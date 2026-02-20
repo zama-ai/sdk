@@ -1,0 +1,14 @@
+"use client";
+
+import type { DelegatedUserDecryptParams } from "@zama-fhe/token-sdk";
+import { useMutation } from "@tanstack/react-query";
+import { useConfidentialSDK } from "../provider";
+
+export function useDelegatedUserDecrypt() {
+  const sdk = useConfidentialSDK();
+  return useMutation<Record<string, bigint>, Error, DelegatedUserDecryptParams>(
+    {
+      mutationFn: (params) => sdk.relayer.delegatedUserDecrypt(params),
+    },
+  );
+}

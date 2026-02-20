@@ -1,0 +1,25 @@
+# dependencies
+node_modules
+
+# testing
+coverage
+
+# eslint
+.eslintcache
+
+# build
+dist
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+
+# env files
+.env*
+!.env.example
+
+# typescript
+*.tsbuildinfo

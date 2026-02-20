@@ -1,0 +1,75 @@
+"use client";
+
+import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { ReadonlyConfidentialToken, type Address } from "@zama-fhe/token-sdk";
+import { useMemo } from "react";
+import { useConfidentialSDK } from "../provider";
+import {
+  confidentialBalancesQueryKeys,
+  confidentialHandlesQueryKeys,
+} from "./confidential-balance-query-keys";
+
+interface UseConfidentialBalancesOptions extends Omit<
+  UseQueryOptions<Map<Address, bigint>, Error>,
+  "queryKey" | "queryFn"
+> {
+  handleRefetchInterval?: number;
+}
+
+const DEFAULT_HANDLE_REFETCH_INTERVAL = 10_000;
+
+/**
+ * Declarative hook to read multiple confidential token balances in batch.
+ * Uses two-phase polling: cheaply polls encrypted handles, then only
+ * decrypts when any handle changes.
+ */
+export function useConfidentialBalances(
+  tokenAddresses: Address[],
+  owner?: Address,
+  options?: UseConfidentialBalancesOptions,
+) {
+  const sdk = useConfidentialSDK();
+  const { handleRefetchInterval, ...balanceOptions } = options ?? {};
+
+  const tokens = useMemo(
+    () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
+    [sdk, tokenAddresses],
+  );
+
+  // Phase 1: Poll all encrypted handles (cheap RPC reads)
+  const handlesQuery = useQuery<Address[], Error>({
+    queryKey: confidentialHandlesQueryKeys.tokens(tokenAddresses, owner ?? ""),
+    queryFn: async () => {
+      const ownerAddress = owner ?? (await sdk.signer.getAddress());
+      return Promise.all(
+        tokens.map((t) => t.confidentialBalanceOf(ownerAddress)),
+      );
+    },
+    enabled: tokenAddresses.length > 0,
+    refetchInterval: handleRefetchInterval ?? DEFAULT_HANDLE_REFETCH_INTERVAL,
+  });
+
+  const handles = handlesQuery.data;
+  const handlesKey = handles?.join(",") ?? "";
+
+  // Phase 2: Batch decrypt only when any handle changes
+  const balancesQuery = useQuery<Map<Address, bigint>, Error>({
+    queryKey: [
+      ...confidentialBalancesQueryKeys.tokens(tokenAddresses, owner ?? ""),
+      handlesKey,
+    ],
+    queryFn: async () => {
+      const ownerAddress = owner ?? (await sdk.signer.getAddress());
+      return ReadonlyConfidentialToken.batchDecryptBalances(
+        tokens,
+        handles!,
+        ownerAddress,
+      );
+    },
+    enabled: tokenAddresses.length > 0 && handles !== undefined,
+    staleTime: Infinity,
+    ...balanceOptions,
+  });
+
+  return balancesQuery;
+}
