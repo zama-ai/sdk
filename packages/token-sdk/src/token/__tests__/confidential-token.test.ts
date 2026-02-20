@@ -210,9 +210,7 @@ describe("ConfidentialToken", () => {
     });
 
     it("returns 0n for tokens that fail decryption", async () => {
-      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(
-        new Error("decrypt failed"),
-      );
+      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
 
@@ -273,9 +271,7 @@ describe("ConfidentialToken", () => {
     });
 
     it("returns 0n for tokens that fail decryption", async () => {
-      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(
-        new Error("decrypt failed"),
-      );
+      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       const result = await ConfidentialToken.batchDecryptBalances(
         [token],
@@ -341,13 +337,11 @@ describe("ConfidentialToken", () => {
     });
 
     it("throws ConfidentialTokenError on decryption failure", async () => {
-      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(
-        new Error("decrypt failed"),
-      );
+      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-      await expect(
-        token.decryptBalance(VALID_HANDLE as Address),
-      ).rejects.toThrow("Failed to decrypt balance");
+      await expect(token.decryptBalance(VALID_HANDLE as Address)).rejects.toThrow(
+        "Failed to decrypt balance",
+      );
     });
 
     it("returns 0n when handle not found in decrypt result", async () => {
@@ -468,10 +462,7 @@ describe("ConfidentialToken", () => {
 
   describe("confidentialTransfer", () => {
     it("encrypts amount and sends transaction", async () => {
-      const txHash = await token.confidentialTransfer(
-        "0xrecipient" as Address,
-        100n,
-      );
+      const txHash = await token.confidentialTransfer("0xrecipient" as Address, 100n);
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
         values: [100n],
@@ -610,10 +601,7 @@ describe("ConfidentialToken", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [
-              UNWRAP_REQUESTED_TOPIC,
-              "0x000000000000000000000000" + USER.slice(2),
-            ],
+            topics: [UNWRAP_REQUESTED_TOPIC, "0x000000000000000000000000" + USER.slice(2)],
             data: "0x" + "ff".repeat(32),
           },
         ],
@@ -655,10 +643,7 @@ describe("ConfidentialToken", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [
-              UNWRAP_REQUESTED_TOPIC,
-              "0x000000000000000000000000" + USER.slice(2),
-            ],
+            topics: [UNWRAP_REQUESTED_TOPIC, "0x000000000000000000000000" + USER.slice(2)],
             data: "0x" + "ff".repeat(32),
           },
         ],
@@ -697,15 +682,15 @@ describe("ConfidentialToken", () => {
     it("wraps non-ConfidentialTokenError in EncryptionFailed", async () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
-      await expect(
-        token.confidentialTransfer("0xrecipient" as Address, 100n),
-      ).rejects.toSatisfy((err: ConfidentialTokenError) => {
-        return (
-          err instanceof ConfidentialTokenError &&
-          err.code === ConfidentialTokenErrorCode.EncryptionFailed &&
-          err.message === "Failed to encrypt transfer amount"
-        );
-      });
+      await expect(token.confidentialTransfer("0xrecipient" as Address, 100n)).rejects.toSatisfy(
+        (err: ConfidentialTokenError) => {
+          return (
+            err instanceof ConfidentialTokenError &&
+            err.code === ConfidentialTokenErrorCode.EncryptionFailed &&
+            err.message === "Failed to encrypt transfer amount"
+          );
+        },
+      );
     });
   });
 
@@ -733,11 +718,7 @@ describe("ConfidentialToken", () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
       await expect(
-        token.confidentialTransferFrom(
-          "0xfrom" as Address,
-          "0xto" as Address,
-          200n,
-        ),
+        token.confidentialTransferFrom("0xfrom" as Address, "0xto" as Address, 200n),
       ).rejects.toSatisfy((err: ConfidentialTokenError) => {
         return (
           err instanceof ConfidentialTokenError &&
@@ -764,19 +745,17 @@ describe("ConfidentialToken", () => {
     });
 
     it("wraps error in ApprovalFailed", async () => {
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(
-        new Error("tx failed"),
-      );
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(
-        token.approve("0xspender" as Address),
-      ).rejects.toSatisfy((err: ConfidentialTokenError) => {
-        return (
-          err instanceof ConfidentialTokenError &&
-          err.code === ConfidentialTokenErrorCode.ApprovalFailed &&
-          err.message === "Operator approval failed"
-        );
-      });
+      await expect(token.approve("0xspender" as Address)).rejects.toSatisfy(
+        (err: ConfidentialTokenError) => {
+          return (
+            err instanceof ConfidentialTokenError &&
+            err.code === ConfidentialTokenErrorCode.ApprovalFailed &&
+            err.message === "Operator approval failed"
+          );
+        },
+      );
     });
   });
 
@@ -796,8 +775,7 @@ describe("ConfidentialToken", () => {
   });
 
   describe("wrap (additional branches)", () => {
-    const ZERO_ADDRESS =
-      "0x0000000000000000000000000000000000000000" as Address;
+    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
 
     it("calls wrapETH when underlying is zero address", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
@@ -877,19 +855,17 @@ describe("ConfidentialToken", () => {
     it("wraps write failure in TransactionReverted", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce("0xunderlying"); // #getUnderlying
       // skip approval
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(
-        new Error("tx failed"),
-      );
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(
-        token.wrap(100n, { approvalStrategy: "skip" }),
-      ).rejects.toSatisfy((err: ConfidentialTokenError) => {
-        return (
-          err instanceof ConfidentialTokenError &&
-          err.code === ConfidentialTokenErrorCode.TransactionReverted &&
-          err.message === "Shield (wrap) transaction failed"
-        );
-      });
+      await expect(token.wrap(100n, { approvalStrategy: "skip" })).rejects.toSatisfy(
+        (err: ConfidentialTokenError) => {
+          return (
+            err instanceof ConfidentialTokenError &&
+            err.code === ConfidentialTokenErrorCode.TransactionReverted &&
+            err.message === "Shield (wrap) transaction failed"
+          );
+        },
+      );
     });
 
     it("wraps allowance check failure in ApprovalFailed", async () => {
@@ -898,18 +874,35 @@ describe("ConfidentialToken", () => {
         .mockResolvedValueOnce("0xunderlying") // ensureAllowance → underlying
         .mockResolvedValueOnce(0n); // allowance
 
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(
-        new Error("approve failed"),
-      );
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
 
-      await expect(token.wrap(100n)).rejects.toSatisfy(
-        (err: ConfidentialTokenError) => {
-          return (
-            err instanceof ConfidentialTokenError &&
-            err.code === ConfidentialTokenErrorCode.ApprovalFailed
-          );
-        },
+      await expect(token.wrap(100n)).rejects.toSatisfy((err: ConfidentialTokenError) => {
+        return (
+          err instanceof ConfidentialTokenError &&
+          err.code === ConfidentialTokenErrorCode.ApprovalFailed
+        );
+      });
+    });
+  });
+
+  describe("wrapETH (error wrapping)", () => {
+    it("wraps ConfidentialTokenError thrown by writeContract", async () => {
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+
+      await expect(token.wrapETH(1000n)).rejects.toMatchObject({
+        code: ConfidentialTokenErrorCode.TransactionReverted,
+        message: "Shield ETH (wrapETH) transaction failed",
+      });
+    });
+
+    it("re-throws ConfidentialTokenError as-is", async () => {
+      const original = new ConfidentialTokenError(
+        ConfidentialTokenErrorCode.EncryptionFailed,
+        "already wrapped",
       );
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(token.wrapETH(1000n)).rejects.toBe(original);
     });
   });
 
@@ -929,56 +922,46 @@ describe("ConfidentialToken", () => {
 
   describe("unwrap (error handling)", () => {
     it("wraps encrypt failure in EncryptionFailed", async () => {
-      vi.mocked(sdk.encrypt).mockRejectedValueOnce(
-        new Error("encrypt failed"),
-      );
+      vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("encrypt failed"));
 
-      await expect(token.unwrap(50n)).rejects.toSatisfy(
-        (err: ConfidentialTokenError) => {
-          return (
-            err instanceof ConfidentialTokenError &&
-            err.code === ConfidentialTokenErrorCode.EncryptionFailed &&
-            err.message === "Failed to encrypt unshield amount"
-          );
-        },
-      );
+      await expect(token.unwrap(50n)).rejects.toSatisfy((err: ConfidentialTokenError) => {
+        return (
+          err instanceof ConfidentialTokenError &&
+          err.code === ConfidentialTokenErrorCode.EncryptionFailed &&
+          err.message === "Failed to encrypt unshield amount"
+        );
+      });
     });
   });
 
   describe("unwrapAll (error handling)", () => {
     it("wraps write failure in TransactionReverted", async () => {
       vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(
-        new Error("tx failed"),
-      );
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.unwrapAll()).rejects.toSatisfy(
-        (err: ConfidentialTokenError) => {
-          return (
-            err instanceof ConfidentialTokenError &&
-            err.code === ConfidentialTokenErrorCode.TransactionReverted &&
-            err.message === "Unshield-all transaction failed"
-          );
-        },
-      );
+      await expect(token.unwrapAll()).rejects.toSatisfy((err: ConfidentialTokenError) => {
+        return (
+          err instanceof ConfidentialTokenError &&
+          err.code === ConfidentialTokenErrorCode.TransactionReverted &&
+          err.message === "Unshield-all transaction failed"
+        );
+      });
     });
   });
 
   describe("finalizeUnwrap (error handling)", () => {
     it("wraps publicDecrypt failure in DecryptionFailed", async () => {
-      vi.mocked(sdk.publicDecrypt).mockRejectedValueOnce(
-        new Error("decrypt failed"),
-      );
+      vi.mocked(sdk.publicDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-      await expect(
-        token.finalizeUnwrap("0xburn" as Address),
-      ).rejects.toSatisfy((err: ConfidentialTokenError) => {
-        return (
-          err instanceof ConfidentialTokenError &&
-          err.code === ConfidentialTokenErrorCode.DecryptionFailed &&
-          err.message === "Failed to finalize unshield"
-        );
-      });
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toSatisfy(
+        (err: ConfidentialTokenError) => {
+          return (
+            err instanceof ConfidentialTokenError &&
+            err.code === ConfidentialTokenErrorCode.DecryptionFailed &&
+            err.message === "Failed to finalize unshield"
+          );
+        },
+      );
     });
   });
 
@@ -1042,19 +1025,15 @@ describe("ConfidentialToken", () => {
         .mockResolvedValueOnce("0xunderlying") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
-      vi.mocked(signer.writeContract).mockRejectedValueOnce(
-        new Error("approve failed"),
-      );
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
 
-      await expect(token.approveUnderlying()).rejects.toSatisfy(
-        (err: ConfidentialTokenError) => {
-          return (
-            err instanceof ConfidentialTokenError &&
-            err.code === ConfidentialTokenErrorCode.ApprovalFailed &&
-            err.message === "ERC-20 approval failed"
-          );
-        },
-      );
+      await expect(token.approveUnderlying()).rejects.toSatisfy((err: ConfidentialTokenError) => {
+        return (
+          err instanceof ConfidentialTokenError &&
+          err.code === ConfidentialTokenErrorCode.ApprovalFailed &&
+          err.message === "ERC-20 approval failed"
+        );
+      });
     });
   });
 });

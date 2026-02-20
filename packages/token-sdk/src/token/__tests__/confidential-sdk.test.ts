@@ -69,4 +69,9 @@ describe("ConfidentialSDK", () => {
     expect(t1.address).toBe("0xaaa");
     expect(t2.address).toBe("0xbbb");
   });
+
+  it("terminate delegates to relayer.terminate", () => {
+    sdk.terminate();
+    expect(relayer.terminate).toHaveBeenCalledOnce();
+  });
 });
