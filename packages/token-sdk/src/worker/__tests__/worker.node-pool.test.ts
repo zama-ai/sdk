@@ -1,0 +1,194 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeWorkerPoolConfig } from "../worker.node-pool";
+import { NodeWorkerPool } from "../worker.node-pool";
+import type { ZKProofLike } from "../../relayer/relayer-sdk.types";
+
+vi.mock("../worker.node-client", () => {
+  const NodeWorkerClient = vi.fn().mockImplementation(function () {
+    return {
+      initWorker: vi.fn().mockResolvedValue(undefined),
+      terminate: vi.fn(),
+      generateKeypair: vi.fn().mockResolvedValue({ publicKey: "pk", privateKey: "sk" }),
+      createEIP712: vi.fn().mockResolvedValue({}),
+      encrypt: vi.fn().mockResolvedValue({ handles: [], inputProof: "0x" }),
+      userDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
+      publicDecrypt: vi
+        .fn()
+        .mockResolvedValue({ clearValues: {}, abiEncodedClearValues: "0x", decryptionProof: "0x" }),
+      createDelegatedUserDecryptEIP712: vi.fn().mockResolvedValue({}),
+      delegatedUserDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
+      requestZKProofVerification: vi.fn().mockResolvedValue("0x"),
+      getPublicKey: vi.fn().mockResolvedValue({ result: null }),
+      getPublicParams: vi.fn().mockResolvedValue({ result: null }),
+    };
+  });
+  return { NodeWorkerClient };
+});
+
+// Must import after mock so the mock is in place
+const { NodeWorkerClient } = await import("../worker.node-client");
+
+const baseConfig = {
+  fhevmConfig: { chainId: 1 },
+} as unknown as NodeWorkerPoolConfig;
+
+describe("NodeWorkerPool", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("uses custom pool size", () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
+    expect(pool.poolSize).toBe(2);
+  });
+
+  it("defaults pool size to min(availableParallelism, 4)", () => {
+    const pool = new NodeWorkerPool(baseConfig);
+    expect(pool.poolSize).toBeGreaterThanOrEqual(1);
+    expect(pool.poolSize).toBeLessThanOrEqual(4);
+  });
+
+  it("initializes all workers in parallel", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
+    await pool.initPool();
+
+    expect(NodeWorkerClient).toHaveBeenCalledTimes(3);
+    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+    for (const instance of instances) {
+      expect(instance.initWorker).toHaveBeenCalledOnce();
+    }
+  });
+
+  it("sends sequential calls to worker 0 when all are idle", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
+    await pool.initPool();
+
+    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+
+    // All resolve immediately so active count returns to 0 each time — always picks worker 0
+    await pool.generateKeypair();
+    await pool.generateKeypair();
+    await pool.generateKeypair();
+
+    expect(instances[0].generateKeypair).toHaveBeenCalledTimes(3);
+    expect(instances[1].generateKeypair).toHaveBeenCalledTimes(0);
+    expect(instances[2].generateKeypair).toHaveBeenCalledTimes(0);
+  });
+
+  it("dispatches to least-busy worker when workers are occupied", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
+    await pool.initPool();
+
+    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+
+    // Make worker 0's generateKeypair block until we resolve it
+    let resolveWorker0!: (v: unknown) => void;
+    instances[0].generateKeypair.mockReturnValueOnce(
+      new Promise((r) => {
+        resolveWorker0 = r;
+      }),
+    );
+
+    // Start a long-running call on worker 0 (don't await)
+    const p1 = pool.generateKeypair();
+
+    // Now worker 0 has 1 active request, worker 1 has 0 — should go to worker 1
+    await pool.generateKeypair();
+    expect(instances[1].generateKeypair).toHaveBeenCalledTimes(1);
+
+    // Resolve worker 0 to clean up
+    resolveWorker0({ publicKey: "pk", privateKey: "sk" });
+    await p1;
+  });
+
+  it("terminates all workers", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
+    await pool.initPool();
+
+    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+
+    pool.terminate();
+
+    for (const instance of instances) {
+      expect(instance.terminate).toHaveBeenCalledOnce();
+    }
+  });
+
+  it("delegates all public methods to workers", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 1 });
+    await pool.initPool();
+
+    const instance = vi.mocked(NodeWorkerClient).mock.results[0].value;
+
+    await pool.generateKeypair();
+    expect(instance.generateKeypair).toHaveBeenCalled();
+
+    await pool.createEIP712("pk", ["0x1"], 1000, 7);
+    expect(instance.createEIP712).toHaveBeenCalledWith("pk", ["0x1"], 1000, 7);
+
+    await pool.encrypt([1n], "0xC", "0xU");
+    expect(instance.encrypt).toHaveBeenCalledWith([1n], "0xC", "0xU");
+
+    await pool.userDecrypt(["h1"], "0xC", ["0xS"], "sk", "pk", "sig", "0xA", 100, 7);
+    expect(instance.userDecrypt).toHaveBeenCalled();
+
+    await pool.publicDecrypt(["h1"]);
+    expect(instance.publicDecrypt).toHaveBeenCalledWith(["h1"]);
+
+    await pool.createDelegatedUserDecryptEIP712("pk", ["0x1"], "0xD", 100, 7);
+    expect(instance.createDelegatedUserDecryptEIP712).toHaveBeenCalled();
+
+    await pool.delegatedUserDecrypt(
+      ["h1"],
+      "0xC",
+      ["0xS"],
+      "sk",
+      "pk",
+      "sig",
+      "0xD",
+      "0xE",
+      100,
+      7,
+    );
+    expect(instance.delegatedUserDecrypt).toHaveBeenCalled();
+
+    await pool.requestZKProofVerification({} as unknown as ZKProofLike);
+    expect(instance.requestZKProofVerification).toHaveBeenCalled();
+
+    await pool.getPublicKey();
+    expect(instance.getPublicKey).toHaveBeenCalled();
+
+    await pool.getPublicParams(2048);
+    expect(instance.getPublicParams).toHaveBeenCalledWith(2048);
+  });
+
+  it("clears workers and active counts on terminate", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
+    await pool.initPool();
+    pool.terminate();
+
+    // Re-init creates fresh workers
+    await pool.initPool();
+    const newInstances = vi
+      .mocked(NodeWorkerClient)
+      .mock.results.slice(2)
+      .map((r) => r.value);
+
+    await pool.generateKeypair();
+    expect(newInstances[0].generateKeypair).toHaveBeenCalledTimes(1);
+  });
+
+  it("decrements active count even when the task rejects", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
+    await pool.initPool();
+
+    const instances = vi.mocked(NodeWorkerClient).mock.results.map((r) => r.value);
+    instances[0].generateKeypair.mockRejectedValueOnce(new Error("boom"));
+
+    await pool.generateKeypair().catch(() => {});
+
+    // Active count for worker 0 should be back to 0, so next call goes to worker 0 again
+    await pool.generateKeypair();
+    expect(instances[0].generateKeypair).toHaveBeenCalledTimes(2);
+  });
+});

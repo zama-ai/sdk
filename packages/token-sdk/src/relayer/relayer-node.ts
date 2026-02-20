@@ -14,14 +14,12 @@ import type {
   UserDecryptParams,
   ZKProofLike,
 } from "./relayer-sdk.types";
-import {
-  NodeWorkerClient,
-  type NodeWorkerClientConfig,
-} from "../worker/worker.node-client";
+import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 
 export interface RelayerNodeConfig {
   chainId: number;
   transports: Record<number, Partial<FhevmInstanceConfig>>;
+  poolSize?: number;
 }
 
 /**
@@ -30,24 +28,25 @@ export interface RelayerNodeConfig {
  */
 export class RelayerNode implements RelayerSDK {
   readonly #config: RelayerNodeConfig;
-  #workerClient: NodeWorkerClient | null = null;
-  #initPromise: Promise<NodeWorkerClient> | null = null;
+  #pool: NodeWorkerPool | null = null;
+  #initPromise: Promise<NodeWorkerPool> | null = null;
 
   constructor(config: RelayerNodeConfig) {
     this.#config = config;
   }
 
-  #getWorkerConfig(): NodeWorkerClientConfig {
-    const { chainId, transports } = this.#config;
+  #getPoolConfig(): NodeWorkerPoolConfig {
+    const { chainId, transports, poolSize } = this.#config;
 
     return {
       fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
+      poolSize,
     };
   }
 
-  async #ensureWorker(): Promise<NodeWorkerClient> {
+  async #ensurePool(): Promise<NodeWorkerPool> {
     if (!this.#initPromise) {
-      this.#initPromise = this.#initWorker().catch((error) => {
+      this.#initPromise = this.#initPool().catch((error) => {
         this.#initPromise = null;
         throw error;
       });
@@ -55,24 +54,24 @@ export class RelayerNode implements RelayerSDK {
     return this.#initPromise;
   }
 
-  async #initWorker(): Promise<NodeWorkerClient> {
-    const workerConfig = this.#getWorkerConfig();
-    this.#workerClient = new NodeWorkerClient(workerConfig);
-    await this.#workerClient.initWorker();
-    return this.#workerClient;
+  async #initPool(): Promise<NodeWorkerPool> {
+    const poolConfig = this.#getPoolConfig();
+    this.#pool = new NodeWorkerPool(poolConfig);
+    await this.#pool.initPool();
+    return this.#pool;
   }
 
   terminate(): void {
-    if (this.#workerClient) {
-      this.#workerClient.terminate();
-      this.#workerClient = null;
+    if (this.#pool) {
+      this.#pool.terminate();
+      this.#pool = null;
       this.#initPromise = null;
     }
   }
 
   async generateKeypair(): Promise<FHEKeypair> {
-    const worker = await this.#ensureWorker();
-    const result = await worker.generateKeypair();
+    const pool = await this.#ensurePool();
+    const result = await pool.generateKeypair();
     return {
       publicKey: result.publicKey,
       privateKey: result.privateKey,
@@ -85,8 +84,8 @@ export class RelayerNode implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
-    const worker = await this.#ensureWorker();
-    const result = await worker.createEIP712(
+    const pool = await this.#ensurePool();
+    const result = await pool.createEIP712(
       publicKey,
       contractAddresses,
       startTimestamp,
@@ -101,8 +100,7 @@ export class RelayerNode implements RelayerSDK {
         verifyingContract: result.domain.verifyingContract,
       },
       types: {
-        UserDecryptRequestVerification:
-          result.types.UserDecryptRequestVerification,
+        UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
       },
       message: {
         publicKey: result.message.publicKey,
@@ -115,12 +113,8 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    const worker = await this.#ensureWorker();
-    const result = await worker.encrypt(
-      params.values,
-      params.contractAddress,
-      params.userAddress,
-    );
+    const pool = await this.#ensurePool();
+    const result = await pool.encrypt(params.values, params.contractAddress, params.userAddress);
 
     return {
       handles: result.handles,
@@ -128,11 +122,9 @@ export class RelayerNode implements RelayerSDK {
     };
   }
 
-  async userDecrypt(
-    params: UserDecryptParams,
-  ): Promise<Record<string, bigint>> {
-    const worker = await this.#ensureWorker();
-    const result = await worker.userDecrypt(
+  async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
+    const pool = await this.#ensurePool();
+    const result = await pool.userDecrypt(
       params.handles,
       params.contractAddress,
       params.signedContractAddresses,
@@ -148,8 +140,8 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async publicDecrypt(handles: string[]): Promise<PublicDecryptResult> {
-    const worker = await this.#ensureWorker();
-    const result = await worker.publicDecrypt(handles);
+    const pool = await this.#ensurePool();
+    const result = await pool.publicDecrypt(handles);
 
     return {
       clearValues: result.clearValues,
@@ -165,8 +157,8 @@ export class RelayerNode implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const worker = await this.#ensureWorker();
-    return worker.createDelegatedUserDecryptEIP712(
+    const pool = await this.#ensurePool();
+    return pool.createDelegatedUserDecryptEIP712(
       publicKey,
       contractAddresses,
       delegatorAddress,
@@ -175,11 +167,9 @@ export class RelayerNode implements RelayerSDK {
     );
   }
 
-  async delegatedUserDecrypt(
-    params: DelegatedUserDecryptParams,
-  ): Promise<Record<string, bigint>> {
-    const worker = await this.#ensureWorker();
-    const result = await worker.delegatedUserDecrypt(
+  async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
+    const pool = await this.#ensurePool();
+    const result = await pool.delegatedUserDecrypt(
       params.handles,
       params.contractAddress,
       params.signedContractAddresses,
@@ -195,25 +185,23 @@ export class RelayerNode implements RelayerSDK {
     return result.clearValues;
   }
 
-  async requestZKProofVerification(
-    zkProof: ZKProofLike,
-  ): Promise<InputProofBytesType> {
-    const worker = await this.#ensureWorker();
-    return worker.requestZKProofVerification(zkProof);
+  async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
+    const pool = await this.#ensurePool();
+    return pool.requestZKProofVerification(zkProof);
   }
 
   async getPublicKey(): Promise<{
     publicKeyId: string;
     publicKey: Uint8Array;
   } | null> {
-    const worker = await this.#ensureWorker();
-    return (await worker.getPublicKey()).result;
+    const pool = await this.#ensurePool();
+    return (await pool.getPublicKey()).result;
   }
 
   async getPublicParams(
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
-    const worker = await this.#ensureWorker();
-    return (await worker.getPublicParams(bits)).result;
+    const pool = await this.#ensurePool();
+    return (await pool.getPublicParams(bits)).result;
   }
 }
