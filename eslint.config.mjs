@@ -1,16 +1,23 @@
 import js from "@eslint/js";
+import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
+import prettierConfig from "eslint-config-prettier";
 
-export default tseslint.config(
+export default defineConfig([
+  globalIgnores(["**/dist/**", "**/node_modules/**", "coverage/**"]),
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  {
-    ignores: ["**/dist/**", "**/node_modules/**", "coverage/**"],
-  },
+  prettierConfig,
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
     },
   },
-);
+]);
