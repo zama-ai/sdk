@@ -1,0 +1,51 @@
+{
+  "name": "@zama-fhe/token-react-sdk",
+  "version": "0.1.0",
+  "description": "React hooks for Zama confidential ERC-20 tokens (fhEVM)",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zama-ai/token-sdk",
+    "directory": "packages/token-react-sdk"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./viem": {
+      "types": "./dist/viem/index.d.ts",
+      "import": "./dist/viem/index.js"
+    },
+    "./ethers": {
+      "types": "./dist/ethers/index.d.ts",
+      "import": "./dist/ethers/index.js"
+    },
+    "./wagmi": {
+      "types": "./dist/wagmi/index.d.ts",
+      "import": "./dist/wagmi/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@zama-fhe/token-sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "@tanstack/react-query": ">=4",
+    "ethers": ">=6",
+    "viem": ">=2",
+    "wagmi": ">=2"
+  },
+  "peerDependenciesMeta": {
+    "ethers": { "optional": true },
+    "viem": { "optional": true },
+    "wagmi": { "optional": true }
+  }
+}
