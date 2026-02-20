@@ -1,0 +1,49 @@
+{
+  "name": "@zama-fhe/token-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Zama confidential ERC-20 tokens (fhEVM)",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zama-ai/token-sdk",
+    "directory": "packages/token-sdk"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./viem": {
+      "types": "./dist/viem/index.d.ts",
+      "import": "./dist/viem/index.js"
+    },
+    "./ethers": {
+      "types": "./dist/ethers/index.d.ts",
+      "import": "./dist/ethers/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "@zama-fhe/relayer-sdk": "0.4.1"
+  },
+  "peerDependencies": {
+    "viem": ">=2",
+    "ethers": ">=6",
+    "@zama-fhe/relayer-sdk": ">=0.4"
+  },
+  "peerDependenciesMeta": {
+    "viem": { "optional": true },
+    "ethers": { "optional": true },
+    "@zama-fhe/relayer-sdk": { "optional": true }
+  }
+}
