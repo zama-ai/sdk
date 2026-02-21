@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "pnpm build:sdk && pnpm build:react-sdk",
-    "buid:sdk": "pnpm --filter @zama-fhe/token-sdk build",
+    "build:sdk": "pnpm --filter @zama-fhe/token-sdk build",
     "build:react-sdk": "pnpm --filter @zama-fhe/token-react-sdk build",
     "build:test-app": "pnpm --filter @zama-fhe/test-app build",
     "test": "vitest",
@@ -55,6 +55,9 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.0",
     "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --cache --fix",

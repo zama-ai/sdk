@@ -29,7 +29,10 @@
       "import": "./dist/node/index.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup"
   },
@@ -41,9 +44,19 @@
     "ethers": ">=6",
     "@zama-fhe/relayer-sdk": ">=0.4"
   },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
   "peerDependenciesMeta": {
-    "viem": { "optional": true },
-    "ethers": { "optional": true },
-    "@zama-fhe/relayer-sdk": { "optional": true }
+    "viem": {
+      "optional": true
+    },
+    "ethers": {
+      "optional": true
+    },
+    "@zama-fhe/relayer-sdk": {
+      "optional": true
+    }
   }
 }

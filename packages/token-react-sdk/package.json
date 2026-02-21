@@ -46,6 +46,10 @@
     "viem": ">=2",
     "wagmi": ">=3"
   },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
   "peerDependenciesMeta": {
     "ethers": {
       "optional": true
