@@ -3,10 +3,10 @@
 import type { GenericStringStorage, RelayerWeb } from "@zama-fhe/token-sdk";
 import { type PropsWithChildren, useMemo } from "react";
 import type { PublicClient, WalletClient } from "viem";
-import { ConfidentialSDKProvider } from "../provider";
+import { TokenSDKProvider } from "../provider";
 import { ViemSigner } from "./viem-signer";
 
-interface ViemConfidentialSDKProviderProps extends PropsWithChildren {
+interface ViemTokenSDKProviderProps extends PropsWithChildren {
   relayer: RelayerWeb;
   storage: GenericStringStorage;
   walletClient: WalletClient;
@@ -14,28 +14,24 @@ interface ViemConfidentialSDKProviderProps extends PropsWithChildren {
 }
 
 /**
- * Viem-aware ConfidentialSDK provider.
+ * Viem-aware TokenSDK provider.
  * Automatically creates a signer from the provided viem clients.
  */
-export function ViemConfidentialSDKProvider({
+export function ViemTokenSDKProvider({
   children,
   relayer,
   storage,
   walletClient,
   publicClient,
-}: ViemConfidentialSDKProviderProps) {
+}: ViemTokenSDKProviderProps) {
   const signer = useMemo(
     () => new ViemSigner(walletClient, publicClient),
     [walletClient, publicClient],
   );
 
   return (
-    <ConfidentialSDKProvider
-      relayer={relayer}
-      storage={storage}
-      signer={signer}
-    >
+    <TokenSDKProvider relayer={relayer} storage={storage} signer={signer}>
       {children}
-    </ConfidentialSDKProvider>
+    </TokenSDKProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { ConfidentialSDK } from "../confidential-sdk";
+import { TokenSDK } from "../token-sdk";
 import { ReadonlyConfidentialToken } from "../readonly-confidential-token";
 import { ConfidentialToken } from "../confidential-token";
 import { MemoryStorage } from "../memory-storage";
@@ -33,12 +33,12 @@ function createMockRelayer(): RelayerSDK {
   };
 }
 
-describe("ConfidentialSDK", () => {
+describe("TokenSDK", () => {
   const storage = new MemoryStorage();
   const signer = createMockSigner();
   const relayer = createMockRelayer();
 
-  const sdk = new ConfidentialSDK({
+  const sdk = new TokenSDK({
     relayer,
     signer,
     storage,

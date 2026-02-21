@@ -20,11 +20,7 @@ export type {
 } from "./relayer/relayer-sdk.types";
 
 // Network preset configs
-export {
-  HardhatConfig,
-  MainnetConfig,
-  SepoliaConfig,
-} from "./relayer/relayer-utils";
+export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
 
 // ABIs
 export { ERC20_ABI, ERC20_METADATA_ABI } from "./abi/erc20.abi";
@@ -37,14 +33,11 @@ export { WRAPPER_ABI } from "./abi/wrapper.abi";
 export { BATCH_SWAP_ABI } from "./abi/batch-swap.abi";
 
 // ERC-165 interface IDs
-export {
-  ERC7984_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID,
-} from "./contracts";
+export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
 
 // Token abstraction layer
-export { ConfidentialSDK } from "./token/confidential-sdk";
-export type { ConfidentialSDKConfig } from "./token/confidential-sdk";
+export { TokenSDK } from "./token/token-sdk";
+export type { TokenSDKConfig } from "./token/token-sdk";
 export { ConfidentialToken } from "./token/confidential-token";
 export type { ConfidentialTokenConfig } from "./token/confidential-token";
 export { ReadonlyConfidentialToken } from "./token/readonly-confidential-token";

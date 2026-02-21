@@ -21,16 +21,11 @@ pnpm add @zama-fhe/token-sdk
 ### Browser
 
 ```ts
-import {
-  ConfidentialSDK,
-  RelayerWeb,
-  SepoliaConfig,
-  IndexedDBStorage,
-} from "@zama-fhe/token-sdk";
+import { TokenSDK, RelayerWeb, SepoliaConfig, IndexedDBStorage } from "@zama-fhe/token-sdk";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
 // 1. Create the SDK with a browser backend (Web Worker)
-const sdk = new ConfidentialSDK({
+const sdk = new TokenSDK({
   relayer: new RelayerWeb({
     chainId: 11155111, // Sepolia
     transports: {
@@ -64,11 +59,11 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 ### Node.js
 
 ```ts
-import { ConfidentialSDK, MemoryStorage } from "@zama-fhe/token-sdk";
+import { TokenSDK, MemoryStorage } from "@zama-fhe/token-sdk";
 import { RelayerNode, SepoliaConfig } from "@zama-fhe/token-sdk/node";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
-const sdk = new ConfidentialSDK({
+const sdk = new TokenSDK({
   relayer: new RelayerNode({
     chainId: 11155111, // Sepolia
     transports: {
@@ -89,12 +84,12 @@ const balance = await token.balanceOf();
 
 ## Core Concepts
 
-### ConfidentialSDK
+### TokenSDK
 
 Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Acts as a factory for token instances.
 
 ```ts
-const sdk = new ConfidentialSDK({
+const sdk = new TokenSDK({
   relayer, // RelayerSDK — either RelayerWeb (browser) or RelayerNode (Node.js)
   signer, // ConfidentialSigner
   storage, // GenericStringStorage
@@ -180,11 +175,7 @@ await ReadonlyConfidentialToken.authorizeAll(tokens);
 const balances = await ReadonlyConfidentialToken.batchBalanceOf(tokens, owner);
 
 // Decrypt pre-fetched handles for multiple tokens
-const balances = await ReadonlyConfidentialToken.batchDecryptBalances(
-  tokens,
-  handles,
-  owner,
-);
+const balances = await ReadonlyConfidentialToken.batchDecryptBalances(tokens, handles, owner);
 ```
 
 ### Storage
@@ -208,7 +199,7 @@ interface GenericStringStorage {
 
 ## Configuration Reference
 
-### `ConfidentialSDKConfig`
+### `TokenSDKConfig`
 
 | Field     | Type                   | Description                                              |
 | --------- | ---------------------- | -------------------------------------------------------- |
@@ -389,11 +380,7 @@ import {
 } from "@zama-fhe/token-sdk/viem";
 
 // Read: pass a PublicClient
-const handle = await readConfidentialBalanceOfContract(
-  publicClient,
-  tokenAddress,
-  userAddress,
-);
+const handle = await readConfidentialBalanceOfContract(publicClient, tokenAddress, userAddress);
 
 // Write: pass a WalletClient
 const txHash = await writeConfidentialTransferContract(
@@ -419,11 +406,7 @@ import {
   writeConfidentialTransferContract,
 } from "@zama-fhe/token-sdk/ethers";
 
-const handle = await readConfidentialBalanceOfContract(
-  provider,
-  tokenAddress,
-  userAddress,
-);
+const handle = await readConfidentialBalanceOfContract(provider, tokenAddress, userAddress);
 const txHash = await writeConfidentialTransferContract(
   signer,
   tokenAddress,
@@ -545,10 +528,7 @@ interface ActivityLogMetadata {
 All SDK errors are instances of `ConfidentialTokenError`:
 
 ```ts
-import {
-  ConfidentialTokenError,
-  ConfidentialTokenErrorCode,
-} from "@zama-fhe/token-sdk";
+import { ConfidentialTokenError, ConfidentialTokenErrorCode } from "@zama-fhe/token-sdk";
 
 try {
   await token.confidentialTransfer(to, amount);

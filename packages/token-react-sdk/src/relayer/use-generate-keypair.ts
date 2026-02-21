@@ -2,10 +2,10 @@
 
 import type { FHEKeypair } from "@zama-fhe/token-sdk";
 import { useMutation } from "@tanstack/react-query";
-import { useConfidentialSDK } from "../provider";
+import { useTokenSDK } from "../provider";
 
 export function useGenerateKeypair() {
-  const sdk = useConfidentialSDK();
+  const sdk = useTokenSDK();
   return useMutation<FHEKeypair, Error, void>({
     mutationFn: () => sdk.relayer.generateKeypair(),
   });

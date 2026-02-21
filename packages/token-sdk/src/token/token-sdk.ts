@@ -2,27 +2,24 @@ import type { Address } from "../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { ConfidentialToken } from "./confidential-token";
 import { ReadonlyConfidentialToken } from "./readonly-confidential-token";
-import type {
-  ConfidentialSigner,
-  GenericStringStorage,
-} from "./confidential-token.types";
+import type { ConfidentialSigner, GenericStringStorage } from "./confidential-token.types";
 
-export interface ConfidentialSDKConfig {
+export interface TokenSDKConfig {
   relayer: RelayerSDK;
   signer: ConfidentialSigner;
   storage: GenericStringStorage;
 }
 
 /**
- * ConfidentialSDK — composes a RelayerSDK with token abstraction.
+ * TokenSDK — composes a RelayerSDK with token abstraction.
  * Provides signer, storage, and high-level ERC-20-like token interface.
  */
-export class ConfidentialSDK {
+export class TokenSDK {
   readonly relayer: RelayerSDK;
   readonly signer: ConfidentialSigner;
   readonly storage: GenericStringStorage;
 
-  constructor(config: ConfidentialSDKConfig) {
+  constructor(config: TokenSDKConfig) {
     this.relayer = config.relayer;
     this.signer = config.signer;
     this.storage = config.storage;

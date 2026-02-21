@@ -3,14 +3,14 @@
 import { useMutation } from "@tanstack/react-query";
 import type { PublicDecryptResult } from "@zama-fhe/token-sdk";
 import { decryptionKeys } from "./decryption-cache";
-import { useConfidentialSDK } from "../provider";
+import { useTokenSDK } from "../provider";
 
 /**
  * On success, populates the decryption cache so useUserDecryptedValue/useUserDecryptedValues
  * can read the results.
  */
 export function usePublicDecrypt() {
-  const sdk = useConfidentialSDK();
+  const sdk = useTokenSDK();
   return useMutation<PublicDecryptResult, Error, string[]>({
     mutationFn: (handles) => sdk.relayer.publicDecrypt(handles),
     onSuccess: (data, _variable, _result, { client }) => {

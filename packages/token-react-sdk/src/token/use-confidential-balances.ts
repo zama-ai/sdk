@@ -3,7 +3,7 @@
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import { ReadonlyConfidentialToken, type Address } from "@zama-fhe/token-sdk";
 import { useMemo } from "react";
-import { useConfidentialSDK } from "../provider";
+import { useTokenSDK } from "../provider";
 import {
   confidentialBalancesQueryKeys,
   confidentialHandlesQueryKeys,
@@ -28,7 +28,7 @@ export function useConfidentialBalances(
   owner?: Address,
   options?: UseConfidentialBalancesOptions,
 ) {
-  const sdk = useConfidentialSDK();
+  const sdk = useTokenSDK();
   const { handleRefetchInterval, ...balanceOptions } = options ?? {};
 
   const tokens = useMemo(
@@ -41,9 +41,7 @@ export function useConfidentialBalances(
     queryKey: confidentialHandlesQueryKeys.tokens(tokenAddresses, owner ?? ""),
     queryFn: async () => {
       const ownerAddress = owner ?? (await sdk.signer.getAddress());
-      return Promise.all(
-        tokens.map((t) => t.confidentialBalanceOf(ownerAddress)),
-      );
+      return Promise.all(tokens.map((t) => t.confidentialBalanceOf(ownerAddress)));
     },
     enabled: tokenAddresses.length > 0,
     refetchInterval: handleRefetchInterval ?? DEFAULT_HANDLE_REFETCH_INTERVAL,
@@ -54,17 +52,10 @@ export function useConfidentialBalances(
 
   // Phase 2: Batch decrypt only when any handle changes
   const balancesQuery = useQuery<Map<Address, bigint>, Error>({
-    queryKey: [
-      ...confidentialBalancesQueryKeys.tokens(tokenAddresses, owner ?? ""),
-      handlesKey,
-    ],
+    queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, owner ?? ""), handlesKey],
     queryFn: async () => {
       const ownerAddress = owner ?? (await sdk.signer.getAddress());
-      return ReadonlyConfidentialToken.batchDecryptBalances(
-        tokens,
-        handles!,
-        ownerAddress,
-      );
+      return ReadonlyConfidentialToken.batchDecryptBalances(tokens, handles!, ownerAddress);
     },
     enabled: tokenAddresses.length > 0 && handles !== undefined,
     staleTime: Infinity,

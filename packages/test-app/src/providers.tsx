@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RelayerWeb, MemoryStorage } from "@zama-fhe/token-react-sdk";
-import { WagmiConfidentialSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
+import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
 import { type ReactNode, useState } from "react";
 import { http, createConfig, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
@@ -44,9 +44,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <WagmiConfidentialSDKProvider relayer={relayer} storage={storage}>
+        <WagmiTokenSDKProvider relayer={relayer} storage={storage}>
           {children}
-        </WagmiConfidentialSDKProvider>
+        </WagmiTokenSDKProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

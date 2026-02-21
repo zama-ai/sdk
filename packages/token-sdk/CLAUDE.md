@@ -30,7 +30,7 @@ Build this package only: `pnpm --filter @zama-fhe/token-sdk build`
 
 The package exposes four entry points via `package.json` exports:
 
-- **`@zama-fhe/token-sdk`** — Core SDK: `ConfidentialSDK`, `ConfidentialToken`, `ReadonlyConfidentialToken`, relayer web backend (`RelayerWeb`), event decoders, activity feed helpers, contract call builders, ABIs, storage adapters, error types
+- **`@zama-fhe/token-sdk`** — Core SDK: `TokenSDK`, `ConfidentialToken`, `ReadonlyConfidentialToken`, relayer web backend (`RelayerWeb`), event decoders, activity feed helpers, contract call builders, ABIs, storage adapters, error types
 - **`@zama-fhe/token-sdk/viem`** — `ViemSigner` adapter + viem-native read/write contract helpers
 - **`@zama-fhe/token-sdk/ethers`** — `EthersSigner` adapter + ethers-native read/write contract helpers
 - **`@zama-fhe/token-sdk/node`** — `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network preset configs
@@ -38,7 +38,7 @@ The package exposes four entry points via `package.json` exports:
 ### Layered Design
 
 ```
-ConfidentialSDK (factory)
+TokenSDK (factory)
   ├── ConfidentialToken (extends ReadonlyConfidentialToken)
   │     ├── Contract call builders (src/contracts/) — pure functions returning ContractCallConfig
   │     ├── CredentialsManager — AES-GCM encrypted FHE credential storage

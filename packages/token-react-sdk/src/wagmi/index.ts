@@ -12,4 +12,4 @@ export { useSupportsInterface } from "./use-supports-interface";
 export { useWrap } from "./use-wrap";
 export { useWrapETH } from "./use-wrap-eth";
 export { WagmiSigner } from "./wagmi-signer";
-export { WagmiConfidentialSDKProvider } from "./wagmi-confidential-sdk-provider";
+export { WagmiTokenSDKProvider } from "./wagmi-token-sdk-provider";

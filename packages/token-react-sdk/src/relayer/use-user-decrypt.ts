@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import type { UserDecryptParams } from "@zama-fhe/token-sdk";
 import { decryptionKeys } from "./decryption-cache";
-import { useConfidentialSDK } from "../provider";
+import { useTokenSDK } from "../provider";
 
 /**
  * Thin wrapper around sdk.userDecrypt().
@@ -15,7 +15,7 @@ import { useConfidentialSDK } from "../provider";
  * can read the results.
  */
 export function useUserDecrypt() {
-  const sdk = useConfidentialSDK();
+  const sdk = useTokenSDK();
 
   return useMutation<Record<string, bigint>, Error, UserDecryptParams>({
     mutationFn: (params) => sdk.relayer.userDecrypt(params),

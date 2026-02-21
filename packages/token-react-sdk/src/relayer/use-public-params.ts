@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useConfidentialSDK } from "../provider";
+import { useTokenSDK } from "../provider";
 
 type PublicParamsResult = {
   publicParams: Uint8Array;
@@ -9,7 +9,7 @@ type PublicParamsResult = {
 } | null;
 
 export function usePublicParams() {
-  const sdk = useConfidentialSDK();
+  const sdk = useTokenSDK();
   return useMutation<PublicParamsResult, Error, number>({
     mutationFn: (bits) => sdk.relayer.getPublicParams(bits),
   });

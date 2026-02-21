@@ -1,36 +1,21 @@
 "use client";
 
-import type {
-  ConfidentialSigner,
-  GenericStringStorage,
-  RelayerSDK,
-} from "@zama-fhe/token-sdk";
-import { ConfidentialSDK } from "@zama-fhe/token-sdk";
-import {
-  createContext,
-  type PropsWithChildren,
-  useContext,
-  useEffect,
-  useMemo,
-} from "react";
+import type { ConfidentialSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/token-sdk";
+import { TokenSDK } from "@zama-fhe/token-sdk";
+import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
 
-interface ConfidentialSDKProviderProps extends PropsWithChildren {
+interface TokenSDKProviderProps extends PropsWithChildren {
   relayer: RelayerSDK;
   signer: ConfidentialSigner;
   storage: GenericStringStorage;
 }
 
-const ConfidentialContext = createContext<ConfidentialSDK | null>(null);
+const TokenSDKContext = createContext<TokenSDK | null>(null);
 
-export function ConfidentialSDKProvider({
-  children,
-  relayer,
-  signer,
-  storage,
-}: ConfidentialSDKProviderProps) {
+export function TokenSDKProvider({ children, relayer, signer, storage }: TokenSDKProviderProps) {
   const sdk = useMemo(
     () =>
-      new ConfidentialSDK({
+      new TokenSDK({
         relayer,
         signer,
         storage,
@@ -42,20 +27,14 @@ export function ConfidentialSDKProvider({
     return () => sdk.terminate();
   }, [sdk]);
 
-  return (
-    <ConfidentialContext.Provider value={sdk}>
-      {children}
-    </ConfidentialContext.Provider>
-  );
+  return <TokenSDKContext.Provider value={sdk}>{children}</TokenSDKContext.Provider>;
 }
 
-export function useConfidentialSDK(): ConfidentialSDK {
-  const context = useContext(ConfidentialContext);
+export function useTokenSDK(): TokenSDK {
+  const context = useContext(TokenSDKContext);
 
   if (!context) {
-    throw new Error(
-      "useConfidentialSDK must be used within a ConfidentialSDKProvider",
-    );
+    throw new Error("useTokenSDK must be used within a TokenSDKProvider");
   }
 
   return context;

@@ -100,10 +100,7 @@ describe("ReadonlyConfidentialToken", () => {
     });
 
     it("mixes zero and non-zero handles correctly", async () => {
-      const result = await token.decryptHandles([
-        ZERO_HANDLE as Address,
-        VALID_HANDLE as Address,
-      ]);
+      const result = await token.decryptHandles([ZERO_HANDLE as Address, VALID_HANDLE as Address]);
 
       expect(result.get(ZERO_HANDLE)).toBe(0n);
       expect(result.get(VALID_HANDLE)).toBe(1000n);
@@ -154,13 +151,9 @@ describe("ReadonlyConfidentialToken", () => {
     });
 
     it("throws ConfidentialTokenError on decryption failure", async () => {
-      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(
-        new Error("relayer down"),
-      );
+      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
-      await expect(
-        token.decryptHandles([VALID_HANDLE as Address]),
-      ).rejects.toMatchObject({
+      await expect(token.decryptHandles([VALID_HANDLE as Address])).rejects.toMatchObject({
         code: ConfidentialTokenErrorCode.DecryptionFailed,
         message: "Failed to decrypt handles",
       });
@@ -210,7 +203,7 @@ describe("ReadonlyConfidentialToken", () => {
   });
 });
 
-describe("ConfidentialSDK token factory", () => {
+describe("TokenSDK token factory", () => {
   it("creates ReadonlyConfidentialToken with correct address", () => {
     const sdk = createMockSdk();
     const signer = createMockSigner();

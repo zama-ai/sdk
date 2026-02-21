@@ -26,12 +26,8 @@ pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 ```tsx
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiConfidentialSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
-import {
-  RelayerWeb,
-  SepoliaConfig,
-  indexedDBStorage,
-} from "@zama-fhe/token-react-sdk";
+import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
+import { RelayerWeb, SepoliaConfig, indexedDBStorage } from "@zama-fhe/token-react-sdk";
 
 const queryClient = new QueryClient();
 
@@ -50,12 +46,9 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <WagmiConfidentialSDKProvider
-          relayer={relayer}
-          storage={indexedDBStorage}
-        >
+        <WagmiTokenSDKProvider relayer={relayer} storage={indexedDBStorage}>
           <TokenBalance />
-        </WagmiConfidentialSDKProvider>
+        </WagmiTokenSDKProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -74,7 +67,7 @@ function TokenBalance() {
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  ConfidentialSDKProvider,
+  TokenSDKProvider,
   RelayerWeb,
   SepoliaConfig,
   useConfidentialBalance,
@@ -98,13 +91,9 @@ const relayer = new RelayerWeb({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfidentialSDKProvider
-        relayer={relayer}
-        signer={yourCustomSigner}
-        storage={new MemoryStorage()}
-      >
+      <TokenSDKProvider relayer={relayer} signer={yourCustomSigner} storage={new MemoryStorage()}>
         <TransferForm />
-      </ConfidentialSDKProvider>
+      </TokenSDKProvider>
     </QueryClientProvider>
   );
 }
@@ -139,15 +128,15 @@ function TransferForm() {
 Use when you have a custom `ConfidentialSigner` (or use the viem/ethers adapter yourself).
 
 ```tsx
-import { ConfidentialSDKProvider } from "@zama-fhe/token-react-sdk";
+import { TokenSDKProvider } from "@zama-fhe/token-react-sdk";
 
-<ConfidentialSDKProvider
+<TokenSDKProvider
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
   signer={signer} // ConfidentialSigner
   storage={storage} // GenericStringStorage
 >
   {children}
-</ConfidentialSDKProvider>;
+</TokenSDKProvider>;
 ```
 
 ### Wagmi Provider
@@ -155,16 +144,16 @@ import { ConfidentialSDKProvider } from "@zama-fhe/token-react-sdk";
 Auto-creates a `ConfidentialSigner` from wagmi. Must be nested inside `WagmiProvider`.
 
 ```tsx
-import { WagmiConfidentialSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
+import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
 
 <WagmiProvider config={wagmiConfig}>
   <QueryClientProvider client={queryClient}>
-    <WagmiConfidentialSDKProvider
+    <WagmiTokenSDKProvider
       relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
       storage={storage} // GenericStringStorage
     >
       {children}
-    </WagmiConfidentialSDKProvider>
+    </WagmiTokenSDKProvider>
   </QueryClientProvider>
 </WagmiProvider>;
 ```
@@ -176,16 +165,16 @@ No `signer` prop needed — it's derived from wagmi automatically.
 Pass viem clients directly.
 
 ```tsx
-import { ViemConfidentialSDKProvider } from "@zama-fhe/token-react-sdk/viem";
+import { ViemTokenSDKProvider } from "@zama-fhe/token-react-sdk/viem";
 
-<ViemConfidentialSDKProvider
+<ViemTokenSDKProvider
   relayer={relayerConfig}
   storage={storage}
   walletClient={walletClient} // viem WalletClient
   publicClient={publicClient} // viem PublicClient
 >
   {children}
-</ViemConfidentialSDKProvider>;
+</ViemTokenSDKProvider>;
 ```
 
 ### Ethers Provider
@@ -193,29 +182,29 @@ import { ViemConfidentialSDKProvider } from "@zama-fhe/token-react-sdk/viem";
 Pass an ethers `Signer`.
 
 ```tsx
-import { EthersConfidentialSDKProvider } from "@zama-fhe/token-react-sdk/ethers";
+import { EthersTokenSDKProvider } from "@zama-fhe/token-react-sdk/ethers";
 
-<EthersConfidentialSDKProvider
+<EthersTokenSDKProvider
   relayer={relayerConfig}
   storage={storage}
   signer={ethersSigner} // ethers Signer
 >
   {children}
-</EthersConfidentialSDKProvider>;
+</EthersTokenSDKProvider>;
 ```
 
 ## Hooks Reference
 
-All hooks require a `ConfidentialSDKProvider` (or one of its variants) in the component tree.
+All hooks require a `TokenSDKProvider` (or one of its variants) in the component tree.
 
 ### SDK Access
 
-#### `useConfidentialSDK`
+#### `useTokenSDK`
 
-Returns the `ConfidentialSDK` instance from context. Use this when you need direct access to the SDK (e.g. for low-level relayer operations).
+Returns the `TokenSDK` instance from context. Use this when you need direct access to the SDK (e.g. for low-level relayer operations).
 
 ```ts
-function useConfidentialSDK(): ConfidentialSDK;
+function useTokenSDK(): TokenSDK;
 ```
 
 #### `useConfidentialToken`
@@ -234,9 +223,7 @@ function useConfidentialToken(config: {
 Returns a `ReadonlyConfidentialToken` instance for a given token address (no wrapper needed). Memoized.
 
 ```ts
-function useReadonlyConfidentialToken(
-  tokenAddress: Address,
-): ReadonlyConfidentialToken;
+function useReadonlyConfidentialToken(tokenAddress: Address): ReadonlyConfidentialToken;
 ```
 
 ### Balance Hooks
@@ -284,11 +271,7 @@ function useConfidentialBalances(
 ```
 
 ```tsx
-const { data: balances } = useConfidentialBalances([
-  "0xTokenA",
-  "0xTokenB",
-  "0xTokenC",
-]);
+const { data: balances } = useConfidentialBalances(["0xTokenA", "0xTokenB", "0xTokenC"]);
 
 // balances is a Map<Address, bigint>
 const tokenABalance = balances?.get("0xTokenA");
@@ -544,10 +527,7 @@ Find the wrapper contract for a given token via the deployment coordinator. Enab
 function useWrapperDiscovery(
   tokenAddress: Address,
   coordinatorAddress: Address | undefined,
-  options?: Omit<
-    UseQueryOptions<Address | null, Error>,
-    "queryKey" | "queryFn"
-  >,
+  options?: Omit<UseQueryOptions<Address | null, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<Address | null, Error>;
 ```
 
@@ -642,9 +622,7 @@ These hooks expose the raw `RelayerSDK` operations as React Query mutations.
 
 ```ts
 // Single handle
-function useUserDecryptedValue(
-  handle: string | undefined,
-): UseQueryResult<bigint>;
+function useUserDecryptedValue(handle: string | undefined): UseQueryResult<bigint>;
 
 // Multiple handles
 function useUserDecryptedValues(handles: string[]): {
@@ -772,11 +750,11 @@ import { EthersSigner } from "@zama-fhe/token-react-sdk/ethers";
 
 All public exports from `@zama-fhe/token-sdk` are re-exported from the main entry point. You never need to import from the core package directly.
 
-**Classes:** `RelayerWeb`, `ConfidentialSDK`, `ConfidentialToken`, `ReadonlyConfidentialToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
+**Classes:** `RelayerWeb`, `TokenSDK`, `ConfidentialToken`, `ReadonlyConfidentialToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
-**Types:** `Address`, `ConfidentialSDKConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `ConfidentialSigner`, `GenericStringStorage`, `ContractCallConfig`.
+**Types:** `Address`, `TokenSDKConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `ConfidentialSigner`, `GenericStringStorage`, `ContractCallConfig`.
 
 **Errors:** `ConfidentialTokenError`, `ConfidentialTokenErrorCode`.
 

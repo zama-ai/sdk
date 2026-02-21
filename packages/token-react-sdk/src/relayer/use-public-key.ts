@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useConfidentialSDK } from "../provider";
+import { useTokenSDK } from "../provider";
 
 type PublicKeyResult = {
   publicKeyId: string;
@@ -9,7 +9,7 @@ type PublicKeyResult = {
 } | null;
 
 export function usePublicKey() {
-  const sdk = useConfidentialSDK();
+  const sdk = useTokenSDK();
   return useMutation<PublicKeyResult, Error, void>({
     mutationFn: () => sdk.relayer.getPublicKey(),
   });

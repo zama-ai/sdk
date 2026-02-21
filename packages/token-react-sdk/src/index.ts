@@ -1,5 +1,5 @@
 // Provider
-export { ConfidentialSDKProvider, useConfidentialSDK } from "./provider";
+export { TokenSDKProvider, useTokenSDK } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
@@ -23,7 +23,7 @@ export { decryptionKeys } from "./relayer/decryption-cache";
 // Re-export core classes
 export {
   RelayerWeb,
-  ConfidentialSDK,
+  TokenSDK,
   ConfidentialToken,
   ReadonlyConfidentialToken,
   MemoryStorage,
@@ -37,7 +37,7 @@ export type {
   Address,
   RelayerSDK,
   RelayerWebConfig,
-  ConfidentialSDKConfig,
+  TokenSDKConfig,
   NetworkType,
   RelayerSDKStatus,
   EncryptResult,
@@ -55,10 +55,7 @@ export type {
 } from "@zama-fhe/token-sdk";
 
 // Re-export constants
-export {
-  ERC7984_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID,
-} from "@zama-fhe/token-sdk";
+export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/token-sdk";
 
 // Re-export ABIs
 export {
@@ -137,14 +134,8 @@ export {
   confidentialHandlesQueryKeys,
 } from "./token/confidential-balance-query-keys";
 export { useWrapperDiscovery } from "./token/use-wrapper-discovery";
-export {
-  useTokenMetadata,
-  type TokenMetadata,
-} from "./token/use-token-metadata";
-export {
-  useActivityFeed,
-  activityFeedQueryKeys,
-} from "./token/use-activity-feed";
+export { useTokenMetadata, type TokenMetadata } from "./token/use-token-metadata";
+export { useActivityFeed, activityFeedQueryKeys } from "./token/use-activity-feed";
 
 // Re-export event decoders, types, and constants from core SDK
 export { ZERO_HANDLE } from "@zama-fhe/token-sdk";
@@ -197,7 +188,4 @@ export type {
   ContractCallConfig,
   TransactionReceipt,
 } from "@zama-fhe/token-sdk";
-export {
-  ConfidentialTokenError,
-  ConfidentialTokenErrorCode,
-} from "@zama-fhe/token-sdk";
+export { ConfidentialTokenError, ConfidentialTokenErrorCode } from "@zama-fhe/token-sdk";

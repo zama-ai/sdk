@@ -2,7 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { ReadonlyConfidentialToken, type Address } from "@zama-fhe/token-sdk";
-import { useConfidentialSDK } from "../provider";
+import { useTokenSDK } from "../provider";
 
 /**
  * Pre-authorize FHE decrypt credentials for a list of token addresses.
@@ -16,13 +16,11 @@ import { useConfidentialSDK } from "../provider";
  * ```
  */
 export function useAuthorizeAll() {
-  const sdk = useConfidentialSDK();
+  const sdk = useTokenSDK();
 
   return useMutation<void, Error, Address[]>({
     mutationFn: async (tokenAddresses) => {
-      const tokens = tokenAddresses.map((addr) =>
-        sdk.createReadonlyToken(addr),
-      );
+      const tokens = tokenAddresses.map((addr) => sdk.createReadonlyToken(addr));
       return ReadonlyConfidentialToken.authorizeAll(tokens);
     },
   });

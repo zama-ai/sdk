@@ -1,11 +1,8 @@
 "use client";
 
-import type {
-  Address,
-  KmsDelegatedUserDecryptEIP712Type,
-} from "@zama-fhe/token-sdk";
+import type { Address, KmsDelegatedUserDecryptEIP712Type } from "@zama-fhe/token-sdk";
 import { useMutation } from "@tanstack/react-query";
-import { useConfidentialSDK } from "../provider";
+import { useTokenSDK } from "../provider";
 
 export interface CreateDelegatedUserDecryptEIP712Params {
   publicKey: string;
@@ -16,7 +13,7 @@ export interface CreateDelegatedUserDecryptEIP712Params {
 }
 
 export function useCreateDelegatedUserDecryptEIP712() {
-  const sdk = useConfidentialSDK();
+  const sdk = useTokenSDK();
   return useMutation<
     KmsDelegatedUserDecryptEIP712Type,
     Error,

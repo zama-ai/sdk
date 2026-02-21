@@ -39,7 +39,7 @@ pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 ```tsx
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiConfidentialSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
+import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
 import {
   RelayerWeb,
   SepoliaConfig,
@@ -65,9 +65,9 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <WagmiConfidentialSDKProvider relayer={relayer} storage={indexedDBStorage}>
+        <WagmiTokenSDKProvider relayer={relayer} storage={indexedDBStorage}>
           <TokenDashboard />
-        </WagmiConfidentialSDKProvider>
+        </WagmiTokenSDKProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -95,10 +95,10 @@ function TokenDashboard() {
 ### Browser with viem
 
 ```ts
-import { ConfidentialSDK, RelayerWeb, SepoliaConfig, IndexedDBStorage } from "@zama-fhe/token-sdk";
+import { TokenSDK, RelayerWeb, SepoliaConfig, IndexedDBStorage } from "@zama-fhe/token-sdk";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
-const sdk = new ConfidentialSDK({
+const sdk = new TokenSDK({
   relayer: new RelayerWeb({
     chainId: 11155111,
     transports: {
@@ -131,10 +131,10 @@ await token.unshield(500n);
 ### Browser with ethers
 
 ```ts
-import { ConfidentialSDK, RelayerWeb, SepoliaConfig, IndexedDBStorage } from "@zama-fhe/token-sdk";
+import { TokenSDK, RelayerWeb, SepoliaConfig, IndexedDBStorage } from "@zama-fhe/token-sdk";
 import { EthersSigner } from "@zama-fhe/token-sdk/ethers";
 
-const sdk = new ConfidentialSDK({
+const sdk = new TokenSDK({
   relayer: new RelayerWeb({
     chainId: 11155111,
     transports: {
@@ -153,11 +153,11 @@ const sdk = new ConfidentialSDK({
 ### Node.js
 
 ```ts
-import { ConfidentialSDK, MemoryStorage } from "@zama-fhe/token-sdk";
+import { TokenSDK, MemoryStorage } from "@zama-fhe/token-sdk";
 import { RelayerNode, SepoliaConfig } from "@zama-fhe/token-sdk/node";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
-const sdk = new ConfidentialSDK({
+const sdk = new TokenSDK({
   relayer: new RelayerNode({
     chainId: 11155111,
     transports: {
@@ -180,7 +180,7 @@ const sdk = new ConfidentialSDK({
 │                    Your Application                  │
 ├──────────────────────┬──────────────────────────────┤
 │  token-react-sdk     │  token-sdk (vanilla TS)      │
-│  React hooks +       │  ConfidentialSDK             │
+│  React hooks +       │  TokenSDK             │
 │  React Query cache   │  ConfidentialToken            │
 │                      │  ReadonlyConfidentialToken    │
 ├──────────────────────┴──────────────────────────────┤
@@ -212,9 +212,9 @@ Each package exposes multiple entry points for tree-shaking:
 | Import Path | Contents |
 | --- | --- |
 | `@zama-fhe/token-react-sdk` | Provider-based hooks + all re-exports from core SDK |
-| `@zama-fhe/token-react-sdk/viem` | Viem-specific hooks + `ViemConfidentialSDKProvider` |
-| `@zama-fhe/token-react-sdk/ethers` | Ethers-specific hooks + `EthersConfidentialSDKProvider` |
-| `@zama-fhe/token-react-sdk/wagmi` | Wagmi-specific hooks + `WagmiConfidentialSDKProvider` |
+| `@zama-fhe/token-react-sdk/viem` | Viem-specific hooks + `ViemTokenSDKProvider` |
+| `@zama-fhe/token-react-sdk/ethers` | Ethers-specific hooks + `EthersTokenSDKProvider` |
+| `@zama-fhe/token-react-sdk/wagmi` | Wagmi-specific hooks + `WagmiTokenSDKProvider` |
 
 ## Supported Networks
 
@@ -242,15 +242,15 @@ const transports = {
 
 ### 1. Choose Your Stack
 
-| Stack                 | SDK                   | Provider                        | Signer                         |
-| --------------------- | --------------------- | ------------------------------- | ------------------------------ |
-| React + wagmi         | `token-react-sdk`     | `WagmiConfidentialSDKProvider`  | Auto-derived from wagmi        |
-| React + viem          | `token-react-sdk`     | `ViemConfidentialSDKProvider`   | `ViemSigner`                   |
-| React + ethers        | `token-react-sdk`     | `EthersConfidentialSDKProvider` | `EthersSigner`                 |
-| React + custom signer | `token-react-sdk`     | `ConfidentialSDKProvider`       | Implement `ConfidentialSigner` |
-| Vanilla TS + viem     | `token-sdk`           | N/A                             | `ViemSigner`                   |
-| Vanilla TS + ethers   | `token-sdk`           | N/A                             | `EthersSigner`                 |
-| Node.js backend       | `token-sdk` + `/node` | N/A                             | `ViemSigner` or `EthersSigner` |
+| Stack                 | SDK                   | Provider                 | Signer                         |
+| --------------------- | --------------------- | ------------------------ | ------------------------------ |
+| React + wagmi         | `token-react-sdk`     | `WagmiTokenSDKProvider`  | Auto-derived from wagmi        |
+| React + viem          | `token-react-sdk`     | `ViemTokenSDKProvider`   | `ViemSigner`                   |
+| React + ethers        | `token-react-sdk`     | `EthersTokenSDKProvider` | `EthersSigner`                 |
+| React + custom signer | `token-react-sdk`     | `TokenSDKProvider`       | Implement `ConfidentialSigner` |
+| Vanilla TS + viem     | `token-sdk`           | N/A                      | `ViemSigner`                   |
+| Vanilla TS + ethers   | `token-sdk`           | N/A                      | `EthersSigner`                 |
+| Node.js backend       | `token-sdk` + `/node` | N/A                      | `ViemSigner` or `EthersSigner` |
 
 ### 2. Configure the Relayer
 
