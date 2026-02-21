@@ -1,0 +1,23 @@
+{
+  "name": "react-wagmi-example",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.0",
+    "@zama-fhe/token-react-sdk": "file:../../packages/token-react-sdk",
+    "@zama-fhe/token-sdk": "file:../../packages/token-sdk",
+    "next": "^15.3.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "viem": "^2.30.0",
+    "wagmi": "^2.15.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "typescript": "^5.8.0"
+  }
+}

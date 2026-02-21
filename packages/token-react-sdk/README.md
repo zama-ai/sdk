@@ -179,7 +179,7 @@ import { ViemTokenSDKProvider } from "@zama-fhe/token-react-sdk/viem";
 
 ### Ethers Provider
 
-Pass an ethers `Signer`.
+Pass an ethers `BrowserProvider`. The signer is resolved automatically via `provider.getSigner()`.
 
 ```tsx
 import { EthersTokenSDKProvider } from "@zama-fhe/token-react-sdk/ethers";
@@ -187,7 +187,7 @@ import { EthersTokenSDKProvider } from "@zama-fhe/token-react-sdk/ethers";
 <EthersTokenSDKProvider
   relayer={relayerConfig}
   storage={storage}
-  signer={ethersSigner} // ethers Signer
+  provider={new BrowserProvider(window.ethereum!)}
 >
   {children}
 </EthersTokenSDKProvider>;

@@ -5,39 +5,41 @@ import type {
   TransactionReceipt,
 } from "../token/confidential-token.types";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import { ethers, type Signer } from "ethers";
+import { ethers, type BrowserProvider, type Signer } from "ethers";
 
 /**
  * ConfidentialSigner backed by ethers.
  *
- * @param signer - ethers Signer
+ * Accepts either a `BrowserProvider` (signer resolved lazily via `getSigner()`)
+ * or a `Signer` directly (e.g. `Wallet` for Node.js scripts).
  */
 export class EthersSigner implements ConfidentialSigner {
-  private readonly signer: Signer;
+  private signerPromise: Promise<Signer>;
 
-  constructor(signer: Signer) {
-    this.signer = signer;
+  constructor(providerOrSigner: BrowserProvider | Signer) {
+    if ("getSigner" in providerOrSigner) {
+      this.signerPromise = (providerOrSigner as BrowserProvider).getSigner();
+    } else {
+      this.signerPromise = Promise.resolve(providerOrSigner);
+    }
   }
 
   async getAddress(): Promise<Address> {
-    return this.signer.getAddress() as unknown as Address;
+    const signer = await this.signerPromise;
+    return signer.getAddress() as unknown as Address;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Address> {
+    const signer = await this.signerPromise;
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
-    const sig = await this.signer.signTypedData(domain, sigTypes, message);
+    const sig = await signer.signTypedData(domain, sigTypes, message);
     return sig as Address;
   }
 
-  async writeContract<C extends ContractCallConfig>(
-    config: C,
-  ): Promise<Address> {
-    const contract = new ethers.Contract(
-      config.address,
-      config.abi as ethers.InterfaceAbi,
-      this.signer,
-    );
+  async writeContract<C extends ContractCallConfig>(config: C): Promise<Address> {
+    const signer = await this.signerPromise;
+    const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
     const tx = await contract[config.functionName](...config.args, {
       value: config.value,
     });
@@ -45,16 +47,14 @@ export class EthersSigner implements ConfidentialSigner {
   }
 
   async readContract<T, C extends ContractCallConfig>(config: C): Promise<T> {
-    const contract = new ethers.Contract(
-      config.address,
-      config.abi as ethers.InterfaceAbi,
-      this.signer,
-    );
+    const signer = await this.signerPromise;
+    const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
     return contract[config.functionName](...config.args) as Promise<T>;
   }
 
   async waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt> {
-    const provider = this.signer.provider;
+    const signer = await this.signerPromise;
+    const provider = signer.provider;
     if (!provider) throw new TypeError("Signer has no provider");
     const receipt = await provider.waitForTransaction(hash);
     if (!receipt) throw new Error("Transaction receipt not found");

@@ -1,0 +1,16 @@
+{
+  "name": "node-ethers-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@zama-fhe/token-sdk": "file:../../packages/token-sdk",
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}
