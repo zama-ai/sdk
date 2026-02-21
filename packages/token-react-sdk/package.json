@@ -29,7 +29,10 @@
       "import": "./dist/wagmi/index.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup"
   },
@@ -41,11 +44,17 @@
     "@tanstack/react-query": ">=4",
     "ethers": ">=6",
     "viem": ">=2",
-    "wagmi": ">=2"
+    "wagmi": ">=3"
   },
   "peerDependenciesMeta": {
-    "ethers": { "optional": true },
-    "viem": { "optional": true },
-    "wagmi": { "optional": true }
+    "ethers": {
+      "optional": true
+    },
+    "viem": {
+      "optional": true
+    },
+    "wagmi": {
+      "optional": true
+    }
   }
 }

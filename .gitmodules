@@ -1,0 +1,3 @@
+[submodule "hardhat"]
+	path = hardhat
+	url = https://github.com/zama-ai/zaiffer-smart-contracts

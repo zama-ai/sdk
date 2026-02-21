@@ -1,0 +1,39 @@
+{
+  "name": "@zama-fhe/test-app",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3100",
+    "dev:e2e": "NEXT_PUBLIC_NETWORK=hardhat next dev --port 3100",
+    "build": "next build",
+    "start": "next start --port 3100",
+    "e2e:test": "playwright test",
+    "e2e:test:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.21",
+    "@zama-fhe/token-react-sdk": "workspace:*",
+    "@zama-fhe/token-sdk": "workspace:*",
+    "next": "^16.1.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "viem": "^2.46.2",
+    "wagmi": "^3.5.0"
+  },
+  "devDependencies": {
+    "@fhevm/mock-utils": "0.4.2",
+    "@playwright/test": "^1.58.2",
+    "@tailwindcss/postcss": "^4.2.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@zama-fhe/relayer-sdk": "0.4.1",
+    "ethers": "^6.16.0",
+    "tailwindcss": "^4.2.0",
+    "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "wagmi": "^3.5.0"
+    }
+  }
+}

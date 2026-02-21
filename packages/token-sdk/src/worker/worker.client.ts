@@ -1,8 +1,4 @@
-import type {
-  Address,
-  FhevmInstanceConfig,
-  ZKProofLike,
-} from "../relayer/relayer-sdk.types";
+import type { Address, FhevmInstanceConfig, ZKProofLike } from "../relayer/relayer-sdk.types";
 import type {
   CreateDelegatedEIP712ResponseData,
   CreateEIP712ResponseData,
@@ -61,9 +57,7 @@ export class RelayerWorkerClient {
   async initWorker(): Promise<Worker> {
     if (!this.#worker) {
       // Create worker using Next.js worker pattern
-      this.#worker = new Worker(
-        new URL("./relayer-sdk.worker.ts", import.meta.url),
-      );
+      this.#worker = new Worker(new URL("./relayer-sdk.worker.js", import.meta.url));
 
       // Set up message handlers
       this.#worker.onmessage = this.#handleMessage.bind(this);
@@ -71,11 +65,7 @@ export class RelayerWorkerClient {
       this.#worker.onmessageerror = this.#handleMessageError.bind(this);
 
       // Initialize SDK in worker
-      await this.#sendRequest<InitResponseData>(
-        "INIT",
-        this.#config,
-        INIT_TIMEOUT_MS,
-      );
+      await this.#sendRequest<InitResponseData>("INIT", this.#config, INIT_TIMEOUT_MS);
     }
 
     return this.#worker;
@@ -112,10 +102,7 @@ export class RelayerWorkerClient {
    * Generate a keypair for FHE operations.
    */
   async generateKeypair(): Promise<GenerateKeypairResponseData> {
-    return this.#sendRequest<GenerateKeypairResponseData>(
-      "GENERATE_KEYPAIR",
-      {},
-    );
+    return this.#sendRequest<GenerateKeypairResponseData>("GENERATE_KEYPAIR", {});
   }
 
   /**
@@ -196,16 +183,13 @@ export class RelayerWorkerClient {
     startTimestamp: number,
     durationDays: number,
   ): Promise<CreateDelegatedEIP712ResponseData> {
-    return this.#sendRequest<CreateDelegatedEIP712ResponseData>(
-      "CREATE_DELEGATED_EIP712",
-      {
-        publicKey,
-        contractAddresses,
-        delegatorAddress,
-        startTimestamp,
-        durationDays,
-      },
-    );
+    return this.#sendRequest<CreateDelegatedEIP712ResponseData>("CREATE_DELEGATED_EIP712", {
+      publicKey,
+      contractAddresses,
+      delegatorAddress,
+      startTimestamp,
+      durationDays,
+    });
   }
 
   /**
@@ -223,21 +207,18 @@ export class RelayerWorkerClient {
     startTimestamp: number,
     durationDays: number,
   ): Promise<DelegatedUserDecryptResponseData> {
-    return this.#sendRequest<DelegatedUserDecryptResponseData>(
-      "DELEGATED_USER_DECRYPT",
-      {
-        handles,
-        contractAddress,
-        signedContractAddresses,
-        privateKey,
-        publicKey,
-        signature,
-        delegatorAddress,
-        delegateAddress,
-        startTimestamp,
-        durationDays,
-      },
-    );
+    return this.#sendRequest<DelegatedUserDecryptResponseData>("DELEGATED_USER_DECRYPT", {
+      handles,
+      contractAddress,
+      signedContractAddresses,
+      privateKey,
+      publicKey,
+      signature,
+      delegatorAddress,
+      delegateAddress,
+      startTimestamp,
+      durationDays,
+    });
   }
 
   /**
@@ -314,10 +295,7 @@ export class RelayerWorkerClient {
     const pending = this.#pendingRequests.get(response.id);
 
     if (!pending) {
-      console.warn(
-        "[WorkerClient] Received response for unknown request:",
-        response.id,
-      );
+      console.warn("[WorkerClient] Received response for unknown request:", response.id);
       return;
     }
 

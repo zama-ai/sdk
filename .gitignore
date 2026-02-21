@@ -23,3 +23,10 @@ npm-debug.log*
 
 # typescript
 *.tsbuildinfo
+
+# playwright
+**/playwright/test-results/
+**/playwright-report/
+
+# next.js
+.next/

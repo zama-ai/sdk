@@ -6,6 +6,7 @@ export default defineConfig({
     "viem/index": "src/viem/index.ts",
     "ethers/index": "src/ethers/index.ts",
     "node/index": "src/node/index.ts",
+    "relayer-sdk.worker": "src/worker/relayer-sdk.worker.ts",
   },
   format: ["esm"],
   dts: true,

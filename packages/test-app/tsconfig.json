@@ -13,13 +13,21 @@
     "jsx": "react-jsx",
     "incremental": true,
     "target": "es2022",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
-      "@zama-fhe/token-sdk": ["./packages/token-sdk/src"],
-      "@zama-fhe/token-sdk/*": ["./packages/token-sdk/src/*"],
-      "@zama-fhe/token-react-sdk": ["./packages/token-react-sdk/src"],
-      "@zama-fhe/token-react-sdk/*": ["./packages/token-react-sdk/src/*"]
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["packages/**/*.ts", "packages/**/*.tsx"],
-  "exclude": ["node_modules", "**/node_modules", "packages/test-app"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
 }
