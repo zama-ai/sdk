@@ -5,40 +5,125 @@ on:
     workflows: [Vitest]
     types: [completed]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   test:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           submodules: true
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - run: pnpm build
+      - name: Build SDK packages
+        run: pnpm build
 
-      # Build the Next.js test-app (CI uses `pnpm start` not `pnpm dev:e2e`)
-      - run: pnpm build:test-app
+      - name: Restore Playwright browsers cache
+        id: playwright-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /home/runner/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @zama-fhe/test-app exec playwright install --with-deps chromium
+
+      - name: Save Playwright browsers cache
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /home/runner/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Restore Hardhat dependencies cache
+        id: hardhat-deps-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: hardhat/node_modules
+          key: hardhat-deps-${{ runner.os }}-${{ hashFiles('hardhat/package-lock.json') }}
+
+      - name: Install Hardhat dependencies
+        if: steps.hardhat-deps-cache.outputs.cache-hit != 'true'
+        run: pnpm hardhat:install
+
+      - name: Save Hardhat dependencies cache
+        if: steps.hardhat-deps-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: hardhat/node_modules
+          key: hardhat-deps-${{ runner.os }}-${{ hashFiles('hardhat/package-lock.json') }}
+
+      - name: Restore Hardhat compilation cache
+        id: hardhat-build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            hardhat/artifacts
+            hardhat/cache
+            hardhat/typechain-types
+          key: hardhat-build-${{ runner.os }}-${{ hashFiles('hardhat/contracts/**/*.sol', 'hardhat/hardhat.config.ts') }}
+
+      - name: Compile Hardhat contracts
+        if: steps.hardhat-build-cache.outputs.cache-hit != 'true'
+        run: pnpm hardhat:compile
+
+      - name: Save Hardhat compilation cache
+        if: steps.hardhat-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            hardhat/artifacts
+            hardhat/cache
+            hardhat/typechain-types
+          key: hardhat-build-${{ runner.os }}-${{ hashFiles('hardhat/contracts/**/*.sol', 'hardhat/hardhat.config.ts') }}
+
+      - name: Restore Next.js build cache
+        id: nextjs-build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: packages/test-app/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-app/src/**/*.ts', 'packages/test-app/src/**/*.tsx') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Build Next.js test-app
+        run: pnpm build:test-app
         env:
           NEXT_PUBLIC_NETWORK: hardhat
 
-      # Install hardhat dependencies (uses npm, not pnpm)
-      - run: pnpm hardhat:install
+      - name: Save Next.js build cache
+        if: steps.nextjs-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: packages/test-app/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-app/src/**/*.ts', 'packages/test-app/src/**/*.tsx') }}
 
-      # Install Playwright browsers
-      - run: pnpm --filter @zama-fhe/test-app exec playwright install --with-deps chromium
+      - name: Run Playwright tests
+        run: pnpm e2e:test
 
-      - run: pnpm e2e:test
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
