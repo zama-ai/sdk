@@ -42,7 +42,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
 import {
   RelayerWeb,
-  SepoliaConfig,
   indexedDBStorage,
   useConfidentialBalance,
   useConfidentialTransfer,
@@ -54,7 +53,6 @@ const relayer = new RelayerWeb({
   chainId: 11155111,
   transports: {
     [11155111]: {
-      ...SepoliaConfig,
       relayerUrl: "https://relayer.zama.ai",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
@@ -95,7 +93,7 @@ function TokenDashboard() {
 ### Browser with viem
 
 ```ts
-import { TokenSDK, RelayerWeb, SepoliaConfig, IndexedDBStorage } from "@zama-fhe/token-sdk";
+import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/token-sdk";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
 const sdk = new TokenSDK({
@@ -103,7 +101,6 @@ const sdk = new TokenSDK({
     chainId: 11155111,
     transports: {
       [11155111]: {
-        ...SepoliaConfig,
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
@@ -131,7 +128,7 @@ await token.unshield(500n);
 ### Browser with ethers
 
 ```ts
-import { TokenSDK, RelayerWeb, SepoliaConfig, IndexedDBStorage } from "@zama-fhe/token-sdk";
+import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/token-sdk";
 import { EthersSigner } from "@zama-fhe/token-sdk/ethers";
 
 const sdk = new TokenSDK({
@@ -139,7 +136,6 @@ const sdk = new TokenSDK({
     chainId: 11155111,
     transports: {
       [11155111]: {
-        ...SepoliaConfig,
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
@@ -154,7 +150,7 @@ const sdk = new TokenSDK({
 
 ```ts
 import { TokenSDK, MemoryStorage } from "@zama-fhe/token-sdk";
-import { RelayerNode, SepoliaConfig } from "@zama-fhe/token-sdk/node";
+import { RelayerNode } from "@zama-fhe/token-sdk/node";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
 const sdk = new TokenSDK({
@@ -162,7 +158,6 @@ const sdk = new TokenSDK({
     chainId: 11155111,
     transports: {
       [11155111]: {
-        ...SepoliaConfig,
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
@@ -224,19 +219,7 @@ Each package exposes multiple entry points for tree-shaking:
 | Sepolia Testnet  | 11155111 | `SepoliaConfig` |
 | Local Hardhat    | 31337    | `HardhatConfig` |
 
-Presets provide contract addresses and default values. You only need to supply `relayerUrl` and `network` (RPC URL):
-
-```ts
-import { SepoliaConfig } from "@zama-fhe/token-sdk";
-
-const transports = {
-  [11155111]: {
-    ...SepoliaConfig,
-    relayerUrl: "https://relayer.zama.ai",
-    network: "https://sepolia.infura.io/v3/YOUR_KEY",
-  },
-};
-```
+Defaults for known chains are merged automatically — you only need to supply `relayerUrl` and `network` (RPC URL).
 
 ## Integration Guide
 
@@ -263,7 +246,53 @@ The relayer handles FHE operations (encryption, decryption, key generation). Cho
 
 `RelayerWeb` runs FHE in a Web Worker loading WASM from CDN. `RelayerNode` calls the relayer SDK directly and supports worker threads via `NodeWorkerClient` / `NodeWorkerPool` for parallel operations.
 
-### 3. Choose a Storage Backend
+### 3. Authentication
+
+The relayer requires an API key. There are two approaches:
+
+**Option A — Proxy (recommended for browser apps)**
+
+Route relayer requests through your own backend that injects the API key. This keeps the key out of client-side code:
+
+```ts
+const relayer = new RelayerWeb({
+  chainId: 11155111,
+  transports: {
+    [11155111]: {
+      relayerUrl: "https://your-backend.com/api/relayer", // your proxy forwards to relayer.zama.ai
+      network: "https://sepolia.infura.io/v3/YOUR_KEY",
+    },
+  },
+});
+```
+
+**Option B — Direct API key via transport config**
+
+Pass the API key directly using the `auth` option. Three authentication methods are supported:
+
+```ts
+// API key via header (default header: x-api-key)
+const relayer = new RelayerWeb({
+  chainId: 11155111,
+  transports: {
+    [11155111]: {
+      relayerUrl: "https://relayer.zama.ai",
+      network: "https://sepolia.infura.io/v3/YOUR_KEY",
+      auth: { __type: "ApiKeyHeader", value: "your-api-key" },
+    },
+  },
+});
+
+// API key via cookie (default cookie name: x-api-key)
+auth: { __type: "ApiKeyCookie", value: "your-api-key" }
+
+// Bearer token
+auth: { __type: "BearerToken", token: "your-bearer-token" }
+```
+
+The `Auth` types (`ApiKeyHeader`, `ApiKeyCookie`, `BearerToken`) are exported from `@zama-fhe/token-sdk` for TypeScript usage.
+
+### 4. Choose a Storage
 
 FHE credentials (keypair + EIP-712 signature) need to be persisted so users don't re-sign on every page load:
 
@@ -274,7 +303,7 @@ FHE credentials (keypair + EIP-712 signature) need to be persisted so users don'
 | `MemoryStorage`    | Testing / Node.js scripts (lost on restart)                                      |
 | Custom             | Implement `GenericStringStorage` (3 methods: `getItem`, `setItem`, `removeItem`) |
 
-### 4. Token Operations
+### 5. Token Operations
 
 ```ts
 const token = sdk.createToken("0xEncryptedERC20Address");
@@ -298,7 +327,7 @@ await token.approve("0xSpender");
 const approved = await token.isApproved("0xSpender");
 ```
 
-### 5. Custom Signer (Advanced)
+### 6. Custom Signer (Advanced)
 
 If you're not using viem or ethers, implement the `ConfidentialSigner` interface:
 
@@ -312,7 +341,7 @@ interface ConfidentialSigner {
 }
 ```
 
-### 6. Low-Level Contract Call Builders
+### 7. Low-Level Contract Call Builders
 
 For full control, use the contract call builders that return `ContractCallConfig` objects compatible with any Web3 library:
 
