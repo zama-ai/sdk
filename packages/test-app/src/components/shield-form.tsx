@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   useShield,
   useUnderlyingAllowance,
@@ -15,19 +14,18 @@ export function ShieldForm({
   tokenAddress: Address;
   wrapperAddress: Address;
 }) {
-  const [amount, setAmount] = useState("");
   const { data: metadata } = useTokenMetadata(tokenAddress);
   const { data: allowance } = useUnderlyingAllowance(tokenAddress, wrapperAddress);
   const shield = useShield({ tokenAddress, wrapperAddress });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!amount) return;
-    shield.mutate({ amount: BigInt(amount) });
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" data-testid="shield-form">
+    <form
+      action={(formData) => {
+        shield.mutate({ amount: BigInt(formData.get("amount") as string) });
+      }}
+      className="space-y-4"
+      data-testid="shield-form"
+    >
       <h2 className="text-xl font-semibold">Shield {metadata?.symbol ?? "..."}</h2>
 
       {allowance !== undefined && (
@@ -38,16 +36,16 @@ export function ShieldForm({
 
       <input
         type="text"
+        name="amount"
         placeholder="Amount"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
+        required
         className="w-full px-3 py-2 border rounded"
         data-testid="amount-input"
       />
 
       <button
         type="submit"
-        disabled={shield.isPending || !amount}
+        disabled={shield.isPending}
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
         data-testid="shield-button"
       >

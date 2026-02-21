@@ -1,35 +1,41 @@
 import { test, expect } from "../fixtures/test";
 
-test.describe("Shield", () => {
-  test("should shield USDT and show confidential balance", async ({ page, contracts }) => {
-    await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
-    await page.getByTestId("amount-input").fill("1000");
-    await page.getByTestId("shield-button").click();
+// Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol
+function wrapFee(amount: bigint): bigint {
+  return (amount * 100n + 9999n) / 10000n;
+}
 
-    await expect(page.getByTestId("shield-success")).toBeVisible({
-      timeout: 30000,
-    });
+// Hardhat deployment wraps 1_000 * 10^6 = 1_000_000_000 tokens for the test account
+const INITIAL_BALANCE = 1_000_000_000n - wrapFee(1_000_000_000n);
 
-    await page.goto("/wallet");
-    await page.getByTestId("reveal-button").click();
-    const cUsdtRow = page.getByTestId("token-row-cUSDT");
-    await expect(cUsdtRow).toBeVisible({ timeout: 30000 });
-    await expect(cUsdtRow.getByTestId("balance")).not.toHaveText("0");
-  });
+test("should shield USDT and show confidential balance", async ({ page, contracts }) => {
+  await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
+  await page.getByTestId("amount-input").fill("1000");
+  await page.getByTestId("shield-button").click();
 
-  test("should shield USDC and show confidential balance", async ({ page, contracts }) => {
-    await page.goto(`/shield?token=${contracts.USDC}&wrapper=${contracts.cUSDC}`);
-    await page.getByTestId("amount-input").fill("1000");
-    await page.getByTestId("shield-button").click();
+  await expect(page.getByTestId("shield-success")).toContainText("Tx: 0x");
 
-    await expect(page.getByTestId("shield-success")).toBeVisible({
-      timeout: 30000,
-    });
+  await page.goto("/wallet");
+  await page.getByTestId("reveal-button").click();
+  const shieldAmount = 1000n;
+  const expectedBalance = INITIAL_BALANCE + shieldAmount - wrapFee(shieldAmount);
+  await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
+    expectedBalance.toString(),
+  );
+});
 
-    await page.goto("/wallet");
-    await page.getByTestId("reveal-button").click();
-    const cUsdcRow = page.getByTestId("token-row-cERC20");
-    await expect(cUsdcRow).toBeVisible({ timeout: 30000 });
-    await expect(cUsdcRow.getByTestId("balance")).not.toHaveText("0");
-  });
+test("should shield USDC and show confidential balance", async ({ page, contracts }) => {
+  await page.goto(`/shield?token=${contracts.USDC}&wrapper=${contracts.cUSDC}`);
+  await page.getByTestId("amount-input").fill("1000");
+  await page.getByTestId("shield-button").click();
+
+  await expect(page.getByTestId("shield-success")).toContainText("Tx: 0x");
+
+  await page.goto("/wallet");
+  await page.getByTestId("reveal-button").click();
+  const shieldAmount = 1000n;
+  const expectedBalance = INITIAL_BALANCE + shieldAmount - wrapFee(shieldAmount);
+  await expect(page.getByTestId("token-row-cERC20").getByTestId("balance")).toHaveText(
+    expectedBalance.toString(),
+  );
 });

@@ -14,7 +14,7 @@ test.describe("Reveal encrypted balances", () => {
   test("should show masked balances until reveal is clicked", async ({ page }) => {
     await page.goto("/wallet");
     const cUsdtRow = page.getByTestId("token-row-cUSDT");
-    await expect(cUsdtRow).toBeVisible({ timeout: 30000 });
+    await expect(cUsdtRow).toBeVisible();
 
     // Balances should be masked before reveal
     await expect(cUsdtRow.getByTestId("balance")).toHaveText("****");
@@ -23,9 +23,7 @@ test.describe("Reveal encrypted balances", () => {
     await page.getByTestId("reveal-button").click();
 
     // Balance should show the exact initial value
-    await expect(cUsdtRow.getByTestId("balance")).toHaveText(INITIAL_BALANCE.toString(), {
-      timeout: 30000,
-    });
+    await expect(cUsdtRow.getByTestId("balance")).toHaveText(INITIAL_BALANCE.toString());
   });
 
   test("should reveal exact cUSDT balance after shielding 500", async ({ page, contracts }) => {
@@ -35,15 +33,12 @@ test.describe("Reveal encrypted balances", () => {
     await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
     await page.getByTestId("amount-input").fill(shieldAmount.toString());
     await page.getByTestId("shield-button").click();
-    await expect(page.getByTestId("shield-success")).toBeVisible({
-      timeout: 30000,
-    });
+    await expect(page.getByTestId("shield-success")).toBeVisible();
 
     await page.goto("/wallet");
     await page.getByTestId("reveal-button").click();
     await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
       expectedBalance.toString(),
-      { timeout: 30000 },
     );
   });
 
@@ -54,15 +49,12 @@ test.describe("Reveal encrypted balances", () => {
     await page.goto(`/shield?token=${contracts.USDC}&wrapper=${contracts.cUSDC}`);
     await page.getByTestId("amount-input").fill(shieldAmount.toString());
     await page.getByTestId("shield-button").click();
-    await expect(page.getByTestId("shield-success")).toBeVisible({
-      timeout: 30000,
-    });
+    await expect(page.getByTestId("shield-success")).toBeVisible();
 
     await page.goto("/wallet");
     await page.getByTestId("reveal-button").click();
     await expect(page.getByTestId("token-row-cERC20").getByTestId("balance")).toHaveText(
       expectedBalance.toString(),
-      { timeout: 30000 },
     );
   });
 
@@ -78,25 +70,20 @@ test.describe("Reveal encrypted balances", () => {
     await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
     await page.getByTestId("amount-input").fill(shieldAmount.toString());
     await page.getByTestId("shield-button").click();
-    await expect(page.getByTestId("shield-success")).toBeVisible({
-      timeout: 30000,
-    });
+    await expect(page.getByTestId("shield-success")).toBeVisible();
 
     // Transfer
     await page.goto(`/transfer?token=${contracts.cUSDT}`);
     await page.getByTestId("recipient-input").fill("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
     await page.getByTestId("amount-input").fill(transferAmount.toString());
     await page.getByTestId("transfer-button").click();
-    await expect(page.getByTestId("transfer-success")).toBeVisible({
-      timeout: 30000,
-    });
+    await expect(page.getByTestId("transfer-success")).toBeVisible();
 
     // Reveal exact balance
     await page.goto("/wallet");
     await page.getByTestId("reveal-button").click();
     await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
       expectedBalance.toString(),
-      { timeout: 30000 },
     );
   });
 
@@ -106,9 +93,7 @@ test.describe("Reveal encrypted balances", () => {
 
     // Reveal
     await page.getByTestId("reveal-button").click();
-    await expect(row.getByTestId("balance")).toHaveText(INITIAL_BALANCE.toString(), {
-      timeout: 30000,
-    });
+    await expect(row.getByTestId("balance")).toHaveText(INITIAL_BALANCE.toString());
 
     // Hide
     await page.getByTestId("reveal-button").click();

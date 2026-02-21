@@ -4,9 +4,6 @@ import { Providers } from "@/providers";
 import { ConnectWallet } from "@/components/connect-wallet";
 import "./globals.css";
 
-// All pages use wagmi/SDK hooks that require client-side providers
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
   title: "Token SDK Test App",
 };
@@ -29,6 +26,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <Link href="/unshield" className="font-medium hover:text-blue-600">
                 Unshield
+              </Link>
+              <Link href="/approve" className="font-medium hover:text-blue-600">
+                Approve
+              </Link>
+              <Link href="/transfer-from" className="font-medium hover:text-blue-600">
+                Transfer From
+              </Link>
+              <Link href="/unshield-all" className="font-medium hover:text-blue-600">
+                Unshield All
+              </Link>
+              <Link href="/authorize-all" className="font-medium hover:text-blue-600">
+                Authorize All
+              </Link>
+              <Link href="/wrapper-discovery" className="font-medium hover:text-blue-600">
+                Wrapper Discovery
+              </Link>
+              <Link href="/fhe-relayer" className="font-medium hover:text-blue-600">
+                FHE Relayer
+              </Link>
+              <Link href="/unwrap-manual" className="font-medium hover:text-blue-600">
+                Manual Unwrap
               </Link>
             </nav>
             <ConnectWallet />

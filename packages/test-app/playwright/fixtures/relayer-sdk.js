@@ -113,6 +113,20 @@ self.relayerSDK = {
         return clearValues;
       },
 
+      getPublicKey: function () {
+        return {
+          publicKeyId: "mock-public-key-id",
+          publicKey: new Uint8Array([1, 2, 3, 4]),
+        };
+      },
+
+      getPublicParams: function (_bits) {
+        return {
+          publicParamsId: "mock-public-params-id",
+          publicParams: new Uint8Array([5, 6, 7, 8]),
+        };
+      },
+
       publicDecrypt: async function (handles) {
         const response = await fetch(`${BASE_URL}/publicDecrypt`, {
           method: "POST",
