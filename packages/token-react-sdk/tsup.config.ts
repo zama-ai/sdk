@@ -1,4 +1,7 @@
 import { defineConfig } from "tsup";
+import { readFileSync, writeFileSync, existsSync } from "fs";
+
+const USE_CLIENT_BANNER = '"use client";\n';
 
 export default defineConfig({
   entry: {
@@ -24,7 +27,16 @@ export default defineConfig({
   ],
   treeshake: true,
   tsconfig: "tsconfig.build.json",
-  banner: {
-    js: '"use client";',
-  },
+  plugins: [
+    {
+      name: "use-client-directive",
+      buildEnd({ writtenFiles }) {
+        for (const { name } of writtenFiles) {
+          if (name.endsWith(".js") && existsSync(name)) {
+            writeFileSync(name, USE_CLIENT_BANNER + readFileSync(name, "utf8"));
+          }
+        }
+      },
+    },
+  ],
 });
