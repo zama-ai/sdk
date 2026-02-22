@@ -48,7 +48,7 @@ export class IndexedDBStorage implements GenericStringStorage {
       const tx = db.transaction(this.#storeName, "readonly");
       const store = tx.objectStore(this.#storeName);
       const request = store.get(key);
-      request.onsuccess = () => resolve(JSON.stringify(request.result?.value) ?? null);
+      request.onsuccess = () => resolve(request.result?.value ?? null);
       request.onerror = () => reject(request.error);
     });
   }
@@ -58,7 +58,7 @@ export class IndexedDBStorage implements GenericStringStorage {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readwrite");
       const store = tx.objectStore(this.#storeName);
-      const request = store.put({ key, value: JSON.parse(value) });
+      const request = store.put({ key, value });
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });

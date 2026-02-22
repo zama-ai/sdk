@@ -25,6 +25,7 @@ export function useUnderlyingAllowance(
   return useQuery<bigint, Error>({
     queryKey: underlyingAllowanceQueryKeys.token(tokenAddress, wrapperAddress),
     queryFn: () => token.allowance(wrapperAddress),
+    staleTime: 30_000,
     ...options,
   });
 }

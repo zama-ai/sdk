@@ -35,6 +35,7 @@ export function useWrapFee(
     queryKey: ["wrapFee", feeManagerAddress, amount.toString(), from, to],
     queryFn: () =>
       token.signer.readContract<bigint>(getWrapFeeContract(feeManagerAddress, amount, from, to)),
+    staleTime: 30_000,
     ...options,
   });
 }
@@ -50,6 +51,7 @@ export function useUnwrapFee(
     queryKey: ["unwrapFee", feeManagerAddress, amount.toString(), from, to],
     queryFn: () =>
       token.signer.readContract<bigint>(getUnwrapFeeContract(feeManagerAddress, amount, from, to)),
+    staleTime: 30_000,
     ...options,
   });
 }
@@ -64,6 +66,7 @@ export function useBatchTransferFee(
     queryKey: ["batchTransferFee", feeManagerAddress],
     queryFn: () =>
       token.signer.readContract<bigint>(getBatchTransferFeeContract(feeManagerAddress)),
+    staleTime: 30_000,
     ...options,
   });
 }
@@ -77,6 +80,7 @@ export function useFeeRecipient(
   return useQuery<Hex, Error>({
     queryKey: ["feeRecipient", feeManagerAddress],
     queryFn: () => token.signer.readContract<Hex>(getFeeRecipientContract(feeManagerAddress)),
+    staleTime: 30_000,
     ...options,
   });
 }

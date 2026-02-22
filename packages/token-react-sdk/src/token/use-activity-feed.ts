@@ -46,7 +46,7 @@ export function useActivityFeed(
       logs?.length ?? 0,
       logs?.[0]?.blockNumber ?? 0,
       logs?.[logs.length - 1]?.blockNumber ?? 0,
-    ].filter(Boolean),
+    ],
     queryFn: async () => {
       if (!logs || !userAddress) return [];
 

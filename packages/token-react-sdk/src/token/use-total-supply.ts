@@ -24,6 +24,7 @@ export function useTotalSupply(
   return useQuery<bigint, Error>({
     queryKey: ["totalSupply", tokenAddress],
     queryFn: () => token.signer.readContract<bigint>(totalSupplyContract(tokenAddress)),
+    staleTime: 30_000,
     ...options,
   });
 }

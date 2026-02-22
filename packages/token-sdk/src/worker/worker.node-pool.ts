@@ -69,6 +69,9 @@ export class NodeWorkerPool {
   }
 
   async #dispatch<T>(fn: (worker: NodeWorkerClient) => Promise<T>): Promise<T> {
+    if (this.#workers.length === 0) {
+      throw new Error("NodeWorkerPool not initialized. Call initPool() first.");
+    }
     const index = this.#leastBusyIndex();
     this.#activeCount[index]++;
     try {

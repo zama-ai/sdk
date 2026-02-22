@@ -28,7 +28,7 @@ export class WagmiSigner implements GenericSigner {
 
   async getAddress(): Promise<Hex> {
     const account = getConnection(this.config);
-    if (!account.address) {
+    if (!account?.address) {
       throw new TypeError("Invalid address");
     }
     return account.address;

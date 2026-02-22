@@ -13,6 +13,8 @@ import { useReadonlyToken } from "./use-readonly-token";
 export const wrapperDiscoveryQueryKeys = {
   all: ["wrapperDiscovery"] as const,
   token: (tokenAddress: string) => ["wrapperDiscovery", tokenAddress] as const,
+  tokenCoordinator: (tokenAddress: string, coordinatorAddress: string) =>
+    ["wrapperDiscovery", tokenAddress, coordinatorAddress] as const,
 } as const;
 
 export interface UseWrapperDiscoveryConfig {

@@ -3,6 +3,8 @@
  * No viem/ethers dependency — works with raw log data from any provider.
  */
 
+import type { Hex } from "./relayer/relayer-sdk.types";
+
 // ---------------------------------------------------------------------------
 // Generic log shape
 // ---------------------------------------------------------------------------
@@ -54,7 +56,7 @@ export interface WrappedEvent {
 export interface UnwrapRequestedEvent {
   readonly eventName: "UnwrapRequested";
   readonly receiver: string;
-  readonly encryptedAmount: string;
+  readonly encryptedAmount: Hex;
 }
 
 export interface UnwrappedFinalizedEvent {
@@ -121,8 +123,8 @@ function wordToBool(data: string, index: number): boolean {
   return wordAt(data, index).slice(-1) !== "0";
 }
 
-function wordToBytes32(data: string, index: number): string {
-  return "0x" + wordAt(data, index);
+function wordToBytes32(data: string, index: number): Hex {
+  return `0x${wordAt(data, index)}`;
 }
 
 // ---------------------------------------------------------------------------

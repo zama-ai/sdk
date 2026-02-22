@@ -67,6 +67,10 @@ export class Token extends ReadonlyToken {
         userAddress: await this.signer.getAddress(),
       });
 
+      if (handles.length === 0) {
+        throw new TokenError(TokenErrorCode.EncryptionFailed, "Encryption returned no handles");
+      }
+
       return await this.signer.writeContract(
         confidentialTransferContract(this.address, to, handles[0], inputProof),
       );
@@ -94,6 +98,10 @@ export class Token extends ReadonlyToken {
         contractAddress: this.address,
         userAddress: from,
       });
+
+      if (handles.length === 0) {
+        throw new TokenError(TokenErrorCode.EncryptionFailed, "Encryption returned no handles");
+      }
 
       return await this.signer.writeContract(
         confidentialTransferFromContract(this.address, from, to, handles[0], inputProof),
@@ -227,6 +235,10 @@ export class Token extends ReadonlyToken {
         userAddress,
       });
 
+      if (handles.length === 0) {
+        throw new TokenError(TokenErrorCode.EncryptionFailed, "Encryption returned no handles");
+      }
+
       return await this.signer.writeContract(
         unwrapContract(this.address, userAddress, userAddress, handles[0], inputProof),
       );
@@ -357,6 +369,7 @@ export class Token extends ReadonlyToken {
         approveContract(underlying, this.wrapper, approvalAmount),
       );
     } catch (error) {
+      if (error instanceof TokenError) throw error;
       throw new TokenError(TokenErrorCode.ApprovalFailed, "ERC-20 approval failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -374,7 +387,7 @@ export class Token extends ReadonlyToken {
         "No UnwrapRequested event found in unshield receipt",
       );
     }
-    return this.finalizeUnwrap(event.encryptedAmount as Hex);
+    return this.finalizeUnwrap(event.encryptedAmount);
   }
 
   async #ensureAllowance(amount: bigint, maxApproval: boolean): Promise<void> {
@@ -399,6 +412,7 @@ export class Token extends ReadonlyToken {
 
       await this.signer.writeContract(approveContract(underlying, this.wrapper, approvalAmount));
     } catch (error) {
+      if (error instanceof TokenError) throw error;
       throw new TokenError(TokenErrorCode.ApprovalFailed, "ERC-20 approval failed", {
         cause: error instanceof Error ? error : undefined,
       });
