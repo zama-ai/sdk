@@ -11,12 +11,20 @@ export const confidentialIsApprovedQueryKeys = {
     ["confidentialIsApproved", tokenAddress, spender] as const,
 } as const;
 
+export interface UseConfidentialIsApprovedConfig extends UseTokenConfig {
+  spender: Address | undefined;
+}
+
+export interface UseConfidentialIsApprovedSuspenseConfig extends UseTokenConfig {
+  spender: Address;
+}
+
 export function useConfidentialIsApproved(
-  config: UseTokenConfig,
-  spender: Address | undefined,
+  config: UseConfidentialIsApprovedConfig,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ) {
-  const token = useToken(config);
+  const { spender, ...tokenConfig } = config;
+  const token = useToken(tokenConfig);
 
   return useQuery<boolean, Error>({
     queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, spender ?? ""),
@@ -27,8 +35,9 @@ export function useConfidentialIsApproved(
   });
 }
 
-export function useConfidentialIsApprovedSuspense(config: UseTokenConfig, spender: Address) {
-  const token = useToken(config);
+export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
+  const { spender, ...tokenConfig } = config;
+  const token = useToken(tokenConfig);
 
   return useSuspenseQuery<boolean, Error>({
     queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, spender),

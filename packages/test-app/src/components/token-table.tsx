@@ -44,7 +44,9 @@ function TokenRow({
 
 export function TokenTable({ tokenAddresses }: { tokenAddresses: Address[] }) {
   const [revealed, setRevealed] = useState(false);
-  const { data: balances, isFetching } = useConfidentialBalances(revealed ? tokenAddresses : []);
+  const { data: balances, isFetching } = useConfidentialBalances({
+    tokenAddresses: revealed ? tokenAddresses : [],
+  });
 
   return (
     <div className="space-y-4">

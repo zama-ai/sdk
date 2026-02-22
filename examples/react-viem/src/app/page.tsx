@@ -27,7 +27,7 @@ function TokenUI() {
   const [amount, setAmount] = useState("");
 
   const metadata = useTokenMetadata(TOKEN_ADDRESS);
-  const balance = useConfidentialBalance(TOKEN_ADDRESS);
+  const balance = useConfidentialBalance({ tokenAddress: TOKEN_ADDRESS });
   const shield = useShield({ tokenAddress: TOKEN_ADDRESS, wrapperAddress: WRAPPER_ADDRESS });
   const transfer = useConfidentialTransfer({ tokenAddress: TOKEN_ADDRESS });
   const unshield = useUnshield({ tokenAddress: TOKEN_ADDRESS, wrapperAddress: WRAPPER_ADDRESS });

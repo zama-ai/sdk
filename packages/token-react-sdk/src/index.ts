@@ -118,10 +118,12 @@ export { useToken, type UseTokenConfig } from "./token/use-token";
 export { useReadonlyToken } from "./token/use-readonly-token";
 export {
   useConfidentialBalance,
+  type UseConfidentialBalanceConfig,
   type UseConfidentialBalanceOptions,
 } from "./token/use-confidential-balance";
 export {
   useConfidentialBalances,
+  type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
 export { useAuthorizeAll } from "./token/use-authorize-all";
@@ -141,6 +143,8 @@ export {
   useConfidentialIsApproved,
   useConfidentialIsApprovedSuspense,
   confidentialIsApprovedQueryKeys,
+  type UseConfidentialIsApprovedConfig,
+  type UseConfidentialIsApprovedSuspenseConfig,
 } from "./token/use-confidential-is-approved";
 export { useWrap, type WrapParams } from "./token/use-wrap";
 export { useShield } from "./token/use-shield";

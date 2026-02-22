@@ -16,7 +16,7 @@ export function ApproveForm({
 }) {
   const { data: metadata } = useTokenMetadata(tokenAddress);
   const approve = useConfidentialApprove({ tokenAddress });
-  const { data: isApproved } = useConfidentialIsApproved({ tokenAddress }, defaultSpender);
+  const { data: isApproved } = useConfidentialIsApproved({ tokenAddress, spender: defaultSpender });
 
   return (
     <form

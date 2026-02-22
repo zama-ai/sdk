@@ -6,12 +6,15 @@ import { ReadonlyToken, type Address } from "@zama-fhe/token-sdk";
 import { useTokenSDK } from "../provider";
 import { confidentialBalancesQueryKeys, confidentialHandlesQueryKeys } from "./balance-query-keys";
 
-export interface UseConfidentialBalancesOptions extends Omit<
-  UseQueryOptions<Map<Address, bigint>, Error>,
-  "queryKey" | "queryFn"
-> {
+export interface UseConfidentialBalancesConfig {
+  tokenAddresses: Address[];
   handleRefetchInterval?: number;
 }
+
+export type UseConfidentialBalancesOptions = Omit<
+  UseQueryOptions<Map<Address, bigint>, Error>,
+  "queryKey" | "queryFn"
+>;
 
 const DEFAULT_HANDLE_REFETCH_INTERVAL = 10_000;
 
@@ -21,25 +24,20 @@ const DEFAULT_HANDLE_REFETCH_INTERVAL = 10_000;
  * decrypts when any handle changes.
  */
 export function useConfidentialBalances(
-  tokenAddresses: Address[],
-  owner?: Address,
+  config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
 ) {
-  const { handleRefetchInterval, ...balanceOptions } = options ?? {};
+  const { tokenAddresses, handleRefetchInterval } = config;
   const sdk = useTokenSDK();
-  // Resolve the actual owner address to use in query keys.
+  // Resolve the signer address for stable query keys.
   // This prevents cache collisions when wallet switches.
-  const [resolvedOwner, setResolvedOwner] = useState<Address | undefined>(owner);
+  const [signerAddress, setSignerAddress] = useState<Address | undefined>();
 
   useEffect(() => {
-    if (owner) {
-      setResolvedOwner(owner);
-    } else {
-      sdk.signer.getAddress().then(setResolvedOwner);
-    }
-  }, [owner, sdk.signer]);
+    sdk.signer.getAddress().then(setSignerAddress);
+  }, [sdk.signer]);
 
-  const ownerKey = resolvedOwner ?? "";
+  const ownerKey = signerAddress ?? "";
 
   const stableKey = tokenAddresses.join(",");
   const tokens = useMemo(
@@ -50,8 +48,8 @@ export function useConfidentialBalances(
   // Phase 1: Poll all encrypted handles (cheap RPC reads)
   const handlesQuery = useQuery<Address[], Error>({
     queryKey: confidentialHandlesQueryKeys.tokens(tokenAddresses, ownerKey),
-    queryFn: () => Promise.all(tokens.map((t) => t.confidentialBalanceOf(resolvedOwner!))),
-    enabled: tokenAddresses.length > 0 && !!resolvedOwner,
+    queryFn: () => Promise.all(tokens.map((t) => t.confidentialBalanceOf())),
+    enabled: tokenAddresses.length > 0 && !!signerAddress,
     refetchInterval: handleRefetchInterval ?? DEFAULT_HANDLE_REFETCH_INTERVAL,
   });
 
@@ -61,10 +59,10 @@ export function useConfidentialBalances(
   // Phase 2: Batch decrypt only when any handle changes
   const balancesQuery = useQuery<Map<Address, bigint>, Error>({
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, ownerKey), handlesKey],
-    queryFn: () => ReadonlyToken.batchDecryptBalances(tokens, handles!, resolvedOwner!),
-    enabled: tokenAddresses.length > 0 && !!resolvedOwner && !!handles,
+    queryFn: () => ReadonlyToken.batchDecryptBalances(tokens, handles!),
+    enabled: tokenAddresses.length > 0 && !!signerAddress && !!handles,
     staleTime: Infinity,
-    ...balanceOptions,
+    ...options,
   });
 
   return { ...balancesQuery, handlesQuery };
