@@ -7,17 +7,22 @@ import {
   type UseQueryResult,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Hex } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
+export const wrapperDiscoveryQueryKeys = {
+  all: ["wrapperDiscovery"] as const,
+  token: (tokenAddress: string) => ["wrapperDiscovery", tokenAddress] as const,
+} as const;
+
 export interface UseWrapperDiscoveryConfig {
-  tokenAddress: Address;
-  coordinatorAddress: Address | undefined;
+  tokenAddress: Hex;
+  coordinatorAddress: Hex | undefined;
 }
 
 export interface UseWrapperDiscoverySuspenseConfig {
-  tokenAddress: Address;
-  coordinatorAddress: Address;
+  tokenAddress: Hex;
+  coordinatorAddress: Hex;
 }
 
 /**
@@ -26,12 +31,12 @@ export interface UseWrapperDiscoverySuspenseConfig {
  */
 export function useWrapperDiscovery(
   config: UseWrapperDiscoveryConfig,
-  options?: Omit<UseQueryOptions<Address | null, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<Address | null, Error> {
+  options?: Omit<UseQueryOptions<Hex | null, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<Hex | null, Error> {
   const { tokenAddress, coordinatorAddress } = config;
   const token = useReadonlyToken(tokenAddress);
 
-  return useQuery<Address | null, Error>({
+  return useQuery<Hex | null, Error>({
     queryKey: ["wrapperDiscovery", tokenAddress, coordinatorAddress],
     queryFn: () => token.discoverWrapper(coordinatorAddress!),
     enabled: coordinatorAddress !== undefined,
@@ -42,11 +47,11 @@ export function useWrapperDiscovery(
 
 export function useWrapperDiscoverySuspense(
   config: UseWrapperDiscoverySuspenseConfig,
-): UseSuspenseQueryResult<Address | null, Error> {
+): UseSuspenseQueryResult<Hex | null, Error> {
   const { tokenAddress, coordinatorAddress } = config;
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<Address | null, Error>({
+  return useSuspenseQuery<Hex | null, Error>({
     queryKey: ["wrapperDiscovery", tokenAddress, coordinatorAddress],
     queryFn: () => token.discoverWrapper(coordinatorAddress),
     staleTime: Infinity,

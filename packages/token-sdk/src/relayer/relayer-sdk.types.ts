@@ -1,6 +1,6 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
 
-export type Hex = `0x${string}`;
+type Hex = `0x${string}`;
 
 // ============================================================================
 // SDK Types (local definitions to avoid importing from @zama-fhe/relayer-sdk/web)

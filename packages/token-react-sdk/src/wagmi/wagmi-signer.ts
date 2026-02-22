@@ -2,7 +2,7 @@ import type {
   GenericSigner,
   ContractCallConfig,
   TransactionReceipt,
-  Address,
+  Hex,
   EIP712TypedData,
 } from "@zama-fhe/token-sdk";
 import type { Config } from "wagmi";
@@ -26,7 +26,7 @@ export class WagmiSigner implements GenericSigner {
     this.config = config;
   }
 
-  async getAddress(): Promise<Address> {
+  async getAddress(): Promise<Hex> {
     const account = getConnection(this.config);
     if (!account.address) {
       throw new TypeError("Invalid address");
@@ -34,14 +34,14 @@ export class WagmiSigner implements GenericSigner {
     return account.address;
   }
 
-  async signTypedData(typedData: EIP712TypedData): Promise<Address> {
+  async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     return signTypedData(this.config, {
       primaryType: Object.keys(typedData.types)[0],
       ...typedData,
-    }) as Promise<Address>;
+    }) as Promise<Hex>;
   }
 
-  async writeContract<C extends ContractCallConfig>(config: C): Promise<Address> {
+  async writeContract<C extends ContractCallConfig>(config: C): Promise<Hex> {
     return writeContract(this.config, config as Parameters<typeof writeContract>[1]);
   }
 
@@ -49,7 +49,7 @@ export class WagmiSigner implements GenericSigner {
     return readContract(this.config, config) as Promise<T>;
   }
 
-  async waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt> {
+  async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     return waitForTransactionReceipt(this.config, { hash });
   }
 }

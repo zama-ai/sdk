@@ -10,6 +10,13 @@ import {
 } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
+export const feeQueryKeys = {
+  wrapFee: (feeManagerAddress: string) => ["wrapFee", feeManagerAddress] as const,
+  unwrapFee: (feeManagerAddress: string) => ["unwrapFee", feeManagerAddress] as const,
+  batchTransferFee: (feeManagerAddress: string) => ["batchTransferFee", feeManagerAddress] as const,
+  feeRecipient: (feeManagerAddress: string) => ["feeRecipient", feeManagerAddress] as const,
+} as const;
+
 export interface UseFeeConfig {
   feeManagerAddress: Hex;
   amount: bigint;

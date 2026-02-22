@@ -1,21 +1,21 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Hex } from "@zama-fhe/token-sdk";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
 import { useToken, type UseTokenConfig } from "./use-token";
 
-interface ApproveUnderlyingParams {
+export interface ApproveUnderlyingParams {
   amount?: bigint;
 }
 
 export function useApproveUnderlying(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, ApproveUnderlyingParams, Address>,
+  options?: UseMutationOptions<Hex, Error, ApproveUnderlyingParams, Hex>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, ApproveUnderlyingParams, Address>({
+  return useMutation<Hex, Error, ApproveUnderlyingParams, Hex>({
     mutationKey: ["approveUnderlying", config.tokenAddress],
     mutationFn: ({ amount }) => token.approveUnderlying(amount),
     ...options,

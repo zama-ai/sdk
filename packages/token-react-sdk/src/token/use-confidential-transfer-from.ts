@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Hex } from "@zama-fhe/token-sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -10,19 +10,19 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
-interface TransferFromParams {
-  from: Address;
-  to: Address;
+export interface ConfidentialTransferFromParams {
+  from: Hex;
+  to: Hex;
   amount: bigint;
 }
 
 export function useConfidentialTransferFrom(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, TransferFromParams, Address>,
+  options?: UseMutationOptions<Hex, Error, ConfidentialTransferFromParams, Hex>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, TransferFromParams, Address>({
+  return useMutation<Hex, Error, ConfidentialTransferFromParams, Hex>({
     mutationKey: ["confidentialTransferFrom", config.tokenAddress],
     mutationFn: ({ from, to, amount }) => token.confidentialTransferFrom(from, to, amount),
     ...options,

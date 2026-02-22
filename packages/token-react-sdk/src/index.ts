@@ -12,8 +12,12 @@ export { useCreateDelegatedUserDecryptEIP712 } from "./relayer/use-create-delega
 export type { CreateDelegatedUserDecryptEIP712Params } from "./relayer/use-create-delegated-user-decrypt-eip712";
 export { useDelegatedUserDecrypt } from "./relayer/use-delegated-user-decrypt";
 export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
-export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
-export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
+export { usePublicKey, publicKeyQueryKeys, type PublicKeyData } from "./relayer/use-public-key";
+export {
+  usePublicParams,
+  publicParamsQueryKeys,
+  type PublicParamsData,
+} from "./relayer/use-public-params";
 
 // Read hooks (cached lookups)
 export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";
@@ -34,10 +38,12 @@ export {
 
 // Re-export core types
 export type {
-  Address,
   RelayerSDK,
   RelayerWebConfig,
   TokenSDKConfig,
+  TokenConfig,
+  ReadonlyTokenConfig,
+  FhevmInstanceConfig,
   NetworkType,
   RelayerSDKStatus,
   EncryptResult,
@@ -53,6 +59,9 @@ export type {
   BatchTransferData,
   StoredCredentials,
 } from "@zama-fhe/token-sdk";
+
+// Re-export network preset configs
+export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/token-sdk";
 
 // Re-export constants
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/token-sdk";
@@ -105,26 +114,42 @@ export {
 } from "@zama-fhe/token-sdk";
 
 // Token hooks
-export { useToken } from "./token/use-token";
+export { useToken, type UseTokenConfig } from "./token/use-token";
 export { useReadonlyToken } from "./token/use-readonly-token";
-export { useConfidentialBalance } from "./token/use-confidential-balance";
-export { useConfidentialBalances } from "./token/use-confidential-balances";
+export {
+  useConfidentialBalance,
+  type UseConfidentialBalanceOptions,
+} from "./token/use-confidential-balance";
+export {
+  useConfidentialBalances,
+  type UseConfidentialBalancesOptions,
+} from "./token/use-confidential-balances";
 export { useAuthorizeAll } from "./token/use-authorize-all";
-export { useConfidentialTransfer } from "./token/use-confidential-transfer";
-export { useConfidentialTransferFrom } from "./token/use-confidential-transfer-from";
-export { useConfidentialApprove } from "./token/use-confidential-approve";
+export {
+  useConfidentialTransfer,
+  type ConfidentialTransferParams,
+} from "./token/use-confidential-transfer";
+export {
+  useConfidentialTransferFrom,
+  type ConfidentialTransferFromParams,
+} from "./token/use-confidential-transfer-from";
+export {
+  useConfidentialApprove,
+  type ConfidentialApproveParams,
+} from "./token/use-confidential-approve";
 export {
   useConfidentialIsApproved,
   useConfidentialIsApprovedSuspense,
+  confidentialIsApprovedQueryKeys,
 } from "./token/use-confidential-is-approved";
-export { useWrap } from "./token/use-wrap";
+export { useWrap, type WrapParams } from "./token/use-wrap";
 export { useShield } from "./token/use-shield";
-export { useWrapETH } from "./token/use-wrap-eth";
+export { useWrapETH, type WrapETHParams } from "./token/use-wrap-eth";
 export { useShieldETH } from "./token/use-shield-eth";
-export { useUnwrap } from "./token/use-unwrap";
+export { useUnwrap, type UnwrapParams } from "./token/use-unwrap";
 export { useUnwrapAll } from "./token/use-unwrap-all";
-export { useFinalizeUnwrap } from "./token/use-finalize-unwrap";
-export { useUnshield } from "./token/use-unshield";
+export { useFinalizeUnwrap, type FinalizeUnwrapParams } from "./token/use-finalize-unwrap";
+export { useUnshield, type UnshieldParams } from "./token/use-unshield";
 export { useUnshieldAll } from "./token/use-unshield-all";
 export {
   useUnderlyingAllowance,
@@ -141,12 +166,14 @@ export {
 export {
   useWrapperDiscovery,
   useWrapperDiscoverySuspense,
+  wrapperDiscoveryQueryKeys,
   type UseWrapperDiscoveryConfig,
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
 export {
   useTokenMetadata,
   useTokenMetadataSuspense,
+  tokenMetadataQueryKeys,
   type TokenMetadata,
 } from "./token/use-token-metadata";
 export {
@@ -154,19 +181,26 @@ export {
   activityFeedQueryKeys,
   type UseActivityFeedConfig,
 } from "./token/use-activity-feed";
-export { useApproveUnderlying } from "./token/use-approve-underlying";
+export { useApproveUnderlying, type ApproveUnderlyingParams } from "./token/use-approve-underlying";
 export {
   useIsConfidential,
   useIsConfidentialSuspense,
+  isConfidentialQueryKeys,
   useIsWrapper,
   useIsWrapperSuspense,
+  isWrapperQueryKeys,
 } from "./token/use-is-confidential";
-export { useTotalSupply, useTotalSupplySuspense } from "./token/use-total-supply";
+export {
+  useTotalSupply,
+  useTotalSupplySuspense,
+  totalSupplyQueryKeys,
+} from "./token/use-total-supply";
 export {
   useWrapFee,
   useUnwrapFee,
   useBatchTransferFee,
   useFeeRecipient,
+  feeQueryKeys,
   type UseFeeConfig,
 } from "./token/use-fees";
 

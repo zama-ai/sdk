@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Hex } from "@zama-fhe/token-sdk";
 import { readWrapperExistsContract } from "@zama-fhe/token-sdk/viem";
 
 type Params = Parameters<typeof readWrapperExistsContract>;
@@ -14,12 +14,7 @@ export function useWrapperExists(
   const enabled = !!coordinator && !!tokenAddress;
   return useQuery({
     queryKey: ["wrapperExists", client, coordinator, tokenAddress],
-    queryFn: () =>
-      readWrapperExistsContract(
-        client,
-        coordinator as Address,
-        tokenAddress as Address,
-      ),
+    queryFn: () => readWrapperExistsContract(client, coordinator as Hex, tokenAddress as Hex),
     enabled,
   });
 }

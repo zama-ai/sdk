@@ -7,11 +7,16 @@ import {
   type UseQueryResult,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
-import { totalSupplyContract, type Address } from "@zama-fhe/token-sdk";
+import { totalSupplyContract, type Hex } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
+export const totalSupplyQueryKeys = {
+  all: ["totalSupply"] as const,
+  token: (tokenAddress: string) => ["totalSupply", tokenAddress] as const,
+} as const;
+
 export function useTotalSupply(
-  tokenAddress: Address,
+  tokenAddress: Hex,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
   const token = useReadonlyToken(tokenAddress);
@@ -23,9 +28,7 @@ export function useTotalSupply(
   });
 }
 
-export function useTotalSupplySuspense(
-  tokenAddress: Address,
-): UseSuspenseQueryResult<bigint, Error> {
+export function useTotalSupplySuspense(tokenAddress: Hex): UseSuspenseQueryResult<bigint, Error> {
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<bigint, Error>({

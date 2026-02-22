@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Hex } from "@zama-fhe/token-sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -10,17 +10,17 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
-interface UnwrapParams {
+export interface UnwrapParams {
   amount: bigint;
 }
 
 export function useUnwrap(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, UnwrapParams, Address>,
+  options?: UseMutationOptions<Hex, Error, UnwrapParams, Hex>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, UnwrapParams, Address>({
+  return useMutation<Hex, Error, UnwrapParams, Hex>({
     mutationKey: ["unwrap", config.tokenAddress],
     mutationFn: ({ amount }) => token.unwrap(amount),
     ...options,

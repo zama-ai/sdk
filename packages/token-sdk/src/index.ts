@@ -2,7 +2,6 @@
 export { RelayerWeb } from "./relayer/relayer-web";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
-  Hex as Address,
   RelayerWebConfig,
   RelayerSDKStatus,
   EncryptResult,

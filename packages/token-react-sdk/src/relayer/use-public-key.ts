@@ -3,7 +3,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTokenSDK } from "../provider";
 
-interface PublicKeyData {
+export const publicKeyQueryKeys = {
+  all: ["publicKey"] as const,
+} as const;
+
+export interface PublicKeyData {
   publicKeyId: string;
   publicKey: Uint8Array;
 }

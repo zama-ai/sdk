@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Hex } from "@zama-fhe/token-sdk";
 import { readConfidentialBalanceOfContract } from "@zama-fhe/token-sdk/viem";
 
 type Params = Parameters<typeof readConfidentialBalanceOfContract>;
@@ -15,11 +15,7 @@ export function useConfidentialBalanceOf(
   return useQuery({
     queryKey: ["confidentialBalanceOf", client, tokenAddress, userAddress],
     queryFn: () =>
-      readConfidentialBalanceOfContract(
-        client,
-        tokenAddress as Address,
-        userAddress as Address,
-      ),
+      readConfidentialBalanceOfContract(client, tokenAddress as Hex, userAddress as Hex),
     enabled,
   });
 }
@@ -32,10 +28,6 @@ export function useConfidentialBalanceOfSuspense(
   return useSuspenseQuery({
     queryKey: ["confidentialBalanceOf", client, tokenAddress, userAddress],
     queryFn: () =>
-      readConfidentialBalanceOfContract(
-        client,
-        tokenAddress as Address,
-        userAddress as Address,
-      ),
+      readConfidentialBalanceOfContract(client, tokenAddress as Hex, userAddress as Hex),
   });
 }

@@ -1,13 +1,13 @@
 "use client";
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { ReadonlyToken, type Address } from "@zama-fhe/token-sdk";
+import { ReadonlyToken, type Hex } from "@zama-fhe/token-sdk";
 import { useMemo } from "react";
 import { useTokenSDK } from "../provider";
 import { confidentialBalancesQueryKeys, confidentialHandlesQueryKeys } from "./balance-query-keys";
 
-interface UseConfidentialBalancesOptions extends Omit<
-  UseQueryOptions<Map<Address, bigint>, Error>,
+export interface UseConfidentialBalancesOptions extends Omit<
+  UseQueryOptions<Map<Hex, bigint>, Error>,
   "queryKey" | "queryFn"
 > {
   handleRefetchInterval?: number;
@@ -21,8 +21,8 @@ const DEFAULT_HANDLE_REFETCH_INTERVAL = 10_000;
  * decrypts when any handle changes.
  */
 export function useConfidentialBalances(
-  tokenAddresses: Address[],
-  owner?: Address,
+  tokenAddresses: Hex[],
+  owner?: Hex,
   options?: UseConfidentialBalancesOptions,
 ) {
   const sdk = useTokenSDK();
@@ -34,7 +34,7 @@ export function useConfidentialBalances(
   );
 
   // Phase 1: Poll all encrypted handles (cheap RPC reads)
-  const handlesQuery = useQuery<Address[], Error>({
+  const handlesQuery = useQuery<Hex[], Error>({
     queryKey: confidentialHandlesQueryKeys.tokens(tokenAddresses, owner ?? ""),
     queryFn: async () => {
       const ownerAddress = owner ?? (await sdk.signer.getAddress());
@@ -48,7 +48,7 @@ export function useConfidentialBalances(
   const handlesKey = handles?.join(",") ?? "";
 
   // Phase 2: Batch decrypt only when any handle changes
-  const balancesQuery = useQuery<Map<Address, bigint>, Error>({
+  const balancesQuery = useQuery<Map<Hex, bigint>, Error>({
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, owner ?? ""), handlesKey],
     queryFn: async () => {
       const ownerAddress = owner ?? (await sdk.signer.getAddress());
@@ -59,5 +59,5 @@ export function useConfidentialBalances(
     ...balanceOptions,
   });
 
-  return balancesQuery;
+  return { ...balancesQuery, handlesQuery };
 }

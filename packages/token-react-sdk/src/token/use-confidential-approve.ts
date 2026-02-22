@@ -1,21 +1,21 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Hex } from "@zama-fhe/token-sdk";
 import { useToken, type UseTokenConfig } from "./use-token";
 
-interface ApproveParams {
-  spender: Address;
+export interface ConfidentialApproveParams {
+  spender: Hex;
   until?: number;
 }
 
 export function useConfidentialApprove(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, ApproveParams, Address>,
+  options?: UseMutationOptions<Hex, Error, ConfidentialApproveParams, Hex>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, ApproveParams, Address>({
+  return useMutation<Hex, Error, ConfidentialApproveParams, Hex>({
     mutationKey: ["confidentialApprove", config.tokenAddress],
     mutationFn: ({ spender, until }) => token.approve(spender, until),
     ...options,
