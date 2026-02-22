@@ -10,10 +10,26 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
+/** Parameters passed to the `mutate` function of {@link useUnwrap}. */
 export interface UnwrapParams {
+  /** Amount to unwrap (plaintext — encrypted automatically). */
   amount: bigint;
 }
 
+/**
+ * Request an unwrap for a specific amount. Encrypts the amount first.
+ * Call {@link useFinalizeUnwrap} after the request is processed on-chain,
+ * or use {@link useUnshield} for a single-call orchestration.
+ *
+ * @param config - Token address (and optional wrapper) identifying the token.
+ * @param options - React Query mutation options.
+ *
+ * @example
+ * ```tsx
+ * const unwrap = useUnwrap({ tokenAddress: "0x..." });
+ * unwrap.mutate({ amount: 500n });
+ * ```
+ */
 export function useUnwrap(
   config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, UnwrapParams, Address>,

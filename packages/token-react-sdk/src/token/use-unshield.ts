@@ -10,10 +10,25 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
+/** Parameters passed to the `mutate` function of {@link useUnshield}. */
 export interface UnshieldParams {
+  /** Amount to unshield (plaintext — encrypted automatically). */
   amount: bigint;
 }
 
+/**
+ * Unshield a specific amount and finalize in one call.
+ * Orchestrates: unwrap → wait for receipt → parse event → finalize.
+ *
+ * @param config - Token and wrapper addresses.
+ * @param options - React Query mutation options.
+ *
+ * @example
+ * ```tsx
+ * const unshield = useUnshield({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * unshield.mutate({ amount: 500n });
+ * ```
+ */
 export function useUnshield(
   config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, UnshieldParams, Address>,

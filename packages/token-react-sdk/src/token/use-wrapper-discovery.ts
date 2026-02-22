@@ -10,26 +10,52 @@ import {
 import type { Address } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
+/**
+ * Query key factory for wrapper discovery queries.
+ * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
+ */
 export const wrapperDiscoveryQueryKeys = {
+  /** Match all wrapper discovery queries. */
   all: ["wrapperDiscovery"] as const,
+  /** Match wrapper discovery queries for a specific token. */
   token: (tokenAddress: string) => ["wrapperDiscovery", tokenAddress] as const,
+  /** Match wrapper discovery query for a specific token + coordinator pair. */
   tokenCoordinator: (tokenAddress: string, coordinatorAddress: string) =>
     ["wrapperDiscovery", tokenAddress, coordinatorAddress] as const,
 } as const;
 
+/** Configuration for {@link useWrapperDiscovery}. */
 export interface UseWrapperDiscoveryConfig {
+  /** Address of the underlying ERC-20 token. */
   tokenAddress: Address;
+  /** Address of the wrapper coordinator. Pass `undefined` to disable the query. */
   coordinatorAddress: Address | undefined;
 }
 
+/** Configuration for {@link useWrapperDiscoverySuspense}. */
 export interface UseWrapperDiscoverySuspenseConfig {
+  /** Address of the underlying ERC-20 token. */
   tokenAddress: Address;
+  /** Address of the wrapper coordinator. */
   coordinatorAddress: Address;
 }
 
 /**
- * Declarative hook to discover the wrapper contract for an ERC-20 token.
+ * Discover the wrapper contract for an ERC-20 token.
  * Returns the wrapper address if one exists, or `null` if not.
+ * Cached indefinitely since wrapper mappings are immutable.
+ *
+ * @param config - Token and coordinator addresses.
+ * @param options - React Query options (forwarded to `useQuery`).
+ * @returns Query result with `data: Address | null`.
+ *
+ * @example
+ * ```tsx
+ * const { data: wrapperAddress } = useWrapperDiscovery({
+ *   tokenAddress: "0xUnderlying",
+ *   coordinatorAddress: "0xCoordinator",
+ * });
+ * ```
  */
 export function useWrapperDiscovery(
   config: UseWrapperDiscoveryConfig,
@@ -47,6 +73,21 @@ export function useWrapperDiscovery(
   });
 }
 
+/**
+ * Suspense variant of {@link useWrapperDiscovery}.
+ * Suspends rendering until the wrapper address is resolved.
+ *
+ * @param config - Token and coordinator addresses.
+ * @returns Suspense query result with `data: Address | null`.
+ *
+ * @example
+ * ```tsx
+ * const { data: wrapperAddress } = useWrapperDiscoverySuspense({
+ *   tokenAddress: "0xUnderlying",
+ *   coordinatorAddress: "0xCoordinator",
+ * });
+ * ```
+ */
 export function useWrapperDiscoverySuspense(
   config: UseWrapperDiscoverySuspenseConfig,
 ): UseSuspenseQueryResult<Address | null, Error> {

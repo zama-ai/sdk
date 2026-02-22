@@ -21,10 +21,15 @@ interface EncryptedCredentials extends Omit<StoredCredentials, "privateKey"> {
  * The privateKey is encrypted with AES-GCM (key derived from the
  * wallet signature via PBKDF2) before being written to the store.
  */
+/** Configuration for constructing a {@link CredentialsManager}. */
 export interface CredentialsManagerConfig {
+  /** FHE relayer backend for keypair generation and EIP-712 creation. */
   sdk: RelayerSDK;
+  /** Wallet signer for signing EIP-712 typed data. */
   signer: GenericSigner;
+  /** Credential storage backend for persisting encrypted credentials. */
   storage: GenericStringStorage;
+  /** Number of days generated credentials remain valid. */
   durationDays: number;
 }
 

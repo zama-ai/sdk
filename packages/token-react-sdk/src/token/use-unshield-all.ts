@@ -10,6 +10,19 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
+/**
+ * Unshield the entire balance and finalize in one call.
+ * Orchestrates: unwrapAll → wait for receipt → parse event → finalize.
+ *
+ * @param config - Token and wrapper addresses.
+ * @param options - React Query mutation options.
+ *
+ * @example
+ * ```tsx
+ * const unshieldAll = useUnshieldAll({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * unshieldAll.mutate();
+ * ```
+ */
 export function useUnshieldAll(
   config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, void, Address>,

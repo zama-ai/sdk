@@ -10,12 +10,29 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
+/** Parameters passed to the `mutate` function of {@link useConfidentialTransferFrom}. */
 export interface ConfidentialTransferFromParams {
+  /** Address to transfer from. Caller must be an approved operator. */
   from: Address;
+  /** Recipient address. */
   to: Address;
+  /** Amount to transfer (plaintext — encrypted automatically). */
   amount: bigint;
 }
 
+/**
+ * Operator transfer on behalf of another address. Caller must be an approved operator.
+ * Invalidates balance caches on success.
+ *
+ * @param config - Token address (and optional wrapper) identifying the token.
+ * @param options - React Query mutation options.
+ *
+ * @example
+ * ```tsx
+ * const transferFrom = useConfidentialTransferFrom({ tokenAddress: "0x..." });
+ * transferFrom.mutate({ from: "0xOwner", to: "0xRecipient", amount: 500n });
+ * ```
+ */
 export function useConfidentialTransferFrom(
   config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, ConfidentialTransferFromParams, Address>,

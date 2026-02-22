@@ -10,6 +10,20 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
+/**
+ * Request an unwrap for the entire confidential balance.
+ * Uses the on-chain balance handle directly (no encryption needed).
+ * Call {@link useFinalizeUnwrap} after processing, or use {@link useUnshieldAll} for single-call orchestration.
+ *
+ * @param config - Token address (and optional wrapper) identifying the token.
+ * @param options - React Query mutation options.
+ *
+ * @example
+ * ```tsx
+ * const unwrapAll = useUnwrapAll({ tokenAddress: "0x..." });
+ * unwrapAll.mutate();
+ * ```
+ */
 export function useUnwrapAll(
   config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, void, Address>,

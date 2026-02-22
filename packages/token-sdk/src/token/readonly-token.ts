@@ -17,15 +17,21 @@ import type { GenericSigner, GenericStringStorage } from "./token.types";
 import { TokenError, TokenErrorCode } from "./token.types";
 import { CredentialsManager } from "./credential-manager";
 
+/** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
   "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
 
+/** Configuration for constructing a {@link ReadonlyToken}. */
 export interface ReadonlyTokenConfig {
+  /** FHE relayer backend. */
   sdk: RelayerSDK;
+  /** Wallet signer for read calls and credential signing. */
   signer: GenericSigner;
+  /** Credential storage backend. */
   storage: GenericStringStorage;
+  /** Address of the confidential token contract. */
   address: Address;
-  /** Number of days FHE credentials remain valid. Default: 1 */
+  /** Number of days FHE credentials remain valid. Default: `1`. */
   durationDays?: number;
 }
 

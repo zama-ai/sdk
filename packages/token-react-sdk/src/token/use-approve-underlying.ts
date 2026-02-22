@@ -5,10 +5,27 @@ import type { Address } from "@zama-fhe/token-sdk";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
 import { useToken, type UseTokenConfig } from "./use-token";
 
+/** Parameters passed to the `mutate` function of {@link useApproveUnderlying}. */
 export interface ApproveUnderlyingParams {
+  /** Approval amount. Defaults to max uint256 if omitted. */
   amount?: bigint;
 }
 
+/**
+ * Approve the wrapper contract to spend the underlying ERC-20.
+ * Defaults to max uint256. Resets to zero first if there's an existing
+ * non-zero allowance (required by tokens like USDT).
+ *
+ * @param config - Token and wrapper addresses.
+ * @param options - React Query mutation options.
+ *
+ * @example
+ * ```tsx
+ * const approve = useApproveUnderlying({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * approve.mutate({}); // max approval
+ * approve.mutate({ amount: 1000n }); // exact amount
+ * ```
+ */
 export function useApproveUnderlying(
   config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, ApproveUnderlyingParams, Address>,

@@ -4,6 +4,19 @@ import type { InputProofBytesType, ZKProofLike } from "@zama-fhe/token-sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useTokenSDK } from "../provider";
 
+/**
+ * Submit a ZK proof for on-chain verification.
+ * Returns the input proof bytes for use in contract calls.
+ *
+ * @returns A mutation whose `mutate` accepts a {@link ZKProofLike}.
+ *
+ * @example
+ * ```tsx
+ * const verify = useRequestZKProofVerification();
+ * verify.mutate(zkProof);
+ * // verify.data => Uint8Array (input proof bytes)
+ * ```
+ */
 export function useRequestZKProofVerification() {
   const sdk = useTokenSDK();
   return useMutation<InputProofBytesType, Error, ZKProofLike>({

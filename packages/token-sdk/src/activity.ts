@@ -23,8 +23,10 @@ import { ZERO_HANDLE } from "./token/readonly-token";
 // Types
 // ---------------------------------------------------------------------------
 
+/** Direction of an activity item relative to the connected wallet. */
 export type ActivityDirection = "incoming" | "outgoing" | "self";
 
+/** Classified type of a token activity event. */
 export type ActivityType =
   | "transfer"
   | "shield"
@@ -32,29 +34,48 @@ export type ActivityType =
   | "unshield_started"
   | "unshield_finalized";
 
+/** Amount attached to an activity item — either cleartext or encrypted (with optional decrypted value). */
 export type ActivityAmount =
   | { readonly type: "clear"; readonly value: bigint }
   | {
       readonly type: "encrypted";
       readonly handle: string;
+      /** Populated after batch decryption via {@link applyDecryptedValues}. */
       readonly decryptedValue?: bigint;
     };
 
+/** On-chain metadata attached to each activity item. */
 export interface ActivityLogMetadata {
+  /** Transaction hash containing this event. */
   readonly transactionHash?: string;
+  /** Block number where this event was emitted. */
   readonly blockNumber?: bigint | number;
+  /** Log index within the transaction. */
   readonly logIndex?: number;
 }
 
+/**
+ * A single renderable activity feed entry.
+ * Produced by {@link parseActivityFeed} from raw event logs.
+ */
 export interface ActivityItem {
+  /** Classified event type. */
   readonly type: ActivityType;
+  /** Direction relative to the connected wallet. */
   readonly direction: ActivityDirection;
+  /** Transfer amount (clear or encrypted). */
   readonly amount: ActivityAmount;
+  /** Sender address (if applicable). */
   readonly from?: string;
+  /** Receiver address (if applicable). */
   readonly to?: string;
+  /** Fee deducted (for shield/unshield events). */
   readonly fee?: bigint;
+  /** Whether the on-chain operation succeeded (for unshield events). */
   readonly success?: boolean;
+  /** On-chain metadata (tx hash, block number, log index). */
   readonly metadata: ActivityLogMetadata;
+  /** The original decoded event. */
   readonly rawEvent: TokenEvent;
 }
 

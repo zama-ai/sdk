@@ -4,11 +4,15 @@ import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
 
+/** Configuration for {@link TokenSDK}. */
 export interface TokenSDKConfig {
+  /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
   relayer: RelayerSDK;
+  /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
   signer: GenericSigner;
+  /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
   storage: GenericStringStorage;
-  /** Number of days FHE credentials remain valid. Default: 1 */
+  /** Number of days FHE credentials remain valid. Default: `1`. */
   credentialDurationDays?: number;
 }
 

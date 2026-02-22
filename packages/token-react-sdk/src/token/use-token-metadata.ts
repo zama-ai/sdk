@@ -10,20 +10,40 @@ import {
 import type { Address } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
+/**
+ * Query key factory for token metadata queries.
+ * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
+ */
 export const tokenMetadataQueryKeys = {
+  /** Match all token metadata queries. */
   all: ["tokenMetadata"] as const,
+  /** Match metadata query for a specific token. */
   token: (tokenAddress: string) => ["tokenMetadata", tokenAddress] as const,
 } as const;
 
+/** ERC-20 token metadata (name, symbol, decimals). */
 export interface TokenMetadata {
+  /** Human-readable token name (e.g. "Wrapped Ether"). */
   name: string;
+  /** Short ticker symbol (e.g. "WETH"). */
   symbol: string;
+  /** Number of decimal places (e.g. 18). */
   decimals: number;
 }
 
 /**
- * Declarative hook to read ERC-20 token metadata (name, symbol, decimals).
- * Fetches all three in parallel. Results are cached indefinitely since metadata doesn't change.
+ * Read ERC-20 token metadata (name, symbol, decimals).
+ * Fetches all three in parallel. Cached indefinitely since metadata is immutable.
+ *
+ * @param tokenAddress - Address of the token contract.
+ * @param options - React Query options (forwarded to `useQuery`).
+ * @returns Query result with `data: TokenMetadata`.
+ *
+ * @example
+ * ```tsx
+ * const { data: metadata } = useTokenMetadata("0xToken");
+ * // metadata?.name, metadata?.symbol, metadata?.decimals
+ * ```
  */
 export function useTokenMetadata(
   tokenAddress: Address,
@@ -46,6 +66,18 @@ export function useTokenMetadata(
   });
 }
 
+/**
+ * Suspense variant of {@link useTokenMetadata}.
+ * Suspends rendering until metadata is loaded.
+ *
+ * @param tokenAddress - Address of the token contract.
+ * @returns Suspense query result with `data: TokenMetadata`.
+ *
+ * @example
+ * ```tsx
+ * const { data: metadata } = useTokenMetadataSuspense("0xToken");
+ * ```
+ */
 export function useTokenMetadataSuspense(
   tokenAddress: Address,
 ): UseSuspenseQueryResult<TokenMetadata, Error> {

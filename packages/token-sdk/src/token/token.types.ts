@@ -4,16 +4,26 @@ export type { Address } from "../relayer/relayer-sdk.types";
 
 /** Framework-agnostic transaction receipt (only the fields the SDK needs). */
 export interface TransactionReceipt {
+  /** Event logs emitted during the transaction. */
   readonly logs: readonly RawLog[];
 }
 
-/** Minimal contract call config (matches contract builder output shape). */
+/**
+ * Minimal contract call configuration.
+ * Matches the shape returned by contract call builder functions in `src/contracts/`.
+ */
 export interface ContractCallConfig {
+  /** Target contract address. */
   readonly address: Address;
+  /** ABI fragment for the function being called. */
   readonly abi: readonly unknown[];
+  /** Solidity function name. */
   readonly functionName: string;
+  /** Encoded function arguments. */
   readonly args: readonly unknown[];
+  /** Native value to send with the transaction (for payable functions). */
   readonly value?: bigint;
+  /** Gas limit override. */
   readonly gas?: bigint;
 }
 
@@ -44,31 +54,67 @@ export interface GenericStringStorage {
   removeItem(key: string): void | Promise<void>;
 }
 
-/** Stored credential data (serialized as JSON in CredentialStore). */
+/** Stored FHE credential data (serialized as JSON in the credential store). */
 export interface StoredCredentials {
+  /** FHE public key (hex-encoded). */
   publicKey: string;
+  /** FHE private key (hex-encoded, encrypted at rest via AES-GCM). */
   privateKey: string;
+  /** EIP-712 signature authorizing decryption. */
   signature: string;
+  /** Contract addresses this credential is authorized for. */
   contractAddresses: Address[];
+  /** Unix timestamp (seconds) when the credential became valid. */
   startTimestamp: number;
+  /** Number of days the credential remains valid. */
   durationDays: number;
 }
 
+/**
+ * Typed error codes thrown by the SDK.
+ * Use `error.code` to programmatically handle specific failure modes.
+ *
+ * @example
+ * ```ts
+ * try {
+ *   await token.confidentialTransfer("0xTo", 100n);
+ * } catch (e) {
+ *   if (e instanceof TokenError && e.code === TokenErrorCode.SigningRejected) {
+ *     // User rejected the wallet signature
+ *   }
+ * }
+ * ```
+ */
 export const TokenErrorCode = {
+  /** User rejected the wallet signature prompt. */
   SigningRejected: "SIGNING_REJECTED",
+  /** Wallet signature failed for a reason other than rejection. */
   SigningFailed: "SIGNING_FAILED",
+  /** FHE encryption failed. */
   EncryptionFailed: "ENCRYPTION_FAILED",
+  /** FHE decryption failed. */
   DecryptionFailed: "DECRYPTION_FAILED",
+  /** Token does not support the confidential (ERC-7984) interface. */
   NotConfidential: "NOT_CONFIDENTIAL",
+  /** Token does not support the wrapper interface. */
   NotWrapper: "NOT_WRAPPER",
+  /** ERC-20 approval transaction failed. */
   ApprovalFailed: "APPROVAL_FAILED",
+  /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
+  /** Credential store read/write failed. */
   StoreError: "STORE_ERROR",
 } as const;
 
+/** Union of all {@link TokenErrorCode} string values. */
 export type TokenErrorCode = (typeof TokenErrorCode)[keyof typeof TokenErrorCode];
 
+/**
+ * Typed error thrown by all SDK operations.
+ * Carries a {@link TokenErrorCode} for programmatic error handling.
+ */
 export class TokenError extends Error {
+  /** Machine-readable error code. */
   readonly code: TokenErrorCode;
 
   constructor(code: TokenErrorCode, message: string, options?: ErrorOptions) {

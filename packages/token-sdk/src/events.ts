@@ -9,8 +9,11 @@ import type { Address } from "./relayer/relayer-sdk.types";
 // Generic log shape
 // ---------------------------------------------------------------------------
 
+/** Framework-agnostic log shape compatible with any Ethereum provider. */
 export interface RawLog {
+  /** Indexed event topics (topic[0] is the event signature hash). */
   readonly topics: readonly string[];
+  /** ABI-encoded non-indexed event data. */
   readonly data: string;
 }
 
@@ -18,11 +21,20 @@ export interface RawLog {
 // Event topic0 constants (keccak256 of canonical signature)
 // ---------------------------------------------------------------------------
 
+/**
+ * Event topic0 constants (keccak256 of the canonical Solidity signature).
+ * Pass to `getLogs({ topics: [Object.values(Topics)] })` to fetch all events.
+ */
 export const Topics = {
+  /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
   ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9",
+  /** `Wrapped(uint64 mintAmount, uint256 amountIn, uint256 feeAmount, address indexed to_, uint256 indexed mintTxId)` */
   Wrapped: "0x1f7907f4d84043abe0fb7c74e8865ee5fe93fe4f691c54a7b8fa9d6fb17c7cba",
+  /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
   UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee",
+  /** `UnwrappedFinalized(bytes32 indexed burntAmountHandle, ...)` */
   UnwrappedFinalized: "0xc64e7c81b18b674fc5b037d8a0041bfe3332d86c780a4688f404ee01fbabb152",
+  /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
   UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806",
 } as const;
 
@@ -30,50 +42,80 @@ export const Topics = {
 // Typed event interfaces
 // ---------------------------------------------------------------------------
 
+/** Decoded `ConfidentialTransfer` event — an encrypted token transfer. */
 export interface ConfidentialTransferEvent {
   readonly eventName: "ConfidentialTransfer";
+  /** Sender address. */
   readonly from: string;
+  /** Receiver address. */
   readonly to: string;
+  /** FHE ciphertext handle for the transferred amount. */
   readonly encryptedAmountHandle: string;
 }
 
+/** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
 export interface WrappedEvent {
   readonly eventName: "Wrapped";
+  /** Confidential tokens minted. */
   readonly mintAmount: bigint;
+  /** Underlying ERC-20 tokens deposited. */
   readonly amountIn: bigint;
+  /** Fee deducted during wrapping. */
   readonly feeAmount: bigint;
+  /** Receiver of the minted confidential tokens. */
   readonly to: string;
+  /** On-chain mint transaction ID. */
   readonly mintTxId: bigint;
 }
 
+/** Decoded `UnwrapRequested` event — an unshield request submitted. */
 export interface UnwrapRequestedEvent {
   readonly eventName: "UnwrapRequested";
+  /** Address that will receive the unwrapped ERC-20 tokens. */
   readonly receiver: string;
+  /** FHE ciphertext handle for the requested unshield amount. */
   readonly encryptedAmount: Address;
 }
 
+/** Decoded `UnwrappedFinalized` event — an unshield completed on-chain. */
 export interface UnwrappedFinalizedEvent {
   readonly eventName: "UnwrappedFinalized";
+  /** FHE handle of the burnt confidential balance. */
   readonly burntAmountHandle: string;
+  /** Whether the finalization succeeded. */
   readonly finalizeSuccess: boolean;
+  /** Whether the fee transfer succeeded. */
   readonly feeTransferSuccess: boolean;
+  /** Amount of confidential tokens burnt. */
   readonly burnAmount: bigint;
+  /** Amount of underlying ERC-20 tokens returned. */
   readonly unwrapAmount: bigint;
+  /** Fee deducted during unwrapping. */
   readonly feeAmount: bigint;
+  /** Next on-chain transaction ID. */
   readonly nextTxId: bigint;
 }
 
+/** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
 export interface UnwrappedStartedEvent {
   readonly eventName: "UnwrappedStarted";
+  /** Whether the unwrap start succeeded. */
   readonly returnVal: boolean;
+  /** On-chain request ID. */
   readonly requestId: bigint;
+  /** On-chain transaction ID. */
   readonly txId: bigint;
+  /** Receiver address. */
   readonly to: string;
+  /** Refund address (if applicable). */
   readonly refund: string;
+  /** FHE handle of the requested amount. */
   readonly requestedAmount: string;
+  /** FHE handle of the burn amount. */
   readonly burnAmount: string;
 }
 
+/** Union of all decoded confidential token event types. */
 export type TokenEvent =
   | ConfidentialTransferEvent
   | WrappedEvent

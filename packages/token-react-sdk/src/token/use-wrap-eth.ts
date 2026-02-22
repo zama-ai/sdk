@@ -10,11 +10,27 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
+/** Parameters passed to the `mutate` function of {@link useWrapETH}. */
 export interface WrapETHParams {
+  /** Amount of ETH to wrap (in wei). */
   amount: bigint;
+  /** ETH value to send with the transaction. Defaults to `amount`. */
   value?: bigint;
 }
 
+/**
+ * Wrap (shield) native ETH into confidential tokens.
+ * Invalidates balance caches on success.
+ *
+ * @param config - Token and wrapper addresses.
+ * @param options - React Query mutation options.
+ *
+ * @example
+ * ```tsx
+ * const wrapETH = useWrapETH({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * wrapETH.mutate({ amount: 1000000000000000000n }); // 1 ETH
+ * ```
+ */
 export function useWrapETH(
   config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, WrapETHParams, Address>,

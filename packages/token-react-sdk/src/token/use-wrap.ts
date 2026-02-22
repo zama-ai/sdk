@@ -10,12 +10,29 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
+/** Parameters passed to the `mutate` function of {@link useWrap}. */
 export interface WrapParams {
+  /** Amount of underlying ERC-20 tokens to wrap. */
   amount: bigint;
+  /** Optional fee amount (for native ETH wrapping with fees). */
   fees?: bigint;
+  /** ERC-20 approval strategy: `"exact"` (default), `"max"`, or `"skip"`. */
   approvalStrategy?: "max" | "exact" | "skip";
 }
 
+/**
+ * Wrap (shield) public ERC-20 tokens into confidential tokens.
+ * Handles ERC-20 approval automatically. Invalidates balance caches on success.
+ *
+ * @param config - Token and wrapper addresses.
+ * @param options - React Query mutation options.
+ *
+ * @example
+ * ```tsx
+ * const wrap = useWrap({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * wrap.mutate({ amount: 1000n });
+ * ```
+ */
 export function useWrap(
   config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, WrapParams, Address>,

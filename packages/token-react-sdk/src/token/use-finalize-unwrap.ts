@@ -10,10 +10,25 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
+/** Parameters passed to the `mutate` function of {@link useFinalizeUnwrap}. */
 export interface FinalizeUnwrapParams {
+  /** Encrypted amount handle from the UnwrapRequested event. */
   burnAmountHandle: Address;
 }
 
+/**
+ * Complete an unwrap by providing the public decryption proof.
+ * Call this after an unwrap request has been processed on-chain.
+ *
+ * @param config - Token address (and optional wrapper) identifying the token.
+ * @param options - React Query mutation options.
+ *
+ * @example
+ * ```tsx
+ * const finalize = useFinalizeUnwrap({ tokenAddress: "0x..." });
+ * finalize.mutate({ burnAmountHandle: event.encryptedAmount });
+ * ```
+ */
 export function useFinalizeUnwrap(
   config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams, Address>,

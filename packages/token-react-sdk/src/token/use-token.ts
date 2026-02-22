@@ -4,14 +4,25 @@ import { useMemo } from "react";
 import type { Address } from "@zama-fhe/token-sdk";
 import { useTokenSDK } from "../provider";
 
+/** Base configuration shared by all mutation hooks that need a Token instance. */
 export interface UseTokenConfig {
+  /** Address of the confidential token contract. */
   tokenAddress: Address;
+  /** Address of the wrapper contract (required for shield/unshield operations). */
   wrapperAddress?: Address;
 }
 
 /**
- * Get a Token instance, memoized by address.
- * Reads signer and storage from the SDK context.
+ * Get a {@link Token} instance, memoized by address pair.
+ * Reads signer and storage from the nearest {@link TokenSDKProvider}.
+ *
+ * @param config - Token and optional wrapper addresses.
+ * @returns A memoized `Token` instance.
+ *
+ * @example
+ * ```tsx
+ * const token = useToken({ tokenAddress: "0xToken", wrapperAddress: "0xWrapper" });
+ * ```
  */
 export function useToken(config: UseTokenConfig) {
   const sdk = useTokenSDK();
