@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { UNWRAP_REQUESTED_TOPIC } from "../../events";
+import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Hex } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
@@ -594,7 +594,7 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [UNWRAP_REQUESTED_TOPIC, "0x000000000000000000000000" + USER.slice(2)],
+            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
             data: "0x" + "ff".repeat(32),
           },
         ],
@@ -636,7 +636,7 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [UNWRAP_REQUESTED_TOPIC, "0x000000000000000000000000" + USER.slice(2)],
+            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
             data: "0x" + "ff".repeat(32),
           },
         ],

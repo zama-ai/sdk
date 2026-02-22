@@ -6,14 +6,7 @@ import {
   sortByBlockNumber,
   type ActivityItem,
 } from "../activity";
-import {
-  CONFIDENTIAL_TRANSFER_TOPIC,
-  WRAPPED_TOPIC,
-  UNWRAP_REQUESTED_TOPIC,
-  UNWRAPPED_FINALIZED_TOPIC,
-  UNWRAPPED_STARTED_TOPIC,
-  type RawLog,
-} from "../events";
+import { Topics, type RawLog } from "../events";
 
 // Helpers (matching events.test.ts conventions)
 const addr = (hex: string) => "0x" + hex.padStart(40, "0");
@@ -30,19 +23,14 @@ const OTHER = addr("bbb2");
 
 function transferLog(from: string, to: string, handle: string) {
   return {
-    topics: [
-      CONFIDENTIAL_TRANSFER_TOPIC,
-      topic(from.slice(2)),
-      topic(to.slice(2)),
-      handle,
-    ],
+    topics: [Topics.ConfidentialTransfer, topic(from.slice(2)), topic(to.slice(2)), handle],
     data: "0x",
   };
 }
 
 function wrappedLog(to: string, amountIn: bigint, feeAmount: bigint) {
   return {
-    topics: [WRAPPED_TOPIC, topic(to.slice(2)), topic("1")],
+    topics: [Topics.Wrapped, topic(to.slice(2)), topic("1")],
     data:
       "0x" +
       word(amountIn.toString(16)) + // mintAmount (same as amountIn for simplicity)
@@ -53,7 +41,7 @@ function wrappedLog(to: string, amountIn: bigint, feeAmount: bigint) {
 
 function unwrapRequestedLog(receiver: string, handle: string) {
   return {
-    topics: [UNWRAP_REQUESTED_TOPIC, topic(receiver.slice(2))],
+    topics: [Topics.UnwrapRequested, topic(receiver.slice(2))],
     data: "0x" + word(handle.slice(2)),
   };
 }
@@ -61,7 +49,7 @@ function unwrapRequestedLog(receiver: string, handle: string) {
 function unwrappedStartedLog(to: string, requestedAmount: string) {
   return {
     topics: [
-      UNWRAPPED_STARTED_TOPIC,
+      Topics.UnwrappedStarted,
       topic("a"), // requestId
       topic("b"), // txId
       topic(to.slice(2)),
@@ -75,14 +63,10 @@ function unwrappedStartedLog(to: string, requestedAmount: string) {
   };
 }
 
-function unwrappedFinalizedLog(
-  unwrapAmount: bigint,
-  feeAmount: bigint,
-  success: boolean,
-) {
+function unwrappedFinalizedLog(unwrapAmount: bigint, feeAmount: bigint, success: boolean) {
   return {
     topics: [
-      UNWRAPPED_FINALIZED_TOPIC,
+      Topics.UnwrappedFinalized,
       bytes32("ab".repeat(32)), // burntAmountHandle
       topic("7"), // nextTxId
     ],
@@ -259,10 +243,7 @@ describe("extractEncryptedHandles", () => {
 
   it("skips zero handles", () => {
     const zeroHandle = "0x" + "0".repeat(64);
-    const items = parseActivityFeed(
-      [transferLog(USER, OTHER, zeroHandle)],
-      USER,
-    );
+    const items = parseActivityFeed([transferLog(USER, OTHER, zeroHandle)], USER);
     const handles = extractEncryptedHandles(items);
     expect(handles).toHaveLength(0);
   });

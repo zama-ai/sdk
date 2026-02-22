@@ -1,11 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { keccak256, toHex, toBytes } from "viem";
 import {
-  CONFIDENTIAL_TRANSFER_TOPIC,
-  WRAPPED_TOPIC,
-  UNWRAP_REQUESTED_TOPIC,
-  UNWRAPPED_FINALIZED_TOPIC,
-  UNWRAPPED_STARTED_TOPIC,
+  Topics,
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
@@ -26,16 +22,16 @@ const bytes32 = (hex: string) => "0x" + hex.padStart(64, "0");
 
 describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
-    ["ConfidentialTransfer(address,address,bytes32)", CONFIDENTIAL_TRANSFER_TOPIC],
-    ["Wrapped(uint64,uint256,uint256,address,uint256)", WRAPPED_TOPIC],
-    ["UnwrapRequested(address,bytes32)", UNWRAP_REQUESTED_TOPIC],
+    ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
+    ["Wrapped(uint64,uint256,uint256,address,uint256)", Topics.Wrapped],
+    ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequested],
     [
       "UnwrappedFinalized(bytes32,bool,bool,uint64,uint256,uint256,uint256)",
-      UNWRAPPED_FINALIZED_TOPIC,
+      Topics.UnwrappedFinalized,
     ],
     [
       "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
-      UNWRAPPED_STARTED_TOPIC,
+      Topics.UnwrappedStarted,
     ],
   ];
 
@@ -52,7 +48,7 @@ describe("decodeConfidentialTransfer", () => {
   const handle = bytes32("cc".repeat(32));
 
   const log: RawLog = {
-    topics: [CONFIDENTIAL_TRANSFER_TOPIC, topic("aaa1"), topic("bbb2"), handle],
+    topics: [Topics.ConfidentialTransfer, topic("aaa1"), topic("bbb2"), handle],
     data: "0x",
   };
 
@@ -70,7 +66,7 @@ describe("decodeConfidentialTransfer", () => {
     expect(
       decodeConfidentialTransfer({
         ...log,
-        topics: [WRAPPED_TOPIC, ...log.topics.slice(1)],
+        topics: [Topics.Wrapped, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -79,7 +75,7 @@ describe("decodeConfidentialTransfer", () => {
     expect(
       decodeConfidentialTransfer({
         ...log,
-        topics: [CONFIDENTIAL_TRANSFER_TOPIC],
+        topics: [Topics.ConfidentialTransfer],
       }),
     ).toBeNull();
   });
@@ -93,7 +89,7 @@ describe("decodeWrapped", () => {
   const feeAmount = 50n;
 
   const log: RawLog = {
-    topics: [WRAPPED_TOPIC, topic("dead"), topic(mintTxId.toString(16))],
+    topics: [Topics.Wrapped, topic("dead"), topic(mintTxId.toString(16))],
     data:
       "0x" +
       word(mintAmount.toString(16)) +
@@ -117,7 +113,7 @@ describe("decodeWrapped", () => {
     expect(
       decodeWrapped({
         ...log,
-        topics: [UNWRAP_REQUESTED_TOPIC, ...log.topics.slice(1)],
+        topics: [Topics.UnwrapRequested, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -128,7 +124,7 @@ describe("decodeUnwrapRequested", () => {
   const amount = bytes32("ff".repeat(32));
 
   const log: RawLog = {
-    topics: [UNWRAP_REQUESTED_TOPIC, topic("1234")],
+    topics: [Topics.UnwrapRequested, topic("1234")],
     data: "0x" + word("ff".repeat(32)),
   };
 
@@ -145,7 +141,7 @@ describe("decodeUnwrapRequested", () => {
     expect(
       decodeUnwrapRequested({
         ...log,
-        topics: [WRAPPED_TOPIC, ...log.topics.slice(1)],
+        topics: [Topics.Wrapped, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -156,7 +152,7 @@ describe("decodeUnwrappedFinalized", () => {
   const nextTxId = 7n;
 
   const log: RawLog = {
-    topics: [UNWRAPPED_FINALIZED_TOPIC, burntHandle, topic(nextTxId.toString(16))],
+    topics: [Topics.UnwrappedFinalized, burntHandle, topic(nextTxId.toString(16))],
     data:
       "0x" +
       word("1") + // finalizeSuccess = true
@@ -184,7 +180,7 @@ describe("decodeUnwrappedFinalized", () => {
     expect(
       decodeUnwrappedFinalized({
         ...log,
-        topics: [WRAPPED_TOPIC, ...log.topics.slice(1)],
+        topics: [Topics.Wrapped, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -200,7 +196,7 @@ describe("decodeUnwrappedStarted", () => {
 
   const log: RawLog = {
     topics: [
-      UNWRAPPED_STARTED_TOPIC,
+      Topics.UnwrappedStarted,
       topic(requestId.toString(16)),
       topic(txId.toString(16)),
       topic("cafe"),
@@ -231,7 +227,7 @@ describe("decodeUnwrappedStarted", () => {
     expect(
       decodeUnwrappedStarted({
         ...log,
-        topics: [WRAPPED_TOPIC, ...log.topics.slice(1)],
+        topics: [Topics.Wrapped, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -240,7 +236,7 @@ describe("decodeUnwrappedStarted", () => {
 describe("decodeTokenEvent", () => {
   it("dispatches to correct decoder", () => {
     const log: RawLog = {
-      topics: [UNWRAP_REQUESTED_TOPIC, topic("abcd")],
+      topics: [Topics.UnwrapRequested, topic("abcd")],
       data: "0x" + word("ff".repeat(32)),
     };
     const event = decodeTokenEvent(log);
@@ -260,13 +256,13 @@ describe("decodeTokenEvents", () => {
   it("decodes array of mixed logs, skipping unknown", () => {
     const logs: RawLog[] = [
       {
-        topics: [UNWRAP_REQUESTED_TOPIC, topic("abcd")],
+        topics: [Topics.UnwrapRequested, topic("abcd")],
         data: "0x" + word("ff".repeat(32)),
       },
       { topics: ["0xunknown"], data: "0x" },
       {
         topics: [
-          CONFIDENTIAL_TRANSFER_TOPIC,
+          Topics.ConfidentialTransfer,
           topic("aaa1"),
           topic("bbb2"),
           bytes32("cc".repeat(32)),
@@ -286,7 +282,7 @@ describe("findUnwrapRequested", () => {
     const logs: RawLog[] = [
       {
         topics: [
-          CONFIDENTIAL_TRANSFER_TOPIC,
+          Topics.ConfidentialTransfer,
           topic("aaa1"),
           topic("bbb2"),
           bytes32("cc".repeat(32)),
@@ -294,7 +290,7 @@ describe("findUnwrapRequested", () => {
         data: "0x",
       },
       {
-        topics: [UNWRAP_REQUESTED_TOPIC, topic("1234")],
+        topics: [Topics.UnwrapRequested, topic("1234")],
         data: "0x" + word("ff".repeat(32)),
       },
     ];
@@ -312,7 +308,7 @@ describe("findWrapped", () => {
   it("finds first Wrapped in mixed logs", () => {
     const logs: RawLog[] = [
       {
-        topics: [WRAPPED_TOPIC, topic("dead"), topic(42n.toString(16))],
+        topics: [Topics.Wrapped, topic("dead"), topic(42n.toString(16))],
         data: "0x" + word(1000n.toString(16)) + word(2000n.toString(16)) + word(50n.toString(16)),
       },
     ];

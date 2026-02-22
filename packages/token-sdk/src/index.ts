@@ -66,11 +66,7 @@ export type {
   TokenEvent,
 } from "./events";
 export {
-  CONFIDENTIAL_TRANSFER_TOPIC,
-  WRAPPED_TOPIC,
-  UNWRAP_REQUESTED_TOPIC,
-  UNWRAPPED_FINALIZED_TOPIC,
-  UNWRAPPED_STARTED_TOPIC,
+  Topics,
   TOKEN_TOPICS,
   decodeConfidentialTransfer,
   decodeWrapped,

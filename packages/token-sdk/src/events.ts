@@ -18,20 +18,13 @@ export interface RawLog {
 // Event topic0 constants (keccak256 of canonical signature)
 // ---------------------------------------------------------------------------
 
-export const CONFIDENTIAL_TRANSFER_TOPIC =
-  "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9" as const;
-
-export const WRAPPED_TOPIC =
-  "0x1f7907f4d84043abe0fb7c74e8865ee5fe93fe4f691c54a7b8fa9d6fb17c7cba" as const;
-
-export const UNWRAP_REQUESTED_TOPIC =
-  "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee" as const;
-
-export const UNWRAPPED_FINALIZED_TOPIC =
-  "0xc64e7c81b18b674fc5b037d8a0041bfe3332d86c780a4688f404ee01fbabb152" as const;
-
-export const UNWRAPPED_STARTED_TOPIC =
-  "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806" as const;
+export const Topics = {
+  ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9",
+  Wrapped: "0x1f7907f4d84043abe0fb7c74e8865ee5fe93fe4f691c54a7b8fa9d6fb17c7cba",
+  UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee",
+  UnwrappedFinalized: "0xc64e7c81b18b674fc5b037d8a0041bfe3332d86c780a4688f404ee01fbabb152",
+  UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806",
+} as const;
 
 // ---------------------------------------------------------------------------
 // Typed event interfaces
@@ -136,7 +129,7 @@ function wordToBytes32(data: string, index: number): Hex {
  * All 3 params indexed → topics[1..3], no data.
  */
 export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEvent | null {
-  if (log.topics[0] !== CONFIDENTIAL_TRANSFER_TOPIC) return null;
+  if (log.topics[0] !== Topics.ConfidentialTransfer) return null;
   if (log.topics.length < 4) return null;
 
   return {
@@ -153,7 +146,7 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
  * Data: mintAmount (uint64, abi-encoded as uint256), amountIn, feeAmount
  */
 export function decodeWrapped(log: RawLog): WrappedEvent | null {
-  if (log.topics[0] !== WRAPPED_TOPIC) return null;
+  if (log.topics[0] !== Topics.Wrapped) return null;
   if (log.topics.length < 3) return null;
 
   return {
@@ -172,7 +165,7 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
  * Data: amount (bytes32)
  */
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
-  if (log.topics[0] !== UNWRAP_REQUESTED_TOPIC) return null;
+  if (log.topics[0] !== Topics.UnwrapRequested) return null;
   if (log.topics.length < 2) return null;
 
   return {
@@ -189,7 +182,7 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
  * Data: finalizeSuccess, feeTransferSuccess, burnAmount, unwrapAmount, feeAmount
  */
 export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
-  if (log.topics[0] !== UNWRAPPED_FINALIZED_TOPIC) return null;
+  if (log.topics[0] !== Topics.UnwrappedFinalized) return null;
   if (log.topics.length < 3) return null;
 
   return {
@@ -211,7 +204,7 @@ export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent |
  * Data: returnVal, refund, requestedAmount, burnAmount
  */
 export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null {
-  if (log.topics[0] !== UNWRAPPED_STARTED_TOPIC) return null;
+  if (log.topics[0] !== Topics.UnwrappedStarted) return null;
   if (log.topics.length < 4) return null;
 
   return {
@@ -308,9 +301,9 @@ export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null {
  * all confidential token events in a single RPC call.
  */
 export const TOKEN_TOPICS = [
-  CONFIDENTIAL_TRANSFER_TOPIC,
-  WRAPPED_TOPIC,
-  UNWRAP_REQUESTED_TOPIC,
-  UNWRAPPED_FINALIZED_TOPIC,
-  UNWRAPPED_STARTED_TOPIC,
+  Topics.ConfidentialTransfer,
+  Topics.Wrapped,
+  Topics.UnwrapRequested,
+  Topics.UnwrappedFinalized,
+  Topics.UnwrappedStarted,
 ] as const;
