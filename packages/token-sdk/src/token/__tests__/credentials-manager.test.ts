@@ -50,7 +50,7 @@ async function computeStoreKey(address: string): Promise<string> {
   const hex = Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-  return hex.slice(0, 16);
+  return hex.slice(0, 32);
 }
 
 describe("CredentialsManager", () => {

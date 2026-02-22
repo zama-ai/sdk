@@ -42,7 +42,9 @@ import type {
 let sdkInstance: FhevmInstance | null = null;
 let sdkGlobal: RelayerSDKGlobal | null = null;
 
-// Store relayer URL and CSRF token for fetch interception
+// Store relayer URL and CSRF token for fetch interception.
+// These globals are per-worker-instance. Do NOT convert to SharedWorker
+// without rearchitecting CSRF token management to be per-connection.
 let relayerUrlBase: string = "";
 let csrfTokenBase: string = "";
 
@@ -84,11 +86,7 @@ function sendSuccess<T>(
 /**
  * Send an error response back to the main thread.
  */
-function sendError(
-  id: string,
-  type: WorkerRequest["type"],
-  error: string,
-): void {
+function sendError(id: string, type: WorkerRequest["type"], error: string): void {
   const response: ErrorResponse = {
     id,
     type,
@@ -107,16 +105,8 @@ const originalFetch = fetch;
  * targeting our relayer proxy to inject credentials and CSRF headers.
  */
 function setupFetchInterceptor(): void {
-  globalThis.fetch = async (
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ): Promise<Response> => {
-    const url =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const method = init?.method?.toUpperCase() ?? "GET";
 
     // Only intercept requests to our relayer proxy
@@ -148,9 +138,7 @@ async function loadSdkScript(cdnUrl: string): Promise<void> {
   // Use original fetch to avoid interception during SDK loading
   const response = await originalFetch(cdnUrl);
   if (!response.ok) {
-    throw new Error(
-      `Failed to fetch SDK: ${response.status} ${response.statusText}`,
-    );
+    throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
   }
   const scriptContent = await response.text();
 
@@ -220,10 +208,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
       throw new Error("SDK not initialized. Call INIT first.");
     }
 
-    const input = sdkInstance.createEncryptedInput(
-      contractAddress,
-      userAddress,
-    );
+    const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
 
     for (const value of values) {
       input.add64(value);
@@ -292,9 +277,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
 /**
  * Handle PUBLIC_DECRYPT request.
  */
-async function handlePublicDecrypt(
-  request: PublicDecryptRequest,
-): Promise<void> {
+async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
@@ -370,11 +353,12 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
         verifyingContract: eip712.domain.verifyingContract as `0x${string}`,
       },
       types: {
-        UserDecryptRequestVerification:
-          eip712.types.UserDecryptRequestVerification.map((field) => ({
+        UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification.map(
+          (field) => ({
             name: field.name,
             type: field.type,
-          })),
+          }),
+        ),
       },
       message: {
         publicKey: eip712.message.publicKey,
@@ -396,9 +380,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
 /**
  * Handle CREATE_DELEGATED_EIP712 request.
  */
-function handleCreateDelegatedEIP712(
-  request: CreateDelegatedEIP712Request,
-): void {
+function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): void {
   const { id, type, payload } = request;
 
   try {
@@ -425,9 +407,7 @@ function handleCreateDelegatedEIP712(
 /**
  * Handle DELEGATED_USER_DECRYPT request.
  */
-async function handleDelegatedUserDecrypt(
-  request: DelegatedUserDecryptRequest,
-): Promise<void> {
+async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
@@ -477,9 +457,7 @@ async function handleRequestZKProofVerification(
       throw new Error("SDK not initialized. Call INIT first.");
     }
 
-    const result = await sdkInstance.requestZKProofVerification(
-      payload.zkProof,
-    );
+    const result = await sdkInstance.requestZKProofVerification(payload.zkProof);
 
     // Transfer ArrayBuffers for zero-copy performance
     const transferList: Transferable[] = [
@@ -596,9 +574,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       handleGetPublicParams(request);
       break;
     default:
-      console.error(
-        "[Worker] Unknown request type:",
-        (request as WorkerRequest).type,
-      );
+      console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);
   }
 };

@@ -27,17 +27,21 @@ export class ViemSigner implements GenericSigner {
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
+    const account = this.walletClient.account;
+    if (!account) throw new TypeError("WalletClient has no account");
     return this.walletClient.signTypedData({
-      account: this.walletClient.account!,
+      account,
       primaryType: Object.keys(typedData.types)[0],
       ...typedData,
     });
   }
 
   async writeContract<C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<Hex> {
+    const account = this.walletClient.account;
+    if (!account) throw new TypeError("WalletClient has no account");
     return this.walletClient.writeContract({
       chain: this.walletClient.chain,
-      account: this.walletClient.account!,
+      account,
       ...config,
     } as Parameters<typeof writeContract>[1]);
   }

@@ -56,16 +56,19 @@ export class RelayerWorkerClient {
    */
   async initWorker(): Promise<Worker> {
     if (!this.#worker) {
-      // Create worker using Next.js worker pattern
-      this.#worker = new Worker(new URL("./relayer-sdk.worker.js", import.meta.url));
+      const worker = new Worker(new URL("./relayer-sdk.worker.js", import.meta.url));
 
-      // Set up message handlers
-      this.#worker.onmessage = this.#handleMessage.bind(this);
-      this.#worker.onerror = this.#handleError.bind(this);
-      this.#worker.onmessageerror = this.#handleMessageError.bind(this);
+      worker.onmessage = this.#handleMessage.bind(this);
+      worker.onerror = this.#handleError.bind(this);
+      worker.onmessageerror = this.#handleMessageError.bind(this);
 
-      // Initialize SDK in worker
-      await this.#sendRequest<InitResponseData>("INIT", this.#config, INIT_TIMEOUT_MS);
+      try {
+        await this.#sendRequestTo<InitResponseData>(worker, "INIT", this.#config, INIT_TIMEOUT_MS);
+        this.#worker = worker;
+      } catch (err) {
+        worker.terminate();
+        throw err;
+      }
     }
 
     return this.#worker;
@@ -259,6 +262,31 @@ export class RelayerWorkerClient {
   /**
    * Send a request to the worker and wait for response.
    */
+  #sendRequestTo<T>(
+    worker: Worker,
+    type: WorkerRequestType,
+    payload: WorkerRequest["payload"],
+    timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const id = this.#generateRequestId();
+
+      const timeoutId = setTimeout(() => {
+        this.#pendingRequests.delete(id);
+        reject(new Error(`Request ${type} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      this.#pendingRequests.set(id, {
+        resolve: resolve as (value: unknown) => void,
+        reject,
+        timeoutId,
+      });
+
+      const request = { id, type, payload } as WorkerRequest;
+      worker.postMessage(request);
+    });
+  }
+
   async #sendRequest<T>(
     type: WorkerRequestType,
     payload: WorkerRequest["payload"],

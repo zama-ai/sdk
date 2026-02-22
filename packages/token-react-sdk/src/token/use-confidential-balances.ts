@@ -28,9 +28,10 @@ export function useConfidentialBalances(
   const sdk = useTokenSDK();
   const { handleRefetchInterval, ...balanceOptions } = options ?? {};
 
+  const stableKey = tokenAddresses.join(",");
   const tokens = useMemo(
     () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
-    [sdk, tokenAddresses],
+    [sdk, stableKey], // stableKey stabilizes referentially-unstable tokenAddresses arrays
   );
 
   // Phase 1: Poll all encrypted handles (cheap RPC reads)
@@ -51,8 +52,9 @@ export function useConfidentialBalances(
   const balancesQuery = useQuery<Map<Hex, bigint>, Error>({
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, owner ?? ""), handlesKey],
     queryFn: async () => {
+      if (!handles) return new Map();
       const ownerAddress = owner ?? (await sdk.signer.getAddress());
-      return ReadonlyToken.batchDecryptBalances(tokens, handles!, ownerAddress);
+      return ReadonlyToken.batchDecryptBalances(tokens, handles, ownerAddress);
     },
     enabled: tokenAddresses.length > 0 && handles !== undefined,
     staleTime: Infinity,

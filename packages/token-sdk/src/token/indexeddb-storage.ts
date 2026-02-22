@@ -11,6 +11,7 @@ import type { GenericStringStorage } from "./token.types";
  */
 export class IndexedDBStorage implements GenericStringStorage {
   #db: IDBDatabase | null = null;
+  #dbPromise: Promise<IDBDatabase> | null = null;
   #dbName: string;
   #dbVersion: number;
   #storeName = "credentials";
@@ -22,8 +23,9 @@ export class IndexedDBStorage implements GenericStringStorage {
 
   #getDB(): Promise<IDBDatabase> {
     if (this.#db) return Promise.resolve(this.#db);
+    if (this.#dbPromise) return this.#dbPromise;
 
-    return new Promise((resolve, reject) => {
+    this.#dbPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(this.#dbName, this.#dbVersion);
 
       request.onupgradeneeded = () => {
@@ -38,8 +40,13 @@ export class IndexedDBStorage implements GenericStringStorage {
         resolve(this.#db);
       };
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        this.#dbPromise = null;
+        reject(request.error);
+      };
     });
+
+    return this.#dbPromise;
   }
 
   async getItem(key: string): Promise<string | null> {

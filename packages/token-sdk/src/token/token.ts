@@ -324,7 +324,15 @@ export class Token extends ReadonlyToken {
         burnAmountHandle,
       ]);
 
-      const clearValue = BigInt(abiEncodedClearValues);
+      let clearValue: bigint;
+      try {
+        clearValue = BigInt(abiEncodedClearValues);
+      } catch {
+        throw new TokenError(
+          TokenErrorCode.DecryptionFailed,
+          `Cannot parse decrypted value: ${abiEncodedClearValues}`,
+        );
+      }
 
       return await this.signer.writeContract(
         finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, decryptionProof),

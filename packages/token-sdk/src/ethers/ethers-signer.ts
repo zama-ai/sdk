@@ -54,6 +54,11 @@ export class EthersSigner implements GenericSigner {
     if (!provider) throw new TypeError("Signer has no provider");
     const receipt = await provider.waitForTransaction(hash);
     if (!receipt) throw new Error("Transaction receipt not found");
-    return receipt;
+    return {
+      logs: receipt.logs.map((log) => ({
+        topics: log.topics.filter((t): t is string => t !== null),
+        data: log.data,
+      })),
+    };
   }
 }

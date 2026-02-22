@@ -33,6 +33,7 @@ export class CredentialsManager {
   #signer: GenericSigner;
   #storage: GenericStringStorage;
   #durationDays: number;
+  #createPromise: Promise<StoredCredentials> | null = null;
 
   constructor(config: CredentialsManagerConfig) {
     this.#sdk = config.sdk;
@@ -79,7 +80,12 @@ export class CredentialsManager {
       // Store read or decrypt failed — generate fresh credentials
     }
 
-    return this.create(contractAddresses);
+    if (!this.#createPromise) {
+      this.#createPromise = this.create(contractAddresses).finally(() => {
+        this.#createPromise = null;
+      });
+    }
+    return this.#createPromise;
   }
 
   /**
@@ -106,7 +112,7 @@ export class CredentialsManager {
     const hex = Array.from(new Uint8Array(hash))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
-    return hex.slice(0, 16);
+    return hex.slice(0, 32);
   }
 
   // ── Validation ──────────────────────────────────────────────

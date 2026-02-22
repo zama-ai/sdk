@@ -46,19 +46,24 @@ export class NodeWorkerClient {
 
   async initWorker(): Promise<Worker> {
     if (!this.#worker) {
-      this.#worker = new Worker(new URL("./relayer-sdk.node-worker.ts", import.meta.url));
+      const worker = new Worker(new URL("./relayer-sdk.node-worker.ts", import.meta.url));
 
-      this.#worker.on("message", this.#handleMessage.bind(this));
-      this.#worker.on("error", this.#handleError.bind(this));
-      this.#worker.on("messageerror", this.#handleMessageError.bind(this));
+      worker.on("message", this.#handleMessage.bind(this));
+      worker.on("error", this.#handleError.bind(this));
+      worker.on("messageerror", this.#handleMessageError.bind(this));
 
-      await this.#sendRequest<InitResponseData>(
-        "NODE_INIT",
-        {
-          fhevmConfig: this.#config.fhevmConfig,
-        },
-        INIT_TIMEOUT_MS,
-      );
+      try {
+        await this.#sendRequestTo<InitResponseData>(
+          worker,
+          "NODE_INIT",
+          { fhevmConfig: this.#config.fhevmConfig },
+          INIT_TIMEOUT_MS,
+        );
+        this.#worker = worker;
+      } catch (err) {
+        worker.terminate();
+        throw err;
+      }
     }
 
     return this.#worker;
@@ -195,6 +200,31 @@ export class NodeWorkerClient {
   async getPublicParams(bits: number): Promise<GetPublicParamsResponseData> {
     return this.#sendRequest<GetPublicParamsResponseData>("GET_PUBLIC_PARAMS", {
       bits,
+    });
+  }
+
+  #sendRequestTo<T>(
+    worker: Worker,
+    type: WorkerRequestType,
+    payload: WorkerRequest["payload"],
+    timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const id = randomUUID();
+
+      const timeoutId = setTimeout(() => {
+        this.#pendingRequests.delete(id);
+        reject(new Error(`Request ${type} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      this.#pendingRequests.set(id, {
+        resolve: resolve as (value: unknown) => void,
+        reject,
+        timeoutId,
+      });
+
+      const request = { id, type, payload } as WorkerRequest;
+      worker.postMessage(request);
     });
   }
 

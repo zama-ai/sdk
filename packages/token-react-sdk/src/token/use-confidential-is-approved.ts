@@ -22,6 +22,7 @@ export function useConfidentialIsApproved(
     queryKey: ["confidentialIsApproved", config.tokenAddress, spender],
     queryFn: () => token.isApproved(spender as Hex),
     enabled: !!spender,
+    staleTime: 30_000,
     ...options,
   });
 }
