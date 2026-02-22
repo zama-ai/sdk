@@ -27,6 +27,7 @@ const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${SDK_VERSION}/relayer-sdk-
 export class RelayerWeb implements RelayerSDK {
   #workerClient: RelayerWorkerClient | null = null;
   #initPromise: Promise<RelayerWorkerClient> | null = null;
+  #terminated = false;
   readonly #config: RelayerWebConfig;
 
   constructor(config: RelayerWebConfig) {
@@ -71,9 +72,15 @@ export class RelayerWeb implements RelayerSDK {
    */
   async #initWorker(): Promise<RelayerWorkerClient> {
     const workerConfig = this.#getWorkerConfig();
-    this.#workerClient = new RelayerWorkerClient(workerConfig);
-    await this.#workerClient.initWorker();
-    return this.#workerClient;
+    const client = new RelayerWorkerClient(workerConfig);
+    await client.initWorker();
+    // If terminate() was called while we were initializing, clean up immediately
+    if (this.#terminated) {
+      client.terminate();
+      throw new Error("RelayerWeb was terminated during initialization");
+    }
+    this.#workerClient = client;
+    return client;
   }
 
   /**
@@ -81,11 +88,12 @@ export class RelayerWeb implements RelayerSDK {
    * Call this when the SDK is no longer needed.
    */
   terminate(): void {
+    this.#terminated = true;
     if (this.#workerClient) {
       this.#workerClient.terminate();
       this.#workerClient = null;
-      this.#initPromise = null;
     }
+    this.#initPromise = null;
   }
 
   /**

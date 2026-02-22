@@ -344,6 +344,7 @@ export class RelayerWorkerClient {
    */
   #handleError(event: ErrorEvent): void {
     console.error("[WorkerClient] Worker error:", event.message);
+    this.#worker = null;
     this.#rejectAllPending(`Worker error: ${event.message}`);
   }
 
@@ -352,6 +353,7 @@ export class RelayerWorkerClient {
    */
   #handleMessageError(): void {
     console.error("[WorkerClient] Message deserialization failed");
+    this.#worker = null;
     this.#rejectAllPending("Worker message deserialization failed");
   }
 

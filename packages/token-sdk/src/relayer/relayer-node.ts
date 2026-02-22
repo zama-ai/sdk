@@ -30,6 +30,7 @@ export class RelayerNode implements RelayerSDK {
   readonly #config: RelayerNodeConfig;
   #pool: NodeWorkerPool | null = null;
   #initPromise: Promise<NodeWorkerPool> | null = null;
+  #terminated = false;
 
   constructor(config: RelayerNodeConfig) {
     this.#config = config;
@@ -56,17 +57,23 @@ export class RelayerNode implements RelayerSDK {
 
   async #initPool(): Promise<NodeWorkerPool> {
     const poolConfig = this.#getPoolConfig();
-    this.#pool = new NodeWorkerPool(poolConfig);
-    await this.#pool.initPool();
-    return this.#pool;
+    const pool = new NodeWorkerPool(poolConfig);
+    await pool.initPool();
+    if (this.#terminated) {
+      pool.terminate();
+      throw new Error("RelayerNode was terminated during initialization");
+    }
+    this.#pool = pool;
+    return pool;
   }
 
   terminate(): void {
+    this.#terminated = true;
     if (this.#pool) {
       this.#pool.terminate();
       this.#pool = null;
-      this.#initPromise = null;
     }
+    this.#initPromise = null;
   }
 
   async generateKeypair(): Promise<FHEKeypair> {

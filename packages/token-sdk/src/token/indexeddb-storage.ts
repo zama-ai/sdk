@@ -64,6 +64,7 @@ export class IndexedDBStorage implements GenericStringStorage {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readonly");
+      tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
       const store = tx.objectStore(this.#storeName);
       const request = store.get(key);
       request.onsuccess = () => resolve(request.result?.value ?? null);
@@ -75,6 +76,7 @@ export class IndexedDBStorage implements GenericStringStorage {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readwrite");
+      tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
       const store = tx.objectStore(this.#storeName);
       const request = store.put({ key, value });
       request.onsuccess = () => resolve();
@@ -86,6 +88,7 @@ export class IndexedDBStorage implements GenericStringStorage {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readwrite");
+      tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
       const store = tx.objectStore(this.#storeName);
       const request = store.delete(key);
       request.onsuccess = () => resolve();
@@ -97,6 +100,7 @@ export class IndexedDBStorage implements GenericStringStorage {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readwrite");
+      tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
       const store = tx.objectStore(this.#storeName);
       const request = store.clear();
       request.onsuccess = () => resolve();

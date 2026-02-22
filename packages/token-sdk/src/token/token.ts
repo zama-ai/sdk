@@ -408,7 +408,15 @@ export class Token extends ReadonlyToken {
   // PRIVATE HELPERS
 
   async #waitAndFinalizeUnshield(unshieldHash: Address): Promise<Address> {
-    const receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
+    let receipt;
+    try {
+      receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
+    } catch (error) {
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(TokenErrorCode.TransactionReverted, "Failed to get unshield receipt", {
+        cause: error,
+      });
+    }
     const event = findUnwrapRequested(receipt.logs);
     if (!event) {
       throw new TokenError(

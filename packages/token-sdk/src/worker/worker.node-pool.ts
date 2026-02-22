@@ -52,7 +52,17 @@ export class NodeWorkerPool {
       this.#workers.push(new NodeWorkerClient(this.#config));
       this.#activeCount.push(0);
     }
-    await Promise.all(this.#workers.map((w) => w.initWorker()));
+    try {
+      await Promise.all(this.#workers.map((w) => w.initWorker()));
+    } catch (error) {
+      // Terminate any workers that did initialize and reset state
+      for (const worker of this.#workers) {
+        worker.terminate();
+      }
+      this.#workers.length = 0;
+      this.#activeCount.length = 0;
+      throw error;
+    }
   }
 
   terminate(): void {
