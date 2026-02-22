@@ -16,12 +16,12 @@ const relayer = new RelayerWeb({
   },
 });
 
-const walletClient = createWalletClient({
+export const walletClient = createWalletClient({
   chain: sepolia,
   transport: custom(window.ethereum!),
 });
 
-const publicClient = createPublicClient({
+export const publicClient = createPublicClient({
   chain: sepolia,
   transport: http(RPC_URL),
 });

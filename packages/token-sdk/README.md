@@ -141,7 +141,7 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `balanceOf(owner?)`                       | Decrypt and return the plaintext balance.                                                                                                                                                                    |
 | `decryptHandles(handles, owner?)`         | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
 
-All write methods return the transaction hash (`Address`).
+All write methods return the transaction hash (`Hex`).
 
 ### ReadonlyToken
 
@@ -257,11 +257,11 @@ The `GenericSigner` interface has five methods. Any Web3 library can back it.
 
 ```ts
 interface GenericSigner {
-  getAddress(): Promise<Address>;
-  signTypedData(typedData: EIP712TypedData): Promise<Address>;
-  writeContract(config: ContractCallConfig): Promise<Address>;
+  getAddress(): Promise<Hex>;
+  signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+  writeContract(config: ContractCallConfig): Promise<Hex>;
   readContract(config: ContractCallConfig): Promise<unknown>;
-  waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt>;
+  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 ```
 
@@ -291,7 +291,7 @@ Every function returns a `ContractCallConfig` object (address, ABI, function nam
 
 ```ts
 interface ContractCallConfig {
-  readonly address: Address;
+  readonly address: Hex;
   readonly abi: readonly unknown[];
   readonly functionName: string;
   readonly args: readonly unknown[];
@@ -433,7 +433,7 @@ const logs = await publicClient.getLogs({
 });
 ```
 
-Individual topic constants are also exported: `CONFIDENTIAL_TRANSFER_TOPIC`, `WRAPPED_TOPIC`, `UNWRAP_REQUESTED_TOPIC`, `UNWRAPPED_FINALIZED_TOPIC`, `UNWRAPPED_STARTED_TOPIC`.
+Individual topic hashes are accessible via the `Topics` object: `Topics.ConfidentialTransfer`, `Topics.Wrapped`, `Topics.UnwrapRequested`, `Topics.UnwrappedFinalized`, `Topics.UnwrappedStarted`.
 
 ### Decoders
 

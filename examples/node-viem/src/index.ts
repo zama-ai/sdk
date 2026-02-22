@@ -1,16 +1,15 @@
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { MemoryStorage, TokenSDK } from "@zama-fhe/token-sdk";
+import { MemoryStorage, TokenSDK, type Hex } from "@zama-fhe/token-sdk";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 import { RelayerNode } from "@zama-fhe/token-sdk/node";
-import type { Address } from "viem";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
 const RPC_URL = process.env.RPC_URL!;
-const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS as Address;
-const WRAPPER_ADDRESS = process.env.WRAPPER_ADDRESS as Address;
-const RECIPIENT = process.env.RECIPIENT as Address;
+const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS as Hex;
+const WRAPPER_ADDRESS = process.env.WRAPPER_ADDRESS as Hex;
+const RECIPIENT = process.env.RECIPIENT as Hex;
 
 async function main() {
   // 1. Create viem clients

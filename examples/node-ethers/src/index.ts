@@ -2,13 +2,13 @@ import { Wallet, JsonRpcProvider } from "ethers";
 import { MemoryStorage, TokenSDK } from "@zama-fhe/token-sdk";
 import { EthersSigner } from "@zama-fhe/token-sdk/ethers";
 import { RelayerNode } from "@zama-fhe/token-sdk/node";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Hex } from "@zama-fhe/token-sdk";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY!;
 const RPC_URL = process.env.RPC_URL!;
-const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS as Address;
-const WRAPPER_ADDRESS = process.env.WRAPPER_ADDRESS as Address;
-const RECIPIENT = process.env.RECIPIENT as Address;
+const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS as Hex;
+const WRAPPER_ADDRESS = process.env.WRAPPER_ADDRESS as Hex;
+const RECIPIENT = process.env.RECIPIENT as Hex;
 
 const CHAIN_ID = 11155111; // Sepolia
 

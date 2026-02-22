@@ -8,32 +8,21 @@ import {
   useUnshield,
   useTokenMetadata,
 } from "@zama-fhe/token-react-sdk";
-import type { Address } from "@zama-fhe/token-react-sdk";
-import { Providers, useViemWalletClient } from "../providers";
+import type { Hex } from "@zama-fhe/token-react-sdk";
+import { Providers } from "../providers";
 
-const TOKEN_ADDRESS = "0x..." as Address; // Replace with your token address
-const WRAPPER_ADDRESS = "0x..." as Address; // Replace with your wrapper address
+const TOKEN_ADDRESS = "0x..." as Hex; // Replace with your token address
+const WRAPPER_ADDRESS = "0x..." as Hex; // Replace with your wrapper address
 
 export default function Home() {
-  const { walletClient, connect, disconnect } = useViemWalletClient();
-
   return (
-    <Providers walletClient={walletClient}>
-      {walletClient ? (
-        <TokenUI address={walletClient.account?.address} disconnect={disconnect} />
-      ) : (
-        <div style={{ padding: 40, fontFamily: "system-ui" }}>
-          <h1>Confidential Token Demo</h1>
-          <button onClick={connect} style={buttonStyle}>
-            Connect Wallet
-          </button>
-        </div>
-      )}
+    <Providers>
+      <TokenUI />
     </Providers>
   );
 }
 
-function TokenUI({ address, disconnect }: { address?: string; disconnect: () => void }) {
+function TokenUI() {
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
 
@@ -47,16 +36,7 @@ function TokenUI({ address, disconnect }: { address?: string; disconnect: () => 
 
   return (
     <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 600 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>Confidential Token Demo</h1>
-        <button onClick={disconnect} style={buttonStyle}>
-          Disconnect
-        </button>
-      </div>
-
-      <p>
-        Connected: <code>{address}</code>
-      </p>
+      <h1>Confidential Token Demo</h1>
 
       {metadata.data && (
         <p>
@@ -105,7 +85,7 @@ function TokenUI({ address, disconnect }: { address?: string; disconnect: () => 
           />
         </label>
         <button
-          onClick={() => transfer.mutate({ to: recipient as Address, amount: parsedAmount })}
+          onClick={() => transfer.mutate({ to: recipient as Hex, amount: parsedAmount })}
           disabled={transfer.isPending || !amount || !recipient}
           style={{ ...buttonStyle, marginLeft: 8 }}
         >

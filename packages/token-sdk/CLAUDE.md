@@ -73,6 +73,6 @@ All SDK errors use `TokenError` with typed `TokenErrorCode` enum. Methods catch 
 - Tests use vitest with `vi.fn()` mocks for `RelayerSDK` and `GenericSigner`
 - Test files live in `__tests__/` directories adjacent to source
 - Peer dependencies (viem, ethers, `@zama-fhe/relayer-sdk`) are all optional — the SDK works with any combination
-- `Address` type is a hex string alias used throughout
+- `Hex` type (`` `0x${string}` ``) is the canonical hex string alias used throughout
 - Unused vars prefixed with `_` (ESLint configured)
 - Husky + lint-staged run ESLint and Prettier on pre-commit
