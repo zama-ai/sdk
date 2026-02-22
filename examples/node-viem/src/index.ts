@@ -51,7 +51,7 @@ async function main() {
   try {
     // 3. Check balance
     const balance = await token.balanceOf();
-    console.log("Confidential balance:", balance);
+    console.log("Decrypted balance:", balance);
 
     // 4. Shield (wrap public tokens into confidential)
     console.log("Shielding 1000 tokens...");
