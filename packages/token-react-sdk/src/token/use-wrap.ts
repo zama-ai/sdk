@@ -10,7 +10,7 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
-interface WrapParams {
+export interface WrapParams {
   amount: bigint;
   fees?: bigint;
   approvalStrategy?: "max" | "exact" | "skip";
