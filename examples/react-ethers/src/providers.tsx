@@ -6,7 +6,8 @@ import { EthersSigner } from "@zama-fhe/token-react-sdk/ethers";
 import { BrowserProvider } from "ethers";
 import type { ReactNode } from "react";
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL!;
+const MAINNET_RPC_URL = process.env.NEXT_PUBLIC_MAINNET_RPC_URL!;
+const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL!;
 
 const provider = new BrowserProvider(window.ethereum!);
 
@@ -15,7 +16,14 @@ const signer = new EthersSigner(provider);
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
-    [11155111]: { network: RPC_URL },
+    [1]: {
+      network: MAINNET_RPC_URL,
+      relayerUrl: "http://localhost:3000/api/relayer",
+    },
+    [11155111]: {
+      network: SEPOLIA_RPC_URL,
+      relayerUrl: "http://localhost:3000/api/relayer",
+    },
   },
 });
 

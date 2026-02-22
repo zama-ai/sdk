@@ -1,34 +1,46 @@
 import { Wallet, JsonRpcProvider } from "ethers";
 import { MemoryStorage, TokenSDK } from "@zama-fhe/token-sdk";
-import { EthersSigner } from "@zama-fhe/token-sdk/ethers";
+import { EthersSigner, readWrapperForTokenContract } from "@zama-fhe/token-sdk/ethers";
 import { RelayerNode } from "@zama-fhe/token-sdk/node";
 import type { Address } from "@zama-fhe/token-sdk";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY!;
-const RPC_URL = process.env.RPC_URL!;
+const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL!;
+const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL!;
+const RELAYER_API_KEY = process.env.RELAYER_API_KEY!;
 const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS as Address;
-const WRAPPER_ADDRESS = process.env.WRAPPER_ADDRESS as Address;
+const COORDINATOR_ADDRESS = process.env.COORDINATOR_ADDRESS as Address;
 const RECIPIENT = process.env.RECIPIENT as Address;
 
-const CHAIN_ID = 11155111; // Sepolia
+const MAINNET_CHAIN_ID = 1;
+const SEPOLIA_CHAIN_ID = 11155111;
 
 async function main() {
   // 1. Create ethers signer
-  const provider = new JsonRpcProvider(RPC_URL);
+  const provider = new JsonRpcProvider(SEPOLIA_RPC_URL);
   const wallet = new Wallet(PRIVATE_KEY, provider);
 
   // 2. Create SDK components
   const signer = new EthersSigner(wallet);
+  const authConfig = { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY };
   const relayer = new RelayerNode({
     getChainId: () => signer.getChainId(),
     transports: {
-      [CHAIN_ID]: { network: RPC_URL },
+      [MAINNET_CHAIN_ID]: { network: MAINNET_RPC_URL, auth: authConfig },
+      [SEPOLIA_CHAIN_ID]: { network: SEPOLIA_RPC_URL, auth: authConfig },
     },
   });
   const storage = new MemoryStorage();
 
+  // 3. Resolve wrapper address on-chain
+  const wrapperAddress = await readWrapperForTokenContract(
+    provider,
+    COORDINATOR_ADDRESS,
+    TOKEN_ADDRESS,
+  );
+
   const sdk = new TokenSDK({ relayer, signer, storage });
-  const token = sdk.createToken(TOKEN_ADDRESS, WRAPPER_ADDRESS);
+  const token = sdk.createToken(TOKEN_ADDRESS, wrapperAddress as Address);
 
   try {
     // 3. Check balance

@@ -1,14 +1,16 @@
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
+import { mainnet, sepolia } from "viem/chains";
 import { MemoryStorage, TokenSDK, type Address } from "@zama-fhe/token-sdk";
-import { ViemSigner } from "@zama-fhe/token-sdk/viem";
+import { ViemSigner, readWrapperForTokenContract } from "@zama-fhe/token-sdk/viem";
 import { RelayerNode } from "@zama-fhe/token-sdk/node";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
-const RPC_URL = process.env.RPC_URL!;
+const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL!;
+const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL!;
+const RELAYER_API_KEY = process.env.RELAYER_API_KEY!;
 const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS as Address;
-const WRAPPER_ADDRESS = process.env.WRAPPER_ADDRESS as Address;
+const COORDINATOR_ADDRESS = process.env.COORDINATOR_ADDRESS as Address;
 const RECIPIENT = process.env.RECIPIENT as Address;
 
 async function main() {
@@ -16,26 +18,35 @@ async function main() {
   const account = privateKeyToAccount(PRIVATE_KEY);
   const publicClient = createPublicClient({
     chain: sepolia,
-    transport: http(RPC_URL),
+    transport: http(SEPOLIA_RPC_URL),
   });
   const walletClient = createWalletClient({
     account,
     chain: sepolia,
-    transport: http(RPC_URL),
+    transport: http(SEPOLIA_RPC_URL),
   });
 
   // 2. Create SDK components
   const signer = new ViemSigner(walletClient, publicClient);
+  const authConfig = { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY };
   const relayer = new RelayerNode({
     getChainId: () => signer.getChainId(),
     transports: {
-      [sepolia.id]: { network: RPC_URL },
+      [mainnet.id]: { network: MAINNET_RPC_URL, auth: authConfig },
+      [sepolia.id]: { network: SEPOLIA_RPC_URL, auth: authConfig },
     },
   });
   const storage = new MemoryStorage();
 
+  // 3. Resolve wrapper address on-chain
+  const wrapperAddress = await readWrapperForTokenContract(
+    publicClient,
+    COORDINATOR_ADDRESS,
+    TOKEN_ADDRESS,
+  );
+
   const sdk = new TokenSDK({ relayer, signer, storage });
-  const token = sdk.createToken(TOKEN_ADDRESS, WRAPPER_ADDRESS);
+  const token = sdk.createToken(TOKEN_ADDRESS, wrapperAddress);
 
   try {
     // 3. Check balance

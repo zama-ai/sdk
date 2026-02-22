@@ -5,9 +5,10 @@ import { RelayerWeb, TokenSDKProvider, indexedDBStorage } from "@zama-fhe/token-
 import { ViemSigner } from "@zama-fhe/token-react-sdk/viem";
 import type { ReactNode } from "react";
 import { createPublicClient, createWalletClient, custom, http } from "viem";
-import { sepolia } from "viem/chains";
+import { mainnet, sepolia } from "viem/chains";
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL!;
+const MAINNET_RPC_URL = process.env.NEXT_PUBLIC_MAINNET_RPC_URL!;
+const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL!;
 
 export const walletClient = createWalletClient({
   chain: sepolia,
@@ -16,7 +17,7 @@ export const walletClient = createWalletClient({
 
 export const publicClient = createPublicClient({
   chain: sepolia,
-  transport: http(RPC_URL),
+  transport: http(SEPOLIA_RPC_URL),
 });
 
 const signer = new ViemSigner(walletClient, publicClient);
@@ -24,7 +25,14 @@ const signer = new ViemSigner(walletClient, publicClient);
 const relayer = new RelayerWeb({
   getChainId: () => walletClient.getChainId(),
   transports: {
-    [sepolia.id]: { network: RPC_URL },
+    [mainnet.id]: {
+      network: MAINNET_RPC_URL,
+      relayerUrl: "http://localhost:3000/api/relayer",
+    },
+    [sepolia.id]: {
+      network: SEPOLIA_RPC_URL,
+      relayerUrl: "http://localhost:3000/api/relayer",
+    },
   },
 });
 
