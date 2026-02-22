@@ -31,8 +31,25 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "keywords": [
+    "fhe",
+    "zama",
+    "fhevm",
+    "confidential",
+    "erc20",
+    "privacy",
+    "homomorphic-encryption",
+    "react",
+    "hooks",
+    "ethereum"
+  ],
+  "homepage": "https://github.com/zama-ai/token-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/zama-ai/token-sdk/issues"
+  },
   "scripts": {
     "build": "tsup"
   },

@@ -27,12 +27,12 @@ interface ContractConfig {
 
 async function ethersRead(provider: Provider | Signer, config: ContractConfig) {
   const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, provider);
-  return contract[config.functionName](...config.args);
+  return contract[config.functionName]!(...config.args);
 }
 
 async function ethersWrite(signer: Signer, config: ContractConfig): Promise<Address> {
   const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
-  const tx = await contract[config.functionName](...config.args, {
+  const tx = await contract[config.functionName]!(...config.args, {
     value: config.value,
   });
   return tx.hash as Address;

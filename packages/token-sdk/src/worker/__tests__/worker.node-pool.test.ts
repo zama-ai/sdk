@@ -118,7 +118,7 @@ describe("NodeWorkerPool", () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 1 });
     await pool.initPool();
 
-    const instance = vi.mocked(NodeWorkerClient).mock.results[0].value;
+    const instance = vi.mocked(NodeWorkerClient).mock.results[0]!.value;
 
     await pool.generateKeypair();
     expect(instance.generateKeypair).toHaveBeenCalled();

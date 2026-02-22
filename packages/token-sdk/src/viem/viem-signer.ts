@@ -35,7 +35,7 @@ export class ViemSigner implements GenericSigner {
     if (!account) throw new TypeError("WalletClient has no account");
     return this.walletClient.signTypedData({
       account,
-      primaryType: Object.keys(typedData.types)[0],
+      primaryType: Object.keys(typedData.types)[0]!,
       ...typedData,
     });
   }

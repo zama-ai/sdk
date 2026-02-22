@@ -18,7 +18,7 @@ export function useUserDecryptedValues(handles: string[]) {
 
   const data: Record<string, bigint | undefined> = {};
   for (let i = 0; i < handles.length; i++) {
-    data[handles[i]] = results[i].data as bigint | undefined;
+    data[handles[i]!] = results[i]!.data as bigint | undefined;
   }
 
   return {

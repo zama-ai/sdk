@@ -48,12 +48,18 @@ export function useConfidentialBalance(
   // This prevents cache collisions when wallet switches.
   const [signerAddress, setSignerAddress] = useState<Address | undefined>();
 
+  const [signerError, setSignerError] = useState<Error | undefined>();
+
   useEffect(() => {
     setSignerAddress(undefined);
+    setSignerError(undefined);
     token.signer
       .getAddress()
       .then(setSignerAddress)
-      .catch(() => setSignerAddress(undefined));
+      .catch((error: unknown) => {
+        setSignerAddress(undefined);
+        setSignerError(error instanceof Error ? error : new Error(String(error)));
+      });
   }, [token.signer]);
 
   const ownerKey = signerAddress ?? "";
@@ -77,5 +83,5 @@ export function useConfidentialBalance(
     ...options,
   });
 
-  return { ...balanceQuery, handleQuery };
+  return { ...balanceQuery, handleQuery, signerError };
 }

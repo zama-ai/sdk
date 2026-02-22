@@ -26,6 +26,7 @@ export default defineConfig({
     "@zama-fhe/relayer-sdk",
   ],
   treeshake: true,
+  sourcemap: true,
   tsconfig: "tsconfig.build.json",
   plugins: [
     {

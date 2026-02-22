@@ -84,7 +84,7 @@ export class Token extends ReadonlyToken {
       }
 
       return await this.signer.writeContract(
-        confidentialTransferContract(this.address, to, handles[0], inputProof),
+        confidentialTransferContract(this.address, to, handles[0]!, inputProof),
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
@@ -116,7 +116,7 @@ export class Token extends ReadonlyToken {
       }
 
       return await this.signer.writeContract(
-        confidentialTransferFromContract(this.address, from, to, handles[0], inputProof),
+        confidentialTransferFromContract(this.address, from, to, handles[0]!, inputProof),
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
@@ -261,7 +261,7 @@ export class Token extends ReadonlyToken {
 
     try {
       return await this.signer.writeContract(
-        unwrapContract(this.address, userAddress, userAddress, handles[0], inputProof),
+        unwrapContract(this.address, userAddress, userAddress, handles[0]!, inputProof),
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;

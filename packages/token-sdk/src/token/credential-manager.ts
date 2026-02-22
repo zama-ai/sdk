@@ -82,8 +82,9 @@ export class CredentialsManager {
           return creds;
         }
       }
-    } catch (error) {
-      console.warn("[CredentialsManager] Failed to read stored credentials, regenerating", error);
+    } catch {
+      // Stored credentials unreadable (corrupt, schema change, decryption failure).
+      // Fall through to regeneration.
     }
 
     const key = contractAddresses.slice().sort().join(",");

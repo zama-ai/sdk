@@ -91,11 +91,11 @@ describe("parseActivityFeed", () => {
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
-    expect(items[0].type).toBe("transfer");
-    expect(items[0].direction).toBe("outgoing");
-    expect(items[0].amount).toEqual({ type: "encrypted", handle });
-    expect(items[0].from).toBe(USER);
-    expect(items[0].to).toBe(OTHER);
+    expect(items[0]!.type).toBe("transfer");
+    expect(items[0]!.direction).toBe("outgoing");
+    expect(items[0]!.amount).toEqual({ type: "encrypted", handle });
+    expect(items[0]!.from).toBe(USER);
+    expect(items[0]!.to).toBe(OTHER);
   });
 
   it("parses a ConfidentialTransfer as incoming", () => {
@@ -104,7 +104,7 @@ describe("parseActivityFeed", () => {
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
-    expect(items[0].direction).toBe("incoming");
+    expect(items[0]!.direction).toBe("incoming");
   });
 
   it("parses a self-transfer", () => {
@@ -113,7 +113,7 @@ describe("parseActivityFeed", () => {
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
-    expect(items[0].direction).toBe("self");
+    expect(items[0]!.direction).toBe("self");
   });
 
   it("handles case-insensitive address comparison", () => {
@@ -122,7 +122,7 @@ describe("parseActivityFeed", () => {
     const logs = [transferLog(USER, OTHER, handle)];
     const items = parseActivityFeed(logs, upperUser);
 
-    expect(items[0].direction).toBe("outgoing");
+    expect(items[0]!.direction).toBe("outgoing");
   });
 
   it("parses a Wrapped event as shield", () => {
@@ -130,10 +130,10 @@ describe("parseActivityFeed", () => {
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
-    expect(items[0].type).toBe("shield");
-    expect(items[0].direction).toBe("incoming");
-    expect(items[0].amount).toEqual({ type: "clear", value: 1000n });
-    expect(items[0].fee).toBe(50n);
+    expect(items[0]!.type).toBe("shield");
+    expect(items[0]!.direction).toBe("incoming");
+    expect(items[0]!.amount).toEqual({ type: "clear", value: 1000n });
+    expect(items[0]!.fee).toBe(50n);
   });
 
   it("parses an UnwrapRequested event", () => {
@@ -142,9 +142,9 @@ describe("parseActivityFeed", () => {
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
-    expect(items[0].type).toBe("unshield_requested");
-    expect(items[0].direction).toBe("incoming");
-    expect(items[0].amount).toEqual({ type: "encrypted", handle });
+    expect(items[0]!.type).toBe("unshield_requested");
+    expect(items[0]!.direction).toBe("incoming");
+    expect(items[0]!.amount).toEqual({ type: "encrypted", handle });
   });
 
   it("parses an UnwrappedStarted event", () => {
@@ -153,9 +153,9 @@ describe("parseActivityFeed", () => {
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
-    expect(items[0].type).toBe("unshield_started");
-    expect(items[0].direction).toBe("incoming");
-    expect(items[0].success).toBe(true);
+    expect(items[0]!.type).toBe("unshield_started");
+    expect(items[0]!.direction).toBe("incoming");
+    expect(items[0]!.success).toBe(true);
   });
 
   it("parses an UnwrappedFinalized event", () => {
@@ -163,10 +163,10 @@ describe("parseActivityFeed", () => {
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
-    expect(items[0].type).toBe("unshield_finalized");
-    expect(items[0].amount).toEqual({ type: "clear", value: 450n });
-    expect(items[0].fee).toBe(50n);
-    expect(items[0].success).toBe(true);
+    expect(items[0]!.type).toBe("unshield_finalized");
+    expect(items[0]!.amount).toEqual({ type: "clear", value: 450n });
+    expect(items[0]!.fee).toBe(50n);
+    expect(items[0]!.success).toBe(true);
   });
 
   it("preserves metadata from logs", () => {
@@ -179,7 +179,7 @@ describe("parseActivityFeed", () => {
     };
     const items = parseActivityFeed([log], USER);
 
-    expect(items[0].metadata).toEqual({
+    expect(items[0]!.metadata).toEqual({
       transactionHash: "0xdeadbeef",
       blockNumber: 42n,
       logIndex: 3,
@@ -207,9 +207,9 @@ describe("parseActivityFeed", () => {
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(3);
-    expect(items[0].type).toBe("transfer");
-    expect(items[1].type).toBe("shield");
-    expect(items[2].type).toBe("unshield_finalized");
+    expect(items[0]!.type).toBe("transfer");
+    expect(items[1]!.type).toBe("shield");
+    expect(items[2]!.type).toBe("unshield_finalized");
   });
 });
 
@@ -265,7 +265,7 @@ describe("applyDecryptedValues", () => {
     const decryptedMap = new Map([[handle, 42n]]);
     const result = applyDecryptedValues(items, decryptedMap);
 
-    expect(result[0].amount).toEqual({
+    expect(result[0]!.amount).toEqual({
       type: "encrypted",
       handle,
       decryptedValue: 42n,
@@ -276,7 +276,7 @@ describe("applyDecryptedValues", () => {
     const items = parseActivityFeed([wrappedLog(USER, 1000n, 50n)], USER);
     const result = applyDecryptedValues(items, new Map());
 
-    expect(result[0].amount).toEqual({ type: "clear", value: 1000n });
+    expect(result[0]!.amount).toEqual({ type: "clear", value: 1000n });
   });
 
   it("leaves items with unknown handles unchanged", () => {
@@ -284,7 +284,7 @@ describe("applyDecryptedValues", () => {
     const items = parseActivityFeed([transferLog(USER, OTHER, handle)], USER);
     const result = applyDecryptedValues(items, new Map());
 
-    expect(result[0].amount).toEqual({ type: "encrypted", handle });
+    expect(result[0]!.amount).toEqual({ type: "encrypted", handle });
   });
 });
 
@@ -309,9 +309,9 @@ describe("sortByBlockNumber", () => {
     );
 
     const sorted = sortByBlockNumber(items);
-    expect(sorted[0].metadata.blockNumber).toBe(3n);
-    expect(sorted[1].metadata.blockNumber).toBe(2n);
-    expect(sorted[2].metadata.blockNumber).toBe(1n);
+    expect(sorted[0]!.metadata.blockNumber).toBe(3n);
+    expect(sorted[1]!.metadata.blockNumber).toBe(2n);
+    expect(sorted[2]!.metadata.blockNumber).toBe(1n);
   });
 
   it("sorts by logIndex within same block", () => {
@@ -337,9 +337,9 @@ describe("sortByBlockNumber", () => {
     );
 
     const sorted = sortByBlockNumber(items);
-    expect(sorted[0].metadata.logIndex).toBe(2);
-    expect(sorted[1].metadata.logIndex).toBe(1);
-    expect(sorted[2].metadata.logIndex).toBe(0);
+    expect(sorted[0]!.metadata.logIndex).toBe(2);
+    expect(sorted[1]!.metadata.logIndex).toBe(1);
+    expect(sorted[2]!.metadata.logIndex).toBe(0);
   });
 
   it("handles numeric block numbers", () => {
@@ -358,8 +358,8 @@ describe("sortByBlockNumber", () => {
     );
 
     const sorted = sortByBlockNumber(items);
-    expect(sorted[0].metadata.blockNumber).toBe(20);
-    expect(sorted[1].metadata.blockNumber).toBe(10);
+    expect(sorted[0]!.metadata.blockNumber).toBe(20);
+    expect(sorted[1]!.metadata.blockNumber).toBe(10);
   });
 
   it("places items without blockNumber at the beginning", () => {
@@ -375,8 +375,8 @@ describe("sortByBlockNumber", () => {
     );
 
     const sorted = sortByBlockNumber(items);
-    expect(sorted[0].metadata.blockNumber).toBeUndefined();
-    expect(sorted[1].metadata.blockNumber).toBe(5n);
+    expect(sorted[0]!.metadata.blockNumber).toBeUndefined();
+    expect(sorted[1]!.metadata.blockNumber).toBe(5n);
   });
 
   it("does not mutate the original array", () => {

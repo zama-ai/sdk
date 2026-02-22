@@ -15,10 +15,14 @@ import type {
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
 import { mergeFhevmConfig } from "./relayer-utils";
-import packageJson from "../../package.json";
+import { TokenError, TokenErrorCode } from "../token/token.types";
 
-const SDK_VERSION = packageJson.devDependencies["@zama-fhe/relayer-sdk"];
-const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${SDK_VERSION}/relayer-sdk-js.umd.cjs`;
+/**
+ * Pinned relayer SDK version used for the WASM CDN bundle.
+ * Update this when upgrading @zama-fhe/relayer-sdk.
+ */
+const RELAYER_SDK_VERSION = "0.4.1";
+const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
 
 /**
  * RelayerWeb — browser FHE backend using a Web Worker.
@@ -77,7 +81,11 @@ export class RelayerWeb implements RelayerSDK {
     if (!this.#initPromise) {
       this.#initPromise = this.#initWorker().catch((error) => {
         this.#initPromise = null;
-        throw error;
+        throw error instanceof TokenError
+          ? error
+          : new TokenError(TokenErrorCode.EncryptionFailed, "Failed to initialize FHE worker", {
+              cause: error instanceof Error ? error : undefined,
+            });
       });
     }
     return this.#initPromise;

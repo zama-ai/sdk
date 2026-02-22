@@ -149,6 +149,10 @@ export class ReadonlyToken {
    * Decrypt balances for multiple tokens in parallel.
    * Shares a single set of credentials across all tokens.
    *
+   * **Warning:** If a per-token decryption fails and no `onError` callback is
+   * provided, the failed token's balance is silently set to `0n` in the result
+   * map. Always pass `onError` if you need to detect partial failures.
+   *
    * @example
    * ```ts
    * const balances = await ReadonlyToken.batchBalanceOf(tokens);
@@ -164,12 +168,12 @@ export class ReadonlyToken {
   ): Promise<Map<Address, bigint>> {
     if (tokens.length === 0) return new Map();
 
-    const sdk = tokens[0].sdk;
-    const signer = tokens[0].signer;
+    const sdk = tokens[0]!.sdk;
+    const signer = tokens[0]!.signer;
     const ownerAddress = owner ?? (await signer.getAddress());
     const allAddresses = tokens.map((t) => t.address);
 
-    const creds = await tokens[0].credentials.getAll(allAddresses);
+    const creds = await tokens[0]!.credentials.getAll(allAddresses);
 
     const handles = await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress)));
 
@@ -177,8 +181,8 @@ export class ReadonlyToken {
     const decryptPromises: Promise<void>[] = [];
 
     for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i];
-      const handle = handles[i];
+      const token = tokens[i]!;
+      const handle = handles[i]!;
 
       if (token.isZeroHandle(handle)) {
         results.set(token.address, BigInt(0));
@@ -216,11 +220,16 @@ export class ReadonlyToken {
    * Decrypt pre-fetched encrypted handles for multiple tokens in parallel.
    * Use when you already have handles from {@link confidentialBalanceOf}.
    *
+   * **Warning:** If a per-token decryption fails and no `onError` callback is
+   * provided, the failed token's balance is silently set to `0n` in the result
+   * map. Always pass `onError` if you need to detect partial failures.
+   *
    * @example
    * ```ts
    * const handles = await Promise.all(tokens.map(t => t.confidentialBalanceOf()));
    * const balances = await ReadonlyToken.batchDecryptBalances(
    *   tokens, handles, owner,
+   *   (addr, err) => console.error(`Decrypt failed for ${addr}`, err),
    * );
    * ```
    */
@@ -232,18 +241,18 @@ export class ReadonlyToken {
   ): Promise<Map<Address, bigint>> {
     if (tokens.length === 0) return new Map();
 
-    const sdk = tokens[0].sdk;
-    const signer = tokens[0].signer;
+    const sdk = tokens[0]!.sdk;
+    const signer = tokens[0]!.signer;
     const allAddresses = tokens.map((t) => t.address);
-    const creds = await tokens[0].credentials.getAll(allAddresses);
+    const creds = await tokens[0]!.credentials.getAll(allAddresses);
     const signerAddress = owner ?? (await signer.getAddress());
 
     const results = new Map<Address, bigint>();
     const decryptPromises: Promise<void>[] = [];
 
     for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i];
-      const handle = handles[i];
+      const token = tokens[i]!;
+      const handle = handles[i]!;
 
       if (token.isZeroHandle(handle)) {
         results.set(token.address, BigInt(0));
@@ -390,7 +399,7 @@ export class ReadonlyToken {
   static async authorizeAll(tokens: ReadonlyToken[]): Promise<void> {
     if (tokens.length === 0) return;
     const allAddresses = tokens.map((t) => t.address);
-    await tokens[0].credentials.getAll(allAddresses);
+    await tokens[0]!.credentials.getAll(allAddresses);
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Address> {

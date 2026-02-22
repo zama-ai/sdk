@@ -46,14 +46,14 @@ export class EthersSigner implements GenericSigner {
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
     const overrides: Record<string, unknown> = {};
     if (config.value !== undefined) overrides.value = config.value;
-    const tx = await contract[config.functionName](...config.args, overrides);
+    const tx = await contract[config.functionName]!(...config.args, overrides);
     return tx.hash as Address;
   }
 
   async readContract<T, C extends ContractCallConfig>(config: C): Promise<T> {
     const signer = await this.signerPromise;
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
-    return contract[config.functionName](...config.args) as Promise<T>;
+    return contract[config.functionName]!(...config.args) as Promise<T>;
   }
 
   async waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt> {

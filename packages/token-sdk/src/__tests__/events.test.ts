@@ -272,8 +272,8 @@ describe("decodeTokenEvents", () => {
     ];
     const events = decodeTokenEvents(logs);
     expect(events).toHaveLength(2);
-    expect(events[0].eventName).toBe("UnwrapRequested");
-    expect(events[1].eventName).toBe("ConfidentialTransfer");
+    expect(events[0]!.eventName).toBe("UnwrapRequested");
+    expect(events[1]!.eventName).toBe("ConfidentialTransfer");
   });
 });
 

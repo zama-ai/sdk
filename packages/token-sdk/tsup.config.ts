@@ -15,5 +15,6 @@ export default defineConfig({
   outDir: "dist",
   external: ["viem", "ethers", "@zama-fhe/relayer-sdk"],
   treeshake: true,
+  sourcemap: true,
   tsconfig: "tsconfig.build.json",
 });

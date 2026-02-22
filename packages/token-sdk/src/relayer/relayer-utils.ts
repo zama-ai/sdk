@@ -76,5 +76,5 @@ export function mergeFhevmConfig(
   if (!base && (!overrides || Object.keys(overrides).length === 0)) {
     throw new Error(`No config for chainId: ${chainId}`);
   }
-  return { ...base, ...overrides };
+  return { ...base, ...overrides } as FhevmInstanceConfig;
 }

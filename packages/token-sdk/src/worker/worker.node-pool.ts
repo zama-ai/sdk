@@ -79,10 +79,10 @@ export class NodeWorkerPool {
    */
   #leastBusyIndex(): number {
     let minIndex = 0;
-    let minCount = this.#activeCount[0];
+    let minCount = this.#activeCount[0]!;
     for (let i = 1; i < this.#activeCount.length; i++) {
-      if (this.#activeCount[i] < minCount) {
-        minCount = this.#activeCount[i];
+      if (this.#activeCount[i]! < minCount) {
+        minCount = this.#activeCount[i]!;
         minIndex = i;
       }
     }
@@ -94,11 +94,11 @@ export class NodeWorkerPool {
       throw new Error("NodeWorkerPool not initialized. Call initPool() first.");
     }
     const index = this.#leastBusyIndex();
-    this.#activeCount[index]++;
+    this.#activeCount[index]!++;
     try {
-      return await fn(this.#workers[index]);
+      return await fn(this.#workers[index]!);
     } finally {
-      this.#activeCount[index]--;
+      this.#activeCount[index]!--;
     }
   }
 

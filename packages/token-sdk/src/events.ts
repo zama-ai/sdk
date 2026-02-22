@@ -177,9 +177,9 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
 
   return {
     eventName: "ConfidentialTransfer",
-    from: topicToAddress(log.topics[1]),
-    to: topicToAddress(log.topics[2]),
-    encryptedAmountHandle: topicToBytes32(log.topics[3]),
+    from: topicToAddress(log.topics[1]!),
+    to: topicToAddress(log.topics[2]!),
+    encryptedAmountHandle: topicToBytes32(log.topics[3]!),
   };
 }
 
@@ -194,8 +194,8 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
 
   return {
     eventName: "Wrapped",
-    to: topicToAddress(log.topics[1]),
-    mintTxId: topicToBigInt(log.topics[2]),
+    to: topicToAddress(log.topics[1]!),
+    mintTxId: topicToBigInt(log.topics[2]!),
     mintAmount: wordToBigInt(log.data, 0),
     amountIn: wordToBigInt(log.data, 1),
     feeAmount: wordToBigInt(log.data, 2),
@@ -213,7 +213,7 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
 
   return {
     eventName: "UnwrapRequested",
-    receiver: topicToAddress(log.topics[1]),
+    receiver: topicToAddress(log.topics[1]!),
     encryptedAmount: wordToBytes32(log.data, 0),
   };
 }
@@ -230,8 +230,8 @@ export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent |
 
   return {
     eventName: "UnwrappedFinalized",
-    burntAmountHandle: topicToBytes32(log.topics[1]),
-    nextTxId: topicToBigInt(log.topics[2]),
+    burntAmountHandle: topicToBytes32(log.topics[1]!),
+    nextTxId: topicToBigInt(log.topics[2]!),
     finalizeSuccess: wordToBool(log.data, 0),
     feeTransferSuccess: wordToBool(log.data, 1),
     burnAmount: wordToBigInt(log.data, 2),
@@ -252,9 +252,9 @@ export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | nul
 
   return {
     eventName: "UnwrappedStarted",
-    requestId: topicToBigInt(log.topics[1]),
-    txId: topicToBigInt(log.topics[2]),
-    to: topicToAddress(log.topics[3]),
+    requestId: topicToBigInt(log.topics[1]!),
+    txId: topicToBigInt(log.topics[2]!),
+    to: topicToAddress(log.topics[3]!),
     returnVal: wordToBool(log.data, 0),
     refund: wordToAddress(log.data, 1),
     requestedAmount: wordToBytes32(log.data, 2),
