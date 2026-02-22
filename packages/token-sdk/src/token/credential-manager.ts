@@ -2,6 +2,7 @@ import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStringStorage, StoredCredentials } from "./token.types";
 import { TokenError, TokenErrorCode } from "./token.types";
+import { assertObject, assertString, assertArray } from "../utils";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
 interface EncryptedData {
@@ -76,10 +77,8 @@ export class CredentialsManager {
     try {
       const stored = await this.#storage.getItem(storeKey);
       if (stored) {
-        const encrypted = JSON.parse(stored) as EncryptedCredentials;
-        if (!this.#isValidEncryptedShape(encrypted)) {
-          throw new Error("Corrupt credential storage shape");
-        }
+        const encrypted = JSON.parse(stored) as unknown;
+        this.#assertEncryptedCredentials(encrypted);
         const creds = await this.#decryptCredentials(encrypted);
         if (this.#isValid(creds, contractAddresses)) {
           return creds;
@@ -134,15 +133,13 @@ export class CredentialsManager {
 
   // ── Validation ──────────────────────────────────────────────
 
-  #isValidEncryptedShape(data: unknown): data is EncryptedCredentials {
-    if (typeof data !== "object" || data === null) return false;
-    const d = data as Record<string, unknown>;
-    if (typeof d.signature !== "string") return false;
-    if (!Array.isArray(d.contractAddresses)) return false;
-    const epk = d.encryptedPrivateKey as Record<string, unknown> | undefined;
-    if (typeof epk !== "object" || epk === null) return false;
-    if (typeof epk.iv !== "string" || typeof epk.ciphertext !== "string") return false;
-    return true;
+  #assertEncryptedCredentials(data: unknown): asserts data is EncryptedCredentials {
+    assertObject(data, "Stored credentials");
+    assertString(data.signature, "credentials.signature");
+    assertArray(data.contractAddresses, "credentials.contractAddresses");
+    assertObject(data.encryptedPrivateKey, "credentials.encryptedPrivateKey");
+    assertString(data.encryptedPrivateKey.iv, "encryptedPrivateKey.iv");
+    assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
   }
 
   #isValid(creds: StoredCredentials, requiredContracts: Address[]): boolean {
