@@ -1,13 +1,10 @@
 "use client";
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { ReadonlyConfidentialToken, type Address } from "@zama-fhe/token-sdk";
+import { ReadonlyToken, type Address } from "@zama-fhe/token-sdk";
 import { useMemo } from "react";
 import { useTokenSDK } from "../provider";
-import {
-  confidentialBalancesQueryKeys,
-  confidentialHandlesQueryKeys,
-} from "./confidential-balance-query-keys";
+import { confidentialBalancesQueryKeys, confidentialHandlesQueryKeys } from "./balance-query-keys";
 
 interface UseConfidentialBalancesOptions extends Omit<
   UseQueryOptions<Map<Address, bigint>, Error>,
@@ -55,7 +52,7 @@ export function useConfidentialBalances(
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, owner ?? ""), handlesKey],
     queryFn: async () => {
       const ownerAddress = owner ?? (await sdk.signer.getAddress());
-      return ReadonlyConfidentialToken.batchDecryptBalances(tokens, handles!, ownerAddress);
+      return ReadonlyToken.batchDecryptBalances(tokens, handles!, ownerAddress);
     },
     enabled: tokenAddresses.length > 0 && handles !== undefined,
     staleTime: Infinity,

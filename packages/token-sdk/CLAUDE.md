@@ -13,7 +13,7 @@ All commands run from the **monorepo root** (`../../`):
 ```bash
 pnpm test              # Run all tests (vitest, watch mode)
 pnpm test:run          # Run all tests once
-pnpm test:run -- --reporter=verbose src/token/__tests__/confidential-token.test.ts  # Single test file
+pnpm test:run -- --reporter=verbose src/token/__tests__/token.test.ts  # Single test file
 pnpm test:coverage     # Coverage report
 pnpm build             # Build all packages (tsup)
 pnpm typecheck         # Type check (tsc --noEmit)
@@ -30,7 +30,7 @@ Build this package only: `pnpm --filter @zama-fhe/token-sdk build`
 
 The package exposes four entry points via `package.json` exports:
 
-- **`@zama-fhe/token-sdk`** — Core SDK: `TokenSDK`, `ConfidentialToken`, `ReadonlyConfidentialToken`, relayer web backend (`RelayerWeb`), event decoders, activity feed helpers, contract call builders, ABIs, storage adapters, error types
+- **`@zama-fhe/token-sdk`** — Core SDK: `TokenSDK`, `Token`, `ReadonlyToken`, relayer web backend (`RelayerWeb`), event decoders, activity feed helpers, contract call builders, ABIs, storage adapters, error types
 - **`@zama-fhe/token-sdk/viem`** — `ViemSigner` adapter + viem-native read/write contract helpers
 - **`@zama-fhe/token-sdk/ethers`** — `EthersSigner` adapter + ethers-native read/write contract helpers
 - **`@zama-fhe/token-sdk/node`** — `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network preset configs
@@ -39,18 +39,18 @@ The package exposes four entry points via `package.json` exports:
 
 ```
 TokenSDK (factory)
-  ├── ConfidentialToken (extends ReadonlyConfidentialToken)
+  ├── Token (extends ReadonlyToken)
   │     ├── Contract call builders (src/contracts/) — pure functions returning ContractCallConfig
   │     ├── CredentialsManager — AES-GCM encrypted FHE credential storage
   │     └── RelayerSDK interface — FHE encrypt/decrypt operations
-  └── ReadonlyConfidentialToken
+  └── ReadonlyToken
         ├── Balance queries, batch operations, ERC-165 checks
         └── Static methods: authorizeAll, batchBalanceOf, batchDecryptBalances
 ```
 
 **Key abstractions:**
 
-- **`ConfidentialSigner`** (`src/token/confidential-token.types.ts`) — Framework-agnostic wallet interface (5 methods). Implemented by `ViemSigner` and `EthersSigner`.
+- **`ConfidentialSigner`** (`src/token/token.types.ts`) — Framework-agnostic wallet interface (5 methods). Implemented by `ViemSigner` and `EthersSigner`.
 - **`RelayerSDK`** (`src/relayer/relayer-sdk.ts`) — FHE operations interface. `RelayerWeb` uses a Web Worker + WASM CDN bundle. `RelayerNode` calls `@zama-fhe/relayer-sdk/node` directly.
 - **`GenericStringStorage`** — Pluggable key-value store for persisted FHE credentials. `MemoryStorage` for tests, `IndexedDBStorage` for browser.
 - **Contract call builders** (`src/contracts/`) — Pure functions returning `ContractCallConfig` objects. The viem/ethers sub-paths wrap these with library-specific execution.
@@ -65,7 +65,7 @@ Browser FHE runs in a Web Worker (`src/worker/`):
 
 ### Error Handling
 
-All SDK errors use `ConfidentialTokenError` with typed `ConfidentialTokenErrorCode` enum. Methods catch non-SDK errors and re-wrap them with appropriate codes.
+All SDK errors use `TokenError` with typed `TokenErrorCode` enum. Methods catch non-SDK errors and re-wrap them with appropriate codes.
 
 ## Code Conventions
 

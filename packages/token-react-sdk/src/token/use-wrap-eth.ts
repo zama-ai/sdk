@@ -7,11 +7,8 @@ import {
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
-} from "./confidential-balance-query-keys";
-import {
-  useConfidentialToken,
-  type UseConfidentialTokenConfig,
-} from "./use-confidential-token";
+} from "./balance-query-keys";
+import { useToken, type UseTokenConfig } from "./use-token";
 
 interface WrapETHParams {
   amount: bigint;
@@ -19,10 +16,10 @@ interface WrapETHParams {
 }
 
 export function useWrapETH(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, WrapETHParams, Address>,
 ) {
-  const token = useConfidentialToken(config);
+  const token = useToken(config);
 
   return useMutation<Address, Error, WrapETHParams, Address>({
     mutationFn: ({ amount, value }) => token.wrapETH(amount, value),

@@ -24,8 +24,8 @@ export { decryptionKeys } from "./relayer/decryption-cache";
 export {
   RelayerWeb,
   TokenSDK,
-  ConfidentialToken,
-  ReadonlyConfidentialToken,
+  Token,
+  ReadonlyToken,
   MemoryStorage,
   IndexedDBStorage,
   indexedDBStorage,
@@ -104,9 +104,9 @@ export {
   getFeeRecipientContract,
 } from "@zama-fhe/token-sdk";
 
-// ConfidentialToken hooks
-export { useConfidentialToken } from "./token/use-confidential-token";
-export { useReadonlyConfidentialToken } from "./token/use-readonly-confidential-token";
+// Token hooks
+export { useToken } from "./token/use-token";
+export { useReadonlyToken } from "./token/use-readonly-token";
 export { useConfidentialBalance } from "./token/use-confidential-balance";
 export { useConfidentialBalances } from "./token/use-confidential-balances";
 export { useAuthorizeAll } from "./token/use-authorize-all";
@@ -136,7 +136,7 @@ export {
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
-} from "./token/confidential-balance-query-keys";
+} from "./token/balance-query-keys";
 export { useWrapperDiscovery, useWrapperDiscoverySuspense } from "./token/use-wrapper-discovery";
 export {
   useTokenMetadata,
@@ -154,7 +154,7 @@ export type {
   UnwrapRequestedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
-  ConfidentialTokenEvent,
+  TokenEvent,
 } from "@zama-fhe/token-sdk";
 export {
   CONFIDENTIAL_TRANSFER_TOPIC,
@@ -162,14 +162,14 @@ export {
   UNWRAP_REQUESTED_TOPIC,
   UNWRAPPED_FINALIZED_TOPIC,
   UNWRAPPED_STARTED_TOPIC,
-  CONFIDENTIAL_TOKEN_TOPICS,
+  TOKEN_TOPICS,
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
-  decodeConfidentialTokenEvent,
-  decodeConfidentialTokenEvents,
+  decodeTokenEvent,
+  decodeTokenEvents,
   findUnwrapRequested,
   findWrapped,
 } from "@zama-fhe/token-sdk";
@@ -196,4 +196,4 @@ export type {
   ContractCallConfig,
   TransactionReceipt,
 } from "@zama-fhe/token-sdk";
-export { ConfidentialTokenError, ConfidentialTokenErrorCode } from "@zama-fhe/token-sdk";
+export { TokenError, TokenErrorCode } from "@zama-fhe/token-sdk";

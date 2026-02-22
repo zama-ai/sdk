@@ -1,19 +1,14 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import type {
-  Address,
-  RawLog,
-  ActivityLogMetadata,
-  ActivityItem,
-} from "@zama-fhe/token-sdk";
+import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/token-sdk";
 import {
   parseActivityFeed,
   extractEncryptedHandles,
   applyDecryptedValues,
   sortByBlockNumber,
 } from "@zama-fhe/token-sdk";
-import { useReadonlyConfidentialToken } from "./use-readonly-confidential-token";
+import { useReadonlyToken } from "./use-readonly-token";
 
 export const activityFeedQueryKeys = {
   all: ["activityFeed"] as const,
@@ -39,16 +34,12 @@ export function useActivityFeed(
   userAddress: Address | undefined,
   options?: UseActivityFeedOptions,
 ): UseQueryResult<ActivityItem[], Error> {
-  const token = useReadonlyConfidentialToken(tokenAddress);
+  const token = useReadonlyToken(tokenAddress);
   const decrypt = options?.decrypt ?? true;
   const enabled = logs !== undefined && userAddress !== undefined;
 
   return useQuery<ActivityItem[], Error>({
-    queryKey: [
-      ...activityFeedQueryKeys.token(tokenAddress),
-      userAddress ?? "",
-      logs?.length ?? 0,
-    ],
+    queryKey: [...activityFeedQueryKeys.token(tokenAddress), userAddress ?? "", logs?.length ?? 0],
     queryFn: async () => {
       if (!logs || !userAddress) return [];
 
@@ -61,10 +52,7 @@ export function useActivityFeed(
       const handles = extractEncryptedHandles(items);
       if (handles.length === 0) return items;
 
-      const decryptedMap = await token.decryptHandles(
-        handles as Address[],
-        userAddress,
-      );
+      const decryptedMap = await token.decryptHandles(handles as Address[], userAddress);
 
       return applyDecryptedValues(items, decryptedMap);
     },

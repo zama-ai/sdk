@@ -1,6 +1,6 @@
 "use client";
 
-import type { GenericStringStorage } from "./confidential-token.types";
+import type { GenericStringStorage } from "./token.types";
 
 /**
  * IndexedDB-backed {@link GenericStringStorage}.
@@ -48,8 +48,7 @@ export class IndexedDBStorage implements GenericStringStorage {
       const tx = db.transaction(this.#storeName, "readonly");
       const store = tx.objectStore(this.#storeName);
       const request = store.get(key);
-      request.onsuccess = () =>
-        resolve(JSON.stringify(request.result?.value) ?? null);
+      request.onsuccess = () => resolve(JSON.stringify(request.result?.value) ?? null);
       request.onerror = () => reject(request.error);
     });
   }

@@ -120,9 +120,9 @@ The `/node` sub-path also exports `NodeWorkerClient` and `NodeWorkerClientConfig
 
 You can also implement the `RelayerSDK` interface for custom backends.
 
-### ConfidentialToken
+### Token
 
-Full read/write interface for a single confidential ERC-20. Extends `ReadonlyConfidentialToken`. The encrypted ERC-20 contract IS the wrapper, so `wrapper` defaults to the token `address`. Pass an explicit `wrapper` only if they differ.
+Full read/write interface for a single confidential ERC-20. Extends `ReadonlyToken`. The encrypted ERC-20 contract IS the wrapper, so `wrapper` defaults to the token `address`. Pass an explicit `wrapper` only if they differ.
 
 | Method                                    | Description                                                                                                                                                                                                  |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -143,7 +143,7 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyCon
 
 All write methods return the transaction hash (`Address`).
 
-### ReadonlyConfidentialToken
+### ReadonlyToken
 
 Read-only subset. No wrapper address needed.
 
@@ -168,14 +168,14 @@ Static methods for multi-token operations:
 ```ts
 // Pre-authorize all tokens with a single wallet signature
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
-await ReadonlyConfidentialToken.authorizeAll(tokens);
+await ReadonlyToken.authorizeAll(tokens);
 // All subsequent decrypts reuse cached credentials — no more wallet prompts
 
 // Decrypt balances for multiple tokens in parallel
-const balances = await ReadonlyConfidentialToken.batchBalanceOf(tokens, owner);
+const balances = await ReadonlyToken.batchBalanceOf(tokens, owner);
 
 // Decrypt pre-fetched handles for multiple tokens
-const balances = await ReadonlyConfidentialToken.batchDecryptBalances(tokens, handles, owner);
+const balances = await ReadonlyToken.batchDecryptBalances(tokens, handles, owner);
 ```
 
 ### Storage
@@ -285,7 +285,7 @@ const signer = new EthersSigner(ethersSigner);
 
 ## Contract Call Builders
 
-Every function returns a `ContractCallConfig` object (address, ABI, function name, args) that can be used with any Web3 library. These are the low-level building blocks — they map 1:1 to on-chain contract calls without any orchestration. Use them when the high-level `ConfidentialToken` API doesn't cover your use case.
+Every function returns a `ContractCallConfig` object (address, ABI, function name, args) that can be used with any Web3 library. These are the low-level building blocks — they map 1:1 to on-chain contract calls without any orchestration. Use them when the high-level `Token` API doesn't cover your use case.
 
 > **High-level vs low-level:** `token.wrap()` / `token.unshield()` handle the full flow (approval, encryption, receipt waiting, finalization). The contract call builders (`wrapContract()`, `unwrapContract()`, etc.) produce raw call configs for a single contract interaction.
 
@@ -422,14 +422,14 @@ Decode raw log entries from `eth_getLogs` into typed event objects.
 
 ### Topics
 
-Use `CONFIDENTIAL_TOKEN_TOPICS` as the `topics[0]` filter for `getLogs` to capture all confidential token events:
+Use `TOKEN_TOPICS` as the `topics[0]` filter for `getLogs` to capture all confidential token events:
 
 ```ts
-import { CONFIDENTIAL_TOKEN_TOPICS } from "@zama-fhe/token-sdk";
+import { TOKEN_TOPICS } from "@zama-fhe/token-sdk";
 
 const logs = await publicClient.getLogs({
   address: tokenAddress,
-  topics: [CONFIDENTIAL_TOKEN_TOPICS],
+  topics: [TOKEN_TOPICS],
 });
 ```
 
@@ -437,15 +437,15 @@ Individual topic constants are also exported: `CONFIDENTIAL_TRANSFER_TOPIC`, `WR
 
 ### Decoders
 
-| Function                              | Returns                                                                                                                |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `decodeConfidentialTransfer(log)`     | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                            |
-| `decodeWrapped(log)`                  | `WrappedEvent \| null` — `{ mintAmount, amountIn, feeAmount, to, mintTxId }`                                           |
-| `decodeUnwrapRequested(log)`          | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                                       |
-| `decodeUnwrappedFinalized(log)`       | `UnwrappedFinalizedEvent \| null` — `{ burntAmountHandle, finalizeSuccess, burnAmount, unwrapAmount, feeAmount, ... }` |
-| `decodeUnwrappedStarted(log)`         | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }`            |
-| `decodeConfidentialTokenEvent(log)`   | `ConfidentialTokenEvent \| null` — tries all decoders                                                                  |
-| `decodeConfidentialTokenEvents(logs)` | `ConfidentialTokenEvent[]` — batch decode, skips unrecognized logs                                                     |
+| Function                          | Returns                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                            |
+| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ mintAmount, amountIn, feeAmount, to, mintTxId }`                                           |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                                       |
+| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ burntAmountHandle, finalizeSuccess, burnAmount, unwrapAmount, feeAmount, ... }` |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }`            |
+| `decodeTokenEvent(log)`           | `TokenEvent \| null` — tries all decoders                                                                              |
+| `decodeTokenEvents(logs)`         | `TokenEvent[]` — batch decode, skips unrecognized logs                                                                 |
 
 ### Finder Helpers
 
@@ -513,7 +513,7 @@ interface ActivityItem {
   fee?: ActivityAmount;
   success?: boolean;
   metadata: ActivityLogMetadata;
-  rawEvent: ConfidentialTokenEvent;
+  rawEvent: TokenEvent;
 }
 
 interface ActivityLogMetadata {
@@ -525,20 +525,20 @@ interface ActivityLogMetadata {
 
 ## Error Handling
 
-All SDK errors are instances of `ConfidentialTokenError`:
+All SDK errors are instances of `TokenError`:
 
 ```ts
-import { ConfidentialTokenError, ConfidentialTokenErrorCode } from "@zama-fhe/token-sdk";
+import { TokenError, TokenErrorCode } from "@zama-fhe/token-sdk";
 
 try {
   await token.confidentialTransfer(to, amount);
 } catch (error) {
-  if (error instanceof ConfidentialTokenError) {
+  if (error instanceof TokenError) {
     switch (error.code) {
-      case ConfidentialTokenErrorCode.SigningRejected:
+      case TokenErrorCode.SigningRejected:
         // User rejected wallet signature
         break;
-      case ConfidentialTokenErrorCode.EncryptionFailed:
+      case TokenErrorCode.EncryptionFailed:
         // FHE encryption failed
         break;
     }

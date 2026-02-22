@@ -7,11 +7,8 @@ import {
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
-} from "./confidential-balance-query-keys";
-import {
-  useConfidentialToken,
-  type UseConfidentialTokenConfig,
-} from "./use-confidential-token";
+} from "./balance-query-keys";
+import { useToken, type UseTokenConfig } from "./use-token";
 
 interface TransferFromParams {
   from: Address;
@@ -20,14 +17,13 @@ interface TransferFromParams {
 }
 
 export function useConfidentialTransferFrom(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, TransferFromParams, Address>,
 ) {
-  const token = useConfidentialToken(config);
+  const token = useToken(config);
 
   return useMutation<Address, Error, TransferFromParams, Address>({
-    mutationFn: ({ from, to, amount }) =>
-      token.confidentialTransferFrom(from, to, amount),
+    mutationFn: ({ from, to, amount }) => token.confidentialTransferFrom(from, to, amount),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({

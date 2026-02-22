@@ -4,16 +4,16 @@ import { useMemo } from "react";
 import type { Address } from "@zama-fhe/token-sdk";
 import { useTokenSDK } from "../provider";
 
-export interface UseConfidentialTokenConfig {
+export interface UseTokenConfig {
   tokenAddress: Address;
   wrapperAddress?: Address;
 }
 
 /**
- * Get a ConfidentialToken instance, memoized by address.
+ * Get a Token instance, memoized by address.
  * Reads signer and storage from the SDK context.
  */
-export function useConfidentialToken(config: UseConfidentialTokenConfig) {
+export function useToken(config: UseTokenConfig) {
   const sdk = useTokenSDK();
 
   return useMemo(

@@ -8,7 +8,7 @@ import {
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/token-sdk";
-import { useReadonlyConfidentialToken } from "./use-readonly-confidential-token";
+import { useReadonlyToken } from "./use-readonly-token";
 
 /**
  * Declarative hook to discover the wrapper contract for an ERC-20 token.
@@ -19,7 +19,7 @@ export function useWrapperDiscovery(
   coordinatorAddress: Address | undefined,
   options?: Omit<UseQueryOptions<Address | null, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<Address | null, Error> {
-  const token = useReadonlyConfidentialToken(tokenAddress);
+  const token = useReadonlyToken(tokenAddress);
 
   return useQuery<Address | null, Error>({
     queryKey: ["wrapperDiscovery", tokenAddress, coordinatorAddress],
@@ -34,7 +34,7 @@ export function useWrapperDiscoverySuspense(
   tokenAddress: Address,
   coordinatorAddress: Address,
 ): UseSuspenseQueryResult<Address | null, Error> {
-  const token = useReadonlyConfidentialToken(tokenAddress);
+  const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<Address | null, Error>({
     queryKey: ["wrapperDiscovery", tokenAddress, coordinatorAddress],

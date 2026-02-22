@@ -8,7 +8,7 @@ import {
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/token-sdk";
-import { useReadonlyConfidentialToken } from "./use-readonly-confidential-token";
+import { useReadonlyToken } from "./use-readonly-token";
 
 export interface TokenMetadata {
   name: string;
@@ -24,7 +24,7 @@ export function useTokenMetadata(
   tokenAddress: Address,
   options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<TokenMetadata, Error> {
-  const token = useReadonlyConfidentialToken(tokenAddress);
+  const token = useReadonlyToken(tokenAddress);
 
   return useQuery<TokenMetadata, Error>({
     queryKey: ["tokenMetadata", tokenAddress],
@@ -44,7 +44,7 @@ export function useTokenMetadata(
 export function useTokenMetadataSuspense(
   tokenAddress: Address,
 ): UseSuspenseQueryResult<TokenMetadata, Error> {
-  const token = useReadonlyConfidentialToken(tokenAddress);
+  const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<TokenMetadata, Error>({
     queryKey: ["tokenMetadata", tokenAddress],

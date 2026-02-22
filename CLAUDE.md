@@ -22,7 +22,7 @@ pnpm build
 # Unit tests (vitest, jsdom environment)
 pnpm test              # Watch mode
 pnpm test:run          # Single run
-pnpm test:run -- --reporter=verbose packages/token-sdk/src/token/__tests__/confidential-token.test.ts  # Single file
+pnpm test:run -- --reporter=verbose packages/token-sdk/src/token/__tests__/token.test.ts  # Single file
 
 # Type checking & linting
 pnpm typecheck         # tsc --noEmit

@@ -14,45 +14,36 @@ import {
 } from "../contracts";
 import { findUnwrapRequested } from "../events";
 import type { Address } from "../relayer/relayer-sdk.types";
-import {
-  ConfidentialTokenError,
-  ConfidentialTokenErrorCode,
-} from "./confidential-token.types";
-import {
-  ReadonlyConfidentialToken,
-  type ReadonlyConfidentialTokenConfig,
-} from "./readonly-confidential-token";
+import { TokenError, TokenErrorCode } from "./token.types";
+import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 
 /**
  * ERC-20-like interface for a single confidential token.
  * Hides all FHE complexity (encryption, decryption, EIP-712 signing)
  * behind familiar methods.
  *
- * Extends ReadonlyConfidentialToken with write operations
+ * Extends ReadonlyToken with write operations
  * (transfer, shield, unshield).
  */
-export interface ConfidentialTokenConfig extends ReadonlyConfidentialTokenConfig {
+export interface TokenConfig extends ReadonlyTokenConfig {
   /** Override the wrapper address. Defaults to `address` (the token IS the wrapper). */
   wrapper?: Address;
 }
 
-export class ConfidentialToken extends ReadonlyConfidentialToken {
-  static readonly ZERO_ADDRESS: Address =
-    "0x0000000000000000000000000000000000000000";
+export class Token extends ReadonlyToken {
+  static readonly ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
 
   readonly wrapper: Address;
   #underlying: Address | undefined;
 
-  constructor(config: ConfidentialTokenConfig) {
+  constructor(config: TokenConfig) {
     super(config);
     this.wrapper = config.wrapper ?? config.address;
   }
 
   async #getUnderlying(): Promise<Address> {
     if (this.#underlying === undefined) {
-      this.#underlying = await this.signer.readContract<Address>(
-        underlyingContract(this.wrapper),
-      );
+      this.#underlying = await this.signer.readContract<Address>(underlyingContract(this.wrapper));
     }
     return this.#underlying;
   }
@@ -80,12 +71,10 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
         confidentialTransferContract(this.address, to, handles[0], inputProof),
       );
     } catch (error) {
-      if (error instanceof ConfidentialTokenError) throw error;
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.EncryptionFailed,
-        "Failed to encrypt transfer amount",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(TokenErrorCode.EncryptionFailed, "Failed to encrypt transfer amount", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -98,11 +87,7 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
    * const txHash = await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
    * ```
    */
-  async confidentialTransferFrom(
-    from: Address,
-    to: Address,
-    amount: bigint,
-  ): Promise<Address> {
+  async confidentialTransferFrom(from: Address, to: Address, amount: bigint): Promise<Address> {
     try {
       const { handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
@@ -111,18 +96,12 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
       });
 
       return await this.signer.writeContract(
-        confidentialTransferFromContract(
-          this.address,
-          from,
-          to,
-          handles[0],
-          inputProof,
-        ),
+        confidentialTransferFromContract(this.address, from, to, handles[0], inputProof),
       );
     } catch (error) {
-      if (error instanceof ConfidentialTokenError) throw error;
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.EncryptionFailed,
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(
+        TokenErrorCode.EncryptionFailed,
         "Failed to encrypt transferFrom amount",
         { cause: error instanceof Error ? error : undefined },
       );
@@ -140,16 +119,12 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
    */
   async approve(spender: Address, until?: number): Promise<Address> {
     try {
-      return await this.signer.writeContract(
-        setOperatorContract(this.address, spender, until),
-      );
+      return await this.signer.writeContract(setOperatorContract(this.address, spender, until));
     } catch (error) {
-      if (error instanceof ConfidentialTokenError) throw error;
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.ApprovalFailed,
-        "Operator approval failed",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(TokenErrorCode.ApprovalFailed, "Operator approval failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -165,9 +140,7 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
    */
   async isApproved(spender: Address): Promise<boolean> {
     const holder = await this.signer.getAddress();
-    return this.signer.readContract<boolean>(
-      isOperatorContract(this.address, holder, spender),
-    );
+    return this.signer.readContract<boolean>(isOperatorContract(this.address, holder, spender));
   }
 
   /**
@@ -191,7 +164,7 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
   ): Promise<Address> {
     const underlying = await this.#getUnderlying();
 
-    if (underlying === ConfidentialToken.ZERO_ADDRESS) {
+    if (underlying === Token.ZERO_ADDRESS) {
       return this.wrapETH(amount, amount + (options?.fees ?? 0n));
     }
 
@@ -202,16 +175,12 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
 
     try {
       const address = await this.signer.getAddress();
-      return await this.signer.writeContract(
-        wrapContract(this.wrapper, address, amount),
-      );
+      return await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
     } catch (error) {
-      if (error instanceof ConfidentialTokenError) throw error;
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.TransactionReverted,
-        "Shield (wrap) transaction failed",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(TokenErrorCode.TransactionReverted, "Shield (wrap) transaction failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -230,9 +199,9 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
         wrapETHContract(this.wrapper, userAddress, amount, value ?? amount),
       );
     } catch (error) {
-      if (error instanceof ConfidentialTokenError) throw error;
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.TransactionReverted,
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(
+        TokenErrorCode.TransactionReverted,
         "Shield ETH (wrapETH) transaction failed",
         { cause: error instanceof Error ? error : undefined },
       );
@@ -259,21 +228,13 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
       });
 
       return await this.signer.writeContract(
-        unwrapContract(
-          this.address,
-          userAddress,
-          userAddress,
-          handles[0],
-          inputProof,
-        ),
+        unwrapContract(this.address, userAddress, userAddress, handles[0], inputProof),
       );
     } catch (error) {
-      if (error instanceof ConfidentialTokenError) throw error;
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.EncryptionFailed,
-        "Failed to encrypt unshield amount",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(TokenErrorCode.EncryptionFailed, "Failed to encrypt unshield amount", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -292,28 +253,18 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
     if (this.isZeroHandle(handle)) {
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.DecryptionFailed,
-        "Cannot unshield: balance is zero",
-      );
+      throw new TokenError(TokenErrorCode.DecryptionFailed, "Cannot unshield: balance is zero");
     }
 
     try {
       return await this.signer.writeContract(
-        unwrapFromBalanceContract(
-          this.address,
-          userAddress,
-          userAddress,
-          handle,
-        ),
+        unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
       );
     } catch (error) {
-      if (error instanceof ConfidentialTokenError) throw error;
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.TransactionReverted,
-        "Unshield-all transaction failed",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(TokenErrorCode.TransactionReverted, "Unshield-all transaction failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -357,26 +308,20 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
    */
   async finalizeUnwrap(burnAmountHandle: Address): Promise<Address> {
     try {
-      const { abiEncodedClearValues, decryptionProof } =
-        await this.sdk.publicDecrypt([burnAmountHandle]);
+      const { abiEncodedClearValues, decryptionProof } = await this.sdk.publicDecrypt([
+        burnAmountHandle,
+      ]);
 
       const clearValue = BigInt(abiEncodedClearValues);
 
       return await this.signer.writeContract(
-        finalizeUnwrapContract(
-          this.wrapper,
-          burnAmountHandle,
-          clearValue,
-          decryptionProof,
-        ),
+        finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, decryptionProof),
       );
     } catch (error) {
-      if (error instanceof ConfidentialTokenError) throw error;
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.DecryptionFailed,
-        "Failed to finalize unshield",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to finalize unshield", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -392,9 +337,7 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
    * ```
    */
   async approveUnderlying(amount?: bigint): Promise<Address> {
-    const underlying = await this.signer.readContract<Address>(
-      underlyingContract(this.wrapper),
-    );
+    const underlying = await this.signer.readContract<Address>(underlyingContract(this.wrapper));
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
 
@@ -406,9 +349,7 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
         );
 
         if (currentAllowance > 0n) {
-          await this.signer.writeContract(
-            approveContract(underlying, this.wrapper, 0n),
-          );
+          await this.signer.writeContract(approveContract(underlying, this.wrapper, 0n));
         }
       }
 
@@ -416,11 +357,9 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
         approveContract(underlying, this.wrapper, approvalAmount),
       );
     } catch (error) {
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.ApprovalFailed,
-        "ERC-20 approval failed",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      throw new TokenError(TokenErrorCode.ApprovalFailed, "ERC-20 approval failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -430,8 +369,8 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
     const receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
     const event = findUnwrapRequested(receipt.logs);
     if (!event) {
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.TransactionReverted,
+      throw new TokenError(
+        TokenErrorCode.TransactionReverted,
         "No UnwrapRequested event found in unshield receipt",
       );
     }
@@ -439,9 +378,7 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
   }
 
   async #ensureAllowance(amount: bigint, maxApproval: boolean): Promise<void> {
-    const underlying = await this.signer.readContract<Address>(
-      underlyingContract(this.wrapper),
-    );
+    const underlying = await this.signer.readContract<Address>(underlyingContract(this.wrapper));
 
     const userAddress = await this.signer.getAddress();
     const allowance = await this.signer.readContract<bigint>(
@@ -455,22 +392,16 @@ export class ConfidentialToken extends ReadonlyConfidentialToken {
       // Required by non-standard tokens like USDT, and also mitigates the
       // ERC-20 approve race condition for all tokens.
       if (allowance > 0n) {
-        await this.signer.writeContract(
-          approveContract(underlying, this.wrapper, 0n),
-        );
+        await this.signer.writeContract(approveContract(underlying, this.wrapper, 0n));
       }
 
       const approvalAmount = maxApproval ? 2n ** 256n - 1n : amount;
 
-      await this.signer.writeContract(
-        approveContract(underlying, this.wrapper, approvalAmount),
-      );
+      await this.signer.writeContract(approveContract(underlying, this.wrapper, approvalAmount));
     } catch (error) {
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.ApprovalFailed,
-        "ERC-20 approval failed",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      throw new TokenError(TokenErrorCode.ApprovalFailed, "ERC-20 approval failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 }

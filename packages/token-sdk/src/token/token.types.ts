@@ -53,7 +53,7 @@ export interface StoredCredentials {
   durationDays: number;
 }
 
-export const ConfidentialTokenErrorCode = {
+export const TokenErrorCode = {
   SigningRejected: "SIGNING_REJECTED",
   SigningFailed: "SIGNING_FAILED",
   EncryptionFailed: "ENCRYPTION_FAILED",
@@ -65,19 +65,14 @@ export const ConfidentialTokenErrorCode = {
   StoreError: "STORE_ERROR",
 } as const;
 
-export type ConfidentialTokenErrorCode =
-  (typeof ConfidentialTokenErrorCode)[keyof typeof ConfidentialTokenErrorCode];
+export type TokenErrorCode = (typeof TokenErrorCode)[keyof typeof TokenErrorCode];
 
-export class ConfidentialTokenError extends Error {
-  readonly code: ConfidentialTokenErrorCode;
+export class TokenError extends Error {
+  readonly code: TokenErrorCode;
 
-  constructor(
-    code: ConfidentialTokenErrorCode,
-    message: string,
-    options?: ErrorOptions,
-  ) {
+  constructor(code: TokenErrorCode, message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = "ConfidentialTokenError";
+    this.name = "TokenError";
     this.code = code;
   }
 }

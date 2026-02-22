@@ -2,11 +2,8 @@
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/token-sdk";
-import { useReadonlyConfidentialToken } from "./use-readonly-confidential-token";
-import {
-  confidentialBalanceQueryKeys,
-  confidentialHandleQueryKeys,
-} from "./confidential-balance-query-keys";
+import { useReadonlyToken } from "./use-readonly-token";
+import { confidentialBalanceQueryKeys, confidentialHandleQueryKeys } from "./balance-query-keys";
 
 interface UseConfidentialBalanceOptions extends Omit<
   UseQueryOptions<bigint, Error>,
@@ -27,7 +24,7 @@ export function useConfidentialBalance(
   owner?: Address,
   options?: UseConfidentialBalanceOptions,
 ) {
-  const token = useReadonlyConfidentialToken(tokenAddress);
+  const token = useReadonlyToken(tokenAddress);
   const { handleRefetchInterval, ...balanceOptions } = options ?? {};
 
   // Phase 1: Poll the encrypted handle (cheap RPC read, no signing)
@@ -44,10 +41,7 @@ export function useConfidentialBalance(
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
   const balanceQuery = useQuery<bigint, Error>({
-    queryKey: [
-      ...confidentialBalanceQueryKeys.owner(tokenAddress, owner ?? ""),
-      handle ?? "",
-    ],
+    queryKey: [...confidentialBalanceQueryKeys.owner(tokenAddress, owner ?? ""), handle ?? ""],
     queryFn: async () => {
       if (!handle) return BigInt(0);
       const ownerAddress = owner ?? (await token.signer.getAddress());

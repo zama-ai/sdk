@@ -4,8 +4,7 @@
  */
 export const confidentialBalanceQueryKeys = {
   all: ["confidentialBalance"] as const,
-  token: (tokenAddress: string) =>
-    ["confidentialBalance", tokenAddress] as const,
+  token: (tokenAddress: string) => ["confidentialBalance", tokenAddress] as const,
   owner: (tokenAddress: string, owner: string) =>
     ["confidentialBalance", tokenAddress, owner] as const,
 } as const;
@@ -18,8 +17,7 @@ export const confidentialBalancesQueryKeys = {
 
 export const confidentialHandleQueryKeys = {
   all: ["confidentialHandle"] as const,
-  token: (tokenAddress: string) =>
-    ["confidentialHandle", tokenAddress] as const,
+  token: (tokenAddress: string) => ["confidentialHandle", tokenAddress] as const,
   owner: (tokenAddress: string, owner: string) =>
     ["confidentialHandle", tokenAddress, owner] as const,
 } as const;

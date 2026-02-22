@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { TokenSDK } from "../token-sdk";
-import { ReadonlyConfidentialToken } from "../readonly-confidential-token";
-import { ConfidentialToken } from "../confidential-token";
+import { ReadonlyToken } from "../readonly-token";
+import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
-import type { ConfidentialSigner } from "../confidential-token.types";
+import type { ConfidentialSigner } from "../token.types";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 
@@ -49,16 +49,16 @@ describe("TokenSDK", () => {
     expect(sdk.storage).toBe(storage);
   });
 
-  it("createReadonlyToken returns ReadonlyConfidentialToken", () => {
+  it("createReadonlyToken returns ReadonlyToken", () => {
     const token = sdk.createReadonlyToken("0xtoken" as Address);
-    expect(token).toBeInstanceOf(ReadonlyConfidentialToken);
+    expect(token).toBeInstanceOf(ReadonlyToken);
     expect(token.address).toBe("0xtoken");
     expect(token.signer).toBe(signer);
   });
 
-  it("createToken returns ConfidentialToken", () => {
+  it("createToken returns Token", () => {
     const token = sdk.createToken("0xtoken" as Address);
-    expect(token).toBeInstanceOf(ConfidentialToken);
+    expect(token).toBeInstanceOf(Token);
     expect(token.address).toBe("0xtoken");
   });
 

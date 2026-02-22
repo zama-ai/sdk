@@ -13,20 +13,14 @@ import {
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
-import type {
-  ConfidentialSigner,
-  GenericStringStorage,
-} from "./confidential-token.types";
-import {
-  ConfidentialTokenError,
-  ConfidentialTokenErrorCode,
-} from "./confidential-token.types";
+import type { ConfidentialSigner, GenericStringStorage } from "./token.types";
+import { TokenError, TokenErrorCode } from "./token.types";
 import { CredentialsManager } from "./credential-manager";
 
 export const ZERO_HANDLE =
   "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
 
-export interface ReadonlyConfidentialTokenConfig {
+export interface ReadonlyTokenConfig {
   sdk: RelayerSDK;
   signer: ConfidentialSigner;
   storage: GenericStringStorage;
@@ -38,13 +32,13 @@ export interface ReadonlyConfidentialTokenConfig {
  * Supports balance queries, authorization, and ERC-165 checks.
  * Does not require a wrapper address.
  */
-export class ReadonlyConfidentialToken {
+export class ReadonlyToken {
   protected readonly credentials: CredentialsManager;
   protected readonly sdk: RelayerSDK;
   readonly signer: ConfidentialSigner;
   readonly address: Address;
 
-  constructor(config: ReadonlyConfidentialTokenConfig) {
+  constructor(config: ReadonlyTokenConfig) {
     this.credentials = new CredentialsManager({
       sdk: config.sdk,
       signer: config.signer,
@@ -90,11 +84,9 @@ export class ReadonlyConfidentialToken {
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.DecryptionFailed,
-        "Failed to decrypt balance",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to decrypt balance", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -151,14 +143,14 @@ export class ReadonlyConfidentialToken {
    *
    * @example
    * ```ts
-   * const balances = await ReadonlyConfidentialToken.batchBalanceOf(tokens);
+   * const balances = await ReadonlyToken.batchBalanceOf(tokens);
    * for (const [address, balance] of balances) {
    *   console.log(address, balance);
    * }
    * ```
    */
   static async batchBalanceOf(
-    tokens: ReadonlyConfidentialToken[],
+    tokens: ReadonlyToken[],
     owner?: Address,
   ): Promise<Map<Address, bigint>> {
     if (tokens.length === 0) return new Map();
@@ -170,9 +162,7 @@ export class ReadonlyConfidentialToken {
 
     const creds = await tokens[0].credentials.getAll(allAddresses);
 
-    const handles = await Promise.all(
-      tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress)),
-    );
+    const handles = await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress)));
 
     const results = new Map<Address, bigint>();
     const decryptPromises: Promise<void>[] = [];
@@ -219,13 +209,13 @@ export class ReadonlyConfidentialToken {
    * @example
    * ```ts
    * const handles = await Promise.all(tokens.map(t => t.confidentialBalanceOf()));
-   * const balances = await ReadonlyConfidentialToken.batchDecryptBalances(
+   * const balances = await ReadonlyToken.batchDecryptBalances(
    *   tokens, handles, owner,
    * );
    * ```
    */
   static async batchDecryptBalances(
-    tokens: ReadonlyConfidentialToken[],
+    tokens: ReadonlyToken[],
     handles: Address[],
     owner?: Address,
   ): Promise<Map<Address, bigint>> {
@@ -292,9 +282,7 @@ export class ReadonlyConfidentialToken {
       wrapperExistsContract(coordinatorAddress, this.address),
     );
     if (!exists) return null;
-    return this.signer.readContract<Address>(
-      getWrapperContract(coordinatorAddress, this.address),
-    );
+    return this.signer.readContract<Address>(getWrapperContract(coordinatorAddress, this.address));
   }
 
   /**
@@ -318,13 +306,9 @@ export class ReadonlyConfidentialToken {
    * ```
    */
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
-    const underlying = await this.signer.readContract<Address>(
-      underlyingContract(wrapper),
-    );
+    const underlying = await this.signer.readContract<Address>(underlyingContract(wrapper));
     const userAddress = owner ?? (await this.signer.getAddress());
-    return this.signer.readContract<bigint>(
-      allowanceContract(underlying, userAddress, wrapper),
-    );
+    return this.signer.readContract<bigint>(allowanceContract(underlying, userAddress, wrapper));
   }
 
   /**
@@ -387,13 +371,11 @@ export class ReadonlyConfidentialToken {
    * @example
    * ```ts
    * const tokens = addresses.map(a => sdk.createReadonlyToken(a));
-   * await ReadonlyConfidentialToken.authorizeAll(tokens);
+   * await ReadonlyToken.authorizeAll(tokens);
    * // All tokens now share the same credentials
    * ```
    */
-  static async authorizeAll(
-    tokens: ReadonlyConfidentialToken[],
-  ): Promise<void> {
+  static async authorizeAll(tokens: ReadonlyToken[]): Promise<void> {
     if (tokens.length === 0) return;
     const allAddresses = tokens.map((t) => t.address);
     await tokens[0].credentials.getAll(allAddresses);
@@ -450,11 +432,9 @@ export class ReadonlyConfidentialToken {
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.DecryptionFailed,
-        "Failed to decrypt balance",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to decrypt balance", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -462,10 +442,7 @@ export class ReadonlyConfidentialToken {
    * Batch-decrypt arbitrary encrypted handles in a single relayer call.
    * Zero handles are returned as 0n without hitting the relayer.
    */
-  async decryptHandles(
-    handles: Address[],
-    owner?: Address,
-  ): Promise<Map<string, bigint>> {
+  async decryptHandles(handles: Address[], owner?: Address): Promise<Map<string, bigint>> {
     const results = new Map<string, bigint>();
     const nonZeroHandles: Address[] = [];
 
@@ -498,11 +475,9 @@ export class ReadonlyConfidentialToken {
         results.set(handle, decrypted[handle] ?? BigInt(0));
       }
     } catch (error) {
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.DecryptionFailed,
-        "Failed to decrypt handles",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to decrypt handles", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
 
     return results;

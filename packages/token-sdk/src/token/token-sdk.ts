@@ -1,8 +1,8 @@
 import type { Address } from "../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import { ConfidentialToken } from "./confidential-token";
-import { ReadonlyConfidentialToken } from "./readonly-confidential-token";
-import type { ConfidentialSigner, GenericStringStorage } from "./confidential-token.types";
+import { Token } from "./token";
+import { ReadonlyToken } from "./readonly-token";
+import type { ConfidentialSigner, GenericStringStorage } from "./token.types";
 
 export interface TokenSDKConfig {
   relayer: RelayerSDK;
@@ -29,8 +29,8 @@ export class TokenSDK {
    * Create a read-only interface for a confidential token.
    * Supports balance queries and authorization without a wrapper address.
    */
-  createReadonlyToken(address: Address): ReadonlyConfidentialToken {
-    return new ReadonlyConfidentialToken({
+  createReadonlyToken(address: Address): ReadonlyToken {
+    return new ReadonlyToken({
       sdk: this.relayer,
       signer: this.signer,
       storage: this.storage,
@@ -42,8 +42,8 @@ export class TokenSDK {
    * Create a high-level ERC-20-like interface for a confidential token.
    * Includes write operations (transfer, shield, unshield).
    */
-  createToken(address: Address, wrapper?: Address): ConfidentialToken {
-    return new ConfidentialToken({
+  createToken(address: Address, wrapper?: Address): Token {
+    return new Token({
       sdk: this.relayer,
       signer: this.signer,
       storage: this.storage,

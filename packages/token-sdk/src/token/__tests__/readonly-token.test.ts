@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ReadonlyConfidentialToken } from "../readonly-confidential-token";
-import { ZERO_HANDLE } from "../readonly-confidential-token";
+import { ReadonlyToken } from "../readonly-token";
+import { ZERO_HANDLE } from "../readonly-token";
 import { MemoryStorage } from "../memory-storage";
-import type { ConfidentialSigner } from "../confidential-token.types";
-import { ConfidentialTokenErrorCode } from "../confidential-token.types";
+import type { ConfidentialSigner } from "../token.types";
+import { TokenErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 
@@ -51,15 +51,15 @@ function createMockSigner(): ConfidentialSigner {
   };
 }
 
-describe("ReadonlyConfidentialToken", () => {
+describe("ReadonlyToken", () => {
   let sdk: ReturnType<typeof createMockSdk>;
   let signer: ConfidentialSigner;
-  let token: ReadonlyConfidentialToken;
+  let token: ReadonlyToken;
 
   beforeEach(() => {
     sdk = createMockSdk();
     signer = createMockSigner();
-    token = new ReadonlyConfidentialToken({
+    token = new ReadonlyToken({
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
@@ -150,11 +150,11 @@ describe("ReadonlyConfidentialToken", () => {
       expect(result.get(unknownHandle)).toBe(0n);
     });
 
-    it("throws ConfidentialTokenError on decryption failure", async () => {
+    it("throws TokenError on decryption failure", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
       await expect(token.decryptHandles([VALID_HANDLE as Address])).rejects.toMatchObject({
-        code: ConfidentialTokenErrorCode.DecryptionFailed,
+        code: TokenErrorCode.DecryptionFailed,
         message: "Failed to decrypt handles",
       });
     });
@@ -204,10 +204,10 @@ describe("ReadonlyConfidentialToken", () => {
 });
 
 describe("TokenSDK token factory", () => {
-  it("creates ReadonlyConfidentialToken with correct address", () => {
+  it("creates ReadonlyToken with correct address", () => {
     const sdk = createMockSdk();
     const signer = createMockSigner();
-    const token = new ReadonlyConfidentialToken({
+    const token = new ReadonlyToken({
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),

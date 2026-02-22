@@ -2,7 +2,7 @@
 
 import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/token-sdk";
-import { useReadonlyConfidentialToken } from "./use-readonly-confidential-token";
+import { useReadonlyToken } from "./use-readonly-token";
 
 export const underlyingAllowanceQueryKeys = {
   all: ["underlyingAllowance"] as const,
@@ -15,7 +15,7 @@ export function useUnderlyingAllowance(
   encryptedErc20Wrapper: Address,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
-  const token = useReadonlyConfidentialToken(encryptedErc20Address);
+  const token = useReadonlyToken(encryptedErc20Address);
 
   return useQuery<bigint, Error>({
     queryKey: underlyingAllowanceQueryKeys.token(encryptedErc20Address, encryptedErc20Wrapper),
@@ -28,7 +28,7 @@ export function useUnderlyingAllowanceSuspense(
   encryptedErc20Address: Address,
   encryptedErc20Wrapper: Address,
 ) {
-  const token = useReadonlyConfidentialToken(encryptedErc20Address);
+  const token = useReadonlyToken(encryptedErc20Address);
 
   return useSuspenseQuery<bigint, Error>({
     queryKey: underlyingAllowanceQueryKeys.token(encryptedErc20Address, encryptedErc20Wrapper),

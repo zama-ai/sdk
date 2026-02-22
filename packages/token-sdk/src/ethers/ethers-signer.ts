@@ -3,7 +3,7 @@ import type {
   ConfidentialSigner,
   ContractCallConfig,
   TransactionReceipt,
-} from "../token/confidential-token.types";
+} from "../token/token.types";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { ethers, type BrowserProvider, type Signer } from "ethers";
 

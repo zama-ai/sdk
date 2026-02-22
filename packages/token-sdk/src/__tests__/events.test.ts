@@ -11,8 +11,8 @@ import {
   decodeUnwrapRequested,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
-  decodeConfidentialTokenEvent,
-  decodeConfidentialTokenEvents,
+  decodeTokenEvent,
+  decodeTokenEvents,
   findUnwrapRequested,
   findWrapped,
   type RawLog,
@@ -26,10 +26,7 @@ const bytes32 = (hex: string) => "0x" + hex.padStart(64, "0");
 
 describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
-    [
-      "ConfidentialTransfer(address,address,bytes32)",
-      CONFIDENTIAL_TRANSFER_TOPIC,
-    ],
+    ["ConfidentialTransfer(address,address,bytes32)", CONFIDENTIAL_TRANSFER_TOPIC],
     ["Wrapped(uint64,uint256,uint256,address,uint256)", WRAPPED_TOPIC],
     ["UnwrapRequested(address,bytes32)", UNWRAP_REQUESTED_TOPIC],
     [
@@ -159,11 +156,7 @@ describe("decodeUnwrappedFinalized", () => {
   const nextTxId = 7n;
 
   const log: RawLog = {
-    topics: [
-      UNWRAPPED_FINALIZED_TOPIC,
-      burntHandle,
-      topic(nextTxId.toString(16)),
-    ],
+    topics: [UNWRAPPED_FINALIZED_TOPIC, burntHandle, topic(nextTxId.toString(16))],
     data:
       "0x" +
       word("1") + // finalizeSuccess = true
@@ -244,13 +237,13 @@ describe("decodeUnwrappedStarted", () => {
   });
 });
 
-describe("decodeConfidentialTokenEvent", () => {
+describe("decodeTokenEvent", () => {
   it("dispatches to correct decoder", () => {
     const log: RawLog = {
       topics: [UNWRAP_REQUESTED_TOPIC, topic("abcd")],
       data: "0x" + word("ff".repeat(32)),
     };
-    const event = decodeConfidentialTokenEvent(log);
+    const event = decodeTokenEvent(log);
     expect(event?.eventName).toBe("UnwrapRequested");
   });
 
@@ -259,11 +252,11 @@ describe("decodeConfidentialTokenEvent", () => {
       topics: ["0x" + "00".repeat(32)],
       data: "0x",
     };
-    expect(decodeConfidentialTokenEvent(log)).toBeNull();
+    expect(decodeTokenEvent(log)).toBeNull();
   });
 });
 
-describe("decodeConfidentialTokenEvents", () => {
+describe("decodeTokenEvents", () => {
   it("decodes array of mixed logs, skipping unknown", () => {
     const logs: RawLog[] = [
       {
@@ -281,7 +274,7 @@ describe("decodeConfidentialTokenEvents", () => {
         data: "0x",
       },
     ];
-    const events = decodeConfidentialTokenEvents(logs);
+    const events = decodeTokenEvents(logs);
     expect(events).toHaveLength(2);
     expect(events[0].eventName).toBe("UnwrapRequested");
     expect(events[1].eventName).toBe("ConfidentialTransfer");
@@ -320,11 +313,7 @@ describe("findWrapped", () => {
     const logs: RawLog[] = [
       {
         topics: [WRAPPED_TOPIC, topic("dead"), topic(42n.toString(16))],
-        data:
-          "0x" +
-          word(1000n.toString(16)) +
-          word(2000n.toString(16)) +
-          word(50n.toString(16)),
+        data: "0x" + word(1000n.toString(16)) + word(2000n.toString(16)) + word(50n.toString(16)),
       },
     ];
     const event = findWrapped(logs);

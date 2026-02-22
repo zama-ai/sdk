@@ -7,21 +7,18 @@ import {
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
-} from "./confidential-balance-query-keys";
-import {
-  useConfidentialToken,
-  type UseConfidentialTokenConfig,
-} from "./use-confidential-token";
+} from "./balance-query-keys";
+import { useToken, type UseTokenConfig } from "./use-token";
 
 interface UnshieldParams {
   amount: bigint;
 }
 
 export function useUnshield(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, UnshieldParams, Address>,
 ) {
-  const token = useConfidentialToken(config);
+  const token = useToken(config);
 
   return useMutation<Address, Error, UnshieldParams, Address>({
     mutationFn: ({ amount }) => token.unshield(amount),

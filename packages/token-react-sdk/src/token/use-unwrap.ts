@@ -7,21 +7,18 @@ import {
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
-} from "./confidential-balance-query-keys";
-import {
-  useConfidentialToken,
-  type UseConfidentialTokenConfig,
-} from "./use-confidential-token";
+} from "./balance-query-keys";
+import { useToken, type UseTokenConfig } from "./use-token";
 
 interface UnwrapParams {
   amount: bigint;
 }
 
 export function useUnwrap(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, UnwrapParams, Address>,
 ) {
-  const token = useConfidentialToken(config);
+  const token = useToken(config);
 
   return useMutation<Address, Error, UnwrapParams, Address>({
     mutationFn: ({ amount }) => token.unwrap(amount),

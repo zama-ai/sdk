@@ -2,14 +2,14 @@
 
 import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/token-sdk";
-import { useConfidentialToken, type UseConfidentialTokenConfig } from "./use-confidential-token";
+import { useToken, type UseTokenConfig } from "./use-token";
 
 export function useConfidentialIsApproved(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   spender: Address | undefined,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ) {
-  const token = useConfidentialToken(config);
+  const token = useToken(config);
 
   return useQuery<boolean, Error>({
     queryKey: ["confidentialIsApproved", config.tokenAddress, spender],
@@ -19,11 +19,8 @@ export function useConfidentialIsApproved(
   });
 }
 
-export function useConfidentialIsApprovedSuspense(
-  config: UseConfidentialTokenConfig,
-  spender: Address,
-) {
-  const token = useConfidentialToken(config);
+export function useConfidentialIsApprovedSuspense(config: UseTokenConfig, spender: Address) {
+  const token = useToken(config);
 
   return useSuspenseQuery<boolean, Error>({
     queryKey: ["confidentialIsApproved", config.tokenAddress, spender],

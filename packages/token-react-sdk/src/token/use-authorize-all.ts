@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { ReadonlyConfidentialToken, type Address } from "@zama-fhe/token-sdk";
+import { ReadonlyToken, type Address } from "@zama-fhe/token-sdk";
 import { useTokenSDK } from "../provider";
 
 /**
@@ -21,7 +21,7 @@ export function useAuthorizeAll() {
   return useMutation<void, Error, Address[]>({
     mutationFn: async (tokenAddresses) => {
       const tokens = tokenAddresses.map((addr) => sdk.createReadonlyToken(addr));
-      return ReadonlyConfidentialToken.authorizeAll(tokens);
+      return ReadonlyToken.authorizeAll(tokens);
     },
   });
 }

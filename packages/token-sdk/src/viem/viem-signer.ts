@@ -2,7 +2,7 @@ import type {
   ConfidentialSigner,
   ContractCallConfig,
   TransactionReceipt,
-} from "../token/confidential-token.types";
+} from "../token/token.types";
 import type { PublicClient, WalletClient } from "viem";
 import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { writeContract } from "viem/actions";
@@ -48,9 +48,7 @@ export class ViemSigner implements ConfidentialSigner {
     } as Parameters<typeof writeContract>[1]);
   }
 
-  async readContract<T, C extends ContractCallConfig = ContractCallConfig>(
-    config: C,
-  ): Promise<T> {
+  async readContract<T, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T> {
     return this.publicClient.readContract(config) as Promise<T>;
   }
 

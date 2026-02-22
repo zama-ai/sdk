@@ -1,4 +1,4 @@
-import type { GenericStringStorage } from "./confidential-token.types";
+import type { GenericStringStorage } from "./token.types";
 
 /** In-memory credential store. Credentials are lost on page reload. */
 export class MemoryStorage implements GenericStringStorage {

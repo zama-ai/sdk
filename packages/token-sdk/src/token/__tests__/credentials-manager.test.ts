@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CredentialsManager } from "../credential-manager";
 import { MemoryStorage } from "../memory-storage";
-import type { ConfidentialSigner } from "../confidential-token.types";
-import { ConfidentialTokenError, ConfidentialTokenErrorCode } from "../confidential-token.types";
+import type { ConfidentialSigner } from "../token.types";
+import { TokenError, TokenErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 
@@ -31,9 +31,7 @@ function createMockSdk() {
   } as unknown as RelayerSDK;
 }
 
-function createMockSigner(
-  address: Address = "0xuser" as Address,
-): ConfidentialSigner {
+function createMockSigner(address: Address = "0xuser" as Address): ConfidentialSigner {
   return {
     getAddress: vi.fn().mockResolvedValue(address),
     signTypedData: vi.fn().mockResolvedValue("0xsig789"),
@@ -165,56 +163,50 @@ describe("CredentialsManager", () => {
   });
 
   it("throws SigningRejected when user rejects signature (rejected)", async () => {
-    vi.mocked(signer.signTypedData).mockRejectedValue(
-      new Error("User rejected the request"),
-    );
+    vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User rejected the request"));
 
     await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
-        code: ConfidentialTokenErrorCode.SigningRejected,
+        code: TokenErrorCode.SigningRejected,
       }),
     );
 
     try {
       await manager.get("0xtoken" as Address);
     } catch (e) {
-      expect(e).toBeInstanceOf(ConfidentialTokenError);
+      expect(e).toBeInstanceOf(TokenError);
     }
   });
 
   it("throws SigningRejected when user denies signature (denied)", async () => {
-    vi.mocked(signer.signTypedData).mockRejectedValue(
-      new Error("User denied transaction"),
-    );
+    vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User denied transaction"));
 
     await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
-        code: ConfidentialTokenErrorCode.SigningRejected,
+        code: TokenErrorCode.SigningRejected,
       }),
     );
 
     try {
       await manager.get("0xtoken" as Address);
     } catch (e) {
-      expect(e).toBeInstanceOf(ConfidentialTokenError);
+      expect(e).toBeInstanceOf(TokenError);
     }
   });
 
   it("throws SigningFailed for other signing errors", async () => {
-    vi.mocked(signer.signTypedData).mockRejectedValue(
-      new Error("network timeout"),
-    );
+    vi.mocked(signer.signTypedData).mockRejectedValue(new Error("network timeout"));
 
     await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
-        code: ConfidentialTokenErrorCode.SigningFailed,
+        code: TokenErrorCode.SigningFailed,
       }),
     );
 
     try {
       await manager.get("0xtoken" as Address);
     } catch (e) {
-      expect(e).toBeInstanceOf(ConfidentialTokenError);
+      expect(e).toBeInstanceOf(TokenError);
     }
   });
 
@@ -223,15 +215,15 @@ describe("CredentialsManager", () => {
 
     await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
-        code: ConfidentialTokenErrorCode.SigningFailed,
+        code: TokenErrorCode.SigningFailed,
       }),
     );
 
     try {
       await manager.get("0xtoken" as Address);
     } catch (e) {
-      expect(e).toBeInstanceOf(ConfidentialTokenError);
-      expect((e as ConfidentialTokenError).cause).toBeUndefined();
+      expect(e).toBeInstanceOf(TokenError);
+      expect((e as TokenError).cause).toBeUndefined();
     }
   });
 });

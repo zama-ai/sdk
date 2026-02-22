@@ -8,9 +8,9 @@
  */
 
 import {
-  decodeConfidentialTokenEvent,
+  decodeTokenEvent,
   type RawLog,
-  type ConfidentialTokenEvent,
+  type TokenEvent,
   type ConfidentialTransferEvent,
   type WrappedEvent,
   type UnwrapRequestedEvent,
@@ -54,7 +54,7 @@ export interface ActivityItem {
   readonly fee?: bigint;
   readonly success?: boolean;
   readonly metadata: ActivityLogMetadata;
-  readonly rawEvent: ConfidentialTokenEvent;
+  readonly rawEvent: TokenEvent;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ function classifyDirection(
 }
 
 function eventToActivityItem(
-  event: ConfidentialTokenEvent,
+  event: TokenEvent,
   userAddress: string,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
@@ -190,7 +190,7 @@ export function parseActivityFeed(
 ): ActivityItem[] {
   const items: ActivityItem[] = [];
   for (const log of logs) {
-    const event = decodeConfidentialTokenEvent(log);
+    const event = decodeTokenEvent(log);
     if (!event) continue;
 
     const metadata: ActivityLogMetadata = {
@@ -206,15 +206,10 @@ export function parseActivityFeed(
 /**
  * Extract unique non-zero encrypted handles that need decryption.
  */
-export function extractEncryptedHandles(
-  items: readonly ActivityItem[],
-): string[] {
+export function extractEncryptedHandles(items: readonly ActivityItem[]): string[] {
   const handles = new Set<string>();
   for (const item of items) {
-    if (
-      item.amount.type === "encrypted" &&
-      item.amount.decryptedValue === undefined
-    ) {
+    if (item.amount.type === "encrypted" && item.amount.decryptedValue === undefined) {
       const h = item.amount.handle;
       // Skip zero handles
       if (h !== "0x" && h !== "0x" + "0".repeat(64)) {
@@ -254,9 +249,7 @@ export function applyDecryptedValues(
  * Sort activity items by block number, most recent first.
  * Items without a block number are placed at the beginning (most recent).
  */
-export function sortByBlockNumber(
-  items: readonly ActivityItem[],
-): ActivityItem[] {
+export function sortByBlockNumber(items: readonly ActivityItem[]): ActivityItem[] {
   return [...items].sort((a, b) => {
     const aBlock = a.metadata.blockNumber;
     const bBlock = b.metadata.blockNumber;

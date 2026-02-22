@@ -1,14 +1,7 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
-import type {
-  ConfidentialSigner,
-  GenericStringStorage,
-  StoredCredentials,
-} from "./confidential-token.types";
-import {
-  ConfidentialTokenError,
-  ConfidentialTokenErrorCode,
-} from "./confidential-token.types";
+import type { ConfidentialSigner, GenericStringStorage, StoredCredentials } from "./token.types";
+import { TokenError, TokenErrorCode } from "./token.types";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
 interface EncryptedData {
@@ -109,10 +102,7 @@ export class CredentialsManager {
   /** Returns a truncated SHA-256 hash of the address to avoid leaking it in storage. */
   async #storeKey(): Promise<string> {
     const address = (await this.#signer.getAddress()).toLowerCase();
-    const hash = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(address),
-    );
+    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address));
     const hex = Array.from(new Uint8Array(hash))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
@@ -126,9 +116,7 @@ export class CredentialsManager {
     const expiresAt = creds.startTimestamp + creds.durationDays * 86400;
     if (nowSeconds >= expiresAt) return false;
 
-    const signedSet = new Set(
-      creds.contractAddresses.map((a) => a.toLowerCase()),
-    );
+    const signedSet = new Set(creds.contractAddresses.map((a) => a.toLowerCase()));
     return requiredContracts.every((addr) => signedSet.has(addr.toLowerCase()));
   }
 
@@ -180,38 +168,28 @@ export class CredentialsManager {
         error instanceof Error &&
         (error.message.includes("rejected") || error.message.includes("denied"))
       ) {
-        throw new ConfidentialTokenError(
-          ConfidentialTokenErrorCode.SigningRejected,
+        throw new TokenError(
+          TokenErrorCode.SigningRejected,
           "User rejected the decrypt authorization signature",
           { cause: error },
         );
       }
-      throw new ConfidentialTokenError(
-        ConfidentialTokenErrorCode.SigningFailed,
-        "Failed to create decrypt credentials",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      throw new TokenError(TokenErrorCode.SigningFailed, "Failed to create decrypt credentials", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
   // ── AES-GCM encryption (ported from KeypairDB) ─────────────
 
-  async #encryptCredentials(
-    creds: StoredCredentials,
-  ): Promise<EncryptedCredentials> {
+  async #encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials> {
     const address = (await this.#signer.getAddress()).toLowerCase();
-    const encryptedPrivateKey = await this.#encrypt(
-      creds.privateKey,
-      creds.signature,
-      address,
-    );
+    const encryptedPrivateKey = await this.#encrypt(creds.privateKey, creds.signature, address);
     const { privateKey: _, ...rest } = creds;
     return { ...rest, encryptedPrivateKey };
   }
 
-  async #decryptCredentials(
-    encrypted: EncryptedCredentials,
-  ): Promise<StoredCredentials> {
+  async #decryptCredentials(encrypted: EncryptedCredentials): Promise<StoredCredentials> {
     const address = (await this.#signer.getAddress()).toLowerCase();
     const privateKey = await this.#decrypt(
       encrypted.encryptedPrivateKey,
@@ -252,11 +230,7 @@ export class CredentialsManager {
   }
 
   /** Encrypts a string using AES-GCM with a key derived from the wallet signature. */
-  async #encrypt(
-    plaintext: string,
-    signature: string,
-    address: string,
-  ): Promise<EncryptedData> {
+  async #encrypt(plaintext: string, signature: string, address: string): Promise<EncryptedData> {
     const key = await this.#deriveKey(signature, address);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encoder = new TextEncoder();
@@ -274,22 +248,12 @@ export class CredentialsManager {
   }
 
   /** Decrypts AES-GCM encrypted data using a key derived from the wallet signature. */
-  async #decrypt(
-    encrypted: EncryptedData,
-    signature: string,
-    address: string,
-  ): Promise<string> {
+  async #decrypt(encrypted: EncryptedData, signature: string, address: string): Promise<string> {
     const key = await this.#deriveKey(signature, address);
     const iv = Uint8Array.from(atob(encrypted.iv), (c) => c.charCodeAt(0));
-    const ciphertext = Uint8Array.from(atob(encrypted.ciphertext), (c) =>
-      c.charCodeAt(0),
-    );
+    const ciphertext = Uint8Array.from(atob(encrypted.ciphertext), (c) => c.charCodeAt(0));
 
-    const plaintext = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv },
-      key,
-      ciphertext,
-    );
+    const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
 
     return new TextDecoder().decode(plaintext);
   }

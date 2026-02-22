@@ -7,25 +7,21 @@ import {
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
-} from "./confidential-balance-query-keys";
-import {
-  useConfidentialToken,
-  type UseConfidentialTokenConfig,
-} from "./use-confidential-token";
+} from "./balance-query-keys";
+import { useToken, type UseTokenConfig } from "./use-token";
 
 interface FinalizeUnwrapParams {
   burnAmountHandle: Address;
 }
 
 export function useFinalizeUnwrap(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams, Address>,
 ) {
-  const token = useConfidentialToken(config);
+  const token = useToken(config);
 
   return useMutation<Address, Error, FinalizeUnwrapParams, Address>({
-    mutationFn: ({ burnAmountHandle }) =>
-      token.finalizeUnwrap(burnAmountHandle),
+    mutationFn: ({ burnAmountHandle }) => token.finalizeUnwrap(burnAmountHandle),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({

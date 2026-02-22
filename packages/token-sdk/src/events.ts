@@ -79,7 +79,7 @@ export interface UnwrappedStartedEvent {
   readonly burnAmount: string;
 }
 
-export type ConfidentialTokenEvent =
+export type TokenEvent =
   | ConfidentialTransferEvent
   | WrappedEvent
   | UnwrapRequestedEvent
@@ -133,9 +133,7 @@ function wordToBytes32(data: string, index: number): string {
  * ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)
  * All 3 params indexed → topics[1..3], no data.
  */
-export function decodeConfidentialTransfer(
-  log: RawLog,
-): ConfidentialTransferEvent | null {
+export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEvent | null {
   if (log.topics[0] !== CONFIDENTIAL_TRANSFER_TOPIC) return null;
   if (log.topics.length < 4) return null;
 
@@ -171,9 +169,7 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
  * Indexed: receiver (topics[1])
  * Data: amount (bytes32)
  */
-export function decodeUnwrapRequested(
-  log: RawLog,
-): UnwrapRequestedEvent | null {
+export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
   if (log.topics[0] !== UNWRAP_REQUESTED_TOPIC) return null;
   if (log.topics.length < 2) return null;
 
@@ -190,9 +186,7 @@ export function decodeUnwrapRequested(
  * Indexed: burntAmountHandle (topics[1]), nextTxId (topics[2])
  * Data: finalizeSuccess, feeTransferSuccess, burnAmount, unwrapAmount, feeAmount
  */
-export function decodeUnwrappedFinalized(
-  log: RawLog,
-): UnwrappedFinalizedEvent | null {
+export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
   if (log.topics[0] !== UNWRAPPED_FINALIZED_TOPIC) return null;
   if (log.topics.length < 3) return null;
 
@@ -214,9 +208,7 @@ export function decodeUnwrappedFinalized(
  * Indexed: requestId (topics[1]), txId (topics[2]), to (topics[3])
  * Data: returnVal, refund, requestedAmount, burnAmount
  */
-export function decodeUnwrappedStarted(
-  log: RawLog,
-): UnwrappedStartedEvent | null {
+export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null {
   if (log.topics[0] !== UNWRAPPED_STARTED_TOPIC) return null;
   if (log.topics.length < 4) return null;
 
@@ -241,15 +233,13 @@ export function decodeUnwrappedStarted(
  *
  * @example
  * ```ts
- * const event = decodeConfidentialTokenEvent(log);
+ * const event = decodeTokenEvent(log);
  * if (event?.eventName === "ConfidentialTransfer") {
  *   console.log(event.from, event.to);
  * }
  * ```
  */
-export function decodeConfidentialTokenEvent(
-  log: RawLog,
-): ConfidentialTokenEvent | null {
+export function decodeTokenEvent(log: RawLog): TokenEvent | null {
   return (
     decodeConfidentialTransfer(log) ??
     decodeWrapped(log) ??
@@ -264,15 +254,13 @@ export function decodeConfidentialTokenEvent(
  *
  * @example
  * ```ts
- * const events = decodeConfidentialTokenEvents(receipt.logs);
+ * const events = decodeTokenEvents(receipt.logs);
  * ```
  */
-export function decodeConfidentialTokenEvents(
-  logs: readonly RawLog[],
-): ConfidentialTokenEvent[] {
-  const events: ConfidentialTokenEvent[] = [];
+export function decodeTokenEvents(logs: readonly RawLog[]): TokenEvent[] {
+  const events: TokenEvent[] = [];
   for (const log of logs) {
-    const event = decodeConfidentialTokenEvent(log);
+    const event = decodeTokenEvent(log);
     if (event) events.push(event);
   }
   return events;
@@ -287,9 +275,7 @@ export function decodeConfidentialTokenEvents(
  * if (event) console.log(event.receiver, event.encryptedAmount);
  * ```
  */
-export function findUnwrapRequested(
-  logs: readonly RawLog[],
-): UnwrapRequestedEvent | null {
+export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEvent | null {
   for (const log of logs) {
     const event = decodeUnwrapRequested(log);
     if (event) return event;
@@ -316,10 +302,10 @@ export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null {
 
 /**
  * All 5 confidential token event topic0 hashes.
- * Pass to `getLogs({ topics: [CONFIDENTIAL_TOKEN_TOPICS] })` to fetch
+ * Pass to `getLogs({ topics: [TOKEN_TOPICS] })` to fetch
  * all confidential token events in a single RPC call.
  */
-export const CONFIDENTIAL_TOKEN_TOPICS = [
+export const TOKEN_TOPICS = [
   CONFIDENTIAL_TRANSFER_TOPIC,
   WRAPPED_TOPIC,
   UNWRAP_REQUESTED_TOPIC,

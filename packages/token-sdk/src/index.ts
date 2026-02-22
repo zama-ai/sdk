@@ -38,11 +38,11 @@ export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts"
 // Token abstraction layer
 export { TokenSDK } from "./token/token-sdk";
 export type { TokenSDKConfig } from "./token/token-sdk";
-export { ConfidentialToken } from "./token/confidential-token";
-export type { ConfidentialTokenConfig } from "./token/confidential-token";
-export { ReadonlyConfidentialToken } from "./token/readonly-confidential-token";
-export type { ReadonlyConfidentialTokenConfig } from "./token/readonly-confidential-token";
-export { ZERO_HANDLE } from "./token/readonly-confidential-token";
+export { Token } from "./token/token";
+export type { TokenConfig } from "./token/token";
+export { ReadonlyToken } from "./token/readonly-token";
+export type { ReadonlyTokenConfig } from "./token/readonly-token";
+export { ZERO_HANDLE } from "./token/readonly-token";
 export { MemoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { CredentialsManager } from "./token/credential-manager";
@@ -52,11 +52,8 @@ export type {
   StoredCredentials,
   ContractCallConfig,
   TransactionReceipt,
-} from "./token/confidential-token.types";
-export {
-  ConfidentialTokenError,
-  ConfidentialTokenErrorCode,
-} from "./token/confidential-token.types";
+} from "./token/token.types";
+export { TokenError, TokenErrorCode } from "./token/token.types";
 
 // Event decoders and types
 export type {
@@ -66,7 +63,7 @@ export type {
   UnwrapRequestedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
-  ConfidentialTokenEvent,
+  TokenEvent,
 } from "./events";
 export {
   CONFIDENTIAL_TRANSFER_TOPIC,
@@ -74,14 +71,14 @@ export {
   UNWRAP_REQUESTED_TOPIC,
   UNWRAPPED_FINALIZED_TOPIC,
   UNWRAPPED_STARTED_TOPIC,
-  CONFIDENTIAL_TOKEN_TOPICS,
+  TOKEN_TOPICS,
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
-  decodeConfidentialTokenEvent,
-  decodeConfidentialTokenEvents,
+  decodeTokenEvent,
+  decodeTokenEvents,
   findUnwrapRequested,
   findWrapped,
 } from "./events";

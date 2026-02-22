@@ -207,23 +207,20 @@ Returns the `TokenSDK` instance from context. Use this when you need direct acce
 function useTokenSDK(): TokenSDK;
 ```
 
-#### `useConfidentialToken`
+#### `useToken`
 
-Returns a `ConfidentialToken` instance for a given token address. The encrypted ERC-20 contract IS the wrapper, so `wrapperAddress` defaults to `tokenAddress`. Pass it only if they differ. Memoized — same config returns the same instance.
+Returns a `Token` instance for a given token address. The encrypted ERC-20 contract IS the wrapper, so `wrapperAddress` defaults to `tokenAddress`. Pass it only if they differ. Memoized — same config returns the same instance.
 
 ```ts
-function useConfidentialToken(config: {
-  tokenAddress: Address;
-  wrapperAddress?: Address;
-}): ConfidentialToken;
+function useToken(config: { tokenAddress: Address; wrapperAddress?: Address }): Token;
 ```
 
-#### `useReadonlyConfidentialToken`
+#### `useReadonlyToken`
 
-Returns a `ReadonlyConfidentialToken` instance for a given token address (no wrapper needed). Memoized.
+Returns a `ReadonlyToken` instance for a given token address (no wrapper needed). Memoized.
 
 ```ts
-function useReadonlyConfidentialToken(tokenAddress: Address): ReadonlyConfidentialToken;
+function useReadonlyToken(tokenAddress: Address): ReadonlyToken;
 ```
 
 ### Balance Hooks
@@ -305,7 +302,7 @@ Encrypted transfer. Encrypts the amount and calls the contract. Automatically in
 
 ```ts
 function useConfidentialTransfer(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, TransferParams>,
 ): UseMutationResult<Address, Error, TransferParams>;
 
@@ -329,7 +326,7 @@ Operator transfer on behalf of another address.
 
 ```ts
 function useConfidentialTransferFrom(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, TransferFromParams>,
 ): UseMutationResult<Address, Error, TransferFromParams>;
 
@@ -348,7 +345,7 @@ Shield (wrap) public ERC-20 tokens into confidential tokens. Handles ERC-20 appr
 
 ```ts
 function useWrap(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, WrapParams>,
 ): UseMutationResult<Address, Error, WrapParams>;
 
@@ -374,7 +371,7 @@ Shield (wrap) native ETH into confidential tokens. Use when the underlying token
 
 ```ts
 function useWrapETH(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, WrapETHParams>,
 ): UseMutationResult<Address, Error, WrapETHParams>;
 
@@ -394,7 +391,7 @@ Unshield a specific amount. Handles the entire unwrap + finalize flow.
 
 ```ts
 function useUnshield(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, UnshieldParams>,
 ): UseMutationResult<Address, Error, UnshieldParams>;
 
@@ -417,7 +414,7 @@ Unshield the entire balance. Handles the entire unwrap + finalize flow.
 
 ```ts
 function useUnshieldAll(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, void>,
 ): UseMutationResult<Address, Error, void>;
 ```
@@ -440,7 +437,7 @@ Request unwrap for a specific amount (requires manual finalization via `useFinal
 
 ```ts
 function useUnwrap(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, UnwrapParams>,
 ): UseMutationResult<Address, Error, UnwrapParams>;
 
@@ -455,7 +452,7 @@ Request unwrap for the entire balance (requires manual finalization).
 
 ```ts
 function useUnwrapAll(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, void>,
 ): UseMutationResult<Address, Error, void>;
 ```
@@ -466,7 +463,7 @@ Complete an unwrap by providing the decryption proof.
 
 ```ts
 function useFinalizeUnwrap(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams>,
 ): UseMutationResult<Address, Error, FinalizeUnwrapParams>;
 
@@ -483,7 +480,7 @@ Set operator approval for the confidential token.
 
 ```ts
 function useConfidentialApprove(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   options?: UseMutationOptions<Address, Error, ApproveParams>,
 ): UseMutationResult<Address, Error, ApproveParams>;
 
@@ -499,7 +496,7 @@ Check if a spender is an approved operator. Enabled only when `spender` is defin
 
 ```ts
 function useConfidentialIsApproved(
-  config: UseConfidentialTokenConfig,
+  config: UseTokenConfig,
   spender: Address | undefined,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<boolean, Error>;
@@ -750,21 +747,21 @@ import { EthersSigner } from "@zama-fhe/token-react-sdk/ethers";
 
 All public exports from `@zama-fhe/token-sdk` are re-exported from the main entry point. You never need to import from the core package directly.
 
-**Classes:** `RelayerWeb`, `TokenSDK`, `ConfidentialToken`, `ReadonlyConfidentialToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
+**Classes:** `RelayerWeb`, `TokenSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
 **Types:** `Address`, `TokenSDKConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `ConfidentialSigner`, `GenericStringStorage`, `ContractCallConfig`.
 
-**Errors:** `ConfidentialTokenError`, `ConfidentialTokenErrorCode`.
+**Errors:** `TokenError`, `TokenErrorCode`.
 
 **Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`.
 
 **ABIs:** `ERC20_ABI`, `ERC20_METADATA_ABI`, `DEPLOYMENT_COORDINATOR_ABI`, `ERC165_ABI`, `ENCRYPTION_ABI`, `FEE_MANAGER_ABI`, `TRANSFER_BATCHER_ABI`, `WRAPPER_ABI`, `BATCH_SWAP_ABI`.
 
-**Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `ConfidentialTokenEvent`, `CONFIDENTIAL_TOKEN_TOPICS`, `CONFIDENTIAL_TRANSFER_TOPIC`, `WRAPPED_TOPIC`, `UNWRAP_REQUESTED_TOPIC`, `UNWRAPPED_FINALIZED_TOPIC`, `UNWRAPPED_STARTED_TOPIC`.
+**Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `TokenEvent`, `TOKEN_TOPICS`, `CONFIDENTIAL_TRANSFER_TOPIC`, `WRAPPED_TOPIC`, `UNWRAP_REQUESTED_TOPIC`, `UNWRAPPED_FINALIZED_TOPIC`, `UNWRAPPED_STARTED_TOPIC`.
 
-**Event decoders:** `decodeConfidentialTransfer`, `decodeWrapped`, `decodeUnwrapRequested`, `decodeUnwrappedFinalized`, `decodeUnwrappedStarted`, `decodeConfidentialTokenEvent`, `decodeConfidentialTokenEvents`, `findUnwrapRequested`, `findWrapped`.
+**Event decoders:** `decodeConfidentialTransfer`, `decodeWrapped`, `decodeUnwrapRequested`, `decodeUnwrappedFinalized`, `decodeUnwrappedStarted`, `decodeTokenEvent`, `decodeTokenEvents`, `findUnwrapRequested`, `findWrapped`.
 
 **Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
 
