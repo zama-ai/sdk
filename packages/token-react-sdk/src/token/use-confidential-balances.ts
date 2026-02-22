@@ -72,10 +72,9 @@ export function useConfidentialBalances(
 
   const ownerKey = signerAddress ?? "";
 
-  const stableKey = tokenAddresses.join(",");
   const tokens = useMemo(
     () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
-    [sdk, stableKey], // stableKey stabilizes referentially-unstable tokenAddresses arrays
+    [sdk, tokenAddresses],
   );
 
   // Phase 1: Poll all encrypted handles (cheap RPC reads)
