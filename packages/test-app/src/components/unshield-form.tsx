@@ -15,7 +15,7 @@ export function UnshieldForm({
   wrapperAddress?: Address;
 }) {
   const { data: metadata } = useTokenMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance(tokenAddress);
+  const { data: balance } = useConfidentialBalance({ tokenAddress });
   const unshield = useUnshield({ tokenAddress, wrapperAddress });
 
   return (

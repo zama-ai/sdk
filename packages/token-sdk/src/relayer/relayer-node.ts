@@ -3,7 +3,6 @@ import type { RelayerSDK } from "./relayer-sdk";
 import { mergeFhevmConfig } from "./relayer-utils";
 import type {
   Address,
-  ChainIdOrResolver,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -18,8 +17,9 @@ import type {
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 
 export interface RelayerNodeConfig {
-  chainId: ChainIdOrResolver;
   transports: Record<number, Partial<FhevmInstanceConfig>>;
+  /** Resolve the current chain ID. Called lazily before each operation; the pool is re-initialized when the value changes. */
+  getChainId: () => Promise<number>;
   poolSize?: number;
 }
 
@@ -38,13 +38,8 @@ export class RelayerNode implements RelayerSDK {
     this.#config = config;
   }
 
-  async #resolveChainId(): Promise<number> {
-    const { chainId } = this.#config;
-    return typeof chainId === "function" ? chainId() : chainId;
-  }
-
   async #getPoolConfig(): Promise<NodeWorkerPoolConfig> {
-    const chainId = await this.#resolveChainId();
+    const chainId = await this.#config.getChainId();
     const { transports, poolSize } = this.#config;
 
     return {
@@ -54,7 +49,7 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async #ensurePool(): Promise<NodeWorkerPool> {
-    const chainId = await this.#resolveChainId();
+    const chainId = await this.#config.getChainId();
 
     // Chain changed → tear down old pool, re-init
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {

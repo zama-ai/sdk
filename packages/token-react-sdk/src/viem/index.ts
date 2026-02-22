@@ -43,4 +43,3 @@ export {
   type UseSupportsInterfaceSuspenseConfig,
 } from "./use-supports-interface";
 export { ViemSigner } from "./viem-signer";
-export { ViemTokenSDKProvider } from "./viem-token-sdk-provider";

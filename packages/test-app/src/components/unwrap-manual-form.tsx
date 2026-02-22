@@ -20,7 +20,7 @@ export function UnwrapManualForm({
 }) {
   const [burnAmountHandle, setBurnAmountHandle] = useState<Address | null>(null);
   const { data: metadata } = useTokenMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance(tokenAddress);
+  const { data: balance } = useConfidentialBalance({ tokenAddress });
   const sdk = useTokenSDK();
   const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
   const finalizeUnwrap = useFinalizeUnwrap({ tokenAddress, wrapperAddress });

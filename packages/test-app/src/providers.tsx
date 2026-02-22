@@ -1,8 +1,8 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage, RelayerWeb } from "@zama-fhe/token-react-sdk";
-import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
+import { MemoryStorage, RelayerWeb, TokenSDKProvider } from "@zama-fhe/token-react-sdk";
+import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
 import { type ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
@@ -27,8 +27,10 @@ const wagmiConfig = createConfig({
   },
 });
 
+const signer = new WagmiSigner(wagmiConfig);
+
 const relayer = new RelayerWeb({
-  chainId: hardhat.id,
+  getChainId: async () => signer.getChainId(),
   transports: {
     [hardhat.id]: {
       network: hardhat.rpcUrls.default.http[0],
@@ -44,9 +46,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <WagmiTokenSDKProvider relayer={relayer} storage={storage}>
+        <TokenSDKProvider relayer={relayer} storage={storage} signer={signer}>
           {children}
-        </WagmiTokenSDKProvider>
+        </TokenSDKProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

@@ -20,7 +20,7 @@ async function main() {
   // 2. Create SDK components
   const signer = new EthersSigner(wallet);
   const relayer = new RelayerNode({
-    chainId: CHAIN_ID,
+    getChainId: () => signer.getChainId(),
     transports: {
       [CHAIN_ID]: { network: RPC_URL },
     },

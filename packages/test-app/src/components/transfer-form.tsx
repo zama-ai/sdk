@@ -15,7 +15,7 @@ export function TransferForm({
   wrapperAddress?: Address;
 }) {
   const { data: metadata } = useTokenMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance(tokenAddress);
+  const { data: balance } = useConfidentialBalance({ tokenAddress });
   const transfer = useConfidentialTransfer({ tokenAddress, wrapperAddress });
 
   return (

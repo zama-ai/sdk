@@ -35,27 +35,14 @@ export class RelayerWeb implements RelayerSDK {
     this.#config = config;
   }
 
-  /**
-   * Get or create the worker client configuration.
-   */
-  #resolveCsrfToken(): string {
-    const token = this.#config.csrfToken;
-    return (typeof token === "function" ? token() : token) ?? "";
-  }
-
-  async #resolveChainId(): Promise<number> {
-    const { chainId } = this.#config;
-    return typeof chainId === "function" ? chainId() : chainId;
-  }
-
   async #getWorkerConfig(): Promise<WorkerClientConfig> {
-    const chainId = await this.#resolveChainId();
+    const chainId = await this.#config.getChainId();
     const { transports } = this.#config;
 
     return {
       cdnUrl: CDN_URL,
       fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
-      csrfToken: this.#resolveCsrfToken(),
+      csrfToken: this.#config.getCsrfToken?.() ?? "",
     };
   }
 
@@ -65,7 +52,7 @@ export class RelayerWeb implements RelayerSDK {
    * Resets on failure to allow retries.
    */
   async #ensureWorker(): Promise<RelayerWorkerClient> {
-    const chainId = await this.#resolveChainId();
+    const chainId = await this.#config.getChainId();
 
     // Chain changed → tear down old worker, re-init
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
@@ -120,7 +107,7 @@ export class RelayerWeb implements RelayerSDK {
    */
   async #refreshCsrfToken(): Promise<void> {
     if (this.#workerClient) {
-      const token = this.#resolveCsrfToken();
+      const token = this.#config.getCsrfToken?.() ?? "";
       if (token) {
         await this.#workerClient.updateCsrf(token);
       }

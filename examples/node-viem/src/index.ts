@@ -27,7 +27,7 @@ async function main() {
   // 2. Create SDK components
   const signer = new ViemSigner(walletClient, publicClient);
   const relayer = new RelayerNode({
-    chainId: sepolia.id,
+    getChainId: () => signer.getChainId(),
     transports: {
       [sepolia.id]: { network: RPC_URL },
     },

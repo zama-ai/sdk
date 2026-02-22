@@ -21,14 +21,13 @@ export interface RelayerSDKGlobal {
 /** Network configuration for the Relayer SDK */
 export type NetworkType = "hardhat" | "sepolia" | "mainnet";
 
-/** A static chain ID or an async resolver function (for lazy / dynamic chain switching). */
-export type ChainIdOrResolver = number | (() => number | Promise<number>);
-
 /** Configuration for RelayerWeb (browser backend) initialization. */
 export interface RelayerWebConfig {
-  chainId: ChainIdOrResolver;
   transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
-  csrfToken?: string | (() => string);
+  /** Resolve the current chain ID. Called lazily before each operation; the worker is re-initialized when the value changes. */
+  getChainId: () => Promise<number>;
+  /** Resolve the current CSRF token. Called before each authenticated network request. */
+  getCsrfToken?: () => string;
 }
 
 /** Result from encryption operation */

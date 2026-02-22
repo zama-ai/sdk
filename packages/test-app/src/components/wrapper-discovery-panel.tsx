@@ -9,7 +9,7 @@ export function WrapperDiscoveryPanel({
   tokenAddress: Address;
   coordinatorAddress?: Address;
 }) {
-  const wrapperDiscovery = useWrapperDiscovery(tokenAddress, coordinatorAddress);
+  const wrapperDiscovery = useWrapperDiscovery({ tokenAddress, coordinatorAddress });
 
   return (
     <section className="space-y-2">

@@ -22,7 +22,6 @@ test("should generate keypair then create EIP-712", async ({ page, contracts }) 
 
 test("should get public key", async ({ page, contracts }) => {
   await page.goto(`/fhe-relayer?tokens=${contracts.cUSDT}`);
-  await page.getByTestId("public-key-button").click();
 
   await expect(page.getByTestId("public-key-result")).toContainText(
     "Public key ID: mock-public-key-id",
@@ -31,7 +30,6 @@ test("should get public key", async ({ page, contracts }) => {
 
 test("should get public params", async ({ page, contracts }) => {
   await page.goto(`/fhe-relayer?tokens=${contracts.cUSDT}`);
-  await page.getByTestId("public-params-button").click();
 
   await expect(page.getByTestId("public-params-result")).toContainText(
     "Public params ID: mock-public-params-id",

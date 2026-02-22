@@ -15,4 +15,3 @@ export { useSupportsInterface, type UseSupportsInterfaceConfig } from "./use-sup
 export { useWrap } from "./use-wrap";
 export { useWrapETH } from "./use-wrap-eth";
 export { WagmiSigner } from "./wagmi-signer";
-export { WagmiTokenSDKProvider } from "./wagmi-token-sdk-provider";

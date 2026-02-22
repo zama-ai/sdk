@@ -43,4 +43,3 @@ export {
   type UseSupportsInterfaceSuspenseConfig,
 } from "./use-supports-interface";
 export { EthersSigner } from "./ethers-signer";
-export { EthersTokenSDKProvider } from "./ethers-token-sdk-provider";

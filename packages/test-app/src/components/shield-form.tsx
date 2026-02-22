@@ -15,7 +15,7 @@ export function ShieldForm({
   wrapperAddress: Address;
 }) {
   const { data: metadata } = useTokenMetadata(tokenAddress);
-  const { data: allowance } = useUnderlyingAllowance(tokenAddress, wrapperAddress);
+  const { data: allowance } = useUnderlyingAllowance({ tokenAddress, wrapperAddress });
   const shield = useShield({ tokenAddress, wrapperAddress });
 
   return (

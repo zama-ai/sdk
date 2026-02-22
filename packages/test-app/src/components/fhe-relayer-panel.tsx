@@ -16,7 +16,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
   const generateKeypair = useGenerateKeypair();
   const createEIP712 = useCreateEIP712();
   const publicKey = usePublicKey();
-  const publicParams = usePublicParams();
+  const publicParams = usePublicParams(2048);
   const encrypt = useEncrypt();
 
   return (
@@ -82,14 +82,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
       {/* usePublicKey */}
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">usePublicKey</h2>
-        <button
-          onClick={() => publicKey.mutate()}
-          disabled={publicKey.isPending}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-          data-testid="public-key-button"
-        >
-          {publicKey.isPending ? "Fetching..." : "Get Public Key"}
-        </button>
+        {publicKey.isLoading && <p>Fetching...</p>}
         {publicKey.isSuccess && publicKey.data && (
           <p className="text-green-600" data-testid="public-key-result">
             Public key ID: {publicKey.data.publicKeyId}
@@ -105,14 +98,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
       {/* usePublicParams */}
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">usePublicParams</h2>
-        <button
-          onClick={() => publicParams.mutate(2048)}
-          disabled={publicParams.isPending}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-          data-testid="public-params-button"
-        >
-          {publicParams.isPending ? "Fetching..." : "Get Public Params"}
-        </button>
+        {publicParams.isLoading && <p>Fetching...</p>}
         {publicParams.isSuccess && publicParams.data && (
           <p className="text-green-600" data-testid="public-params-result">
             Public params ID: {publicParams.data.publicParamsId}
