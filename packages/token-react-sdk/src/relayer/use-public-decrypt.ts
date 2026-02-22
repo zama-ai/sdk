@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PublicDecryptResult } from "@zama-fhe/token-sdk";
 import { decryptionKeys } from "./decryption-cache";
 import { useTokenSDK } from "../provider";
@@ -11,11 +11,12 @@ import { useTokenSDK } from "../provider";
  */
 export function usePublicDecrypt() {
   const sdk = useTokenSDK();
+  const queryClient = useQueryClient();
   return useMutation<PublicDecryptResult, Error, string[]>({
     mutationFn: (handles) => sdk.relayer.publicDecrypt(handles),
-    onSuccess: (data, _variable, _result, { client }) => {
+    onSuccess: (data) => {
       for (const [handle, value] of Object.entries(data.clearValues)) {
-        client.setQueryData(decryptionKeys.value(handle), value);
+        queryClient.setQueryData(decryptionKeys.value(handle), value);
       }
     },
   });

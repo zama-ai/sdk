@@ -45,6 +45,7 @@ export class RelayerWorkerClient {
   #worker: Worker | null = null;
   #config: WorkerClientConfig;
   #pendingRequests = new Map<string, PendingRequest<unknown>>();
+  #initPromise: Promise<Worker> | null = null;
 
   constructor(config: WorkerClientConfig) {
     this.#config = config;
@@ -53,22 +54,33 @@ export class RelayerWorkerClient {
   /**
    * Initialize the worker and SDK.
    * Must be called before any other operations.
+   * Deduplicates concurrent calls to prevent worker leaks.
    */
   async initWorker(): Promise<Worker> {
-    if (!this.#worker) {
-      const worker = new Worker(new URL("./relayer-sdk.worker.js", import.meta.url));
+    if (this.#worker) return this.#worker;
 
-      worker.onmessage = this.#handleMessage.bind(this);
-      worker.onerror = this.#handleError.bind(this);
-      worker.onmessageerror = this.#handleMessageError.bind(this);
-
-      try {
-        await this.#sendRequestTo<InitResponseData>(worker, "INIT", this.#config, INIT_TIMEOUT_MS);
-        this.#worker = worker;
-      } catch (err) {
-        worker.terminate();
+    if (!this.#initPromise) {
+      this.#initPromise = this.#doInitWorker().catch((err) => {
+        this.#initPromise = null;
         throw err;
-      }
+      });
+    }
+    return this.#initPromise;
+  }
+
+  async #doInitWorker(): Promise<Worker> {
+    const worker = new Worker(new URL("./relayer-sdk.worker.js", import.meta.url));
+
+    worker.onmessage = this.#handleMessage.bind(this);
+    worker.onerror = this.#handleError.bind(this);
+    worker.onmessageerror = this.#handleMessageError.bind(this);
+
+    try {
+      await this.#sendRequestTo<InitResponseData>(worker, "INIT", this.#config, INIT_TIMEOUT_MS);
+      this.#worker = worker;
+    } catch (err) {
+      worker.terminate();
+      throw err;
     }
 
     return this.#worker;
@@ -89,6 +101,7 @@ export class RelayerWorkerClient {
       this.#worker.terminate();
       this.#worker = null;
     }
+    this.#initPromise = null;
   }
 
   /**

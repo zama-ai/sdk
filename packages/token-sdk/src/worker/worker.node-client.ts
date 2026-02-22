@@ -39,31 +39,47 @@ export class NodeWorkerClient {
   #worker: Worker | null = null;
   #config: NodeWorkerClientConfig;
   #pendingRequests = new Map<string, PendingRequest<unknown>>();
+  #initPromise: Promise<Worker> | null = null;
 
   constructor(config: NodeWorkerClientConfig) {
     this.#config = config;
   }
 
+  /**
+   * Initialize the worker thread.
+   * Deduplicates concurrent calls to prevent worker leaks.
+   */
   async initWorker(): Promise<Worker> {
-    if (!this.#worker) {
-      const worker = new Worker(new URL("./relayer-sdk.node-worker.ts", import.meta.url));
+    if (this.#worker) return this.#worker;
 
-      worker.on("message", this.#handleMessage.bind(this));
-      worker.on("error", this.#handleError.bind(this));
-      worker.on("messageerror", this.#handleMessageError.bind(this));
-
-      try {
-        await this.#sendRequestTo<InitResponseData>(
-          worker,
-          "NODE_INIT",
-          { fhevmConfig: this.#config.fhevmConfig },
-          INIT_TIMEOUT_MS,
-        );
-        this.#worker = worker;
-      } catch (err) {
-        worker.terminate();
+    if (!this.#initPromise) {
+      this.#initPromise = this.#doInitWorker().catch((err) => {
+        this.#initPromise = null;
         throw err;
-      }
+      });
+    }
+    return this.#initPromise;
+  }
+
+  async #doInitWorker(): Promise<Worker> {
+    const worker = new Worker(new URL("./relayer-sdk.node-worker.js", import.meta.url));
+
+    worker.on("message", this.#handleMessage.bind(this));
+    worker.on("error", this.#handleError.bind(this));
+    worker.on("messageerror", this.#handleMessageError.bind(this));
+
+    try {
+      await this.#sendRequestTo<InitResponseData>(
+        worker,
+        "NODE_INIT",
+        { fhevmConfig: this.#config.fhevmConfig },
+        INIT_TIMEOUT_MS,
+      );
+      worker.unref();
+      this.#worker = worker;
+    } catch (err) {
+      worker.terminate();
+      throw err;
     }
 
     return this.#worker;
@@ -80,6 +96,7 @@ export class NodeWorkerClient {
       this.#worker.terminate();
       this.#worker = null;
     }
+    this.#initPromise = null;
   }
 
   async generateKeypair(): Promise<GenerateKeypairResponseData> {

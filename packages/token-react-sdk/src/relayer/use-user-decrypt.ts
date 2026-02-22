@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UserDecryptParams } from "@zama-fhe/token-sdk";
 import { decryptionKeys } from "./decryption-cache";
 import { useTokenSDK } from "../provider";
@@ -16,12 +16,13 @@ import { useTokenSDK } from "../provider";
  */
 export function useUserDecrypt() {
   const sdk = useTokenSDK();
+  const queryClient = useQueryClient();
 
   return useMutation<Record<string, bigint>, Error, UserDecryptParams>({
     mutationFn: (params) => sdk.relayer.userDecrypt(params),
-    onSuccess: (data, _variables, _result, { client }) => {
+    onSuccess: (data) => {
       for (const [handle, value] of Object.entries(data)) {
-        client.setQueryData(decryptionKeys.value(handle), value);
+        queryClient.setQueryData(decryptionKeys.value(handle), value);
       }
     },
   });

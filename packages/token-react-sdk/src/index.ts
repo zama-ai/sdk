@@ -27,6 +27,7 @@ export { decryptionKeys } from "./relayer/decryption-cache";
 // Re-export core classes
 export {
   RelayerWeb,
+  RelayerNode,
   TokenSDK,
   Token,
   ReadonlyToken,
@@ -40,6 +41,7 @@ export {
 export type {
   RelayerSDK,
   RelayerWebConfig,
+  RelayerNodeConfig,
   TokenSDKConfig,
   TokenConfig,
   ReadonlyTokenConfig,
