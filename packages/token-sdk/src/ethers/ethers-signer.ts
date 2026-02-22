@@ -36,9 +36,9 @@ export class EthersSigner implements GenericSigner {
   async writeContract<C extends ContractCallConfig>(config: C): Promise<Hex> {
     const signer = await this.signerPromise;
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
-    const tx = await contract[config.functionName](...config.args, {
-      value: config.value,
-    });
+    const overrides: Record<string, unknown> = {};
+    if (config.value !== undefined) overrides.value = config.value;
+    const tx = await contract[config.functionName](...config.args, overrides);
     return tx.hash as Hex;
   }
 

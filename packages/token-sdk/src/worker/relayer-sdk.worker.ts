@@ -536,44 +536,53 @@ function handleUpdateCsrf(request: UpdateCsrfRequest): void {
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
 
-  switch (request.type) {
-    case "INIT":
-      await handleInit(request);
-      break;
-    case "UPDATE_CSRF":
-      handleUpdateCsrf(request);
-      break;
-    case "ENCRYPT":
-      await handleEncrypt(request);
-      break;
-    case "USER_DECRYPT":
-      await handleUserDecrypt(request);
-      break;
-    case "PUBLIC_DECRYPT":
-      await handlePublicDecrypt(request);
-      break;
-    case "GENERATE_KEYPAIR":
-      handleGenerateKeypair(request);
-      break;
-    case "CREATE_EIP712":
-      handleCreateEIP712(request);
-      break;
-    case "CREATE_DELEGATED_EIP712":
-      handleCreateDelegatedEIP712(request);
-      break;
-    case "DELEGATED_USER_DECRYPT":
-      await handleDelegatedUserDecrypt(request);
-      break;
-    case "REQUEST_ZK_PROOF_VERIFICATION":
-      await handleRequestZKProofVerification(request);
-      break;
-    case "GET_PUBLIC_KEY":
-      handleGetPublicKey(request);
-      break;
-    case "GET_PUBLIC_PARAMS":
-      handleGetPublicParams(request);
-      break;
-    default:
-      console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);
+  try {
+    switch (request.type) {
+      case "INIT":
+        await handleInit(request);
+        break;
+      case "UPDATE_CSRF":
+        handleUpdateCsrf(request);
+        break;
+      case "ENCRYPT":
+        await handleEncrypt(request);
+        break;
+      case "USER_DECRYPT":
+        await handleUserDecrypt(request);
+        break;
+      case "PUBLIC_DECRYPT":
+        await handlePublicDecrypt(request);
+        break;
+      case "GENERATE_KEYPAIR":
+        handleGenerateKeypair(request);
+        break;
+      case "CREATE_EIP712":
+        handleCreateEIP712(request);
+        break;
+      case "CREATE_DELEGATED_EIP712":
+        handleCreateDelegatedEIP712(request);
+        break;
+      case "DELEGATED_USER_DECRYPT":
+        await handleDelegatedUserDecrypt(request);
+        break;
+      case "REQUEST_ZK_PROOF_VERIFICATION":
+        await handleRequestZKProofVerification(request);
+        break;
+      case "GET_PUBLIC_KEY":
+        handleGetPublicKey(request);
+        break;
+      case "GET_PUBLIC_PARAMS":
+        handleGetPublicParams(request);
+        break;
+      default:
+        console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    sendError(
+      request?.id ?? "unknown",
+      request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),
+      message,
+    );
   }
 };

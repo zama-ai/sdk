@@ -27,7 +27,7 @@ export function useIsConfidential(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<boolean, Error>({
-    queryKey: ["isConfidential", tokenAddress],
+    queryKey: isConfidentialQueryKeys.token(tokenAddress),
     queryFn: () => token.isConfidential(),
     staleTime: Infinity,
     ...options,
@@ -40,7 +40,7 @@ export function useIsConfidentialSuspense(
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<boolean, Error>({
-    queryKey: ["isConfidential", tokenAddress],
+    queryKey: isConfidentialQueryKeys.token(tokenAddress),
     queryFn: () => token.isConfidential(),
     staleTime: Infinity,
   });
@@ -53,7 +53,7 @@ export function useIsWrapper(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<boolean, Error>({
-    queryKey: ["isWrapper", tokenAddress],
+    queryKey: isWrapperQueryKeys.token(tokenAddress),
     queryFn: () => token.isWrapper(),
     staleTime: Infinity,
     ...options,
@@ -64,7 +64,7 @@ export function useIsWrapperSuspense(tokenAddress: Hex): UseSuspenseQueryResult<
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<boolean, Error>({
-    queryKey: ["isWrapper", tokenAddress],
+    queryKey: isWrapperQueryKeys.token(tokenAddress),
     queryFn: () => token.isWrapper(),
     staleTime: Infinity,
   });

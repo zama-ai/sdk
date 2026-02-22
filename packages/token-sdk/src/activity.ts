@@ -17,6 +17,7 @@ import {
   type UnwrappedFinalizedEvent,
   type UnwrappedStartedEvent,
 } from "./events";
+import { ZERO_HANDLE } from "./token/readonly-token";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -212,7 +213,7 @@ export function extractEncryptedHandles(items: readonly ActivityItem[]): string[
     if (item.amount.type === "encrypted" && item.amount.decryptedValue === undefined) {
       const h = item.amount.handle;
       // Skip zero handles
-      if (h !== "0x" && h !== "0x" + "0".repeat(64)) {
+      if (h !== "0x" && h !== ZERO_HANDLE) {
         handles.add(h);
       }
     }

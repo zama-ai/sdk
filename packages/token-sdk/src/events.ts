@@ -113,7 +113,7 @@ function wordToBigInt(data: string, index: number): bigint {
 }
 
 function wordToBool(data: string, index: number): boolean {
-  return wordAt(data, index).slice(-1) !== "0";
+  return BigInt("0x" + wordAt(data, index)) !== 0n;
 }
 
 function wordToBytes32(data: string, index: number): Hex {

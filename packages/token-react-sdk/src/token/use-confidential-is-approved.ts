@@ -19,7 +19,7 @@ export function useConfidentialIsApproved(
   const token = useToken(config);
 
   return useQuery<boolean, Error>({
-    queryKey: ["confidentialIsApproved", config.tokenAddress, spender],
+    queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, spender ?? ""),
     queryFn: () => token.isApproved(spender as Hex),
     enabled: !!spender,
     staleTime: 30_000,
@@ -31,7 +31,8 @@ export function useConfidentialIsApprovedSuspense(config: UseTokenConfig, spende
   const token = useToken(config);
 
   return useSuspenseQuery<boolean, Error>({
-    queryKey: ["confidentialIsApproved", config.tokenAddress, spender],
+    queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, spender),
     queryFn: () => token.isApproved(spender),
+    staleTime: 30_000,
   });
 }

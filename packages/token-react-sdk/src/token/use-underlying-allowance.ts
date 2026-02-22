@@ -37,5 +37,6 @@ export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceCon
   return useSuspenseQuery<bigint, Error>({
     queryKey: underlyingAllowanceQueryKeys.token(tokenAddress, wrapperAddress),
     queryFn: () => token.allowance(wrapperAddress),
+    staleTime: 30_000,
   });
 }

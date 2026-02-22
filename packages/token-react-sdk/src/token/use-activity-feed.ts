@@ -43,9 +43,7 @@ export function useActivityFeed(
     queryKey: [
       ...activityFeedQueryKeys.token(tokenAddress),
       userAddress ?? "",
-      logs?.length ?? 0,
-      logs?.[0]?.blockNumber ?? 0,
-      logs?.[logs.length - 1]?.blockNumber ?? 0,
+      logs?.map((l) => `${l.transactionHash ?? ""}:${l.logIndex ?? ""}`).join(",") ?? "",
     ],
     queryFn: async () => {
       if (!logs || !userAddress) return [];

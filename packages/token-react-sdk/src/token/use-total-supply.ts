@@ -22,7 +22,7 @@ export function useTotalSupply(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<bigint, Error>({
-    queryKey: ["totalSupply", tokenAddress],
+    queryKey: totalSupplyQueryKeys.token(tokenAddress),
     queryFn: () => token.signer.readContract<bigint>(totalSupplyContract(tokenAddress)),
     staleTime: 30_000,
     ...options,
@@ -33,7 +33,8 @@ export function useTotalSupplySuspense(tokenAddress: Hex): UseSuspenseQueryResul
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<bigint, Error>({
-    queryKey: ["totalSupply", tokenAddress],
+    queryKey: totalSupplyQueryKeys.token(tokenAddress),
     queryFn: () => token.signer.readContract<bigint>(totalSupplyContract(tokenAddress)),
+    staleTime: 30_000,
   });
 }

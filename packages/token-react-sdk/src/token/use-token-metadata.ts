@@ -32,7 +32,7 @@ export function useTokenMetadata(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<TokenMetadata, Error>({
-    queryKey: ["tokenMetadata", tokenAddress],
+    queryKey: tokenMetadataQueryKeys.token(tokenAddress),
     queryFn: async () => {
       const [name, symbol, decimals] = await Promise.all([
         token.name(),
@@ -52,7 +52,7 @@ export function useTokenMetadataSuspense(
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<TokenMetadata, Error>({
-    queryKey: ["tokenMetadata", tokenAddress],
+    queryKey: tokenMetadataQueryKeys.token(tokenAddress),
     queryFn: async () => {
       const [name, symbol, decimals] = await Promise.all([
         token.name(),

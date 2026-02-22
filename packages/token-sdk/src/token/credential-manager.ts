@@ -34,6 +34,7 @@ export class CredentialsManager {
   #storage: GenericStringStorage;
   #durationDays: number;
   #createPromise: Promise<StoredCredentials> | null = null;
+  #createPromiseKey: string | null = null;
 
   constructor(config: CredentialsManagerConfig) {
     this.#sdk = config.sdk;
@@ -80,9 +81,12 @@ export class CredentialsManager {
       // Store read or decrypt failed — generate fresh credentials
     }
 
-    if (!this.#createPromise) {
+    const key = contractAddresses.slice().sort().join(",");
+    if (!this.#createPromise || this.#createPromiseKey !== key) {
+      this.#createPromiseKey = key;
       this.#createPromise = this.create(contractAddresses).finally(() => {
         this.#createPromise = null;
+        this.#createPromiseKey = null;
       });
     }
     return this.#createPromise;

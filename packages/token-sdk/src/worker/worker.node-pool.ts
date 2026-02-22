@@ -37,6 +37,7 @@ export class NodeWorkerPool {
   }
 
   async initPool(): Promise<void> {
+    if (this.#workers.length > 0) return;
     for (let i = 0; i < this.#poolSize; i++) {
       this.#workers.push(new NodeWorkerClient(this.#config));
       this.#activeCount.push(0);

@@ -35,6 +35,7 @@ export class Token extends ReadonlyToken {
 
   readonly wrapper: Hex;
   #underlying: Hex | undefined;
+  #underlyingPromise: Promise<Hex> | null = null;
 
   constructor(config: TokenConfig) {
     super(config);
@@ -42,10 +43,22 @@ export class Token extends ReadonlyToken {
   }
 
   async #getUnderlying(): Promise<Hex> {
-    if (this.#underlying === undefined) {
-      this.#underlying = await this.signer.readContract<Hex>(underlyingContract(this.wrapper));
+    if (this.#underlying !== undefined) return this.#underlying;
+    if (!this.#underlyingPromise) {
+      try {
+        this.#underlyingPromise = this.signer
+          .readContract<Hex>(underlyingContract(this.wrapper))
+          .then((v) => {
+            this.#underlying = v;
+            this.#underlyingPromise = null;
+            return v;
+          });
+      } catch (error) {
+        this.#underlyingPromise = null;
+        throw error;
+      }
     }
-    return this.#underlying;
+    return this.#underlyingPromise;
   }
 
   // WRITE OPERATIONS
@@ -357,7 +370,7 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async approveUnderlying(amount?: bigint): Promise<Hex> {
-    const underlying = await this.signer.readContract<Hex>(underlyingContract(this.wrapper));
+    const underlying = await this.#getUnderlying();
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
 

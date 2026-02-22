@@ -3,10 +3,7 @@
  * Handles CPU-intensive WASM operations off the main thread using node:worker_threads.
  */
 
-import type {
-  FhevmInstance,
-  FhevmInstanceConfig,
-} from "@zama-fhe/relayer-sdk/node";
+import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
 import { parentPort, type Transferable } from "node:worker_threads";
 import { convertToBigIntRecord } from "../relayer/relayer-utils";
 import type {
@@ -54,11 +51,7 @@ function sendSuccess<T>(
   port.postMessage(response, transfer);
 }
 
-function sendError(
-  id: string,
-  type: WorkerRequest["type"],
-  error: string,
-): void {
+function sendError(id: string, type: WorkerRequest["type"], error: string): void {
   const response: ErrorResponse = { id, type, success: false, error };
   port.postMessage(response);
 }
@@ -94,10 +87,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
       throw new Error("SDK not initialized. Call NODE_INIT first.");
     }
 
-    const input = sdkInstance.createEncryptedInput(
-      contractAddress,
-      userAddress,
-    );
+    const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
 
     for (const value of values) {
       input.add64(value);
@@ -159,9 +149,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   }
 }
 
-async function handlePublicDecrypt(
-  request: PublicDecryptRequest,
-): Promise<void> {
+async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
@@ -231,11 +219,12 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
         verifyingContract: eip712.domain.verifyingContract as `0x${string}`,
       },
       types: {
-        UserDecryptRequestVerification:
-          eip712.types.UserDecryptRequestVerification.map((field) => ({
+        UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification.map(
+          (field) => ({
             name: field.name,
             type: field.type,
-          })),
+          }),
+        ),
       },
       message: {
         publicKey: eip712.message.publicKey,
@@ -254,9 +243,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
   }
 }
 
-function handleCreateDelegatedEIP712(
-  request: CreateDelegatedEIP712Request,
-): void {
+function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): void {
   const { id, type, payload } = request;
 
   try {
@@ -280,9 +267,7 @@ function handleCreateDelegatedEIP712(
   }
 }
 
-async function handleDelegatedUserDecrypt(
-  request: DelegatedUserDecryptRequest,
-): Promise<void> {
+async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
@@ -329,9 +314,7 @@ async function handleRequestZKProofVerification(
       throw new Error("SDK not initialized. Call NODE_INIT first.");
     }
 
-    const result = await sdkInstance.requestZKProofVerification(
-      payload.zkProof,
-    );
+    const result = await sdkInstance.requestZKProofVerification(payload.zkProof);
 
     const transferList: Transferable[] = [
       result.inputProof.buffer as ArrayBuffer,
@@ -389,44 +372,50 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
 }
 
 port.on("message", async (request: WorkerRequest) => {
-  switch (request.type) {
-    case "NODE_INIT":
-      await handleNodeInit(request);
-      break;
-    case "ENCRYPT":
-      await handleEncrypt(request);
-      break;
-    case "USER_DECRYPT":
-      await handleUserDecrypt(request);
-      break;
-    case "PUBLIC_DECRYPT":
-      await handlePublicDecrypt(request);
-      break;
-    case "GENERATE_KEYPAIR":
-      handleGenerateKeypair(request);
-      break;
-    case "CREATE_EIP712":
-      handleCreateEIP712(request);
-      break;
-    case "CREATE_DELEGATED_EIP712":
-      handleCreateDelegatedEIP712(request);
-      break;
-    case "DELEGATED_USER_DECRYPT":
-      await handleDelegatedUserDecrypt(request);
-      break;
-    case "REQUEST_ZK_PROOF_VERIFICATION":
-      await handleRequestZKProofVerification(request);
-      break;
-    case "GET_PUBLIC_KEY":
-      handleGetPublicKey(request);
-      break;
-    case "GET_PUBLIC_PARAMS":
-      handleGetPublicParams(request);
-      break;
-    default:
-      console.error(
-        "[NodeWorker] Unknown request type:",
-        (request as WorkerRequest).type,
-      );
+  try {
+    switch (request.type) {
+      case "NODE_INIT":
+        await handleNodeInit(request);
+        break;
+      case "ENCRYPT":
+        await handleEncrypt(request);
+        break;
+      case "USER_DECRYPT":
+        await handleUserDecrypt(request);
+        break;
+      case "PUBLIC_DECRYPT":
+        await handlePublicDecrypt(request);
+        break;
+      case "GENERATE_KEYPAIR":
+        handleGenerateKeypair(request);
+        break;
+      case "CREATE_EIP712":
+        handleCreateEIP712(request);
+        break;
+      case "CREATE_DELEGATED_EIP712":
+        handleCreateDelegatedEIP712(request);
+        break;
+      case "DELEGATED_USER_DECRYPT":
+        await handleDelegatedUserDecrypt(request);
+        break;
+      case "REQUEST_ZK_PROOF_VERIFICATION":
+        await handleRequestZKProofVerification(request);
+        break;
+      case "GET_PUBLIC_KEY":
+        handleGetPublicKey(request);
+        break;
+      case "GET_PUBLIC_PARAMS":
+        handleGetPublicParams(request);
+        break;
+      default:
+        console.error("[NodeWorker] Unknown request type:", (request as WorkerRequest).type);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    sendError(
+      request?.id ?? "unknown",
+      request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),
+      message,
+    );
   }
 });
