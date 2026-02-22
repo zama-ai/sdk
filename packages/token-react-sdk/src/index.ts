@@ -113,7 +113,10 @@ export { useAuthorizeAll } from "./token/use-authorize-all";
 export { useConfidentialTransfer } from "./token/use-confidential-transfer";
 export { useConfidentialTransferFrom } from "./token/use-confidential-transfer-from";
 export { useConfidentialApprove } from "./token/use-confidential-approve";
-export { useConfidentialIsApproved } from "./token/use-confidential-is-approved";
+export {
+  useConfidentialIsApproved,
+  useConfidentialIsApprovedSuspense,
+} from "./token/use-confidential-is-approved";
 export { useWrap } from "./token/use-wrap";
 export { useShield } from "./token/use-shield";
 export { useWrapETH } from "./token/use-wrap-eth";
@@ -125,6 +128,7 @@ export { useUnshield } from "./token/use-unshield";
 export { useUnshieldAll } from "./token/use-unshield-all";
 export {
   useUnderlyingAllowance,
+  useUnderlyingAllowanceSuspense,
   underlyingAllowanceQueryKeys,
 } from "./token/use-underlying-allowance";
 export {
@@ -133,8 +137,12 @@ export {
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
 } from "./token/confidential-balance-query-keys";
-export { useWrapperDiscovery } from "./token/use-wrapper-discovery";
-export { useTokenMetadata, type TokenMetadata } from "./token/use-token-metadata";
+export { useWrapperDiscovery, useWrapperDiscoverySuspense } from "./token/use-wrapper-discovery";
+export {
+  useTokenMetadata,
+  useTokenMetadataSuspense,
+  type TokenMetadata,
+} from "./token/use-token-metadata";
 export { useActivityFeed, activityFeedQueryKeys } from "./token/use-activity-feed";
 
 // Re-export event decoders, types, and constants from core SDK
