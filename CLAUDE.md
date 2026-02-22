@@ -60,7 +60,9 @@ Each SDK package has multiple entry points (main, `/viem`, `/ethers`, `/node` or
 
 ### Key Design Patterns
 
-- **Framework-agnostic core**: `token-sdk` defines a `GenericSigner` interface; viem/ethers adapters implement it. React hooks in `token-react-sdk` follow the same split.
+- **Framework-agnostic core**: `token-sdk` defines a `GenericSigner` interface (with `getChainId`, `getAddress`, `signTypedData`, `writeContract`, `readContract`, `waitForTransactionReceipt`); viem/ethers/wagmi adapters implement it. React hooks in `token-react-sdk` follow the same split.
+- **Lazy chain ID resolution**: `RelayerWeb` and `RelayerNode` accept a `getChainId` function. The worker/pool is re-initialized automatically when the chain changes.
+- **Single provider**: React apps use `TokenSDKProvider` directly with an explicitly constructed signer adapter. No library-specific provider wrappers.
 - **Contract call builders**: Pure functions in `token-sdk/src/contracts/` return `ContractCallConfig` objects. Library-specific sub-paths wrap these with execution logic.
 - **FHE via Web Workers**: Browser FHE operations run in a Web Worker loading WASM from CDN (`RelayerWeb`). Node.js uses `NodeWorkerClient`/`NodeWorkerPool` with worker threads.
 - **Two-phase balance polling** (React SDK): Poll encrypted handle cheaply via RPC, only decrypt when handle changes.

@@ -21,18 +21,24 @@ pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 
 ## Quick Start
 
-### With wagmi (recommended for wagmi-based dApps)
+### With wagmi
 
 ```tsx
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
-import { RelayerWeb, SepoliaConfig, indexedDBStorage } from "@zama-fhe/token-react-sdk";
+import {
+  TokenSDKProvider,
+  RelayerWeb,
+  SepoliaConfig,
+  indexedDBStorage,
+} from "@zama-fhe/token-react-sdk";
+import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
 
 const queryClient = new QueryClient();
+const signer = new WagmiSigner(wagmiConfig);
 
 const relayer = new RelayerWeb({
-  chainId: 11155111, // Sepolia
+  getChainId: () => signer.getChainId(),
   transports: {
     [11155111]: {
       ...SepoliaConfig,
@@ -46,9 +52,9 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <WagmiTokenSDKProvider relayer={relayer} storage={indexedDBStorage}>
+        <TokenSDKProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
           <TokenBalance />
-        </WagmiTokenSDKProvider>
+        </TokenSDKProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -62,7 +68,7 @@ function TokenBalance() {
 }
 ```
 
-### With a generic signer
+### With a custom signer
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -78,7 +84,7 @@ import {
 const queryClient = new QueryClient();
 
 const relayer = new RelayerWeb({
-  chainId: 11155111, // Sepolia
+  getChainId: () => yourCustomSigner.getChainId(),
   transports: {
     [11155111]: {
       ...SepoliaConfig,
@@ -122,74 +128,18 @@ function TransferForm() {
 
 ## Provider Setup
 
-### Generic Provider
-
-Use when you have a custom `GenericSigner` (or use the viem/ethers adapter yourself).
+All setups use `TokenSDKProvider`. Create a signer with the adapter for your library, then pass it directly.
 
 ```tsx
 import { TokenSDKProvider } from "@zama-fhe/token-react-sdk";
 
 <TokenSDKProvider
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
-  signer={signer} // Signer
+  signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
   storage={storage} // GenericStringStorage
 >
   {children}
 </TokenSDKProvider>;
-```
-
-### Wagmi Provider
-
-Auto-creates a `GenericSigner` from wagmi. Must be nested inside `WagmiProvider`.
-
-```tsx
-import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
-
-<WagmiProvider config={wagmiConfig}>
-  <QueryClientProvider client={queryClient}>
-    <WagmiTokenSDKProvider
-      relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
-      storage={storage} // GenericStringStorage
-    >
-      {children}
-    </WagmiTokenSDKProvider>
-  </QueryClientProvider>
-</WagmiProvider>;
-```
-
-No `signer` prop needed — it's derived from wagmi automatically.
-
-### Viem Provider
-
-Pass viem clients directly.
-
-```tsx
-import { ViemTokenSDKProvider } from "@zama-fhe/token-react-sdk/viem";
-
-<ViemTokenSDKProvider
-  relayer={relayerConfig}
-  storage={storage}
-  walletClient={walletClient} // viem WalletClient
-  publicClient={publicClient} // viem PublicClient
->
-  {children}
-</ViemTokenSDKProvider>;
-```
-
-### Ethers Provider
-
-Pass an ethers `BrowserProvider`. The signer is resolved automatically via `provider.getSigner()`.
-
-```tsx
-import { EthersTokenSDKProvider } from "@zama-fhe/token-react-sdk/ethers";
-
-<EthersTokenSDKProvider
-  relayer={relayerConfig}
-  storage={storage}
-  provider={new BrowserProvider(window.ethereum!)}
->
-  {children}
-</EthersTokenSDKProvider>;
 ```
 
 ## Hooks Reference

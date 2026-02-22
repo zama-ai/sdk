@@ -43,7 +43,7 @@ pnpm hardhat:node   # Start hardhat node standalone
 
 ### Provider Stack (`src/providers.tsx`)
 
-Wraps the app in: `QueryClientProvider` > `WagmiProvider` > `WagmiTokenSDKProvider`. When `NEXT_PUBLIC_NETWORK=hardhat`, uses a custom burner wallet connector instead of injected wallets.
+Wraps the app in: `QueryClientProvider` > `WagmiProvider` > `TokenSDKProvider`. Creates a `WagmiSigner` and `RelayerWeb` with lazy chain ID resolution. When `NEXT_PUBLIC_NETWORK=hardhat`, uses a custom burner wallet connector instead of injected wallets.
 
 ### Burner Connector (`src/burner-connector.ts`)
 

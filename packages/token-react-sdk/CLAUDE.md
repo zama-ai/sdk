@@ -26,12 +26,12 @@ Build this package only: `pnpm --filter @zama-fhe/token-react-sdk build` (runs t
 
 ### Four entry points (tsup bundles each separately)
 
-| Entry point           | Import path                        | Purpose                                                           |
-| --------------------- | ---------------------------------- | ----------------------------------------------------------------- |
-| `src/index.ts`        | `@zama-fhe/token-react-sdk`        | Provider-based hooks + re-exports from core SDK                   |
-| `src/viem/index.ts`   | `@zama-fhe/token-react-sdk/viem`   | Viem-specific hooks + `ViemTokenSDKProvider` + `ViemSigner`       |
-| `src/ethers/index.ts` | `@zama-fhe/token-react-sdk/ethers` | Ethers-specific hooks + `EthersTokenSDKProvider` + `EthersSigner` |
-| `src/wagmi/index.ts`  | `@zama-fhe/token-react-sdk/wagmi`  | Wagmi-specific hooks + `WagmiTokenSDKProvider` + `WagmiSigner`    |
+| Entry point           | Import path                        | Purpose                                         |
+| --------------------- | ---------------------------------- | ----------------------------------------------- |
+| `src/index.ts`        | `@zama-fhe/token-react-sdk`        | Provider-based hooks + re-exports from core SDK |
+| `src/viem/index.ts`   | `@zama-fhe/token-react-sdk/viem`   | Viem-specific hooks + `ViemSigner`              |
+| `src/ethers/index.ts` | `@zama-fhe/token-react-sdk/ethers` | Ethers-specific hooks + `EthersSigner`          |
+| `src/wagmi/index.ts`  | `@zama-fhe/token-react-sdk/wagmi`  | Wagmi-specific hooks + `WagmiSigner`            |
 
 ### Two-layer hook architecture
 
@@ -39,9 +39,9 @@ Build this package only: `pnpm --filter @zama-fhe/token-react-sdk build` (runs t
 
 **Layer 2 — Library-adapter hooks** (`src/viem/`, `src/ethers/`, `src/wagmi/`): Low-level hooks that call contract read/write functions directly through their respective library (viem `PublicClient`/`WalletClient`, ethers `Signer`, wagmi `Config`). These do **not** use the SDK provider context — they're for advanced use when you want fine-grained contract-level control.
 
-### Provider hierarchy
+### Provider
 
-`TokenSDKProvider` (generic, in `src/provider.tsx`) is the base. Library-specific providers (`ViemTokenSDKProvider`, `EthersTokenSDKProvider`, `WagmiTokenSDKProvider`) wrap it by creating a `GenericSigner` adapter from their library's native types.
+`TokenSDKProvider` (in `src/provider.tsx`) is the single provider. Consumers create a signer adapter (`ViemSigner`, `EthersSigner`, `WagmiSigner`) themselves and pass it directly.
 
 ### Key patterns
 

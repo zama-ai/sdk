@@ -39,18 +39,20 @@ pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 ```tsx
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
 import {
+  TokenSDKProvider,
   RelayerWeb,
   indexedDBStorage,
   useConfidentialBalance,
   useConfidentialTransfer,
   useWrap,
 } from "@zama-fhe/token-react-sdk";
+import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
 
 const queryClient = new QueryClient();
+const signer = new WagmiSigner(wagmiConfig);
 const relayer = new RelayerWeb({
-  chainId: 11155111,
+  getChainId: () => signer.getChainId(),
   transports: {
     [11155111]: {
       relayerUrl: "https://relayer.zama.ai",
@@ -63,9 +65,9 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <WagmiTokenSDKProvider relayer={relayer} storage={indexedDBStorage}>
+        <TokenSDKProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
           <TokenDashboard />
-        </WagmiTokenSDKProvider>
+        </TokenSDKProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -96,9 +98,11 @@ function TokenDashboard() {
 import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/token-sdk";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
+const signer = new ViemSigner(walletClient, publicClient);
+
 const sdk = new TokenSDK({
   relayer: new RelayerWeb({
-    chainId: 11155111,
+    getChainId: () => signer.getChainId(),
     transports: {
       [11155111]: {
         relayerUrl: "https://relayer.zama.ai",
@@ -106,7 +110,7 @@ const sdk = new TokenSDK({
       },
     },
   }),
-  signer: new ViemSigner(walletClient, publicClient),
+  signer,
   storage: new IndexedDBStorage(),
 });
 
@@ -131,9 +135,11 @@ await token.unshield(500n);
 import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/token-sdk";
 import { EthersSigner } from "@zama-fhe/token-sdk/ethers";
 
+const signer = new EthersSigner(ethersSigner);
+
 const sdk = new TokenSDK({
   relayer: new RelayerWeb({
-    chainId: 11155111,
+    getChainId: () => signer.getChainId(),
     transports: {
       [11155111]: {
         relayerUrl: "https://relayer.zama.ai",
@@ -141,7 +147,7 @@ const sdk = new TokenSDK({
       },
     },
   }),
-  signer: new EthersSigner(ethersSigner),
+  signer,
   storage: new IndexedDBStorage(),
 });
 ```
@@ -153,9 +159,11 @@ import { TokenSDK, MemoryStorage } from "@zama-fhe/token-sdk";
 import { RelayerNode } from "@zama-fhe/token-sdk/node";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
+const signer = new ViemSigner(walletClient, publicClient);
+
 const sdk = new TokenSDK({
   relayer: new RelayerNode({
-    chainId: 11155111,
+    getChainId: () => signer.getChainId(),
     transports: {
       [11155111]: {
         relayerUrl: "https://relayer.zama.ai",
@@ -163,7 +171,7 @@ const sdk = new TokenSDK({
       },
     },
   }),
-  signer: new ViemSigner(walletClient, publicClient),
+  signer,
   storage: new MemoryStorage(),
 });
 ```
@@ -207,9 +215,9 @@ Each package exposes multiple entry points for tree-shaking:
 | Import Path | Contents |
 | --- | --- |
 | `@zama-fhe/token-react-sdk` | Provider-based hooks + all re-exports from core SDK |
-| `@zama-fhe/token-react-sdk/viem` | Viem-specific hooks + `ViemTokenSDKProvider` |
-| `@zama-fhe/token-react-sdk/ethers` | Ethers-specific hooks + `EthersTokenSDKProvider` |
-| `@zama-fhe/token-react-sdk/wagmi` | Wagmi-specific hooks + `WagmiTokenSDKProvider` |
+| `@zama-fhe/token-react-sdk/viem` | Viem-specific hooks + `ViemSigner` |
+| `@zama-fhe/token-react-sdk/ethers` | Ethers-specific hooks + `EthersSigner` |
+| `@zama-fhe/token-react-sdk/wagmi` | Wagmi-specific hooks + `WagmiSigner` |
 
 ## Supported Networks
 
@@ -225,15 +233,15 @@ Defaults for known chains are merged automatically — you only need to supply `
 
 ### 1. Choose Your Stack
 
-| Stack                 | SDK                   | Provider                 | Signer                         |
-| --------------------- | --------------------- | ------------------------ | ------------------------------ |
-| React + wagmi         | `token-react-sdk`     | `WagmiTokenSDKProvider`  | Auto-derived from wagmi        |
-| React + viem          | `token-react-sdk`     | `ViemTokenSDKProvider`   | `ViemSigner`                   |
-| React + ethers        | `token-react-sdk`     | `EthersTokenSDKProvider` | `EthersSigner`                 |
-| React + custom signer | `token-react-sdk`     | `TokenSDKProvider`       | Implement `ConfidentialSigner` |
-| Vanilla TS + viem     | `token-sdk`           | N/A                      | `ViemSigner`                   |
-| Vanilla TS + ethers   | `token-sdk`           | N/A                      | `EthersSigner`                 |
-| Node.js backend       | `token-sdk` + `/node` | N/A                      | `ViemSigner` or `EthersSigner` |
+| Stack                 | SDK                   | Provider           | Signer                         |
+| --------------------- | --------------------- | ------------------ | ------------------------------ |
+| React + wagmi         | `token-react-sdk`     | `TokenSDKProvider` | `WagmiSigner`                  |
+| React + viem          | `token-react-sdk`     | `TokenSDKProvider` | `ViemSigner`                   |
+| React + ethers        | `token-react-sdk`     | `TokenSDKProvider` | `EthersSigner`                 |
+| React + custom signer | `token-react-sdk`     | `TokenSDKProvider` | Implement `GenericSigner`      |
+| Vanilla TS + viem     | `token-sdk`           | N/A                | `ViemSigner`                   |
+| Vanilla TS + ethers   | `token-sdk`           | N/A                | `EthersSigner`                 |
+| Node.js backend       | `token-sdk` + `/node` | N/A                | `ViemSigner` or `EthersSigner` |
 
 ### 2. Configure the Relayer
 
@@ -256,7 +264,7 @@ Route relayer requests through your own backend that injects the API key. This k
 
 ```ts
 const relayer = new RelayerWeb({
-  chainId: 11155111,
+  getChainId: () => signer.getChainId(),
   transports: {
     [11155111]: {
       relayerUrl: "https://your-backend.com/api/relayer", // your proxy forwards to relayer.zama.ai
@@ -273,7 +281,7 @@ Pass the API key directly using the `auth` option. Three authentication methods 
 ```ts
 // API key via header (default header: x-api-key)
 const relayer = new RelayerWeb({
-  chainId: 11155111,
+  getChainId: () => signer.getChainId(),
   transports: {
     [11155111]: {
       relayerUrl: "https://relayer.zama.ai",
@@ -329,10 +337,11 @@ const approved = await token.isApproved("0xSpender");
 
 ### 6. Custom Signer (Advanced)
 
-If you're not using viem or ethers, implement the `ConfidentialSigner` interface:
+If you're not using viem or ethers, implement the `GenericSigner` interface:
 
 ```ts
-interface ConfidentialSigner {
+interface GenericSigner {
+  getChainId(): Promise<number>;
   getAddress(): Promise<Address>;
   signTypedData(typedData: EIP712TypedData): Promise<Address>;
   writeContract(config: ContractCallConfig): Promise<Address>;

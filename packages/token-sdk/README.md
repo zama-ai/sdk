@@ -24,10 +24,12 @@ pnpm add @zama-fhe/token-sdk
 import { TokenSDK, RelayerWeb, SepoliaConfig, IndexedDBStorage } from "@zama-fhe/token-sdk";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
-// 1. Create the SDK with a browser backend (Web Worker)
+// 1. Create signer and relayer
+const signer = new ViemSigner(walletClient, publicClient);
+
 const sdk = new TokenSDK({
   relayer: new RelayerWeb({
-    chainId: 11155111, // Sepolia
+    getChainId: () => signer.getChainId(),
     transports: {
       [11155111]: {
         ...SepoliaConfig,
@@ -36,7 +38,7 @@ const sdk = new TokenSDK({
       },
     },
   }),
-  signer: new ViemSigner(walletClient, publicClient),
+  signer,
   storage: new IndexedDBStorage(),
 });
 
@@ -63,9 +65,11 @@ import { TokenSDK, MemoryStorage } from "@zama-fhe/token-sdk";
 import { RelayerNode, SepoliaConfig } from "@zama-fhe/token-sdk/node";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
+const signer = new ViemSigner(walletClient, publicClient);
+
 const sdk = new TokenSDK({
   relayer: new RelayerNode({
-    chainId: 11155111, // Sepolia
+    getChainId: () => signer.getChainId(),
     transports: {
       [11155111]: {
         ...SepoliaConfig,
@@ -74,7 +78,7 @@ const sdk = new TokenSDK({
       },
     },
   }),
-  signer: new ViemSigner(walletClient, publicClient),
+  signer,
   storage: new MemoryStorage(),
 });
 
@@ -209,17 +213,17 @@ interface GenericStringStorage {
 
 ### `RelayerWebConfig` (browser)
 
-| Field        | Type                                  | Description                                                                                  |
-| ------------ | ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `chainId`    | `number`                              | Active chain ID (1 = mainnet, 11155111 = Sepolia, 31337 = Hardhat).                          |
-| `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses). |
-| `csrfToken`  | `string \| (() => string)`            | Optional CSRF token for relayer requests.                                                    |
+| Field          | Type                                  | Description                                                                                  |
+| -------------- | ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `getChainId`   | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.   |
+| `transports`   | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses). |
+| `getCsrfToken` | `() => string`                        | Optional. Resolve the CSRF token before each authenticated network request.                  |
 
 ### `RelayerNodeConfig` (Node.js)
 
 | Field        | Type                                  | Description                                                                                        |
 | ------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `chainId`    | `number`                              | Active chain ID (1 = mainnet, 11155111 = Sepolia, 31337 = Hardhat).                                |
+| `getChainId` | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the pool is re-initialized on chain change.           |
 | `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, auth, contract addresses). |
 
 ### Network Preset Configs
@@ -253,10 +257,11 @@ const transports = {
 
 ## GenericSigner Interface
 
-The `GenericSigner` interface has five methods. Any Web3 library can back it.
+The `GenericSigner` interface has six methods. Any Web3 library can back it.
 
 ```ts
 interface GenericSigner {
+  getChainId(): Promise<number>;
   getAddress(): Promise<Address>;
   signTypedData(typedData: EIP712TypedData): Promise<Address>;
   writeContract(config: ContractCallConfig): Promise<Address>;
