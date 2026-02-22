@@ -50,7 +50,7 @@ TokenSDK (factory)
 
 **Key abstractions:**
 
-- **`ConfidentialSigner`** (`src/token/token.types.ts`) — Framework-agnostic wallet interface (5 methods). Implemented by `ViemSigner` and `EthersSigner`.
+- **`GenericSigner`** (`src/token/token.types.ts`) — Framework-agnostic wallet interface (5 methods). Implemented by `ViemSigner` and `EthersSigner`.
 - **`RelayerSDK`** (`src/relayer/relayer-sdk.ts`) — FHE operations interface. `RelayerWeb` uses a Web Worker + WASM CDN bundle. `RelayerNode` calls `@zama-fhe/relayer-sdk/node` directly.
 - **`GenericStringStorage`** — Pluggable key-value store for persisted FHE credentials. `MemoryStorage` for tests, `IndexedDBStorage` for browser.
 - **Contract call builders** (`src/contracts/`) — Pure functions returning `ContractCallConfig` objects. The viem/ethers sub-paths wrap these with library-specific execution.
@@ -70,7 +70,7 @@ All SDK errors use `TokenError` with typed `TokenErrorCode` enum. Methods catch 
 ## Code Conventions
 
 - ESM-only (`"type": "module"`), built with tsup
-- Tests use vitest with `vi.fn()` mocks for `RelayerSDK` and `ConfidentialSigner`
+- Tests use vitest with `vi.fn()` mocks for `RelayerSDK` and `GenericSigner`
 - Test files live in `__tests__/` directories adjacent to source
 - Peer dependencies (viem, ethers, `@zama-fhe/relayer-sdk`) are all optional — the SDK works with any combination
 - `Address` type is a hex string alias used throughout

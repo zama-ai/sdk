@@ -41,7 +41,7 @@ Build this package only: `pnpm --filter @zama-fhe/token-react-sdk build` (runs t
 
 ### Provider hierarchy
 
-`TokenSDKProvider` (generic, in `src/provider.tsx`) is the base. Library-specific providers (`ViemTokenSDKProvider`, `EthersTokenSDKProvider`, `WagmiTokenSDKProvider`) wrap it by creating a `ConfidentialSigner` adapter from their library's native types.
+`TokenSDKProvider` (generic, in `src/provider.tsx`) is the base. Library-specific providers (`ViemTokenSDKProvider`, `EthersTokenSDKProvider`, `WagmiTokenSDKProvider`) wrap it by creating a `GenericSigner` adapter from their library's native types.
 
 ### Key patterns
 

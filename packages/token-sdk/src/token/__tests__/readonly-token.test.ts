@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ReadonlyToken } from "../readonly-token";
 import { ZERO_HANDLE } from "../readonly-token";
 import { MemoryStorage } from "../memory-storage";
-import type { ConfidentialSigner } from "../token.types";
+import type { GenericSigner } from "../token.types";
 import { TokenErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
@@ -41,7 +41,7 @@ function createMockSdk() {
   } as unknown as RelayerSDK;
 }
 
-function createMockSigner(): ConfidentialSigner {
+function createMockSigner(): GenericSigner {
   return {
     getAddress: vi.fn().mockResolvedValue(USER),
     signTypedData: vi.fn().mockResolvedValue("0xsig"),
@@ -53,7 +53,7 @@ function createMockSigner(): ConfidentialSigner {
 
 describe("ReadonlyToken", () => {
   let sdk: ReturnType<typeof createMockSdk>;
-  let signer: ConfidentialSigner;
+  let signer: GenericSigner;
   let token: ReadonlyToken;
 
   beforeEach(() => {

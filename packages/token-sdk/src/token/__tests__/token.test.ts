@@ -3,7 +3,7 @@ import { UNWRAP_REQUESTED_TOPIC } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
-import { TokenError, TokenErrorCode, type ConfidentialSigner } from "../token.types";
+import { TokenError, TokenErrorCode, type GenericSigner } from "../token.types";
 import { MemoryStorage } from "../memory-storage";
 
 const TOKEN = "0xtoken" as Address;
@@ -48,7 +48,7 @@ function createMockSdk() {
   } as unknown as RelayerSDK;
 }
 
-function createMockSigner(): ConfidentialSigner {
+function createMockSigner(): GenericSigner {
   return {
     getAddress: vi.fn().mockResolvedValue(USER),
     signTypedData: vi.fn().mockResolvedValue("0xsig"),
@@ -60,7 +60,7 @@ function createMockSigner(): ConfidentialSigner {
 
 describe("Token", () => {
   let sdk: ReturnType<typeof createMockSdk>;
-  let signer: ConfidentialSigner;
+  let signer: GenericSigner;
   let token: Token;
 
   beforeEach(() => {

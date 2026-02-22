@@ -13,7 +13,7 @@ import {
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
-import type { ConfidentialSigner, GenericStringStorage } from "./token.types";
+import type { GenericSigner, GenericStringStorage } from "./token.types";
 import { TokenError, TokenErrorCode } from "./token.types";
 import { CredentialsManager } from "./credential-manager";
 
@@ -22,7 +22,7 @@ export const ZERO_HANDLE =
 
 export interface ReadonlyTokenConfig {
   sdk: RelayerSDK;
-  signer: ConfidentialSigner;
+  signer: GenericSigner;
   storage: GenericStringStorage;
   address: Address;
 }
@@ -35,7 +35,7 @@ export interface ReadonlyTokenConfig {
 export class ReadonlyToken {
   protected readonly credentials: CredentialsManager;
   protected readonly sdk: RelayerSDK;
-  readonly signer: ConfidentialSigner;
+  readonly signer: GenericSigner;
   readonly address: Address;
 
   constructor(config: ReadonlyTokenConfig) {

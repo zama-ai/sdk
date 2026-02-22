@@ -125,14 +125,14 @@ function TransferForm() {
 
 ### Generic Provider
 
-Use when you have a custom `ConfidentialSigner` (or use the viem/ethers adapter yourself).
+Use when you have a custom `GenericSigner` (or use the viem/ethers adapter yourself).
 
 ```tsx
 import { TokenSDKProvider } from "@zama-fhe/token-react-sdk";
 
 <TokenSDKProvider
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
-  signer={signer} // ConfidentialSigner
+  signer={signer} // Signer
   storage={storage} // GenericStringStorage
 >
   {children}
@@ -141,7 +141,7 @@ import { TokenSDKProvider } from "@zama-fhe/token-react-sdk";
 
 ### Wagmi Provider
 
-Auto-creates a `ConfidentialSigner` from wagmi. Must be nested inside `WagmiProvider`.
+Auto-creates a `GenericSigner` from wagmi. Must be nested inside `WagmiProvider`.
 
 ```tsx
 import { WagmiTokenSDKProvider } from "@zama-fhe/token-react-sdk/wagmi";
@@ -751,7 +751,7 @@ All public exports from `@zama-fhe/token-sdk` are re-exported from the main entr
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
-**Types:** `Address`, `TokenSDKConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `ConfidentialSigner`, `GenericStringStorage`, `ContractCallConfig`.
+**Types:** `Address`, `TokenSDKConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`.
 
 **Errors:** `TokenError`, `TokenErrorCode`.
 

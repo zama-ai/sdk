@@ -1,12 +1,12 @@
 "use client";
 
-import type { ConfidentialSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/token-sdk";
+import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/token-sdk";
 import { TokenSDK } from "@zama-fhe/token-sdk";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
 
 interface TokenSDKProviderProps extends PropsWithChildren {
   relayer: RelayerSDK;
-  signer: ConfidentialSigner;
+  signer: GenericSigner;
   storage: GenericStringStorage;
 }
 

@@ -1,5 +1,5 @@
 import type {
-  ConfidentialSigner,
+  GenericSigner,
   ContractCallConfig,
   TransactionReceipt,
   Address,
@@ -15,11 +15,11 @@ import {
 } from "wagmi/actions";
 
 /**
- * ConfidentialSigner backed by wagmi.
+ * GenericSigner backed by wagmi.
  *
  * @param config - Wagmi config (from useConfig())
  */
-export class WagmiSigner implements ConfidentialSigner {
+export class WagmiSigner implements GenericSigner {
   private readonly config: Config;
 
   constructor(config: Config) {
@@ -41,18 +41,11 @@ export class WagmiSigner implements ConfidentialSigner {
     }) as Promise<Address>;
   }
 
-  async writeContract<C extends ContractCallConfig>(
-    config: C,
-  ): Promise<Address> {
-    return writeContract(
-      this.config,
-      config as Parameters<typeof writeContract>[1],
-    );
+  async writeContract<C extends ContractCallConfig>(config: C): Promise<Address> {
+    return writeContract(this.config, config as Parameters<typeof writeContract>[1]);
   }
 
-  async readContract<T, C extends ContractCallConfig = ContractCallConfig>(
-    config: C,
-  ): Promise<T> {
+  async readContract<T, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T> {
     return readContract(this.config, config) as Promise<T>;
   }
 

@@ -91,7 +91,7 @@ Entry point to the SDK. Composes a relayer backend with a signer and storage lay
 ```ts
 const sdk = new TokenSDK({
   relayer, // RelayerSDK — either RelayerWeb (browser) or RelayerNode (Node.js)
-  signer, // ConfidentialSigner
+  signer, // GenericSigner
   storage, // GenericStringStorage
 });
 
@@ -204,7 +204,7 @@ interface GenericStringStorage {
 | Field     | Type                   | Description                                              |
 | --------- | ---------------------- | -------------------------------------------------------- |
 | `relayer` | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance) |
-| `signer`  | `ConfidentialSigner`   | Wallet signer interface.                                 |
+| `signer`  | `GenericSigner`        | Wallet signer interface.                                 |
 | `storage` | `GenericStringStorage` | Credential storage backend.                              |
 
 ### `RelayerWebConfig` (browser)
@@ -251,12 +251,12 @@ const transports = {
 };
 ```
 
-## Signer Interface
+## GenericSigner Interface
 
-The `ConfidentialSigner` interface has five methods. Any Web3 library can back it.
+The `GenericSigner` interface has five methods. Any Web3 library can back it.
 
 ```ts
-interface ConfidentialSigner {
+interface GenericSigner {
   getAddress(): Promise<Address>;
   signTypedData(typedData: EIP712TypedData): Promise<Address>;
   writeContract(config: ContractCallConfig): Promise<Address>;

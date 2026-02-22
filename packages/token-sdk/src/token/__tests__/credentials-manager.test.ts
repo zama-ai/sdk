@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CredentialsManager } from "../credential-manager";
 import { MemoryStorage } from "../memory-storage";
-import type { ConfidentialSigner } from "../token.types";
+import type { GenericSigner } from "../token.types";
 import { TokenError, TokenErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
@@ -31,7 +31,7 @@ function createMockSdk() {
   } as unknown as RelayerSDK;
 }
 
-function createMockSigner(address: Address = "0xuser" as Address): ConfidentialSigner {
+function createMockSigner(address: Address = "0xuser" as Address): GenericSigner {
   return {
     getAddress: vi.fn().mockResolvedValue(address),
     signTypedData: vi.fn().mockResolvedValue("0xsig789"),
@@ -55,7 +55,7 @@ async function computeStoreKey(address: string): Promise<string> {
 
 describe("CredentialsManager", () => {
   let sdk: ReturnType<typeof createMockSdk>;
-  let signer: ConfidentialSigner;
+  let signer: GenericSigner;
   let store: MemoryStorage;
   let manager: CredentialsManager;
   let storeKey: string;

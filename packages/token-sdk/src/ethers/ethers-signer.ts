@@ -1,19 +1,15 @@
 import type { Address } from "../relayer/relayer-sdk.types";
-import type {
-  ConfidentialSigner,
-  ContractCallConfig,
-  TransactionReceipt,
-} from "../token/token.types";
+import type { GenericSigner, ContractCallConfig, TransactionReceipt } from "../token/token.types";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { ethers, type BrowserProvider, type Signer } from "ethers";
 
 /**
- * ConfidentialSigner backed by ethers.
+ * GenericSigner backed by ethers.
  *
  * Accepts either a `BrowserProvider` (signer resolved lazily via `getSigner()`)
  * or a `Signer` directly (e.g. `Wallet` for Node.js scripts).
  */
-export class EthersSigner implements ConfidentialSigner {
+export class EthersSigner implements GenericSigner {
   private signerPromise: Promise<Signer>;
 
   constructor(providerOrSigner: BrowserProvider | Signer) {

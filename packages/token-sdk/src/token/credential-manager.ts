@@ -1,6 +1,6 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
-import type { ConfidentialSigner, GenericStringStorage, StoredCredentials } from "./token.types";
+import type { GenericSigner, GenericStringStorage, StoredCredentials } from "./token.types";
 import { TokenError, TokenErrorCode } from "./token.types";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
@@ -23,14 +23,14 @@ interface EncryptedCredentials extends Omit<StoredCredentials, "privateKey"> {
  */
 export interface CredentialsManagerConfig {
   sdk: RelayerSDK;
-  signer: ConfidentialSigner;
+  signer: GenericSigner;
   storage: GenericStringStorage;
   durationDays: number;
 }
 
 export class CredentialsManager {
   #sdk: RelayerSDK;
-  #signer: ConfidentialSigner;
+  #signer: GenericSigner;
   #storage: GenericStringStorage;
   #durationDays: number;
 

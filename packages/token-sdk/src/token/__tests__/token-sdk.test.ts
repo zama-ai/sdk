@@ -3,11 +3,11 @@ import { TokenSDK } from "../token-sdk";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
-import type { ConfidentialSigner } from "../token.types";
+import type { GenericSigner } from "../token.types";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 
-function createMockSigner(): ConfidentialSigner {
+function createMockSigner(): GenericSigner {
   return {
     getAddress: vi.fn().mockResolvedValue("0xuser"),
     signTypedData: vi.fn().mockResolvedValue("0xsig"),

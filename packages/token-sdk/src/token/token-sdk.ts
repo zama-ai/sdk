@@ -2,11 +2,11 @@ import type { Address } from "../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
-import type { ConfidentialSigner, GenericStringStorage } from "./token.types";
+import type { GenericSigner, GenericStringStorage } from "./token.types";
 
 export interface TokenSDKConfig {
   relayer: RelayerSDK;
-  signer: ConfidentialSigner;
+  signer: GenericSigner;
   storage: GenericStringStorage;
 }
 
@@ -16,7 +16,7 @@ export interface TokenSDKConfig {
  */
 export class TokenSDK {
   readonly relayer: RelayerSDK;
-  readonly signer: ConfidentialSigner;
+  readonly signer: GenericSigner;
   readonly storage: GenericStringStorage;
 
   constructor(config: TokenSDKConfig) {

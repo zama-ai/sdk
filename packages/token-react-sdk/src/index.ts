@@ -191,7 +191,7 @@ export {
 
 // Re-export token types from core SDK
 export type {
-  ConfidentialSigner,
+  GenericSigner,
   GenericStringStorage,
   ContractCallConfig,
   TransactionReceipt,

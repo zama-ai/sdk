@@ -21,7 +21,7 @@ export interface ContractCallConfig {
  * Wallet devs implement this with their library of choice.
  * The React SDK ships pre-built adapters for wagmi/viem/ethers.
  */
-export interface ConfidentialSigner {
+export interface GenericSigner {
   /** The connected wallet address. */
   getAddress: () => Promise<Address>;
   /** Sign EIP-712 typed data (used for decrypt authorization). */

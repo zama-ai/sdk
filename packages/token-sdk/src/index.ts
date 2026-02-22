@@ -47,7 +47,7 @@ export { MemoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { CredentialsManager } from "./token/credential-manager";
 export type {
-  ConfidentialSigner,
+  GenericSigner,
   GenericStringStorage,
   StoredCredentials,
   ContractCallConfig,

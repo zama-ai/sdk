@@ -1,19 +1,15 @@
-import type {
-  ConfidentialSigner,
-  ContractCallConfig,
-  TransactionReceipt,
-} from "../token/token.types";
+import type { GenericSigner, ContractCallConfig, TransactionReceipt } from "../token/token.types";
 import type { PublicClient, WalletClient } from "viem";
 import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { writeContract } from "viem/actions";
 
 /**
- * ConfidentialSigner backed by viem.
+ * GenericSigner backed by viem.
  *
  * @param walletClient - viem WalletClient (for signing + writes)
  * @param publicClient - viem PublicClient (for reads)
  */
-export class ViemSigner implements ConfidentialSigner {
+export class ViemSigner implements GenericSigner {
   private readonly walletClient: WalletClient;
   private readonly publicClient: PublicClient;
 
