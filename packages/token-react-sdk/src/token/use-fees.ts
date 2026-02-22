@@ -11,8 +11,10 @@ import {
 import { useReadonlyToken } from "./use-readonly-token";
 
 export const feeQueryKeys = {
-  wrapFee: (feeManagerAddress: string) => ["wrapFee", feeManagerAddress] as const,
-  unwrapFee: (feeManagerAddress: string) => ["unwrapFee", feeManagerAddress] as const,
+  wrapFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) =>
+    ["wrapFee", feeManagerAddress, ...(amount !== undefined ? [amount, from, to] : [])] as const,
+  unwrapFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) =>
+    ["unwrapFee", feeManagerAddress, ...(amount !== undefined ? [amount, from, to] : [])] as const,
   batchTransferFee: (feeManagerAddress: string) => ["batchTransferFee", feeManagerAddress] as const,
   feeRecipient: (feeManagerAddress: string) => ["feeRecipient", feeManagerAddress] as const,
 } as const;
@@ -32,7 +34,7 @@ export function useWrapFee(
   const token = useReadonlyToken(feeManagerAddress);
 
   return useQuery<bigint, Error>({
-    queryKey: ["wrapFee", feeManagerAddress, amount.toString(), from, to],
+    queryKey: feeQueryKeys.wrapFee(feeManagerAddress, amount.toString(), from, to),
     queryFn: () =>
       token.signer.readContract<bigint>(getWrapFeeContract(feeManagerAddress, amount, from, to)),
     staleTime: 30_000,
@@ -48,7 +50,7 @@ export function useUnwrapFee(
   const token = useReadonlyToken(feeManagerAddress);
 
   return useQuery<bigint, Error>({
-    queryKey: ["unwrapFee", feeManagerAddress, amount.toString(), from, to],
+    queryKey: feeQueryKeys.unwrapFee(feeManagerAddress, amount.toString(), from, to),
     queryFn: () =>
       token.signer.readContract<bigint>(getUnwrapFeeContract(feeManagerAddress, amount, from, to)),
     staleTime: 30_000,
@@ -63,7 +65,7 @@ export function useBatchTransferFee(
   const token = useReadonlyToken(feeManagerAddress);
 
   return useQuery<bigint, Error>({
-    queryKey: ["batchTransferFee", feeManagerAddress],
+    queryKey: feeQueryKeys.batchTransferFee(feeManagerAddress),
     queryFn: () =>
       token.signer.readContract<bigint>(getBatchTransferFeeContract(feeManagerAddress)),
     staleTime: 30_000,
@@ -78,7 +80,7 @@ export function useFeeRecipient(
   const token = useReadonlyToken(feeManagerAddress);
 
   return useQuery<Hex, Error>({
-    queryKey: ["feeRecipient", feeManagerAddress],
+    queryKey: feeQueryKeys.feeRecipient(feeManagerAddress),
     queryFn: () => token.signer.readContract<Hex>(getFeeRecipientContract(feeManagerAddress)),
     staleTime: 30_000,
     ...options,

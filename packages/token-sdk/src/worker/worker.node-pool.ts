@@ -26,6 +26,7 @@ export class NodeWorkerPool {
   readonly #activeCount: number[] = [];
   readonly #config: NodeWorkerPoolConfig;
   readonly #poolSize: number;
+  #initPromise: Promise<void> | null = null;
 
   constructor(config: NodeWorkerPoolConfig) {
     this.#config = config;
@@ -38,6 +39,15 @@ export class NodeWorkerPool {
 
   async initPool(): Promise<void> {
     if (this.#workers.length > 0) return;
+    if (!this.#initPromise) {
+      this.#initPromise = this.#doInitPool().finally(() => {
+        this.#initPromise = null;
+      });
+    }
+    return this.#initPromise;
+  }
+
+  async #doInitPool(): Promise<void> {
     for (let i = 0; i < this.#poolSize; i++) {
       this.#workers.push(new NodeWorkerClient(this.#config));
       this.#activeCount.push(0);

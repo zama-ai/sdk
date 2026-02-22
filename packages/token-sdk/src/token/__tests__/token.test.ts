@@ -474,8 +474,7 @@ describe("Token", () => {
   describe("wrap", () => {
     it("checks allowance and wraps", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying
-        .mockResolvedValueOnce("0xunderlying") // ensureAllowance → underlying
+        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
       const txHash = await token.wrap(100n);
@@ -495,8 +494,7 @@ describe("Token", () => {
 
     it("skips approval when allowance is sufficient", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying
-        .mockResolvedValueOnce("0xunderlying") // ensureAllowance → underlying
+        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(200n); // enough allowance
 
       await token.wrap(100n);
@@ -797,8 +795,7 @@ describe("Token", () => {
 
     it("approves max uint256 with approvalStrategy max", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying
-        .mockResolvedValueOnce("0xunderlying") // ensureAllowance → underlying
+        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
       await token.wrap(100n, { approvalStrategy: "max" });
@@ -815,8 +812,7 @@ describe("Token", () => {
 
     it("resets to zero first when existing non-zero allowance (USDT handling)", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying
-        .mockResolvedValueOnce("0xunderlying") // ensureAllowance → underlying
+        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(50n); // existing non-zero allowance < amount
 
       await token.wrap(100n);
@@ -861,8 +857,7 @@ describe("Token", () => {
 
     it("wraps allowance check failure in ApprovalFailed", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying
-        .mockResolvedValueOnce("0xunderlying") // ensureAllowance → underlying
+        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));

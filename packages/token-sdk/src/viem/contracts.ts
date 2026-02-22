@@ -17,6 +17,15 @@ import {
   wrapperExistsContract,
 } from "../contracts";
 
+// ── Helpers ────────────────────────────────────────────────
+
+function requireAccount(client: WalletClient) {
+  if (!client.account) {
+    throw new TypeError("WalletClient has no account");
+  }
+  return client.account;
+}
+
 // ── Read helpers ────────────────────────────────────────────
 
 export function readConfidentialBalanceOfContract(
@@ -66,7 +75,7 @@ export function writeConfidentialTransferContract(
 ) {
   return client.writeContract({
     chain: client.chain,
-    account: client.account!,
+    account: requireAccount(client),
     ...confidentialTransferContract(tokenAddress, to, handle, inputProof),
   });
 }
@@ -81,7 +90,7 @@ export function writeConfidentialBatchTransferContract(
 ) {
   return client.writeContract({
     chain: client.chain,
-    account: client.account!,
+    account: requireAccount(client),
     ...confidentialBatchTransferContract(
       batcherAddress,
       tokenAddress,
@@ -102,7 +111,7 @@ export function writeUnwrapContract(
 ) {
   return client.writeContract({
     chain: client.chain,
-    account: client.account!,
+    account: requireAccount(client),
     ...unwrapContract(encryptedErc20, from, to, encryptedAmount, inputProof),
   });
 }
@@ -116,7 +125,7 @@ export function writeUnwrapFromBalanceContract(
 ) {
   return client.writeContract({
     chain: client.chain,
-    account: client.account!,
+    account: requireAccount(client),
     ...unwrapFromBalanceContract(encryptedErc20, from, to, encryptedBalance),
   });
 }
@@ -130,7 +139,7 @@ export function writeFinalizeUnwrapContract(
 ) {
   return client.writeContract({
     chain: client.chain,
-    account: client.account!,
+    account: requireAccount(client),
     ...finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
   });
 }
@@ -143,7 +152,7 @@ export function writeSetOperatorContract(
 ) {
   return client.writeContract({
     chain: client.chain,
-    account: client.account!,
+    account: requireAccount(client),
     ...setOperatorContract(tokenAddress, spender, timestamp),
   });
 }
@@ -156,7 +165,7 @@ export function writeWrapContract(
 ) {
   return client.writeContract({
     chain: client.chain,
-    account: client.account!,
+    account: requireAccount(client),
     ...wrapContract(wrapperAddress, to, amount),
   });
 }
@@ -170,7 +179,7 @@ export function writeWrapETHContract(
 ) {
   return client.writeContract({
     chain: client.chain,
-    account: client.account!,
+    account: requireAccount(client),
     ...wrapETHContract(wrapperAddress, to, amount, value),
   });
 }

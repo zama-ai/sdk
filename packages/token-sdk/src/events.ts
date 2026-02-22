@@ -101,7 +101,8 @@ function topicToBytes32(topic: string): string {
 function wordAt(data: string, index: number): string {
   // data starts with "0x", each word is 64 hex chars (32 bytes)
   const start = 2 + index * 64;
-  return data.slice(start, start + 64);
+  const word = data.slice(start, start + 64);
+  return word.length === 64 ? word : word.padEnd(64, "0");
 }
 
 function wordToAddress(data: string, index: number): string {

@@ -37,12 +37,15 @@ export class IndexedDBStorage implements GenericStringStorage {
 
       request.onsuccess = () => {
         this.#db = request.result;
+        this.#dbPromise = null;
         this.#db.onversionchange = () => {
           this.#db?.close();
           this.#db = null;
+          this.#dbPromise = null;
         };
         this.#db.onclose = () => {
           this.#db = null;
+          this.#dbPromise = null;
         };
         resolve(this.#db);
       };

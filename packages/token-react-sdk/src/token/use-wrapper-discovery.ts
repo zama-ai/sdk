@@ -39,7 +39,7 @@ export function useWrapperDiscovery(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<Hex | null, Error>({
-    queryKey: ["wrapperDiscovery", tokenAddress, coordinatorAddress],
+    queryKey: wrapperDiscoveryQueryKeys.tokenCoordinator(tokenAddress, coordinatorAddress ?? ""),
     queryFn: () => token.discoverWrapper(coordinatorAddress!),
     enabled: coordinatorAddress !== undefined,
     staleTime: Infinity,
@@ -54,7 +54,7 @@ export function useWrapperDiscoverySuspense(
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<Hex | null, Error>({
-    queryKey: ["wrapperDiscovery", tokenAddress, coordinatorAddress],
+    queryKey: wrapperDiscoveryQueryKeys.tokenCoordinator(tokenAddress, coordinatorAddress ?? ""),
     queryFn: () => token.discoverWrapper(coordinatorAddress),
     staleTime: Infinity,
   });

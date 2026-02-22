@@ -45,18 +45,17 @@ export class Token extends ReadonlyToken {
   async #getUnderlying(): Promise<Hex> {
     if (this.#underlying !== undefined) return this.#underlying;
     if (!this.#underlyingPromise) {
-      try {
-        this.#underlyingPromise = this.signer
-          .readContract<Hex>(underlyingContract(this.wrapper))
-          .then((v) => {
-            this.#underlying = v;
-            this.#underlyingPromise = null;
-            return v;
-          });
-      } catch (error) {
-        this.#underlyingPromise = null;
-        throw error;
-      }
+      this.#underlyingPromise = this.signer
+        .readContract<Hex>(underlyingContract(this.wrapper))
+        .then((v) => {
+          this.#underlying = v;
+          this.#underlyingPromise = null;
+          return v;
+        })
+        .catch((error) => {
+          this.#underlyingPromise = null;
+          throw error;
+        });
     }
     return this.#underlyingPromise;
   }
@@ -241,23 +240,32 @@ export class Token extends ReadonlyToken {
   async unwrap(amount: bigint): Promise<Hex> {
     const userAddress = await this.signer.getAddress();
 
+    let handles: Uint8Array[];
+    let inputProof: Uint8Array;
     try {
-      const { handles, inputProof } = await this.sdk.encrypt({
+      ({ handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
         contractAddress: this.wrapper,
         userAddress,
+      }));
+    } catch (error) {
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(TokenErrorCode.EncryptionFailed, "Failed to encrypt unshield amount", {
+        cause: error instanceof Error ? error : undefined,
       });
+    }
 
-      if (handles.length === 0) {
-        throw new TokenError(TokenErrorCode.EncryptionFailed, "Encryption returned no handles");
-      }
+    if (handles.length === 0) {
+      throw new TokenError(TokenErrorCode.EncryptionFailed, "Encryption returned no handles");
+    }
 
+    try {
       return await this.signer.writeContract(
         unwrapContract(this.address, userAddress, userAddress, handles[0], inputProof),
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.EncryptionFailed, "Failed to encrypt unshield amount", {
+      throw new TokenError(TokenErrorCode.TransactionReverted, "Unshield transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -412,7 +420,7 @@ export class Token extends ReadonlyToken {
   }
 
   async #ensureAllowance(amount: bigint, maxApproval: boolean): Promise<void> {
-    const underlying = await this.signer.readContract<Hex>(underlyingContract(this.wrapper));
+    const underlying = await this.#getUnderlying();
 
     const userAddress = await this.signer.getAddress();
     const allowance = await this.signer.readContract<bigint>(
