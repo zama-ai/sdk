@@ -6,11 +6,20 @@ import { readConfidentialBalanceOfContract } from "@zama-fhe/token-sdk/viem";
 
 type Params = Parameters<typeof readConfidentialBalanceOfContract>;
 
-export function useConfidentialBalanceOf(
-  client: Params[0],
-  tokenAddress: Params[1] | undefined,
-  userAddress: Params[2] | undefined,
-) {
+export interface UseConfidentialBalanceOfConfig {
+  client: Params[0];
+  tokenAddress: Hex | undefined;
+  userAddress: Hex | undefined;
+}
+
+export interface UseConfidentialBalanceOfSuspenseConfig {
+  client: Params[0];
+  tokenAddress: Hex;
+  userAddress: Hex;
+}
+
+export function useConfidentialBalanceOf(config: UseConfidentialBalanceOfConfig) {
+  const { client, tokenAddress, userAddress } = config;
   const enabled = !!tokenAddress && !!userAddress;
   return useQuery({
     queryKey: ["confidentialBalanceOf", client, tokenAddress, userAddress],
@@ -20,11 +29,8 @@ export function useConfidentialBalanceOf(
   });
 }
 
-export function useConfidentialBalanceOfSuspense(
-  client: Params[0],
-  tokenAddress: Params[1],
-  userAddress: Params[2],
-) {
+export function useConfidentialBalanceOfSuspense(config: UseConfidentialBalanceOfSuspenseConfig) {
+  const { client, tokenAddress, userAddress } = config;
   return useSuspenseQuery({
     queryKey: ["confidentialBalanceOf", client, tokenAddress, userAddress],
     queryFn: () =>

@@ -6,11 +6,20 @@ import { readWrapperForTokenContract } from "@zama-fhe/token-sdk/ethers";
 
 type Params = Parameters<typeof readWrapperForTokenContract>;
 
-export function useWrapperForToken(
-  provider: Params[0],
-  coordinator: Params[1] | undefined,
-  tokenAddress: Params[2] | undefined,
-) {
+export interface UseWrapperForTokenConfig {
+  provider: Params[0];
+  coordinator: Hex | undefined;
+  tokenAddress: Hex | undefined;
+}
+
+export interface UseWrapperForTokenSuspenseConfig {
+  provider: Params[0];
+  coordinator: Hex;
+  tokenAddress: Hex;
+}
+
+export function useWrapperForToken(config: UseWrapperForTokenConfig) {
+  const { provider, coordinator, tokenAddress } = config;
   const enabled = !!coordinator && !!tokenAddress;
   return useQuery({
     queryKey: ["wrapperForToken", provider, coordinator, tokenAddress],
@@ -19,11 +28,8 @@ export function useWrapperForToken(
   });
 }
 
-export function useWrapperForTokenSuspense(
-  provider: Params[0],
-  coordinator: Params[1],
-  tokenAddress: Params[2],
-) {
+export function useWrapperForTokenSuspense(config: UseWrapperForTokenSuspenseConfig) {
+  const { provider, coordinator, tokenAddress } = config;
   return useSuspenseQuery({
     queryKey: ["wrapperForToken", provider, coordinator, tokenAddress],
     queryFn: () => readWrapperForTokenContract(provider, coordinator, tokenAddress),

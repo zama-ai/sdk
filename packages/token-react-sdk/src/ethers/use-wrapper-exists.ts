@@ -6,11 +6,20 @@ import { readWrapperExistsContract } from "@zama-fhe/token-sdk/ethers";
 
 type Params = Parameters<typeof readWrapperExistsContract>;
 
-export function useWrapperExists(
-  provider: Params[0],
-  coordinator: Params[1] | undefined,
-  tokenAddress: Params[2] | undefined,
-) {
+export interface UseWrapperExistsConfig {
+  provider: Params[0];
+  coordinator: Hex | undefined;
+  tokenAddress: Hex | undefined;
+}
+
+export interface UseWrapperExistsSuspenseConfig {
+  provider: Params[0];
+  coordinator: Hex;
+  tokenAddress: Hex;
+}
+
+export function useWrapperExists(config: UseWrapperExistsConfig) {
+  const { provider, coordinator, tokenAddress } = config;
   const enabled = !!coordinator && !!tokenAddress;
   return useQuery({
     queryKey: ["wrapperExists", provider, coordinator, tokenAddress],
@@ -19,11 +28,8 @@ export function useWrapperExists(
   });
 }
 
-export function useWrapperExistsSuspense(
-  provider: Params[0],
-  coordinator: Params[1],
-  tokenAddress: Params[2],
-) {
+export function useWrapperExistsSuspense(config: UseWrapperExistsSuspenseConfig) {
+  const { provider, coordinator, tokenAddress } = config;
   return useSuspenseQuery({
     queryKey: ["wrapperExists", provider, coordinator, tokenAddress],
     queryFn: () => readWrapperExistsContract(provider, coordinator, tokenAddress),

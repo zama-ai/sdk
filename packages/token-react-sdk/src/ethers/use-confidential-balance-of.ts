@@ -6,11 +6,20 @@ import { readConfidentialBalanceOfContract } from "@zama-fhe/token-sdk/ethers";
 
 type Params = Parameters<typeof readConfidentialBalanceOfContract>;
 
-export function useConfidentialBalanceOf(
-  provider: Params[0],
-  tokenAddress: Params[1] | undefined,
-  userAddress: Params[2] | undefined,
-) {
+export interface UseConfidentialBalanceOfConfig {
+  provider: Params[0];
+  tokenAddress: Hex | undefined;
+  userAddress: Hex | undefined;
+}
+
+export interface UseConfidentialBalanceOfSuspenseConfig {
+  provider: Params[0];
+  tokenAddress: Hex;
+  userAddress: Hex;
+}
+
+export function useConfidentialBalanceOf(config: UseConfidentialBalanceOfConfig) {
+  const { provider, tokenAddress, userAddress } = config;
   const enabled = !!tokenAddress && !!userAddress;
   return useQuery({
     queryKey: ["confidentialBalanceOf", provider, tokenAddress, userAddress],
@@ -20,11 +29,8 @@ export function useConfidentialBalanceOf(
   });
 }
 
-export function useConfidentialBalanceOfSuspense(
-  provider: Params[0],
-  tokenAddress: Params[1],
-  userAddress: Params[2],
-) {
+export function useConfidentialBalanceOfSuspense(config: UseConfidentialBalanceOfSuspenseConfig) {
+  const { provider, tokenAddress, userAddress } = config;
   return useSuspenseQuery({
     queryKey: ["confidentialBalanceOf", provider, tokenAddress, userAddress],
     queryFn: () => readConfidentialBalanceOfContract(provider, tokenAddress, userAddress),

@@ -6,7 +6,18 @@ import { readUnderlyingTokenContract } from "@zama-fhe/token-sdk/ethers";
 
 type Params = Parameters<typeof readUnderlyingTokenContract>;
 
-export function useUnderlyingToken(provider: Params[0], wrapperAddress: Params[1] | undefined) {
+export interface UseUnderlyingTokenConfig {
+  provider: Params[0];
+  wrapperAddress: Hex | undefined;
+}
+
+export interface UseUnderlyingTokenSuspenseConfig {
+  provider: Params[0];
+  wrapperAddress: Hex;
+}
+
+export function useUnderlyingToken(config: UseUnderlyingTokenConfig) {
+  const { provider, wrapperAddress } = config;
   const enabled = !!wrapperAddress;
   return useQuery({
     queryKey: ["underlyingToken", provider, wrapperAddress],
@@ -15,7 +26,8 @@ export function useUnderlyingToken(provider: Params[0], wrapperAddress: Params[1
   });
 }
 
-export function useUnderlyingTokenSuspense(provider: Params[0], wrapperAddress: Params[1]) {
+export function useUnderlyingTokenSuspense(config: UseUnderlyingTokenSuspenseConfig) {
+  const { provider, wrapperAddress } = config;
   return useSuspenseQuery({
     queryKey: ["underlyingToken", provider, wrapperAddress],
     queryFn: () => readUnderlyingTokenContract(provider, wrapperAddress),

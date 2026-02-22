@@ -6,11 +6,20 @@ import { readWrapperForTokenContract } from "@zama-fhe/token-sdk/viem";
 
 type Params = Parameters<typeof readWrapperForTokenContract>;
 
-export function useWrapperForToken(
-  client: Params[0],
-  coordinator: Params[1] | undefined,
-  tokenAddress: Params[2] | undefined,
-) {
+export interface UseWrapperForTokenConfig {
+  client: Params[0];
+  coordinator: Hex | undefined;
+  tokenAddress: Hex | undefined;
+}
+
+export interface UseWrapperForTokenSuspenseConfig {
+  client: Params[0];
+  coordinator: Hex;
+  tokenAddress: Hex;
+}
+
+export function useWrapperForToken(config: UseWrapperForTokenConfig) {
+  const { client, coordinator, tokenAddress } = config;
   const enabled = !!coordinator && !!tokenAddress;
   return useQuery({
     queryKey: ["wrapperForToken", client, coordinator, tokenAddress],
@@ -19,11 +28,8 @@ export function useWrapperForToken(
   });
 }
 
-export function useWrapperForTokenSuspense(
-  client: Params[0],
-  coordinator: Params[1],
-  tokenAddress: Params[2],
-) {
+export function useWrapperForTokenSuspense(config: UseWrapperForTokenSuspenseConfig) {
+  const { client, coordinator, tokenAddress } = config;
   return useSuspenseQuery({
     queryKey: ["wrapperForToken", client, coordinator, tokenAddress],
     queryFn: () => readWrapperForTokenContract(client, coordinator, tokenAddress),

@@ -6,11 +6,20 @@ import { readWrapperExistsContract } from "@zama-fhe/token-sdk/viem";
 
 type Params = Parameters<typeof readWrapperExistsContract>;
 
-export function useWrapperExists(
-  client: Params[0],
-  coordinator: Params[1] | undefined,
-  tokenAddress: Params[2] | undefined,
-) {
+export interface UseWrapperExistsConfig {
+  client: Params[0];
+  coordinator: Hex | undefined;
+  tokenAddress: Hex | undefined;
+}
+
+export interface UseWrapperExistsSuspenseConfig {
+  client: Params[0];
+  coordinator: Hex;
+  tokenAddress: Hex;
+}
+
+export function useWrapperExists(config: UseWrapperExistsConfig) {
+  const { client, coordinator, tokenAddress } = config;
   const enabled = !!coordinator && !!tokenAddress;
   return useQuery({
     queryKey: ["wrapperExists", client, coordinator, tokenAddress],
@@ -19,11 +28,8 @@ export function useWrapperExists(
   });
 }
 
-export function useWrapperExistsSuspense(
-  client: Params[0],
-  coordinator: Params[1],
-  tokenAddress: Params[2],
-) {
+export function useWrapperExistsSuspense(config: UseWrapperExistsSuspenseConfig) {
+  const { client, coordinator, tokenAddress } = config;
   return useSuspenseQuery({
     queryKey: ["wrapperExists", client, coordinator, tokenAddress],
     queryFn: () => readWrapperExistsContract(client, coordinator, tokenAddress),
