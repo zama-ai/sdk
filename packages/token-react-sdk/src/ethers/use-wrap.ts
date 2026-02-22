@@ -6,21 +6,15 @@ import { writeWrapContract } from "@zama-fhe/token-sdk/ethers";
 type WriteFn = typeof writeWrapContract;
 type Params = Parameters<WriteFn>;
 
-export type WrapParams = {
+export interface WrapParams {
   signer: Params[0];
   wrapperAddress: Params[1];
   to: Params[2];
   amount: Params[3];
-};
-
+}
 export function useWrap() {
   return useMutation<Awaited<ReturnType<WriteFn>>, Error, WrapParams>({
     mutationFn: (params) =>
-      writeWrapContract(
-        params.signer,
-        params.wrapperAddress,
-        params.to,
-        params.amount,
-      ),
+      writeWrapContract(params.signer, params.wrapperAddress, params.to, params.amount),
   });
 }

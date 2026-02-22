@@ -6,20 +6,15 @@ import { writeConfidentialTransferContract } from "@zama-fhe/token-sdk/ethers";
 type WriteFn = typeof writeConfidentialTransferContract;
 type Params = Parameters<WriteFn>;
 
-export type ConfidentialTransferParams = {
+export interface ConfidentialTransferParams {
   signer: Params[0];
   tokenAddress: Params[1];
   to: Params[2];
   handle: Params[3];
   inputProof: Params[4];
-};
-
+}
 export function useConfidentialTransfer() {
-  return useMutation<
-    Awaited<ReturnType<WriteFn>>,
-    Error,
-    ConfidentialTransferParams
-  >({
+  return useMutation<Awaited<ReturnType<WriteFn>>, Error, ConfidentialTransferParams>({
     mutationFn: (params) =>
       writeConfidentialTransferContract(
         params.signer,
