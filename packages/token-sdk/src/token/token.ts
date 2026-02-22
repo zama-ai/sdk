@@ -340,27 +340,34 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async finalizeUnwrap(burnAmountHandle: Address): Promise<Address> {
-    try {
-      const { abiEncodedClearValues, decryptionProof } = await this.sdk.publicDecrypt([
-        burnAmountHandle,
-      ]);
+    let clearValue: bigint;
+    let decryptionProof: Address;
 
-      let clearValue: bigint;
+    try {
+      const result = await this.sdk.publicDecrypt([burnAmountHandle]);
+      decryptionProof = result.decryptionProof;
       try {
-        clearValue = BigInt(abiEncodedClearValues);
+        clearValue = BigInt(result.abiEncodedClearValues);
       } catch {
         throw new TokenError(
           TokenErrorCode.DecryptionFailed,
-          `Cannot parse decrypted value: ${abiEncodedClearValues}`,
+          `Cannot parse decrypted value: ${result.abiEncodedClearValues}`,
         );
       }
+    } catch (error) {
+      if (error instanceof TokenError) throw error;
+      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to finalize unshield", {
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
 
+    try {
       return await this.signer.writeContract(
         finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, decryptionProof),
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to finalize unshield", {
+      throw new TokenError(TokenErrorCode.TransactionReverted, "Failed to finalize unshield", {
         cause: error instanceof Error ? error : undefined,
       });
     }

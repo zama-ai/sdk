@@ -73,7 +73,7 @@ export function mergeFhevmConfig(
   overrides?: Partial<FhevmInstanceConfig>,
 ): FhevmInstanceConfig {
   const base = DefaultConfigs[chainId];
-  if (!base && !overrides) {
+  if (!base && (!overrides || Object.keys(overrides).length === 0)) {
     throw new Error(`No config for chainId: ${chainId}`);
   }
   return { ...base, ...overrides };

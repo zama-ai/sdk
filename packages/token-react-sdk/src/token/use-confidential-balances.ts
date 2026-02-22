@@ -50,7 +50,11 @@ export function useConfidentialBalances(
   const [signerAddress, setSignerAddress] = useState<Address | undefined>();
 
   useEffect(() => {
-    sdk.signer.getAddress().then(setSignerAddress);
+    setSignerAddress(undefined);
+    sdk.signer
+      .getAddress()
+      .then(setSignerAddress)
+      .catch(() => setSignerAddress(undefined));
   }, [sdk.signer]);
 
   const ownerKey = signerAddress ?? "";

@@ -31,6 +31,7 @@ export class RelayerNode implements RelayerSDK {
   readonly #config: RelayerNodeConfig;
   #pool: NodeWorkerPool | null = null;
   #initPromise: Promise<NodeWorkerPool> | null = null;
+  #ensureLock: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
 
@@ -49,6 +50,16 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async #ensurePool(): Promise<NodeWorkerPool> {
+    if (this.#ensureLock) return this.#ensureLock;
+    this.#ensureLock = this.#ensurePoolInner();
+    try {
+      return await this.#ensureLock;
+    } finally {
+      this.#ensureLock = null;
+    }
+  }
+
+  async #ensurePoolInner(): Promise<NodeWorkerPool> {
     const chainId = await this.#config.getChainId();
 
     // Chain changed → tear down old pool, re-init
@@ -88,6 +99,7 @@ export class RelayerNode implements RelayerSDK {
       this.#pool = null;
     }
     this.#initPromise = null;
+    this.#ensureLock = null;
   }
 
   async generateKeypair(): Promise<FHEKeypair> {

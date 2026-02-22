@@ -27,6 +27,7 @@ const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${SDK_VERSION}/relayer-sdk-
 export class RelayerWeb implements RelayerSDK {
   #workerClient: RelayerWorkerClient | null = null;
   #initPromise: Promise<RelayerWorkerClient> | null = null;
+  #ensureLock: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
   readonly #config: RelayerWebConfig;
@@ -52,6 +53,16 @@ export class RelayerWeb implements RelayerSDK {
    * Resets on failure to allow retries.
    */
   async #ensureWorker(): Promise<RelayerWorkerClient> {
+    if (this.#ensureLock) return this.#ensureLock;
+    this.#ensureLock = this.#ensureWorkerInner();
+    try {
+      return await this.#ensureLock;
+    } finally {
+      this.#ensureLock = null;
+    }
+  }
+
+  async #ensureWorkerInner(): Promise<RelayerWorkerClient> {
     const chainId = await this.#config.getChainId();
 
     // Chain changed → tear down old worker, re-init
@@ -99,6 +110,7 @@ export class RelayerWeb implements RelayerSDK {
       this.#workerClient = null;
     }
     this.#initPromise = null;
+    this.#ensureLock = null;
   }
 
   /**

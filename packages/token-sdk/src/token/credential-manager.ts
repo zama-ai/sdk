@@ -82,8 +82,8 @@ export class CredentialsManager {
           return creds;
         }
       }
-    } catch {
-      // Store read or decrypt failed — generate fresh credentials
+    } catch (error) {
+      console.warn("[CredentialsManager] Failed to read stored credentials, regenerating", error);
     }
 
     const key = contractAddresses.slice().sort().join(",");

@@ -273,14 +273,18 @@ export class NodeWorkerClient {
 
   #handleError(error: Error): void {
     console.error("[NodeWorkerClient] Worker error:", error.message);
+    const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending(`Worker error: ${error.message}`);
+    worker?.terminate();
   }
 
   #handleMessageError(): void {
     console.error("[NodeWorkerClient] Message deserialization failed");
+    const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending("Worker message deserialization failed");
+    worker?.terminate();
   }
 
   #rejectAllPending(message: string): void {

@@ -3,6 +3,7 @@
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/token-sdk";
 import { useToken, type UseTokenConfig } from "./use-token";
+import { confidentialIsApprovedQueryKeys } from "./use-confidential-is-approved";
 
 /** Parameters passed to the `mutate` function of {@link useConfidentialApprove}. */
 export interface ConfidentialApproveParams {
@@ -34,5 +35,11 @@ export function useConfidentialApprove(
     mutationKey: ["confidentialApprove", config.tokenAddress],
     mutationFn: ({ spender, until }) => token.approve(spender, until),
     ...options,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      context.client.invalidateQueries({
+        queryKey: confidentialIsApprovedQueryKeys.token(config.tokenAddress),
+      });
+      options?.onSuccess?.(data, variables, onMutateResult, context);
+    },
   });
 }
