@@ -48,6 +48,7 @@ function createMockSigner(): GenericSigner {
     writeContract: vi.fn().mockResolvedValue("0xtxhash"),
     readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
+    getChainId: vi.fn().mockResolvedValue(31337),
   };
 }
 

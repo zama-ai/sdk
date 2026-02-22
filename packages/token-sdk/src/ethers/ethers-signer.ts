@@ -20,6 +20,14 @@ export class EthersSigner implements GenericSigner {
     }
   }
 
+  async getChainId(): Promise<number> {
+    const signer = await this.signerPromise;
+    const provider = signer.provider;
+    if (!provider) throw new TypeError("Signer has no provider");
+    const network = await provider.getNetwork();
+    return Number(network.chainId);
+  }
+
   async getAddress(): Promise<Address> {
     const signer = await this.signerPromise;
     return signer.getAddress() as unknown as Address;

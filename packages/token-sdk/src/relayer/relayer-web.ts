@@ -28,6 +28,7 @@ export class RelayerWeb implements RelayerSDK {
   #workerClient: RelayerWorkerClient | null = null;
   #initPromise: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
+  #resolvedChainId: number | null = null;
   readonly #config: RelayerWebConfig;
 
   constructor(config: RelayerWebConfig) {
@@ -42,8 +43,14 @@ export class RelayerWeb implements RelayerSDK {
     return (typeof token === "function" ? token() : token) ?? "";
   }
 
-  #getWorkerConfig(): WorkerClientConfig {
-    const { chainId, transports } = this.#config;
+  async #resolveChainId(): Promise<number> {
+    const { chainId } = this.#config;
+    return typeof chainId === "function" ? chainId() : chainId;
+  }
+
+  async #getWorkerConfig(): Promise<WorkerClientConfig> {
+    const chainId = await this.#resolveChainId();
+    const { transports } = this.#config;
 
     return {
       cdnUrl: CDN_URL,
@@ -58,6 +65,17 @@ export class RelayerWeb implements RelayerSDK {
    * Resets on failure to allow retries.
    */
   async #ensureWorker(): Promise<RelayerWorkerClient> {
+    const chainId = await this.#resolveChainId();
+
+    // Chain changed → tear down old worker, re-init
+    if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
+      this.#workerClient?.terminate();
+      this.#workerClient = null;
+      this.#initPromise = null;
+    }
+
+    this.#resolvedChainId = chainId;
+
     if (!this.#initPromise) {
       this.#initPromise = this.#initWorker().catch((error) => {
         this.#initPromise = null;
@@ -71,7 +89,7 @@ export class RelayerWeb implements RelayerSDK {
    * Initialize the worker (called once via promise lock).
    */
   async #initWorker(): Promise<RelayerWorkerClient> {
-    const workerConfig = this.#getWorkerConfig();
+    const workerConfig = await this.#getWorkerConfig();
     const client = new RelayerWorkerClient(workerConfig);
     await client.initWorker();
     // If terminate() was called while we were initializing, clean up immediately

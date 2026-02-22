@@ -3,6 +3,7 @@ import type { RelayerSDK } from "./relayer-sdk";
 import { mergeFhevmConfig } from "./relayer-utils";
 import type {
   Address,
+  ChainIdOrResolver,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -17,7 +18,7 @@ import type {
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 
 export interface RelayerNodeConfig {
-  chainId: number;
+  chainId: ChainIdOrResolver;
   transports: Record<number, Partial<FhevmInstanceConfig>>;
   poolSize?: number;
 }
@@ -31,13 +32,20 @@ export class RelayerNode implements RelayerSDK {
   #pool: NodeWorkerPool | null = null;
   #initPromise: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
+  #resolvedChainId: number | null = null;
 
   constructor(config: RelayerNodeConfig) {
     this.#config = config;
   }
 
-  #getPoolConfig(): NodeWorkerPoolConfig {
-    const { chainId, transports, poolSize } = this.#config;
+  async #resolveChainId(): Promise<number> {
+    const { chainId } = this.#config;
+    return typeof chainId === "function" ? chainId() : chainId;
+  }
+
+  async #getPoolConfig(): Promise<NodeWorkerPoolConfig> {
+    const chainId = await this.#resolveChainId();
+    const { transports, poolSize } = this.#config;
 
     return {
       fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
@@ -46,6 +54,17 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async #ensurePool(): Promise<NodeWorkerPool> {
+    const chainId = await this.#resolveChainId();
+
+    // Chain changed → tear down old pool, re-init
+    if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
+      this.#pool?.terminate();
+      this.#pool = null;
+      this.#initPromise = null;
+    }
+
+    this.#resolvedChainId = chainId;
+
     if (!this.#initPromise) {
       this.#initPromise = this.#initPool().catch((error) => {
         this.#initPromise = null;
@@ -56,7 +75,7 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async #initPool(): Promise<NodeWorkerPool> {
-    const poolConfig = this.#getPoolConfig();
+    const poolConfig = await this.#getPoolConfig();
     const pool = new NodeWorkerPool(poolConfig);
     await pool.initPool();
     if (this.#terminated) {

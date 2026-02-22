@@ -18,6 +18,10 @@ export class ViemSigner implements GenericSigner {
     this.publicClient = publicClient;
   }
 
+  async getChainId(): Promise<number> {
+    return this.publicClient.getChainId();
+  }
+
   async getAddress(): Promise<Address> {
     const account = this.walletClient.account;
     if (!account) {

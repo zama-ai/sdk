@@ -7,6 +7,7 @@ import type {
 } from "@zama-fhe/token-sdk";
 import type { Config } from "wagmi";
 import {
+  getChainId,
   getConnection,
   readContract,
   signTypedData,
@@ -24,6 +25,10 @@ export class WagmiSigner implements GenericSigner {
 
   constructor(config: Config) {
     this.config = config;
+  }
+
+  async getChainId(): Promise<number> {
+    return getChainId(this.config);
   }
 
   async getAddress(): Promise<Address> {

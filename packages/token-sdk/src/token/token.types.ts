@@ -33,6 +33,8 @@ export interface ContractCallConfig {
  * The React SDK ships pre-built adapters for wagmi/viem/ethers.
  */
 export interface GenericSigner {
+  /** Return the chain ID of the connected network. */
+  getChainId(): Promise<number>;
   /** The connected wallet address. */
   getAddress: () => Promise<Address>;
   /** Sign EIP-712 typed data (used for decrypt authorization). */

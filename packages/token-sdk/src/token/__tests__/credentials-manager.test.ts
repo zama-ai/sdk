@@ -38,6 +38,7 @@ function createMockSigner(address: Address = "0xuser" as Address): GenericSigner
     writeContract: vi.fn(),
     readContract: vi.fn(),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
+    getChainId: vi.fn().mockResolvedValue(31337),
   };
 }
 
