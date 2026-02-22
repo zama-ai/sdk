@@ -77,14 +77,21 @@ export class CredentialsManager {
       const stored = await this.#storage.getItem(storeKey);
       if (stored) {
         const encrypted = JSON.parse(stored) as EncryptedCredentials;
+        if (!this.#isValidEncryptedShape(encrypted)) {
+          throw new Error("Corrupt credential storage shape");
+        }
         const creds = await this.#decryptCredentials(encrypted);
         if (this.#isValid(creds, contractAddresses)) {
           return creds;
         }
       }
     } catch {
-      // Stored credentials unreadable (corrupt, schema change, decryption failure).
-      // Fall through to regeneration.
+      // Stored credentials unreadable (corrupt, schema change, decryption failure) — regenerate.
+      try {
+        await this.#storage.removeItem(storeKey);
+      } catch {
+        // Best effort cleanup
+      }
     }
 
     const key = contractAddresses.slice().sort().join(",");
@@ -126,6 +133,17 @@ export class CredentialsManager {
   }
 
   // ── Validation ──────────────────────────────────────────────
+
+  #isValidEncryptedShape(data: unknown): data is EncryptedCredentials {
+    if (typeof data !== "object" || data === null) return false;
+    const d = data as Record<string, unknown>;
+    if (typeof d.signature !== "string") return false;
+    if (!Array.isArray(d.contractAddresses)) return false;
+    const epk = d.encryptedPrivateKey as Record<string, unknown> | undefined;
+    if (typeof epk !== "object" || epk === null) return false;
+    if (typeof epk.iv !== "string" || typeof epk.ciphertext !== "string") return false;
+    return true;
+  }
 
   #isValid(creds: StoredCredentials, requiredContracts: Address[]): boolean {
     const nowSeconds = Math.floor(Date.now() / 1000);
@@ -236,7 +254,7 @@ export class CredentialsManager {
       {
         name: "PBKDF2",
         salt: encoder.encode(address),
-        iterations: 100000,
+        iterations: 600_000,
         hash: "SHA-256",
       },
       keyMaterial,

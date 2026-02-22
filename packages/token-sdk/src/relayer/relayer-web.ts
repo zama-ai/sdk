@@ -14,7 +14,7 @@ import type {
 } from "./relayer-sdk.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
-import { mergeFhevmConfig } from "./relayer-utils";
+import { mergeFhevmConfig, withRetry } from "./relayer-utils";
 import { TokenError, TokenErrorCode } from "../token/token.types";
 
 /**
@@ -67,6 +67,10 @@ export class RelayerWeb implements RelayerSDK {
   }
 
   async #ensureWorkerInner(): Promise<RelayerWorkerClient> {
+    if (this.#terminated) {
+      throw new TokenError(TokenErrorCode.EncryptionFailed, "RelayerWeb has been terminated");
+    }
+
     const chainId = await this.#config.getChainId();
 
     // Chain changed → tear down old worker, re-init
@@ -190,14 +194,12 @@ export class RelayerWeb implements RelayerSDK {
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const { values, contractAddress, userAddress } = params;
 
-    const worker = await this.#ensureWorker();
-    await this.#refreshCsrfToken();
-    const result = await worker.encrypt(values, contractAddress, userAddress);
-
-    return {
-      handles: result.handles,
-      inputProof: result.inputProof,
-    };
+    return withRetry(async () => {
+      const worker = await this.#ensureWorker();
+      await this.#refreshCsrfToken();
+      const result = await worker.encrypt(values, contractAddress, userAddress);
+      return { handles: result.handles, inputProof: result.inputProof };
+    });
   }
 
   /**
@@ -205,22 +207,22 @@ export class RelayerWeb implements RelayerSDK {
    * Requires a valid EIP712 signature.
    */
   async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
-    const worker = await this.#ensureWorker();
-    await this.#refreshCsrfToken();
-
-    const result = await worker.userDecrypt(
-      params.handles,
-      params.contractAddress,
-      params.signedContractAddresses,
-      params.privateKey,
-      params.publicKey,
-      params.signature,
-      params.signerAddress,
-      params.startTimestamp,
-      params.durationDays,
-    );
-
-    return result.clearValues;
+    return withRetry(async () => {
+      const worker = await this.#ensureWorker();
+      await this.#refreshCsrfToken();
+      const result = await worker.userDecrypt(
+        params.handles,
+        params.contractAddress,
+        params.signedContractAddresses,
+        params.privateKey,
+        params.publicKey,
+        params.signature,
+        params.signerAddress,
+        params.startTimestamp,
+        params.durationDays,
+      );
+      return result.clearValues;
+    });
   }
 
   /**
@@ -228,15 +230,16 @@ export class RelayerWeb implements RelayerSDK {
    * Used for publicly visible encrypted values.
    */
   async publicDecrypt(handles: string[]): Promise<PublicDecryptResult> {
-    const worker = await this.#ensureWorker();
-    await this.#refreshCsrfToken();
-    const result = await worker.publicDecrypt(handles);
-
-    return {
-      clearValues: result.clearValues,
-      abiEncodedClearValues: result.abiEncodedClearValues,
-      decryptionProof: result.decryptionProof,
-    };
+    return withRetry(async () => {
+      const worker = await this.#ensureWorker();
+      await this.#refreshCsrfToken();
+      const result = await worker.publicDecrypt(handles);
+      return {
+        clearValues: result.clearValues,
+        abiEncodedClearValues: result.abiEncodedClearValues,
+        decryptionProof: result.decryptionProof,
+      };
+    });
   }
 
   /**
@@ -264,32 +267,34 @@ export class RelayerWeb implements RelayerSDK {
    * Requires a valid EIP712 signature from the delegator.
    */
   async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
-    const worker = await this.#ensureWorker();
-    await this.#refreshCsrfToken();
-
-    const result = await worker.delegatedUserDecrypt(
-      params.handles,
-      params.contractAddress,
-      params.signedContractAddresses,
-      params.privateKey,
-      params.publicKey,
-      params.signature,
-      params.delegatorAddress,
-      params.delegateAddress,
-      params.startTimestamp,
-      params.durationDays,
-    );
-
-    return result.clearValues;
+    return withRetry(async () => {
+      const worker = await this.#ensureWorker();
+      await this.#refreshCsrfToken();
+      const result = await worker.delegatedUserDecrypt(
+        params.handles,
+        params.contractAddress,
+        params.signedContractAddresses,
+        params.privateKey,
+        params.publicKey,
+        params.signature,
+        params.delegatorAddress,
+        params.delegateAddress,
+        params.startTimestamp,
+        params.durationDays,
+      );
+      return result.clearValues;
+    });
   }
 
   /**
    * Submit a ZK proof to the relayer for verification.
    */
   async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    const worker = await this.#ensureWorker();
-    await this.#refreshCsrfToken();
-    return worker.requestZKProofVerification(zkProof);
+    return withRetry(async () => {
+      const worker = await this.#ensureWorker();
+      await this.#refreshCsrfToken();
+      return worker.requestZKProofVerification(zkProof);
+    });
   }
 
   /**

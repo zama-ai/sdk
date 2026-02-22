@@ -1,6 +1,6 @@
 import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
 import type { RelayerSDK } from "./relayer-sdk";
-import { mergeFhevmConfig } from "./relayer-utils";
+import { mergeFhevmConfig, withRetry } from "./relayer-utils";
 import { TokenError, TokenErrorCode } from "../token/token.types";
 import type {
   Address,
@@ -61,6 +61,10 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async #ensurePoolInner(): Promise<NodeWorkerPool> {
+    if (this.#terminated) {
+      throw new TokenError(TokenErrorCode.EncryptionFailed, "RelayerNode has been terminated");
+    }
+
     const chainId = await this.#config.getChainId();
 
     // Chain changed → tear down old pool, re-init
@@ -153,41 +157,41 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    const pool = await this.#ensurePool();
-    const result = await pool.encrypt(params.values, params.contractAddress, params.userAddress);
-
-    return {
-      handles: result.handles,
-      inputProof: result.inputProof,
-    };
+    return withRetry(async () => {
+      const pool = await this.#ensurePool();
+      const result = await pool.encrypt(params.values, params.contractAddress, params.userAddress);
+      return { handles: result.handles, inputProof: result.inputProof };
+    });
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
-    const pool = await this.#ensurePool();
-    const result = await pool.userDecrypt(
-      params.handles,
-      params.contractAddress,
-      params.signedContractAddresses,
-      params.privateKey,
-      params.publicKey,
-      params.signature,
-      params.signerAddress,
-      params.startTimestamp,
-      params.durationDays,
-    );
-
-    return result.clearValues;
+    return withRetry(async () => {
+      const pool = await this.#ensurePool();
+      const result = await pool.userDecrypt(
+        params.handles,
+        params.contractAddress,
+        params.signedContractAddresses,
+        params.privateKey,
+        params.publicKey,
+        params.signature,
+        params.signerAddress,
+        params.startTimestamp,
+        params.durationDays,
+      );
+      return result.clearValues;
+    });
   }
 
   async publicDecrypt(handles: string[]): Promise<PublicDecryptResult> {
-    const pool = await this.#ensurePool();
-    const result = await pool.publicDecrypt(handles);
-
-    return {
-      clearValues: result.clearValues,
-      abiEncodedClearValues: result.abiEncodedClearValues,
-      decryptionProof: result.decryptionProof,
-    };
+    return withRetry(async () => {
+      const pool = await this.#ensurePool();
+      const result = await pool.publicDecrypt(handles);
+      return {
+        clearValues: result.clearValues,
+        abiEncodedClearValues: result.abiEncodedClearValues,
+        decryptionProof: result.decryptionProof,
+      };
+    });
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -208,26 +212,29 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
-    const pool = await this.#ensurePool();
-    const result = await pool.delegatedUserDecrypt(
-      params.handles,
-      params.contractAddress,
-      params.signedContractAddresses,
-      params.privateKey,
-      params.publicKey,
-      params.signature,
-      params.delegatorAddress,
-      params.delegateAddress,
-      params.startTimestamp,
-      params.durationDays,
-    );
-
-    return result.clearValues;
+    return withRetry(async () => {
+      const pool = await this.#ensurePool();
+      const result = await pool.delegatedUserDecrypt(
+        params.handles,
+        params.contractAddress,
+        params.signedContractAddresses,
+        params.privateKey,
+        params.publicKey,
+        params.signature,
+        params.delegatorAddress,
+        params.delegateAddress,
+        params.startTimestamp,
+        params.durationDays,
+      );
+      return result.clearValues;
+    });
   }
 
   async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    const pool = await this.#ensurePool();
-    return pool.requestZKProofVerification(zkProof);
+    return withRetry(async () => {
+      const pool = await this.#ensurePool();
+      return pool.requestZKProofVerification(zkProof);
+    });
   }
 
   async getPublicKey(): Promise<{

@@ -7,6 +7,7 @@ export default defineConfig({
     "ethers/index": "src/ethers/index.ts",
     "node/index": "src/node/index.ts",
     "relayer-sdk.worker": "src/worker/relayer-sdk.worker.ts",
+    "relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
   },
   format: ["esm"],
   dts: true,

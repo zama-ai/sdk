@@ -240,6 +240,12 @@ export class ReadonlyToken {
     onError?: (address: Address, error: Error) => void,
   ): Promise<Map<Address, bigint>> {
     if (tokens.length === 0) return new Map();
+    if (tokens.length !== handles.length) {
+      throw new TokenError(
+        TokenErrorCode.DecryptionFailed,
+        `tokens.length (${tokens.length}) must equal handles.length (${handles.length})`,
+      );
+    }
 
     const sdk = tokens[0]!.sdk;
     const signer = tokens[0]!.signer;

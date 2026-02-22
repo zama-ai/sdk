@@ -51,15 +51,22 @@ export function useConfidentialBalance(
   const [signerError, setSignerError] = useState<Error | undefined>();
 
   useEffect(() => {
-    setSignerAddress(undefined);
+    let cancelled = false;
     setSignerError(undefined);
     token.signer
       .getAddress()
-      .then(setSignerAddress)
+      .then((addr) => {
+        if (!cancelled) setSignerAddress(addr);
+      })
       .catch((error: unknown) => {
-        setSignerAddress(undefined);
-        setSignerError(error instanceof Error ? error : new Error(String(error)));
+        if (!cancelled) {
+          setSignerAddress(undefined);
+          setSignerError(error instanceof Error ? error : new Error(String(error)));
+        }
       });
+    return () => {
+      cancelled = true;
+    };
   }, [token.signer]);
 
   const ownerKey = signerAddress ?? "";
