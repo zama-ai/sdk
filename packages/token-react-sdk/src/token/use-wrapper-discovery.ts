@@ -10,15 +10,25 @@ import {
 import type { Address } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
+export interface UseWrapperDiscoveryConfig {
+  tokenAddress: Address;
+  coordinatorAddress: Address | undefined;
+}
+
+export interface UseWrapperDiscoverySuspenseConfig {
+  tokenAddress: Address;
+  coordinatorAddress: Address;
+}
+
 /**
  * Declarative hook to discover the wrapper contract for an ERC-20 token.
  * Returns the wrapper address if one exists, or `null` if not.
  */
 export function useWrapperDiscovery(
-  tokenAddress: Address,
-  coordinatorAddress: Address | undefined,
+  config: UseWrapperDiscoveryConfig,
   options?: Omit<UseQueryOptions<Address | null, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<Address | null, Error> {
+  const { tokenAddress, coordinatorAddress } = config;
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<Address | null, Error>({
@@ -31,9 +41,9 @@ export function useWrapperDiscovery(
 }
 
 export function useWrapperDiscoverySuspense(
-  tokenAddress: Address,
-  coordinatorAddress: Address,
+  config: UseWrapperDiscoverySuspenseConfig,
 ): UseSuspenseQueryResult<Address | null, Error> {
+  const { tokenAddress, coordinatorAddress } = config;
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<Address | null, Error>({

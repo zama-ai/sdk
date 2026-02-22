@@ -15,7 +15,10 @@ export const activityFeedQueryKeys = {
   token: (tokenAddress: string) => ["activityFeed", tokenAddress] as const,
 } as const;
 
-interface UseActivityFeedOptions {
+export interface UseActivityFeedConfig {
+  tokenAddress: Address;
+  userAddress: Address | undefined;
+  logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
   /** Whether to batch-decrypt encrypted transfer amounts. Default: true */
   decrypt?: boolean;
 }
@@ -29,13 +32,11 @@ interface UseActivityFeedOptions {
  * and this hook normalizes + decrypts them.
  */
 export function useActivityFeed(
-  tokenAddress: Address,
-  logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined,
-  userAddress: Address | undefined,
-  options?: UseActivityFeedOptions,
+  config: UseActivityFeedConfig,
 ): UseQueryResult<ActivityItem[], Error> {
+  const { tokenAddress, userAddress, logs, decrypt: decryptOpt } = config;
   const token = useReadonlyToken(tokenAddress);
-  const decrypt = options?.decrypt ?? true;
+  const decrypt = decryptOpt ?? true;
   const enabled = logs !== undefined && userAddress !== undefined;
 
   return useQuery<ActivityItem[], Error>({

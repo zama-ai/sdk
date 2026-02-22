@@ -6,17 +6,22 @@ import {
   getUnwrapFeeContract,
   getBatchTransferFeeContract,
   getFeeRecipientContract,
-  type Address,
+  type Hex,
 } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
+export interface UseFeeConfig {
+  feeManagerAddress: Hex;
+  amount: bigint;
+  from: Hex;
+  to: Hex;
+}
+
 export function useWrapFee(
-  feeManagerAddress: Address,
-  amount: bigint,
-  from: Address,
-  to: Address,
+  config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
+  const { feeManagerAddress, amount, from, to } = config;
   const token = useReadonlyToken(feeManagerAddress);
 
   return useQuery<bigint, Error>({
@@ -28,12 +33,10 @@ export function useWrapFee(
 }
 
 export function useUnwrapFee(
-  feeManagerAddress: Address,
-  amount: bigint,
-  from: Address,
-  to: Address,
+  config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
+  const { feeManagerAddress, amount, from, to } = config;
   const token = useReadonlyToken(feeManagerAddress);
 
   return useQuery<bigint, Error>({
@@ -45,7 +48,7 @@ export function useUnwrapFee(
 }
 
 export function useBatchTransferFee(
-  feeManagerAddress: Address,
+  feeManagerAddress: Hex,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
   const token = useReadonlyToken(feeManagerAddress);
@@ -59,14 +62,14 @@ export function useBatchTransferFee(
 }
 
 export function useFeeRecipient(
-  feeManagerAddress: Address,
-  options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<Address, Error> {
+  feeManagerAddress: Hex,
+  options?: Omit<UseQueryOptions<Hex, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<Hex, Error> {
   const token = useReadonlyToken(feeManagerAddress);
 
-  return useQuery<Address, Error>({
+  return useQuery<Hex, Error>({
     queryKey: ["feeRecipient", feeManagerAddress],
-    queryFn: () => token.signer.readContract<Address>(getFeeRecipientContract(feeManagerAddress)),
+    queryFn: () => token.signer.readContract<Hex>(getFeeRecipientContract(feeManagerAddress)),
     ...options,
   });
 }

@@ -12,8 +12,8 @@ import { useToken, type UseTokenConfig } from "./use-token";
 
 interface WrapParams {
   amount: bigint;
-  approvalStrategy?: "max" | "exact" | "skip";
   fees?: bigint;
+  approvalStrategy?: "max" | "exact" | "skip";
 }
 
 export function useWrap(
@@ -24,8 +24,8 @@ export function useWrap(
 
   return useMutation<Address, Error, WrapParams, Address>({
     mutationKey: ["wrap", config.tokenAddress],
-    mutationFn: async ({ amount, approvalStrategy, fees }) =>
-      token.wrap(amount, { approvalStrategy, fees }),
+    mutationFn: async ({ amount, fees, approvalStrategy }) =>
+      token.wrap(amount, { fees, approvalStrategy }),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({

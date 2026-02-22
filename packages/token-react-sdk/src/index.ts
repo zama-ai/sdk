@@ -130,6 +130,7 @@ export {
   useUnderlyingAllowance,
   useUnderlyingAllowanceSuspense,
   underlyingAllowanceQueryKeys,
+  type UseUnderlyingAllowanceConfig,
 } from "./token/use-underlying-allowance";
 export {
   confidentialBalanceQueryKeys,
@@ -137,13 +138,22 @@ export {
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
 } from "./token/balance-query-keys";
-export { useWrapperDiscovery, useWrapperDiscoverySuspense } from "./token/use-wrapper-discovery";
+export {
+  useWrapperDiscovery,
+  useWrapperDiscoverySuspense,
+  type UseWrapperDiscoveryConfig,
+  type UseWrapperDiscoverySuspenseConfig,
+} from "./token/use-wrapper-discovery";
 export {
   useTokenMetadata,
   useTokenMetadataSuspense,
   type TokenMetadata,
 } from "./token/use-token-metadata";
-export { useActivityFeed, activityFeedQueryKeys } from "./token/use-activity-feed";
+export {
+  useActivityFeed,
+  activityFeedQueryKeys,
+  type UseActivityFeedConfig,
+} from "./token/use-activity-feed";
 export { useApproveUnderlying } from "./token/use-approve-underlying";
 export {
   useIsConfidential,
@@ -152,7 +162,13 @@ export {
   useIsWrapperSuspense,
 } from "./token/use-is-confidential";
 export { useTotalSupply, useTotalSupplySuspense } from "./token/use-total-supply";
-export { useWrapFee, useUnwrapFee, useBatchTransferFee, useFeeRecipient } from "./token/use-fees";
+export {
+  useWrapFee,
+  useUnwrapFee,
+  useBatchTransferFee,
+  useFeeRecipient,
+  type UseFeeConfig,
+} from "./token/use-fees";
 
 // Re-export event decoders, types, and constants from core SDK
 export { ZERO_HANDLE } from "@zama-fhe/token-sdk";

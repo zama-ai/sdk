@@ -10,28 +10,31 @@ export const underlyingAllowanceQueryKeys = {
     ["underlyingAllowance", tokenAddress, wrapper] as const,
 } as const;
 
+export interface UseUnderlyingAllowanceConfig {
+  tokenAddress: Address;
+  wrapperAddress: Address;
+}
+
 export function useUnderlyingAllowance(
-  encryptedErc20Address: Address,
-  encryptedErc20Wrapper: Address,
+  config: UseUnderlyingAllowanceConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
-  const token = useReadonlyToken(encryptedErc20Address);
+  const { tokenAddress, wrapperAddress } = config;
+  const token = useReadonlyToken(tokenAddress);
 
   return useQuery<bigint, Error>({
-    queryKey: underlyingAllowanceQueryKeys.token(encryptedErc20Address, encryptedErc20Wrapper),
-    queryFn: () => token.allowance(encryptedErc20Wrapper),
+    queryKey: underlyingAllowanceQueryKeys.token(tokenAddress, wrapperAddress),
+    queryFn: () => token.allowance(wrapperAddress),
     ...options,
   });
 }
 
-export function useUnderlyingAllowanceSuspense(
-  encryptedErc20Address: Address,
-  encryptedErc20Wrapper: Address,
-) {
-  const token = useReadonlyToken(encryptedErc20Address);
+export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceConfig) {
+  const { tokenAddress, wrapperAddress } = config;
+  const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<bigint, Error>({
-    queryKey: underlyingAllowanceQueryKeys.token(encryptedErc20Address, encryptedErc20Wrapper),
-    queryFn: () => token.allowance(encryptedErc20Wrapper),
+    queryKey: underlyingAllowanceQueryKeys.token(tokenAddress, wrapperAddress),
+    queryFn: () => token.allowance(wrapperAddress),
   });
 }
