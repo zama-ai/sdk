@@ -21,6 +21,7 @@ export function useFinalizeUnwrap(
   const token = useToken(config);
 
   return useMutation<Address, Error, FinalizeUnwrapParams, Address>({
+    mutationKey: ["finalizeUnwrap", config.tokenAddress],
     mutationFn: ({ burnAmountHandle }) => token.finalizeUnwrap(burnAmountHandle),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {

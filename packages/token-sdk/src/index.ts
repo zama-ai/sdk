@@ -2,7 +2,7 @@
 export { RelayerWeb } from "./relayer/relayer-web";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
-  Address,
+  Hex as Address,
   RelayerWebConfig,
   RelayerSDKStatus,
   EncryptResult,
@@ -47,6 +47,7 @@ export { MemoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { CredentialsManager } from "./token/credential-manager";
 export type {
+  Hex,
   GenericSigner,
   GenericStringStorage,
   StoredCredentials,

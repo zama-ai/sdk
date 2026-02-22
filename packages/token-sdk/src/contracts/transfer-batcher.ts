@@ -1,11 +1,11 @@
 import { TRANSFER_BATCHER_ABI } from "../abi/transfer-batch.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Hex } from "../relayer/relayer-sdk.types";
 
 /** Batch transfer data for confidentialBatchTransfer. */
 export interface BatchTransferData {
-  to: Address;
-  encryptedAmount: Address;
-  inputProof: Address;
+  to: Hex;
+  encryptedAmount: Hex;
+  inputProof: Hex;
   retryFor: bigint;
 }
 
@@ -20,9 +20,9 @@ export interface BatchTransferData {
  * ```
  */
 export function confidentialBatchTransferContract(
-  batcherAddress: Address,
-  tokenAddress: Address,
-  fromAddress: Address,
+  batcherAddress: Hex,
+  tokenAddress: Hex,
+  fromAddress: Hex,
   batchTransferData: BatchTransferData[],
   fees: bigint,
 ) {

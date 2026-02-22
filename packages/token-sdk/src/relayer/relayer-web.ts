@@ -1,5 +1,5 @@
 import type {
-  Address,
+  Hex,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -12,10 +12,7 @@ import type {
   UserDecryptParams,
   ZKProofLike,
 } from "./relayer-sdk.types";
-import {
-  RelayerWorkerClient,
-  type WorkerClientConfig,
-} from "../worker/worker.client";
+import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
 import { mergeFhevmConfig } from "./relayer-utils";
 import packageJson from "../../package.json";
@@ -121,7 +118,7 @@ export class RelayerWeb implements RelayerSDK {
    */
   async createEIP712(
     publicKey: string,
-    contractAddresses: Address[],
+    contractAddresses: Hex[],
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
@@ -141,8 +138,7 @@ export class RelayerWeb implements RelayerSDK {
         verifyingContract: result.domain.verifyingContract,
       },
       types: {
-        UserDecryptRequestVerification:
-          result.types.UserDecryptRequestVerification,
+        UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
       },
       message: {
         publicKey: result.message.publicKey,
@@ -175,9 +171,7 @@ export class RelayerWeb implements RelayerSDK {
    * Decrypt ciphertexts using user's private key.
    * Requires a valid EIP712 signature.
    */
-  async userDecrypt(
-    params: UserDecryptParams,
-  ): Promise<Record<string, bigint>> {
+  async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
     const worker = await this.#ensureWorker();
     await this.#refreshCsrfToken();
 
@@ -217,7 +211,7 @@ export class RelayerWeb implements RelayerSDK {
    */
   async createDelegatedUserDecryptEIP712(
     publicKey: string,
-    contractAddresses: Address[],
+    contractAddresses: Hex[],
     delegatorAddress: string,
     startTimestamp: number,
     durationDays: number = 7,
@@ -236,9 +230,7 @@ export class RelayerWeb implements RelayerSDK {
    * Decrypt ciphertexts via delegation.
    * Requires a valid EIP712 signature from the delegator.
    */
-  async delegatedUserDecrypt(
-    params: DelegatedUserDecryptParams,
-  ): Promise<Record<string, bigint>> {
+  async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
     const worker = await this.#ensureWorker();
     await this.#refreshCsrfToken();
 
@@ -261,9 +253,7 @@ export class RelayerWeb implements RelayerSDK {
   /**
    * Submit a ZK proof to the relayer for verification.
    */
-  async requestZKProofVerification(
-    zkProof: ZKProofLike,
-  ): Promise<InputProofBytesType> {
+  async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
     const worker = await this.#ensureWorker();
     await this.#refreshCsrfToken();
     return worker.requestZKProofVerification(zkProof);

@@ -1,5 +1,5 @@
 import { ERC20_ABI, ERC20_METADATA_ABI } from "../abi/erc20.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Hex } from "../relayer/relayer-sdk.types";
 
 /**
  * Returns the contract config to read a token's name.
@@ -9,7 +9,7 @@ import type { Address } from "../relayer/relayer-sdk.types";
  * const name = await signer.readContract(nameContract(tokenAddress));
  * ```
  */
-export function nameContract(tokenAddress: Address) {
+export function nameContract(tokenAddress: Hex) {
   return {
     address: tokenAddress,
     abi: ERC20_METADATA_ABI,
@@ -26,7 +26,7 @@ export function nameContract(tokenAddress: Address) {
  * const symbol = await signer.readContract(symbolContract(tokenAddress));
  * ```
  */
-export function symbolContract(tokenAddress: Address) {
+export function symbolContract(tokenAddress: Hex) {
   return {
     address: tokenAddress,
     abi: ERC20_METADATA_ABI,
@@ -43,7 +43,7 @@ export function symbolContract(tokenAddress: Address) {
  * const decimals = await signer.readContract(decimalsContract(tokenAddress));
  * ```
  */
-export function decimalsContract(tokenAddress: Address) {
+export function decimalsContract(tokenAddress: Hex) {
   return {
     address: tokenAddress,
     abi: ERC20_METADATA_ABI,
@@ -62,11 +62,7 @@ export function decimalsContract(tokenAddress: Address) {
  * );
  * ```
  */
-export function allowanceContract(
-  tokenAddress: Address,
-  owner: Address,
-  spender: Address,
-) {
+export function allowanceContract(tokenAddress: Hex, owner: Hex, spender: Hex) {
   return {
     address: tokenAddress,
     abi: ERC20_ABI,
@@ -85,11 +81,7 @@ export function allowanceContract(
  * );
  * ```
  */
-export function approveContract(
-  tokenAddress: Address,
-  spender: Address,
-  value: bigint,
-) {
+export function approveContract(tokenAddress: Hex, spender: Hex, value: bigint) {
   return {
     address: tokenAddress,
     abi: ERC20_ABI,

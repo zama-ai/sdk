@@ -1,10 +1,6 @@
 import { Worker } from "node:worker_threads";
 import { randomUUID } from "node:crypto";
-import type {
-  Address,
-  FhevmInstanceConfig,
-  ZKProofLike,
-} from "../relayer/relayer-sdk.types";
+import type { Hex, FhevmInstanceConfig, ZKProofLike } from "../relayer/relayer-sdk.types";
 import type {
   CreateDelegatedEIP712ResponseData,
   CreateEIP712ResponseData,
@@ -50,9 +46,7 @@ export class NodeWorkerClient {
 
   async initWorker(): Promise<Worker> {
     if (!this.#worker) {
-      this.#worker = new Worker(
-        new URL("./relayer-sdk.node-worker.ts", import.meta.url),
-      );
+      this.#worker = new Worker(new URL("./relayer-sdk.node-worker.ts", import.meta.url));
 
       this.#worker.on("message", this.#handleMessage.bind(this));
       this.#worker.on("error", this.#handleError.bind(this));
@@ -84,15 +78,12 @@ export class NodeWorkerClient {
   }
 
   async generateKeypair(): Promise<GenerateKeypairResponseData> {
-    return this.#sendRequest<GenerateKeypairResponseData>(
-      "GENERATE_KEYPAIR",
-      {},
-    );
+    return this.#sendRequest<GenerateKeypairResponseData>("GENERATE_KEYPAIR", {});
   }
 
   async createEIP712(
     publicKey: string,
-    contractAddresses: Address[],
+    contractAddresses: Hex[],
     startTimestamp: number,
     durationDays: number,
   ): Promise<CreateEIP712ResponseData> {
@@ -106,8 +97,8 @@ export class NodeWorkerClient {
 
   async encrypt(
     values: bigint[],
-    contractAddress: Address,
-    userAddress: Address,
+    contractAddress: Hex,
+    userAddress: Hex,
   ): Promise<EncryptResponseData> {
     return this.#sendRequest<EncryptResponseData>("ENCRYPT", {
       values,
@@ -118,12 +109,12 @@ export class NodeWorkerClient {
 
   async userDecrypt(
     handles: string[],
-    contractAddress: Address,
-    signedContractAddresses: Address[],
+    contractAddress: Hex,
+    signedContractAddresses: Hex[],
     privateKey: string,
     publicKey: string,
     signature: string,
-    signerAddress: Address,
+    signerAddress: Hex,
     startTimestamp: number,
     durationDays: number,
   ): Promise<UserDecryptResponseData> {
@@ -148,50 +139,44 @@ export class NodeWorkerClient {
 
   async createDelegatedUserDecryptEIP712(
     publicKey: string,
-    contractAddresses: Address[],
+    contractAddresses: Hex[],
     delegatorAddress: string,
     startTimestamp: number,
     durationDays: number,
   ): Promise<CreateDelegatedEIP712ResponseData> {
-    return this.#sendRequest<CreateDelegatedEIP712ResponseData>(
-      "CREATE_DELEGATED_EIP712",
-      {
-        publicKey,
-        contractAddresses,
-        delegatorAddress,
-        startTimestamp,
-        durationDays,
-      },
-    );
+    return this.#sendRequest<CreateDelegatedEIP712ResponseData>("CREATE_DELEGATED_EIP712", {
+      publicKey,
+      contractAddresses,
+      delegatorAddress,
+      startTimestamp,
+      durationDays,
+    });
   }
 
   async delegatedUserDecrypt(
     handles: string[],
-    contractAddress: Address,
-    signedContractAddresses: Address[],
+    contractAddress: Hex,
+    signedContractAddresses: Hex[],
     privateKey: string,
     publicKey: string,
     signature: string,
-    delegatorAddress: Address,
-    delegateAddress: Address,
+    delegatorAddress: Hex,
+    delegateAddress: Hex,
     startTimestamp: number,
     durationDays: number,
   ): Promise<DelegatedUserDecryptResponseData> {
-    return this.#sendRequest<DelegatedUserDecryptResponseData>(
-      "DELEGATED_USER_DECRYPT",
-      {
-        handles,
-        contractAddress,
-        signedContractAddresses,
-        privateKey,
-        publicKey,
-        signature,
-        delegatorAddress,
-        delegateAddress,
-        startTimestamp,
-        durationDays,
-      },
-    );
+    return this.#sendRequest<DelegatedUserDecryptResponseData>("DELEGATED_USER_DECRYPT", {
+      handles,
+      contractAddress,
+      signedContractAddresses,
+      privateKey,
+      publicKey,
+      signature,
+      delegatorAddress,
+      delegateAddress,
+      startTimestamp,
+      durationDays,
+    });
   }
 
   async requestZKProofVerification(
@@ -242,10 +227,7 @@ export class NodeWorkerClient {
     const pending = this.#pendingRequests.get(response.id);
 
     if (!pending) {
-      console.warn(
-        "[NodeWorkerClient] Received response for unknown request:",
-        response.id,
-      );
+      console.warn("[NodeWorkerClient] Received response for unknown request:", response.id);
       return;
     }
 

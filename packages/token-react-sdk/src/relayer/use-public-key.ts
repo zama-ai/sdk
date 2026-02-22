@@ -1,16 +1,20 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTokenSDK } from "../provider";
 
-type PublicKeyResult = {
+interface PublicKeyData {
   publicKeyId: string;
   publicKey: Uint8Array;
-} | null;
+}
+
+type PublicKeyResult = PublicKeyData | null;
 
 export function usePublicKey() {
   const sdk = useTokenSDK();
-  return useMutation<PublicKeyResult, Error, void>({
-    mutationFn: () => sdk.relayer.getPublicKey(),
+  return useQuery<PublicKeyResult, Error>({
+    queryKey: ["publicKey"],
+    queryFn: () => sdk.relayer.getPublicKey(),
+    staleTime: Infinity,
   });
 }

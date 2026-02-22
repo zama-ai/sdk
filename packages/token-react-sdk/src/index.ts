@@ -144,6 +144,15 @@ export {
   type TokenMetadata,
 } from "./token/use-token-metadata";
 export { useActivityFeed, activityFeedQueryKeys } from "./token/use-activity-feed";
+export { useApproveUnderlying } from "./token/use-approve-underlying";
+export {
+  useIsConfidential,
+  useIsConfidentialSuspense,
+  useIsWrapper,
+  useIsWrapperSuspense,
+} from "./token/use-is-confidential";
+export { useTotalSupply, useTotalSupplySuspense } from "./token/use-total-supply";
+export { useWrapFee, useUnwrapFee, useBatchTransferFee, useFeeRecipient } from "./token/use-fees";
 
 // Re-export event decoders, types, and constants from core SDK
 export { ZERO_HANDLE } from "@zama-fhe/token-sdk";
@@ -191,6 +200,7 @@ export {
 
 // Re-export token types from core SDK
 export type {
+  Hex,
   GenericSigner,
   GenericStringStorage,
   ContractCallConfig,

@@ -17,6 +17,7 @@ export function useUnshieldAll(
   const token = useToken(config);
 
   return useMutation<Address, Error, void, Address>({
+    mutationKey: ["unshieldAll", config.tokenAddress],
     mutationFn: () => token.unshieldAll(),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {

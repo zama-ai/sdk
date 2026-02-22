@@ -19,6 +19,7 @@ export function useAuthorizeAll() {
   const sdk = useTokenSDK();
 
   return useMutation<void, Error, Address[]>({
+    mutationKey: ["authorizeAll"],
     mutationFn: async (tokenAddresses) => {
       const tokens = tokenAddresses.map((addr) => sdk.createReadonlyToken(addr));
       return ReadonlyToken.authorizeAll(tokens);

@@ -22,6 +22,7 @@ export function useWrapETH(
   const token = useToken(config);
 
   return useMutation<Address, Error, WrapETHParams, Address>({
+    mutationKey: ["wrapETH", config.tokenAddress],
     mutationFn: ({ amount, value }) => token.wrapETH(amount, value),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {

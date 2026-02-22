@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { Address } from "../../relayer/relayer-sdk.types";
+import type { Hex } from "../../relayer/relayer-sdk.types";
 
 // ERC-20
 import {
@@ -43,10 +43,7 @@ import {
 } from "../wrapper";
 
 // Deployment coordinator
-import {
-  getWrapperContract,
-  wrapperExistsContract,
-} from "../deployment-coordinator";
+import { getWrapperContract, wrapperExistsContract } from "../deployment-coordinator";
 
 // Fee manager
 import {
@@ -59,13 +56,13 @@ import {
 // Transfer batcher
 import { confidentialBatchTransferContract } from "../transfer-batcher";
 
-const TOKEN = "0xtoken" as Address;
-const USER = "0xuser" as Address;
-const SPENDER = "0xspender" as Address;
-const WRAPPER = "0xwrapper" as Address;
-const COORDINATOR = "0xcoordinator" as Address;
-const FEE_MANAGER = "0xfeemanager" as Address;
-const BATCHER = "0xbatcher" as Address;
+const TOKEN = "0xtoken" as Hex;
+const USER = "0xuser" as Hex;
+const SPENDER = "0xspender" as Hex;
+const WRAPPER = "0xwrapper" as Hex;
+const COORDINATOR = "0xcoordinator" as Hex;
+const FEE_MANAGER = "0xfeemanager" as Hex;
+const BATCHER = "0xbatcher" as Hex;
 
 describe("ERC-20 contract builders", () => {
   it("nameContract", () => {
@@ -136,13 +133,7 @@ describe("Encryption contract builders", () => {
   it("confidentialTransferFromContract converts handles to hex", () => {
     const handle = new Uint8Array([0xab]);
     const proof = new Uint8Array([0xcd]);
-    const config = confidentialTransferFromContract(
-      TOKEN,
-      USER,
-      SPENDER,
-      handle,
-      proof,
-    );
+    const config = confidentialTransferFromContract(TOKEN, USER, SPENDER, handle, proof);
     expect(config.functionName).toBe("confidentialTransferFrom");
     expect(config.args).toEqual([USER, SPENDER, "0xab", "0xcd"]);
   });
@@ -177,12 +168,7 @@ describe("Encryption contract builders", () => {
 
   it("unwrapFromBalanceContract", () => {
     const handle = "0x" + "ab".repeat(32);
-    const config = unwrapFromBalanceContract(
-      TOKEN,
-      USER,
-      SPENDER,
-      handle as Address,
-    );
+    const config = unwrapFromBalanceContract(TOKEN, USER, SPENDER, handle as Hex);
     expect(config.functionName).toBe("unwrap");
     expect(config.args).toEqual([USER, SPENDER, handle]);
   });
@@ -231,8 +217,8 @@ describe("Encryption contract builders", () => {
 
 describe("Wrapper contract builders", () => {
   it("finalizeUnwrapContract", () => {
-    const handle = "0xburn" as Address;
-    const proof = "0xproof" as Address;
+    const handle = "0xburn" as Hex;
+    const proof = "0xproof" as Hex;
     const config = finalizeUnwrapContract(WRAPPER, handle, 500n, proof);
     expect(config.address).toBe(WRAPPER);
     expect(config.functionName).toBe("finalizeUnwrap");
@@ -306,18 +292,12 @@ describe("Transfer batcher contract builders", () => {
     const data = [
       {
         to: USER,
-        encryptedAmount: "0xhandle" as Address,
-        inputProof: "0xproof" as Address,
+        encryptedAmount: "0xhandle" as Hex,
+        inputProof: "0xproof" as Hex,
         retryFor: 0n,
       },
     ];
-    const config = confidentialBatchTransferContract(
-      BATCHER,
-      TOKEN,
-      USER,
-      data,
-      10n,
-    );
+    const config = confidentialBatchTransferContract(BATCHER, TOKEN, USER, data, 10n);
     expect(config.address).toBe(BATCHER);
     expect(config.functionName).toBe("confidentialBatchTransfer");
     expect(config.args).toEqual([TOKEN, USER, data]);

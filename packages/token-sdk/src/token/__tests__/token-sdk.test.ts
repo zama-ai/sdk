@@ -4,7 +4,7 @@ import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
 import type { GenericSigner } from "../token.types";
-import type { Address } from "../../relayer/relayer-sdk.types";
+import type { Hex } from "../../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 
 function createMockSigner(): GenericSigner {
@@ -50,21 +50,21 @@ describe("TokenSDK", () => {
   });
 
   it("createReadonlyToken returns ReadonlyToken", () => {
-    const token = sdk.createReadonlyToken("0xtoken" as Address);
+    const token = sdk.createReadonlyToken("0xtoken" as Hex);
     expect(token).toBeInstanceOf(ReadonlyToken);
     expect(token.address).toBe("0xtoken");
     expect(token.signer).toBe(signer);
   });
 
   it("createToken returns Token", () => {
-    const token = sdk.createToken("0xtoken" as Address);
+    const token = sdk.createToken("0xtoken" as Hex);
     expect(token).toBeInstanceOf(Token);
     expect(token.address).toBe("0xtoken");
   });
 
   it("creates distinct instances per address", () => {
-    const t1 = sdk.createReadonlyToken("0xaaa" as Address);
-    const t2 = sdk.createReadonlyToken("0xbbb" as Address);
+    const t1 = sdk.createReadonlyToken("0xaaa" as Hex);
+    const t2 = sdk.createReadonlyToken("0xbbb" as Hex);
     expect(t1).not.toBe(t2);
     expect(t1.address).toBe("0xaaa");
     expect(t2.address).toBe("0xbbb");

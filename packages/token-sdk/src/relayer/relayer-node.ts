@@ -2,7 +2,7 @@ import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
 import type { RelayerSDK } from "./relayer-sdk";
 import { mergeFhevmConfig } from "./relayer-utils";
 import type {
-  Address,
+  Hex,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -80,7 +80,7 @@ export class RelayerNode implements RelayerSDK {
 
   async createEIP712(
     publicKey: string,
-    contractAddresses: Address[],
+    contractAddresses: Hex[],
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
@@ -152,7 +152,7 @@ export class RelayerNode implements RelayerSDK {
 
   async createDelegatedUserDecryptEIP712(
     publicKey: string,
-    contractAddresses: Address[],
+    contractAddresses: Hex[],
     delegatorAddress: string,
     startTimestamp: number,
     durationDays: number = 7,

@@ -1,5 +1,5 @@
 import type { PublicClient, WalletClient } from "viem";
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Hex } from "../relayer/relayer-sdk.types";
 import type { BatchTransferData } from "../contracts";
 import {
   confidentialBalanceOfContract,
@@ -21,53 +21,46 @@ import {
 
 export function readConfidentialBalanceOfContract(
   client: PublicClient,
-  tokenAddress: Address,
-  userAddress: Address,
+  tokenAddress: Hex,
+  userAddress: Hex,
 ) {
-  return client.readContract(
-    confidentialBalanceOfContract(tokenAddress, userAddress),
-  );
+  return client.readContract(confidentialBalanceOfContract(tokenAddress, userAddress));
 }
 
 export function readWrapperForTokenContract(
   client: PublicClient,
-  coordinator: Address,
-  tokenAddress: Address,
+  coordinator: Hex,
+  tokenAddress: Hex,
 ) {
   return client.readContract(getWrapperContract(coordinator, tokenAddress));
 }
 
-export function readUnderlyingTokenContract(
-  client: PublicClient,
-  wrapperAddress: Address,
-) {
+export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Hex) {
   return client.readContract(underlyingContract(wrapperAddress));
 }
 
 export function readWrapperExistsContract(
   client: PublicClient,
-  coordinator: Address,
-  tokenAddress: Address,
+  coordinator: Hex,
+  tokenAddress: Hex,
 ) {
   return client.readContract(wrapperExistsContract(coordinator, tokenAddress));
 }
 
 export function readSupportsInterfaceContract(
   client: PublicClient,
-  tokenAddress: Address,
-  interfaceId: Address,
+  tokenAddress: Hex,
+  interfaceId: Hex,
 ) {
-  return client.readContract(
-    supportsInterfaceContract(tokenAddress, interfaceId),
-  );
+  return client.readContract(supportsInterfaceContract(tokenAddress, interfaceId));
 }
 
 // ── Write helpers ───────────────────────────────────────────
 
 export function writeConfidentialTransferContract(
   client: WalletClient,
-  tokenAddress: Address,
-  to: Address,
+  tokenAddress: Hex,
+  to: Hex,
   handle: Uint8Array,
   inputProof: Uint8Array,
 ) {
@@ -80,9 +73,9 @@ export function writeConfidentialTransferContract(
 
 export function writeConfidentialBatchTransferContract(
   client: WalletClient,
-  batcherAddress: Address,
-  tokenAddress: Address,
-  fromAddress: Address,
+  batcherAddress: Hex,
+  tokenAddress: Hex,
+  fromAddress: Hex,
   batchTransferData: BatchTransferData[],
   fees: bigint,
 ) {
@@ -101,9 +94,9 @@ export function writeConfidentialBatchTransferContract(
 
 export function writeUnwrapContract(
   client: WalletClient,
-  encryptedErc20: Address,
-  from: Address,
-  to: Address,
+  encryptedErc20: Hex,
+  from: Hex,
+  to: Hex,
   encryptedAmount: Uint8Array,
   inputProof: Uint8Array,
 ) {
@@ -116,10 +109,10 @@ export function writeUnwrapContract(
 
 export function writeUnwrapFromBalanceContract(
   client: WalletClient,
-  encryptedErc20: Address,
-  from: Address,
-  to: Address,
-  encryptedBalance: Address,
+  encryptedErc20: Hex,
+  from: Hex,
+  to: Hex,
+  encryptedBalance: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
@@ -130,27 +123,22 @@ export function writeUnwrapFromBalanceContract(
 
 export function writeFinalizeUnwrapContract(
   client: WalletClient,
-  wrapper: Address,
-  burntAmount: Address,
+  wrapper: Hex,
+  burntAmount: Hex,
   burntAmountCleartext: bigint,
-  decryptionProof: Address,
+  decryptionProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: client.account!,
-    ...finalizeUnwrapContract(
-      wrapper,
-      burntAmount,
-      burntAmountCleartext,
-      decryptionProof,
-    ),
+    ...finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
   });
 }
 
 export function writeSetOperatorContract(
   client: WalletClient,
-  tokenAddress: Address,
-  spender: Address,
+  tokenAddress: Hex,
+  spender: Hex,
   timestamp?: number,
 ) {
   return client.writeContract({
@@ -162,8 +150,8 @@ export function writeSetOperatorContract(
 
 export function writeWrapContract(
   client: WalletClient,
-  wrapperAddress: Address,
-  to: Address,
+  wrapperAddress: Hex,
+  to: Hex,
   amount: bigint,
 ) {
   return client.writeContract({
@@ -175,8 +163,8 @@ export function writeWrapContract(
 
 export function writeWrapETHContract(
   client: WalletClient,
-  wrapperAddress: Address,
-  to: Address,
+  wrapperAddress: Hex,
+  to: Hex,
   amount: bigint,
   value: bigint,
 ) {

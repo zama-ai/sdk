@@ -16,6 +16,7 @@ export function useConfidentialApprove(
   const token = useToken(config);
 
   return useMutation<Address, Error, ApproveParams, Address>({
+    mutationKey: ["confidentialApprove", config.tokenAddress],
     mutationFn: ({ spender, until }) => token.approve(spender, until),
     ...options,
   });

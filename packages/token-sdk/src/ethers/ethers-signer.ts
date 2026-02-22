@@ -1,4 +1,4 @@
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Hex } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, ContractCallConfig, TransactionReceipt } from "../token/token.types";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { ethers, type BrowserProvider, type Signer } from "ethers";
@@ -14,32 +14,32 @@ export class EthersSigner implements GenericSigner {
 
   constructor(providerOrSigner: BrowserProvider | Signer) {
     if ("getSigner" in providerOrSigner) {
-      this.signerPromise = (providerOrSigner as BrowserProvider).getSigner();
+      this.signerPromise = providerOrSigner.getSigner();
     } else {
       this.signerPromise = Promise.resolve(providerOrSigner);
     }
   }
 
-  async getAddress(): Promise<Address> {
+  async getAddress(): Promise<Hex> {
     const signer = await this.signerPromise;
-    return signer.getAddress() as unknown as Address;
+    return signer.getAddress() as unknown as Hex;
   }
 
-  async signTypedData(typedData: EIP712TypedData): Promise<Address> {
+  async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const signer = await this.signerPromise;
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
     const sig = await signer.signTypedData(domain, sigTypes, message);
-    return sig as Address;
+    return sig as Hex;
   }
 
-  async writeContract<C extends ContractCallConfig>(config: C): Promise<Address> {
+  async writeContract<C extends ContractCallConfig>(config: C): Promise<Hex> {
     const signer = await this.signerPromise;
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
     const tx = await contract[config.functionName](...config.args, {
       value: config.value,
     });
-    return tx.hash as Address;
+    return tx.hash as Hex;
   }
 
   async readContract<T, C extends ContractCallConfig>(config: C): Promise<T> {
@@ -48,7 +48,7 @@ export class EthersSigner implements GenericSigner {
     return contract[config.functionName](...config.args) as Promise<T>;
   }
 
-  async waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt> {
+  async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     const signer = await this.signerPromise;
     const provider = signer.provider;
     if (!provider) throw new TypeError("Signer has no provider");

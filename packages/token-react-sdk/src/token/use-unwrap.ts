@@ -21,6 +21,7 @@ export function useUnwrap(
   const token = useToken(config);
 
   return useMutation<Address, Error, UnwrapParams, Address>({
+    mutationKey: ["unwrap", config.tokenAddress],
     mutationFn: ({ amount }) => token.unwrap(amount),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {

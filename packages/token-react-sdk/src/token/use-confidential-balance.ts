@@ -52,5 +52,5 @@ export function useConfidentialBalance(
     ...balanceOptions,
   });
 
-  return balanceQuery;
+  return { ...balanceQuery, handleQuery };
 }

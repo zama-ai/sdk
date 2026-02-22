@@ -1,5 +1,5 @@
 import type {
-  Address,
+  Hex,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -21,7 +21,7 @@ export interface RelayerSDK {
 
   createEIP712(
     publicKey: string,
-    contractAddresses: Address[],
+    contractAddresses: Hex[],
     startTimestamp: number,
     durationDays?: number,
   ): Promise<EIP712TypedData>;
@@ -34,19 +34,15 @@ export interface RelayerSDK {
 
   createDelegatedUserDecryptEIP712(
     publicKey: string,
-    contractAddresses: Address[],
+    contractAddresses: Hex[],
     delegatorAddress: string,
     startTimestamp: number,
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type>;
 
-  delegatedUserDecrypt(
-    params: DelegatedUserDecryptParams,
-  ): Promise<Record<string, bigint>>;
+  delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>>;
 
-  requestZKProofVerification(
-    zkProof: ZKProofLike,
-  ): Promise<InputProofBytesType>;
+  requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
 
   getPublicKey(): Promise<{
     publicKeyId: string;

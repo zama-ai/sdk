@@ -1,6 +1,6 @@
 import type { GenericSigner, ContractCallConfig, TransactionReceipt } from "../token/token.types";
 import type { PublicClient, WalletClient } from "viem";
-import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { Hex, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { writeContract } from "viem/actions";
 
 /**
@@ -18,7 +18,7 @@ export class ViemSigner implements GenericSigner {
     this.publicClient = publicClient;
   }
 
-  async getAddress(): Promise<Address> {
+  async getAddress(): Promise<Hex> {
     const account = this.walletClient.account;
     if (!account) {
       throw new TypeError("Invalid address");
@@ -26,7 +26,7 @@ export class ViemSigner implements GenericSigner {
     return account.address;
   }
 
-  async signTypedData(typedData: EIP712TypedData): Promise<Address> {
+  async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     return this.walletClient.signTypedData({
       account: this.walletClient.account!,
       primaryType: Object.keys(typedData.types)[0],
@@ -34,9 +34,7 @@ export class ViemSigner implements GenericSigner {
     });
   }
 
-  async writeContract<C extends ContractCallConfig = ContractCallConfig>(
-    config: C,
-  ): Promise<Address> {
+  async writeContract<C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<Hex> {
     return this.walletClient.writeContract({
       chain: this.walletClient.chain,
       account: this.walletClient.account!,
@@ -48,7 +46,7 @@ export class ViemSigner implements GenericSigner {
     return this.publicClient.readContract(config) as Promise<T>;
   }
 
-  async waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt> {
+  async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     return this.publicClient.waitForTransactionReceipt({ hash });
   }
 }

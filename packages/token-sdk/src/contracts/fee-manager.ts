@@ -1,5 +1,5 @@
 import { FEE_MANAGER_ABI } from "../abi/fee-manager.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Hex } from "../relayer/relayer-sdk.types";
 
 /**
  * Returns the contract config to compute the wrap fee.
@@ -12,10 +12,10 @@ import type { Address } from "../relayer/relayer-sdk.types";
  * ```
  */
 export function getWrapFeeContract(
-  feeManagerAddress: Address,
+  feeManagerAddress: Hex,
   amount: bigint,
-  wrapFrom: Address,
-  wrapTo: Address,
+  wrapFrom: Hex,
+  wrapTo: Hex,
 ) {
   return {
     address: feeManagerAddress,
@@ -36,10 +36,10 @@ export function getWrapFeeContract(
  * ```
  */
 export function getUnwrapFeeContract(
-  feeManagerAddress: Address,
+  feeManagerAddress: Hex,
   amount: bigint,
-  unwrapFrom: Address,
-  unwrapTo: Address,
+  unwrapFrom: Hex,
+  unwrapTo: Hex,
 ) {
   return {
     address: feeManagerAddress,
@@ -59,7 +59,7 @@ export function getUnwrapFeeContract(
  * );
  * ```
  */
-export function getBatchTransferFeeContract(feeManagerAddress: Address) {
+export function getBatchTransferFeeContract(feeManagerAddress: Hex) {
   return {
     address: feeManagerAddress,
     abi: FEE_MANAGER_ABI,
@@ -78,7 +78,7 @@ export function getBatchTransferFeeContract(feeManagerAddress: Address) {
  * );
  * ```
  */
-export function getFeeRecipientContract(feeManagerAddress: Address) {
+export function getFeeRecipientContract(feeManagerAddress: Hex) {
   return {
     address: feeManagerAddress,
     abi: FEE_MANAGER_ABI,

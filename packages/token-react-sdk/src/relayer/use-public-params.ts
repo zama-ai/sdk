@@ -1,16 +1,20 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTokenSDK } from "../provider";
 
-type PublicParamsResult = {
+interface PublicParamsData {
   publicParams: Uint8Array;
   publicParamsId: string;
-} | null;
+}
 
-export function usePublicParams() {
+type PublicParamsResult = PublicParamsData | null;
+
+export function usePublicParams(bits: number) {
   const sdk = useTokenSDK();
-  return useMutation<PublicParamsResult, Error, number>({
-    mutationFn: (bits) => sdk.relayer.getPublicParams(bits),
+  return useQuery<PublicParamsResult, Error>({
+    queryKey: ["publicParams", bits],
+    queryFn: () => sdk.relayer.getPublicParams(bits),
+    staleTime: Infinity,
   });
 }

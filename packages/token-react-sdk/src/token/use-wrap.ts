@@ -23,6 +23,7 @@ export function useWrap(
   const token = useToken(config);
 
   return useMutation<Address, Error, WrapParams, Address>({
+    mutationKey: ["wrap", config.tokenAddress],
     mutationFn: async ({ amount, approvalStrategy, fees }) =>
       token.wrap(amount, { approvalStrategy, fees }),
     ...options,

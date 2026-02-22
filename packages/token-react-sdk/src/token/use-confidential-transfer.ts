@@ -22,6 +22,7 @@ export function useConfidentialTransfer(
   const token = useToken(config);
 
   return useMutation<Address, Error, TransferParams, Address>({
+    mutationKey: ["confidentialTransfer", config.tokenAddress],
     mutationFn: ({ to, amount }) => token.confidentialTransfer(to, amount),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
