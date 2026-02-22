@@ -5,12 +5,12 @@ import { MemoryStorage } from "../memory-storage";
 import type { GenericSigner } from "../token.types";
 import { TokenErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Hex } from "../../relayer/relayer-sdk.types";
+import type { Address } from "../../relayer/relayer-sdk.types";
 
-const TOKEN = "0xtoken" as Hex;
-const USER = "0xuser" as Hex;
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Hex;
-const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Hex;
+const TOKEN = "0xtoken" as Address;
+const USER = "0xuser" as Address;
+const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
+const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
 
 function createMockSdk() {
   return {
@@ -69,21 +69,24 @@ describe("ReadonlyToken", () => {
 
   describe("decryptHandles", () => {
     it("returns 0n for zero handles without hitting relayer", async () => {
-      const result = await token.decryptHandles([ZERO_HANDLE as Hex]);
+      const result = await token.decryptHandles([ZERO_HANDLE as Address]);
 
       expect(result.get(ZERO_HANDLE)).toBe(0n);
       expect(sdk.userDecrypt).not.toHaveBeenCalled();
     });
 
     it("returns 0n for 0x handle without hitting relayer", async () => {
-      const result = await token.decryptHandles(["0x" as Hex]);
+      const result = await token.decryptHandles(["0x" as Address]);
 
       expect(result.get("0x")).toBe(0n);
       expect(sdk.userDecrypt).not.toHaveBeenCalled();
     });
 
     it("decrypts non-zero handles in a single relayer call", async () => {
-      const result = await token.decryptHandles([VALID_HANDLE as Hex, VALID_HANDLE2 as Hex]);
+      const result = await token.decryptHandles([
+        VALID_HANDLE as Address,
+        VALID_HANDLE2 as Address,
+      ]);
 
       expect(result.get(VALID_HANDLE)).toBe(1000n);
       expect(result.get(VALID_HANDLE2)).toBe(2000n);
@@ -97,7 +100,7 @@ describe("ReadonlyToken", () => {
     });
 
     it("mixes zero and non-zero handles correctly", async () => {
-      const result = await token.decryptHandles([ZERO_HANDLE as Hex, VALID_HANDLE as Hex]);
+      const result = await token.decryptHandles([ZERO_HANDLE as Address, VALID_HANDLE as Address]);
 
       expect(result.get(ZERO_HANDLE)).toBe(0n);
       expect(result.get(VALID_HANDLE)).toBe(1000n);
@@ -118,8 +121,8 @@ describe("ReadonlyToken", () => {
     });
 
     it("uses provided owner as signerAddress", async () => {
-      const otherOwner = "0xother" as Hex;
-      await token.decryptHandles([VALID_HANDLE as Hex], otherOwner);
+      const otherOwner = "0xother" as Address;
+      await token.decryptHandles([VALID_HANDLE as Address], otherOwner);
 
       expect(sdk.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -129,7 +132,7 @@ describe("ReadonlyToken", () => {
     });
 
     it("defaults signerAddress to signer.getAddress()", async () => {
-      await token.decryptHandles([VALID_HANDLE as Hex]);
+      await token.decryptHandles([VALID_HANDLE as Address]);
 
       expect(sdk.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -139,10 +142,10 @@ describe("ReadonlyToken", () => {
     });
 
     it("returns 0n for handles not in decrypt result", async () => {
-      const unknownHandle = ("0x" + "ff".repeat(32)) as Hex;
+      const unknownHandle = ("0x" + "ff".repeat(32)) as Address;
       vi.mocked(sdk.userDecrypt).mockResolvedValueOnce({});
 
-      const result = await token.decryptHandles([unknownHandle as Hex]);
+      const result = await token.decryptHandles([unknownHandle as Address]);
 
       expect(result.get(unknownHandle)).toBe(0n);
     });
@@ -150,7 +153,7 @@ describe("ReadonlyToken", () => {
     it("throws TokenError on decryption failure", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
-      await expect(token.decryptHandles([VALID_HANDLE as Hex])).rejects.toMatchObject({
+      await expect(token.decryptHandles([VALID_HANDLE as Address])).rejects.toMatchObject({
         code: TokenErrorCode.DecryptionFailed,
         message: "Failed to decrypt handles",
       });
@@ -179,12 +182,12 @@ describe("ReadonlyToken", () => {
 
   describe("allowance", () => {
     it("reads underlying token then checks allowance", async () => {
-      const UNDERLYING = "0xunderlying" as Hex;
+      const UNDERLYING = "0xunderlying" as Address;
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(UNDERLYING) // underlying()
         .mockResolvedValueOnce(500n); // allowance()
 
-      const result = await token.allowance("0xwrapper" as Hex);
+      const result = await token.allowance("0xwrapper" as Address);
 
       expect(result).toBe(500n);
       expect(signer.readContract).toHaveBeenCalledTimes(2);

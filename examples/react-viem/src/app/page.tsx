@@ -8,11 +8,11 @@ import {
   useUnshield,
   useTokenMetadata,
 } from "@zama-fhe/token-react-sdk";
-import type { Hex } from "@zama-fhe/token-react-sdk";
+import type { Address } from "@zama-fhe/token-react-sdk";
 import { Providers } from "../providers";
 
-const TOKEN_ADDRESS = "0x..." as Hex; // Replace with your token address
-const WRAPPER_ADDRESS = "0x..." as Hex; // Replace with your wrapper address
+const TOKEN_ADDRESS = "0x..." as Address; // Replace with your token address
+const WRAPPER_ADDRESS = "0x..." as Address; // Replace with your wrapper address
 
 export default function Home() {
   return (
@@ -85,7 +85,7 @@ function TokenUI() {
           />
         </label>
         <button
-          onClick={() => transfer.mutate({ to: recipient as Hex, amount: parsedAmount })}
+          onClick={() => transfer.mutate({ to: recipient as Address, amount: parsedAmount })}
           disabled={transfer.isPending || !amount || !recipient}
           style={{ ...buttonStyle, marginLeft: 8 }}
         >

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 import { confidentialBalanceQueryKeys, confidentialHandleQueryKeys } from "./balance-query-keys";
 
@@ -20,15 +20,15 @@ const DEFAULT_HANDLE_REFETCH_INTERVAL = 10_000;
  * decrypts when the handle changes (new balance).
  */
 export function useConfidentialBalance(
-  tokenAddress: Hex,
-  owner?: Hex,
+  tokenAddress: Address,
+  owner?: Address,
   options?: UseConfidentialBalanceOptions,
 ) {
   const token = useReadonlyToken(tokenAddress);
   const { handleRefetchInterval, ...balanceOptions } = options ?? {};
 
   // Phase 1: Poll the encrypted handle (cheap RPC read, no signing)
-  const handleQuery = useQuery<Hex, Error>({
+  const handleQuery = useQuery<Address, Error>({
     queryKey: confidentialHandleQueryKeys.owner(tokenAddress, owner ?? ""),
     queryFn: async () => {
       const ownerAddress = owner ?? (await token.signer.getAddress());

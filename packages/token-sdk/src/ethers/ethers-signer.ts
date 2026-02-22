@@ -1,4 +1,4 @@
-import type { Hex } from "../relayer/relayer-sdk.types";
+import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, ContractCallConfig, TransactionReceipt } from "../token/token.types";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { ethers, type BrowserProvider, type Signer } from "ethers";
@@ -20,26 +20,26 @@ export class EthersSigner implements GenericSigner {
     }
   }
 
-  async getAddress(): Promise<Hex> {
+  async getAddress(): Promise<Address> {
     const signer = await this.signerPromise;
-    return signer.getAddress() as unknown as Hex;
+    return signer.getAddress() as unknown as Address;
   }
 
-  async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
+  async signTypedData(typedData: EIP712TypedData): Promise<Address> {
     const signer = await this.signerPromise;
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
     const sig = await signer.signTypedData(domain, sigTypes, message);
-    return sig as Hex;
+    return sig as Address;
   }
 
-  async writeContract<C extends ContractCallConfig>(config: C): Promise<Hex> {
+  async writeContract<C extends ContractCallConfig>(config: C): Promise<Address> {
     const signer = await this.signerPromise;
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
     const overrides: Record<string, unknown> = {};
     if (config.value !== undefined) overrides.value = config.value;
     const tx = await contract[config.functionName](...config.args, overrides);
-    return tx.hash as Hex;
+    return tx.hash as Address;
   }
 
   async readContract<T, C extends ContractCallConfig>(config: C): Promise<T> {
@@ -48,7 +48,7 @@ export class EthersSigner implements GenericSigner {
     return contract[config.functionName](...config.args) as Promise<T>;
   }
 
-  async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
+  async waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt> {
     const signer = await this.signerPromise;
     const provider = signer.provider;
     if (!provider) throw new TypeError("Signer has no provider");

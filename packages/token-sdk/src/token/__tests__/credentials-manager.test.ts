@@ -4,7 +4,7 @@ import { MemoryStorage } from "../memory-storage";
 import type { GenericSigner } from "../token.types";
 import { TokenError, TokenErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Hex } from "../../relayer/relayer-sdk.types";
+import type { Address } from "../../relayer/relayer-sdk.types";
 
 function createMockSdk() {
   return {
@@ -31,7 +31,7 @@ function createMockSdk() {
   } as unknown as RelayerSDK;
 }
 
-function createMockSigner(address: Hex = "0xuser" as Hex): GenericSigner {
+function createMockSigner(address: Address = "0xuser" as Address): GenericSigner {
   return {
     getAddress: vi.fn().mockResolvedValue(address),
     signTypedData: vi.fn().mockResolvedValue("0xsig789"),
@@ -74,7 +74,7 @@ describe("CredentialsManager", () => {
   });
 
   it("generates new credentials on first call", async () => {
-    const creds = await manager.get("0xtoken" as Hex);
+    const creds = await manager.get("0xtoken" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
     expect(sdk.createEIP712).toHaveBeenCalledOnce();
@@ -85,22 +85,22 @@ describe("CredentialsManager", () => {
   });
 
   it("returns cached credentials on second call with same contracts", async () => {
-    await manager.get("0xtoken" as Hex);
-    await manager.get("0xtoken" as Hex);
+    await manager.get("0xtoken" as Address);
+    await manager.get("0xtoken" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
   });
 
   it("re-signs when new contract not in signed list", async () => {
-    await manager.get("0xtoken1" as Hex);
-    await manager.getAll(["0xtoken1" as Hex, "0xtoken2" as Hex]);
+    await manager.get("0xtoken1" as Address);
+    await manager.getAll(["0xtoken1" as Address, "0xtoken2" as Address]);
 
     expect(sdk.generateKeypair).toHaveBeenCalledTimes(2);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
   });
 
   it("persists credentials to store with hashed key", async () => {
-    await manager.get("0xtoken" as Hex);
+    await manager.get("0xtoken" as Address);
 
     const stored = store.getItem(storeKey);
     expect(stored).not.toBeNull();
@@ -109,7 +109,7 @@ describe("CredentialsManager", () => {
   });
 
   it("does not store the full address as key", async () => {
-    await manager.get("0xtoken" as Hex);
+    await manager.get("0xtoken" as Address);
 
     const rawKey = (await signer.getAddress()).toLowerCase();
     const stored = store.getItem(rawKey);
@@ -117,7 +117,7 @@ describe("CredentialsManager", () => {
   });
 
   it("loads credentials from store on new instance", async () => {
-    await manager.get("0xtoken" as Hex);
+    await manager.get("0xtoken" as Address);
 
     const manager2 = new CredentialsManager({
       sdk: sdk as unknown as RelayerSDK,
@@ -125,14 +125,14 @@ describe("CredentialsManager", () => {
       storage: store,
       durationDays: 7,
     });
-    await manager2.get("0xtoken" as Hex);
+    await manager2.get("0xtoken" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
   });
 
   it("invalidates expired credentials", async () => {
     // First call creates credentials — which get stored under the hashed key
-    await manager.get("0xtoken" as Hex);
+    await manager.get("0xtoken" as Address);
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
 
     // Tamper the stored data to simulate expiration
@@ -148,14 +148,14 @@ describe("CredentialsManager", () => {
       storage: store,
       durationDays: 7,
     });
-    const creds = await manager2.get("0xtoken" as Hex);
+    const creds = await manager2.get("0xtoken" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledTimes(2);
     expect(creds.publicKey).toBe("0xpub123");
   });
 
   it("clears credentials", async () => {
-    await manager.get("0xtoken" as Hex);
+    await manager.get("0xtoken" as Address);
     await manager.clear();
 
     const stored = store.getItem(storeKey);
@@ -165,14 +165,14 @@ describe("CredentialsManager", () => {
   it("throws SigningRejected when user rejects signature (rejected)", async () => {
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User rejected the request"));
 
-    await expect(manager.get("0xtoken" as Hex)).rejects.toThrow(
+    await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
         code: TokenErrorCode.SigningRejected,
       }),
     );
 
     try {
-      await manager.get("0xtoken" as Hex);
+      await manager.get("0xtoken" as Address);
     } catch (e) {
       expect(e).toBeInstanceOf(TokenError);
     }
@@ -181,14 +181,14 @@ describe("CredentialsManager", () => {
   it("throws SigningRejected when user denies signature (denied)", async () => {
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User denied transaction"));
 
-    await expect(manager.get("0xtoken" as Hex)).rejects.toThrow(
+    await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
         code: TokenErrorCode.SigningRejected,
       }),
     );
 
     try {
-      await manager.get("0xtoken" as Hex);
+      await manager.get("0xtoken" as Address);
     } catch (e) {
       expect(e).toBeInstanceOf(TokenError);
     }
@@ -197,14 +197,14 @@ describe("CredentialsManager", () => {
   it("throws SigningFailed for other signing errors", async () => {
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("network timeout"));
 
-    await expect(manager.get("0xtoken" as Hex)).rejects.toThrow(
+    await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
         code: TokenErrorCode.SigningFailed,
       }),
     );
 
     try {
-      await manager.get("0xtoken" as Hex);
+      await manager.get("0xtoken" as Address);
     } catch (e) {
       expect(e).toBeInstanceOf(TokenError);
     }
@@ -213,14 +213,14 @@ describe("CredentialsManager", () => {
   it("throws SigningFailed for non-Error exceptions", async () => {
     vi.mocked(signer.signTypedData).mockRejectedValue("unexpected");
 
-    await expect(manager.get("0xtoken" as Hex)).rejects.toThrow(
+    await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
         code: TokenErrorCode.SigningFailed,
       }),
     );
 
     try {
-      await manager.get("0xtoken" as Hex);
+      await manager.get("0xtoken" as Address);
     } catch (e) {
       expect(e).toBeInstanceOf(TokenError);
       expect((e as TokenError).cause).toBeUndefined();

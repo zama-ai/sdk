@@ -211,7 +211,7 @@ function useTokenSDK(): TokenSDK;
 Returns a `Token` instance for a given token address. The encrypted ERC-20 contract IS the wrapper, so `wrapperAddress` defaults to `tokenAddress`. Pass it only if they differ. Memoized — same config returns the same instance.
 
 ```ts
-function useToken(config: { tokenAddress: Hex; wrapperAddress?: Hex }): Token;
+function useToken(config: { tokenAddress: Address; wrapperAddress?: Address }): Token;
 ```
 
 #### `useReadonlyToken`
@@ -219,7 +219,7 @@ function useToken(config: { tokenAddress: Hex; wrapperAddress?: Hex }): Token;
 Returns a `ReadonlyToken` instance for a given token address (no wrapper needed). Memoized.
 
 ```ts
-function useReadonlyToken(tokenAddress: Hex): ReadonlyToken;
+function useReadonlyToken(tokenAddress: Address): ReadonlyToken;
 ```
 
 ### Balance Hooks
@@ -230,8 +230,8 @@ Single-token balance with automatic decryption. Uses two-phase polling: polls th
 
 ```ts
 function useConfidentialBalance(
-  tokenAddress: Hex,
-  owner?: Hex, // defaults to connected wallet
+  tokenAddress: Address,
+  owner?: Address, // defaults to connected wallet
   options?: UseConfidentialBalanceOptions,
 ): UseQueryResult<bigint, Error>;
 ```
@@ -260,16 +260,16 @@ Multi-token batch balance. Same two-phase polling pattern.
 
 ```ts
 function useConfidentialBalances(
-  tokenAddresses: Hex[],
-  owner?: Hex,
+  tokenAddresses: Address[],
+  owner?: Address,
   options?: UseConfidentialBalancesOptions,
-): UseQueryResult<Map<Hex, bigint>, Error>;
+): UseQueryResult<Map<Address, bigint>, Error>;
 ```
 
 ```tsx
 const { data: balances } = useConfidentialBalances(["0xTokenA", "0xTokenB", "0xTokenC"]);
 
-// balances is a Map<Hex, bigint>
+// balances is a Map<Address, bigint>
 const tokenABalance = balances?.get("0xTokenA");
 ```
 
@@ -280,7 +280,7 @@ const tokenABalance = balances?.get("0xTokenA");
 Pre-authorize FHE decrypt credentials for a list of token addresses with a single wallet signature. Call this early (e.g. after loading the token list) so that subsequent individual decrypt operations reuse cached credentials without prompting the wallet again.
 
 ```ts
-function useAuthorizeAll(): UseMutationResult<void, Error, Hex[]>;
+function useAuthorizeAll(): UseMutationResult<void, Error, Address[]>;
 ```
 
 ```tsx
@@ -302,11 +302,11 @@ Encrypted transfer. Encrypts the amount and calls the contract. Automatically in
 ```ts
 function useConfidentialTransfer(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, ConfidentialTransferParams>,
-): UseMutationResult<Hex, Error, ConfidentialTransferParams>;
+  options?: UseMutationOptions<Address, Error, ConfidentialTransferParams>,
+): UseMutationResult<Address, Error, ConfidentialTransferParams>;
 
 interface ConfidentialTransferParams {
-  to: Hex;
+  to: Address;
   amount: bigint;
 }
 ```
@@ -326,12 +326,12 @@ Operator transfer on behalf of another address.
 ```ts
 function useConfidentialTransferFrom(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, ConfidentialTransferFromParams>,
-): UseMutationResult<Hex, Error, ConfidentialTransferFromParams>;
+  options?: UseMutationOptions<Address, Error, ConfidentialTransferFromParams>,
+): UseMutationResult<Address, Error, ConfidentialTransferFromParams>;
 
 interface ConfidentialTransferFromParams {
-  from: Hex;
-  to: Hex;
+  from: Address;
+  to: Address;
   amount: bigint;
 }
 ```
@@ -345,8 +345,8 @@ Shield (wrap) public ERC-20 tokens into confidential tokens. Handles ERC-20 appr
 ```ts
 function useWrap(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, WrapParams>,
-): UseMutationResult<Hex, Error, WrapParams>;
+  options?: UseMutationOptions<Address, Error, WrapParams>,
+): UseMutationResult<Address, Error, WrapParams>;
 
 interface WrapParams {
   amount: bigint;
@@ -371,8 +371,8 @@ Shield (wrap) native ETH into confidential tokens. Use when the underlying token
 ```ts
 function useWrapETH(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, WrapETHParams>,
-): UseMutationResult<Hex, Error, WrapETHParams>;
+  options?: UseMutationOptions<Address, Error, WrapETHParams>,
+): UseMutationResult<Address, Error, WrapETHParams>;
 
 interface WrapETHParams {
   amount: bigint;
@@ -391,8 +391,8 @@ Unshield a specific amount. Handles the entire unwrap + finalize flow.
 ```ts
 function useUnshield(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, UnshieldParams>,
-): UseMutationResult<Hex, Error, UnshieldParams>;
+  options?: UseMutationOptions<Address, Error, UnshieldParams>,
+): UseMutationResult<Address, Error, UnshieldParams>;
 
 interface UnshieldParams {
   amount: bigint;
@@ -414,8 +414,8 @@ Unshield the entire balance. Handles the entire unwrap + finalize flow.
 ```ts
 function useUnshieldAll(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, void>,
-): UseMutationResult<Hex, Error, void>;
+  options?: UseMutationOptions<Address, Error, void>,
+): UseMutationResult<Address, Error, void>;
 ```
 
 ```tsx
@@ -437,8 +437,8 @@ Request unwrap for a specific amount (requires manual finalization via `useFinal
 ```ts
 function useUnwrap(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, UnwrapParams>,
-): UseMutationResult<Hex, Error, UnwrapParams>;
+  options?: UseMutationOptions<Address, Error, UnwrapParams>,
+): UseMutationResult<Address, Error, UnwrapParams>;
 
 interface UnwrapParams {
   amount: bigint;
@@ -452,8 +452,8 @@ Request unwrap for the entire balance (requires manual finalization).
 ```ts
 function useUnwrapAll(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, void>,
-): UseMutationResult<Hex, Error, void>;
+  options?: UseMutationOptions<Address, Error, void>,
+): UseMutationResult<Address, Error, void>;
 ```
 
 #### `useFinalizeUnwrap`
@@ -463,11 +463,11 @@ Complete an unwrap by providing the decryption proof.
 ```ts
 function useFinalizeUnwrap(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, FinalizeUnwrapParams>,
-): UseMutationResult<Hex, Error, FinalizeUnwrapParams>;
+  options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams>,
+): UseMutationResult<Address, Error, FinalizeUnwrapParams>;
 
 interface FinalizeUnwrapParams {
-  burnAmountHandle: Hex;
+  burnAmountHandle: Address;
 }
 ```
 
@@ -480,11 +480,11 @@ Set operator approval for the confidential token.
 ```ts
 function useConfidentialApprove(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, ConfidentialApproveParams>,
-): UseMutationResult<Hex, Error, ConfidentialApproveParams>;
+  options?: UseMutationOptions<Address, Error, ConfidentialApproveParams>,
+): UseMutationResult<Address, Error, ConfidentialApproveParams>;
 
 interface ConfidentialApproveParams {
-  spender: Hex;
+  spender: Address;
   until?: number; // Unix timestamp, defaults to now + 1 hour
 }
 ```
@@ -496,7 +496,7 @@ Check if a spender is an approved operator. Enabled only when `spender` is defin
 ```ts
 function useConfidentialIsApproved(
   config: UseTokenConfig,
-  spender: Hex | undefined,
+  spender: Address | undefined,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<boolean, Error>;
 ```
@@ -512,8 +512,8 @@ function useUnderlyingAllowance(
 ): UseQueryResult<bigint, Error>;
 
 interface UseUnderlyingAllowanceConfig {
-  tokenAddress: Hex;
-  wrapperAddress: Hex;
+  tokenAddress: Address;
+  wrapperAddress: Address;
 }
 ```
 
@@ -526,12 +526,12 @@ Find the wrapper contract for a given token via the deployment coordinator. Enab
 ```ts
 function useWrapperDiscovery(
   config: UseWrapperDiscoveryConfig,
-  options?: Omit<UseQueryOptions<Hex | null, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<Hex | null, Error>;
+  options?: Omit<UseQueryOptions<Address | null, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<Address | null, Error>;
 
 interface UseWrapperDiscoveryConfig {
-  tokenAddress: Hex;
-  coordinatorAddress: Hex | undefined;
+  tokenAddress: Address;
+  coordinatorAddress: Address | undefined;
 }
 ```
 
@@ -541,7 +541,7 @@ Fetch token name, symbol, and decimals in parallel. Cached indefinitely.
 
 ```ts
 function useTokenMetadata(
-  tokenAddress: Hex,
+  tokenAddress: Address,
   options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<TokenMetadata, Error>;
 
@@ -567,8 +567,8 @@ Parse raw event logs into a classified, optionally decrypted activity feed.
 function useActivityFeed(config: UseActivityFeedConfig): UseQueryResult<ActivityItem[], Error>;
 
 interface UseActivityFeedConfig {
-  tokenAddress: Hex;
-  userAddress: Hex | undefined;
+  tokenAddress: Address;
+  userAddress: Address | undefined;
   logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
   decrypt?: boolean; // default: true — batch-decrypt encrypted amounts
 }
@@ -756,7 +756,7 @@ All public exports from `@zama-fhe/token-sdk` are re-exported from the main entr
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
-**Types:** `Hex`, `TokenSDKConfig`, `TokenConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`.
+**Types:** `Address`, `TokenSDKConfig`, `TokenConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`.
 
 **Errors:** `TokenError`, `TokenErrorCode`.
 

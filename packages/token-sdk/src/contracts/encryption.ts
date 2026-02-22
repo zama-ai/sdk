@@ -1,5 +1,5 @@
 import { ENCRYPTION_ABI } from "../abi/encryption.abi";
-import type { Hex } from "../relayer/relayer-sdk.types";
+import type { Address } from "../relayer/relayer-sdk.types";
 import { toHex } from "../utils";
 
 /**
@@ -12,7 +12,7 @@ import { toHex } from "../utils";
  * );
  * ```
  */
-export function confidentialBalanceOfContract(tokenAddress: Hex, userAddress: Hex) {
+export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address) {
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -32,8 +32,8 @@ export function confidentialBalanceOfContract(tokenAddress: Hex, userAddress: He
  * ```
  */
 export function confidentialTransferContract(
-  encryptedErc20: Hex,
-  to: Hex,
+  encryptedErc20: Address,
+  to: Address,
   handle: Uint8Array,
   inputProof: Uint8Array,
 ) {
@@ -56,9 +56,9 @@ export function confidentialTransferContract(
  * ```
  */
 export function confidentialTransferFromContract(
-  encryptedErc20: Hex,
-  from: Hex,
-  to: Hex,
+  encryptedErc20: Address,
+  from: Address,
+  to: Address,
   handle: Uint8Array,
   inputProof: Uint8Array,
 ) {
@@ -80,7 +80,7 @@ export function confidentialTransferFromContract(
  * );
  * ```
  */
-export function isOperatorContract(tokenAddress: Hex, holder: Hex, spender: Hex) {
+export function isOperatorContract(tokenAddress: Address, holder: Address, spender: Address) {
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -100,7 +100,7 @@ export function isOperatorContract(tokenAddress: Hex, holder: Hex, spender: Hex)
  * );
  * ```
  */
-export function setOperatorContract(tokenAddress: Hex, spender: Hex, timestamp?: number) {
+export function setOperatorContract(tokenAddress: Address, spender: Address, timestamp?: number) {
   const until = timestamp ?? Math.floor(Date.now() / 1000) + 3600;
   return {
     address: tokenAddress,
@@ -121,9 +121,9 @@ export function setOperatorContract(tokenAddress: Hex, spender: Hex, timestamp?:
  * ```
  */
 export function unwrapContract(
-  encryptedErc20: Hex,
-  from: Hex,
-  to: Hex,
+  encryptedErc20: Address,
+  from: Address,
+  to: Address,
   encryptedAmount: Uint8Array,
   inputProof: Uint8Array,
 ) {
@@ -146,10 +146,10 @@ export function unwrapContract(
  * ```
  */
 export function unwrapFromBalanceContract(
-  encryptedErc20: Hex,
-  from: Hex,
-  to: Hex,
-  encryptedBalance: Hex,
+  encryptedErc20: Address,
+  from: Address,
+  to: Address,
+  encryptedBalance: Address,
 ) {
   return {
     address: encryptedErc20,
@@ -169,7 +169,7 @@ export function unwrapFromBalanceContract(
  * );
  * ```
  */
-export function confidentialTotalSupplyContract(tokenAddress: Hex) {
+export function confidentialTotalSupplyContract(tokenAddress: Address) {
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -188,7 +188,7 @@ export function confidentialTotalSupplyContract(tokenAddress: Hex) {
  * );
  * ```
  */
-export function totalSupplyContract(tokenAddress: Hex) {
+export function totalSupplyContract(tokenAddress: Address) {
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -205,7 +205,7 @@ export function totalSupplyContract(tokenAddress: Hex) {
  * const rate = await signer.readContract(rateContract(tokenAddress));
  * ```
  */
-export function rateContract(tokenAddress: Hex) {
+export function rateContract(tokenAddress: Address) {
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -224,7 +224,7 @@ export function rateContract(tokenAddress: Hex) {
  * );
  * ```
  */
-export function deploymentCoordinatorContract(tokenAddress: Hex) {
+export function deploymentCoordinatorContract(tokenAddress: Address) {
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -243,7 +243,11 @@ export function deploymentCoordinatorContract(tokenAddress: Hex) {
  * );
  * ```
  */
-export function isFinalizeUnwrapOperatorContract(tokenAddress: Hex, holder: Hex, operator: Hex) {
+export function isFinalizeUnwrapOperatorContract(
+  tokenAddress: Address,
+  holder: Address,
+  operator: Address,
+) {
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -264,8 +268,8 @@ export function isFinalizeUnwrapOperatorContract(tokenAddress: Hex, holder: Hex,
  * ```
  */
 export function setFinalizeUnwrapOperatorContract(
-  tokenAddress: Hex,
-  operator: Hex,
+  tokenAddress: Address,
+  operator: Address,
   timestamp?: number,
 ) {
   const until = timestamp ?? Math.floor(Date.now() / 1000) + 3600;

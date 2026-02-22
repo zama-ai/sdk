@@ -1,5 +1,5 @@
 import type { PublicClient, WalletClient } from "viem";
-import type { Hex } from "../relayer/relayer-sdk.types";
+import type { Address } from "../relayer/relayer-sdk.types";
 import type { BatchTransferData } from "../contracts";
 import {
   confidentialBalanceOfContract,
@@ -30,36 +30,36 @@ function requireAccount(client: WalletClient) {
 
 export function readConfidentialBalanceOfContract(
   client: PublicClient,
-  tokenAddress: Hex,
-  userAddress: Hex,
+  tokenAddress: Address,
+  userAddress: Address,
 ) {
   return client.readContract(confidentialBalanceOfContract(tokenAddress, userAddress));
 }
 
 export function readWrapperForTokenContract(
   client: PublicClient,
-  coordinator: Hex,
-  tokenAddress: Hex,
+  coordinator: Address,
+  tokenAddress: Address,
 ) {
   return client.readContract(getWrapperContract(coordinator, tokenAddress));
 }
 
-export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Hex) {
+export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address) {
   return client.readContract(underlyingContract(wrapperAddress));
 }
 
 export function readWrapperExistsContract(
   client: PublicClient,
-  coordinator: Hex,
-  tokenAddress: Hex,
+  coordinator: Address,
+  tokenAddress: Address,
 ) {
   return client.readContract(wrapperExistsContract(coordinator, tokenAddress));
 }
 
 export function readSupportsInterfaceContract(
   client: PublicClient,
-  tokenAddress: Hex,
-  interfaceId: Hex,
+  tokenAddress: Address,
+  interfaceId: Address,
 ) {
   return client.readContract(supportsInterfaceContract(tokenAddress, interfaceId));
 }
@@ -68,8 +68,8 @@ export function readSupportsInterfaceContract(
 
 export function writeConfidentialTransferContract(
   client: WalletClient,
-  tokenAddress: Hex,
-  to: Hex,
+  tokenAddress: Address,
+  to: Address,
   handle: Uint8Array,
   inputProof: Uint8Array,
 ) {
@@ -82,9 +82,9 @@ export function writeConfidentialTransferContract(
 
 export function writeConfidentialBatchTransferContract(
   client: WalletClient,
-  batcherAddress: Hex,
-  tokenAddress: Hex,
-  fromAddress: Hex,
+  batcherAddress: Address,
+  tokenAddress: Address,
+  fromAddress: Address,
   batchTransferData: BatchTransferData[],
   fees: bigint,
 ) {
@@ -103,9 +103,9 @@ export function writeConfidentialBatchTransferContract(
 
 export function writeUnwrapContract(
   client: WalletClient,
-  encryptedErc20: Hex,
-  from: Hex,
-  to: Hex,
+  encryptedErc20: Address,
+  from: Address,
+  to: Address,
   encryptedAmount: Uint8Array,
   inputProof: Uint8Array,
 ) {
@@ -118,10 +118,10 @@ export function writeUnwrapContract(
 
 export function writeUnwrapFromBalanceContract(
   client: WalletClient,
-  encryptedErc20: Hex,
-  from: Hex,
-  to: Hex,
-  encryptedBalance: Hex,
+  encryptedErc20: Address,
+  from: Address,
+  to: Address,
+  encryptedBalance: Address,
 ) {
   return client.writeContract({
     chain: client.chain,
@@ -132,10 +132,10 @@ export function writeUnwrapFromBalanceContract(
 
 export function writeFinalizeUnwrapContract(
   client: WalletClient,
-  wrapper: Hex,
-  burntAmount: Hex,
+  wrapper: Address,
+  burntAmount: Address,
   burntAmountCleartext: bigint,
-  decryptionProof: Hex,
+  decryptionProof: Address,
 ) {
   return client.writeContract({
     chain: client.chain,
@@ -146,8 +146,8 @@ export function writeFinalizeUnwrapContract(
 
 export function writeSetOperatorContract(
   client: WalletClient,
-  tokenAddress: Hex,
-  spender: Hex,
+  tokenAddress: Address,
+  spender: Address,
   timestamp?: number,
 ) {
   return client.writeContract({
@@ -159,8 +159,8 @@ export function writeSetOperatorContract(
 
 export function writeWrapContract(
   client: WalletClient,
-  wrapperAddress: Hex,
-  to: Hex,
+  wrapperAddress: Address,
+  to: Address,
   amount: bigint,
 ) {
   return client.writeContract({
@@ -172,8 +172,8 @@ export function writeWrapContract(
 
 export function writeWrapETHContract(
   client: WalletClient,
-  wrapperAddress: Hex,
-  to: Hex,
+  wrapperAddress: Address,
+  to: Address,
   amount: bigint,
   value: bigint,
 ) {

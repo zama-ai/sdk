@@ -1,12 +1,12 @@
 "use client";
 
-import type { Hex, KmsDelegatedUserDecryptEIP712Type } from "@zama-fhe/token-sdk";
+import type { Address, KmsDelegatedUserDecryptEIP712Type } from "@zama-fhe/token-sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useTokenSDK } from "../provider";
 
 export interface CreateDelegatedUserDecryptEIP712Params {
   publicKey: string;
-  contractAddresses: Hex[];
+  contractAddresses: Address[];
   delegatorAddress: string;
   startTimestamp: number;
   durationDays?: number;

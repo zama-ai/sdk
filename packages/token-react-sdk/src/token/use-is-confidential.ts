@@ -7,7 +7,7 @@ import {
   type UseQueryResult,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 export const isConfidentialQueryKeys = {
@@ -21,7 +21,7 @@ export const isWrapperQueryKeys = {
 } as const;
 
 export function useIsConfidential(
-  tokenAddress: Hex,
+  tokenAddress: Address,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<boolean, Error> {
   const token = useReadonlyToken(tokenAddress);
@@ -35,7 +35,7 @@ export function useIsConfidential(
 }
 
 export function useIsConfidentialSuspense(
-  tokenAddress: Hex,
+  tokenAddress: Address,
 ): UseSuspenseQueryResult<boolean, Error> {
   const token = useReadonlyToken(tokenAddress);
 
@@ -47,7 +47,7 @@ export function useIsConfidentialSuspense(
 }
 
 export function useIsWrapper(
-  tokenAddress: Hex,
+  tokenAddress: Address,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<boolean, Error> {
   const token = useReadonlyToken(tokenAddress);
@@ -60,7 +60,9 @@ export function useIsWrapper(
   });
 }
 
-export function useIsWrapperSuspense(tokenAddress: Hex): UseSuspenseQueryResult<boolean, Error> {
+export function useIsWrapperSuspense(
+  tokenAddress: Address,
+): UseSuspenseQueryResult<boolean, Error> {
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<boolean, Error>({

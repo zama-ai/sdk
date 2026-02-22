@@ -141,7 +141,7 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `balanceOf(owner?)`                       | Decrypt and return the plaintext balance.                                                                                                                                                                    |
 | `decryptHandles(handles, owner?)`         | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
 
-All write methods return the transaction hash (`Hex`).
+All write methods return the transaction hash (`Address`).
 
 ### ReadonlyToken
 
@@ -257,11 +257,11 @@ The `GenericSigner` interface has five methods. Any Web3 library can back it.
 
 ```ts
 interface GenericSigner {
-  getAddress(): Promise<Hex>;
-  signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-  writeContract(config: ContractCallConfig): Promise<Hex>;
+  getAddress(): Promise<Address>;
+  signTypedData(typedData: EIP712TypedData): Promise<Address>;
+  writeContract(config: ContractCallConfig): Promise<Address>;
   readContract(config: ContractCallConfig): Promise<unknown>;
-  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+  waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt>;
 }
 ```
 
@@ -291,7 +291,7 @@ Every function returns a `ContractCallConfig` object (address, ABI, function nam
 
 ```ts
 interface ContractCallConfig {
-  readonly address: Hex;
+  readonly address: Address;
   readonly abi: readonly unknown[];
   readonly functionName: string;
   readonly args: readonly unknown[];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -17,11 +17,11 @@ export interface WrapETHParams {
 
 export function useWrapETH(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, WrapETHParams, Hex>,
+  options?: UseMutationOptions<Address, Error, WrapETHParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Hex, Error, WrapETHParams, Hex>({
+  return useMutation<Address, Error, WrapETHParams, Address>({
     mutationKey: ["wrapETH", config.tokenAddress],
     mutationFn: ({ amount, value }) => token.wrapETH(amount, value),
     ...options,

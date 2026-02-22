@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import { useToken, type UseTokenConfig } from "./use-token";
 
 export const confidentialIsApprovedQueryKeys = {
@@ -13,21 +13,21 @@ export const confidentialIsApprovedQueryKeys = {
 
 export function useConfidentialIsApproved(
   config: UseTokenConfig,
-  spender: Hex | undefined,
+  spender: Address | undefined,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ) {
   const token = useToken(config);
 
   return useQuery<boolean, Error>({
     queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, spender ?? ""),
-    queryFn: () => token.isApproved(spender as Hex),
+    queryFn: () => token.isApproved(spender as Address),
     enabled: !!spender,
     staleTime: 30_000,
     ...options,
   });
 }
 
-export function useConfidentialIsApprovedSuspense(config: UseTokenConfig, spender: Hex) {
+export function useConfidentialIsApprovedSuspense(config: UseTokenConfig, spender: Address) {
   const token = useToken(config);
 
   return useSuspenseQuery<boolean, Error>({

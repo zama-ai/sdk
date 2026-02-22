@@ -1,5 +1,5 @@
 import type {
-  Hex,
+  Address,
   FhevmInstanceConfig,
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
@@ -57,8 +57,8 @@ export interface EncryptRequest extends BaseRequest {
   type: "ENCRYPT";
   payload: {
     values: bigint[];
-    contractAddress: Hex;
-    userAddress: Hex;
+    contractAddress: Address;
+    userAddress: Address;
   };
 }
 
@@ -66,12 +66,12 @@ export interface UserDecryptRequest extends BaseRequest {
   type: "USER_DECRYPT";
   payload: {
     handles: string[];
-    contractAddress: Hex;
-    signedContractAddresses: Hex[];
+    contractAddress: Address;
+    signedContractAddresses: Address[];
     privateKey: string;
     publicKey: string;
     signature: string;
-    signerAddress: Hex;
+    signerAddress: Address;
     startTimestamp: number;
     durationDays: number;
   };
@@ -93,7 +93,7 @@ export interface CreateEIP712Request extends BaseRequest {
   type: "CREATE_EIP712";
   payload: {
     publicKey: string;
-    contractAddresses: Hex[];
+    contractAddresses: Address[];
     startTimestamp: number;
     durationDays: number;
   };
@@ -103,7 +103,7 @@ export interface CreateDelegatedEIP712Request extends BaseRequest {
   type: "CREATE_DELEGATED_EIP712";
   payload: {
     publicKey: string;
-    contractAddresses: Hex[];
+    contractAddresses: Address[];
     delegatorAddress: string;
     startTimestamp: number;
     durationDays: number;
@@ -114,13 +114,13 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
   type: "DELEGATED_USER_DECRYPT";
   payload: {
     handles: string[];
-    contractAddress: Hex;
-    signedContractAddresses: Hex[];
+    contractAddress: Address;
+    signedContractAddresses: Address[];
     privateKey: string;
     publicKey: string;
     signature: string;
-    delegatorAddress: Hex;
-    delegateAddress: Hex;
+    delegatorAddress: Address;
+    delegateAddress: Address;
     startTimestamp: number;
     durationDays: number;
   };
@@ -205,7 +205,7 @@ export interface UserDecryptResponseData {
 export interface PublicDecryptResponseData {
   clearValues: Record<string, bigint>;
   abiEncodedClearValues: string;
-  decryptionProof: Hex;
+  decryptionProof: Address;
 }
 
 export interface GenerateKeypairResponseData {
@@ -218,7 +218,7 @@ export interface CreateEIP712ResponseData {
     name: string;
     version: string;
     chainId: number;
-    verifyingContract: Hex;
+    verifyingContract: Address;
   };
   types: {
     UserDecryptRequestVerification: Array<{

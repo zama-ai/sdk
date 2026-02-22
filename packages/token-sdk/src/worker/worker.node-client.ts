@@ -1,6 +1,6 @@
 import { Worker } from "node:worker_threads";
 import { randomUUID } from "node:crypto";
-import type { Hex, FhevmInstanceConfig, ZKProofLike } from "../relayer/relayer-sdk.types";
+import type { Address, FhevmInstanceConfig, ZKProofLike } from "../relayer/relayer-sdk.types";
 import type {
   CreateDelegatedEIP712ResponseData,
   CreateEIP712ResponseData,
@@ -88,7 +88,7 @@ export class NodeWorkerClient {
 
   async createEIP712(
     publicKey: string,
-    contractAddresses: Hex[],
+    contractAddresses: Address[],
     startTimestamp: number,
     durationDays: number,
   ): Promise<CreateEIP712ResponseData> {
@@ -102,8 +102,8 @@ export class NodeWorkerClient {
 
   async encrypt(
     values: bigint[],
-    contractAddress: Hex,
-    userAddress: Hex,
+    contractAddress: Address,
+    userAddress: Address,
   ): Promise<EncryptResponseData> {
     return this.#sendRequest<EncryptResponseData>("ENCRYPT", {
       values,
@@ -114,12 +114,12 @@ export class NodeWorkerClient {
 
   async userDecrypt(
     handles: string[],
-    contractAddress: Hex,
-    signedContractAddresses: Hex[],
+    contractAddress: Address,
+    signedContractAddresses: Address[],
     privateKey: string,
     publicKey: string,
     signature: string,
-    signerAddress: Hex,
+    signerAddress: Address,
     startTimestamp: number,
     durationDays: number,
   ): Promise<UserDecryptResponseData> {
@@ -144,7 +144,7 @@ export class NodeWorkerClient {
 
   async createDelegatedUserDecryptEIP712(
     publicKey: string,
-    contractAddresses: Hex[],
+    contractAddresses: Address[],
     delegatorAddress: string,
     startTimestamp: number,
     durationDays: number,
@@ -160,13 +160,13 @@ export class NodeWorkerClient {
 
   async delegatedUserDecrypt(
     handles: string[],
-    contractAddress: Hex,
-    signedContractAddresses: Hex[],
+    contractAddress: Address,
+    signedContractAddresses: Address[],
     privateKey: string,
     publicKey: string,
     signature: string,
-    delegatorAddress: Hex,
-    delegateAddress: Hex,
+    delegatorAddress: Address,
+    delegateAddress: Address,
     startTimestamp: number,
     durationDays: number,
   ): Promise<DelegatedUserDecryptResponseData> {

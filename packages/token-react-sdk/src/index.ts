@@ -246,7 +246,7 @@ export {
 
 // Re-export token types from core SDK
 export type {
-  Hex,
+  Address,
   GenericSigner,
   GenericStringStorage,
   ContractCallConfig,

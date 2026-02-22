@@ -1,19 +1,19 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import { readUnderlyingTokenContract } from "@zama-fhe/token-sdk/viem";
 
 type Params = Parameters<typeof readUnderlyingTokenContract>;
 
 export interface UseUnderlyingTokenConfig {
   client: Params[0];
-  wrapperAddress: Hex | undefined;
+  wrapperAddress: Address | undefined;
 }
 
 export interface UseUnderlyingTokenSuspenseConfig {
   client: Params[0];
-  wrapperAddress: Hex;
+  wrapperAddress: Address;
 }
 
 export function useUnderlyingToken(config: UseUnderlyingTokenConfig) {
@@ -21,7 +21,7 @@ export function useUnderlyingToken(config: UseUnderlyingTokenConfig) {
   const enabled = !!wrapperAddress;
   return useQuery({
     queryKey: ["underlyingToken", client, wrapperAddress],
-    queryFn: () => readUnderlyingTokenContract(client, wrapperAddress as Hex),
+    queryFn: () => readUnderlyingTokenContract(client, wrapperAddress as Address),
     enabled,
   });
 }

@@ -1,13 +1,13 @@
 "use client";
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { ReadonlyToken, type Hex } from "@zama-fhe/token-sdk";
+import { ReadonlyToken, type Address } from "@zama-fhe/token-sdk";
 import { useMemo } from "react";
 import { useTokenSDK } from "../provider";
 import { confidentialBalancesQueryKeys, confidentialHandlesQueryKeys } from "./balance-query-keys";
 
 export interface UseConfidentialBalancesOptions extends Omit<
-  UseQueryOptions<Map<Hex, bigint>, Error>,
+  UseQueryOptions<Map<Address, bigint>, Error>,
   "queryKey" | "queryFn"
 > {
   handleRefetchInterval?: number;
@@ -21,8 +21,8 @@ const DEFAULT_HANDLE_REFETCH_INTERVAL = 10_000;
  * decrypts when any handle changes.
  */
 export function useConfidentialBalances(
-  tokenAddresses: Hex[],
-  owner?: Hex,
+  tokenAddresses: Address[],
+  owner?: Address,
   options?: UseConfidentialBalancesOptions,
 ) {
   const sdk = useTokenSDK();
@@ -35,7 +35,7 @@ export function useConfidentialBalances(
   );
 
   // Phase 1: Poll all encrypted handles (cheap RPC reads)
-  const handlesQuery = useQuery<Hex[], Error>({
+  const handlesQuery = useQuery<Address[], Error>({
     queryKey: confidentialHandlesQueryKeys.tokens(tokenAddresses, owner ?? ""),
     queryFn: async () => {
       const ownerAddress = owner ?? (await sdk.signer.getAddress());
@@ -49,7 +49,7 @@ export function useConfidentialBalances(
   const handlesKey = handles?.join(",") ?? "";
 
   // Phase 2: Batch decrypt only when any handle changes
-  const balancesQuery = useQuery<Map<Hex, bigint>, Error>({
+  const balancesQuery = useQuery<Map<Address, bigint>, Error>({
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, owner ?? ""), handlesKey],
     queryFn: async () => {
       if (!handles) return new Map();

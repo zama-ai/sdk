@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Hex } from "../../relayer/relayer-sdk.types";
+import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
 import { TokenError, TokenErrorCode, type GenericSigner } from "../token.types";
 import { MemoryStorage } from "../memory-storage";
 
-const TOKEN = "0xtoken" as Hex;
-const USER = "0xuser" as Hex;
+const TOKEN = "0xtoken" as Address;
+const USER = "0xuser" as Address;
 const ZERO_HANDLE = "0x" + "0".repeat(64);
 const VALID_HANDLE = "0x" + "ab".repeat(32);
 
@@ -110,7 +110,7 @@ describe("Token", () => {
 
     it("accepts custom owner address", async () => {
       vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
-      const otherAddress = "0xother" as Hex;
+      const otherAddress = "0xother" as Address;
 
       await token.balanceOf(otherAddress);
 
@@ -154,7 +154,7 @@ describe("Token", () => {
   });
 
   describe("batchBalanceOf", () => {
-    const TOKEN2 = "0xtoken2" as Hex;
+    const TOKEN2 = "0xtoken2" as Address;
     const VALID_HANDLE2 = "0x" + "cd".repeat(32);
 
     it("returns empty map for empty array", async () => {
@@ -217,7 +217,7 @@ describe("Token", () => {
   });
 
   describe("batchDecryptBalances", () => {
-    const TOKEN2 = "0xtoken2" as Hex;
+    const TOKEN2 = "0xtoken2" as Address;
     const VALID_HANDLE2 = "0x" + "cd".repeat(32);
 
     it("returns empty map for empty array", async () => {
@@ -239,7 +239,7 @@ describe("Token", () => {
 
       const result = await Token.batchDecryptBalances(
         [token, token2],
-        [VALID_HANDLE as Hex, VALID_HANDLE2 as Hex],
+        [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
       );
 
       expect(result.get(TOKEN)).toBe(1000n);
@@ -258,7 +258,7 @@ describe("Token", () => {
 
       const result = await Token.batchDecryptBalances(
         [token, token2],
-        [VALID_HANDLE as Hex, ZERO_HANDLE as Hex],
+        [VALID_HANDLE as Address, ZERO_HANDLE as Address],
       );
 
       expect(result.get(TOKEN)).toBe(1000n);
@@ -269,7 +269,7 @@ describe("Token", () => {
     it("returns 0n for tokens that fail decryption", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-      const result = await Token.batchDecryptBalances([token], [VALID_HANDLE as Hex]);
+      const result = await Token.batchDecryptBalances([token], [VALID_HANDLE as Address]);
 
       expect(result.get(TOKEN)).toBe(0n);
     });
@@ -277,21 +277,21 @@ describe("Token", () => {
 
   describe("decryptBalance", () => {
     it("returns 0n for zero handle without decrypting", async () => {
-      const balance = await token.decryptBalance(ZERO_HANDLE as Hex);
+      const balance = await token.decryptBalance(ZERO_HANDLE as Address);
 
       expect(balance).toBe(0n);
       expect(sdk.userDecrypt).not.toHaveBeenCalled();
     });
 
     it("returns 0n for 0x handle without decrypting", async () => {
-      const balance = await token.decryptBalance("0x" as Hex);
+      const balance = await token.decryptBalance("0x" as Address);
 
       expect(balance).toBe(0n);
       expect(sdk.userDecrypt).not.toHaveBeenCalled();
     });
 
     it("decrypts non-zero handle and returns balance", async () => {
-      const balance = await token.decryptBalance(VALID_HANDLE as Hex);
+      const balance = await token.decryptBalance(VALID_HANDLE as Address);
 
       expect(balance).toBe(1000n);
       expect(sdk.userDecrypt).toHaveBeenCalledWith(
@@ -303,14 +303,14 @@ describe("Token", () => {
     });
 
     it("does not call readContract (skips on-chain read)", async () => {
-      await token.decryptBalance(VALID_HANDLE as Hex);
+      await token.decryptBalance(VALID_HANDLE as Address);
 
       expect(signer.readContract).not.toHaveBeenCalled();
     });
 
     it("uses provided owner as signerAddress", async () => {
-      const otherOwner = "0xother" as Hex;
-      await token.decryptBalance(VALID_HANDLE as Hex, otherOwner);
+      const otherOwner = "0xother" as Address;
+      await token.decryptBalance(VALID_HANDLE as Address, otherOwner);
 
       expect(sdk.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -320,7 +320,7 @@ describe("Token", () => {
     });
 
     it("defaults signerAddress to signer.getAddress()", async () => {
-      await token.decryptBalance(VALID_HANDLE as Hex);
+      await token.decryptBalance(VALID_HANDLE as Address);
 
       expect(sdk.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -332,7 +332,7 @@ describe("Token", () => {
     it("throws TokenError on decryption failure", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-      await expect(token.decryptBalance(VALID_HANDLE as Hex)).rejects.toThrow(
+      await expect(token.decryptBalance(VALID_HANDLE as Address)).rejects.toThrow(
         "Failed to decrypt balance",
       );
     });
@@ -340,7 +340,7 @@ describe("Token", () => {
     it("returns 0n when handle not found in decrypt result", async () => {
       vi.mocked(sdk.userDecrypt).mockResolvedValueOnce({});
 
-      const balance = await token.decryptBalance(VALID_HANDLE as Hex);
+      const balance = await token.decryptBalance(VALID_HANDLE as Address);
 
       expect(balance).toBe(0n);
     });
@@ -361,8 +361,8 @@ describe("Token", () => {
   });
 
   describe("discoverWrapper", () => {
-    const COORDINATOR = "0xcoordinator" as Hex;
-    const WRAPPER_ADDR = "0xdiscoveredWrapper" as Hex;
+    const COORDINATOR = "0xcoordinator" as Address;
+    const WRAPPER_ADDR = "0xdiscoveredWrapper" as Address;
 
     it("returns wrapper address when it exists", async () => {
       vi.mocked(signer.readContract)
@@ -392,7 +392,7 @@ describe("Token", () => {
 
   describe("underlyingToken", () => {
     it("reads the underlying token address", async () => {
-      const UNDERLYING = "0xunderlying" as Hex;
+      const UNDERLYING = "0xunderlying" as Address;
       vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING);
 
       const result = await token.underlyingToken();
@@ -455,7 +455,7 @@ describe("Token", () => {
 
   describe("confidentialTransfer", () => {
     it("encrypts amount and sends transaction", async () => {
-      const txHash = await token.confidentialTransfer("0xrecipient" as Hex, 100n);
+      const txHash = await token.confidentialTransfer("0xrecipient" as Address, 100n);
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
         values: [100n],
@@ -574,7 +574,7 @@ describe("Token", () => {
 
   describe("finalizeUnwrap", () => {
     it("decrypts burn amount and finalizes", async () => {
-      const burnHandle = "0xburn" as Hex;
+      const burnHandle = "0xburn" as Address;
       const txHash = await token.finalizeUnwrap(burnHandle);
 
       expect(sdk.publicDecrypt).toHaveBeenCalledWith([burnHandle]);
@@ -673,7 +673,7 @@ describe("Token", () => {
     it("wraps non-TokenError in EncryptionFailed", async () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
-      await expect(token.confidentialTransfer("0xrecipient" as Hex, 100n)).rejects.toSatisfy(
+      await expect(token.confidentialTransfer("0xrecipient" as Address, 100n)).rejects.toSatisfy(
         (err: TokenError) => {
           return (
             err instanceof TokenError &&
@@ -687,8 +687,8 @@ describe("Token", () => {
 
   describe("confidentialTransferFrom", () => {
     it("encrypts amount with from as userAddress and sends transaction", async () => {
-      const from = "0xfrom" as Hex;
-      const to = "0xto" as Hex;
+      const from = "0xfrom" as Address;
+      const to = "0xto" as Address;
 
       const txHash = await token.confidentialTransferFrom(from, to, 200n);
 
@@ -709,7 +709,7 @@ describe("Token", () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
       await expect(
-        token.confidentialTransferFrom("0xfrom" as Hex, "0xto" as Hex, 200n),
+        token.confidentialTransferFrom("0xfrom" as Address, "0xto" as Address, 200n),
       ).rejects.toSatisfy((err: TokenError) => {
         return (
           err instanceof TokenError &&
@@ -722,7 +722,7 @@ describe("Token", () => {
 
   describe("approve", () => {
     it("calls setOperatorContract with spender", async () => {
-      const spender = "0xspender" as Hex;
+      const spender = "0xspender" as Address;
 
       const txHash = await token.approve(spender);
 
@@ -738,7 +738,7 @@ describe("Token", () => {
     it("wraps error in ApprovalFailed", async () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.approve("0xspender" as Hex)).rejects.toSatisfy((err: TokenError) => {
+      await expect(token.approve("0xspender" as Address)).rejects.toSatisfy((err: TokenError) => {
         return (
           err instanceof TokenError &&
           err.code === TokenErrorCode.ApprovalFailed &&
@@ -752,7 +752,7 @@ describe("Token", () => {
     it("returns boolean result from readContract", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(true);
 
-      const result = await token.isApproved("0xspender" as Hex);
+      const result = await token.isApproved("0xspender" as Address);
 
       expect(result).toBe(true);
       expect(signer.readContract).toHaveBeenCalledWith(
@@ -764,7 +764,7 @@ describe("Token", () => {
   });
 
   describe("wrap (additional branches)", () => {
-    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Hex;
+    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
 
     it("calls wrapETH when underlying is zero address", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
@@ -933,13 +933,15 @@ describe("Token", () => {
     it("wraps publicDecrypt failure in DecryptionFailed", async () => {
       vi.mocked(sdk.publicDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-      await expect(token.finalizeUnwrap("0xburn" as Hex)).rejects.toSatisfy((err: TokenError) => {
-        return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.DecryptionFailed &&
-          err.message === "Failed to finalize unshield"
-        );
-      });
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toSatisfy(
+        (err: TokenError) => {
+          return (
+            err instanceof TokenError &&
+            err.code === TokenErrorCode.DecryptionFailed &&
+            err.message === "Failed to finalize unshield"
+          );
+        },
+      );
     });
   });
 

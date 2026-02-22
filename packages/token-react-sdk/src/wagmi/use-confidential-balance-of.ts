@@ -1,17 +1,17 @@
 "use client";
 
 import { confidentialBalanceOfContract } from "@zama-fhe/token-sdk";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import { useReadContract } from "wagmi";
 
 export interface UseConfidentialBalanceOfConfig {
-  tokenAddress: Hex | undefined;
-  userAddress: Hex | undefined;
+  tokenAddress: Address | undefined;
+  userAddress: Address | undefined;
 }
 
 export function useConfidentialBalanceOf(config: UseConfidentialBalanceOfConfig) {
   const { tokenAddress, userAddress } = config;
   const enabled = !!tokenAddress && !!userAddress;
-  const contract = confidentialBalanceOfContract(tokenAddress as Hex, userAddress as Hex);
+  const contract = confidentialBalanceOfContract(tokenAddress as Address, userAddress as Address);
   return useReadContract({ ...contract, query: { enabled } });
 }

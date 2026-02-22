@@ -6,7 +6,7 @@ import {
   getUnwrapFeeContract,
   getBatchTransferFeeContract,
   getFeeRecipientContract,
-  type Hex,
+  type Address,
 } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
@@ -20,10 +20,10 @@ export const feeQueryKeys = {
 } as const;
 
 export interface UseFeeConfig {
-  feeManagerAddress: Hex;
+  feeManagerAddress: Address;
   amount: bigint;
-  from: Hex;
-  to: Hex;
+  from: Address;
+  to: Address;
 }
 
 export function useWrapFee(
@@ -59,7 +59,7 @@ export function useUnwrapFee(
 }
 
 export function useBatchTransferFee(
-  feeManagerAddress: Hex,
+  feeManagerAddress: Address,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
   const token = useReadonlyToken(feeManagerAddress);
@@ -74,14 +74,14 @@ export function useBatchTransferFee(
 }
 
 export function useFeeRecipient(
-  feeManagerAddress: Hex,
-  options?: Omit<UseQueryOptions<Hex, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<Hex, Error> {
+  feeManagerAddress: Address,
+  options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<Address, Error> {
   const token = useReadonlyToken(feeManagerAddress);
 
-  return useQuery<Hex, Error>({
+  return useQuery<Address, Error>({
     queryKey: feeQueryKeys.feeRecipient(feeManagerAddress),
-    queryFn: () => token.signer.readContract<Hex>(getFeeRecipientContract(feeManagerAddress)),
+    queryFn: () => token.signer.readContract<Address>(getFeeRecipientContract(feeManagerAddress)),
     staleTime: 30_000,
     ...options,
   });

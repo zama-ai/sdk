@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import type { Hex, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/token-sdk";
+import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/token-sdk";
 import {
   parseActivityFeed,
   extractEncryptedHandles,
@@ -16,8 +16,8 @@ export const activityFeedQueryKeys = {
 } as const;
 
 export interface UseActivityFeedConfig {
-  tokenAddress: Hex;
-  userAddress: Hex | undefined;
+  tokenAddress: Address;
+  userAddress: Address | undefined;
   logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
   /** Whether to batch-decrypt encrypted transfer amounts. Default: true */
   decrypt?: boolean;
@@ -57,7 +57,7 @@ export function useActivityFeed(
       const handles = extractEncryptedHandles(items);
       if (handles.length === 0) return items;
 
-      const decryptedMap = await token.decryptHandles(handles as Hex[], userAddress);
+      const decryptedMap = await token.decryptHandles(handles as Address[], userAddress);
 
       return applyDecryptedValues(items, decryptedMap);
     },

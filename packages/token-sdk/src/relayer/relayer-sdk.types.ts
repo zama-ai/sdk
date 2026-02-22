@@ -1,6 +1,5 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
-
-type Hex = `0x${string}`;
+import type { Address } from "@zama-fhe/relayer-sdk/bundle";
 
 // ============================================================================
 // SDK Types (local definitions to avoid importing from @zama-fhe/relayer-sdk/web)
@@ -38,19 +37,19 @@ export interface EncryptResult {
 /** Parameters for encryption */
 export interface EncryptParams {
   values: bigint[];
-  contractAddress: Hex;
-  userAddress: Hex;
+  contractAddress: Address;
+  userAddress: Address;
 }
 
 /** Parameters for user decryption */
 export interface UserDecryptParams {
   handles: string[];
-  contractAddress: Hex;
-  signedContractAddresses: Hex[];
+  contractAddress: Address;
+  signedContractAddresses: Address[];
   privateKey: string;
   publicKey: string;
   signature: string;
-  signerAddress: Hex;
+  signerAddress: Address;
   startTimestamp: number;
   durationDays: number;
 }
@@ -59,7 +58,7 @@ export interface UserDecryptParams {
 export interface PublicDecryptResult {
   clearValues: Record<string, bigint>;
   abiEncodedClearValues: string;
-  decryptionProof: Hex;
+  decryptionProof: Address;
 }
 
 /** Keypair for FHE operations */
@@ -74,7 +73,7 @@ export interface EIP712TypedData {
     name: string;
     version: string;
     chainId: number;
-    verifyingContract: Hex;
+    verifyingContract: Address;
   };
   types: {
     [key: string]: Array<{
@@ -94,13 +93,13 @@ export interface EIP712TypedData {
 /** Parameters for delegated user decryption */
 export interface DelegatedUserDecryptParams {
   handles: string[];
-  contractAddress: Hex;
-  signedContractAddresses: Hex[];
+  contractAddress: Address;
+  signedContractAddresses: Address[];
   privateKey: string;
   publicKey: string;
   signature: string;
-  delegatorAddress: Hex;
-  delegateAddress: Hex;
+  delegatorAddress: Address;
+  delegateAddress: Address;
   startTimestamp: number;
   durationDays: number;
 }

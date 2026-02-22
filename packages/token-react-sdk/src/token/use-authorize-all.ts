@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { ReadonlyToken, type Hex } from "@zama-fhe/token-sdk";
+import { ReadonlyToken, type Address } from "@zama-fhe/token-sdk";
 import { useTokenSDK } from "../provider";
 
 /**
@@ -18,7 +18,7 @@ import { useTokenSDK } from "../provider";
 export function useAuthorizeAll() {
   const sdk = useTokenSDK();
 
-  return useMutation<void, Error, Hex[]>({
+  return useMutation<void, Error, Address[]>({
     mutationKey: ["authorizeAll"],
     mutationFn: async (tokenAddresses) => {
       const tokens = tokenAddresses.map((addr) => sdk.createReadonlyToken(addr));

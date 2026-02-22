@@ -1,4 +1,4 @@
-import type { Hex } from "../relayer/relayer-sdk.types";
+import type { Address } from "../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
@@ -33,7 +33,7 @@ export class TokenSDK {
    * Create a read-only interface for a confidential token.
    * Supports balance queries and authorization without a wrapper address.
    */
-  createReadonlyToken(address: Hex): ReadonlyToken {
+  createReadonlyToken(address: Address): ReadonlyToken {
     return new ReadonlyToken({
       sdk: this.relayer,
       signer: this.signer,
@@ -47,7 +47,7 @@ export class TokenSDK {
    * Create a high-level ERC-20-like interface for a confidential token.
    * Includes write operations (transfer, shield, unshield).
    */
-  createToken(address: Hex, wrapper?: Hex): Token {
+  createToken(address: Address, wrapper?: Address): Token {
     return new Token({
       sdk: this.relayer,
       signer: this.signer,

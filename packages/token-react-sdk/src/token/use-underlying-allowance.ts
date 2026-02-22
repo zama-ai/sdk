@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 export const underlyingAllowanceQueryKeys = {
@@ -11,8 +11,8 @@ export const underlyingAllowanceQueryKeys = {
 } as const;
 
 export interface UseUnderlyingAllowanceConfig {
-  tokenAddress: Hex;
-  wrapperAddress: Hex;
+  tokenAddress: Address;
+  wrapperAddress: Address;
 }
 
 export function useUnderlyingAllowance(

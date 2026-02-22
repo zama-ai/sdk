@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -18,11 +18,11 @@ export interface WrapParams {
 
 export function useWrap(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, WrapParams, Hex>,
+  options?: UseMutationOptions<Address, Error, WrapParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Hex, Error, WrapParams, Hex>({
+  return useMutation<Address, Error, WrapParams, Address>({
     mutationKey: ["wrap", config.tokenAddress],
     mutationFn: async ({ amount, fees, approvalStrategy }) =>
       token.wrap(amount, { fees, approvalStrategy }),

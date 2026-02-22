@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import { useTokenSDK } from "../provider";
 
 export interface UseTokenConfig {
-  tokenAddress: Hex;
-  wrapperAddress?: Hex;
+  tokenAddress: Address;
+  wrapperAddress?: Address;
 }
 
 /**

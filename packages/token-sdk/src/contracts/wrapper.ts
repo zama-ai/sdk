@@ -1,5 +1,5 @@
 import { WRAPPER_ABI } from "../abi/wrapper.abi";
-import type { Hex } from "../relayer/relayer-sdk.types";
+import type { Address } from "../relayer/relayer-sdk.types";
 
 /**
  * Returns the contract config for finalizing an unwrap.
@@ -12,10 +12,10 @@ import type { Hex } from "../relayer/relayer-sdk.types";
  * ```
  */
 export function finalizeUnwrapContract(
-  wrapper: Hex,
-  burntAmount: Hex,
+  wrapper: Address,
+  burntAmount: Address,
   burntAmountCleartext: bigint,
-  decryptionProof: Hex,
+  decryptionProof: Address,
 ) {
   return {
     address: wrapper,
@@ -33,7 +33,7 @@ export function finalizeUnwrapContract(
  * const token = await signer.readContract(underlyingContract(wrapperAddress));
  * ```
  */
-export function underlyingContract(wrapperAddress: Hex) {
+export function underlyingContract(wrapperAddress: Address) {
   return {
     address: wrapperAddress,
     abi: WRAPPER_ABI,
@@ -52,7 +52,7 @@ export function underlyingContract(wrapperAddress: Hex) {
  * );
  * ```
  */
-export function wrapContract(wrapperAddress: Hex, to: Hex, amount: bigint) {
+export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint) {
   return {
     address: wrapperAddress,
     abi: WRAPPER_ABI,
@@ -71,7 +71,12 @@ export function wrapContract(wrapperAddress: Hex, to: Hex, amount: bigint) {
  * );
  * ```
  */
-export function wrapETHContract(wrapperAddress: Hex, to: Hex, amount: bigint, value: bigint) {
+export function wrapETHContract(
+  wrapperAddress: Address,
+  to: Address,
+  amount: bigint,
+  value: bigint,
+) {
   return {
     address: wrapperAddress,
     abi: WRAPPER_ABI,

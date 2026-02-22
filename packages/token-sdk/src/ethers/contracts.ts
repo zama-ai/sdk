@@ -1,5 +1,5 @@
 import { ethers, type Provider, type Signer } from "ethers";
-import type { Hex } from "../relayer/relayer-sdk.types";
+import type { Address } from "../relayer/relayer-sdk.types";
 import type { BatchTransferData } from "../contracts";
 import {
   confidentialBalanceOfContract,
@@ -30,48 +30,48 @@ async function ethersRead(provider: Provider | Signer, config: ContractConfig) {
   return contract[config.functionName](...config.args);
 }
 
-async function ethersWrite(signer: Signer, config: ContractConfig): Promise<Hex> {
+async function ethersWrite(signer: Signer, config: ContractConfig): Promise<Address> {
   const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
   const tx = await contract[config.functionName](...config.args, {
     value: config.value,
   });
-  return tx.hash as Hex;
+  return tx.hash as Address;
 }
 
 // ── Read helpers ────────────────────────────────────────────
 
 export function readConfidentialBalanceOfContract(
   provider: Provider | Signer,
-  tokenAddress: Hex,
-  userAddress: Hex,
+  tokenAddress: Address,
+  userAddress: Address,
 ) {
   return ethersRead(provider, confidentialBalanceOfContract(tokenAddress, userAddress));
 }
 
 export function readWrapperForTokenContract(
   provider: Provider | Signer,
-  coordinator: Hex,
-  tokenAddress: Hex,
+  coordinator: Address,
+  tokenAddress: Address,
 ) {
   return ethersRead(provider, getWrapperContract(coordinator, tokenAddress));
 }
 
-export function readUnderlyingTokenContract(provider: Provider | Signer, wrapperAddress: Hex) {
+export function readUnderlyingTokenContract(provider: Provider | Signer, wrapperAddress: Address) {
   return ethersRead(provider, underlyingContract(wrapperAddress));
 }
 
 export function readWrapperExistsContract(
   provider: Provider | Signer,
-  coordinator: Hex,
-  tokenAddress: Hex,
+  coordinator: Address,
+  tokenAddress: Address,
 ) {
   return ethersRead(provider, wrapperExistsContract(coordinator, tokenAddress));
 }
 
 export function readSupportsInterfaceContract(
   provider: Provider | Signer,
-  tokenAddress: Hex,
-  interfaceId: Hex,
+  tokenAddress: Address,
+  interfaceId: Address,
 ) {
   return ethersRead(provider, supportsInterfaceContract(tokenAddress, interfaceId));
 }
@@ -80,8 +80,8 @@ export function readSupportsInterfaceContract(
 
 export function writeConfidentialTransferContract(
   signer: Signer,
-  tokenAddress: Hex,
-  to: Hex,
+  tokenAddress: Address,
+  to: Address,
   handle: Uint8Array,
   inputProof: Uint8Array,
 ) {
@@ -90,9 +90,9 @@ export function writeConfidentialTransferContract(
 
 export function writeConfidentialBatchTransferContract(
   signer: Signer,
-  batcherAddress: Hex,
-  tokenAddress: Hex,
-  fromAddress: Hex,
+  batcherAddress: Address,
+  tokenAddress: Address,
+  fromAddress: Address,
   batchTransferData: BatchTransferData[],
   fees: bigint,
 ) {
@@ -110,9 +110,9 @@ export function writeConfidentialBatchTransferContract(
 
 export function writeUnwrapContract(
   signer: Signer,
-  encryptedErc20: Hex,
-  from: Hex,
-  to: Hex,
+  encryptedErc20: Address,
+  from: Address,
+  to: Address,
   encryptedAmount: Uint8Array,
   inputProof: Uint8Array,
 ) {
@@ -121,20 +121,20 @@ export function writeUnwrapContract(
 
 export function writeUnwrapFromBalanceContract(
   signer: Signer,
-  encryptedErc20: Hex,
-  from: Hex,
-  to: Hex,
-  encryptedBalance: Hex,
+  encryptedErc20: Address,
+  from: Address,
+  to: Address,
+  encryptedBalance: Address,
 ) {
   return ethersWrite(signer, unwrapFromBalanceContract(encryptedErc20, from, to, encryptedBalance));
 }
 
 export function writeFinalizeUnwrapContract(
   signer: Signer,
-  wrapper: Hex,
-  burntAmount: Hex,
+  wrapper: Address,
+  burntAmount: Address,
   burntAmountCleartext: bigint,
-  decryptionProof: Hex,
+  decryptionProof: Address,
 ) {
   return ethersWrite(
     signer,
@@ -144,21 +144,26 @@ export function writeFinalizeUnwrapContract(
 
 export function writeSetOperatorContract(
   signer: Signer,
-  tokenAddress: Hex,
-  spender: Hex,
+  tokenAddress: Address,
+  spender: Address,
   timestamp?: number,
 ) {
   return ethersWrite(signer, setOperatorContract(tokenAddress, spender, timestamp));
 }
 
-export function writeWrapContract(signer: Signer, wrapperAddress: Hex, to: Hex, amount: bigint) {
+export function writeWrapContract(
+  signer: Signer,
+  wrapperAddress: Address,
+  to: Address,
+  amount: bigint,
+) {
   return ethersWrite(signer, wrapContract(wrapperAddress, to, amount));
 }
 
 export function writeWrapETHContract(
   signer: Signer,
-  wrapperAddress: Hex,
-  to: Hex,
+  wrapperAddress: Address,
+  to: Address,
   amount: bigint,
   value: bigint,
 ) {

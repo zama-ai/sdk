@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -12,11 +12,11 @@ import { useToken, type UseTokenConfig } from "./use-token";
 
 export function useUnshieldAll(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Hex, Error, void, Hex>,
+  options?: UseMutationOptions<Address, Error, void, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Hex, Error, void, Hex>({
+  return useMutation<Address, Error, void, Address>({
     mutationKey: ["unshieldAll", config.tokenAddress],
     mutationFn: () => token.unshieldAll(),
     ...options,

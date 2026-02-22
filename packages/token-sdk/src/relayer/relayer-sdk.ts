@@ -1,5 +1,5 @@
 import type {
-  Hex,
+  Address,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -21,7 +21,7 @@ export interface RelayerSDK {
 
   createEIP712(
     publicKey: string,
-    contractAddresses: Hex[],
+    contractAddresses: Address[],
     startTimestamp: number,
     durationDays?: number,
   ): Promise<EIP712TypedData>;
@@ -34,7 +34,7 @@ export interface RelayerSDK {
 
   createDelegatedUserDecryptEIP712(
     publicKey: string,
-    contractAddresses: Hex[],
+    contractAddresses: Address[],
     delegatorAddress: string,
     startTimestamp: number,
     durationDays?: number,

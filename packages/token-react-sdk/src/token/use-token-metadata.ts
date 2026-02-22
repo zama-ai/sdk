@@ -7,7 +7,7 @@ import {
   type UseQueryResult,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
-import type { Hex } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 export const tokenMetadataQueryKeys = {
@@ -26,7 +26,7 @@ export interface TokenMetadata {
  * Fetches all three in parallel. Results are cached indefinitely since metadata doesn't change.
  */
 export function useTokenMetadata(
-  tokenAddress: Hex,
+  tokenAddress: Address,
   options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<TokenMetadata, Error> {
   const token = useReadonlyToken(tokenAddress);
@@ -47,7 +47,7 @@ export function useTokenMetadata(
 }
 
 export function useTokenMetadataSuspense(
-  tokenAddress: Hex,
+  tokenAddress: Address,
 ): UseSuspenseQueryResult<TokenMetadata, Error> {
   const token = useReadonlyToken(tokenAddress);
 

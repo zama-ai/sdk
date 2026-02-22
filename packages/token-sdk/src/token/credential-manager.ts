@@ -1,5 +1,5 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Hex } from "../relayer/relayer-sdk.types";
+import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStringStorage, StoredCredentials } from "./token.types";
 import { TokenError, TokenErrorCode } from "./token.types";
 
@@ -52,7 +52,7 @@ export class CredentialsManager {
    * const creds = await credentials.get("0xTokenAddress");
    * ```
    */
-  async get(contractAddress: Hex): Promise<StoredCredentials> {
+  async get(contractAddress: Address): Promise<StoredCredentials> {
     return this.getAll([contractAddress]);
   }
 
@@ -66,7 +66,7 @@ export class CredentialsManager {
    * const creds = await credentials.getAll(["0xTokenA", "0xTokenB"]);
    * ```
    */
-  async getAll(contractAddresses: Hex[]): Promise<StoredCredentials> {
+  async getAll(contractAddresses: Address[]): Promise<StoredCredentials> {
     const storeKey = await this.#storeKey();
     try {
       const stored = await this.#storage.getItem(storeKey);
@@ -121,7 +121,7 @@ export class CredentialsManager {
 
   // ── Validation ──────────────────────────────────────────────
 
-  #isValid(creds: StoredCredentials, requiredContracts: Hex[]): boolean {
+  #isValid(creds: StoredCredentials, requiredContracts: Address[]): boolean {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const expiresAt = creds.startTimestamp + creds.durationDays * 86400;
     if (nowSeconds >= expiresAt) return false;
@@ -141,7 +141,7 @@ export class CredentialsManager {
    * const creds = await credentials.create(["0xTokenAddress"]);
    * ```
    */
-  async create(contractAddresses: Hex[]): Promise<StoredCredentials> {
+  async create(contractAddresses: Address[]): Promise<StoredCredentials> {
     try {
       const keypair = await this.#sdk.generateKeypair();
       const startTimestamp = Math.floor(Date.now() / 1000);

@@ -1,5 +1,5 @@
 import { ERC165_ABI } from "../abi/erc165.abi";
-import type { Hex } from "../relayer/relayer-sdk.types";
+import type { Address } from "../relayer/relayer-sdk.types";
 
 /** ERC-165 interface ID for IERC7984 (confidential fungible token). */
 export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;
@@ -20,7 +20,7 @@ export const ERC7984_WRAPPER_INTERFACE_ID = "0xd04584ba" as const;
  * );
  * ```
  */
-export function supportsInterfaceContract(tokenAddress: Hex, interfaceId: Hex) {
+export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address) {
   return {
     address: tokenAddress,
     abi: ERC165_ABI,
