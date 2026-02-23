@@ -15,3 +15,13 @@ export function useConfidentialBalanceOf(config: UseConfidentialBalanceOfConfig)
   const contract = confidentialBalanceOfContract(tokenAddress as Address, userAddress as Address);
   return useReadContract({ ...contract, query: { enabled } });
 }
+
+export interface UseConfidentialBalanceOfSuspenseConfig {
+  tokenAddress: Address;
+  userAddress: Address;
+}
+
+export function useConfidentialBalanceOfSuspense(config: UseConfidentialBalanceOfSuspenseConfig) {
+  const contract = confidentialBalanceOfContract(config.tokenAddress, config.userAddress);
+  return useReadContract({ ...contract, query: { suspense: true } });
+}

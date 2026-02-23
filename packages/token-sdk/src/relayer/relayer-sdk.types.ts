@@ -15,6 +15,9 @@ export interface RelayerSDKGlobal {
   MainnetConfig: SDK.FhevmInstanceConfig;
 }
 
+/** Generic hex-encoded string (signatures, tx hashes, proofs, etc.). */
+export type Hex = `0x${string}`;
+
 // ============================================================================
 // Application Types
 // ============================================================================

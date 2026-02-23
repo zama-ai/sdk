@@ -1,6 +1,7 @@
 import type { RawLog } from "../events";
-import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { Address, EIP712TypedData, Hex } from "../relayer/relayer-sdk.types";
 export type { Address } from "../relayer/relayer-sdk.types";
+export type { Hex } from "../relayer/relayer-sdk.types";
 
 /** Framework-agnostic transaction receipt (only the fields the SDK needs). */
 export interface TransactionReceipt {
@@ -38,15 +39,15 @@ export interface GenericSigner {
   /** The connected wallet address. */
   getAddress: () => Promise<Address>;
   /** Sign EIP-712 typed data (used for decrypt authorization). */
-  signTypedData(typedData: EIP712TypedData): Promise<Address>;
+  signTypedData(typedData: EIP712TypedData): Promise<Hex>;
   /** Send a write transaction and return the tx hash. */
-  writeContract<C extends ContractCallConfig>(config: C): Promise<Address>;
+  writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
   /** Execute a read-only call and return the decoded result. */
   readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(
     config: C,
   ): Promise<T>;
   /** Wait for a transaction to be mined and return its receipt. */
-  waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt>;
+  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 
 /** Pluggable key-value store for persisting FHE credentials. */

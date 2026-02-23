@@ -15,3 +15,13 @@ export function useSupportsInterface(config: UseSupportsInterfaceConfig) {
   const contract = supportsInterfaceContract(tokenAddress as Address, interfaceId as Address);
   return useReadContract({ ...contract, query: { enabled } });
 }
+
+export interface UseSupportsInterfaceSuspenseConfig {
+  tokenAddress: Address;
+  interfaceId: Address;
+}
+
+export function useSupportsInterfaceSuspense(config: UseSupportsInterfaceSuspenseConfig) {
+  const contract = supportsInterfaceContract(config.tokenAddress, config.interfaceId);
+  return useReadContract({ ...contract, query: { suspense: true } });
+}

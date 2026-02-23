@@ -227,4 +227,58 @@ describe("CredentialsManager", () => {
       expect((e as TokenError).cause).toBeUndefined();
     }
   });
+
+  it("regenerates when stored JSON is corrupted", async () => {
+    // Write garbage to the store
+    store.setItem(storeKey, "not-valid-json{{{{");
+
+    const creds = await manager.get("0xtoken" as Address);
+
+    // Should regenerate fresh credentials
+    expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+    expect(creds.publicKey).toBe("0xpub123");
+
+    // Corrupted data should have been cleaned up
+    const stored = store.getItem(storeKey);
+    expect(stored).not.toBe("not-valid-json{{{{");
+  });
+
+  it("continues when storage removeItem fails during cleanup", async () => {
+    // Write corrupted data to trigger the catch path
+    store.setItem(storeKey, "corrupted");
+
+    // Make removeItem throw to test best-effort cleanup
+    const originalRemoveItem = store.removeItem.bind(store);
+    store.removeItem = vi.fn().mockImplementation((key: string) => {
+      if (key === storeKey) throw new Error("storage unavailable");
+      return originalRemoveItem(key);
+    });
+
+    // Should still regenerate and return valid credentials
+    const creds = await manager.get("0xtoken" as Address);
+    expect(creds.publicKey).toBe("0xpub123");
+    expect(store.removeItem).toHaveBeenCalledWith(storeKey);
+  });
+
+  it("invalidates credentials at exact expiration boundary", async () => {
+    await manager.get("0xtoken" as Address);
+    expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+
+    // Set startTimestamp to exactly durationDays ago (expired at boundary)
+    const stored = store.getItem(storeKey);
+    const parsed = JSON.parse(stored!);
+    parsed.startTimestamp = Math.floor(Date.now() / 1000) - 1 * 86400; // exactly 1 day ago
+    store.setItem(storeKey, JSON.stringify(parsed));
+
+    // New manager should see expired credentials (nowSeconds >= expiresAt)
+    const manager2 = new CredentialsManager({
+      sdk: sdk as unknown as RelayerSDK,
+      signer,
+      storage: store,
+      durationDays: 1,
+    });
+    await manager2.get("0xtoken" as Address);
+
+    expect(sdk.generateKeypair).toHaveBeenCalledTimes(2);
+  });
 });

@@ -14,3 +14,12 @@ export function useUnderlyingToken(config: UseUnderlyingTokenConfig) {
   const contract = underlyingContract(wrapperAddress as Address);
   return useReadContract({ ...contract, query: { enabled } });
 }
+
+export interface UseUnderlyingTokenSuspenseConfig {
+  wrapperAddress: Address;
+}
+
+export function useUnderlyingTokenSuspense(config: UseUnderlyingTokenSuspenseConfig) {
+  const contract = underlyingContract(config.wrapperAddress);
+  return useReadContract({ ...contract, query: { suspense: true } });
+}

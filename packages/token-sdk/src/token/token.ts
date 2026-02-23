@@ -13,7 +13,7 @@ import {
   wrapETHContract,
 } from "../contracts";
 import { findUnwrapRequested } from "../events";
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Address, Hex } from "../relayer/relayer-sdk.types";
 import {
   TokenError,
   EncryptionFailedError,
@@ -77,7 +77,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.confidentialTransfer("0xRecipient", 1000n);
    * ```
    */
-  async confidentialTransfer(to: Address, amount: bigint): Promise<Address> {
+  async confidentialTransfer(to: Address, amount: bigint): Promise<Hex> {
     try {
       const { handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
@@ -109,7 +109,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
    * ```
    */
-  async confidentialTransferFrom(from: Address, to: Address, amount: bigint): Promise<Address> {
+  async confidentialTransferFrom(from: Address, to: Address, amount: bigint): Promise<Hex> {
     try {
       const { handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
@@ -141,7 +141,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.approve("0xSpender");
    * ```
    */
-  async approve(spender: Address, until?: number): Promise<Address> {
+  async approve(spender: Address, until?: number): Promise<Hex> {
     try {
       return await this.signer.writeContract(setOperatorContract(this.address, spender, until));
     } catch (error) {
@@ -185,7 +185,7 @@ export class Token extends ReadonlyToken {
       approvalStrategy?: "max" | "exact" | "skip";
       fees?: bigint;
     },
-  ): Promise<Address> {
+  ): Promise<Hex> {
     const underlying = await this.#getUnderlying();
 
     if (underlying === Token.ZERO_ADDRESS) {
@@ -216,7 +216,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.wrapETH(1000000000000000000n); // 1 ETH
    * ```
    */
-  async wrapETH(amount: bigint, value?: bigint): Promise<Address> {
+  async wrapETH(amount: bigint, value?: bigint): Promise<Hex> {
     try {
       const userAddress = await this.signer.getAddress();
       return await this.signer.writeContract(
@@ -239,7 +239,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unwrap(500n);
    * ```
    */
-  async unwrap(amount: bigint): Promise<Address> {
+  async unwrap(amount: bigint): Promise<Hex> {
     const userAddress = await this.signer.getAddress();
 
     let handles: Uint8Array[];
@@ -283,7 +283,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unwrapAll();
    * ```
    */
-  async unwrapAll(): Promise<Address> {
+  async unwrapAll(): Promise<Hex> {
     const userAddress = await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
@@ -312,7 +312,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unshield(500n);
    * ```
    */
-  async unshield(amount: bigint): Promise<Address> {
+  async unshield(amount: bigint): Promise<Hex> {
     const unshieldHash = await this.unwrap(amount);
     return this.#waitAndFinalizeUnshield(unshieldHash);
   }
@@ -326,7 +326,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unshieldAll();
    * ```
    */
-  async unshieldAll(): Promise<Address> {
+  async unshieldAll(): Promise<Hex> {
     const unshieldHash = await this.unwrapAll();
     return this.#waitAndFinalizeUnshield(unshieldHash);
   }
@@ -341,7 +341,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.finalizeUnwrap(event.encryptedAmount);
    * ```
    */
-  async finalizeUnwrap(burnAmountHandle: Address): Promise<Address> {
+  async finalizeUnwrap(burnAmountHandle: Address): Promise<Hex> {
     let clearValue: bigint;
     let decryptionProof: Address;
 
@@ -385,7 +385,7 @@ export class Token extends ReadonlyToken {
    * await token.approveUnderlying(1000n); // exact amount
    * ```
    */
-  async approveUnderlying(amount?: bigint): Promise<Address> {
+  async approveUnderlying(amount?: bigint): Promise<Hex> {
     const underlying = await this.#getUnderlying();
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
@@ -415,7 +415,7 @@ export class Token extends ReadonlyToken {
 
   // PRIVATE HELPERS
 
-  async #waitAndFinalizeUnshield(unshieldHash: Address): Promise<Address> {
+  async #waitAndFinalizeUnshield(unshieldHash: Hex): Promise<Hex> {
     let receipt;
     try {
       receipt = await this.signer.waitForTransactionReceipt(unshieldHash);

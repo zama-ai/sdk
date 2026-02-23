@@ -15,3 +15,13 @@ export function useWrapperExists(config: UseWrapperExistsConfig) {
   const contract = wrapperExistsContract(coordinator as Address, tokenAddress as Address);
   return useReadContract({ ...contract, query: { enabled } });
 }
+
+export interface UseWrapperExistsSuspenseConfig {
+  coordinator: Address;
+  tokenAddress: Address;
+}
+
+export function useWrapperExistsSuspense(config: UseWrapperExistsSuspenseConfig) {
+  const contract = wrapperExistsContract(config.coordinator, config.tokenAddress);
+  return useReadContract({ ...contract, query: { suspense: true } });
+}

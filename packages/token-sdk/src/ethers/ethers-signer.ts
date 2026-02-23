@@ -1,7 +1,17 @@
-import type { Address } from "../relayer/relayer-sdk.types";
-import type { GenericSigner, ContractCallConfig, TransactionReceipt } from "../token/token.types";
-import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type {
+  GenericSigner,
+  ContractCallConfig,
+  TransactionReceipt,
+  Hex,
+} from "../token/token.types";
+import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { ethers, type BrowserProvider, type Signer } from "ethers";
+
+/** Validate and narrow a string to the `Hex` branded type. */
+function toHex(s: string): Hex {
+  if (!s.startsWith("0x")) throw new TypeError(`Expected hex string, got: ${s}`);
+  return s as Hex;
+}
 
 /**
  * GenericSigner backed by ethers.
@@ -30,24 +40,24 @@ export class EthersSigner implements GenericSigner {
 
   async getAddress(): Promise<Address> {
     const signer = await this.signerPromise;
-    return signer.getAddress() as unknown as Address;
+    return toHex(await signer.getAddress()) as Address;
   }
 
-  async signTypedData(typedData: EIP712TypedData): Promise<Address> {
+  async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const signer = await this.signerPromise;
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
     const sig = await signer.signTypedData(domain, sigTypes, message);
-    return sig as Address;
+    return toHex(sig);
   }
 
-  async writeContract<C extends ContractCallConfig>(config: C): Promise<Address> {
+  async writeContract<C extends ContractCallConfig>(config: C): Promise<Hex> {
     const signer = await this.signerPromise;
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
     const overrides: Record<string, unknown> = {};
     if (config.value !== undefined) overrides.value = config.value;
     const tx = await contract[config.functionName]!(...config.args, overrides);
-    return tx.hash as Address;
+    return toHex(tx.hash);
   }
 
   async readContract<T, C extends ContractCallConfig>(config: C): Promise<T> {
@@ -56,7 +66,7 @@ export class EthersSigner implements GenericSigner {
     return contract[config.functionName]!(...config.args) as Promise<T>;
   }
 
-  async waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt> {
+  async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     const signer = await this.signerPromise;
     const provider = signer.provider;
     if (!provider) throw new TypeError("Signer has no provider");

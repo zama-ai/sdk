@@ -1,5 +1,5 @@
 import { ethers, type Provider, type Signer } from "ethers";
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Address, Hex } from "../relayer/relayer-sdk.types";
 import type { BatchTransferData } from "../contracts";
 import {
   confidentialBalanceOfContract,
@@ -30,12 +30,18 @@ async function ethersRead(provider: Provider | Signer, config: ContractConfig) {
   return contract[config.functionName]!(...config.args);
 }
 
-async function ethersWrite(signer: Signer, config: ContractConfig): Promise<Address> {
+/** Validate and narrow a string to the `Hex` branded type. */
+function toHex(s: string): Hex {
+  if (!s.startsWith("0x")) throw new TypeError(`Expected hex string, got: ${s}`);
+  return s as Hex;
+}
+
+async function ethersWrite(signer: Signer, config: ContractConfig): Promise<Hex> {
   const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
   const tx = await contract[config.functionName]!(...config.args, {
     value: config.value,
   });
-  return tx.hash as Address;
+  return toHex(tx.hash);
 }
 
 // ── Read helpers ────────────────────────────────────────────
