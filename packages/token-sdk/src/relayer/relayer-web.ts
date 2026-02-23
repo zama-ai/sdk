@@ -15,7 +15,7 @@ import type {
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
 import { mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { TokenError, TokenErrorCode } from "../token/token.types";
+import { TokenError, EncryptionFailedError } from "../token/errors";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -68,7 +68,7 @@ export class RelayerWeb implements RelayerSDK {
 
   async #ensureWorkerInner(): Promise<RelayerWorkerClient> {
     if (this.#terminated) {
-      throw new TokenError(TokenErrorCode.EncryptionFailed, "RelayerWeb has been terminated");
+      throw new EncryptionFailedError("RelayerWeb has been terminated");
     }
 
     const chainId = await this.#config.getChainId();
@@ -87,7 +87,7 @@ export class RelayerWeb implements RelayerSDK {
         this.#initPromise = null;
         throw error instanceof TokenError
           ? error
-          : new TokenError(TokenErrorCode.EncryptionFailed, "Failed to initialize FHE worker", {
+          : new EncryptionFailedError("Failed to initialize FHE worker", {
               cause: error instanceof Error ? error : undefined,
             });
       });

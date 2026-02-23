@@ -53,7 +53,16 @@ export type {
   ContractCallConfig,
   TransactionReceipt,
 } from "./token/token.types";
-export { TokenError, TokenErrorCode } from "./token/token.types";
+export {
+  TokenError,
+  TokenErrorCode,
+  SigningRejectedError,
+  SigningFailedError,
+  EncryptionFailedError,
+  DecryptionFailedError,
+  ApprovalFailedError,
+  TransactionRevertedError,
+} from "./token/errors";
 
 // Event decoders and types
 export type {

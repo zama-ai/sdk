@@ -1,7 +1,7 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStringStorage, StoredCredentials } from "./token.types";
-import { TokenError, TokenErrorCode } from "./token.types";
+import { SigningRejectedError, SigningFailedError } from "./errors";
 import { assertObject, assertString, assertArray } from "../utils";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
@@ -200,13 +200,11 @@ export class CredentialsManager {
         (error instanceof Error &&
           (error.message.includes("rejected") || error.message.includes("denied")));
       if (isRejected) {
-        throw new TokenError(
-          TokenErrorCode.SigningRejected,
-          "User rejected the decrypt authorization signature",
-          { cause: error },
-        );
+        throw new SigningRejectedError("User rejected the decrypt authorization signature", {
+          cause: error,
+        });
       }
-      throw new TokenError(TokenErrorCode.SigningFailed, "Failed to create decrypt credentials", {
+      throw new SigningFailedError("Failed to create decrypt credentials", {
         cause: error instanceof Error ? error : undefined,
       });
     }

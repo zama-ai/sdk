@@ -14,7 +14,7 @@ import {
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
-import { TokenError, TokenErrorCode } from "./token.types";
+import { DecryptionFailedError } from "./errors";
 import { CredentialsManager } from "./credential-manager";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
@@ -92,7 +92,7 @@ export class ReadonlyToken {
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
-      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to decrypt balance", {
+      throw new DecryptionFailedError("Failed to decrypt balance", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -241,8 +241,7 @@ export class ReadonlyToken {
   ): Promise<Map<Address, bigint>> {
     if (tokens.length === 0) return new Map();
     if (tokens.length !== handles.length) {
-      throw new TokenError(
-        TokenErrorCode.DecryptionFailed,
+      throw new DecryptionFailedError(
         `tokens.length (${tokens.length}) must equal handles.length (${handles.length})`,
       );
     }
@@ -459,7 +458,7 @@ export class ReadonlyToken {
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
-      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to decrypt balance", {
+      throw new DecryptionFailedError("Failed to decrypt balance", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -502,7 +501,7 @@ export class ReadonlyToken {
         results.set(handle, decrypted[handle] ?? BigInt(0));
       }
     } catch (error) {
-      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to decrypt handles", {
+      throw new DecryptionFailedError("Failed to decrypt handles", {
         cause: error instanceof Error ? error : undefined,
       });
     }

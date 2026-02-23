@@ -1,7 +1,7 @@
 import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
 import type { RelayerSDK } from "./relayer-sdk";
 import { mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { TokenError, TokenErrorCode } from "../token/token.types";
+import { TokenError, EncryptionFailedError } from "../token/errors";
 import type {
   Address,
   DelegatedUserDecryptParams,
@@ -62,7 +62,7 @@ export class RelayerNode implements RelayerSDK {
 
   async #ensurePoolInner(): Promise<NodeWorkerPool> {
     if (this.#terminated) {
-      throw new TokenError(TokenErrorCode.EncryptionFailed, "RelayerNode has been terminated");
+      throw new EncryptionFailedError("RelayerNode has been terminated");
     }
 
     const chainId = await this.#config.getChainId();
@@ -81,11 +81,9 @@ export class RelayerNode implements RelayerSDK {
         this.#initPromise = null;
         throw error instanceof TokenError
           ? error
-          : new TokenError(
-              TokenErrorCode.EncryptionFailed,
-              "Failed to initialize FHE worker pool",
-              { cause: error instanceof Error ? error : undefined },
-            );
+          : new EncryptionFailedError("Failed to initialize FHE worker pool", {
+              cause: error instanceof Error ? error : undefined,
+            });
       });
     }
     return this.#initPromise;

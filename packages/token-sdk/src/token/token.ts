@@ -14,7 +14,13 @@ import {
 } from "../contracts";
 import { findUnwrapRequested } from "../events";
 import type { Address } from "../relayer/relayer-sdk.types";
-import { TokenError, TokenErrorCode } from "./token.types";
+import {
+  TokenError,
+  EncryptionFailedError,
+  ApprovalFailedError,
+  TransactionRevertedError,
+  DecryptionFailedError,
+} from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 
 /**
@@ -80,7 +86,7 @@ export class Token extends ReadonlyToken {
       });
 
       if (handles.length === 0) {
-        throw new TokenError(TokenErrorCode.EncryptionFailed, "Encryption returned no handles");
+        throw new EncryptionFailedError("Encryption returned no handles");
       }
 
       return await this.signer.writeContract(
@@ -88,7 +94,7 @@ export class Token extends ReadonlyToken {
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.EncryptionFailed, "Failed to encrypt transfer amount", {
+      throw new EncryptionFailedError("Failed to encrypt transfer amount", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -112,7 +118,7 @@ export class Token extends ReadonlyToken {
       });
 
       if (handles.length === 0) {
-        throw new TokenError(TokenErrorCode.EncryptionFailed, "Encryption returned no handles");
+        throw new EncryptionFailedError("Encryption returned no handles");
       }
 
       return await this.signer.writeContract(
@@ -120,11 +126,9 @@ export class Token extends ReadonlyToken {
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(
-        TokenErrorCode.EncryptionFailed,
-        "Failed to encrypt transferFrom amount",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      throw new EncryptionFailedError("Failed to encrypt transferFrom amount", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -142,7 +146,7 @@ export class Token extends ReadonlyToken {
       return await this.signer.writeContract(setOperatorContract(this.address, spender, until));
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.ApprovalFailed, "Operator approval failed", {
+      throw new ApprovalFailedError("Operator approval failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -198,7 +202,7 @@ export class Token extends ReadonlyToken {
       return await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.TransactionReverted, "Shield (wrap) transaction failed", {
+      throw new TransactionRevertedError("Shield (wrap) transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -220,11 +224,9 @@ export class Token extends ReadonlyToken {
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(
-        TokenErrorCode.TransactionReverted,
-        "Shield ETH (wrapETH) transaction failed",
-        { cause: error instanceof Error ? error : undefined },
-      );
+      throw new TransactionRevertedError("Shield ETH (wrapETH) transaction failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   }
 
@@ -250,13 +252,13 @@ export class Token extends ReadonlyToken {
       }));
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.EncryptionFailed, "Failed to encrypt unshield amount", {
+      throw new EncryptionFailedError("Failed to encrypt unshield amount", {
         cause: error instanceof Error ? error : undefined,
       });
     }
 
     if (handles.length === 0) {
-      throw new TokenError(TokenErrorCode.EncryptionFailed, "Encryption returned no handles");
+      throw new EncryptionFailedError("Encryption returned no handles");
     }
 
     try {
@@ -265,7 +267,7 @@ export class Token extends ReadonlyToken {
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.TransactionReverted, "Unshield transaction failed", {
+      throw new TransactionRevertedError("Unshield transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -286,7 +288,7 @@ export class Token extends ReadonlyToken {
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
     if (this.isZeroHandle(handle)) {
-      throw new TokenError(TokenErrorCode.DecryptionFailed, "Cannot unshield: balance is zero");
+      throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
 
     try {
@@ -295,7 +297,7 @@ export class Token extends ReadonlyToken {
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.TransactionReverted, "Unshield-all transaction failed", {
+      throw new TransactionRevertedError("Unshield-all transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -349,14 +351,13 @@ export class Token extends ReadonlyToken {
       try {
         clearValue = BigInt(result.abiEncodedClearValues);
       } catch {
-        throw new TokenError(
-          TokenErrorCode.DecryptionFailed,
+        throw new DecryptionFailedError(
           `Cannot parse decrypted value: ${result.abiEncodedClearValues}`,
         );
       }
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.DecryptionFailed, "Failed to finalize unshield", {
+      throw new DecryptionFailedError("Failed to finalize unshield", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -367,7 +368,7 @@ export class Token extends ReadonlyToken {
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.TransactionReverted, "Failed to finalize unshield", {
+      throw new TransactionRevertedError("Failed to finalize unshield", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -406,7 +407,7 @@ export class Token extends ReadonlyToken {
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.ApprovalFailed, "ERC-20 approval failed", {
+      throw new ApprovalFailedError("ERC-20 approval failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -420,16 +421,13 @@ export class Token extends ReadonlyToken {
       receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.TransactionReverted, "Failed to get unshield receipt", {
+      throw new TransactionRevertedError("Failed to get unshield receipt", {
         cause: error,
       });
     }
     const event = findUnwrapRequested(receipt.logs);
     if (!event) {
-      throw new TokenError(
-        TokenErrorCode.TransactionReverted,
-        "No UnwrapRequested event found in unshield receipt",
-      );
+      throw new TransactionRevertedError("No UnwrapRequested event found in unshield receipt");
     }
     return this.finalizeUnwrap(event.encryptedAmount);
   }
@@ -457,7 +455,7 @@ export class Token extends ReadonlyToken {
       await this.signer.writeContract(approveContract(underlying, this.wrapper, approvalAmount));
     } catch (error) {
       if (error instanceof TokenError) throw error;
-      throw new TokenError(TokenErrorCode.ApprovalFailed, "ERC-20 approval failed", {
+      throw new ApprovalFailedError("ERC-20 approval failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }

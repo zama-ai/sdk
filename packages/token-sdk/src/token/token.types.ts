@@ -72,56 +72,15 @@ export interface StoredCredentials {
   durationDays: number;
 }
 
-/**
- * Typed error codes thrown by the SDK.
- * Use `error.code` to programmatically handle specific failure modes.
- *
- * @example
- * ```ts
- * try {
- *   await token.confidentialTransfer("0xTo", 100n);
- * } catch (e) {
- *   if (e instanceof TokenError && e.code === TokenErrorCode.SigningRejected) {
- *     // User rejected the wallet signature
- *   }
- * }
- * ```
- */
-export const TokenErrorCode = {
-  /** User rejected the wallet signature prompt. */
-  SigningRejected: "SIGNING_REJECTED",
-  /** Wallet signature failed for a reason other than rejection. */
-  SigningFailed: "SIGNING_FAILED",
-  /** FHE encryption failed. */
-  EncryptionFailed: "ENCRYPTION_FAILED",
-  /** FHE decryption failed. */
-  DecryptionFailed: "DECRYPTION_FAILED",
-  /** Token does not support the confidential (ERC-7984) interface. */
-  NotConfidential: "NOT_CONFIDENTIAL",
-  /** Token does not support the wrapper interface. */
-  NotWrapper: "NOT_WRAPPER",
-  /** ERC-20 approval transaction failed. */
-  ApprovalFailed: "APPROVAL_FAILED",
-  /** On-chain transaction reverted. */
-  TransactionReverted: "TRANSACTION_REVERTED",
-  /** Credential store read/write failed. */
-  StoreError: "STORE_ERROR",
-} as const;
-
-/** Union of all {@link TokenErrorCode} string values. */
-export type TokenErrorCode = (typeof TokenErrorCode)[keyof typeof TokenErrorCode];
-
-/**
- * Typed error thrown by all SDK operations.
- * Carries a {@link TokenErrorCode} for programmatic error handling.
- */
-export class TokenError extends Error {
-  /** Machine-readable error code. */
-  readonly code: TokenErrorCode;
-
-  constructor(code: TokenErrorCode, message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = "TokenError";
-    this.code = code;
-  }
-}
+// Re-export errors for backward compatibility
+export {
+  TokenErrorCode,
+  type TokenErrorCode as TokenErrorCodeType,
+  TokenError,
+  SigningRejectedError,
+  SigningFailedError,
+  EncryptionFailedError,
+  DecryptionFailedError,
+  ApprovalFailedError,
+  TransactionRevertedError,
+} from "./errors";
