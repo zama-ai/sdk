@@ -537,40 +537,36 @@ interface ActivityLogMetadata {
 
 ## Error Handling
 
-All SDK errors are instances of `TokenError`:
+All SDK errors extend `TokenError`. Use `instanceof` to catch specific error types:
 
 ```ts
-import { TokenError, TokenErrorCode } from "@zama-fhe/token-sdk";
+import { TokenError, SigningRejectedError, EncryptionFailedError } from "@zama-fhe/token-sdk";
 
 try {
   await token.confidentialTransfer(to, amount);
 } catch (error) {
+  if (error instanceof SigningRejectedError) {
+    // User rejected wallet signature
+  }
+  if (error instanceof EncryptionFailedError) {
+    // FHE encryption failed
+  }
   if (error instanceof TokenError) {
-    switch (error.code) {
-      case TokenErrorCode.SigningRejected:
-        // User rejected wallet signature
-        break;
-      case TokenErrorCode.EncryptionFailed:
-        // FHE encryption failed
-        break;
-    }
+    // Any other SDK error — check error.code for details
   }
 }
 ```
 
-### Error Codes
+### Error Classes
 
-| Code                   | Constant              | Description                                         |
-| ---------------------- | --------------------- | --------------------------------------------------- |
-| `SIGNING_REJECTED`     | `SigningRejected`     | User rejected the wallet signature request.         |
-| `SIGNING_FAILED`       | `SigningFailed`       | Wallet signature failed for a non-rejection reason. |
-| `ENCRYPTION_FAILED`    | `EncryptionFailed`    | FHE encryption operation failed.                    |
-| `DECRYPTION_FAILED`    | `DecryptionFailed`    | FHE decryption operation failed.                    |
-| `NOT_CONFIDENTIAL`     | `NotConfidential`     | Token does not support the ERC-7984 interface.      |
-| `NOT_WRAPPER`          | `NotWrapper`          | Token does not support the wrapper interface.       |
-| `APPROVAL_FAILED`      | `ApprovalFailed`      | ERC-20 approval transaction failed.                 |
-| `TRANSACTION_REVERTED` | `TransactionReverted` | On-chain transaction reverted.                      |
-| `STORE_ERROR`          | `StoreError`          | Credential storage read/write failed.               |
+| Error Class                | Code                   | Description                                         |
+| -------------------------- | ---------------------- | --------------------------------------------------- |
+| `SigningRejectedError`     | `SIGNING_REJECTED`     | User rejected the wallet signature request.         |
+| `SigningFailedError`       | `SIGNING_FAILED`       | Wallet signature failed for a non-rejection reason. |
+| `EncryptionFailedError`    | `ENCRYPTION_FAILED`    | FHE encryption operation failed.                    |
+| `DecryptionFailedError`    | `DECRYPTION_FAILED`    | FHE decryption operation failed.                    |
+| `ApprovalFailedError`      | `APPROVAL_FAILED`      | ERC-20 approval transaction failed.                 |
+| `TransactionRevertedError` | `TRANSACTION_REVERTED` | On-chain transaction reverted.                      |
 
 ## RelayerSDK (Low-Level FHE)
 

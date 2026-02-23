@@ -405,41 +405,42 @@ const txHash = await writeWrapContract(signer, wrapper, to, amount);
 
 ## Error Handling
 
-All SDK errors are instances of `TokenError` with typed error codes:
+All SDK errors extend `TokenError`. Use `instanceof` to catch specific error types:
 
 ```ts
-import { TokenError, TokenErrorCode } from "@zama-fhe/token-sdk";
+import {
+  TokenError,
+  SigningRejectedError,
+  EncryptionFailedError,
+  TransactionRevertedError,
+} from "@zama-fhe/token-sdk";
 
 try {
   await token.confidentialTransfer(to, amount);
 } catch (error) {
+  if (error instanceof SigningRejectedError) {
+    // User rejected wallet signature
+  }
+  if (error instanceof EncryptionFailedError) {
+    // FHE encryption failed
+  }
+  if (error instanceof TransactionRevertedError) {
+    // On-chain transaction reverted
+  }
   if (error instanceof TokenError) {
-    switch (error.code) {
-      case TokenErrorCode.SigningRejected:
-        // User rejected wallet signature
-        break;
-      case TokenErrorCode.EncryptionFailed:
-        // FHE encryption failed
-        break;
-      case TokenErrorCode.TransactionReverted:
-        // On-chain transaction reverted
-        break;
-    }
+    // Any other SDK error — check error.code for details
   }
 }
 ```
 
-| Error Code            | Description                                  |
-| --------------------- | -------------------------------------------- |
-| `SigningRejected`     | User rejected the wallet signature request   |
-| `SigningFailed`       | Wallet signature failed (non-rejection)      |
-| `EncryptionFailed`    | FHE encryption operation failed              |
-| `DecryptionFailed`    | FHE decryption operation failed              |
-| `NotConfidential`     | Token does not support ERC-7984              |
-| `NotWrapper`          | Token does not support the wrapper interface |
-| `ApprovalFailed`      | ERC-20 approval transaction failed           |
-| `TransactionReverted` | On-chain transaction reverted                |
-| `StoreError`          | Credential storage read/write failed         |
+| Error Class                | Code                   | Description                                |
+| -------------------------- | ---------------------- | ------------------------------------------ |
+| `SigningRejectedError`     | `SIGNING_REJECTED`     | User rejected the wallet signature request |
+| `SigningFailedError`       | `SIGNING_FAILED`       | Wallet signature failed (non-rejection)    |
+| `EncryptionFailedError`    | `ENCRYPTION_FAILED`    | FHE encryption operation failed            |
+| `DecryptionFailedError`    | `DECRYPTION_FAILED`    | FHE decryption operation failed            |
+| `ApprovalFailedError`      | `APPROVAL_FAILED`      | ERC-20 approval transaction failed         |
+| `TransactionRevertedError` | `TRANSACTION_REVERTED` | On-chain transaction reverted              |
 
 ## Development
 

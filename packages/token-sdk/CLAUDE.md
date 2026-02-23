@@ -65,7 +65,7 @@ Browser FHE runs in a Web Worker (`src/worker/`):
 
 ### Error Handling
 
-All SDK errors use `TokenError` with typed `TokenErrorCode` enum. Methods catch non-SDK errors and re-wrap them with appropriate codes.
+All SDK errors extend `TokenError` (base class in `src/token/errors.ts`). Each error code has a dedicated subclass (e.g. `EncryptionFailedError`, `SigningRejectedError`). Methods catch non-SDK errors and re-wrap them with the appropriate subclass. Use `instanceof` to match specific errors.
 
 ## Code Conventions
 
