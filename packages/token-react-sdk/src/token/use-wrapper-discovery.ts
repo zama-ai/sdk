@@ -3,6 +3,7 @@
 import {
   useQuery,
   useSuspenseQuery,
+  skipToken,
   type UseQueryOptions,
   type UseQueryResult,
   type UseSuspenseQueryResult,
@@ -80,8 +81,12 @@ export function useWrapperDiscovery(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<Address | null, Error>({
-    ...wrapperDiscoveryQueryOptions(token, coordinatorAddress ?? ("" as Address)),
-    enabled: coordinatorAddress !== undefined,
+    ...(coordinatorAddress
+      ? wrapperDiscoveryQueryOptions(token, coordinatorAddress)
+      : {
+          queryKey: wrapperDiscoveryQueryKeys.tokenCoordinator(tokenAddress, ""),
+          queryFn: skipToken,
+        }),
     ...options,
   });
 }

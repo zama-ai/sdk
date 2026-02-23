@@ -234,7 +234,6 @@ export {
   feeRecipientQueryOptions,
   feeQueryKeys,
   type UseFeeConfig,
-  type FeeOptionsConfig,
 } from "./token/use-fees";
 
 // Re-export event decoders, types, and constants from core SDK

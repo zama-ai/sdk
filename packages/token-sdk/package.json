@@ -53,7 +53,9 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepare": "tsup"
+    "prepare": "tsup",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@zama-fhe/relayer-sdk": "0.4.1"

@@ -9,7 +9,7 @@ import {
   type Address,
   type GenericSigner,
 } from "@zama-fhe/token-sdk";
-import { useReadonlyToken } from "./use-readonly-token";
+import { useTokenSDK } from "../provider";
 
 /**
  * Query key factory for fee-related queries.
@@ -40,26 +40,14 @@ export interface UseFeeConfig {
   to: Address;
 }
 
-/** Configuration for fee options factories. */
-export interface FeeOptionsConfig {
-  /** Address of the fee manager contract. */
-  feeManagerAddress: Address;
-  /** Amount to calculate the fee for. */
-  amount: bigint;
-  /** Sender address. */
-  from: Address;
-  /** Receiver address. */
-  to: Address;
-}
-
 /**
  * TanStack Query options factory for wrap fee.
  *
  * @param signer - A `GenericSigner` instance.
- * @param config - Fee manager address, amount, from, and to.
+ * @param config - {@link UseFeeConfig} with fee manager address, amount, from, and to.
  * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
  */
-export function wrapFeeQueryOptions(signer: GenericSigner, config: FeeOptionsConfig) {
+export function wrapFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig) {
   const { feeManagerAddress, amount, from, to } = config;
   return {
     queryKey: feeQueryKeys.wrapFee(feeManagerAddress, amount.toString(), from, to),
@@ -76,7 +64,7 @@ export function wrapFeeQueryOptions(signer: GenericSigner, config: FeeOptionsCon
  * @param config - Fee manager address, amount, from, and to.
  * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
  */
-export function unwrapFeeQueryOptions(signer: GenericSigner, config: FeeOptionsConfig) {
+export function unwrapFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig) {
   const { feeManagerAddress, amount, from, to } = config;
   return {
     queryKey: feeQueryKeys.unwrapFee(feeManagerAddress, amount.toString(), from, to),
@@ -137,10 +125,10 @@ export function useWrapFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
-  const token = useReadonlyToken(config.feeManagerAddress);
+  const sdk = useTokenSDK();
 
   return useQuery<bigint, Error>({
-    ...wrapFeeQueryOptions(token.signer, config),
+    ...wrapFeeQueryOptions(sdk.signer, config),
     ...options,
   });
 }
@@ -166,10 +154,10 @@ export function useUnwrapFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
-  const token = useReadonlyToken(config.feeManagerAddress);
+  const sdk = useTokenSDK();
 
   return useQuery<bigint, Error>({
-    ...unwrapFeeQueryOptions(token.signer, config),
+    ...unwrapFeeQueryOptions(sdk.signer, config),
     ...options,
   });
 }
@@ -190,10 +178,10 @@ export function useBatchTransferFee(
   feeManagerAddress: Address,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
-  const token = useReadonlyToken(feeManagerAddress);
+  const sdk = useTokenSDK();
 
   return useQuery<bigint, Error>({
-    ...batchTransferFeeQueryOptions(token.signer, feeManagerAddress),
+    ...batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress),
     ...options,
   });
 }
@@ -214,10 +202,10 @@ export function useFeeRecipient(
   feeManagerAddress: Address,
   options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<Address, Error> {
-  const token = useReadonlyToken(feeManagerAddress);
+  const sdk = useTokenSDK();
 
   return useQuery<Address, Error>({
-    ...feeRecipientQueryOptions(token.signer, feeManagerAddress),
+    ...feeRecipientQueryOptions(sdk.signer, feeManagerAddress),
     ...options,
   });
 }

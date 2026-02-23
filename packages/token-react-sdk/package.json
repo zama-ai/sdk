@@ -53,7 +53,9 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepare": "tsup"
+    "prepare": "tsup",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "tsup": "^8.5.1"
