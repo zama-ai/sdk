@@ -1,3 +1,6 @@
+import { Query } from "@tanstack/react-query";
+import { Address } from "@zama-fhe/token-sdk";
+
 /**
  * Query key factories for confidential balance queries.
  * Use with `queryClient.invalidateQueries()` / `resetQueries()` / `removeQueries()`.
@@ -59,4 +62,33 @@ export const confidentialHandlesQueryKeys = {
   /** Match batch handle query for a specific token set + owner. */
   tokens: (tokenAddresses: string[], owner: string) =>
     ["confidentialHandles", tokenAddresses, owner] as const,
+} as const;
+
+/**
+ * Query key matching wagmi's `useBalance` cache (`['balance', ...]`).
+ * Invalidate after operations that change the underlying ERC-20 balance
+ * (e.g. unshield, finalize unwrap) so wagmi refetches automatically.
+ *
+ * Requires the app to share the same `QueryClient` between wagmi and `TokenSDKProvider`.
+ */
+export const wagmiBalancePredicates = {
+  /** Match all wagmi balance queries. */
+  balanceOf: (query: Query) =>
+    Array.isArray(query.queryKey) &&
+    query.queryKey.some(
+      (key) =>
+        typeof key === "object" &&
+        key !== null &&
+        "functionName" in key &&
+        key.functionName === "balanceOf",
+    ),
+  balanceOfAddress: (address: Address) => (query: Query) =>
+    query.queryKey[0] === "readContracts" &&
+    typeof query.queryKey[1] === "object" &&
+    query.queryKey[1] !== null &&
+    "contracts" in query.queryKey[1] &&
+    Array.isArray(query.queryKey[1].contracts) &&
+    query.queryKey[1].contracts.some(
+      (c) => c.address === address && c.functionName === "balanceOf",
+    ),
 } as const;

@@ -7,6 +7,7 @@ import {
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
+  wagmiBalancePredicates,
 } from "./balance-query-keys";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
 import { useToken, type UseTokenConfig } from "./use-token";
@@ -60,10 +61,11 @@ export function useUnshieldAll(
       context.client.invalidateQueries({
         queryKey: confidentialBalancesQueryKeys.all,
       });
-      // Underlying ERC-20 balance changes after unshield — invalidate wagmi useBalance cache
-      context.client.invalidateQueries({ queryKey: ["balance"] });
       context.client.invalidateQueries({
         queryKey: underlyingAllowanceQueryKeys.all,
+      });
+      context.client.invalidateQueries({
+        predicate: wagmiBalancePredicates.balanceOfAddress(config.tokenAddress),
       });
       options?.onSuccess?.(data, variables, onMutateResult, context);
     },
