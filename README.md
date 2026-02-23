@@ -206,22 +206,22 @@ const sdk = new TokenSDK({
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Your Application                  │
+│                    Your Application                 │
 ├──────────────────────┬──────────────────────────────┤
 │  token-react-sdk     │  token-sdk (vanilla TS)      │
 │  React hooks +       │  TokenSDK                    │
 │  React Query cache   │  Token                       │
 │                      │  ReadonlyToken               │
 ├──────────────────────┴──────────────────────────────┤
-│                   Signer Adapters                    │
-│           ViemSigner · EthersSigner · WagmiSigner    │
+│                   Signer Adapters                   │
+│       ViemSigner · EthersSigner · WagmiSigner       │
 ├─────────────────────────────────────────────────────┤
-│                  Relayer Backend                     │
-│     RelayerWeb (browser, Web Worker + WASM)          │
-│     RelayerNode (Node.js, worker threads)            │
+│                  Relayer Backend                    │
+│       RelayerWeb (browser, Web Worker + WASM)       │
+│       RelayerNode (Node.js, worker threads)         │
 ├─────────────────────────────────────────────────────┤
-│              fhEVM Smart Contracts                   │
-│       Encrypted ERC-20 · Wrapper · Coordinator       │
+│              fhEVM Smart Contracts                  │
+│       Encrypted ERC-20 · Wrapper · Coordinator      │
 └─────────────────────────────────────────────────────┘
 ```
 
