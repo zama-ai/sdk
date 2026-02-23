@@ -20,6 +20,7 @@ Output to `dist/`. Root `pnpm build` runs builds in dependency order.
 ## Package.json Exports
 
 Each package uses conditional exports:
+
 ```json
 "exports": {
   ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },

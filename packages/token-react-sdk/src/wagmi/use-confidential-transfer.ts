@@ -3,9 +3,7 @@
 import { confidentialTransferContract } from "@zama-fhe/token-sdk";
 import { useWriteContract } from "wagmi";
 
-type EncryptedTransferParameters = Parameters<
-  typeof confidentialTransferContract
->;
+type EncryptedTransferParameters = Parameters<typeof confidentialTransferContract>;
 
 export function useConfidentialTransfer() {
   const { mutate, mutateAsync, ...mutation } = useWriteContract();
@@ -16,9 +14,7 @@ export function useConfidentialTransfer() {
     handle: EncryptedTransferParameters[2],
     inputProof: EncryptedTransferParameters[3],
   ) {
-    return mutate(
-      confidentialTransferContract(encryptedErc20, to, handle, inputProof),
-    );
+    return mutate(confidentialTransferContract(encryptedErc20, to, handle, inputProof));
   }
 
   async function transferAsync(
@@ -27,9 +23,7 @@ export function useConfidentialTransfer() {
     handle: EncryptedTransferParameters[2],
     inputProof: EncryptedTransferParameters[3],
   ) {
-    return mutateAsync(
-      confidentialTransferContract(encryptedErc20, to, handle, inputProof),
-    );
+    return mutateAsync(confidentialTransferContract(encryptedErc20, to, handle, inputProof));
   }
 
   return {

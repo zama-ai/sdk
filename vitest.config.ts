@@ -26,10 +26,7 @@ export default defineConfig({
       },
       {
         find: /^@zama-fhe\/token-react-sdk\/(.+)/,
-        replacement: path.resolve(
-          __dirname,
-          "./packages/token-react-sdk/src/$1",
-        ),
+        replacement: path.resolve(__dirname, "./packages/token-react-sdk/src/$1"),
       },
       {
         find: /^@zama-fhe\/token-react-sdk$/,

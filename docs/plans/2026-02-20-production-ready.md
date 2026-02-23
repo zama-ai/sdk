@@ -13,11 +13,13 @@
 ### Task 1: Install build tooling
 
 **Files:**
+
 - Modify: `package.json` (root)
 
 **Step 1: Install tsup, prettier, and changesets**
 
 Run:
+
 ```bash
 pnpm add -Dw tsup @changesets/cli @changesets/changelog-github prettier eslint-config-prettier
 ```
@@ -39,12 +41,14 @@ git commit -m "chore: add tsup, changesets, and prettier"
 ### Task 2: Configure tsup for token-sdk
 
 **Files:**
+
 - Create: `packages/token-sdk/tsup.config.ts`
 - Modify: `packages/token-sdk/package.json`
 
 **Step 1: Create tsup config**
 
 Create `packages/token-sdk/tsup.config.ts`:
+
 ```ts
 import { defineConfig } from "tsup";
 
@@ -68,6 +72,7 @@ export default defineConfig({
 **Step 2: Update package.json**
 
 Replace `packages/token-sdk/package.json` with:
+
 ```json
 {
   "name": "@zama-fhe/token-sdk",
@@ -140,12 +145,14 @@ git commit -m "feat(token-sdk): add tsup build config and npm exports"
 ### Task 3: Configure tsup for token-react-sdk
 
 **Files:**
+
 - Create: `packages/token-react-sdk/tsup.config.ts`
 - Modify: `packages/token-react-sdk/package.json`
 
 **Step 1: Create tsup config**
 
 Create `packages/token-react-sdk/tsup.config.ts`:
+
 ```ts
 import { defineConfig } from "tsup";
 
@@ -183,6 +190,7 @@ Note: `banner: { js: '"use client"' }` marks all chunks as client components sin
 **Step 2: Update package.json**
 
 Replace `packages/token-react-sdk/package.json` with:
+
 ```json
 {
   "name": "@zama-fhe/token-react-sdk",
@@ -254,6 +262,7 @@ git commit -m "feat(token-react-sdk): add tsup build config and npm exports"
 ### Task 4: Add root build and format scripts
 
 **Files:**
+
 - Modify: `package.json` (root)
 - Create: `.prettierrc`
 - Create: `eslint.config.mjs`
@@ -261,6 +270,7 @@ git commit -m "feat(token-react-sdk): add tsup build config and npm exports"
 **Step 1: Update root package.json scripts**
 
 Add to the `"scripts"` section of root `package.json`:
+
 ```json
 {
   "scripts": {
@@ -283,6 +293,7 @@ Add to the `"scripts"` section of root `package.json`:
 **Step 2: Create .prettierrc**
 
 Create `.prettierrc`:
+
 ```json
 {
   "semi": true,
@@ -296,6 +307,7 @@ Create `.prettierrc`:
 **Step 3: Create .prettierignore**
 
 Create `.prettierignore`:
+
 ```
 dist
 node_modules
@@ -307,6 +319,7 @@ coverage
 **Step 4: Create eslint.config.mjs**
 
 Create `eslint.config.mjs`:
+
 ```js
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
@@ -329,6 +342,7 @@ export default tseslint.config(
 **Step 5: Install eslint deps**
 
 Run:
+
 ```bash
 pnpm add -Dw @eslint/js typescript-eslint eslint-config-prettier
 ```
@@ -356,6 +370,7 @@ git commit -m "chore: add root build, lint, and format scripts"
 ### Task 5: Initialize changesets
 
 **Files:**
+
 - Create: `.changeset/config.json`
 
 **Step 1: Initialize changesets**
@@ -366,6 +381,7 @@ Expected: Creates `.changeset/` directory with `config.json` and `README.md`
 **Step 2: Update changeset config for linked versioning**
 
 Replace `.changeset/config.json` with:
+
 ```json
 {
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
@@ -399,11 +415,13 @@ git commit -m "chore: initialize changesets with fixed versioning"
 ### Task 6: Create GitHub Actions CI workflow
 
 **Files:**
+
 - Create: `.github/workflows/ci.yml`
 
 **Step 1: Create CI workflow**
 
 Create `.github/workflows/ci.yml`:
+
 ```yaml
 name: CI
 
@@ -451,11 +469,13 @@ git commit -m "ci: add CI workflow for build, test, lint, and format"
 ### Task 7: Create GitHub Actions release workflow
 
 **Files:**
+
 - Create: `.github/workflows/release.yml`
 
 **Step 1: Create release workflow**
 
 Create `.github/workflows/release.yml`:
+
 ```yaml
 name: Release
 
@@ -515,6 +535,7 @@ git commit -m "ci: add release workflow with changesets"
 ### Task 8: Add package tsconfig for build (separate from root typecheck config)
 
 **Files:**
+
 - Create: `packages/token-sdk/tsconfig.build.json`
 - Create: `packages/token-react-sdk/tsconfig.build.json`
 
@@ -523,6 +544,7 @@ Each package needs a build-specific tsconfig that tsup uses for declaration gene
 **Step 1: Create token-sdk tsconfig.build.json**
 
 Create `packages/token-sdk/tsconfig.build.json`:
+
 ```json
 {
   "extends": "./tsconfig.json",
@@ -533,6 +555,7 @@ Create `packages/token-sdk/tsconfig.build.json`:
 **Step 2: Create token-react-sdk tsconfig.build.json**
 
 Create `packages/token-react-sdk/tsconfig.build.json`:
+
 ```json
 {
   "extends": "./tsconfig.json",
@@ -545,11 +568,13 @@ Create `packages/token-react-sdk/tsconfig.build.json`:
 Add `tsconfig: "tsconfig.build.json"` to both `tsup.config.ts` files.
 
 For `packages/token-sdk/tsup.config.ts`, add:
+
 ```ts
   tsconfig: "tsconfig.build.json",
 ```
 
 For `packages/token-react-sdk/tsup.config.ts`, add:
+
 ```ts
   tsconfig: "tsconfig.build.json",
 ```
@@ -576,27 +601,33 @@ git commit -m "chore: add build tsconfigs excluding test files"
 **Step 1: Clean build from scratch**
 
 Run:
+
 ```bash
 rm -rf packages/token-sdk/dist packages/token-react-sdk/dist
 pnpm build
 ```
+
 Expected: Both packages build cleanly
 
 **Step 2: Run full CI pipeline locally**
 
 Run:
+
 ```bash
 pnpm build && pnpm typecheck && pnpm test:run && pnpm lint
 ```
+
 Expected: All pass
 
 **Step 3: Verify npm pack contents**
 
 Run:
+
 ```bash
 cd packages/token-sdk && pnpm pack --dry-run && cd ../..
 cd packages/token-react-sdk && pnpm pack --dry-run && cd ../..
 ```
+
 Expected: Only `dist/` files and `README.md` listed (no `src/` files)
 
 **Step 4: Commit any remaining changes**
