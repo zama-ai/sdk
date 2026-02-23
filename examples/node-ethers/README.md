@@ -22,9 +22,9 @@ npm start
 1. Creates an `EthersSigner` from a private key
 2. Sets up `RelayerNode` for FHE operations
 3. Checks the confidential balance
-4. Shields (wraps) public tokens into confidential tokens
+4. Shields public tokens into confidential tokens
 5. Performs a confidential transfer
-6. Unshields (unwraps) tokens back to public
+6. Unshields tokens back to public
 7. Cleans up the worker pool
 
 ## Authentication

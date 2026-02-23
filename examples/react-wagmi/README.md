@@ -30,9 +30,9 @@ Open [http://localhost:3000](http://localhost:3000) and connect your wallet (Met
 
 - Connect/disconnect wallet via wagmi's injected connector
 - Display decrypted confidential balance (auto-polling)
-- Shield (wrap) public tokens into confidential tokens
+- Shield public tokens into confidential tokens
 - Confidential transfer to another address
-- Unshield (unwrap) tokens back to public
+- Unshield tokens back to public
 
 ## Authentication
 
