@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { TokenSDK } from "@zama-fhe/token-sdk";
 import { useTokenSDK } from "../provider";
 
 /**
@@ -25,6 +26,21 @@ export interface PublicParamsData {
 type PublicParamsResult = PublicParamsData | null;
 
 /**
+ * TanStack Query options factory for FHE public parameters.
+ *
+ * @param sdk - A `TokenSDK` instance.
+ * @param bits - The FHE bit size to fetch parameters for (e.g. 2048).
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function publicParamsQueryOptions(sdk: TokenSDK, bits: number) {
+  return {
+    queryKey: publicParamsQueryKeys.bits(bits),
+    queryFn: () => sdk.relayer.getPublicParams(bits) as Promise<PublicParamsResult>,
+    staleTime: Infinity,
+  } as const;
+}
+
+/**
  * Fetch FHE public parameters for a given bit size from the relayer.
  * Cached indefinitely since parameters do not change during a session.
  *
@@ -39,9 +55,5 @@ type PublicParamsResult = PublicParamsData | null;
  */
 export function usePublicParams(bits: number) {
   const sdk = useTokenSDK();
-  return useQuery<PublicParamsResult, Error>({
-    queryKey: ["publicParams", bits],
-    queryFn: () => sdk.relayer.getPublicParams(bits),
-    staleTime: Infinity,
-  });
+  return useQuery<PublicParamsResult, Error>(publicParamsQueryOptions(sdk, bits));
 }

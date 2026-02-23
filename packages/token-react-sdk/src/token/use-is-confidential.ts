@@ -7,7 +7,7 @@ import {
   type UseQueryResult,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, ReadonlyToken } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 /**
@@ -33,6 +33,34 @@ export const isWrapperQueryKeys = {
 } as const;
 
 /**
+ * TanStack Query options factory for ERC-165 confidential interface check.
+ *
+ * @param token - A `ReadonlyToken` instance.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function isConfidentialQueryOptions(token: ReadonlyToken) {
+  return {
+    queryKey: isConfidentialQueryKeys.token(token.address),
+    queryFn: () => token.isConfidential(),
+    staleTime: Infinity,
+  } as const;
+}
+
+/**
+ * TanStack Query options factory for ERC-165 wrapper interface check.
+ *
+ * @param token - A `ReadonlyToken` instance.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function isWrapperQueryOptions(token: ReadonlyToken) {
+  return {
+    queryKey: isWrapperQueryKeys.token(token.address),
+    queryFn: () => token.isWrapper(),
+    staleTime: Infinity,
+  } as const;
+}
+
+/**
  * Check if a token supports the ERC-7984 confidential interface via ERC-165.
  * Result is cached indefinitely since interface support does not change.
  *
@@ -52,9 +80,7 @@ export function useIsConfidential(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<boolean, Error>({
-    queryKey: isConfidentialQueryKeys.token(tokenAddress),
-    queryFn: () => token.isConfidential(),
-    staleTime: Infinity,
+    ...isConfidentialQueryOptions(token),
     ...options,
   });
 }
@@ -76,11 +102,7 @@ export function useIsConfidentialSuspense(
 ): UseSuspenseQueryResult<boolean, Error> {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<boolean, Error>({
-    queryKey: isConfidentialQueryKeys.token(tokenAddress),
-    queryFn: () => token.isConfidential(),
-    staleTime: Infinity,
-  });
+  return useSuspenseQuery<boolean, Error>(isConfidentialQueryOptions(token));
 }
 
 /**
@@ -103,9 +125,7 @@ export function useIsWrapper(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<boolean, Error>({
-    queryKey: isWrapperQueryKeys.token(tokenAddress),
-    queryFn: () => token.isWrapper(),
-    staleTime: Infinity,
+    ...isWrapperQueryOptions(token),
     ...options,
   });
 }
@@ -127,9 +147,5 @@ export function useIsWrapperSuspense(
 ): UseSuspenseQueryResult<boolean, Error> {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<boolean, Error>({
-    queryKey: isWrapperQueryKeys.token(tokenAddress),
-    queryFn: () => token.isWrapper(),
-    staleTime: Infinity,
-  });
+  return useSuspenseQuery<boolean, Error>(isWrapperQueryOptions(token));
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, Token } from "@zama-fhe/token-sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -16,6 +16,19 @@ export interface WrapETHParams {
   amount: bigint;
   /** ETH value to send with the transaction. Defaults to `amount`. */
   value?: bigint;
+}
+
+/**
+ * TanStack Query mutation options factory for wrap ETH (shield).
+ *
+ * @param token - A `Token` instance.
+ * @returns Mutation options with `mutationKey` and `mutationFn`.
+ */
+export function wrapETHMutationOptions(token: Token) {
+  return {
+    mutationKey: ["wrapETH", token.address] as const,
+    mutationFn: ({ amount, value }: WrapETHParams) => token.wrapETH(amount, value),
+  };
 }
 
 /**

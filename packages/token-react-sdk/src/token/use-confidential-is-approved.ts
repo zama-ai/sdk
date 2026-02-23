@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, Token } from "@zama-fhe/token-sdk";
 import { useToken, type UseTokenConfig } from "./use-token";
 
 /**
@@ -31,6 +31,21 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseTokenConfig 
 }
 
 /**
+ * TanStack Query options factory for confidential approval check.
+ *
+ * @param token - A `Token` instance.
+ * @param spender - Address to check approval for.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function confidentialIsApprovedQueryOptions(token: Token, spender: Address) {
+  return {
+    queryKey: confidentialIsApprovedQueryKeys.spender(token.address, spender),
+    queryFn: () => token.isApproved(spender),
+    staleTime: 30_000,
+  } as const;
+}
+
+/**
  * Check if a spender is an approved operator for the connected wallet.
  *
  * @param config - Token address and spender to check.
@@ -53,10 +68,8 @@ export function useConfidentialIsApproved(
   const token = useToken(tokenConfig);
 
   return useQuery<boolean, Error>({
-    queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, spender ?? ""),
-    queryFn: () => token.isApproved(spender as Address),
+    ...confidentialIsApprovedQueryOptions(token, spender as Address),
     enabled: !!spender,
-    staleTime: 30_000,
     ...options,
   });
 }
@@ -80,9 +93,5 @@ export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsAppro
   const { spender, ...tokenConfig } = config;
   const token = useToken(tokenConfig);
 
-  return useSuspenseQuery<boolean, Error>({
-    queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, spender),
-    queryFn: () => token.isApproved(spender),
-    staleTime: 30_000,
-  });
+  return useSuspenseQuery<boolean, Error>(confidentialIsApprovedQueryOptions(token, spender));
 }

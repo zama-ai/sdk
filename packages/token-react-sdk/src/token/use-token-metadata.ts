@@ -7,7 +7,7 @@ import {
   type UseQueryResult,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, ReadonlyToken } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 /**
@@ -32,6 +32,34 @@ export interface TokenMetadata {
 }
 
 /**
+ * TanStack Query options factory for token metadata.
+ * Returns a config object usable with `useQuery`, `prefetchQuery`, `useQueries`, etc.
+ *
+ * @param token - A `ReadonlyToken` instance.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ *
+ * @example
+ * ```ts
+ * const options = tokenMetadataQueryOptions(token);
+ * await queryClient.prefetchQuery(options);
+ * ```
+ */
+export function tokenMetadataQueryOptions(token: ReadonlyToken) {
+  return {
+    queryKey: tokenMetadataQueryKeys.token(token.address),
+    queryFn: async () => {
+      const [name, symbol, decimals] = await Promise.all([
+        token.name(),
+        token.symbol(),
+        token.decimals(),
+      ]);
+      return { name, symbol, decimals } as TokenMetadata;
+    },
+    staleTime: Infinity,
+  } as const;
+}
+
+/**
  * Read ERC-20 token metadata (name, symbol, decimals).
  * Fetches all three in parallel. Cached indefinitely since metadata is immutable.
  *
@@ -52,16 +80,7 @@ export function useTokenMetadata(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<TokenMetadata, Error>({
-    queryKey: tokenMetadataQueryKeys.token(tokenAddress),
-    queryFn: async () => {
-      const [name, symbol, decimals] = await Promise.all([
-        token.name(),
-        token.symbol(),
-        token.decimals(),
-      ]);
-      return { name, symbol, decimals };
-    },
-    staleTime: Infinity,
+    ...tokenMetadataQueryOptions(token),
     ...options,
   });
 }
@@ -83,16 +102,5 @@ export function useTokenMetadataSuspense(
 ): UseSuspenseQueryResult<TokenMetadata, Error> {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<TokenMetadata, Error>({
-    queryKey: tokenMetadataQueryKeys.token(tokenAddress),
-    queryFn: async () => {
-      const [name, symbol, decimals] = await Promise.all([
-        token.name(),
-        token.symbol(),
-        token.decimals(),
-      ]);
-      return { name, symbol, decimals };
-    },
-    staleTime: Infinity,
-  });
+  return useSuspenseQuery<TokenMetadata, Error>(tokenMetadataQueryOptions(token));
 }

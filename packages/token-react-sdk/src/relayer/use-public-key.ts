@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { TokenSDK } from "@zama-fhe/token-sdk";
 import { useTokenSDK } from "../provider";
 
 /**
@@ -23,6 +24,20 @@ export interface PublicKeyData {
 type PublicKeyResult = PublicKeyData | null;
 
 /**
+ * TanStack Query options factory for the FHE public key.
+ *
+ * @param sdk - A `TokenSDK` instance.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function publicKeyQueryOptions(sdk: TokenSDK) {
+  return {
+    queryKey: publicKeyQueryKeys.all,
+    queryFn: () => sdk.relayer.getPublicKey() as Promise<PublicKeyResult>,
+    staleTime: Infinity,
+  } as const;
+}
+
+/**
  * Fetch the FHE network public key from the relayer.
  * Cached indefinitely since the key does not change during a session.
  *
@@ -36,9 +51,5 @@ type PublicKeyResult = PublicKeyData | null;
  */
 export function usePublicKey() {
   const sdk = useTokenSDK();
-  return useQuery<PublicKeyResult, Error>({
-    queryKey: ["publicKey"],
-    queryFn: () => sdk.relayer.getPublicKey(),
-    staleTime: Infinity,
-  });
+  return useQuery<PublicKeyResult, Error>(publicKeyQueryOptions(sdk));
 }

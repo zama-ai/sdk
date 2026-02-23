@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, Token } from "@zama-fhe/token-sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -18,6 +18,20 @@ export interface WrapParams {
   fees?: bigint;
   /** ERC-20 approval strategy: `"exact"` (default), `"max"`, or `"skip"`. */
   approvalStrategy?: "max" | "exact" | "skip";
+}
+
+/**
+ * TanStack Query mutation options factory for wrap (shield).
+ *
+ * @param token - A `Token` instance.
+ * @returns Mutation options with `mutationKey` and `mutationFn`.
+ */
+export function wrapMutationOptions(token: Token) {
+  return {
+    mutationKey: ["wrap", token.address] as const,
+    mutationFn: async ({ amount, fees, approvalStrategy }: WrapParams) =>
+      token.wrap(amount, { fees, approvalStrategy }),
+  };
 }
 
 /**

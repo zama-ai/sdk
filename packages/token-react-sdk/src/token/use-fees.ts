@@ -7,6 +7,7 @@ import {
   getBatchTransferFeeContract,
   getFeeRecipientContract,
   type Address,
+  type GenericSigner,
 } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
@@ -39,6 +40,82 @@ export interface UseFeeConfig {
   to: Address;
 }
 
+/** Configuration for fee options factories. */
+export interface FeeOptionsConfig {
+  /** Address of the fee manager contract. */
+  feeManagerAddress: Address;
+  /** Amount to calculate the fee for. */
+  amount: bigint;
+  /** Sender address. */
+  from: Address;
+  /** Receiver address. */
+  to: Address;
+}
+
+/**
+ * TanStack Query options factory for wrap fee.
+ *
+ * @param signer - A `GenericSigner` instance.
+ * @param config - Fee manager address, amount, from, and to.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function wrapFeeQueryOptions(signer: GenericSigner, config: FeeOptionsConfig) {
+  const { feeManagerAddress, amount, from, to } = config;
+  return {
+    queryKey: feeQueryKeys.wrapFee(feeManagerAddress, amount.toString(), from, to),
+    queryFn: () =>
+      signer.readContract<bigint>(getWrapFeeContract(feeManagerAddress, amount, from, to)),
+    staleTime: 30_000,
+  } as const;
+}
+
+/**
+ * TanStack Query options factory for unwrap fee.
+ *
+ * @param signer - A `GenericSigner` instance.
+ * @param config - Fee manager address, amount, from, and to.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function unwrapFeeQueryOptions(signer: GenericSigner, config: FeeOptionsConfig) {
+  const { feeManagerAddress, amount, from, to } = config;
+  return {
+    queryKey: feeQueryKeys.unwrapFee(feeManagerAddress, amount.toString(), from, to),
+    queryFn: () =>
+      signer.readContract<bigint>(getUnwrapFeeContract(feeManagerAddress, amount, from, to)),
+    staleTime: 30_000,
+  } as const;
+}
+
+/**
+ * TanStack Query options factory for batch transfer fee.
+ *
+ * @param signer - A `GenericSigner` instance.
+ * @param feeManagerAddress - Address of the fee manager contract.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress: Address) {
+  return {
+    queryKey: feeQueryKeys.batchTransferFee(feeManagerAddress),
+    queryFn: () => signer.readContract<bigint>(getBatchTransferFeeContract(feeManagerAddress)),
+    staleTime: 30_000,
+  } as const;
+}
+
+/**
+ * TanStack Query options factory for fee recipient.
+ *
+ * @param signer - A `GenericSigner` instance.
+ * @param feeManagerAddress - Address of the fee manager contract.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddress: Address) {
+  return {
+    queryKey: feeQueryKeys.feeRecipient(feeManagerAddress),
+    queryFn: () => signer.readContract<Address>(getFeeRecipientContract(feeManagerAddress)),
+    staleTime: 30_000,
+  } as const;
+}
+
 /**
  * Read the wrap fee for a given amount and address pair.
  *
@@ -60,14 +137,10 @@ export function useWrapFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
-  const { feeManagerAddress, amount, from, to } = config;
-  const token = useReadonlyToken(feeManagerAddress);
+  const token = useReadonlyToken(config.feeManagerAddress);
 
   return useQuery<bigint, Error>({
-    queryKey: feeQueryKeys.wrapFee(feeManagerAddress, amount.toString(), from, to),
-    queryFn: () =>
-      token.signer.readContract<bigint>(getWrapFeeContract(feeManagerAddress, amount, from, to)),
-    staleTime: 30_000,
+    ...wrapFeeQueryOptions(token.signer, config),
     ...options,
   });
 }
@@ -93,14 +166,10 @@ export function useUnwrapFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
-  const { feeManagerAddress, amount, from, to } = config;
-  const token = useReadonlyToken(feeManagerAddress);
+  const token = useReadonlyToken(config.feeManagerAddress);
 
   return useQuery<bigint, Error>({
-    queryKey: feeQueryKeys.unwrapFee(feeManagerAddress, amount.toString(), from, to),
-    queryFn: () =>
-      token.signer.readContract<bigint>(getUnwrapFeeContract(feeManagerAddress, amount, from, to)),
-    staleTime: 30_000,
+    ...unwrapFeeQueryOptions(token.signer, config),
     ...options,
   });
 }
@@ -124,10 +193,7 @@ export function useBatchTransferFee(
   const token = useReadonlyToken(feeManagerAddress);
 
   return useQuery<bigint, Error>({
-    queryKey: feeQueryKeys.batchTransferFee(feeManagerAddress),
-    queryFn: () =>
-      token.signer.readContract<bigint>(getBatchTransferFeeContract(feeManagerAddress)),
-    staleTime: 30_000,
+    ...batchTransferFeeQueryOptions(token.signer, feeManagerAddress),
     ...options,
   });
 }
@@ -151,9 +217,7 @@ export function useFeeRecipient(
   const token = useReadonlyToken(feeManagerAddress);
 
   return useQuery<Address, Error>({
-    queryKey: feeQueryKeys.feeRecipient(feeManagerAddress),
-    queryFn: () => token.signer.readContract<Address>(getFeeRecipientContract(feeManagerAddress)),
-    staleTime: 30_000,
+    ...feeRecipientQueryOptions(token.signer, feeManagerAddress),
     ...options,
   });
 }

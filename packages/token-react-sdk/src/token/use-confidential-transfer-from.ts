@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, Token } from "@zama-fhe/token-sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -18,6 +18,20 @@ export interface ConfidentialTransferFromParams {
   to: Address;
   /** Amount to transfer (plaintext — encrypted automatically). */
   amount: bigint;
+}
+
+/**
+ * TanStack Query mutation options factory for confidential transfer-from.
+ *
+ * @param token - A `Token` instance.
+ * @returns Mutation options with `mutationKey` and `mutationFn`.
+ */
+export function confidentialTransferFromMutationOptions(token: Token) {
+  return {
+    mutationKey: ["confidentialTransferFrom", token.address] as const,
+    mutationFn: ({ from, to, amount }: ConfidentialTransferFromParams) =>
+      token.confidentialTransferFrom(from, to, amount),
+  };
 }
 
 /**

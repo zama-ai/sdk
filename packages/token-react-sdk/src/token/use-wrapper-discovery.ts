@@ -7,7 +7,7 @@ import {
   type UseQueryResult,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, ReadonlyToken } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 /**
@@ -41,6 +41,21 @@ export interface UseWrapperDiscoverySuspenseConfig {
 }
 
 /**
+ * TanStack Query options factory for wrapper discovery.
+ *
+ * @param token - A `ReadonlyToken` instance.
+ * @param coordinatorAddress - Address of the wrapper coordinator.
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function wrapperDiscoveryQueryOptions(token: ReadonlyToken, coordinatorAddress: Address) {
+  return {
+    queryKey: wrapperDiscoveryQueryKeys.tokenCoordinator(token.address, coordinatorAddress),
+    queryFn: () => token.discoverWrapper(coordinatorAddress),
+    staleTime: Infinity,
+  } as const;
+}
+
+/**
  * Discover the wrapper contract for an ERC-20 token.
  * Returns the wrapper address if one exists, or `null` if not.
  * Cached indefinitely since wrapper mappings are immutable.
@@ -65,10 +80,8 @@ export function useWrapperDiscovery(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<Address | null, Error>({
-    queryKey: wrapperDiscoveryQueryKeys.tokenCoordinator(tokenAddress, coordinatorAddress ?? ""),
-    queryFn: () => token.discoverWrapper(coordinatorAddress!),
+    ...wrapperDiscoveryQueryOptions(token, coordinatorAddress ?? ("" as Address)),
     enabled: coordinatorAddress !== undefined,
-    staleTime: Infinity,
     ...options,
   });
 }
@@ -94,9 +107,7 @@ export function useWrapperDiscoverySuspense(
   const { tokenAddress, coordinatorAddress } = config;
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<Address | null, Error>({
-    queryKey: wrapperDiscoveryQueryKeys.tokenCoordinator(tokenAddress, coordinatorAddress ?? ""),
-    queryFn: () => token.discoverWrapper(coordinatorAddress),
-    staleTime: Infinity,
-  });
+  return useSuspenseQuery<Address | null, Error>(
+    wrapperDiscoveryQueryOptions(token, coordinatorAddress),
+  );
 }

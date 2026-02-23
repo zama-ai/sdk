@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, Token } from "@zama-fhe/token-sdk";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
 import { useToken, type UseTokenConfig } from "./use-token";
 
@@ -9,6 +9,19 @@ import { useToken, type UseTokenConfig } from "./use-token";
 export interface ApproveUnderlyingParams {
   /** Approval amount. Defaults to max uint256 if omitted. */
   amount?: bigint;
+}
+
+/**
+ * TanStack Query mutation options factory for approve-underlying.
+ *
+ * @param token - A `Token` instance.
+ * @returns Mutation options with `mutationKey` and `mutationFn`.
+ */
+export function approveUnderlyingMutationOptions(token: Token) {
+  return {
+    mutationKey: ["approveUnderlying", token.address] as const,
+    mutationFn: ({ amount }: ApproveUnderlyingParams) => token.approveUnderlying(amount),
+  };
 }
 
 /**

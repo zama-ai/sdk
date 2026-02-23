@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, Token } from "@zama-fhe/token-sdk";
 import { useToken, type UseTokenConfig } from "./use-token";
 import { confidentialIsApprovedQueryKeys } from "./use-confidential-is-approved";
 
@@ -11,6 +11,19 @@ export interface ConfidentialApproveParams {
   spender: Address;
   /** Unix timestamp until which the approval is valid. Defaults to 1 hour from now. */
   until?: number;
+}
+
+/**
+ * TanStack Query mutation options factory for confidential approve.
+ *
+ * @param token - A `Token` instance.
+ * @returns Mutation options with `mutationKey` and `mutationFn`.
+ */
+export function confidentialApproveMutationOptions(token: Token) {
+  return {
+    mutationKey: ["confidentialApprove", token.address] as const,
+    mutationFn: ({ spender, until }: ConfidentialApproveParams) => token.approve(spender, until),
+  };
 }
 
 /**

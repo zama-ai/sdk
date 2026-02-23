@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address, ReadonlyToken } from "@zama-fhe/token-sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 /**
@@ -22,6 +22,21 @@ export interface UseUnderlyingAllowanceConfig {
   tokenAddress: Address;
   /** Address of the wrapper contract (the spender). */
   wrapperAddress: Address;
+}
+
+/**
+ * TanStack Query options factory for underlying ERC-20 allowance.
+ *
+ * @param token - A `ReadonlyToken` instance.
+ * @param wrapperAddress - Address of the wrapper contract (the spender).
+ * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
+ */
+export function underlyingAllowanceQueryOptions(token: ReadonlyToken, wrapperAddress: Address) {
+  return {
+    queryKey: underlyingAllowanceQueryKeys.token(token.address, wrapperAddress),
+    queryFn: () => token.allowance(wrapperAddress),
+    staleTime: 30_000,
+  } as const;
 }
 
 /**
@@ -48,9 +63,7 @@ export function useUnderlyingAllowance(
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<bigint, Error>({
-    queryKey: underlyingAllowanceQueryKeys.token(tokenAddress, wrapperAddress),
-    queryFn: () => token.allowance(wrapperAddress),
-    staleTime: 30_000,
+    ...underlyingAllowanceQueryOptions(token, wrapperAddress),
     ...options,
   });
 }
@@ -74,9 +87,5 @@ export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceCon
   const { tokenAddress, wrapperAddress } = config;
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<bigint, Error>({
-    queryKey: underlyingAllowanceQueryKeys.token(tokenAddress, wrapperAddress),
-    queryFn: () => token.allowance(wrapperAddress),
-    staleTime: 30_000,
-  });
+  return useSuspenseQuery<bigint, Error>(underlyingAllowanceQueryOptions(token, wrapperAddress));
 }
