@@ -30,3 +30,6 @@ npm-debug.log*
 
 # next.js
 .next/
+
+# worktrees
+.worktrees/
