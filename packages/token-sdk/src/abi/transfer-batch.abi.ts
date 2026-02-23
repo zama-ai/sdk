@@ -167,8 +167,7 @@ export const TRANSFER_BATCHER_ABI = [
             type: "uint256",
           },
         ],
-        internalType:
-          "struct ERC7984TransferBatcher.ConfidentialTransferInput[]",
+        internalType: "struct ERC7984TransferBatcher.ConfidentialTransferInput[]",
         name: "transfers",
         type: "tuple[]",
       },

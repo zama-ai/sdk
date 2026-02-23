@@ -3,9 +3,7 @@
 import { confidentialBatchTransferContract } from "@zama-fhe/token-sdk";
 import { useWriteContract } from "wagmi";
 
-type BatchTransferParameters = Parameters<
-  typeof confidentialBatchTransferContract
->;
+type BatchTransferParameters = Parameters<typeof confidentialBatchTransferContract>;
 
 export function useConfidentialBatchTransfer() {
   const { mutate, mutateAsync, ...mutation } = useWriteContract();

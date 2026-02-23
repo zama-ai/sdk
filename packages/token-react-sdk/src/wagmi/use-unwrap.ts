@@ -15,9 +15,7 @@ export function useUnwrap() {
     encryptedAmount: UnwrapParameters[3],
     inputProof: UnwrapParameters[4],
   ) {
-    return mutate(
-      unwrapContract(encryptedErc20, from, to, encryptedAmount, inputProof),
-    );
+    return mutate(unwrapContract(encryptedErc20, from, to, encryptedAmount, inputProof));
   }
 
   async function unwrapAsync(
@@ -27,9 +25,7 @@ export function useUnwrap() {
     encryptedAmount: UnwrapParameters[3],
     inputProof: UnwrapParameters[4],
   ) {
-    return mutateAsync(
-      unwrapContract(encryptedErc20, from, to, encryptedAmount, inputProof),
-    );
+    return mutateAsync(unwrapContract(encryptedErc20, from, to, encryptedAmount, inputProof));
   }
 
   return {

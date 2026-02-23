@@ -29,10 +29,7 @@ export {
   approveContract,
 } from "./erc20";
 
-export {
-  getWrapperContract,
-  wrapperExistsContract,
-} from "./deployment-coordinator";
+export { getWrapperContract, wrapperExistsContract } from "./deployment-coordinator";
 
 export {
   ERC7984_INTERFACE_ID,
@@ -47,7 +44,4 @@ export {
   getFeeRecipientContract,
 } from "./fee-manager";
 
-export {
-  confidentialBatchTransferContract,
-  type BatchTransferData,
-} from "./transfer-batcher";
+export { confidentialBatchTransferContract, type BatchTransferData } from "./transfer-batcher";

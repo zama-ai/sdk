@@ -15,12 +15,7 @@ export function useFinalizeUnwrap() {
     decryptionProof: FinalizeUnwrapParameters[3],
   ) {
     return mutate(
-      finalizeUnwrapContract(
-        wrapper,
-        burntAmount,
-        burntAmountCleartext,
-        decryptionProof,
-      ),
+      finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
     );
   }
 
@@ -31,12 +26,7 @@ export function useFinalizeUnwrap() {
     decryptionProof: FinalizeUnwrapParameters[3],
   ) {
     return mutateAsync(
-      finalizeUnwrapContract(
-        wrapper,
-        burntAmount,
-        burntAmountCleartext,
-        decryptionProof,
-      ),
+      finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
     );
   }
 

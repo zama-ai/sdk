@@ -14,9 +14,7 @@ export function useUnwrapFromBalance() {
     to: UnwrapFromBalanceParameters[2],
     encryptedBalance: UnwrapFromBalanceParameters[3],
   ) {
-    return mutate(
-      unwrapFromBalanceContract(encryptedErc20, from, to, encryptedBalance),
-    );
+    return mutate(unwrapFromBalanceContract(encryptedErc20, from, to, encryptedBalance));
   }
 
   async function unwrapFromBalanceAsync(
@@ -25,9 +23,7 @@ export function useUnwrapFromBalance() {
     to: UnwrapFromBalanceParameters[2],
     encryptedBalance: UnwrapFromBalanceParameters[3],
   ) {
-    return mutateAsync(
-      unwrapFromBalanceContract(encryptedErc20, from, to, encryptedBalance),
-    );
+    return mutateAsync(unwrapFromBalanceContract(encryptedErc20, from, to, encryptedBalance));
   }
 
   return {

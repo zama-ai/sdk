@@ -81,9 +81,7 @@ describe("mergeFhevmConfig", () => {
   });
 
   it("throws for unknown chainId with no overrides", () => {
-    expect(() => mergeFhevmConfig(99999)).toThrow(
-      "No config for chainId: 99999",
-    );
+    expect(() => mergeFhevmConfig(99999)).toThrow("No config for chainId: 99999");
   });
 
   it("returns overrides-only for unknown chainId when overrides provided", () => {

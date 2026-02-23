@@ -1251,8 +1251,7 @@ export const ENCRYPTION_ABI = [
             type: "address",
           },
         ],
-        internalType:
-          "struct RegulatedERC7984ERC20WrapperWithFeesUpgradeable.ReceiverEntry",
+        internalType: "struct RegulatedERC7984ERC20WrapperWithFeesUpgradeable.ReceiverEntry",
         name: "",
         type: "tuple",
       },
