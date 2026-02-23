@@ -9,7 +9,7 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "html"],
+      reporter: ["text", "json", "json-summary", "html"],
       include: ["packages/token-sdk/src/**", "packages/token-react-sdk/src/**"],
       exclude: [
         "**/__tests__/**",
@@ -17,11 +17,13 @@ export default defineConfig({
         "**/*.types.ts",
         "**/abi/**",
         "**/index.ts",
+        "**/worker/relayer-sdk.worker.ts",
+        "**/worker/relayer-sdk.node-worker.ts",
       ],
       thresholds: {
-        lines: 60,
-        branches: 60,
-        functions: 60,
+        lines: 80,
+        branches: 80,
+        functions: 80,
       },
     },
   },
