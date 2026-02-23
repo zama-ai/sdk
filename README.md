@@ -63,11 +63,11 @@ const signer = new WagmiSigner(wagmiConfig);
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
-    [1]: {
+    [mainnet.id]: {
       relayerUrl: "https://relayer.zama.ai",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
-    [11155111]: {
+    [sepolia.id]: {
       relayerUrl: "https://relayer.zama.ai",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
