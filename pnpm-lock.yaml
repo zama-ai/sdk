@@ -159,6 +159,9 @@ importers:
       react:
         specifier: '>=18'
         version: 19.2.4
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
       viem:
         specifier: '>=2'
         version: 2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.6)
@@ -171,6 +174,9 @@ importers:
       ethers:
         specifier: '>=6'
         version: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
       viem:
         specifier: '>=2'
         version: 2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.6)

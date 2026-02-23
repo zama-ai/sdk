@@ -26,7 +26,7 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "changeset publish",
-    "prepare": "husky && pnpm build",
+    "prepare": "husky",
     "submodule:init": "git submodule update --init --recursive",
     "submodule:update": "git submodule update --remote --merge",
     "hardhat:install": "npm --prefix hardhat install",

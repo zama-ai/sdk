@@ -52,10 +52,14 @@
     "url": "https://github.com/zama-ai/token-sdk/issues"
   },
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "prepare": "tsup"
   },
   "devDependencies": {
     "@zama-fhe/relayer-sdk": "0.4.1"
+  },
+  "dependencies": {
+    "tsup": "^8.5.1"
   },
   "peerDependencies": {
     "viem": ">=2",
