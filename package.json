@@ -55,7 +55,7 @@
     "ethers": "^6.16.0",
     "fake-indexeddb": "^6.2.5",
     "husky": "^9.1.7",
-    "jsdom": "^27.4.0",
+    "jsdom": "^28.1.0",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.1",
     "tsup": "^8.5.1",
