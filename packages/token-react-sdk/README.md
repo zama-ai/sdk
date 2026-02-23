@@ -297,45 +297,45 @@ interface ConfidentialTransferFromParams {
 }
 ```
 
-### Shield / Wrap Hooks
+### Shield Hooks
 
-#### `useWrap` (alias: `useShield`)
+#### `useShield` (alias: `useWrap`)
 
-Shield (wrap) public ERC-20 tokens into confidential tokens. Handles ERC-20 approval automatically.
+Shield public ERC-20 tokens into confidential tokens. Handles ERC-20 approval automatically.
 
 ```ts
-function useWrap(
+function useShield(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, WrapParams>,
-): UseMutationResult<Address, Error, WrapParams>;
+  options?: UseMutationOptions<Address, Error, ShieldParams>,
+): UseMutationResult<Address, Error, ShieldParams>;
 
-interface WrapParams {
+interface ShieldParams {
   amount: bigint;
   approvalStrategy?: "max" | "exact" | "skip"; // default: "exact"
 }
 ```
 
 ```tsx
-const { mutateAsync: wrap } = useWrap({ tokenAddress: "0xTokenAddress" });
+const { mutateAsync: shield } = useShield({ tokenAddress: "0xTokenAddress" });
 
-// Wrap 1000 tokens with exact approval (default)
-await wrap({ amount: 1000n });
+// Shield 1000 tokens with exact approval (default)
+await shield({ amount: 1000n });
 
-// Wrap with max approval
-await wrap({ amount: 1000n, approvalStrategy: "max" });
+// Shield with max approval
+await shield({ amount: 1000n, approvalStrategy: "max" });
 ```
 
-#### `useWrapETH` (alias: `useShieldETH`)
+#### `useShieldETH` (alias: `useWrapETH`)
 
-Shield (wrap) native ETH into confidential tokens. Use when the underlying token is the zero address (native ETH).
+Shield native ETH into confidential tokens. Use when the underlying token is the zero address (native ETH).
 
 ```ts
-function useWrapETH(
+function useShieldETH(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, WrapETHParams>,
-): UseMutationResult<Address, Error, WrapETHParams>;
+  options?: UseMutationOptions<Address, Error, ShieldETHParams>,
+): UseMutationResult<Address, Error, ShieldETHParams>;
 
-interface WrapETHParams {
+interface ShieldETHParams {
   amount: bigint;
   value?: bigint; // defaults to amount
 }
@@ -696,7 +696,7 @@ Both `@zama-fhe/token-react-sdk/viem` and `@zama-fhe/token-react-sdk/ethers` exp
 
 ### Write hooks
 
-`useConfidentialTransfer`, `useConfidentialBatchTransfer`, `useUnwrap`, `useUnwrapFromBalance`, `useFinalizeUnwrap`, `useSetOperator`, `useWrap`, `useWrapETH`.
+`useConfidentialTransfer`, `useConfidentialBatchTransfer`, `useUnwrap`, `useUnwrapFromBalance`, `useFinalizeUnwrap`, `useSetOperator`, `useShield`, `useShieldETH`.
 
 - **viem:** Mutation params include `client: WalletClient`.
 - **ethers:** Mutation params include `signer: Signer`.

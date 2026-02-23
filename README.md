@@ -46,7 +46,7 @@ import {
   indexedDBStorage,
   useConfidentialBalance,
   useConfidentialTransfer,
-  useWrap,
+  useShield,
 } from "@zama-fhe/token-react-sdk";
 import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
 
@@ -91,12 +91,12 @@ function TokenDashboard() {
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
     tokenAddress: "0xTokenAddress",
   });
-  const { mutateAsync: wrap } = useWrap({ tokenAddress: "0xTokenAddress" });
+  const { mutateAsync: shield } = useShield({ tokenAddress: "0xTokenAddress" });
 
   return (
     <div>
       <p>Balance: {isLoading ? "Decrypting..." : balance?.toString()}</p>
-      <button onClick={() => wrap({ amount: 1000n })}>Shield 1000</button>
+      <button onClick={() => shield({ amount: 1000n })}>Shield 1000</button>
       <button onClick={() => transfer({ to: "0xRecipient", amount: 100n })} disabled={isPending}>
         Send 100
       </button>
