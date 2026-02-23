@@ -12,6 +12,7 @@ import type {
   RequestZKProofVerificationResponseData,
   UpdateCsrfResponseData,
   UserDecryptResponseData,
+  GenericLogger,
   WorkerRequest,
   WorkerRequestType,
   WorkerResponse,
@@ -22,6 +23,8 @@ export interface WorkerClientConfig {
   cdnUrl: string;
   fhevmConfig: FhevmInstanceConfig;
   csrfToken: string;
+  /** Optional logger for tracing worker request lifecycle. */
+  logger?: GenericLogger;
 }
 
 /** Pending request tracker */
@@ -29,6 +32,8 @@ interface PendingRequest<T> {
   resolve: (value: T) => void;
   reject: (error: Error) => void;
   timeoutId: ReturnType<typeof setTimeout>;
+  startTime: number;
+  type: WorkerRequestType;
 }
 
 /** Default timeout for operations (30 seconds) */
@@ -46,9 +51,11 @@ export class RelayerWorkerClient {
   #config: WorkerClientConfig;
   #pendingRequests = new Map<string, PendingRequest<unknown>>();
   #initPromise: Promise<Worker> | null = null;
+  #logger: GenericLogger | undefined;
 
   constructor(config: WorkerClientConfig) {
     this.#config = config;
+    this.#logger = config.logger;
   }
 
   /**
@@ -283,9 +290,16 @@ export class RelayerWorkerClient {
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const id = this.#generateRequestId();
+      const startTime = performance.now();
+      this.#logger?.debug(`[WorkerClient] → ${type}`, { id });
 
       const timeoutId = setTimeout(() => {
         this.#pendingRequests.delete(id);
+        const elapsed = Math.round(performance.now() - startTime);
+        this.#logger?.error(`[WorkerClient] ${type} timed out after ${timeoutMs}ms`, {
+          id,
+          elapsed,
+        });
         reject(new Error(`Request ${type} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
@@ -293,6 +307,8 @@ export class RelayerWorkerClient {
         resolve: resolve as (value: unknown) => void,
         reject,
         timeoutId,
+        startTime,
+        type,
       });
 
       const request = { id, type, payload } as WorkerRequest;
@@ -308,21 +324,27 @@ export class RelayerWorkerClient {
     const worker = await this.initWorker();
     return new Promise<T>((resolve, reject) => {
       const id = this.#generateRequestId();
+      const startTime = performance.now();
+      this.#logger?.debug(`[WorkerClient] → ${type}`, { id });
 
-      // Set up timeout
       const timeoutId = setTimeout(() => {
         this.#pendingRequests.delete(id);
+        const elapsed = Math.round(performance.now() - startTime);
+        this.#logger?.error(`[WorkerClient] ${type} timed out after ${timeoutMs}ms`, {
+          id,
+          elapsed,
+        });
         reject(new Error(`Request ${type} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
-      // Track pending request
       this.#pendingRequests.set(id, {
         resolve: resolve as (value: unknown) => void,
         reject,
         timeoutId,
+        startTime,
+        type,
       });
 
-      // Send request to worker
       const request = { id, type, payload } as WorkerRequest;
       worker.postMessage(request);
     });
@@ -336,9 +358,13 @@ export class RelayerWorkerClient {
     const pending = this.#pendingRequests.get(response.id);
 
     if (!pending) {
-      console.warn("[WorkerClient] Received response for unknown request:", response.id);
+      this.#logger?.warn("[WorkerClient] Received response for unknown request", {
+        id: response.id,
+      });
       return;
     }
+
+    const elapsed = Math.round(performance.now() - pending.startTime);
 
     // Clean up
     clearTimeout(pending.timeoutId);
@@ -346,8 +372,17 @@ export class RelayerWorkerClient {
 
     // Resolve or reject
     if (response.success) {
+      this.#logger?.debug(`[WorkerClient] ← ${pending.type} OK`, {
+        id: response.id,
+        elapsed,
+      });
       pending.resolve(response.data);
     } else {
+      this.#logger?.error(`[WorkerClient] ← ${pending.type} FAILED`, {
+        id: response.id,
+        elapsed,
+        error: response.error,
+      });
       pending.reject(new Error(response.error));
     }
   }
@@ -356,7 +391,7 @@ export class RelayerWorkerClient {
    * Handle worker errors.
    */
   #handleError(event: ErrorEvent): void {
-    console.error("[WorkerClient] Worker error:", event.message);
+    this.#logger?.error("[WorkerClient] Worker error", { error: event.message });
     const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending(`Worker error: ${event.message}`);
@@ -367,7 +402,7 @@ export class RelayerWorkerClient {
    * Handle message deserialization errors (e.g. structured clone failures).
    */
   #handleMessageError(): void {
-    console.error("[WorkerClient] Message deserialization failed");
+    this.#logger?.error("[WorkerClient] Message deserialization failed");
     const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending("Worker message deserialization failed");

@@ -35,13 +35,29 @@ export function confidentialTransferMutationOptions(token: Token) {
 /**
  * Encrypt and send a confidential transfer. Invalidates balance caches on success.
  *
+ * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link EncryptionFailedError} — FHE encryption failed
+ * - {@link TransactionRevertedError} — on-chain transaction reverted
+ *
  * @param config - Token address (and optional wrapper) identifying the token.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const transfer = useConfidentialTransfer({ tokenAddress: "0x..." });
- * transfer.mutate({ to: "0xRecipient", amount: 1000n });
+ * const transfer = useConfidentialTransfer({
+ *   tokenAddress: "0x...",
+ * });
+ * transfer.mutate(
+ *   { to: "0xRecipient", amount: 1000n },
+ *   {
+ *     onError: (error) => {
+ *       if (error instanceof SigningRejectedError) {
+ *         // user cancelled — no action needed
+ *       }
+ *     },
+ *   },
+ * );
  * ```
  */
 export function useConfidentialTransfer(

@@ -5,8 +5,18 @@ import type { Address } from "@zama-fhe/token-sdk";
 import { useTokenSDK } from "../provider";
 
 /**
- * Get a ReadonlyToken instance, memoized by address.
- * Only supports balance queries and authorization — no wrapper needed.
+ * Get a {@link ReadonlyToken} instance, memoized by address.
+ * Supports balance queries, ERC-165 checks, and authorization — no wrapper needed.
+ * Reads signer and storage from the nearest {@link TokenSDKProvider}.
+ *
+ * @param address - Address of the confidential token contract.
+ * @returns A memoized `ReadonlyToken` instance.
+ *
+ * @example
+ * ```tsx
+ * const token = useReadonlyToken("0xToken");
+ * // token.balanceOf(), token.isConfidential(), etc.
+ * ```
  */
 export function useReadonlyToken(address: Address) {
   const sdk = useTokenSDK();

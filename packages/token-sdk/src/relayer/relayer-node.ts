@@ -22,6 +22,8 @@ export interface RelayerNodeConfig {
   /** Resolve the current chain ID. Called lazily before each operation; the pool is re-initialized when the value changes. */
   getChainId: () => Promise<number>;
   poolSize?: number;
+  /** Optional logger for observing worker lifecycle and request timing. */
+  logger?: import("../worker/worker.types").GenericLogger;
 }
 
 /**
@@ -47,6 +49,7 @@ export class RelayerNode implements RelayerSDK {
     return {
       fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
       poolSize,
+      logger: this.#config.logger,
     };
   }
 

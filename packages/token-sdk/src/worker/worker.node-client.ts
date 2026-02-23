@@ -13,6 +13,7 @@ import type {
   PublicDecryptResponseData,
   RequestZKProofVerificationResponseData,
   UserDecryptResponseData,
+  GenericLogger,
   WorkerRequest,
   WorkerRequestType,
   WorkerResponse,
@@ -20,12 +21,16 @@ import type {
 
 export interface NodeWorkerClientConfig {
   fhevmConfig: FhevmInstanceConfig;
+  /** Optional logger for tracing worker request lifecycle. */
+  logger?: GenericLogger;
 }
 
 interface PendingRequest<T> {
   resolve: (value: T) => void;
   reject: (error: Error) => void;
   timeoutId: ReturnType<typeof setTimeout>;
+  startTime: number;
+  type: WorkerRequestType;
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -40,9 +45,11 @@ export class NodeWorkerClient {
   #config: NodeWorkerClientConfig;
   #pendingRequests = new Map<string, PendingRequest<unknown>>();
   #initPromise: Promise<Worker> | null = null;
+  #logger: GenericLogger | undefined;
 
   constructor(config: NodeWorkerClientConfig) {
     this.#config = config;
+    this.#logger = config.logger;
   }
 
   /**
@@ -228,9 +235,16 @@ export class NodeWorkerClient {
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const id = randomUUID();
+      const startTime = performance.now();
+      this.#logger?.debug(`[NodeWorkerClient] → ${type}`, { id });
 
       const timeoutId = setTimeout(() => {
         this.#pendingRequests.delete(id);
+        const elapsed = Math.round(performance.now() - startTime);
+        this.#logger?.error(`[NodeWorkerClient] ${type} timed out after ${timeoutMs}ms`, {
+          id,
+          elapsed,
+        });
         reject(new Error(`Request ${type} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
@@ -238,6 +252,8 @@ export class NodeWorkerClient {
         resolve: resolve as (value: unknown) => void,
         reject,
         timeoutId,
+        startTime,
+        type,
       });
 
       const request = { id, type, payload } as WorkerRequest;
@@ -253,9 +269,16 @@ export class NodeWorkerClient {
     const worker = await this.initWorker();
     return new Promise<T>((resolve, reject) => {
       const id = randomUUID();
+      const startTime = performance.now();
+      this.#logger?.debug(`[NodeWorkerClient] → ${type}`, { id });
 
       const timeoutId = setTimeout(() => {
         this.#pendingRequests.delete(id);
+        const elapsed = Math.round(performance.now() - startTime);
+        this.#logger?.error(`[NodeWorkerClient] ${type} timed out after ${timeoutMs}ms`, {
+          id,
+          elapsed,
+        });
         reject(new Error(`Request ${type} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
@@ -263,6 +286,8 @@ export class NodeWorkerClient {
         resolve: resolve as (value: unknown) => void,
         reject,
         timeoutId,
+        startTime,
+        type,
       });
 
       const request = { id, type, payload } as WorkerRequest;
@@ -274,22 +299,35 @@ export class NodeWorkerClient {
     const pending = this.#pendingRequests.get(response.id);
 
     if (!pending) {
-      console.warn("[NodeWorkerClient] Received response for unknown request:", response.id);
+      this.#logger?.warn("[NodeWorkerClient] Received response for unknown request", {
+        id: response.id,
+      });
       return;
     }
+
+    const elapsed = Math.round(performance.now() - pending.startTime);
 
     clearTimeout(pending.timeoutId);
     this.#pendingRequests.delete(response.id);
 
     if (response.success) {
+      this.#logger?.debug(`[NodeWorkerClient] ← ${pending.type} OK`, {
+        id: response.id,
+        elapsed,
+      });
       pending.resolve(response.data);
     } else {
+      this.#logger?.error(`[NodeWorkerClient] ← ${pending.type} FAILED`, {
+        id: response.id,
+        elapsed,
+        error: response.error,
+      });
       pending.reject(new Error(response.error));
     }
   }
 
   #handleError(error: Error): void {
-    console.error("[NodeWorkerClient] Worker error:", error.message);
+    this.#logger?.error("[NodeWorkerClient] Worker error", { error: error.message });
     const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending(`Worker error: ${error.message}`);
@@ -297,7 +335,7 @@ export class NodeWorkerClient {
   }
 
   #handleMessageError(): void {
-    console.error("[NodeWorkerClient] Message deserialization failed");
+    this.#logger?.error("[NodeWorkerClient] Message deserialization failed");
     const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending("Worker message deserialization failed");

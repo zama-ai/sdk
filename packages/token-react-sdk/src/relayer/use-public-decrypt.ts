@@ -6,8 +6,18 @@ import { decryptionKeys } from "./decryption-cache";
 import { useTokenSDK } from "../provider";
 
 /**
- * On success, populates the decryption cache so useUserDecryptedValue/useUserDecryptedValues
+ * Decrypt FHE ciphertext handles using the network public key (no credential needed).
+ * On success, populates the decryption cache so {@link useUserDecryptedValue} / {@link useUserDecryptedValues}
  * can read the results.
+ *
+ * @returns A mutation whose `mutate` accepts an array of handle strings.
+ *
+ * @example
+ * ```tsx
+ * const publicDecrypt = usePublicDecrypt();
+ * publicDecrypt.mutate(["0xHandle1", "0xHandle2"]);
+ * // publicDecrypt.data?.clearValues => { "0xHandle1": 500n, ... }
+ * ```
  */
 export function usePublicDecrypt() {
   const sdk = useTokenSDK();

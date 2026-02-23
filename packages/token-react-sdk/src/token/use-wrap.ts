@@ -38,6 +38,11 @@ export function wrapMutationOptions(token: Token) {
  * Wrap (shield) public ERC-20 tokens into confidential tokens.
  * Handles ERC-20 approval automatically. Invalidates balance caches on success.
  *
+ * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link ApprovalFailedError} — ERC-20 approval transaction failed
+ * - {@link TransactionRevertedError} — wrap transaction reverted
+ *
  * @param config - Token and wrapper addresses.
  * @param options - React Query mutation options.
  *

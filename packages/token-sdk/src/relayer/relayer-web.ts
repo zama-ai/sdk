@@ -48,6 +48,7 @@ export class RelayerWeb implements RelayerSDK {
       cdnUrl: CDN_URL,
       fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
       csrfToken: this.#config.getCsrfToken?.() ?? "",
+      logger: this.#config.logger,
     };
   }
 

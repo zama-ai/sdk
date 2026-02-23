@@ -7,6 +7,22 @@ import type {
 } from "../relayer/relayer-sdk.types";
 
 // ============================================================================
+// Logger
+// ============================================================================
+
+/**
+ * Optional logger for worker client observability.
+ * Pass to `WorkerClientConfig` or `NodeWorkerClientConfig` to observe
+ * request lifecycle (start, success, error, timeout).
+ */
+export interface GenericLogger {
+  info: (message: string, data?: Record<string, unknown>) => void;
+  debug: (message: string, data?: Record<string, unknown>) => void;
+  warn: (message: string, data?: Record<string, unknown>) => void;
+  error: (message: string, data?: Record<string, unknown>) => void;
+}
+
+// ============================================================================
 // Request Types
 // ============================================================================
 

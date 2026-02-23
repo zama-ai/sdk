@@ -1,5 +1,6 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
 import type { Address } from "@zama-fhe/relayer-sdk/bundle";
+import type { GenericLogger } from "../worker/worker.types";
 
 // ============================================================================
 // SDK Types (local definitions to avoid importing from @zama-fhe/relayer-sdk/web)
@@ -28,6 +29,8 @@ export interface RelayerWebConfig {
   getChainId: () => Promise<number>;
   /** Resolve the current CSRF token. Called before each authenticated network request. */
   getCsrfToken?: () => string;
+  /** Optional logger for observing worker lifecycle and request timing. */
+  logger?: GenericLogger;
 }
 
 /** Result from encryption operation */

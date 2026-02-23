@@ -29,6 +29,10 @@ export function confidentialApproveMutationOptions(token: Token) {
 /**
  * Set operator approval for a confidential token. Defaults to 1 hour.
  *
+ * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link TransactionRevertedError} — on-chain transaction reverted
+ *
  * @param config - Token address (and optional wrapper) identifying the token.
  * @param options - React Query mutation options.
  *

@@ -16,6 +16,7 @@ export type {
   ZKProofLike,
   InputProofBytesType,
   FhevmInstanceConfig,
+  GenericLogger,
 } from "./relayer/relayer-sdk.types";
 
 // Network preset configs
