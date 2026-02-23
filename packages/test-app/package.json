@@ -30,10 +30,5 @@
     "ethers": "^6.16.0",
     "tailwindcss": "^4.2.0",
     "typescript": "^5.9.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "wagmi": "^3.5.0"
-    }
   }
 }
