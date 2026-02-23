@@ -11,7 +11,7 @@ import { usePublicKey } from "../relayer/use-public-key";
 import { usePublicParams } from "../relayer/use-public-params";
 import { renderWithProviders, createMockSigner } from "./test-utils";
 
-const TOKEN = "0xtoken" as Address;
+const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 
 describe("query hooks", () => {
   describe("useTokenMetadata", () => {
@@ -87,7 +87,7 @@ describe("query hooks", () => {
         () =>
           useConfidentialIsApproved({
             tokenAddress: TOKEN,
-            spender: "0xspender" as Address,
+            spender: "0x3333333333333333333333333333333333333333" as Address,
           }),
         { signer },
       );
@@ -109,13 +109,15 @@ describe("query hooks", () => {
 
     it("executes when coordinator is provided", async () => {
       const signer = createMockSigner();
-      vi.mocked(signer.readContract).mockResolvedValue("0xwrapper" as Address);
+      vi.mocked(signer.readContract).mockResolvedValue(
+        "0x4444444444444444444444444444444444444444" as Address,
+      );
 
       const { result } = renderWithProviders(
         () =>
           useWrapperDiscovery({
             tokenAddress: TOKEN,
-            coordinatorAddress: "0xcoordinator" as Address,
+            coordinatorAddress: "0x5555555555555555555555555555555555555555" as Address,
           }),
         { signer },
       );
@@ -126,10 +128,10 @@ describe("query hooks", () => {
 
   describe("fee hooks", () => {
     const feeConfig = {
-      feeManagerAddress: "0xfee" as Address,
+      feeManagerAddress: "0x6666666666666666666666666666666666666666" as Address,
       amount: 1000n,
-      from: "0xfrom" as Address,
-      to: "0xto" as Address,
+      from: "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+      to: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
     };
 
     it("useWrapFee calls signer.readContract", async () => {
@@ -157,9 +159,12 @@ describe("query hooks", () => {
       const signer = createMockSigner();
       vi.mocked(signer.readContract).mockResolvedValue(10n);
 
-      const { result } = renderWithProviders(() => useBatchTransferFee("0xfee" as Address), {
-        signer,
-      });
+      const { result } = renderWithProviders(
+        () => useBatchTransferFee("0x6666666666666666666666666666666666666666" as Address),
+        {
+          signer,
+        },
+      );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(10n);
@@ -169,9 +174,12 @@ describe("query hooks", () => {
       const signer = createMockSigner();
       vi.mocked(signer.readContract).mockResolvedValue("0xrecipient");
 
-      const { result } = renderWithProviders(() => useFeeRecipient("0xfee" as Address), {
-        signer,
-      });
+      const { result } = renderWithProviders(
+        () => useFeeRecipient("0x6666666666666666666666666666666666666666" as Address),
+        {
+          signer,
+        },
+      );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe("0xrecipient");

@@ -12,7 +12,7 @@ export interface UseSupportsInterfaceConfig {
 export function useSupportsInterface(config: UseSupportsInterfaceConfig) {
   const { tokenAddress, interfaceId } = config;
   const enabled = !!tokenAddress && !!interfaceId;
-  const contract = supportsInterfaceContract(tokenAddress as Address, interfaceId as Address);
+  const contract = enabled ? supportsInterfaceContract(tokenAddress, interfaceId) : {};
   return useReadContract({ ...contract, query: { enabled } });
 }
 

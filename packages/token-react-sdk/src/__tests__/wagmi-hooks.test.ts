@@ -228,11 +228,22 @@ describe("Wagmi mutation hooks", () => {
     it("calls wrapContract and passes result to mutate", () => {
       const hook = useWrap();
 
-      hook.mutate("0xwrapper" as Address, "0xto" as Address, 100n);
+      hook.mutate(
+        "0x4444444444444444444444444444444444444444" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+        100n,
+      );
 
-      expect(vi.mocked(wrapContract)).toHaveBeenCalledWith("0xwrapper", "0xto", 100n);
+      expect(vi.mocked(wrapContract)).toHaveBeenCalledWith(
+        "0x4444444444444444444444444444444444444444",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        100n,
+      );
       expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "wrap", address: "0xwrapper" }),
+        expect.objectContaining({
+          functionName: "wrap",
+          address: "0x4444444444444444444444444444444444444444",
+        }),
       );
     });
 
@@ -240,9 +251,17 @@ describe("Wagmi mutation hooks", () => {
       mockMutateAsync.mockResolvedValue("0xtxhash");
       const hook = useWrap();
 
-      await hook.mutateAsync("0xwrapper" as Address, "0xto" as Address, 200n);
+      await hook.mutateAsync(
+        "0x4444444444444444444444444444444444444444" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+        200n,
+      );
 
-      expect(vi.mocked(wrapContract)).toHaveBeenCalledWith("0xwrapper", "0xto", 200n);
+      expect(vi.mocked(wrapContract)).toHaveBeenCalledWith(
+        "0x4444444444444444444444444444444444444444",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        200n,
+      );
       expect(mockMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "wrap" }),
       );
@@ -260,9 +279,19 @@ describe("Wagmi mutation hooks", () => {
     it("calls wrapETHContract with value and passes result to mutate", () => {
       const hook = useWrapETH();
 
-      hook.mutate("0xwrapper" as Address, "0xto" as Address, 100n, 100n);
+      hook.mutate(
+        "0x4444444444444444444444444444444444444444" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+        100n,
+        100n,
+      );
 
-      expect(vi.mocked(wrapETHContract)).toHaveBeenCalledWith("0xwrapper", "0xto", 100n, 100n);
+      expect(vi.mocked(wrapETHContract)).toHaveBeenCalledWith(
+        "0x4444444444444444444444444444444444444444",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        100n,
+        100n,
+      );
       expect(mockMutate).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "wrapETH", value: 100n }),
       );
@@ -272,9 +301,19 @@ describe("Wagmi mutation hooks", () => {
       mockMutateAsync.mockResolvedValue("0xtxhash");
       const hook = useWrapETH();
 
-      await hook.mutateAsync("0xwrapper" as Address, "0xto" as Address, 50n, 50n);
+      await hook.mutateAsync(
+        "0x4444444444444444444444444444444444444444" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+        50n,
+        50n,
+      );
 
-      expect(vi.mocked(wrapETHContract)).toHaveBeenCalledWith("0xwrapper", "0xto", 50n, 50n);
+      expect(vi.mocked(wrapETHContract)).toHaveBeenCalledWith(
+        "0x4444444444444444444444444444444444444444",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        50n,
+        50n,
+      );
       expect(mockMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "wrapETH" }),
       );
@@ -287,12 +326,18 @@ describe("Wagmi mutation hooks", () => {
       const proof = new Uint8Array([4, 5, 6]);
       const hook = useUnwrap();
 
-      hook.mutate("0xtoken" as Address, "0xfrom" as Address, "0xto" as Address, handle, proof);
+      hook.mutate(
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+        handle,
+        proof,
+      );
 
       expect(vi.mocked(unwrapContract)).toHaveBeenCalledWith(
-        "0xtoken",
-        "0xfrom",
-        "0xto",
+        "0x1111111111111111111111111111111111111111",
+        "0xcccccccccccccccccccccccccccccccccccccccc",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         handle,
         proof,
       );
@@ -306,17 +351,17 @@ describe("Wagmi mutation hooks", () => {
       const handle2 = new Uint8Array([7, 8, 9]);
       const proof2 = new Uint8Array([10, 11, 12]);
       await hook.mutateAsync(
-        "0xtoken" as Address,
-        "0xfrom" as Address,
-        "0xto" as Address,
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
         handle2,
         proof2,
       );
 
       expect(vi.mocked(unwrapContract)).toHaveBeenCalledWith(
-        "0xtoken",
-        "0xfrom",
-        "0xto",
+        "0x1111111111111111111111111111111111111111",
+        "0xcccccccccccccccccccccccccccccccccccccccc",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         handle2,
         proof2,
       );
@@ -331,20 +376,23 @@ describe("Wagmi mutation hooks", () => {
       const hook = useUnwrapFromBalance();
 
       hook.mutate(
-        "0xtoken" as Address,
-        "0xfrom" as Address,
-        "0xto" as Address,
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
         100n as unknown as Address,
       );
 
       expect(vi.mocked(unwrapFromBalanceContract)).toHaveBeenCalledWith(
-        "0xtoken",
-        "0xfrom",
-        "0xto",
+        "0x1111111111111111111111111111111111111111",
+        "0xcccccccccccccccccccccccccccccccccccccccc",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         100n,
       );
       expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "unwrap", address: "0xtoken" }),
+        expect.objectContaining({
+          functionName: "unwrap",
+          address: "0x1111111111111111111111111111111111111111",
+        }),
       );
     });
 
@@ -353,20 +401,23 @@ describe("Wagmi mutation hooks", () => {
       const hook = useUnwrapFromBalance();
 
       await hook.mutateAsync(
-        "0xtoken" as Address,
-        "0xfrom" as Address,
-        "0xto" as Address,
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
         200n as unknown as Address,
       );
 
       expect(vi.mocked(unwrapFromBalanceContract)).toHaveBeenCalledWith(
-        "0xtoken",
-        "0xfrom",
-        "0xto",
+        "0x1111111111111111111111111111111111111111",
+        "0xcccccccccccccccccccccccccccccccccccccccc",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         200n,
       );
       expect(mockMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "unwrap", address: "0xtoken" }),
+        expect.objectContaining({
+          functionName: "unwrap",
+          address: "0x1111111111111111111111111111111111111111",
+        }),
       );
     });
   });
@@ -375,10 +426,15 @@ describe("Wagmi mutation hooks", () => {
     it("calls finalizeUnwrapContract and passes result to mutate", () => {
       const hook = useFinalizeUnwrap();
 
-      hook.mutate("0xwrapper" as Address, "0xburnt" as Address, 500n, "0xproof" as Address);
+      hook.mutate(
+        "0x4444444444444444444444444444444444444444" as Address,
+        "0xburnt" as Address,
+        500n,
+        "0xproof" as Address,
+      );
 
       expect(vi.mocked(finalizeUnwrapContract)).toHaveBeenCalledWith(
-        "0xwrapper",
+        "0x4444444444444444444444444444444444444444",
         "0xburnt",
         500n,
         "0xproof",
@@ -393,14 +449,14 @@ describe("Wagmi mutation hooks", () => {
       const hook = useFinalizeUnwrap();
 
       await hook.mutateAsync(
-        "0xwrapper" as Address,
+        "0x4444444444444444444444444444444444444444" as Address,
         "0xburnt" as Address,
         1000n,
         "0xproof" as Address,
       );
 
       expect(vi.mocked(finalizeUnwrapContract)).toHaveBeenCalledWith(
-        "0xwrapper",
+        "0x4444444444444444444444444444444444444444",
         "0xburnt",
         1000n,
         "0xproof",
@@ -415,11 +471,14 @@ describe("Wagmi mutation hooks", () => {
     it("calls setOperatorContract with default timestamp and passes result to mutate", () => {
       const hook = useSetOperator();
 
-      hook.mutate("0xtoken" as Address, "0xspender" as Address);
+      hook.mutate(
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0x3333333333333333333333333333333333333333" as Address,
+      );
 
       expect(vi.mocked(setOperatorContract)).toHaveBeenCalledWith(
-        "0xtoken",
-        "0xspender",
+        "0x1111111111111111111111111111111111111111",
+        "0x3333333333333333333333333333333333333333",
         undefined,
       );
       expect(mockMutate).toHaveBeenCalledWith(
@@ -430,18 +489,34 @@ describe("Wagmi mutation hooks", () => {
     it("calls setOperatorContract with custom timestamp", () => {
       const hook = useSetOperator();
 
-      hook.mutate("0xtoken" as Address, "0xspender" as Address, 99999);
+      hook.mutate(
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0x3333333333333333333333333333333333333333" as Address,
+        99999,
+      );
 
-      expect(vi.mocked(setOperatorContract)).toHaveBeenCalledWith("0xtoken", "0xspender", 99999);
+      expect(vi.mocked(setOperatorContract)).toHaveBeenCalledWith(
+        "0x1111111111111111111111111111111111111111",
+        "0x3333333333333333333333333333333333333333",
+        99999,
+      );
     });
 
     it("calls setOperatorContract and passes result to mutateAsync", async () => {
       mockMutateAsync.mockResolvedValue("0xtxhash");
       const hook = useSetOperator();
 
-      await hook.mutateAsync("0xtoken" as Address, "0xspender" as Address, 42);
+      await hook.mutateAsync(
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0x3333333333333333333333333333333333333333" as Address,
+        42,
+      );
 
-      expect(vi.mocked(setOperatorContract)).toHaveBeenCalledWith("0xtoken", "0xspender", 42);
+      expect(vi.mocked(setOperatorContract)).toHaveBeenCalledWith(
+        "0x1111111111111111111111111111111111111111",
+        "0x3333333333333333333333333333333333333333",
+        42,
+      );
       expect(mockMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "setOperator" }),
       );
@@ -454,11 +529,16 @@ describe("Wagmi mutation hooks", () => {
       const proof = new Uint8Array([30, 40]);
       const hook = useConfidentialTransfer();
 
-      hook.mutate("0xtoken" as Address, "0xto" as Address, handle, proof);
+      hook.mutate(
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+        handle,
+        proof,
+      );
 
       expect(vi.mocked(confidentialTransferContract)).toHaveBeenCalledWith(
-        "0xtoken",
-        "0xto",
+        "0x1111111111111111111111111111111111111111",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         handle,
         proof,
       );
@@ -473,11 +553,16 @@ describe("Wagmi mutation hooks", () => {
 
       const handle2 = new Uint8Array([50, 60]);
       const proof2 = new Uint8Array([70, 80]);
-      await hook.mutateAsync("0xtoken" as Address, "0xto" as Address, handle2, proof2);
+      await hook.mutateAsync(
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+        handle2,
+        proof2,
+      );
 
       expect(vi.mocked(confidentialTransferContract)).toHaveBeenCalledWith(
-        "0xtoken",
-        "0xto",
+        "0x1111111111111111111111111111111111111111",
+        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         handle2,
         proof2,
       );
@@ -491,7 +576,7 @@ describe("Wagmi mutation hooks", () => {
     it("calls confidentialBatchTransferContract and passes result to mutate", () => {
       const batchData = [
         {
-          to: "0xrecipient" as Address,
+          to: "0x8888888888888888888888888888888888888888" as Address,
           encryptedAmount: "0xenc" as Address,
           inputProof: "0xproof" as Address,
           retryFor: 0n,
@@ -500,17 +585,17 @@ describe("Wagmi mutation hooks", () => {
       const hook = useConfidentialBatchTransfer();
 
       hook.mutate(
-        "0xbatcher" as Address,
-        "0xtoken" as Address,
-        "0xfrom" as Address,
+        "0x7777777777777777777777777777777777777777" as Address,
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
         batchData,
         100n,
       );
 
       expect(vi.mocked(confidentialBatchTransferContract)).toHaveBeenCalledWith(
-        "0xbatcher",
-        "0xtoken",
-        "0xfrom",
+        "0x7777777777777777777777777777777777777777",
+        "0x1111111111111111111111111111111111111111",
+        "0xcccccccccccccccccccccccccccccccccccccccc",
         batchData,
         100n,
       );
@@ -527,17 +612,17 @@ describe("Wagmi mutation hooks", () => {
       const hook = useConfidentialBatchTransfer();
 
       await hook.mutateAsync(
-        "0xbatcher" as Address,
-        "0xtoken" as Address,
-        "0xfrom" as Address,
+        "0x7777777777777777777777777777777777777777" as Address,
+        "0x1111111111111111111111111111111111111111" as Address,
+        "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
         [],
         0n,
       );
 
       expect(vi.mocked(confidentialBatchTransferContract)).toHaveBeenCalledWith(
-        "0xbatcher",
-        "0xtoken",
-        "0xfrom",
+        "0x7777777777777777777777777777777777777777",
+        "0x1111111111111111111111111111111111111111",
+        "0xcccccccccccccccccccccccccccccccccccccccc",
         [],
         0n,
       );
@@ -553,15 +638,18 @@ describe("Wagmi query hooks", () => {
   describe("useConfidentialBalanceOf", () => {
     it("calls confidentialBalanceOfContract and useReadContract with enabled=true", () => {
       useConfidentialBalanceOf({
-        tokenAddress: "0xtoken" as Address,
-        userAddress: "0xuser" as Address,
+        tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
+        userAddress: "0x2222222222222222222222222222222222222222" as Address,
       });
 
-      expect(vi.mocked(confidentialBalanceOfContract)).toHaveBeenCalledWith("0xtoken", "0xuser");
+      expect(vi.mocked(confidentialBalanceOfContract)).toHaveBeenCalledWith(
+        "0x1111111111111111111111111111111111111111",
+        "0x2222222222222222222222222222222222222222",
+      );
       expect(mockUseReadContract).toHaveBeenCalledWith(
         expect.objectContaining({
           functionName: "confidentialBalanceOf",
-          address: "0xtoken",
+          address: "0x1111111111111111111111111111111111111111",
           query: { enabled: true },
         }),
       );
@@ -570,7 +658,7 @@ describe("Wagmi query hooks", () => {
     it("passes enabled=false when tokenAddress is undefined", () => {
       useConfidentialBalanceOf({
         tokenAddress: undefined,
-        userAddress: "0xuser" as Address,
+        userAddress: "0x2222222222222222222222222222222222222222" as Address,
       });
 
       expect(mockUseReadContract).toHaveBeenCalledWith(
@@ -582,7 +670,7 @@ describe("Wagmi query hooks", () => {
 
     it("passes enabled=false when userAddress is undefined", () => {
       useConfidentialBalanceOf({
-        tokenAddress: "0xtoken" as Address,
+        tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
         userAddress: undefined,
       });
 
@@ -610,14 +698,17 @@ describe("Wagmi query hooks", () => {
   describe("useWrapperForToken", () => {
     it("calls getWrapperContract and useReadContract with enabled=true", () => {
       useWrapperForToken({
-        coordinator: "0xcoordinator" as Address,
-        tokenAddress: "0xtoken" as Address,
+        coordinator: "0x5555555555555555555555555555555555555555" as Address,
+        tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
       });
 
-      expect(vi.mocked(getWrapperContract)).toHaveBeenCalledWith("0xcoordinator", "0xtoken");
+      expect(vi.mocked(getWrapperContract)).toHaveBeenCalledWith(
+        "0x5555555555555555555555555555555555555555",
+        "0x1111111111111111111111111111111111111111",
+      );
       expect(mockUseReadContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "0xcoordinator",
+          address: "0x5555555555555555555555555555555555555555",
           query: { enabled: true },
         }),
       );
@@ -626,7 +717,7 @@ describe("Wagmi query hooks", () => {
     it("passes enabled=false when coordinator is undefined", () => {
       useWrapperForToken({
         coordinator: undefined,
-        tokenAddress: "0xtoken" as Address,
+        tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
       });
 
       expect(mockUseReadContract).toHaveBeenCalledWith(
@@ -638,7 +729,7 @@ describe("Wagmi query hooks", () => {
 
     it("passes enabled=false when tokenAddress is undefined", () => {
       useWrapperForToken({
-        coordinator: "0xcoordinator" as Address,
+        coordinator: "0x5555555555555555555555555555555555555555" as Address,
         tokenAddress: undefined,
       });
 
@@ -653,14 +744,17 @@ describe("Wagmi query hooks", () => {
   describe("useWrapperExists", () => {
     it("calls wrapperExistsContract and useReadContract with enabled=true", () => {
       useWrapperExists({
-        coordinator: "0xcoordinator" as Address,
-        tokenAddress: "0xtoken" as Address,
+        coordinator: "0x5555555555555555555555555555555555555555" as Address,
+        tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
       });
 
-      expect(vi.mocked(wrapperExistsContract)).toHaveBeenCalledWith("0xcoordinator", "0xtoken");
+      expect(vi.mocked(wrapperExistsContract)).toHaveBeenCalledWith(
+        "0x5555555555555555555555555555555555555555",
+        "0x1111111111111111111111111111111111111111",
+      );
       expect(mockUseReadContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "0xcoordinator",
+          address: "0x5555555555555555555555555555555555555555",
           query: { enabled: true },
         }),
       );
@@ -669,7 +763,7 @@ describe("Wagmi query hooks", () => {
     it("passes enabled=false when coordinator is undefined", () => {
       useWrapperExists({
         coordinator: undefined,
-        tokenAddress: "0xtoken" as Address,
+        tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
       });
 
       expect(mockUseReadContract).toHaveBeenCalledWith(
@@ -681,7 +775,7 @@ describe("Wagmi query hooks", () => {
 
     it("passes enabled=false when tokenAddress is undefined", () => {
       useWrapperExists({
-        coordinator: "0xcoordinator" as Address,
+        coordinator: "0x5555555555555555555555555555555555555555" as Address,
         tokenAddress: undefined,
       });
 
@@ -696,13 +790,15 @@ describe("Wagmi query hooks", () => {
   describe("useUnderlyingToken", () => {
     it("calls underlyingContract and useReadContract with enabled=true", () => {
       useUnderlyingToken({
-        wrapperAddress: "0xwrapper" as Address,
+        wrapperAddress: "0x4444444444444444444444444444444444444444" as Address,
       });
 
-      expect(vi.mocked(underlyingContract)).toHaveBeenCalledWith("0xwrapper");
+      expect(vi.mocked(underlyingContract)).toHaveBeenCalledWith(
+        "0x4444444444444444444444444444444444444444",
+      );
       expect(mockUseReadContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "0xwrapper",
+          address: "0x4444444444444444444444444444444444444444",
           functionName: "underlying",
           query: { enabled: true },
         }),
@@ -725,14 +821,17 @@ describe("Wagmi query hooks", () => {
   describe("useSupportsInterface", () => {
     it("calls supportsInterfaceContract and useReadContract with enabled=true", () => {
       useSupportsInterface({
-        tokenAddress: "0xtoken" as Address,
+        tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
         interfaceId: "0x12345678" as Address,
       });
 
-      expect(vi.mocked(supportsInterfaceContract)).toHaveBeenCalledWith("0xtoken", "0x12345678");
+      expect(vi.mocked(supportsInterfaceContract)).toHaveBeenCalledWith(
+        "0x1111111111111111111111111111111111111111",
+        "0x12345678",
+      );
       expect(mockUseReadContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "0xtoken",
+          address: "0x1111111111111111111111111111111111111111",
           query: { enabled: true },
         }),
       );
@@ -753,7 +852,7 @@ describe("Wagmi query hooks", () => {
 
     it("passes enabled=false when interfaceId is undefined", () => {
       useSupportsInterface({
-        tokenAddress: "0xtoken" as Address,
+        tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
         interfaceId: undefined,
       });
 
@@ -773,11 +872,14 @@ describe("Wagmi suspense query hooks", () => {
       await import("../wagmi/use-confidential-balance-of");
 
     useConfidentialBalanceOfSuspense({
-      tokenAddress: "0xtoken" as Address,
-      userAddress: "0xuser" as Address,
+      tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
+      userAddress: "0x2222222222222222222222222222222222222222" as Address,
     });
 
-    expect(vi.mocked(confidentialBalanceOfContract)).toHaveBeenCalledWith("0xtoken", "0xuser");
+    expect(vi.mocked(confidentialBalanceOfContract)).toHaveBeenCalledWith(
+      "0x1111111111111111111111111111111111111111",
+      "0x2222222222222222222222222222222222222222",
+    );
     expect(mockUseReadContract).toHaveBeenCalledWith(
       expect.objectContaining({
         query: { suspense: true },
@@ -789,11 +891,14 @@ describe("Wagmi suspense query hooks", () => {
     const { useWrapperForTokenSuspense } = await import("../wagmi/use-wrapper-for-token");
 
     useWrapperForTokenSuspense({
-      coordinator: "0xcoordinator" as Address,
-      tokenAddress: "0xtoken" as Address,
+      coordinator: "0x5555555555555555555555555555555555555555" as Address,
+      tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
     });
 
-    expect(vi.mocked(getWrapperContract)).toHaveBeenCalledWith("0xcoordinator", "0xtoken");
+    expect(vi.mocked(getWrapperContract)).toHaveBeenCalledWith(
+      "0x5555555555555555555555555555555555555555",
+      "0x1111111111111111111111111111111111111111",
+    );
     expect(mockUseReadContract).toHaveBeenCalledWith(
       expect.objectContaining({
         query: { suspense: true },
@@ -805,11 +910,14 @@ describe("Wagmi suspense query hooks", () => {
     const { useWrapperExistsSuspense } = await import("../wagmi/use-wrapper-exists");
 
     useWrapperExistsSuspense({
-      coordinator: "0xcoordinator" as Address,
-      tokenAddress: "0xtoken" as Address,
+      coordinator: "0x5555555555555555555555555555555555555555" as Address,
+      tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
     });
 
-    expect(vi.mocked(wrapperExistsContract)).toHaveBeenCalledWith("0xcoordinator", "0xtoken");
+    expect(vi.mocked(wrapperExistsContract)).toHaveBeenCalledWith(
+      "0x5555555555555555555555555555555555555555",
+      "0x1111111111111111111111111111111111111111",
+    );
     expect(mockUseReadContract).toHaveBeenCalledWith(
       expect.objectContaining({
         query: { suspense: true },
@@ -821,10 +929,12 @@ describe("Wagmi suspense query hooks", () => {
     const { useUnderlyingTokenSuspense } = await import("../wagmi/use-underlying-token");
 
     useUnderlyingTokenSuspense({
-      wrapperAddress: "0xwrapper" as Address,
+      wrapperAddress: "0x4444444444444444444444444444444444444444" as Address,
     });
 
-    expect(vi.mocked(underlyingContract)).toHaveBeenCalledWith("0xwrapper");
+    expect(vi.mocked(underlyingContract)).toHaveBeenCalledWith(
+      "0x4444444444444444444444444444444444444444",
+    );
     expect(mockUseReadContract).toHaveBeenCalledWith(
       expect.objectContaining({
         query: { suspense: true },
@@ -836,11 +946,14 @@ describe("Wagmi suspense query hooks", () => {
     const { useSupportsInterfaceSuspense } = await import("../wagmi/use-supports-interface");
 
     useSupportsInterfaceSuspense({
-      tokenAddress: "0xtoken" as Address,
+      tokenAddress: "0x1111111111111111111111111111111111111111" as Address,
       interfaceId: "0x12345678" as Address,
     });
 
-    expect(vi.mocked(supportsInterfaceContract)).toHaveBeenCalledWith("0xtoken", "0x12345678");
+    expect(vi.mocked(supportsInterfaceContract)).toHaveBeenCalledWith(
+      "0x1111111111111111111111111111111111111111",
+      "0x12345678",
+    );
     expect(mockUseReadContract).toHaveBeenCalledWith(
       expect.objectContaining({
         query: { suspense: true },

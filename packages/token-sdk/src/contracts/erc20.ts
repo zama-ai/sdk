@@ -1,5 +1,6 @@
 import { ERC20_ABI, ERC20_METADATA_ABI } from "../abi/erc20.abi";
 import type { Address } from "../relayer/relayer-sdk.types";
+import { assertAddress } from "../utils";
 
 /**
  * Returns the contract config to read a token's name.
@@ -10,6 +11,7 @@ import type { Address } from "../relayer/relayer-sdk.types";
  * ```
  */
 export function nameContract(tokenAddress: Address) {
+  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: tokenAddress,
     abi: ERC20_METADATA_ABI,
@@ -27,6 +29,7 @@ export function nameContract(tokenAddress: Address) {
  * ```
  */
 export function symbolContract(tokenAddress: Address) {
+  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: tokenAddress,
     abi: ERC20_METADATA_ABI,
@@ -44,6 +47,7 @@ export function symbolContract(tokenAddress: Address) {
  * ```
  */
 export function decimalsContract(tokenAddress: Address) {
+  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: tokenAddress,
     abi: ERC20_METADATA_ABI,
@@ -63,6 +67,9 @@ export function decimalsContract(tokenAddress: Address) {
  * ```
  */
 export function allowanceContract(tokenAddress: Address, owner: Address, spender: Address) {
+  assertAddress(tokenAddress, "tokenAddress");
+  assertAddress(owner, "owner");
+  assertAddress(spender, "spender");
   return {
     address: tokenAddress,
     abi: ERC20_ABI,
@@ -82,6 +89,8 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
  * ```
  */
 export function approveContract(tokenAddress: Address, spender: Address, value: bigint) {
+  assertAddress(tokenAddress, "tokenAddress");
+  assertAddress(spender, "spender");
   return {
     address: tokenAddress,
     abi: ERC20_ABI,

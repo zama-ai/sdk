@@ -22,8 +22,8 @@ import {
 } from "../token/balance-query-keys";
 import { renderWithProviders, createMockSigner, createMockRelayer } from "./test-utils";
 
-const TOKEN = "0xtoken" as Address;
-const WRAPPER = "0xwrapper" as Address;
+const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 
 /**
  * Creates a mock relayer whose publicDecrypt returns a value
@@ -65,8 +65,8 @@ describe("useConfidentialTransferFrom", () => {
 
     await act(async () => {
       result.current.mutate({
-        from: "0xowner" as Address,
-        to: "0xrecipient" as Address,
+        from: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" as Address,
+        to: "0x8888888888888888888888888888888888888888" as Address,
         amount: 100n,
       });
     });
@@ -89,8 +89,8 @@ describe("useConfidentialTransferFrom", () => {
 
     await act(async () => {
       result.current.mutate({
-        from: "0xowner" as Address,
-        to: "0xrecipient" as Address,
+        from: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" as Address,
+        to: "0x8888888888888888888888888888888888888888" as Address,
         amount: 100n,
       });
     });
@@ -516,7 +516,7 @@ describe("useConfidentialBalances", () => {
     const signer = createMockSigner();
     vi.mocked(signer.readContract).mockResolvedValue("0xhandle" as Address);
 
-    const tokens = [TOKEN, "0xtoken2" as Address];
+    const tokens = [TOKEN, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address];
 
     const { result } = renderWithProviders(
       () => useConfidentialBalances({ tokenAddresses: tokens }),
@@ -568,7 +568,7 @@ describe("useActivityFeed", () => {
     const { result } = renderWithProviders(() =>
       useActivityFeed({
         tokenAddress: TOKEN,
-        userAddress: "0xuser" as Address,
+        userAddress: "0x2222222222222222222222222222222222222222" as Address,
         logs: undefined,
       }),
     );
@@ -597,7 +597,7 @@ describe("useActivityFeed", () => {
       () =>
         useActivityFeed({
           tokenAddress: TOKEN,
-          userAddress: "0xuser" as Address,
+          userAddress: "0x2222222222222222222222222222222222222222" as Address,
           logs: [],
         }),
       { signer },
@@ -614,7 +614,7 @@ describe("useActivityFeed", () => {
       () =>
         useActivityFeed({
           tokenAddress: TOKEN,
-          userAddress: "0xuser" as Address,
+          userAddress: "0x2222222222222222222222222222222222222222" as Address,
           logs: [],
           decrypt: false,
         }),

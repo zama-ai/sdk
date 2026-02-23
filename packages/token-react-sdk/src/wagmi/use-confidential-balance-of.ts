@@ -12,7 +12,7 @@ export interface UseConfidentialBalanceOfConfig {
 export function useConfidentialBalanceOf(config: UseConfidentialBalanceOfConfig) {
   const { tokenAddress, userAddress } = config;
   const enabled = !!tokenAddress && !!userAddress;
-  const contract = confidentialBalanceOfContract(tokenAddress as Address, userAddress as Address);
+  const contract = enabled ? confidentialBalanceOfContract(tokenAddress, userAddress) : {};
   return useReadContract({ ...contract, query: { enabled } });
 }
 

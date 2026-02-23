@@ -21,13 +21,13 @@ import {
 
 // ── Constants ────────────────────────────────────────────
 
-const ACCOUNT_ADDRESS = "0xabc123" as Address;
-const TOKEN = "0xtoken" as Address;
-const USER = "0xuser" as Address;
-const SPENDER = "0xspender" as Address;
-const WRAPPER = "0xwrapper" as Address;
-const COORDINATOR = "0xcoordinator" as Address;
-const BATCHER = "0xbatcher" as Address;
+const ACCOUNT_ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+const USER = "0x2222222222222222222222222222222222222222" as Address;
+const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
+const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
+const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
+const BATCHER = "0x7777777777777777777777777777777777777777" as Address;
 const TX_HASH = "0xtxhash" as Hex;
 const MOCK_CHAIN = { id: 1, name: "mainnet" } as WalletClient["chain"];
 

@@ -104,7 +104,7 @@ describe("CredentialsManager", () => {
   it("persists credentials to store with hashed key", async () => {
     await manager.get("0xtoken" as Address);
 
-    const stored = store.getItem(storeKey);
+    const stored = await store.getItem(storeKey);
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored!);
     expect(parsed.publicKey).toBe("0xpub123");
@@ -114,7 +114,7 @@ describe("CredentialsManager", () => {
     await manager.get("0xtoken" as Address);
 
     const rawKey = (await signer.getAddress()).toLowerCase();
-    const stored = store.getItem(rawKey);
+    const stored = await store.getItem(rawKey);
     expect(stored).toBeNull();
   });
 
@@ -138,10 +138,10 @@ describe("CredentialsManager", () => {
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
 
     // Tamper the stored data to simulate expiration
-    const stored = store.getItem(storeKey);
+    const stored = await store.getItem(storeKey);
     const parsed = JSON.parse(stored!);
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
-    store.setItem(storeKey, JSON.stringify(parsed));
+    await store.setItem(storeKey, JSON.stringify(parsed));
 
     // New manager (no cache) reads expired data from store → re-generates
     const manager2 = new CredentialsManager({
@@ -160,7 +160,7 @@ describe("CredentialsManager", () => {
     await manager.get("0xtoken" as Address);
     await manager.clear();
 
-    const stored = store.getItem(storeKey);
+    const stored = await store.getItem(storeKey);
     expect(stored).toBeNull();
   });
 
@@ -231,7 +231,7 @@ describe("CredentialsManager", () => {
 
   it("regenerates when stored JSON is corrupted", async () => {
     // Write garbage to the store
-    store.setItem(storeKey, "not-valid-json{{{{");
+    await store.setItem(storeKey, "not-valid-json{{{{");
 
     const creds = await manager.get("0xtoken" as Address);
 
@@ -240,13 +240,13 @@ describe("CredentialsManager", () => {
     expect(creds.publicKey).toBe("0xpub123");
 
     // Corrupted data should have been cleaned up
-    const stored = store.getItem(storeKey);
+    const stored = await store.getItem(storeKey);
     expect(stored).not.toBe("not-valid-json{{{{");
   });
 
   it("continues when storage removeItem fails during cleanup", async () => {
     // Write corrupted data to trigger the catch path
-    store.setItem(storeKey, "corrupted");
+    await store.setItem(storeKey, "corrupted");
 
     // Make removeItem throw to test best-effort cleanup
     const originalRemoveItem = store.removeItem.bind(store);
@@ -266,10 +266,10 @@ describe("CredentialsManager", () => {
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
 
     // Set startTimestamp to exactly durationDays ago (expired at boundary)
-    const stored = store.getItem(storeKey);
+    const stored = await store.getItem(storeKey);
     const parsed = JSON.parse(stored!);
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 1 * 86400; // exactly 1 day ago
-    store.setItem(storeKey, JSON.stringify(parsed));
+    await store.setItem(storeKey, JSON.stringify(parsed));
 
     // New manager should see expired credentials (nowSeconds >= expiresAt)
     const manager2 = new CredentialsManager({
@@ -297,10 +297,10 @@ describe("CredentialsManager", () => {
       await manager.get("0xtoken" as Address);
 
       // Tamper stored data to simulate expiration
-      const stored = store.getItem(storeKey);
+      const stored = await store.getItem(storeKey);
       const parsed = JSON.parse(stored!);
       parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
-      store.setItem(storeKey, JSON.stringify(parsed));
+      await store.setItem(storeKey, JSON.stringify(parsed));
 
       const manager2 = new CredentialsManager({
         sdk: sdk as unknown as RelayerSDK,
@@ -324,7 +324,7 @@ describe("CredentialsManager", () => {
     });
 
     it("returns false when stored data is corrupted", async () => {
-      store.setItem(storeKey, "corrupted-json{{{");
+      await store.setItem(storeKey, "corrupted-json{{{");
       expect(await manager.isExpired()).toBe(false);
     });
   });

@@ -58,13 +58,13 @@ import {
 // Transfer batcher
 import { confidentialBatchTransferContract } from "../transfer-batcher";
 
-const TOKEN = "0xtoken" as Address;
-const USER = "0xuser" as Address;
-const SPENDER = "0xspender" as Address;
-const WRAPPER = "0xwrapper" as Address;
-const COORDINATOR = "0xcoordinator" as Address;
-const FEE_MANAGER = "0xfeemanager" as Address;
-const BATCHER = "0xbatcher" as Address;
+const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+const USER = "0x2222222222222222222222222222222222222222" as Address;
+const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
+const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
+const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
+const FEE_MANAGER = "0x6666666666666666666666666666666666666666" as Address;
+const BATCHER = "0x7777777777777777777777777777777777777777" as Address;
 
 describe("ERC-20 contract builders", () => {
   it("nameContract", () => {
@@ -233,12 +233,12 @@ describe("Encryption contract builders", () => {
 
 describe("Wrapper contract builders", () => {
   it("finalizeUnwrapContract", () => {
-    const handle = "0xburn" as Address;
-    const proof = "0xproof" as Address;
+    const handle = ("0x" + "ab".repeat(32)) as Address;
+    const proof = ("0x" + "cd".repeat(32)) as Address;
     const config = finalizeUnwrapContract(WRAPPER, handle, 500n, proof);
     expect(config.address).toBe(WRAPPER);
     expect(config.functionName).toBe("finalizeUnwrap");
-    expect(config.args).toEqual([handle, 500n, proof]);
+    expect(config.args).toEqual(["0x" + "ab".repeat(32), 500n, "0x" + "cd".repeat(32)]);
   });
 
   it("underlyingContract", () => {
@@ -308,8 +308,8 @@ describe("Transfer batcher contract builders", () => {
     const data = [
       {
         to: USER,
-        encryptedAmount: "0xhandle" as Address,
-        inputProof: "0xproof" as Address,
+        encryptedAmount: ("0x" + "aa".repeat(32)) as Address,
+        inputProof: ("0x" + "bb".repeat(32)) as Address,
         retryFor: 0n,
       },
     ];

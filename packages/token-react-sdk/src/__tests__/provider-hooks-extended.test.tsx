@@ -9,13 +9,15 @@ import { useTotalSupplySuspense } from "../token/use-total-supply";
 import { useWrapperDiscoverySuspense } from "../token/use-wrapper-discovery";
 import { renderWithProviders, createMockSigner } from "./test-utils";
 
-const TOKEN = "0xtoken" as Address;
-const WRAPPER = "0xwrapper" as Address;
+const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 
 describe("useUnderlyingAllowance", () => {
   it("returns allowance value", async () => {
     const signer = createMockSigner();
-    vi.mocked(signer.readContract).mockResolvedValue(5000n);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
+      .mockResolvedValueOnce(5000n); // allowance()
 
     const { result } = renderWithProviders(
       () =>
@@ -84,13 +86,15 @@ describe("useTotalSupplySuspense", () => {
 describe("useWrapperDiscoverySuspense", () => {
   it("returns wrapper address via suspense", async () => {
     const signer = createMockSigner();
-    vi.mocked(signer.readContract).mockResolvedValue("0xwrapper" as Address);
+    vi.mocked(signer.readContract).mockResolvedValue(
+      "0x4444444444444444444444444444444444444444" as Address,
+    );
 
     const { result } = renderWithProviders(
       () =>
         useWrapperDiscoverySuspense({
           tokenAddress: TOKEN,
-          coordinatorAddress: "0xcoordinator" as Address,
+          coordinatorAddress: "0x5555555555555555555555555555555555555555" as Address,
         }),
       { signer },
     );

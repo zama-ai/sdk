@@ -12,7 +12,7 @@ export interface UseWrapperExistsConfig {
 export function useWrapperExists(config: UseWrapperExistsConfig) {
   const { coordinator, tokenAddress } = config;
   const enabled = !!coordinator && !!tokenAddress;
-  const contract = wrapperExistsContract(coordinator as Address, tokenAddress as Address);
+  const contract = enabled ? wrapperExistsContract(coordinator, tokenAddress) : {};
   return useReadContract({ ...contract, query: { enabled } });
 }
 

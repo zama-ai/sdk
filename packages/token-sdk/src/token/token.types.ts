@@ -52,9 +52,9 @@ export interface GenericSigner {
 
 /** Pluggable key-value store for persisting FHE credentials. */
 export interface GenericStringStorage {
-  getItem(key: string): string | Promise<string | null> | null;
-  setItem(key: string, value: string): void | Promise<void>;
-  removeItem(key: string): void | Promise<void>;
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+  removeItem(key: string): Promise<void>;
 }
 
 /** Stored FHE credential data (serialized as JSON in the credential store). */

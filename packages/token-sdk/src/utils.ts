@@ -8,6 +8,14 @@ export function toHex(bytes: Uint8Array): Address {
 
 // ── Runtime type assertion helpers ───────────────────────────
 
+const ADDRESS_REGEX = /^0x[0-9a-fA-F]{40}$/;
+
+export function assertAddress(value: string, name: string): asserts value is Address {
+  if (!ADDRESS_REGEX.test(value)) {
+    throw new TypeError(`${name} must be a valid address (0x + 40 hex chars), got: ${value}`);
+  }
+}
+
 export function assertObject(
   value: unknown,
   context: string,

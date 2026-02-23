@@ -4,15 +4,15 @@ import type { GenericStringStorage } from "./token.types";
 export class MemoryStorage implements GenericStringStorage {
   #map = new Map<string, string>();
 
-  getItem(key: string): string | null {
+  async getItem(key: string): Promise<string | null> {
     return this.#map.get(key) ?? null;
   }
 
-  setItem(key: string, value: string): void {
+  async setItem(key: string, value: string): Promise<void> {
     this.#map.set(key, value);
   }
 
-  removeItem(key: string): void {
+  async removeItem(key: string): Promise<void> {
     this.#map.delete(key);
   }
 }

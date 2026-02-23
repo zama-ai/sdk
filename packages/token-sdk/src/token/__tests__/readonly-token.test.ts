@@ -7,8 +7,8 @@ import { TokenErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 
-const TOKEN = "0xtoken" as Address;
-const USER = "0xuser" as Address;
+const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+const USER = "0x2222222222222222222222222222222222222222" as Address;
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
 
@@ -122,7 +122,7 @@ describe("ReadonlyToken", () => {
     });
 
     it("uses provided owner as signerAddress", async () => {
-      const otherOwner = "0xother" as Address;
+      const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
       await token.decryptHandles([VALID_HANDLE as Address], otherOwner);
 
       expect(sdk.userDecrypt).toHaveBeenCalledWith(
@@ -183,12 +183,12 @@ describe("ReadonlyToken", () => {
 
   describe("allowance", () => {
     it("reads underlying token then checks allowance", async () => {
-      const UNDERLYING = "0xunderlying" as Address;
+      const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(UNDERLYING) // underlying()
         .mockResolvedValueOnce(500n); // allowance()
 
-      const result = await token.allowance("0xwrapper" as Address);
+      const result = await token.allowance("0x4444444444444444444444444444444444444444" as Address);
 
       expect(result).toBe(500n);
       expect(signer.readContract).toHaveBeenCalledTimes(2);
@@ -204,7 +204,7 @@ describe("ReadonlyToken", () => {
   });
 
   describe("batchBalanceOf error paths", () => {
-    const TOKEN2 = "0xtoken2" as Address;
+    const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
 
     it("calls onError with DecryptionFailedError on per-token failure", async () => {
       const token2 = new ReadonlyToken({
@@ -248,7 +248,7 @@ describe("ReadonlyToken", () => {
   });
 
   describe("batchDecryptBalances error paths", () => {
-    const TOKEN2 = "0xtoken2" as Address;
+    const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
 
     it("reports mixed success/failure via onError", async () => {
       const token2 = new ReadonlyToken({

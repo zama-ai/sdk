@@ -10,8 +10,8 @@ import { useEncrypt } from "../relayer/use-encrypt";
 import { confidentialBalanceQueryKeys } from "../token/balance-query-keys";
 import { renderWithProviders, createMockSigner, createMockRelayer } from "./test-utils";
 
-const TOKEN = "0xtoken" as Address;
-const WRAPPER = "0xwrapper" as Address;
+const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 
 describe("useConfidentialTransfer", () => {
   it("calls token.confidentialTransfer on mutate", async () => {
@@ -77,8 +77,8 @@ describe("useEncrypt", () => {
     await act(async () => {
       result.current.mutate({
         values: [1000n],
-        contractAddress: "0xtoken" as Address,
-        userAddress: "0xuser" as Address,
+        contractAddress: "0x1111111111111111111111111111111111111111" as Address,
+        userAddress: "0x2222222222222222222222222222222222222222" as Address,
       });
     });
 
@@ -112,7 +112,10 @@ describe("useConfidentialTransfer optimistic updates", () => {
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
-      result.current.mutate({ to: "0xrecipient" as Address, amount: 1200n });
+      result.current.mutate({
+        to: "0x8888888888888888888888888888888888888888" as Address,
+        amount: 1200n,
+      });
     });
 
     // Balance should be optimistically decreased
@@ -144,7 +147,10 @@ describe("useConfidentialTransfer optimistic updates", () => {
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
-      result.current.mutate({ to: "0xrecipient" as Address, amount: 1200n });
+      result.current.mutate({
+        to: "0x8888888888888888888888888888888888888888" as Address,
+        amount: 1200n,
+      });
     });
 
     // Balance should remain unchanged
@@ -169,7 +175,10 @@ describe("useConfidentialTransfer optimistic updates", () => {
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     await act(async () => {
-      result.current.mutate({ to: "0xrecipient" as Address, amount: 1200n });
+      result.current.mutate({
+        to: "0x8888888888888888888888888888888888888888" as Address,
+        amount: 1200n,
+      });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));

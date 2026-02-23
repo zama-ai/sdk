@@ -11,7 +11,7 @@ export interface UseUnderlyingTokenConfig {
 export function useUnderlyingToken(config: UseUnderlyingTokenConfig) {
   const { wrapperAddress } = config;
   const enabled = !!wrapperAddress;
-  const contract = underlyingContract(wrapperAddress as Address);
+  const contract = enabled ? underlyingContract(wrapperAddress) : {};
   return useReadContract({ ...contract, query: { enabled } });
 }
 

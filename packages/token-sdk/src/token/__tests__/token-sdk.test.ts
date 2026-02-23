@@ -51,16 +51,16 @@ describe("TokenSDK", () => {
   });
 
   it("createReadonlyToken returns ReadonlyToken", () => {
-    const token = sdk.createReadonlyToken("0xtoken" as Address);
+    const token = sdk.createReadonlyToken("0x1111111111111111111111111111111111111111" as Address);
     expect(token).toBeInstanceOf(ReadonlyToken);
-    expect(token.address).toBe("0xtoken");
+    expect(token.address).toBe("0x1111111111111111111111111111111111111111");
     expect(token.signer).toBe(signer);
   });
 
   it("createToken returns Token", () => {
-    const token = sdk.createToken("0xtoken" as Address);
+    const token = sdk.createToken("0x1111111111111111111111111111111111111111" as Address);
     expect(token).toBeInstanceOf(Token);
-    expect(token.address).toBe("0xtoken");
+    expect(token.address).toBe("0x1111111111111111111111111111111111111111");
   });
 
   it("creates distinct instances per address", () => {

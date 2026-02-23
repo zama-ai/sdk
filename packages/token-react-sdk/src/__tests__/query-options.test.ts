@@ -17,10 +17,10 @@ import { publicKeyQueryOptions } from "../relayer/use-public-key";
 import { publicParamsQueryOptions } from "../relayer/use-public-params";
 import { createMockSigner, createMockRelayer, createMockStorage } from "./test-utils";
 
-const TOKEN_ADDR = "0xtoken" as Address;
-const SPENDER = "0xspender" as Address;
-const WRAPPER = "0xwrapper" as Address;
-const COORDINATOR = "0xcoordinator" as Address;
+const TOKEN_ADDR = "0x1111111111111111111111111111111111111111" as Address;
+const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
+const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
+const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
 
 function createMockReadonlyToken(address: Address = TOKEN_ADDR) {
   return {
@@ -182,34 +182,37 @@ describe("query options factories", () => {
 
   describe("fee query options", () => {
     const signer = createMockSigner();
+    const FEE_MANAGER = "0x6666666666666666666666666666666666666666" as Address;
+    const FROM = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
+    const TO = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
     const feeConfig = {
-      feeManagerAddress: "0xfee" as Address,
+      feeManagerAddress: FEE_MANAGER,
       amount: 1000n,
-      from: "0xfrom" as Address,
-      to: "0xto" as Address,
+      from: FROM,
+      to: TO,
     };
 
     it("wrapFeeQueryOptions key includes amount/from/to", () => {
       const opts = wrapFeeQueryOptions(signer, feeConfig);
-      expect(opts.queryKey).toEqual(["wrapFee", "0xfee", "1000", "0xfrom", "0xto"]);
+      expect(opts.queryKey).toEqual(["wrapFee", FEE_MANAGER, "1000", FROM, TO]);
       expect(opts.staleTime).toBe(30_000);
     });
 
     it("unwrapFeeQueryOptions key includes amount/from/to", () => {
       const opts = unwrapFeeQueryOptions(signer, feeConfig);
-      expect(opts.queryKey).toEqual(["unwrapFee", "0xfee", "1000", "0xfrom", "0xto"]);
+      expect(opts.queryKey).toEqual(["unwrapFee", FEE_MANAGER, "1000", FROM, TO]);
       expect(opts.staleTime).toBe(30_000);
     });
 
     it("batchTransferFeeQueryOptions key includes feeManagerAddress", () => {
-      const opts = batchTransferFeeQueryOptions(signer, "0xfee" as Address);
-      expect(opts.queryKey).toEqual(["batchTransferFee", "0xfee"]);
+      const opts = batchTransferFeeQueryOptions(signer, FEE_MANAGER);
+      expect(opts.queryKey).toEqual(["batchTransferFee", FEE_MANAGER]);
       expect(opts.staleTime).toBe(30_000);
     });
 
     it("feeRecipientQueryOptions key includes feeManagerAddress", () => {
-      const opts = feeRecipientQueryOptions(signer, "0xfee" as Address);
-      expect(opts.queryKey).toEqual(["feeRecipient", "0xfee"]);
+      const opts = feeRecipientQueryOptions(signer, FEE_MANAGER);
+      expect(opts.queryKey).toEqual(["feeRecipient", FEE_MANAGER]);
       expect(opts.staleTime).toBe(30_000);
     });
 

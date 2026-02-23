@@ -18,13 +18,13 @@ describe("confidentialTransferContract", () => {
     const handle = new Uint8Array([1, 2, 3]);
     const inputProof = new Uint8Array([4, 5, 6]);
     const config = confidentialTransferContract(
-      "0xtoken" as Address,
-      "0xto" as Address,
+      "0x1111111111111111111111111111111111111111" as Address,
+      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
       handle,
       inputProof,
     );
 
-    expect(config.address).toBe("0xtoken");
+    expect(config.address).toBe("0x1111111111111111111111111111111111111111");
     expect(config.functionName).toBe("confidentialTransfer");
     expect(config.abi).toBeDefined();
     expect(config.args).toHaveLength(3);
@@ -33,31 +33,42 @@ describe("confidentialTransferContract", () => {
 
 describe("wrapContract", () => {
   it("returns correct contract call config", () => {
-    const config = wrapContract("0xwrapper" as Address, "0xto" as Address, 100n);
+    const config = wrapContract(
+      "0x4444444444444444444444444444444444444444" as Address,
+      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+      100n,
+    );
 
-    expect(config.address).toBe("0xwrapper");
+    expect(config.address).toBe("0x4444444444444444444444444444444444444444");
     expect(config.functionName).toBe("wrap");
     expect(config.abi).toBeDefined();
-    expect(config.args).toEqual(["0xto", 100n]);
+    expect(config.args).toEqual(["0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 100n]);
   });
 });
 
 describe("setOperatorContract", () => {
   it("returns correct contract call config with default timestamp", () => {
-    const config = setOperatorContract("0xtoken" as Address, "0xspender" as Address);
+    const config = setOperatorContract(
+      "0x1111111111111111111111111111111111111111" as Address,
+      "0x3333333333333333333333333333333333333333" as Address,
+    );
 
-    expect(config.address).toBe("0xtoken");
+    expect(config.address).toBe("0x1111111111111111111111111111111111111111");
     expect(config.functionName).toBe("setOperator");
     expect(config.abi).toBeDefined();
-    expect(config.args[0]).toBe("0xspender");
+    expect(config.args[0]).toBe("0x3333333333333333333333333333333333333333");
     // Default: Math.floor(Date.now() / 1000) + 3600
     expect(config.args[1]).toBeGreaterThan(0);
   });
 
   it("returns correct contract call config with custom timestamp", () => {
-    const config = setOperatorContract("0xtoken" as Address, "0xspender" as Address, 12345);
+    const config = setOperatorContract(
+      "0x1111111111111111111111111111111111111111" as Address,
+      "0x3333333333333333333333333333333333333333" as Address,
+      12345,
+    );
 
-    expect(config.args[0]).toBe("0xspender");
+    expect(config.args[0]).toBe("0x3333333333333333333333333333333333333333");
     expect(config.args[1]).toBe(12345);
   });
 });

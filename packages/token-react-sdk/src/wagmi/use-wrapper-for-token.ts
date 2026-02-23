@@ -12,7 +12,7 @@ export interface UseWrapperForTokenConfig {
 export function useWrapperForToken(config: UseWrapperForTokenConfig) {
   const { coordinator, tokenAddress } = config;
   const enabled = !!coordinator && !!tokenAddress;
-  const contract = getWrapperContract(coordinator as Address, tokenAddress as Address);
+  const contract = enabled ? getWrapperContract(coordinator, tokenAddress) : {};
   return useReadContract({ ...contract, query: { enabled } });
 }
 

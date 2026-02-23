@@ -1,5 +1,6 @@
 import { FEE_MANAGER_ABI } from "../abi/fee-manager.abi";
 import type { Address } from "../relayer/relayer-sdk.types";
+import { assertAddress } from "../utils";
 
 /**
  * Returns the contract config to compute the wrap fee.
@@ -17,6 +18,9 @@ export function getWrapFeeContract(
   wrapFrom: Address,
   wrapTo: Address,
 ) {
+  assertAddress(feeManagerAddress, "feeManagerAddress");
+  assertAddress(wrapFrom, "wrapFrom");
+  assertAddress(wrapTo, "wrapTo");
   return {
     address: feeManagerAddress,
     abi: FEE_MANAGER_ABI,
@@ -41,6 +45,9 @@ export function getUnwrapFeeContract(
   unwrapFrom: Address,
   unwrapTo: Address,
 ) {
+  assertAddress(feeManagerAddress, "feeManagerAddress");
+  assertAddress(unwrapFrom, "unwrapFrom");
+  assertAddress(unwrapTo, "unwrapTo");
   return {
     address: feeManagerAddress,
     abi: FEE_MANAGER_ABI,
@@ -60,6 +67,7 @@ export function getUnwrapFeeContract(
  * ```
  */
 export function getBatchTransferFeeContract(feeManagerAddress: Address) {
+  assertAddress(feeManagerAddress, "feeManagerAddress");
   return {
     address: feeManagerAddress,
     abi: FEE_MANAGER_ABI,
@@ -79,6 +87,7 @@ export function getBatchTransferFeeContract(feeManagerAddress: Address) {
  * ```
  */
 export function getFeeRecipientContract(feeManagerAddress: Address) {
+  assertAddress(feeManagerAddress, "feeManagerAddress");
   return {
     address: feeManagerAddress,
     abi: FEE_MANAGER_ABI,

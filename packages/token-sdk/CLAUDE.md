@@ -52,8 +52,8 @@ TokenSDK (factory)
 
 - **`GenericSigner`** (`src/token/token.types.ts`) — Framework-agnostic wallet interface (5 methods). Implemented by `ViemSigner`, `EthersSigner`, and `WagmiSigner` (in `token-react-sdk`).
 - **`RelayerSDK`** (`src/relayer/relayer-sdk.ts`) — FHE operations interface. `RelayerWeb` uses a Web Worker + WASM CDN bundle. `RelayerNode` calls `@zama-fhe/relayer-sdk/node` directly.
-- **`GenericStringStorage`** — Pluggable key-value store for persisted FHE credentials. `MemoryStorage` for tests, `IndexedDBStorage` for browser.
-- **Contract call builders** (`src/contracts/`) — Pure functions returning `ContractCallConfig` objects. The viem/ethers sub-paths wrap these with library-specific execution.
+- **`GenericStringStorage`** — Pluggable key-value store for persisted FHE credentials. All methods (`getItem`, `setItem`, `removeItem`) return `Promise` — implementations must be async. `MemoryStorage` for tests, `IndexedDBStorage` for browser.
+- **Contract call builders** (`src/contracts/`) — Pure functions returning `ContractCallConfig` objects. All builders validate address arguments at runtime via `assertAddress()` (`0x` + 40 hex chars); FHE data params (handles, proofs, interface IDs) are not validated. The viem/ethers sub-paths wrap these with library-specific execution.
 
 ### Worker Architecture
 
@@ -73,6 +73,7 @@ All SDK errors extend `TokenError` (base class in `src/token/errors.ts`). Each e
 - Tests use vitest with `vi.fn()` mocks for `RelayerSDK` and `GenericSigner`
 - Test files live in `__tests__/` directories adjacent to source
 - Peer dependencies (viem, ethers, `@zama-fhe/relayer-sdk`) are all optional — the SDK works with any combination
-- `Address` type (`` `0x${string}` ``) for contract/wallet addresses; `Hex` type (same shape) for signatures, tx hashes, and proofs
+- `Address` type (`` `0x${string}` ``) for contract/wallet addresses; `Hex` type (same shape) for signatures, tx hashes, and proofs. Contract call builders enforce valid addresses at runtime (`assertAddress` in `src/utils.ts`)
+- Tests must use full 42-character addresses (e.g. `"0x1111111111111111111111111111111111111111"`) — short placeholders like `"0xtoken"` will fail `assertAddress` validation
 - Unused vars prefixed with `_` (ESLint configured)
 - Husky + lint-staged run ESLint and Prettier on pre-commit

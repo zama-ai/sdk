@@ -1,5 +1,6 @@
 import { WRAPPER_ABI } from "../abi/wrapper.abi";
 import type { Address } from "../relayer/relayer-sdk.types";
+import { assertAddress } from "../utils";
 
 /**
  * Returns the contract config for finalizing an unwrap.
@@ -17,6 +18,7 @@ export function finalizeUnwrapContract(
   burntAmountCleartext: bigint,
   decryptionProof: Address,
 ) {
+  assertAddress(wrapper, "wrapper");
   return {
     address: wrapper,
     abi: WRAPPER_ABI,
@@ -34,6 +36,7 @@ export function finalizeUnwrapContract(
  * ```
  */
 export function underlyingContract(wrapperAddress: Address) {
+  assertAddress(wrapperAddress, "wrapperAddress");
   return {
     address: wrapperAddress,
     abi: WRAPPER_ABI,
@@ -53,6 +56,8 @@ export function underlyingContract(wrapperAddress: Address) {
  * ```
  */
 export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint) {
+  assertAddress(wrapperAddress, "wrapperAddress");
+  assertAddress(to, "to");
   return {
     address: wrapperAddress,
     abi: WRAPPER_ABI,
@@ -77,6 +82,8 @@ export function wrapETHContract(
   amount: bigint,
   value: bigint,
 ) {
+  assertAddress(wrapperAddress, "wrapperAddress");
+  assertAddress(to, "to");
   return {
     address: wrapperAddress,
     abi: WRAPPER_ABI,

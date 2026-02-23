@@ -5,7 +5,7 @@ import { vi } from "vitest";
 import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/token-sdk";
 import { TokenSDKProvider } from "../provider";
 
-const USER = "0xuser" as `0x${string}`;
+const USER = "0x2222222222222222222222222222222222222222" as `0x${string}`;
 
 export function createMockSigner(): GenericSigner {
   return {

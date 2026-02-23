@@ -37,7 +37,7 @@ Build this package only: `pnpm --filter @zama-fhe/token-react-sdk build` (runs t
 
 **Layer 1 — Provider hooks** (`src/token/`, `src/relayer/`): Use `TokenSDKProvider` context. These hooks call `useTokenSDK()` to get the SDK instance, then use `useQuery`/`useMutation` from React Query. They handle cache invalidation automatically (e.g., `useConfidentialTransfer` invalidates balance queries on success).
 
-**Layer 2 — Library-adapter hooks** (`src/viem/`, `src/ethers/`, `src/wagmi/`): Low-level hooks that call contract read/write functions directly through their respective library (viem `PublicClient`/`WalletClient`, ethers `Signer`, wagmi `Config`). These do **not** use the SDK provider context — they're for advanced use when you want fine-grained contract-level control. All three sub-paths export suspense variants of read hooks (e.g. `useConfidentialBalanceOfSuspense`) for use with React Suspense boundaries.
+**Layer 2 — Library-adapter hooks** (`src/viem/`, `src/ethers/`, `src/wagmi/`): Low-level hooks that call contract read/write functions directly through their respective library (viem `PublicClient`/`WalletClient`, ethers `Signer`, wagmi `Config`). These do **not** use the SDK provider context — they're for advanced use when you want fine-grained contract-level control. All three sub-paths export suspense variants of read hooks (e.g. `useConfidentialBalanceOfSuspense`) for use with React Suspense boundaries. Wagmi query hooks that accept optional addresses (e.g. `useConfidentialBalanceOf`, `useWrapperForToken`) skip building the contract config when addresses are `undefined` — the contract builder is only called when all required addresses are present.
 
 ### Provider
 

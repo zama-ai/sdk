@@ -6,8 +6,8 @@ import { Token } from "../token";
 import { TokenError, TokenErrorCode, type GenericSigner } from "../token.types";
 import { MemoryStorage } from "../memory-storage";
 
-const TOKEN = "0xtoken" as Address;
-const USER = "0xuser" as Address;
+const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+const USER = "0x2222222222222222222222222222222222222222" as Address;
 const ZERO_HANDLE = "0x" + "0".repeat(64);
 const VALID_HANDLE = "0x" + "ab".repeat(32);
 
@@ -111,7 +111,7 @@ describe("Token", () => {
 
     it("accepts custom owner address", async () => {
       vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
-      const otherAddress = "0xother" as Address;
+      const otherAddress = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
 
       await token.balanceOf(otherAddress);
 
@@ -155,7 +155,7 @@ describe("Token", () => {
   });
 
   describe("batchBalanceOf", () => {
-    const TOKEN2 = "0xtoken2" as Address;
+    const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
     const VALID_HANDLE2 = "0x" + "cd".repeat(32);
 
     it("returns empty map for empty array", async () => {
@@ -218,7 +218,7 @@ describe("Token", () => {
   });
 
   describe("batchDecryptBalances", () => {
-    const TOKEN2 = "0xtoken2" as Address;
+    const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
     const VALID_HANDLE2 = "0x" + "cd".repeat(32);
 
     it("returns empty map for empty array", async () => {
@@ -310,7 +310,7 @@ describe("Token", () => {
     });
 
     it("uses provided owner as signerAddress", async () => {
-      const otherOwner = "0xother" as Address;
+      const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
       await token.decryptBalance(VALID_HANDLE as Address, otherOwner);
 
       expect(sdk.userDecrypt).toHaveBeenCalledWith(
@@ -362,7 +362,7 @@ describe("Token", () => {
   });
 
   describe("discoverWrapper", () => {
-    const COORDINATOR = "0xcoordinator" as Address;
+    const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
     const WRAPPER_ADDR = "0xdiscoveredWrapper" as Address;
 
     it("returns wrapper address when it exists", async () => {
@@ -393,7 +393,7 @@ describe("Token", () => {
 
   describe("underlyingToken", () => {
     it("reads the underlying token address", async () => {
-      const UNDERLYING = "0xunderlying" as Address;
+      const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
       vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING);
 
       const result = await token.underlyingToken();
@@ -456,7 +456,10 @@ describe("Token", () => {
 
   describe("confidentialTransfer", () => {
     it("encrypts amount and sends transaction", async () => {
-      const txHash = await token.confidentialTransfer("0xrecipient" as Address, 100n);
+      const txHash = await token.confidentialTransfer(
+        "0x8888888888888888888888888888888888888888" as Address,
+        100n,
+      );
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
         values: [100n],
@@ -475,7 +478,7 @@ describe("Token", () => {
   describe("wrap", () => {
     it("checks allowance and wraps", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
       const txHash = await token.wrap(100n);
@@ -495,7 +498,7 @@ describe("Token", () => {
 
     it("skips approval when allowance is sufficient", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(200n); // enough allowance
 
       await token.wrap(100n);
@@ -508,7 +511,9 @@ describe("Token", () => {
     });
 
     it("skips approval when approvalStrategy is skip", async () => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce("0xunderlying"); // #getUnderlying
+      vi.mocked(signer.readContract).mockResolvedValueOnce(
+        "0x9999999999999999999999999999999999999999",
+      ); // #getUnderlying
 
       await token.wrap(100n, { approvalStrategy: "skip" });
 
@@ -674,22 +679,22 @@ describe("Token", () => {
     it("wraps non-TokenError in EncryptionFailed", async () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
-      await expect(token.confidentialTransfer("0xrecipient" as Address, 100n)).rejects.toSatisfy(
-        (err: TokenError) => {
-          return (
-            err instanceof TokenError &&
-            err.code === TokenErrorCode.EncryptionFailed &&
-            err.message === "Failed to encrypt transfer amount"
-          );
-        },
-      );
+      await expect(
+        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+      ).rejects.toSatisfy((err: TokenError) => {
+        return (
+          err instanceof TokenError &&
+          err.code === TokenErrorCode.EncryptionFailed &&
+          err.message === "Failed to encrypt transfer amount"
+        );
+      });
     });
   });
 
   describe("confidentialTransferFrom", () => {
     it("encrypts amount with from as userAddress and sends transaction", async () => {
-      const from = "0xfrom" as Address;
-      const to = "0xto" as Address;
+      const from = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
+      const to = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
 
       const txHash = await token.confidentialTransferFrom(from, to, 200n);
 
@@ -710,7 +715,11 @@ describe("Token", () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
       await expect(
-        token.confidentialTransferFrom("0xfrom" as Address, "0xto" as Address, 200n),
+        token.confidentialTransferFrom(
+          "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          200n,
+        ),
       ).rejects.toSatisfy((err: TokenError) => {
         return (
           err instanceof TokenError &&
@@ -723,7 +732,7 @@ describe("Token", () => {
 
   describe("approve", () => {
     it("calls setOperatorContract with spender", async () => {
-      const spender = "0xspender" as Address;
+      const spender = "0x3333333333333333333333333333333333333333" as Address;
 
       const txHash = await token.approve(spender);
 
@@ -739,7 +748,9 @@ describe("Token", () => {
     it("wraps error in ApprovalFailed", async () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.approve("0xspender" as Address)).rejects.toSatisfy((err: TokenError) => {
+      await expect(
+        token.approve("0x3333333333333333333333333333333333333333" as Address),
+      ).rejects.toSatisfy((err: TokenError) => {
         return (
           err instanceof TokenError &&
           err.code === TokenErrorCode.ApprovalFailed &&
@@ -753,7 +764,9 @@ describe("Token", () => {
     it("returns boolean result from readContract", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(true);
 
-      const result = await token.isApproved("0xspender" as Address);
+      const result = await token.isApproved(
+        "0x3333333333333333333333333333333333333333" as Address,
+      );
 
       expect(result).toBe(true);
       expect(signer.readContract).toHaveBeenCalledWith(
@@ -796,7 +809,7 @@ describe("Token", () => {
 
     it("approves max uint256 with approvalStrategy max", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
       await token.wrap(100n, { approvalStrategy: "max" });
@@ -813,7 +826,7 @@ describe("Token", () => {
 
     it("resets to zero first when existing non-zero allowance (USDT handling)", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(50n); // existing non-zero allowance < amount
 
       await token.wrap(100n);
@@ -841,7 +854,9 @@ describe("Token", () => {
     });
 
     it("wraps write failure in TransactionReverted", async () => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce("0xunderlying"); // #getUnderlying
+      vi.mocked(signer.readContract).mockResolvedValueOnce(
+        "0x9999999999999999999999999999999999999999",
+      ); // #getUnderlying
       // skip approval
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
@@ -858,7 +873,7 @@ describe("Token", () => {
 
     it("wraps allowance check failure in ApprovalFailed", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
@@ -949,7 +964,7 @@ describe("Token", () => {
   describe("approveUnderlying", () => {
     it("defaults to max uint256 approval", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // underlying
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
       await token.approveUnderlying();
@@ -964,7 +979,7 @@ describe("Token", () => {
 
     it("resets to zero first when existing non-zero allowance", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // underlying
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
         .mockResolvedValueOnce(50n); // currentAllowance > 0
 
       await token.approveUnderlying();
@@ -988,7 +1003,7 @@ describe("Token", () => {
 
     it("accepts custom amount", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // underlying
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
       await token.approveUnderlying(500n);
@@ -1003,7 +1018,7 @@ describe("Token", () => {
 
     it("wraps error in ApprovalFailed", async () => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0xunderlying") // underlying
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));

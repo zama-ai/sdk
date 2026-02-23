@@ -1,5 +1,6 @@
 import { TRANSFER_BATCHER_ABI } from "../abi/transfer-batch.abi";
 import type { Address } from "../relayer/relayer-sdk.types";
+import { assertAddress } from "../utils";
 
 /** Batch transfer data for confidentialBatchTransfer. */
 export interface BatchTransferData {
@@ -26,6 +27,9 @@ export function confidentialBatchTransferContract(
   batchTransferData: BatchTransferData[],
   fees: bigint,
 ) {
+  assertAddress(batcherAddress, "batcherAddress");
+  assertAddress(tokenAddress, "tokenAddress");
+  assertAddress(fromAddress, "fromAddress");
   return {
     address: batcherAddress,
     abi: TRANSFER_BATCHER_ABI,

@@ -1,5 +1,6 @@
 import { DEPLOYMENT_COORDINATOR_ABI } from "../abi/deployment-coordinator.abi";
 import type { Address } from "../relayer/relayer-sdk.types";
+import { assertAddress } from "../utils";
 
 /**
  * Returns the contract config to look up a wrapper for a given ERC-20 token.
@@ -12,6 +13,8 @@ import type { Address } from "../relayer/relayer-sdk.types";
  * ```
  */
 export function getWrapperContract(coordinator: Address, tokenAddress: Address) {
+  assertAddress(coordinator, "coordinator");
+  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: coordinator,
     abi: DEPLOYMENT_COORDINATOR_ABI,
@@ -31,6 +34,8 @@ export function getWrapperContract(coordinator: Address, tokenAddress: Address) 
  * ```
  */
 export function wrapperExistsContract(coordinator: Address, tokenAddress: Address) {
+  assertAddress(coordinator, "coordinator");
+  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: coordinator,
     abi: DEPLOYMENT_COORDINATOR_ABI,
