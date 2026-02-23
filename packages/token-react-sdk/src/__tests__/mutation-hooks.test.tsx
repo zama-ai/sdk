@@ -7,6 +7,7 @@ import { useApproveUnderlying } from "../token/use-approve-underlying";
 import { useWrap } from "../token/use-wrap";
 import { useAuthorizeAll } from "../token/use-authorize-all";
 import { useEncrypt } from "../relayer/use-encrypt";
+import { confidentialBalanceQueryKeys } from "../token/balance-query-keys";
 import { renderWithProviders, createMockSigner, createMockRelayer } from "./test-utils";
 
 const TOKEN = "0xtoken" as Address;
@@ -87,5 +88,156 @@ describe("useEncrypt", () => {
       handles: [new Uint8Array([1, 2, 3])],
       inputProof: new Uint8Array([4, 5, 6]),
     });
+  });
+});
+
+describe("useConfidentialTransfer optimistic updates", () => {
+  it("subtracts amount from cached balance on mutate when optimistic=true", async () => {
+    const signer = createMockSigner();
+    // Make writeContract hang so we can observe the optimistic state
+    let resolveTransfer: (v: string) => void;
+    vi.mocked(signer.writeContract).mockReturnValue(
+      new Promise((resolve) => {
+        resolveTransfer = resolve as (v: string) => void;
+      }),
+    );
+
+    const { result, queryClient } = renderWithProviders(
+      () => useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
+      { signer },
+    );
+
+    // Seed the cache with a balance
+    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    queryClient.setQueryData(balanceKey, 5000n);
+
+    await act(async () => {
+      result.current.mutate({ to: "0xrecipient" as Address, amount: 1200n });
+    });
+
+    // Balance should be optimistically decreased
+    await waitFor(() => {
+      expect(queryClient.getQueryData(balanceKey)).toBe(3800n);
+    });
+
+    // Resolve the mutation to avoid dangling promises
+    await act(async () => {
+      resolveTransfer!("0xtxhash");
+    });
+  });
+
+  it("does not modify cached balance when optimistic is not set", async () => {
+    const signer = createMockSigner();
+    let resolveTransfer: (v: string) => void;
+    vi.mocked(signer.writeContract).mockReturnValue(
+      new Promise((resolve) => {
+        resolveTransfer = resolve as (v: string) => void;
+      }),
+    );
+
+    const { result, queryClient } = renderWithProviders(
+      () => useConfidentialTransfer({ tokenAddress: TOKEN }),
+      { signer },
+    );
+
+    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    queryClient.setQueryData(balanceKey, 5000n);
+
+    await act(async () => {
+      result.current.mutate({ to: "0xrecipient" as Address, amount: 1200n });
+    });
+
+    // Balance should remain unchanged
+    expect(queryClient.getQueryData(balanceKey)).toBe(5000n);
+
+    await act(async () => {
+      resolveTransfer!("0xtxhash");
+    });
+  });
+
+  it("invalidates balance queries on error when optimistic=true", async () => {
+    const signer = createMockSigner();
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
+
+    const { result, queryClient } = renderWithProviders(
+      () => useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }),
+      { signer },
+    );
+
+    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    queryClient.setQueryData(balanceKey, 5000n);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    await act(async () => {
+      result.current.mutate({ to: "0xrecipient" as Address, amount: 1200n });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    // Verify invalidation was called for rollback
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+      }),
+    );
+  });
+});
+
+describe("useWrap optimistic updates", () => {
+  it("adds amount to cached balance on mutate when optimistic=true", async () => {
+    const signer = createMockSigner();
+    let resolveWrap: (v: string) => void;
+    vi.mocked(signer.writeContract).mockReturnValue(
+      new Promise((resolve) => {
+        resolveWrap = resolve as (v: string) => void;
+      }),
+    );
+
+    const { result, queryClient } = renderWithProviders(
+      () => useWrap({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+      { signer },
+    );
+
+    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    queryClient.setQueryData(balanceKey, 3000n);
+
+    await act(async () => {
+      result.current.mutate({ amount: 500n });
+    });
+
+    // Balance should be optimistically increased
+    await waitFor(() => {
+      expect(queryClient.getQueryData(balanceKey)).toBe(3500n);
+    });
+
+    await act(async () => {
+      resolveWrap!("0xtxhash");
+    });
+  });
+
+  it("invalidates balance queries on wrap error when optimistic=true", async () => {
+    const signer = createMockSigner();
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("wrap failed"));
+
+    const { result, queryClient } = renderWithProviders(
+      () => useWrap({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+      { signer },
+    );
+
+    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    queryClient.setQueryData(balanceKey, 3000n);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    await act(async () => {
+      result.current.mutate({ amount: 500n });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+      }),
+    );
   });
 });

@@ -131,16 +131,36 @@ function setupFetchInterceptor(): void {
 }
 
 /**
+ * Verify a fetched script's SHA-384 hash matches the expected integrity value.
+ */
+async function verifyIntegrity(content: string, expectedHash: string): Promise<void> {
+  const encoder = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest("SHA-384", encoder.encode(content));
+  const hashHex = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  if (hashHex !== expectedHash) {
+    throw new Error(`CDN integrity check failed: expected SHA-384 ${expectedHash}, got ${hashHex}`);
+  }
+}
+
+/**
  * Load SDK script by fetching content and creating a Blob URL.
  * This avoids CORS issues with importScripts on some CDNs.
+ * When an integrity hash is provided, verifies the content before execution.
  */
-async function loadSdkScript(cdnUrl: string): Promise<void> {
+async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
   // Use original fetch to avoid interception during SDK loading
   const response = await originalFetch(cdnUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
   }
   const scriptContent = await response.text();
+
+  // Verify integrity before executing the script
+  if (integrity) {
+    await verifyIntegrity(scriptContent, integrity);
+  }
 
   // Create a blob URL and import it
   const blob = new Blob([scriptContent], { type: "application/javascript" });
@@ -158,7 +178,7 @@ async function loadSdkScript(cdnUrl: string): Promise<void> {
  */
 async function handleInit(request: InitRequest): Promise<void> {
   const { id, type, payload } = request;
-  const { cdnUrl, fhevmConfig, csrfToken } = payload;
+  const { cdnUrl, fhevmConfig, csrfToken, integrity } = payload;
 
   try {
     // Extract relayerUrl from config for fetch interception
@@ -169,7 +189,7 @@ async function handleInit(request: InitRequest): Promise<void> {
     setupFetchInterceptor();
 
     // Load SDK via fetch + blob URL (avoids CORS issues with importScripts)
-    await loadSdkScript(cdnUrl);
+    await loadSdkScript(cdnUrl, integrity);
 
     if (!self.relayerSDK) {
       throw new Error("Failed to load relayerSDK from CDN");

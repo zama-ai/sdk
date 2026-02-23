@@ -3,6 +3,7 @@ import { CredentialsManager } from "../credential-manager";
 import { MemoryStorage } from "../memory-storage";
 import type { GenericSigner } from "../token.types";
 import { TokenError, TokenErrorCode } from "../token.types";
+import { CredentialExpiredError } from "../errors";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 
@@ -280,5 +281,60 @@ describe("CredentialsManager", () => {
     await manager2.get("0xtoken" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledTimes(2);
+  });
+
+  describe("isExpired", () => {
+    it("returns false when no credentials are stored", async () => {
+      expect(await manager.isExpired()).toBe(false);
+    });
+
+    it("returns false when credentials are valid", async () => {
+      await manager.get("0xtoken" as Address);
+      expect(await manager.isExpired()).toBe(false);
+    });
+
+    it("returns true when credentials are expired", async () => {
+      await manager.get("0xtoken" as Address);
+
+      // Tamper stored data to simulate expiration
+      const stored = store.getItem(storeKey);
+      const parsed = JSON.parse(stored!);
+      parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
+      store.setItem(storeKey, JSON.stringify(parsed));
+
+      const manager2 = new CredentialsManager({
+        sdk: sdk as unknown as RelayerSDK,
+        signer,
+        storage: store,
+        durationDays: 1,
+      });
+      expect(await manager2.isExpired()).toBe(true);
+    });
+
+    it("returns true when credentials don't cover the requested contract", async () => {
+      await manager.get("0xtoken" as Address);
+
+      const manager2 = new CredentialsManager({
+        sdk: sdk as unknown as RelayerSDK,
+        signer,
+        storage: store,
+        durationDays: 1,
+      });
+      expect(await manager2.isExpired("0xother" as Address)).toBe(true);
+    });
+
+    it("returns false when stored data is corrupted", async () => {
+      store.setItem(storeKey, "corrupted-json{{{");
+      expect(await manager.isExpired()).toBe(false);
+    });
+  });
+});
+
+describe("CredentialExpiredError", () => {
+  it("has the correct error code", () => {
+    const error = new CredentialExpiredError("credentials expired");
+    expect(error.code).toBe(TokenErrorCode.CredentialExpired);
+    expect(error.name).toBe("CredentialExpiredError");
+    expect(error).toBeInstanceOf(TokenError);
   });
 });

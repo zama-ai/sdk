@@ -35,6 +35,8 @@ export {
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
   supportsInterfaceContract,
+  isConfidentialTokenContract,
+  isConfidentialWrapperContract,
 } from "./erc165";
 
 export {

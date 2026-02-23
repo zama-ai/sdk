@@ -105,6 +105,41 @@ export class CredentialsManager {
   }
 
   /**
+   * Check if stored credentials exist and are expired.
+   * Returns `true` if credentials are stored but past their expiration time.
+   * Returns `false` if no credentials are stored or if they are still valid.
+   *
+   * Use this to proactively detect expiration and show appropriate UI
+   * (e.g. "Re-authorizing..." instead of a generic loading state).
+   *
+   * @param contractAddress - Optional contract address to check coverage for.
+   *   When provided, also returns `true` if credentials don't cover this address.
+   *
+   * @example
+   * ```ts
+   * if (await credentials.isExpired("0xTokenAddress")) {
+   *   showReauthorizingUI();
+   * }
+   * ```
+   */
+  async isExpired(contractAddress?: Address): Promise<boolean> {
+    const storeKey = await this.#storeKey();
+    try {
+      const stored = await this.#storage.getItem(storeKey);
+      if (!stored) return false;
+
+      const encrypted = JSON.parse(stored) as unknown;
+      this.#assertEncryptedCredentials(encrypted);
+      const creds = await this.#decryptCredentials(encrypted);
+
+      const requiredContracts = contractAddress ? [contractAddress] : [];
+      return !this.#isValid(creds, requiredContracts);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Delete stored credentials for the connected wallet (best-effort).
    *
    * @example

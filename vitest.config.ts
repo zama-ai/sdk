@@ -10,7 +10,19 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["node_modules/"],
+      include: ["packages/token-sdk/src/**", "packages/token-react-sdk/src/**"],
+      exclude: [
+        "**/__tests__/**",
+        "**/*.test.{ts,tsx}",
+        "**/*.types.ts",
+        "**/abi/**",
+        "**/index.ts",
+      ],
+      thresholds: {
+        lines: 60,
+        branches: 60,
+        functions: 60,
+      },
     },
   },
   resolve: {
@@ -31,6 +43,20 @@ export default defineConfig({
       {
         find: /^@zama-fhe\/token-react-sdk$/,
         replacement: path.resolve(__dirname, "./packages/token-react-sdk/src"),
+      },
+      {
+        find: /^wagmi\/actions$/,
+        replacement: path.resolve(
+          __dirname,
+          "./packages/token-react-sdk/node_modules/wagmi/dist/esm/exports/actions.js",
+        ),
+      },
+      {
+        find: /^wagmi$/,
+        replacement: path.resolve(
+          __dirname,
+          "./packages/token-react-sdk/node_modules/wagmi/dist/esm/exports/index.js",
+        ),
       },
     ],
   },

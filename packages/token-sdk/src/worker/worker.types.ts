@@ -52,6 +52,8 @@ export interface InitRequest extends BaseRequest {
     cdnUrl: string;
     fhevmConfig: FhevmInstanceConfig;
     csrfToken: string;
+    /** Expected SHA-384 hex digest for integrity verification. */
+    integrity?: string;
   };
 }
 

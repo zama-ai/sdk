@@ -26,6 +26,8 @@ export const TokenErrorCode = {
   ApprovalFailed: "APPROVAL_FAILED",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
+  /** FHE credentials have expired and need regeneration. */
+  CredentialExpired: "CREDENTIAL_EXPIRED",
 } as const;
 
 /** Union of all {@link TokenErrorCode} string values. */
@@ -92,5 +94,13 @@ export class TransactionRevertedError extends TokenError {
   constructor(message: string, options?: ErrorOptions) {
     super(TokenErrorCode.TransactionReverted, message, options);
     this.name = "TransactionRevertedError";
+  }
+}
+
+/** FHE credentials have expired and need regeneration. */
+export class CredentialExpiredError extends TokenError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(TokenErrorCode.CredentialExpired, message, options);
+    this.name = "CredentialExpiredError";
   }
 }

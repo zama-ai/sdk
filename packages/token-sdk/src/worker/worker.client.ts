@@ -13,6 +13,8 @@ export interface WorkerClientConfig {
   cdnUrl: string;
   fhevmConfig: FhevmInstanceConfig;
   csrfToken: string;
+  /** Expected SHA-384 hex digest of the CDN bundle for integrity verification. */
+  integrity?: string;
   /** Optional logger for tracing worker request lifecycle. */
   logger?: GenericLogger;
 }

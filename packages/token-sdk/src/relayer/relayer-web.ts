@@ -23,6 +23,9 @@ import { TokenError, EncryptionFailedError } from "../token/errors";
  */
 const RELAYER_SDK_VERSION = "0.4.1";
 const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
+/** SHA-384 hex digest of the pinned CDN bundle for integrity verification. */
+const CDN_INTEGRITY =
+  "2bd5401738b74509549bed2029bbbabedd481b10ac260f66e64a4ff3723d6d704180c51e882757c56ca1840491e90e33";
 
 /**
  * RelayerWeb — browser FHE backend using a Web Worker.
@@ -48,6 +51,7 @@ export class RelayerWeb implements RelayerSDK {
       cdnUrl: CDN_URL,
       fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
       csrfToken: this.#config.getCsrfToken?.() ?? "",
+      integrity: CDN_INTEGRITY,
       logger: this.#config.logger,
     };
   }

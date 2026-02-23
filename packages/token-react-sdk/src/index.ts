@@ -137,6 +137,7 @@ export {
   useConfidentialTransfer,
   confidentialTransferMutationOptions,
   type ConfidentialTransferParams,
+  type UseConfidentialTransferConfig,
 } from "./token/use-confidential-transfer";
 export {
   useConfidentialTransferFrom,
@@ -156,7 +157,12 @@ export {
   type UseConfidentialIsApprovedConfig,
   type UseConfidentialIsApprovedSuspenseConfig,
 } from "./token/use-confidential-is-approved";
-export { useWrap, wrapMutationOptions, type WrapParams } from "./token/use-wrap";
+export {
+  useWrap,
+  wrapMutationOptions,
+  type WrapParams,
+  type UseWrapConfig,
+} from "./token/use-wrap";
 export { useShield } from "./token/use-shield";
 export { useWrapETH, wrapETHMutationOptions, type WrapETHParams } from "./token/use-wrap-eth";
 export { useShieldETH } from "./token/use-shield-eth";

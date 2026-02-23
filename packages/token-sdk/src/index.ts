@@ -64,6 +64,7 @@ export {
   DecryptionFailedError,
   ApprovalFailedError,
   TransactionRevertedError,
+  CredentialExpiredError,
 } from "./token/errors";
 
 // Event decoders and types
@@ -122,6 +123,8 @@ export {
   wrapContract,
   wrapETHContract,
   supportsInterfaceContract,
+  isConfidentialTokenContract,
+  isConfidentialWrapperContract,
   nameContract,
   symbolContract,
   decimalsContract,

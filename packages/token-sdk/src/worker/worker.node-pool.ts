@@ -26,6 +26,28 @@ export interface NodeWorkerPoolConfig extends NodeWorkerClientConfig {
 
 const MAX_DEFAULT_POOL_SIZE = 4;
 
+/**
+ * Pool of Node.js worker threads for parallel FHE operations.
+ *
+ * **Default pool size:** `min(os.availableParallelism(), 4)`. Each worker loads
+ * the full WASM module (~50–100 MB), so size the pool based on available memory.
+ *
+ * **Scheduling:** Least-connections — each request is dispatched to the worker
+ * with the fewest in-flight operations.
+ *
+ * **When to override pool size:**
+ * - High-throughput batch processing (e.g. bulk encryptions): increase to match CPU cores.
+ * - Memory-constrained environments: decrease to 1–2 workers.
+ *
+ * **Lifecycle:**
+ * 1. Construct with config: `new NodeWorkerPool({ fhevmConfig })`
+ * 2. Initialize all workers: `await pool.initPool()`
+ * 3. Use: `await pool.encrypt(...)`, `await pool.userDecrypt(...)`, etc.
+ * 4. Shut down: `pool.terminate()`
+ *
+ * `initPool()` is idempotent — concurrent calls share the same initialization promise.
+ * If any worker fails to initialize, all workers are terminated and the error is propagated.
+ */
 export class NodeWorkerPool {
   readonly #workers: NodeWorkerClient[] = [];
   readonly #activeCount: number[] = [];
@@ -33,6 +55,10 @@ export class NodeWorkerPool {
   readonly #poolSize: number;
   #initPromise: Promise<void> | null = null;
 
+  /**
+   * @param config - Pool configuration. Set `poolSize` to override the default
+   *   (`min(os.availableParallelism(), 4)`).
+   */
   constructor(config: NodeWorkerPoolConfig) {
     this.#config = config;
     this.#poolSize = config.poolSize ?? Math.min(availableParallelism(), MAX_DEFAULT_POOL_SIZE);

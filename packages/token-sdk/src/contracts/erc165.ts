@@ -28,3 +28,31 @@ export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Ad
     args: [interfaceId],
   } as const;
 }
+
+/**
+ * Returns contract config to check if a token implements IERC7984 (confidential fungible token).
+ *
+ * @example
+ * ```ts
+ * const isConfidential = await signer.readContract(
+ *   isConfidentialTokenContract("0xTokenAddress"),
+ * );
+ * ```
+ */
+export function isConfidentialTokenContract(tokenAddress: Address) {
+  return supportsInterfaceContract(tokenAddress, ERC7984_INTERFACE_ID);
+}
+
+/**
+ * Returns contract config to check if a token implements IERC7984ERC20Wrapper (confidential wrapper).
+ *
+ * @example
+ * ```ts
+ * const isWrapper = await signer.readContract(
+ *   isConfidentialWrapperContract("0xWrapperAddress"),
+ * );
+ * ```
+ */
+export function isConfidentialWrapperContract(tokenAddress: Address) {
+  return supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID);
+}

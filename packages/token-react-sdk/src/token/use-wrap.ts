@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
 import type { Address, Token } from "@zama-fhe/token-sdk";
 import {
   confidentialBalanceQueryKeys,
@@ -18,6 +18,16 @@ export interface WrapParams {
   fees?: bigint;
   /** ERC-20 approval strategy: `"exact"` (default), `"max"`, or `"skip"`. */
   approvalStrategy?: "max" | "exact" | "skip";
+}
+
+/** Configuration for {@link useWrap}. */
+export interface UseWrapConfig extends UseTokenConfig {
+  /**
+   * When `true`, optimistically adds the wrap amount to the cached confidential balance
+   * before the transaction confirms. Rolls back on error.
+   * @default false
+   */
+  optimistic?: boolean;
 }
 
 /**
@@ -44,25 +54,50 @@ export function wrapMutationOptions(token: Token) {
  * - {@link TransactionRevertedError} — wrap transaction reverted
  *
  * @param config - Token and wrapper addresses.
+ *   Set `optimistic: true` to add the amount to the cached balance immediately.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const wrap = useWrap({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * const wrap = useWrap({ tokenAddress: "0x...", wrapperAddress: "0x...", optimistic: true });
  * wrap.mutate({ amount: 1000n });
  * ```
  */
 export function useWrap(
-  config: UseTokenConfig,
+  config: UseWrapConfig,
   options?: UseMutationOptions<Address, Error, WrapParams, Address>,
 ) {
   const token = useToken(config);
+  const queryClient = useQueryClient();
 
   return useMutation<Address, Error, WrapParams, Address>({
     mutationKey: ["wrap", config.tokenAddress],
     mutationFn: async ({ amount, fees, approvalStrategy }) =>
       token.wrap(amount, { fees, approvalStrategy }),
     ...options,
+    onMutate: config.optimistic
+      ? async (variables, mutationContext) => {
+          const balanceKey = confidentialBalanceQueryKeys.token(config.tokenAddress);
+          await queryClient.cancelQueries({ queryKey: balanceKey });
+          const previous = queryClient.getQueriesData<bigint>({ queryKey: balanceKey });
+          for (const [key, value] of previous) {
+            if (value !== undefined) {
+              queryClient.setQueryData(key, value + variables.amount);
+            }
+          }
+          return (options?.onMutate?.(variables, mutationContext) ??
+            config.tokenAddress) as Address;
+        }
+      : options?.onMutate,
+    onError: (error, variables, onMutateResult, context) => {
+      if (config.optimistic) {
+        // Rollback: invalidate to refetch actual values
+        queryClient.invalidateQueries({
+          queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
+        });
+      }
+      options?.onError?.(error, variables, onMutateResult, context);
+    },
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({
         queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
