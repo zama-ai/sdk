@@ -2,6 +2,13 @@
   "name": "@zama-fhe/token-sdk-monorepo",
   "version": "0.1.0",
   "private": true,
+  "description": "Monorepo for Zama confidential ERC-20 token SDKs (fhEVM)",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zama-ai/token-sdk"
+  },
+  "author": "Guillaume Hermet <guillaume.hermet@zama.ai>",
   "scripts": {
     "build": "pnpm build:sdk && pnpm build:react-sdk",
     "build:sdk": "pnpm --filter @zama-fhe/token-sdk build",
