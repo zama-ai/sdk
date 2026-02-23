@@ -56,10 +56,10 @@
     "prepare": "tsup"
   },
   "dependencies": {
-    "@zama-fhe/token-sdk": "workspace:*",
     "tsup": "^8.5.1"
   },
   "peerDependencies": {
+    "@zama-fhe/token-sdk": "workspace:*",
     "react": ">=18",
     "@tanstack/react-query": ">=5",
     "ethers": ">=6",
