@@ -16,8 +16,8 @@ export type {
   ZKProofLike,
   InputProofBytesType,
   FhevmInstanceConfig,
-  GenericLogger,
 } from "./relayer/relayer-sdk.types";
+export type { GenericLogger } from "./worker/worker.types";
 
 // Network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";

@@ -1,17 +1,22 @@
 import { availableParallelism } from "node:os";
 import { NodeWorkerClient } from "./worker.node-client";
 import type { NodeWorkerClientConfig } from "./worker.node-client";
-import type { Address, ZKProofLike } from "../relayer/relayer-sdk.types";
+import type { ZKProofLike } from "../relayer/relayer-sdk.types";
 import type {
+  CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
+  CreateEIP712Payload,
   CreateEIP712ResponseData,
+  DelegatedUserDecryptPayload,
   DelegatedUserDecryptResponseData,
+  EncryptPayload,
   EncryptResponseData,
   GenerateKeypairResponseData,
   GetPublicKeyResponseData,
   GetPublicParamsResponseData,
   PublicDecryptResponseData,
   RequestZKProofVerificationResponseData,
+  UserDecryptPayload,
   UserDecryptResponseData,
 } from "./worker.types";
 
@@ -106,49 +111,16 @@ export class NodeWorkerPool {
     return this.#dispatch((w) => w.generateKeypair());
   }
 
-  async createEIP712(
-    publicKey: string,
-    contractAddresses: Address[],
-    startTimestamp: number,
-    durationDays: number,
-  ): Promise<CreateEIP712ResponseData> {
-    return this.#dispatch((w) =>
-      w.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays),
-    );
+  async createEIP712(params: CreateEIP712Payload): Promise<CreateEIP712ResponseData> {
+    return this.#dispatch((w) => w.createEIP712(params));
   }
 
-  async encrypt(
-    values: bigint[],
-    contractAddress: Address,
-    userAddress: Address,
-  ): Promise<EncryptResponseData> {
-    return this.#dispatch((w) => w.encrypt(values, contractAddress, userAddress));
+  async encrypt(params: EncryptPayload): Promise<EncryptResponseData> {
+    return this.#dispatch((w) => w.encrypt(params));
   }
 
-  async userDecrypt(
-    handles: string[],
-    contractAddress: Address,
-    signedContractAddresses: Address[],
-    privateKey: string,
-    publicKey: string,
-    signature: string,
-    signerAddress: Address,
-    startTimestamp: number,
-    durationDays: number,
-  ): Promise<UserDecryptResponseData> {
-    return this.#dispatch((w) =>
-      w.userDecrypt(
-        handles,
-        contractAddress,
-        signedContractAddresses,
-        privateKey,
-        publicKey,
-        signature,
-        signerAddress,
-        startTimestamp,
-        durationDays,
-      ),
-    );
+  async userDecrypt(params: UserDecryptPayload): Promise<UserDecryptResponseData> {
+    return this.#dispatch((w) => w.userDecrypt(params));
   }
 
   async publicDecrypt(handles: string[]): Promise<PublicDecryptResponseData> {
@@ -156,49 +128,15 @@ export class NodeWorkerPool {
   }
 
   async createDelegatedUserDecryptEIP712(
-    publicKey: string,
-    contractAddresses: Address[],
-    delegatorAddress: string,
-    startTimestamp: number,
-    durationDays: number,
+    params: CreateDelegatedEIP712Payload,
   ): Promise<CreateDelegatedEIP712ResponseData> {
-    return this.#dispatch((w) =>
-      w.createDelegatedUserDecryptEIP712(
-        publicKey,
-        contractAddresses,
-        delegatorAddress,
-        startTimestamp,
-        durationDays,
-      ),
-    );
+    return this.#dispatch((w) => w.createDelegatedUserDecryptEIP712(params));
   }
 
   async delegatedUserDecrypt(
-    handles: string[],
-    contractAddress: Address,
-    signedContractAddresses: Address[],
-    privateKey: string,
-    publicKey: string,
-    signature: string,
-    delegatorAddress: Address,
-    delegateAddress: Address,
-    startTimestamp: number,
-    durationDays: number,
+    params: DelegatedUserDecryptPayload,
   ): Promise<DelegatedUserDecryptResponseData> {
-    return this.#dispatch((w) =>
-      w.delegatedUserDecrypt(
-        handles,
-        contractAddress,
-        signedContractAddresses,
-        privateKey,
-        publicKey,
-        signature,
-        delegatorAddress,
-        delegateAddress,
-        startTimestamp,
-        durationDays,
-      ),
-    );
+    return this.#dispatch((w) => w.delegatedUserDecrypt(params));
   }
 
   async requestZKProofVerification(

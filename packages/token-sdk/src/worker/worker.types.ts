@@ -177,6 +177,16 @@ export type WorkerRequest =
   | GetPublicParamsRequest;
 
 // ============================================================================
+// Payload Type Aliases
+// ============================================================================
+
+export type EncryptPayload = EncryptRequest["payload"];
+export type UserDecryptPayload = UserDecryptRequest["payload"];
+export type DelegatedUserDecryptPayload = DelegatedUserDecryptRequest["payload"];
+export type CreateEIP712Payload = CreateEIP712Request["payload"];
+export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload"];
+
+// ============================================================================
 // Response Types
 // ============================================================================
 

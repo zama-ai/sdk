@@ -123,33 +123,63 @@ describe("NodeWorkerPool", () => {
     await pool.generateKeypair();
     expect(instance.generateKeypair).toHaveBeenCalled();
 
-    await pool.createEIP712("pk", ["0x1"], 1000, 7);
-    expect(instance.createEIP712).toHaveBeenCalledWith("pk", ["0x1"], 1000, 7);
+    await pool.createEIP712({
+      publicKey: "pk",
+      contractAddresses: ["0x1"],
+      startTimestamp: 1000,
+      durationDays: 7,
+    });
+    expect(instance.createEIP712).toHaveBeenCalledWith({
+      publicKey: "pk",
+      contractAddresses: ["0x1"],
+      startTimestamp: 1000,
+      durationDays: 7,
+    });
 
-    await pool.encrypt([1n], "0xC", "0xU");
-    expect(instance.encrypt).toHaveBeenCalledWith([1n], "0xC", "0xU");
+    await pool.encrypt({ values: [1n], contractAddress: "0xC", userAddress: "0xU" });
+    expect(instance.encrypt).toHaveBeenCalledWith({
+      values: [1n],
+      contractAddress: "0xC",
+      userAddress: "0xU",
+    });
 
-    await pool.userDecrypt(["h1"], "0xC", ["0xS"], "sk", "pk", "sig", "0xA", 100, 7);
+    await pool.userDecrypt({
+      handles: ["h1"],
+      contractAddress: "0xC",
+      signedContractAddresses: ["0xS"],
+      privateKey: "sk",
+      publicKey: "pk",
+      signature: "sig",
+      signerAddress: "0xA",
+      startTimestamp: 100,
+      durationDays: 7,
+    });
     expect(instance.userDecrypt).toHaveBeenCalled();
 
     await pool.publicDecrypt(["h1"]);
     expect(instance.publicDecrypt).toHaveBeenCalledWith(["h1"]);
 
-    await pool.createDelegatedUserDecryptEIP712("pk", ["0x1"], "0xD", 100, 7);
+    await pool.createDelegatedUserDecryptEIP712({
+      publicKey: "pk",
+      contractAddresses: ["0x1"],
+      delegatorAddress: "0xD",
+      startTimestamp: 100,
+      durationDays: 7,
+    });
     expect(instance.createDelegatedUserDecryptEIP712).toHaveBeenCalled();
 
-    await pool.delegatedUserDecrypt(
-      ["h1"],
-      "0xC",
-      ["0xS"],
-      "sk",
-      "pk",
-      "sig",
-      "0xD",
-      "0xE",
-      100,
-      7,
-    );
+    await pool.delegatedUserDecrypt({
+      handles: ["h1"],
+      contractAddress: "0xC",
+      signedContractAddresses: ["0xS"],
+      privateKey: "sk",
+      publicKey: "pk",
+      signature: "sig",
+      delegatorAddress: "0xD",
+      delegateAddress: "0xE",
+      startTimestamp: 100,
+      durationDays: 7,
+    });
     expect(instance.delegatedUserDecrypt).toHaveBeenCalled();
 
     await pool.requestZKProofVerification({} as unknown as ZKProofLike);

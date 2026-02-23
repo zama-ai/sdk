@@ -161,12 +161,12 @@ export class RelayerWeb implements RelayerSDK {
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
     const worker = await this.#ensureWorker();
-    const result = await worker.createEIP712(
+    const result = await worker.createEIP712({
       publicKey,
       contractAddresses,
       startTimestamp,
       durationDays,
-    );
+    });
 
     return {
       domain: {
@@ -198,7 +198,7 @@ export class RelayerWeb implements RelayerSDK {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
-      const result = await worker.encrypt(values, contractAddress, userAddress);
+      const result = await worker.encrypt({ values, contractAddress, userAddress });
       return { handles: result.handles, inputProof: result.inputProof };
     });
   }
@@ -211,17 +211,7 @@ export class RelayerWeb implements RelayerSDK {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
-      const result = await worker.userDecrypt(
-        params.handles,
-        params.contractAddress,
-        params.signedContractAddresses,
-        params.privateKey,
-        params.publicKey,
-        params.signature,
-        params.signerAddress,
-        params.startTimestamp,
-        params.durationDays,
-      );
+      const result = await worker.userDecrypt(params);
       return result.clearValues;
     });
   }
@@ -254,13 +244,13 @@ export class RelayerWeb implements RelayerSDK {
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const worker = await this.#ensureWorker();
-    return worker.createDelegatedUserDecryptEIP712(
+    return worker.createDelegatedUserDecryptEIP712({
       publicKey,
       contractAddresses,
       delegatorAddress,
       startTimestamp,
       durationDays,
-    );
+    });
   }
 
   /**
@@ -271,18 +261,7 @@ export class RelayerWeb implements RelayerSDK {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
-      const result = await worker.delegatedUserDecrypt(
-        params.handles,
-        params.contractAddress,
-        params.signedContractAddresses,
-        params.privateKey,
-        params.publicKey,
-        params.signature,
-        params.delegatorAddress,
-        params.delegateAddress,
-        params.startTimestamp,
-        params.durationDays,
-      );
+      const result = await worker.delegatedUserDecrypt(params);
       return result.clearValues;
     });
   }

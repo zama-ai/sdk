@@ -130,12 +130,12 @@ export class RelayerNode implements RelayerSDK {
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
     const pool = await this.#ensurePool();
-    const result = await pool.createEIP712(
+    const result = await pool.createEIP712({
       publicKey,
       contractAddresses,
       startTimestamp,
       durationDays,
-    );
+    });
 
     return {
       domain: {
@@ -160,7 +160,7 @@ export class RelayerNode implements RelayerSDK {
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     return withRetry(async () => {
       const pool = await this.#ensurePool();
-      const result = await pool.encrypt(params.values, params.contractAddress, params.userAddress);
+      const result = await pool.encrypt(params);
       return { handles: result.handles, inputProof: result.inputProof };
     });
   }
@@ -168,17 +168,7 @@ export class RelayerNode implements RelayerSDK {
   async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
     return withRetry(async () => {
       const pool = await this.#ensurePool();
-      const result = await pool.userDecrypt(
-        params.handles,
-        params.contractAddress,
-        params.signedContractAddresses,
-        params.privateKey,
-        params.publicKey,
-        params.signature,
-        params.signerAddress,
-        params.startTimestamp,
-        params.durationDays,
-      );
+      const result = await pool.userDecrypt(params);
       return result.clearValues;
     });
   }
@@ -203,30 +193,19 @@ export class RelayerNode implements RelayerSDK {
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const pool = await this.#ensurePool();
-    return pool.createDelegatedUserDecryptEIP712(
+    return pool.createDelegatedUserDecryptEIP712({
       publicKey,
       contractAddresses,
       delegatorAddress,
       startTimestamp,
       durationDays,
-    );
+    });
   }
 
   async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
     return withRetry(async () => {
       const pool = await this.#ensurePool();
-      const result = await pool.delegatedUserDecrypt(
-        params.handles,
-        params.contractAddress,
-        params.signedContractAddresses,
-        params.privateKey,
-        params.publicKey,
-        params.signature,
-        params.delegatorAddress,
-        params.delegateAddress,
-        params.startTimestamp,
-        params.durationDays,
-      );
+      const result = await pool.delegatedUserDecrypt(params);
       return result.clearValues;
     });
   }
