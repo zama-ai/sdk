@@ -21,7 +21,7 @@ pnpm add @zama-fhe/token-sdk
 ### Browser
 
 ```ts
-import { TokenSDK, RelayerWeb, SepoliaConfig, IndexedDBStorage } from "@zama-fhe/token-sdk";
+import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/token-sdk";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
 // 1. Create signer and relayer
@@ -31,8 +31,11 @@ const sdk = new TokenSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
+      [1]: {
+        relayerUrl: "https://relayer.zama.ai",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
       [11155111]: {
-        ...SepoliaConfig,
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
@@ -62,7 +65,7 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 
 ```ts
 import { TokenSDK, MemoryStorage } from "@zama-fhe/token-sdk";
-import { RelayerNode, SepoliaConfig } from "@zama-fhe/token-sdk/node";
+import { RelayerNode } from "@zama-fhe/token-sdk/node";
 import { ViemSigner } from "@zama-fhe/token-sdk/viem";
 
 const signer = new ViemSigner(walletClient, publicClient);
@@ -72,6 +75,10 @@ const sdk = new TokenSDK({
     getChainId: () => signer.getChainId(),
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
+      [1]: {
+        relayerUrl: "https://relayer.zama.ai",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
       [11155111]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",

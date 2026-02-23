@@ -26,7 +26,7 @@ pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 
 ```tsx
 import { WagmiProvider, createConfig, http } from "wagmi";
-import { sepolia } from "wagmi/chains";
+import { mainnet, sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TokenSDKProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/token-react-sdk";
 import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
@@ -34,8 +34,11 @@ import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
 const queryClient = new QueryClient();
 
 const wagmiConfig = createConfig({
-  chains: [sepolia],
-  transports: { [sepolia.id]: http() },
+  chains: [mainnet, sepolia],
+  transports: {
+    [mainnet.id]: http("https://mainnet.infura.io/v3/YOUR_KEY"),
+    [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY"),
+  },
 });
 
 const signer = new WagmiSigner(wagmiConfig);
@@ -43,6 +46,10 @@ const signer = new WagmiSigner(wagmiConfig);
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
+    [1]: {
+      relayerUrl: "https://relayer.zama.ai",
+      network: "https://mainnet.infura.io/v3/YOUR_KEY",
+    },
     [11155111]: {
       relayerUrl: "https://relayer.zama.ai",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
@@ -87,6 +94,10 @@ const queryClient = new QueryClient();
 const relayer = new RelayerWeb({
   getChainId: () => yourCustomSigner.getChainId(),
   transports: {
+    [1]: {
+      relayerUrl: "https://relayer.zama.ai",
+      network: "https://mainnet.infura.io/v3/YOUR_KEY",
+    },
     [11155111]: {
       relayerUrl: "https://relayer.zama.ai",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
