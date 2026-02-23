@@ -183,9 +183,9 @@ const sdk = new TokenSDK({
 │                    Your Application                  │
 ├──────────────────────┬──────────────────────────────┤
 │  token-react-sdk     │  token-sdk (vanilla TS)      │
-│  React hooks +       │  TokenSDK             │
-│  React Query cache   │  ConfidentialToken            │
-│                      │  ReadonlyConfidentialToken    │
+│  React hooks +       │  TokenSDK                    │
+│  React Query cache   │  Token                       │
+│                      │  ReadonlyToken               │
 ├──────────────────────┴──────────────────────────────┤
 │                   Signer Adapters                    │
 │           ViemSigner · EthersSigner · WagmiSigner    │
@@ -379,23 +379,23 @@ const txHash = await writeWrapContract(signer, wrapper, to, amount);
 
 ## Error Handling
 
-All SDK errors are instances of `ConfidentialTokenError` with typed error codes:
+All SDK errors are instances of `TokenError` with typed error codes:
 
 ```ts
-import { ConfidentialTokenError, ConfidentialTokenErrorCode } from "@zama-fhe/token-sdk";
+import { TokenError, TokenErrorCode } from "@zama-fhe/token-sdk";
 
 try {
   await token.confidentialTransfer(to, amount);
 } catch (error) {
-  if (error instanceof ConfidentialTokenError) {
+  if (error instanceof TokenError) {
     switch (error.code) {
-      case ConfidentialTokenErrorCode.SigningRejected:
+      case TokenErrorCode.SigningRejected:
         // User rejected wallet signature
         break;
-      case ConfidentialTokenErrorCode.EncryptionFailed:
+      case TokenErrorCode.EncryptionFailed:
         // FHE encryption failed
         break;
-      case ConfidentialTokenErrorCode.TransactionReverted:
+      case TokenErrorCode.TransactionReverted:
         // On-chain transaction reverted
         break;
     }
@@ -420,7 +420,7 @@ try {
 ### Prerequisites
 
 - Node.js >= 20
-- pnpm >= 9
+- pnpm >= 10
 
 ### Setup
 

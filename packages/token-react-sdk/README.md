@@ -15,9 +15,10 @@ pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 | Package                 | Version | Required?                                     |
 | ----------------------- | ------- | --------------------------------------------- |
 | `react`                 | >= 18   | Yes                                           |
-| `@tanstack/react-query` | >= 4    | Yes                                           |
+| `@tanstack/react-query` | >= 5    | Yes                                           |
 | `viem`                  | >= 2    | Optional — for `/viem` and `/wagmi` sub-paths |
 | `ethers`                | >= 6    | Optional — for `/ethers` sub-path             |
+| `wagmi`                 | >= 2    | Optional — for `/wagmi` sub-path              |
 
 ## Quick Start
 
