@@ -458,8 +458,8 @@ pnpm install
 
 ```bash
 pnpm build                  # Build all (token-sdk first, then token-react-sdk)
-pnpm --filter @zama-fhe/token-sdk build        # Build core SDK only
-pnpm --filter @zama-fhe/token-react-sdk build   # Build React SDK only
+pnpm build:sdk              # Build core SDK only
+pnpm build:react-sdk        # Build React SDK only
 ```
 
 ### Test
