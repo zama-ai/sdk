@@ -52,8 +52,7 @@
     "url": "https://github.com/zama-ai/token-sdk/issues"
   },
   "scripts": {
-    "build": "tsup",
-    "prepare": "tsup"
+    "build": "tsup"
   },
   "dependencies": {
     "@zama-fhe/token-sdk": "workspace:*"
