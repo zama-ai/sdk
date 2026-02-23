@@ -65,7 +65,7 @@ export function useUnshieldAll(
         queryKey: underlyingAllowanceQueryKeys.all,
       });
       context.client.invalidateQueries({
-        predicate: wagmiBalancePredicates.balanceOfAddress(config.tokenAddress),
+        predicate: wagmiBalancePredicates.balanceOf,
       });
       options?.onSuccess?.(data, variables, onMutateResult, context);
     },
