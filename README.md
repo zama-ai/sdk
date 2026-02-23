@@ -37,7 +37,8 @@ pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 ### React with wagmi
 
 ```tsx
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, createConfig, http } from "wagmi";
+import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   TokenSDKProvider,
@@ -48,6 +49,11 @@ import {
   useWrap,
 } from "@zama-fhe/token-react-sdk";
 import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
+
+const wagmiConfig = createConfig({
+  chains: [sepolia],
+  transports: { [sepolia.id]: http() },
+});
 
 const queryClient = new QueryClient();
 const signer = new WagmiSigner(wagmiConfig);
@@ -164,6 +170,7 @@ const signer = new ViemSigner(walletClient, publicClient);
 const sdk = new TokenSDK({
   relayer: new RelayerNode({
     getChainId: () => signer.getChainId(),
+    poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
       [11155111]: {
         relayerUrl: "https://relayer.zama.ai",

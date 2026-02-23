@@ -70,9 +70,9 @@ const signer = new ViemSigner(walletClient, publicClient);
 const sdk = new TokenSDK({
   relayer: new RelayerNode({
     getChainId: () => signer.getChainId(),
+    poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
       [11155111]: {
-        ...SepoliaConfig,
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },

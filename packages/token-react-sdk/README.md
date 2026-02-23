@@ -25,24 +25,25 @@ pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 ### With wagmi
 
 ```tsx
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, createConfig, http } from "wagmi";
+import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  TokenSDKProvider,
-  RelayerWeb,
-  SepoliaConfig,
-  indexedDBStorage,
-} from "@zama-fhe/token-react-sdk";
+import { TokenSDKProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/token-react-sdk";
 import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
 
 const queryClient = new QueryClient();
+
+const wagmiConfig = createConfig({
+  chains: [sepolia],
+  transports: { [sepolia.id]: http() },
+});
+
 const signer = new WagmiSigner(wagmiConfig);
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [11155111]: {
-      ...SepoliaConfig,
       relayerUrl: "https://relayer.zama.ai",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
@@ -76,7 +77,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   TokenSDKProvider,
   RelayerWeb,
-  SepoliaConfig,
   useConfidentialBalance,
   useConfidentialTransfer,
   MemoryStorage,
@@ -88,7 +88,6 @@ const relayer = new RelayerWeb({
   getChainId: () => yourCustomSigner.getChainId(),
   transports: {
     [11155111]: {
-      ...SepoliaConfig,
       relayerUrl: "https://relayer.zama.ai",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
