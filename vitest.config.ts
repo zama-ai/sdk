@@ -31,7 +31,7 @@ export default defineConfig({
     dedupe: ["wagmi", "react", "react-dom", "@tanstack/react-query"],
     alias: [
       {
-        find: /^@zama-fhe\/token-sdk\/(.+)/,
+        find: /^@zama-fhe\/sdk\/(.+)/,
         replacement: path.resolve(__dirname, "./packages/sdk/src/$1"),
       },
       {
