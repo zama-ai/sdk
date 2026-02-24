@@ -1,9 +1,9 @@
 {
   "name": "@zama-fhe/react-sdk",
-  "version": "0.1.0",
-  "description": "React hooks for Zama confidential ERC-20 tokens (fhEVM)",
+  "version": "1.0.0",
+  "description": "React hooks for Zama SDK",
   "license": "BSD-3-Clause",
-  "author": "Guillaume Hermet <guillaume.hermet@zama.ai>",
+  "author": "Zama",
   "repository": {
     "type": "git",
     "url": "https://github.com/zama-ai/sdk",

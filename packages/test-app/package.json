@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk-test-app",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev --port 3100",
