@@ -41,9 +41,12 @@ export class WagmiSigner implements GenericSigner {
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
+    const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return signTypedData(this.config, {
-      primaryType: Object.keys(typedData.types)[0]!,
-      ...typedData,
+      primaryType: Object.keys(sigTypes)[0]!,
+      types: sigTypes,
+      domain: typedData.domain,
+      message: typedData.message,
     });
   }
 

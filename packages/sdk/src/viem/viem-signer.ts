@@ -38,10 +38,13 @@ export class ViemSigner implements GenericSigner {
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const account = this.walletClient.account;
     if (!account) throw new TypeError("WalletClient has no account");
+    const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return this.walletClient.signTypedData({
       account,
-      primaryType: Object.keys(typedData.types)[0]!,
-      ...typedData,
+      primaryType: Object.keys(sigTypes)[0]!,
+      types: sigTypes,
+      domain: typedData.domain,
+      message: typedData.message,
     });
   }
 

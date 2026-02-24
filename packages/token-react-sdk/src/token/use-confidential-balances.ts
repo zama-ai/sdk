@@ -91,7 +91,17 @@ export function useConfidentialBalances(
   // Phase 2: Batch decrypt only when any handle changes
   const balancesQuery = useQuery<Map<Address, bigint>, Error>({
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, ownerKey), handlesKey],
-    queryFn: () => ReadonlyToken.batchDecryptBalances(tokens, handles!),
+    queryFn: async () => {
+      const raw = await ReadonlyToken.batchDecryptBalances(tokens, handles!);
+      // Re-key the Map with the caller's original addresses so lookups
+      // work regardless of address casing (tokens normalize to lowercase).
+      const result = new Map<Address, bigint>();
+      for (let i = 0; i < tokens.length; i++) {
+        const balance = raw.get(tokens[i]!.address);
+        if (balance !== undefined) result.set(tokenAddresses[i]!, balance);
+      }
+      return result;
+    },
     enabled: tokenAddresses.length > 0 && !!signerAddress && !!handles,
     staleTime: Infinity,
     ...options,
