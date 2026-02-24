@@ -26,8 +26,8 @@ Build this package only: `pnpm --filter @zama-fhe/react-sdk build` (runs tsup).
 
 ### Four entry points (tsup bundles each separately)
 
-| Entry point           | Import path                        | Purpose                                         |
-| --------------------- | ---------------------------------- | ----------------------------------------------- |
+| Entry point           | Import path                  | Purpose                                         |
+| --------------------- | ---------------------------- | ----------------------------------------------- |
 | `src/index.ts`        | `@zama-fhe/react-sdk`        | Provider-based hooks + re-exports from core SDK |
 | `src/viem/index.ts`   | `@zama-fhe/react-sdk/viem`   | Viem-specific hooks + `ViemSigner`              |
 | `src/ethers/index.ts` | `@zama-fhe/react-sdk/ethers` | Ethers-specific hooks + `EthersSigner`          |

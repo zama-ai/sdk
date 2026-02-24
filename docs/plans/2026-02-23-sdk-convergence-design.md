@@ -251,10 +251,10 @@ function createProviderWrapper(options?: {
 
 ## Implementation Order
 
-| Phase                 | Scope           | Estimated Files Changed   | Dependencies |
-| --------------------- | --------------- | ------------------------- | ------------ |
+| Phase                 | Scope     | Estimated Files Changed   | Dependencies |
+| --------------------- | --------- | ------------------------- | ------------ |
 | 1. Adapter Dedup      | react-sdk | ~45 (delete 40, modify 5) | None         |
-| 2. Error Hierarchy    | token-sdk       | ~5 (modify 2, add 3)      | None         |
+| 2. Error Hierarchy    | token-sdk | ~5 (modify 2, add 3)      | None         |
 | 3. Provider Lifecycle | react-sdk | ~8 (add 4, modify 4)      | Phase 2      |
 | 4. Mutation Dedup     | react-sdk | ~10 (modify 10)           | Phase 3      |
 | 5. React Tests        | react-sdk | ~12 (add 12)              | Phases 1-4   |

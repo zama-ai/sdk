@@ -4,9 +4,9 @@ TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homo
 
 ## Packages
 
-| Package                                                    | Description                                                                                                              |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| [`@zama-fhe/sdk`](./packages/sdk/)                         | Core SDK — confidential token operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
+| Package                                        | Description                                                                                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential token operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
 | [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                          |
 
 ## What Are Confidential Tokens?
@@ -261,10 +261,10 @@ Defaults for known chains are merged automatically — you only need to supply `
 
 | Stack                 | SDK                   | Provider           | Signer                         |
 | --------------------- | --------------------- | ------------------ | ------------------------------ |
-| React + wagmi         | `react-sdk`     | `TokenSDKProvider` | `WagmiSigner`                  |
-| React + viem          | `react-sdk`     | `TokenSDKProvider` | `ViemSigner`                   |
-| React + ethers        | `react-sdk`     | `TokenSDKProvider` | `EthersSigner`                 |
-| React + custom signer | `react-sdk`     | `TokenSDKProvider` | Implement `GenericSigner`      |
+| React + wagmi         | `react-sdk`           | `TokenSDKProvider` | `WagmiSigner`                  |
+| React + viem          | `react-sdk`           | `TokenSDKProvider` | `ViemSigner`                   |
+| React + ethers        | `react-sdk`           | `TokenSDKProvider` | `EthersSigner`                 |
+| React + custom signer | `react-sdk`           | `TokenSDKProvider` | Implement `GenericSigner`      |
 | Vanilla TS + viem     | `token-sdk`           | N/A                | `ViemSigner`                   |
 | Vanilla TS + ethers   | `token-sdk`           | N/A                | `EthersSigner`                 |
 | Node.js backend       | `token-sdk` + `/node` | N/A                | `ViemSigner` or `EthersSigner` |
