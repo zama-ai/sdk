@@ -1,11 +1,11 @@
-# @zama-fhe/token-react-sdk
+# @zama-fhe/react-sdk
 
 React hooks for confidential token operations, built on [React Query](https://tanstack.com/query). Provides declarative, cache-aware hooks for balances, confidential transfers, shielding, unshielding, and decryption — so you never deal with raw FHE operations in your components.
 
 ## Installation
 
 ```bash
-pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
+pnpm add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
 `@zama-fhe/sdk` is included as a direct dependency — no need to install it separately.
@@ -28,8 +28,8 @@ pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TokenSDKProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/token-react-sdk";
-import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
+import { TokenSDKProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 const queryClient = new QueryClient();
 
@@ -87,7 +87,7 @@ import {
   useConfidentialBalance,
   useConfidentialTransfer,
   MemoryStorage,
-} from "@zama-fhe/token-react-sdk";
+} from "@zama-fhe/react-sdk";
 
 const queryClient = new QueryClient();
 
@@ -142,7 +142,7 @@ function TransferForm() {
 All setups use `TokenSDKProvider`. Create a signer with the adapter for your library, then pass it directly.
 
 ```tsx
-import { TokenSDKProvider } from "@zama-fhe/token-react-sdk";
+import { TokenSDKProvider } from "@zama-fhe/react-sdk";
 
 <TokenSDKProvider
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
@@ -616,7 +616,7 @@ import {
   underlyingAllowanceQueryKeys,
   activityFeedQueryKeys,
   decryptionKeys,
-} from "@zama-fhe/token-react-sdk";
+} from "@zama-fhe/react-sdk";
 ```
 
 | Factory                         | Keys                                                | Description                         |
@@ -631,7 +631,7 @@ import {
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { confidentialBalanceQueryKeys } from "@zama-fhe/token-react-sdk";
+import { confidentialBalanceQueryKeys } from "@zama-fhe/react-sdk";
 
 const queryClient = useQueryClient();
 
@@ -646,7 +646,7 @@ queryClient.invalidateQueries({
 
 ## Wagmi Adapter Hooks
 
-`@zama-fhe/token-react-sdk/wagmi` exports low-level hooks that wrap wagmi's `useReadContract` and `useWriteContract` directly. These do **not** use the SDK provider for their contract calls — they operate through wagmi's `Config`. Use them for advanced scenarios where you need fine-grained control.
+`@zama-fhe/react-sdk/wagmi` exports low-level hooks that wrap wagmi's `useReadContract` and `useWriteContract` directly. These do **not** use the SDK provider for their contract calls — they operate through wagmi's `Config`. Use them for advanced scenarios where you need fine-grained control.
 
 ### Read Hooks
 
@@ -679,14 +679,14 @@ All write hooks return `{ mutate, mutateAsync, ...mutation }` from wagmi's `useW
 ### Wagmi Signer Adapter
 
 ```ts
-import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
+import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 const signer = new WagmiSigner(wagmiConfig);
 ```
 
 ## Viem & Ethers Adapter Hooks
 
-Both `@zama-fhe/token-react-sdk/viem` and `@zama-fhe/token-react-sdk/ethers` export the same set of read/write hooks, but typed for their respective libraries. They also include `Suspense` variants of all read hooks.
+Both `@zama-fhe/react-sdk/viem` and `@zama-fhe/react-sdk/ethers` export the same set of read/write hooks, but typed for their respective libraries. They also include `Suspense` variants of all read hooks.
 
 ### Read hooks
 
@@ -706,8 +706,8 @@ Both `@zama-fhe/token-react-sdk/viem` and `@zama-fhe/token-react-sdk/ethers` exp
 
 ```ts
 // Re-exported for convenience
-import { ViemSigner } from "@zama-fhe/token-react-sdk/viem";
-import { EthersSigner } from "@zama-fhe/token-react-sdk/ethers";
+import { ViemSigner } from "@zama-fhe/react-sdk/viem";
+import { EthersSigner } from "@zama-fhe/react-sdk/ethers";
 ```
 
 ## Re-exports from Core SDK

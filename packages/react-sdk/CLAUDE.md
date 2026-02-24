@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package Overview
 
-`@zama-fhe/token-react-sdk` — React hooks for Zama confidential ERC-20 tokens (fhEVM). Built on `@tanstack/react-query`, wrapping `@zama-fhe/sdk` (workspace dependency). Part of a pnpm monorepo (`@zama-fhe/token-sdk-monorepo`).
+`@zama-fhe/react-sdk` — React hooks for Zama confidential ERC-20 tokens (fhEVM). Built on `@tanstack/react-query`, wrapping `@zama-fhe/sdk` (workspace dependency). Part of a pnpm monorepo (`@zama-fhe/token-sdk-monorepo`).
 
 ## Commands
 
 All commands run from monorepo root (`../../`):
 
 ```bash
-pnpm build                    # Build token-sdk then token-react-sdk (order matters)
+pnpm build                    # Build token-sdk then react-sdk (order matters)
 pnpm test                     # Run vitest in watch mode
 pnpm test:run                 # Run vitest once
 pnpm test:run -- path/to/file # Run a single test file
@@ -20,7 +20,7 @@ pnpm typecheck                # tsc --noEmit
 pnpm format:check             # Prettier check
 ```
 
-Build this package only: `pnpm --filter @zama-fhe/token-react-sdk build` (runs tsup).
+Build this package only: `pnpm --filter @zama-fhe/react-sdk build` (runs tsup).
 
 ## Architecture
 
@@ -28,10 +28,10 @@ Build this package only: `pnpm --filter @zama-fhe/token-react-sdk build` (runs t
 
 | Entry point           | Import path                        | Purpose                                         |
 | --------------------- | ---------------------------------- | ----------------------------------------------- |
-| `src/index.ts`        | `@zama-fhe/token-react-sdk`        | Provider-based hooks + re-exports from core SDK |
-| `src/viem/index.ts`   | `@zama-fhe/token-react-sdk/viem`   | Viem-specific hooks + `ViemSigner`              |
-| `src/ethers/index.ts` | `@zama-fhe/token-react-sdk/ethers` | Ethers-specific hooks + `EthersSigner`          |
-| `src/wagmi/index.ts`  | `@zama-fhe/token-react-sdk/wagmi`  | Wagmi-specific hooks + `WagmiSigner`            |
+| `src/index.ts`        | `@zama-fhe/react-sdk`        | Provider-based hooks + re-exports from core SDK |
+| `src/viem/index.ts`   | `@zama-fhe/react-sdk/viem`   | Viem-specific hooks + `ViemSigner`              |
+| `src/ethers/index.ts` | `@zama-fhe/react-sdk/ethers` | Ethers-specific hooks + `EthersSigner`          |
+| `src/wagmi/index.ts`  | `@zama-fhe/react-sdk/wagmi`  | Wagmi-specific hooks + `WagmiSigner`            |
 
 ### Two-layer hook architecture
 

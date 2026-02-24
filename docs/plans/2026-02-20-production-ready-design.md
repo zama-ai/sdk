@@ -13,7 +13,7 @@
 tsup per package. Each sub-path export gets its own entry point.
 
 token-sdk entry points: `index`, `viem/index`, `ethers/index`, `node/index`
-token-react-sdk entry points: `index`, `viem/index`, `ethers/index`, `wagmi/index`
+react-sdk entry points: `index`, `viem/index`, `ethers/index`, `wagmi/index`
 
 Output to `dist/`. Root `pnpm build` runs builds in dependency order.
 

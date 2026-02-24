@@ -1,6 +1,6 @@
 # React + viem Example
 
-Next.js 15 app using `@zama-fhe/token-react-sdk` with viem directly (no wagmi).
+Next.js 15 app using `@zama-fhe/react-sdk` with viem directly (no wagmi).
 
 ## Setup
 

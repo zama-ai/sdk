@@ -8,7 +8,7 @@ import {
   usePublicParams,
   useEncrypt,
   type Address,
-} from "@zama-fhe/token-react-sdk";
+} from "@zama-fhe/react-sdk";
 
 export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {
   const [keypairPublicKey, setKeypairPublicKey] = useState<string | null>(null);

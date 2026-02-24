@@ -4,8 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, createConfig, WagmiProvider } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
-import { RelayerWeb, TokenSDKProvider, indexedDBStorage } from "@zama-fhe/token-react-sdk";
-import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
+import { RelayerWeb, TokenSDKProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import type { ReactNode } from "react";
 
 const MAINNET_RPC_URL = process.env.NEXT_PUBLIC_MAINNET_RPC_URL!;
