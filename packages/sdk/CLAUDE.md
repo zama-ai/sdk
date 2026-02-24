@@ -50,7 +50,7 @@ TokenSDK (factory)
 
 **Key abstractions:**
 
-- **`GenericSigner`** (`src/token/token.types.ts`) — Framework-agnostic wallet interface (5 methods). Implemented by `ViemSigner`, `EthersSigner`, and `WagmiSigner` (in `token-react-sdk`).
+- **`GenericSigner`** (`src/token/token.types.ts`) — Framework-agnostic wallet interface (5 methods). Implemented by `ViemSigner`, `EthersSigner`, and `WagmiSigner` (in `react-sdk`).
 - **`RelayerSDK`** (`src/relayer/relayer-sdk.ts`) — FHE operations interface. `RelayerWeb` uses a Web Worker + WASM CDN bundle. `RelayerNode` calls `@zama-fhe/relayer-sdk/node` directly.
 - **`GenericStringStorage`** — Pluggable key-value store for persisted FHE credentials. All methods (`getItem`, `setItem`, `removeItem`) return `Promise` — implementations must be async. `MemoryStorage` for tests, `IndexedDBStorage` for browser.
 - **Contract call builders** (`src/contracts/`) — Pure functions returning `ContractCallConfig` objects. All builders validate address arguments at runtime via `assertAddress()` (`0x` + 40 hex chars); FHE data params (handles, proofs, interface IDs) are not validated. The viem/ethers sub-paths wrap these with library-specific execution.

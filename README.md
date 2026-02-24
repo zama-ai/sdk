@@ -208,7 +208,7 @@ const sdk = new TokenSDK({
 ┌─────────────────────────────────────────────────────┐
 │                    Your Application                 │
 ├──────────────────────┬──────────────────────────────┤
-│  token-react-sdk     │  token-sdk (vanilla TS)      │
+│  react-sdk     │  token-sdk (vanilla TS)      │
 │  React hooks +       │  TokenSDK                    │
 │  React Query cache   │  Token                       │
 │                      │  ReadonlyToken               │
@@ -261,10 +261,10 @@ Defaults for known chains are merged automatically — you only need to supply `
 
 | Stack                 | SDK                   | Provider           | Signer                         |
 | --------------------- | --------------------- | ------------------ | ------------------------------ |
-| React + wagmi         | `token-react-sdk`     | `TokenSDKProvider` | `WagmiSigner`                  |
-| React + viem          | `token-react-sdk`     | `TokenSDKProvider` | `ViemSigner`                   |
-| React + ethers        | `token-react-sdk`     | `TokenSDKProvider` | `EthersSigner`                 |
-| React + custom signer | `token-react-sdk`     | `TokenSDKProvider` | Implement `GenericSigner`      |
+| React + wagmi         | `react-sdk`           | `TokenSDKProvider` | `WagmiSigner`                  |
+| React + viem          | `react-sdk`           | `TokenSDKProvider` | `ViemSigner`                   |
+| React + ethers        | `react-sdk`           | `TokenSDKProvider` | `EthersSigner`                 |
+| React + custom signer | `react-sdk`           | `TokenSDKProvider` | Implement `GenericSigner`      |
 | Vanilla TS + viem     | `token-sdk`           | N/A                | `ViemSigner`                   |
 | Vanilla TS + ethers   | `token-sdk`           | N/A                | `EthersSigner`                 |
 | Node.js backend       | `token-sdk` + `/node` | N/A                | `ViemSigner` or `EthersSigner` |
@@ -458,7 +458,7 @@ pnpm install
 ### Build
 
 ```bash
-pnpm build                  # Build all (token-sdk first, then token-react-sdk)
+pnpm build                  # Build all (token-sdk first, then react-sdk)
 pnpm build:sdk              # Build core SDK only
 pnpm build:react-sdk        # Build React SDK only
 ```

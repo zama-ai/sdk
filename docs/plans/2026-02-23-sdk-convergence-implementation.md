@@ -12,7 +12,7 @@
 
 ---
 
-## Phase 1: Adapter Dedup (token-react-sdk)
+## Phase 1: Adapter Dedup (react-sdk)
 
 The library sub-paths (`/viem`, `/ethers`, `/wagmi`) each have 13 hook files that duplicate the same contract operations with slightly different calling conventions. The shared provider-based hooks in `src/token/` already exist and handle everything via `GenericSigner` context. The per-library hooks are redundant.
 
@@ -171,7 +171,7 @@ All hooks are available from the main entry point via provider context."
 **Step 1: Search for imports from deleted sub-paths**
 
 ```bash
-grep -r "token-react-sdk/viem\|token-react-sdk/ethers\|token-react-sdk/wagmi" packages/test-app/src/ --include="*.ts" --include="*.tsx"
+grep -r "react-sdk/viem\|react-sdk/ethers\|react-sdk/wagmi" packages/test-app/src/ --include="*.ts" --include="*.tsx"
 ```
 
 The test-app currently imports `WagmiSigner` from `@zama-fhe/react-sdk/wagmi` (in `src/providers.tsx`). This still works since `WagmiSigner` is still exported. If any hook imports from sub-paths are found, update them to import from `@zama-fhe/react-sdk` instead.
@@ -317,7 +317,7 @@ export {
 } from "./token/errors";
 ```
 
-**Step 2: Re-export from token-react-sdk**
+**Step 2: Re-export from react-sdk**
 
 In `packages/react-sdk/src/index.ts`, add to the re-export block (after the `TokenError, TokenErrorCode` line):
 
@@ -465,7 +465,7 @@ WalletSwitched, NotReady, InitTimeout codes."
 
 ---
 
-## Phase 3: Provider Lifecycle State Machine (token-react-sdk)
+## Phase 3: Provider Lifecycle State Machine (react-sdk)
 
 ### Task 10: Create provider state types
 
@@ -938,7 +938,7 @@ Export useTokenSDKStatus() for UI phase/error rendering."
 
 ---
 
-## Phase 4: Mutation Dedup & Phase Tracking (token-react-sdk)
+## Phase 4: Mutation Dedup & Phase Tracking (react-sdk)
 
 ### Task 15: Create mutation dedup helper
 
@@ -1166,7 +1166,7 @@ to all mutation hooks for UI feedback."
 
 ---
 
-## Phase 5: React Unit Tests (token-react-sdk)
+## Phase 5: React Unit Tests (react-sdk)
 
 ### Task 18: Add testing dependencies
 

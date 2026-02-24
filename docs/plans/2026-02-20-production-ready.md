@@ -142,7 +142,7 @@ git commit -m "feat(token-sdk): add tsup build config and npm exports"
 
 ---
 
-### Task 3: Configure tsup for token-react-sdk
+### Task 3: Configure tsup for react-sdk
 
 **Files:**
 
@@ -254,7 +254,7 @@ Expected: `dist/` directory created with `index.js`, `index.d.ts`, `viem/index.j
 
 ```bash
 git add packages/react-sdk/tsup.config.ts packages/react-sdk/package.json
-git commit -m "feat(token-react-sdk): add tsup build config and npm exports"
+git commit -m "feat(react-sdk): add tsup build config and npm exports"
 ```
 
 ---
@@ -552,7 +552,7 @@ Create `packages/token-sdk/tsconfig.build.json`:
 }
 ```
 
-**Step 2: Create token-react-sdk tsconfig.build.json**
+**Step 2: Create react-sdk tsconfig.build.json**
 
 Create `packages/react-sdk/tsconfig.build.json`:
 

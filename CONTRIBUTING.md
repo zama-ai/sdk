@@ -31,7 +31,7 @@ pnpm test:run
 ```
 packages/
   token-sdk/          # Core SDK
-  token-react-sdk/    # React hooks
+  react-sdk/    # React hooks
   test-app/           # E2E test app (Playwright + Hardhat)
 ```
 

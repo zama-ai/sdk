@@ -33,7 +33,7 @@ npx playwright test -g "should shield USDT"
 From monorepo root:
 
 ```bash
-pnpm build          # Build token-sdk then token-react-sdk (required before test-app works)
+pnpm build          # Build token-sdk then react-sdk (required before test-app works)
 pnpm lint           # ESLint across monorepo
 pnpm e2e:test       # Run test-app E2E tests
 pnpm hardhat:node   # Start hardhat node standalone
@@ -66,5 +66,5 @@ Each route (`/shield`, `/transfer`, `/unshield`, `/wallet`) maps to `src/app/<ro
 
 - Tests run serially (`workers: 1`, `fullyParallel: false`) because the Hardhat mock coprocessor can't handle concurrent decrypt operations.
 - Playwright auto-starts both the Hardhat node (port 8545) and the Next.js dev server (port 3100) via `webServer` config. In non-CI, it reuses existing servers.
-- The SDK packages (`token-sdk`, `token-react-sdk`) must be built before the test-app can run — they're workspace dependencies.
+- The SDK packages (`token-sdk`, `react-sdk`) must be built before the test-app can run — they're workspace dependencies.
 - `next.config.ts` sets `ignoreBuildErrors: true` for TypeScript because cross-package viem version mismatches are benign at runtime.
