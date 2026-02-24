@@ -718,9 +718,9 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
-**Types:** `Address`, `TokenSDKConfig`, `TokenConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`.
+**Types:** `Address`, `TokenSDKConfig`, `TokenConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `UnshieldCallbacks`.
 
-**Errors:** `TokenError`, `TokenErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`.
+**Errors:** `TokenError`, `TokenErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`.
 
 **Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`.
 

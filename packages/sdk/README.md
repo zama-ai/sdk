@@ -135,22 +135,23 @@ You can also implement the `RelayerSDK` interface for custom backends.
 
 Full read/write interface for a single confidential ERC-20. Extends `ReadonlyToken`. The encrypted ERC-20 contract IS the wrapper, so `wrapper` defaults to the token `address`. Pass an explicit `wrapper` only if they differ.
 
-| Method                                    | Description                                                                                                                                                                                                  |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `wrap(amount, options?)`                  | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
-| `wrapETH(amount, value?)`                 | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
-| `unshield(amount)`                        | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap.                                                                                       |
-| `unshieldAll()`                           | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap.                                                                                   |
-| `unwrap(amount)`                          | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
-| `unwrapAll()`                             | Request unwrap for the entire balance (low-level, requires manual finalization).                                                                                                                             |
-| `finalizeUnwrap(burnAmountHandle)`        | Complete unwrap with public decryption proof.                                                                                                                                                                |
-| `confidentialTransfer(to, amount)`        | Encrypted transfer. Encrypts amount, then calls the contract.                                                                                                                                                |
-| `confidentialTransferFrom(from, to, amt)` | Operator encrypted transfer.                                                                                                                                                                                 |
-| `approve(spender, until?)`                | Set operator approval. `until` defaults to now + 1 hour.                                                                                                                                                     |
-| `isApproved(spender)`                     | Check if a spender is an approved operator.                                                                                                                                                                  |
-| `approveUnderlying(amount?)`              | Approve wrapper to spend underlying ERC-20. Default: max uint256.                                                                                                                                            |
-| `balanceOf(owner?)`                       | Decrypt and return the plaintext balance.                                                                                                                                                                    |
-| `decryptHandles(handles, owner?)`         | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
+| Method                                     | Description                                                                                                                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `wrap(amount, options?)`                   | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
+| `wrapETH(amount, value?)`                  | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
+| `unshield(amount, callbacks?)`             | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                                   |
+| `unshieldAll(callbacks?)`                  | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                               |
+| `unwrap(amount)`                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
+| `unwrapAll()`                              | Request unwrap for the entire balance (low-level, requires manual finalization).                                                                                                                             |
+| `resumeUnshield(unwrapTxHash, callbacks?)` | Resume an interrupted unshield from an existing unwrap tx hash. Goes straight to wait receipt → finalize.                                                                                                    |
+| `finalizeUnwrap(burnAmountHandle)`         | Complete unwrap with public decryption proof.                                                                                                                                                                |
+| `confidentialTransfer(to, amount)`         | Encrypted transfer. Encrypts amount, then calls the contract.                                                                                                                                                |
+| `confidentialTransferFrom(from, to, amt)`  | Operator encrypted transfer.                                                                                                                                                                                 |
+| `approve(spender, until?)`                 | Set operator approval. `until` defaults to now + 1 hour.                                                                                                                                                     |
+| `isApproved(spender)`                      | Check if a spender is an approved operator.                                                                                                                                                                  |
+| `approveUnderlying(amount?)`               | Approve wrapper to spend underlying ERC-20. Default: max uint256.                                                                                                                                            |
+| `balanceOf(owner?)`                        | Decrypt and return the plaintext balance.                                                                                                                                                                    |
+| `decryptHandles(handles, owner?)`          | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
 
 All write methods return the transaction hash (`Address`).
 
@@ -568,14 +569,52 @@ try {
 
 ### Error Classes
 
-| Error Class                | Code                   | Description                                         |
-| -------------------------- | ---------------------- | --------------------------------------------------- |
-| `SigningRejectedError`     | `SIGNING_REJECTED`     | User rejected the wallet signature request.         |
-| `SigningFailedError`       | `SIGNING_FAILED`       | Wallet signature failed for a non-rejection reason. |
-| `EncryptionFailedError`    | `ENCRYPTION_FAILED`    | FHE encryption operation failed.                    |
-| `DecryptionFailedError`    | `DECRYPTION_FAILED`    | FHE decryption operation failed.                    |
-| `ApprovalFailedError`      | `APPROVAL_FAILED`      | ERC-20 approval transaction failed.                 |
-| `TransactionRevertedError` | `TRANSACTION_REVERTED` | On-chain transaction reverted.                      |
+| Error Class                 | Code                     | Description                                                               |
+| --------------------------- | ------------------------ | ------------------------------------------------------------------------- |
+| `SigningRejectedError`      | `SIGNING_REJECTED`       | User rejected the wallet signature request.                               |
+| `SigningFailedError`        | `SIGNING_FAILED`         | Wallet signature failed for a non-rejection reason.                       |
+| `EncryptionFailedError`     | `ENCRYPTION_FAILED`      | FHE encryption operation failed.                                          |
+| `DecryptionFailedError`     | `DECRYPTION_FAILED`      | FHE decryption operation failed.                                          |
+| `ApprovalFailedError`       | `APPROVAL_FAILED`        | ERC-20 approval transaction failed.                                       |
+| `TransactionRevertedError`  | `TRANSACTION_REVERTED`   | On-chain transaction reverted.                                            |
+| `InvalidCredentialsError`   | `INVALID_CREDENTIALS`    | Relayer rejected credentials (stale or expired).                          |
+| `NoCiphertextError`         | `NO_CIPHERTEXT`          | No FHE ciphertext exists for this account (e.g. never shielded).          |
+| `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP error. Carries a `statusCode` property with the HTTP status. |
+
+**Distinguishing "no ciphertext" from "zero balance":**
+
+```ts
+import { NoCiphertextError, RelayerRequestFailedError } from "@zama-fhe/sdk";
+
+try {
+  const balance = await token.balanceOf();
+} catch (error) {
+  if (error instanceof NoCiphertextError) {
+    // Account has never shielded — show "no confidential balance" in UI
+  }
+  if (error instanceof RelayerRequestFailedError) {
+    console.error(`Relayer returned HTTP ${error.statusCode}`);
+  }
+}
+```
+
+### Unshield Progress Callbacks
+
+`unshield()`, `unshieldAll()`, and `resumeUnshield()` accept optional callbacks for tracking progress through the two-phase unshield flow:
+
+```ts
+import type { UnshieldCallbacks } from "@zama-fhe/sdk";
+
+const callbacks: UnshieldCallbacks = {
+  onUnwrapSubmitted: (txHash) => console.log("Unwrap tx:", txHash),
+  onFinalizing: () => console.log("Waiting for decryption proof..."),
+  onFinalizeSubmitted: (txHash) => console.log("Finalize tx:", txHash),
+};
+
+await token.unshield(500n, callbacks);
+```
+
+Callbacks are safe — a throwing callback will not interrupt the unshield flow.
 
 ## RelayerSDK (Low-Level FHE)
 
