@@ -3,7 +3,12 @@ import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
-import { NoCiphertextError, DecryptionFailedError, RelayerRequestFailedError } from "../errors";
+import {
+  NoCiphertextError,
+  DecryptionFailedError,
+  RelayerRequestFailedError,
+  TransactionRevertedError,
+} from "../errors";
 import type { GenericSigner } from "../token.types";
 import { MemoryStorage } from "../memory-storage";
 
@@ -115,6 +120,56 @@ describe("NoCiphertextError detection (P3)", () => {
       NoCiphertextError,
     );
   });
+
+  it("passes through NoCiphertextError without re-wrapping", async () => {
+    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    const original = new NoCiphertextError("already typed");
+    vi.mocked(sdk.userDecrypt).mockRejectedValue(original);
+
+    try {
+      await token.balanceOf();
+    } catch (e) {
+      expect(e).toBe(original);
+    }
+  });
+
+  it("passes through RelayerRequestFailedError without re-wrapping", async () => {
+    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    const original = new RelayerRequestFailedError("already typed", 503);
+    vi.mocked(sdk.userDecrypt).mockRejectedValue(original);
+
+    try {
+      await token.balanceOf();
+    } catch (e) {
+      expect(e).toBe(original);
+    }
+  });
+
+  it("wraps non-Error thrown value with statusCode 400 as NoCiphertextError", async () => {
+    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    vi.mocked(sdk.userDecrypt).mockRejectedValue({ statusCode: 400, message: "bad" });
+
+    await expect(token.balanceOf()).rejects.toBeInstanceOf(NoCiphertextError);
+  });
+
+  it("wraps non-Error thrown value with other statusCode as RelayerRequestFailedError", async () => {
+    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    vi.mocked(sdk.userDecrypt).mockRejectedValue({ statusCode: 502 });
+
+    const err = await token.balanceOf().catch((e) => e);
+    expect(err).toBeInstanceOf(RelayerRequestFailedError);
+    expect(err.statusCode).toBe(502);
+  });
+
+  it("handles decryptHandles 400 error for batch operations", async () => {
+    const error = new Error("No ciphertext") as Error & { statusCode?: number };
+    error.statusCode = 400;
+    vi.mocked(sdk.userDecrypt).mockRejectedValue(error);
+
+    await expect(token.decryptHandles([VALID_HANDLE as Address])).rejects.toBeInstanceOf(
+      NoCiphertextError,
+    );
+  });
 });
 
 describe("Unshield callbacks (P4)", () => {
@@ -223,6 +278,34 @@ describe("Unshield callbacks (P4)", () => {
     });
 
     expect(order).toEqual(["unwrapSubmitted", "finalizing", "finalizeSubmitted"]);
+  });
+
+  it("throws TransactionRevertedError when receipt fetch fails", async () => {
+    vi.mocked(signer.waitForTransactionReceipt).mockRejectedValue(new Error("network error"));
+
+    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
+  });
+
+  it("throws TransactionRevertedError when no UnwrapRequested event in receipt", async () => {
+    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
+
+    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
+  });
+
+  it("throws TransactionRevertedError when finalize writeContract fails", async () => {
+    mockReceiptWithUnwrapRequested();
+    vi.mocked(signer.writeContract)
+      .mockResolvedValueOnce("0xunwraphash") // unwrap succeeds
+      .mockRejectedValueOnce(new Error("finalize failed")); // finalize fails
+
+    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
+  });
+
+  it("throws DecryptionFailedError when publicDecrypt fails during finalize", async () => {
+    mockReceiptWithUnwrapRequested();
+    vi.mocked(sdk.publicDecrypt).mockRejectedValue(new Error("decrypt error"));
+
+    await expect(token.unshield(50n)).rejects.toBeInstanceOf(DecryptionFailedError);
   });
 });
 
