@@ -8,15 +8,15 @@
  */
 
 import {
-  decodeTokenEvent,
+  decodeOnChainEvent,
   type RawLog,
-  type TokenEvent,
+  type OnChainEvent,
   type ConfidentialTransferEvent,
   type WrappedEvent,
   type UnwrapRequestedEvent,
   type UnwrappedFinalizedEvent,
   type UnwrappedStartedEvent,
-} from "./events";
+} from "./events/onchain-events";
 import { ZERO_HANDLE } from "./token/readonly-token";
 
 // ---------------------------------------------------------------------------
@@ -76,7 +76,7 @@ export interface ActivityItem {
   /** On-chain metadata (tx hash, block number, log index). */
   readonly metadata: ActivityLogMetadata;
   /** The original decoded event. */
-  readonly rawEvent: TokenEvent;
+  readonly rawEvent: OnChainEvent;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ function classifyDirection(
 }
 
 function eventToActivityItem(
-  event: TokenEvent,
+  event: OnChainEvent,
   userAddress: string,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
@@ -212,7 +212,7 @@ export function parseActivityFeed(
 ): ActivityItem[] {
   const items: ActivityItem[] = [];
   for (const log of logs) {
-    const event = decodeTokenEvent(log);
+    const event = decodeOnChainEvent(log);
     if (!event) continue;
 
     const metadata: ActivityLogMetadata = {

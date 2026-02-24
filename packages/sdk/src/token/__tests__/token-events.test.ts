@@ -5,8 +5,8 @@ import type { Address, Hex } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
 import { ReadonlyToken } from "../readonly-token";
 import { MemoryStorage } from "../memory-storage";
-import { TokenSDKEvents } from "../token-sdk-events";
-import type { TokenSDKEvent, TokenSDKEventListener } from "../token-sdk-events";
+import { ZamaSDKEvents } from "../../events/sdk-events";
+import type { ZamaSDKEvent, ZamaSDKEventListener } from "../../events/sdk-events";
 import { CredentialsManager } from "../credential-manager";
 import type { GenericSigner } from "../token.types";
 
@@ -63,35 +63,38 @@ function createMockSigner(): GenericSigner {
   };
 }
 
-describe("TokenSDKEvents constants", () => {
+describe("ZamaSDKEvents constants", () => {
   it("has all expected event keys", () => {
-    expect(TokenSDKEvents.CredentialsLoading).toBe("credentials:loading");
-    expect(TokenSDKEvents.CredentialsCached).toBe("credentials:cached");
-    expect(TokenSDKEvents.CredentialsExpired).toBe("credentials:expired");
-    expect(TokenSDKEvents.CredentialsCreating).toBe("credentials:creating");
-    expect(TokenSDKEvents.CredentialsCreated).toBe("credentials:created");
-    expect(TokenSDKEvents.EncryptStart).toBe("encrypt:start");
-    expect(TokenSDKEvents.EncryptEnd).toBe("encrypt:end");
-    expect(TokenSDKEvents.DecryptStart).toBe("decrypt:start");
-    expect(TokenSDKEvents.DecryptEnd).toBe("decrypt:end");
-    expect(TokenSDKEvents.WrapSubmitted).toBe("wrap:submitted");
-    expect(TokenSDKEvents.TransferSubmitted).toBe("transfer:submitted");
-    expect(TokenSDKEvents.TransferFromSubmitted).toBe("transferFrom:submitted");
-    expect(TokenSDKEvents.ApproveSubmitted).toBe("approve:submitted");
-    expect(TokenSDKEvents.ApproveUnderlyingSubmitted).toBe("approveUnderlying:submitted");
-    expect(TokenSDKEvents.UnwrapSubmitted).toBe("unwrap:submitted");
-    expect(TokenSDKEvents.FinalizeUnwrapSubmitted).toBe("finalizeUnwrap:submitted");
-    expect(TokenSDKEvents.UnshieldPhase1Submitted).toBe("unshield:phase1_submitted");
-    expect(TokenSDKEvents.UnshieldPhase2Started).toBe("unshield:phase2_started");
-    expect(TokenSDKEvents.UnshieldPhase2Submitted).toBe("unshield:phase2_submitted");
+    expect(ZamaSDKEvents.CredentialsLoading).toBe("credentials:loading");
+    expect(ZamaSDKEvents.CredentialsCached).toBe("credentials:cached");
+    expect(ZamaSDKEvents.CredentialsExpired).toBe("credentials:expired");
+    expect(ZamaSDKEvents.CredentialsCreating).toBe("credentials:creating");
+    expect(ZamaSDKEvents.CredentialsCreated).toBe("credentials:created");
+    expect(ZamaSDKEvents.EncryptStart).toBe("encrypt:start");
+    expect(ZamaSDKEvents.EncryptEnd).toBe("encrypt:end");
+    expect(ZamaSDKEvents.EncryptError).toBe("encrypt:error");
+    expect(ZamaSDKEvents.DecryptStart).toBe("decrypt:start");
+    expect(ZamaSDKEvents.DecryptEnd).toBe("decrypt:end");
+    expect(ZamaSDKEvents.DecryptError).toBe("decrypt:error");
+    expect(ZamaSDKEvents.TransactionError).toBe("transaction:error");
+    expect(ZamaSDKEvents.WrapSubmitted).toBe("wrap:submitted");
+    expect(ZamaSDKEvents.TransferSubmitted).toBe("transfer:submitted");
+    expect(ZamaSDKEvents.TransferFromSubmitted).toBe("transferFrom:submitted");
+    expect(ZamaSDKEvents.ApproveSubmitted).toBe("approve:submitted");
+    expect(ZamaSDKEvents.ApproveUnderlyingSubmitted).toBe("approveUnderlying:submitted");
+    expect(ZamaSDKEvents.UnwrapSubmitted).toBe("unwrap:submitted");
+    expect(ZamaSDKEvents.FinalizeUnwrapSubmitted).toBe("finalizeUnwrap:submitted");
+    expect(ZamaSDKEvents.UnshieldPhase1Submitted).toBe("unshield:phase1_submitted");
+    expect(ZamaSDKEvents.UnshieldPhase2Started).toBe("unshield:phase2_started");
+    expect(ZamaSDKEvents.UnshieldPhase2Submitted).toBe("unshield:phase2_submitted");
   });
 
-  it("has exactly 19 event types", () => {
-    expect(Object.keys(TokenSDKEvents)).toHaveLength(19);
+  it("has exactly 22 event types", () => {
+    expect(Object.keys(ZamaSDKEvents)).toHaveLength(22);
   });
 
   it("has unique event values", () => {
-    const values = Object.values(TokenSDKEvents);
+    const values = Object.values(ZamaSDKEvents);
     expect(new Set(values).size).toBe(values.length);
   });
 });
@@ -99,8 +102,8 @@ describe("TokenSDKEvents constants", () => {
 describe("ReadonlyToken event emissions", () => {
   let sdk: ReturnType<typeof createMockSdk>;
   let signer: GenericSigner;
-  let events: TokenSDKEvent[];
-  let onEvent: TokenSDKEventListener;
+  let events: ZamaSDKEvent[];
+  let onEvent: ZamaSDKEventListener;
 
   beforeEach(() => {
     sdk = createMockSdk();
@@ -126,10 +129,10 @@ describe("ReadonlyToken event emissions", () => {
     await token.balanceOf();
 
     const types = events.map((e) => e.type);
-    expect(types).toContain(TokenSDKEvents.DecryptStart);
-    expect(types).toContain(TokenSDKEvents.DecryptEnd);
-    expect(types.indexOf(TokenSDKEvents.DecryptStart)).toBeLessThan(
-      types.indexOf(TokenSDKEvents.DecryptEnd),
+    expect(types).toContain(ZamaSDKEvents.DecryptStart);
+    expect(types).toContain(ZamaSDKEvents.DecryptEnd);
+    expect(types.indexOf(ZamaSDKEvents.DecryptStart)).toBeLessThan(
+      types.indexOf(ZamaSDKEvents.DecryptEnd),
     );
   });
 
@@ -140,8 +143,8 @@ describe("ReadonlyToken event emissions", () => {
     await token.balanceOf();
 
     const types = events.map((e) => e.type);
-    expect(types).not.toContain(TokenSDKEvents.DecryptStart);
-    expect(types).not.toContain(TokenSDKEvents.DecryptEnd);
+    expect(types).not.toContain(ZamaSDKEvents.DecryptStart);
+    expect(types).not.toContain(ZamaSDKEvents.DecryptEnd);
   });
 
   it("emits DecryptStart and DecryptEnd during decryptBalance", async () => {
@@ -150,8 +153,8 @@ describe("ReadonlyToken event emissions", () => {
     await token.decryptBalance(VALID_HANDLE);
 
     const types = events.map((e) => e.type);
-    expect(types).toContain(TokenSDKEvents.DecryptStart);
-    expect(types).toContain(TokenSDKEvents.DecryptEnd);
+    expect(types).toContain(ZamaSDKEvents.DecryptStart);
+    expect(types).toContain(ZamaSDKEvents.DecryptEnd);
   });
 
   it("emits DecryptStart and DecryptEnd during decryptHandles", async () => {
@@ -160,8 +163,8 @@ describe("ReadonlyToken event emissions", () => {
     await token.decryptHandles([VALID_HANDLE]);
 
     const types = events.map((e) => e.type);
-    expect(types).toContain(TokenSDKEvents.DecryptStart);
-    expect(types).toContain(TokenSDKEvents.DecryptEnd);
+    expect(types).toContain(ZamaSDKEvents.DecryptStart);
+    expect(types).toContain(ZamaSDKEvents.DecryptEnd);
   });
 
   it("populates tokenAddress and timestamp on decrypt events", async () => {
@@ -172,7 +175,7 @@ describe("ReadonlyToken event emissions", () => {
 
     // Filter to only decrypt events (emitted by ReadonlyToken.emit, which adds tokenAddress)
     const decryptEvents = events.filter(
-      (e) => e.type === TokenSDKEvents.DecryptStart || e.type === TokenSDKEvents.DecryptEnd,
+      (e) => e.type === ZamaSDKEvents.DecryptStart || e.type === ZamaSDKEvents.DecryptEnd,
     );
     expect(decryptEvents.length).toBeGreaterThan(0);
     for (const event of decryptEvents) {
@@ -180,6 +183,32 @@ describe("ReadonlyToken event emissions", () => {
       expect(event.timestamp).toBeGreaterThan(0);
       expect(typeof event.timestamp).toBe("number");
     }
+  });
+
+  it("includes durationMs on DecryptEnd events", async () => {
+    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    const token = createReadonlyToken();
+
+    await token.balanceOf();
+
+    const endEvent = events.find((e) => e.type === ZamaSDKEvents.DecryptEnd);
+    expect(endEvent).toBeDefined();
+    expect("durationMs" in endEvent! && typeof endEvent.durationMs).toBe("number");
+    expect("durationMs" in endEvent! && endEvent.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("emits DecryptError when userDecrypt fails", async () => {
+    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    sdk.userDecrypt = vi.fn().mockRejectedValue(new Error("decrypt boom"));
+    const token = createReadonlyToken();
+
+    await expect(token.balanceOf()).rejects.toThrow();
+
+    const errorEvent = events.find((e) => e.type === ZamaSDKEvents.DecryptError);
+    expect(errorEvent).toBeDefined();
+    expect("error" in errorEvent! && errorEvent.error).toBeInstanceOf(Error);
+    expect("error" in errorEvent! && errorEvent.error.message).toBe("decrypt boom");
+    expect("durationMs" in errorEvent! && errorEvent.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   it("works without onEvent (no-op, does not throw)", async () => {
@@ -198,8 +227,8 @@ describe("ReadonlyToken event emissions", () => {
 describe("Token event emissions", () => {
   let sdk: ReturnType<typeof createMockSdk>;
   let signer: GenericSigner;
-  let events: TokenSDKEvent[];
-  let onEvent: TokenSDKEventListener;
+  let events: ZamaSDKEvent[];
+  let onEvent: ZamaSDKEventListener;
 
   beforeEach(() => {
     sdk = createMockSdk();
@@ -229,9 +258,9 @@ describe("Token event emissions", () => {
       const types = events.map((e) => e.type);
       expect(types).toEqual(
         expect.arrayContaining([
-          TokenSDKEvents.EncryptStart,
-          TokenSDKEvents.EncryptEnd,
-          TokenSDKEvents.TransferSubmitted,
+          ZamaSDKEvents.EncryptStart,
+          ZamaSDKEvents.EncryptEnd,
+          ZamaSDKEvents.TransferSubmitted,
         ]),
       );
     });
@@ -243,9 +272,55 @@ describe("Token event emissions", () => {
         100n,
       );
 
-      const submitted = events.find((e) => e.type === TokenSDKEvents.TransferSubmitted);
+      const submitted = events.find((e) => e.type === ZamaSDKEvents.TransferSubmitted);
       expect(submitted).toBeDefined();
       expect("txHash" in submitted! && submitted.txHash).toBe("0xtxhash");
+    });
+
+    it("includes durationMs on EncryptEnd event", async () => {
+      const token = createToken();
+      await token.confidentialTransfer(
+        "0x8888888888888888888888888888888888888888" as Address,
+        100n,
+      );
+
+      const endEvent = events.find((e) => e.type === ZamaSDKEvents.EncryptEnd);
+      expect(endEvent).toBeDefined();
+      expect("durationMs" in endEvent! && endEvent.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it("emits EncryptError when encryption fails", async () => {
+      sdk.encrypt = vi.fn().mockRejectedValue(new Error("encrypt boom"));
+      const token = createToken();
+
+      await expect(
+        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+      ).rejects.toThrow();
+
+      const errorEvent = events.find((e) => e.type === ZamaSDKEvents.EncryptError);
+      expect(errorEvent).toBeDefined();
+      expect("error" in errorEvent! && errorEvent.error).toBeInstanceOf(Error);
+      expect("error" in errorEvent! && errorEvent.error.message).toBe("encrypt boom");
+      expect("durationMs" in errorEvent! && errorEvent.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it("emits TransactionError (not EncryptError) when writeContract fails", async () => {
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
+      const token = createToken();
+
+      await expect(
+        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+      ).rejects.toThrow();
+
+      const types = events.map((e) => e.type);
+      // Encryption succeeded, so EncryptEnd should be present, not EncryptError
+      expect(types).toContain(ZamaSDKEvents.EncryptEnd);
+      expect(types).not.toContain(ZamaSDKEvents.EncryptError);
+
+      const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
+      expect(txError).toBeDefined();
+      expect("operation" in txError! && txError.operation).toBe("transfer");
+      expect("error" in txError! && txError.error.message).toBe("tx reverted");
     });
   });
 
@@ -259,9 +334,9 @@ describe("Token event emissions", () => {
       );
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(TokenSDKEvents.EncryptStart);
-      expect(types).toContain(TokenSDKEvents.EncryptEnd);
-      expect(types).toContain(TokenSDKEvents.TransferFromSubmitted);
+      expect(types).toContain(ZamaSDKEvents.EncryptStart);
+      expect(types).toContain(ZamaSDKEvents.EncryptEnd);
+      expect(types).toContain(ZamaSDKEvents.TransferFromSubmitted);
     });
   });
 
@@ -271,14 +346,14 @@ describe("Token event emissions", () => {
       await token.approve("0x3333333333333333333333333333333333333333" as Address);
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(TokenSDKEvents.ApproveSubmitted);
+      expect(types).toContain(ZamaSDKEvents.ApproveSubmitted);
     });
 
     it("includes txHash on ApproveSubmitted event", async () => {
       const token = createToken();
       await token.approve("0x3333333333333333333333333333333333333333" as Address);
 
-      const submitted = events.find((e) => e.type === TokenSDKEvents.ApproveSubmitted);
+      const submitted = events.find((e) => e.type === ZamaSDKEvents.ApproveSubmitted);
       expect(submitted).toBeDefined();
       expect("txHash" in submitted! && submitted.txHash).toBe("0xtxhash");
     });
@@ -294,7 +369,7 @@ describe("Token event emissions", () => {
       await token.wrap(100n, { approvalStrategy: "skip" });
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(TokenSDKEvents.WrapSubmitted);
+      expect(types).toContain(ZamaSDKEvents.WrapSubmitted);
     });
 
     it("emits WrapSubmitted for wrapETH", async () => {
@@ -302,7 +377,7 @@ describe("Token event emissions", () => {
       await token.wrapETH(1000n);
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(TokenSDKEvents.WrapSubmitted);
+      expect(types).toContain(ZamaSDKEvents.WrapSubmitted);
     });
   });
 
@@ -312,9 +387,9 @@ describe("Token event emissions", () => {
       await token.unwrap(50n);
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(TokenSDKEvents.EncryptStart);
-      expect(types).toContain(TokenSDKEvents.EncryptEnd);
-      expect(types).toContain(TokenSDKEvents.UnwrapSubmitted);
+      expect(types).toContain(ZamaSDKEvents.EncryptStart);
+      expect(types).toContain(ZamaSDKEvents.EncryptEnd);
+      expect(types).toContain(ZamaSDKEvents.UnwrapSubmitted);
     });
   });
 
@@ -325,7 +400,7 @@ describe("Token event emissions", () => {
       await token.unwrapAll();
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(TokenSDKEvents.UnwrapSubmitted);
+      expect(types).toContain(ZamaSDKEvents.UnwrapSubmitted);
     });
   });
 
@@ -335,9 +410,21 @@ describe("Token event emissions", () => {
       await token.finalizeUnwrap("0xburn" as Address);
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(TokenSDKEvents.DecryptStart);
-      expect(types).toContain(TokenSDKEvents.DecryptEnd);
-      expect(types).toContain(TokenSDKEvents.FinalizeUnwrapSubmitted);
+      expect(types).toContain(ZamaSDKEvents.DecryptStart);
+      expect(types).toContain(ZamaSDKEvents.DecryptEnd);
+      expect(types).toContain(ZamaSDKEvents.FinalizeUnwrapSubmitted);
+    });
+
+    it("emits DecryptError when publicDecrypt fails", async () => {
+      sdk.publicDecrypt = vi.fn().mockRejectedValue(new Error("finalize boom"));
+      const token = createToken();
+
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow();
+
+      const errorEvent = events.find((e) => e.type === ZamaSDKEvents.DecryptError);
+      expect(errorEvent).toBeDefined();
+      expect("error" in errorEvent! && errorEvent.error).toBeInstanceOf(Error);
+      expect("error" in errorEvent! && errorEvent.error.message).toBe("finalize boom");
     });
   });
 
@@ -351,7 +438,7 @@ describe("Token event emissions", () => {
       await token.approveUnderlying();
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(TokenSDKEvents.ApproveUnderlyingSubmitted);
+      expect(types).toContain(ZamaSDKEvents.ApproveUnderlyingSubmitted);
     });
   });
 
@@ -376,22 +463,22 @@ describe("Token event emissions", () => {
       const types = events.map((e) => e.type);
 
       // Phase 1: encrypt + unwrap
-      expect(types).toContain(TokenSDKEvents.EncryptStart);
-      expect(types).toContain(TokenSDKEvents.EncryptEnd);
-      expect(types).toContain(TokenSDKEvents.UnwrapSubmitted);
-      expect(types).toContain(TokenSDKEvents.UnshieldPhase1Submitted);
+      expect(types).toContain(ZamaSDKEvents.EncryptStart);
+      expect(types).toContain(ZamaSDKEvents.EncryptEnd);
+      expect(types).toContain(ZamaSDKEvents.UnwrapSubmitted);
+      expect(types).toContain(ZamaSDKEvents.UnshieldPhase1Submitted);
 
       // Phase 2: finalize
-      expect(types).toContain(TokenSDKEvents.UnshieldPhase2Started);
-      expect(types).toContain(TokenSDKEvents.DecryptStart);
-      expect(types).toContain(TokenSDKEvents.DecryptEnd);
-      expect(types).toContain(TokenSDKEvents.FinalizeUnwrapSubmitted);
-      expect(types).toContain(TokenSDKEvents.UnshieldPhase2Submitted);
+      expect(types).toContain(ZamaSDKEvents.UnshieldPhase2Started);
+      expect(types).toContain(ZamaSDKEvents.DecryptStart);
+      expect(types).toContain(ZamaSDKEvents.DecryptEnd);
+      expect(types).toContain(ZamaSDKEvents.FinalizeUnwrapSubmitted);
+      expect(types).toContain(ZamaSDKEvents.UnshieldPhase2Submitted);
 
       // Phase ordering
-      const phase1Idx = types.indexOf(TokenSDKEvents.UnshieldPhase1Submitted);
-      const phase2StartIdx = types.indexOf(TokenSDKEvents.UnshieldPhase2Started);
-      const phase2SubmitIdx = types.indexOf(TokenSDKEvents.UnshieldPhase2Submitted);
+      const phase1Idx = types.indexOf(ZamaSDKEvents.UnshieldPhase1Submitted);
+      const phase2StartIdx = types.indexOf(ZamaSDKEvents.UnshieldPhase2Started);
+      const phase2SubmitIdx = types.indexOf(ZamaSDKEvents.UnshieldPhase2Submitted);
       expect(phase1Idx).toBeLessThan(phase2StartIdx);
       expect(phase2StartIdx).toBeLessThan(phase2SubmitIdx);
     });
@@ -402,13 +489,86 @@ describe("Token event emissions", () => {
 
       await token.unshield(50n);
 
-      const phase1 = events.find((e) => e.type === TokenSDKEvents.UnshieldPhase1Submitted);
+      const phase1 = events.find((e) => e.type === ZamaSDKEvents.UnshieldPhase1Submitted);
       expect(phase1).toBeDefined();
       expect("txHash" in phase1! && phase1.txHash).toBeTruthy();
 
-      const phase2 = events.find((e) => e.type === TokenSDKEvents.UnshieldPhase2Submitted);
+      const phase2 = events.find((e) => e.type === ZamaSDKEvents.UnshieldPhase2Submitted);
       expect(phase2).toBeDefined();
       expect("txHash" in phase2! && phase2.txHash).toBeTruthy();
+    });
+
+    it("shares the same operationId across all unshield phase events", async () => {
+      const token = createToken();
+      mockReceiptWithUnwrapRequested();
+
+      await token.unshield(50n);
+
+      const phaseEvents = events.filter(
+        (e) =>
+          e.type === ZamaSDKEvents.UnshieldPhase1Submitted ||
+          e.type === ZamaSDKEvents.UnshieldPhase2Started ||
+          e.type === ZamaSDKEvents.UnshieldPhase2Submitted,
+      );
+      expect(phaseEvents).toHaveLength(3);
+
+      const ids = phaseEvents.map((e) => e.operationId);
+      // All three should have the same non-empty operationId
+      expect(ids[0]).toBeTruthy();
+      expect(ids[0]).toBe(ids[1]);
+      expect(ids[1]).toBe(ids[2]);
+    });
+  });
+
+  describe("TransactionError events", () => {
+    it("emits TransactionError with operation 'wrap' on wrap failure", async () => {
+      vi.mocked(signer.readContract).mockResolvedValueOnce(
+        "0x9999999999999999999999999999999999999999",
+      );
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("wrap failed"));
+      const token = createToken();
+
+      await expect(token.wrap(100n, { approvalStrategy: "skip" })).rejects.toThrow();
+
+      const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
+      expect(txError).toBeDefined();
+      expect("operation" in txError! && txError.operation).toBe("wrap");
+    });
+
+    it("emits TransactionError with operation 'approve' on approve failure", async () => {
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("approve failed"));
+      const token = createToken();
+
+      await expect(
+        token.approve("0x3333333333333333333333333333333333333333" as Address),
+      ).rejects.toThrow();
+
+      const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
+      expect(txError).toBeDefined();
+      expect("operation" in txError! && txError.operation).toBe("approve");
+    });
+
+    it("emits TransactionError with operation 'unwrap' on unwrap write failure", async () => {
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("unwrap failed"));
+      const token = createToken();
+
+      await expect(token.unwrap(50n)).rejects.toThrow();
+
+      const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
+      expect(txError).toBeDefined();
+      expect("operation" in txError! && txError.operation).toBe("unwrap");
+    });
+
+    it("emits TransactionError with operation 'finalizeUnwrap' on finalize write failure", async () => {
+      // publicDecrypt succeeds, writeContract fails
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("finalize tx failed"));
+      const token = createToken();
+
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow();
+
+      const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
+      expect(txError).toBeDefined();
+      expect("operation" in txError! && txError.operation).toBe("finalizeUnwrap");
     });
   });
 });
@@ -416,8 +576,8 @@ describe("Token event emissions", () => {
 describe("CredentialsManager event emissions", () => {
   let sdk: ReturnType<typeof createMockSdk>;
   let signer: GenericSigner;
-  let events: TokenSDKEvent[];
-  let onEvent: TokenSDKEventListener;
+  let events: ZamaSDKEvent[];
+  let onEvent: ZamaSDKEventListener;
 
   beforeEach(() => {
     sdk = createMockSdk();
@@ -438,9 +598,9 @@ describe("CredentialsManager event emissions", () => {
     await manager.get("0xtoken" as Address);
 
     const types = events.map((e) => e.type);
-    expect(types).toContain(TokenSDKEvents.CredentialsLoading);
-    expect(types).toContain(TokenSDKEvents.CredentialsCreating);
-    expect(types).toContain(TokenSDKEvents.CredentialsCreated);
+    expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
+    expect(types).toContain(ZamaSDKEvents.CredentialsCreating);
+    expect(types).toContain(ZamaSDKEvents.CredentialsCreated);
   });
 
   it("emits CredentialsCached on cache hit", async () => {
@@ -460,9 +620,9 @@ describe("CredentialsManager event emissions", () => {
     await manager.get("0xtoken" as Address);
 
     const types = events.map((e) => e.type);
-    expect(types).toContain(TokenSDKEvents.CredentialsLoading);
-    expect(types).toContain(TokenSDKEvents.CredentialsCached);
-    expect(types).not.toContain(TokenSDKEvents.CredentialsCreating);
+    expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
+    expect(types).toContain(ZamaSDKEvents.CredentialsCached);
+    expect(types).not.toContain(ZamaSDKEvents.CredentialsCreating);
   });
 
   it("emits CredentialsExpired when credentials are expired", async () => {
@@ -502,9 +662,32 @@ describe("CredentialsManager event emissions", () => {
     await manager2.get("0xtoken" as Address);
 
     const types = events.map((e) => e.type);
-    expect(types).toContain(TokenSDKEvents.CredentialsExpired);
-    expect(types).toContain(TokenSDKEvents.CredentialsCreating);
-    expect(types).toContain(TokenSDKEvents.CredentialsCreated);
+    expect(types).toContain(ZamaSDKEvents.CredentialsExpired);
+    expect(types).toContain(ZamaSDKEvents.CredentialsCreating);
+    expect(types).toContain(ZamaSDKEvents.CredentialsCreated);
+  });
+
+  it("includes contractAddresses on credential events", async () => {
+    const manager = new CredentialsManager({
+      sdk: sdk as unknown as RelayerSDK,
+      signer,
+      storage: new MemoryStorage(),
+      durationDays: 1,
+      onEvent,
+    });
+
+    await manager.get("0xtoken" as Address);
+
+    const credEvents = events.filter(
+      (e) =>
+        e.type === ZamaSDKEvents.CredentialsLoading ||
+        e.type === ZamaSDKEvents.CredentialsCreating ||
+        e.type === ZamaSDKEvents.CredentialsCreated,
+    );
+    expect(credEvents.length).toBe(3);
+    for (const event of credEvents) {
+      expect("contractAddresses" in event && event.contractAddresses).toEqual(["0xtoken"]);
+    }
   });
 
   it("adds timestamp to all emitted events", async () => {

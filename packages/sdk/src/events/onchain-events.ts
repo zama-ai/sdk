@@ -3,7 +3,7 @@
  * No viem/ethers dependency — works with raw log data from any provider.
  */
 
-import type { Address } from "./relayer/relayer-sdk.types";
+import type { Address } from "../relayer/relayer-sdk.types";
 
 // ---------------------------------------------------------------------------
 // Generic log shape
@@ -116,7 +116,7 @@ export interface UnwrappedStartedEvent {
 }
 
 /** Union of all decoded confidential token event types. */
-export type TokenEvent =
+export type OnChainEvent =
   | ConfidentialTransferEvent
   | WrappedEvent
   | UnwrapRequestedEvent
@@ -271,13 +271,13 @@ export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | nul
  *
  * @example
  * ```ts
- * const event = decodeTokenEvent(log);
+ * const event = decodeOnChainEvent(log);
  * if (event?.eventName === "ConfidentialTransfer") {
  *   console.log(event.from, event.to);
  * }
  * ```
  */
-export function decodeTokenEvent(log: RawLog): TokenEvent | null {
+export function decodeOnChainEvent(log: RawLog): OnChainEvent | null {
   return (
     decodeConfidentialTransfer(log) ??
     decodeWrapped(log) ??
@@ -292,13 +292,13 @@ export function decodeTokenEvent(log: RawLog): TokenEvent | null {
  *
  * @example
  * ```ts
- * const events = decodeTokenEvents(receipt.logs);
+ * const events = decodeOnChainEvents(receipt.logs);
  * ```
  */
-export function decodeTokenEvents(logs: readonly RawLog[]): TokenEvent[] {
-  const events: TokenEvent[] = [];
+export function decodeOnChainEvents(logs: readonly RawLog[]): OnChainEvent[] {
+  const events: OnChainEvent[] = [];
   for (const log of logs) {
-    const event = decodeTokenEvent(log);
+    const event = decodeOnChainEvent(log);
     if (event) events.push(event);
   }
   return events;

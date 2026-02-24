@@ -1,9 +1,9 @@
 import type { Address, Hex } from "../relayer/relayer-sdk.types";
 
 /**
- * All SDK event keys, accessible as `TokenSDKEvents.EncryptStart` etc.
+ * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.
  */
-export const TokenSDKEvents = {
+export const ZamaSDKEvents = {
   // Credentials lifecycle
   CredentialsLoading: "credentials:loading",
   CredentialsCached: "credentials:cached",
@@ -13,9 +13,12 @@ export const TokenSDKEvents = {
   // FHE operations
   EncryptStart: "encrypt:start",
   EncryptEnd: "encrypt:end",
+  EncryptError: "encrypt:error",
   DecryptStart: "decrypt:start",
   DecryptEnd: "decrypt:end",
+  DecryptError: "decrypt:error",
   // Write operations
+  TransactionError: "transaction:error",
   WrapSubmitted: "wrap:submitted",
   TransferSubmitted: "transfer:submitted",
   TransferFromSubmitted: "transferFrom:submitted",
@@ -30,106 +33,140 @@ export const TokenSDKEvents = {
 } as const;
 
 /** Union of all SDK event type strings. */
-export type TokenSDKEventType = (typeof TokenSDKEvents)[keyof typeof TokenSDKEvents];
+export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
 
 // -- Base fields present on every event --
 
 interface BaseEvent {
   tokenAddress?: Address;
   timestamp: number;
+  /** Shared identifier linking related events in multi-phase operations (e.g. unshield). */
+  operationId?: string;
 }
 
 // -- Per-event typed payloads --
 
 export interface CredentialsLoadingEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.CredentialsLoading;
+  type: typeof ZamaSDKEvents.CredentialsLoading;
+  /** Contract addresses being requested. */
+  contractAddresses?: Address[];
 }
 
 export interface CredentialsCachedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.CredentialsCached;
+  type: typeof ZamaSDKEvents.CredentialsCached;
+  /** Contract addresses covered by the cached credentials. */
+  contractAddresses?: Address[];
 }
 
 export interface CredentialsExpiredEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.CredentialsExpired;
+  type: typeof ZamaSDKEvents.CredentialsExpired;
+  /** Contract addresses that need re-authorization. */
+  contractAddresses?: Address[];
 }
 
 export interface CredentialsCreatingEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.CredentialsCreating;
+  type: typeof ZamaSDKEvents.CredentialsCreating;
+  /** Contract addresses being authorized. */
+  contractAddresses?: Address[];
 }
 
 export interface CredentialsCreatedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.CredentialsCreated;
+  type: typeof ZamaSDKEvents.CredentialsCreated;
+  /** Contract addresses covered by the new credentials. */
+  contractAddresses?: Address[];
 }
 
 export interface EncryptStartEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.EncryptStart;
+  type: typeof ZamaSDKEvents.EncryptStart;
 }
 
 export interface EncryptEndEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.EncryptEnd;
-  durationMs?: number;
+  type: typeof ZamaSDKEvents.EncryptEnd;
+  durationMs: number;
+}
+
+export interface EncryptErrorEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.EncryptError;
+  /** The error that caused the encryption to fail. */
+  error: Error;
+  durationMs: number;
 }
 
 export interface DecryptStartEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.DecryptStart;
+  type: typeof ZamaSDKEvents.DecryptStart;
 }
 
 export interface DecryptEndEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.DecryptEnd;
-  durationMs?: number;
+  type: typeof ZamaSDKEvents.DecryptEnd;
+  durationMs: number;
+}
+
+export interface DecryptErrorEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.DecryptError;
+  /** The error that caused the decryption to fail. */
+  error: Error;
+  durationMs: number;
+}
+
+export interface TransactionErrorEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.TransactionError;
+  /** Which write operation failed. */
+  operation: string;
+  /** The error that caused the transaction to fail. */
+  error: Error;
 }
 
 export interface WrapSubmittedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.WrapSubmitted;
+  type: typeof ZamaSDKEvents.WrapSubmitted;
   txHash: Hex;
 }
 
 export interface TransferSubmittedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.TransferSubmitted;
+  type: typeof ZamaSDKEvents.TransferSubmitted;
   txHash: Hex;
 }
 
 export interface TransferFromSubmittedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.TransferFromSubmitted;
+  type: typeof ZamaSDKEvents.TransferFromSubmitted;
   txHash: Hex;
 }
 
 export interface ApproveSubmittedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.ApproveSubmitted;
+  type: typeof ZamaSDKEvents.ApproveSubmitted;
   txHash: Hex;
 }
 
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.ApproveUnderlyingSubmitted;
+  type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
   txHash: Hex;
 }
 
 export interface UnwrapSubmittedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.UnwrapSubmitted;
+  type: typeof ZamaSDKEvents.UnwrapSubmitted;
   txHash: Hex;
 }
 
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.FinalizeUnwrapSubmitted;
+  type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
   txHash: Hex;
 }
 
 export interface UnshieldPhase1SubmittedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.UnshieldPhase1Submitted;
+  type: typeof ZamaSDKEvents.UnshieldPhase1Submitted;
   txHash: Hex;
 }
 
 export interface UnshieldPhase2StartedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.UnshieldPhase2Started;
+  type: typeof ZamaSDKEvents.UnshieldPhase2Started;
 }
 
 export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
-  type: typeof TokenSDKEvents.UnshieldPhase2Submitted;
+  type: typeof ZamaSDKEvents.UnshieldPhase2Submitted;
   txHash: Hex;
 }
 
 /** Discriminated union of all SDK events. Never contains amounts, private keys, handles, or proofs. */
-export type TokenSDKEvent =
+export type ZamaSDKEvent =
   | CredentialsLoadingEvent
   | CredentialsCachedEvent
   | CredentialsExpiredEvent
@@ -137,8 +174,11 @@ export type TokenSDKEvent =
   | CredentialsCreatedEvent
   | EncryptStartEvent
   | EncryptEndEvent
+  | EncryptErrorEvent
   | DecryptStartEvent
   | DecryptEndEvent
+  | DecryptErrorEvent
+  | TransactionErrorEvent
   | WrapSubmittedEvent
   | TransferSubmittedEvent
   | TransferFromSubmittedEvent
@@ -150,11 +190,11 @@ export type TokenSDKEvent =
   | UnshieldPhase2StartedEvent
   | UnshieldPhase2SubmittedEvent;
 
-export type TokenSDKEventListener = (event: TokenSDKEvent) => void;
+export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
 
 /** Distributive Omit that preserves the discriminated union. */
-export type TokenSDKEventInput = TokenSDKEvent extends infer E
-  ? E extends TokenSDKEvent
+export type ZamaSDKEventInput = ZamaSDKEvent extends infer E
+  ? E extends ZamaSDKEvent
     ? Omit<E, "timestamp" | "tokenAddress">
     : never
   : never;

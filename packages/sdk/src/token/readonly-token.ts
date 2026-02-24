@@ -17,8 +17,8 @@ import { normalizeAddress, pLimit } from "../utils";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credential-manager";
-import { TokenSDKEvents } from "./token-sdk-events";
-import type { TokenSDKEventInput, TokenSDKEventListener } from "./token-sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -49,7 +49,7 @@ export interface ReadonlyTokenConfig {
   /** Number of days FHE credentials remain valid. Default: `1`. */
   durationDays?: number;
   /** Optional structured event listener for debugging and telemetry. */
-  onEvent?: TokenSDKEventListener;
+  onEvent?: ZamaSDKEventListener;
 }
 
 /**
@@ -62,7 +62,7 @@ export class ReadonlyToken {
   protected readonly sdk: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
-  readonly #onEvent: TokenSDKEventListener | undefined;
+  readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
     const address = normalizeAddress(config.address, "address");
@@ -80,7 +80,7 @@ export class ReadonlyToken {
   }
 
   /** Emit a structured event (no-op when no listener is registered). */
-  protected emit(partial: TokenSDKEventInput): void {
+  protected emit(partial: ZamaSDKEventInput): void {
     this.#onEvent?.({ ...partial, tokenAddress: this.address, timestamp: Date.now() });
   }
 
@@ -103,8 +103,9 @@ export class ReadonlyToken {
 
     const creds = await this.credentials.get(this.address);
 
+    const t0 = Date.now();
     try {
-      this.emit({ type: TokenSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart });
       const result = await this.sdk.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
@@ -116,10 +117,15 @@ export class ReadonlyToken {
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });
-      this.emit({ type: TokenSDKEvents.DecryptEnd });
+      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+      });
       throw wrapDecryptError(error, "Failed to decrypt balance");
     }
   }
@@ -415,8 +421,9 @@ export class ReadonlyToken {
 
     const creds = await this.credentials.get(this.address);
 
+    const t0 = Date.now();
     try {
-      this.emit({ type: TokenSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart });
       const result = await this.sdk.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
@@ -428,10 +435,15 @@ export class ReadonlyToken {
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });
-      this.emit({ type: TokenSDKEvents.DecryptEnd });
+      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+      });
       throw wrapDecryptError(error, "Failed to decrypt balance");
     }
   }
@@ -456,8 +468,9 @@ export class ReadonlyToken {
 
     const creds = await this.credentials.get(this.address);
 
+    const t0 = Date.now();
     try {
-      this.emit({ type: TokenSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart });
       const decrypted = await this.sdk.userDecrypt({
         handles: nonZeroHandles,
         contractAddress: this.address,
@@ -469,12 +482,17 @@ export class ReadonlyToken {
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });
-      this.emit({ type: TokenSDKEvents.DecryptEnd });
+      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
       for (const handle of nonZeroHandles) {
         results.set(handle, decrypted[handle] ?? BigInt(0));
       }
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+      });
       throw wrapDecryptError(error, "Failed to decrypt handles");
     }
 
@@ -487,6 +505,11 @@ export class ReadonlyToken {
  * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
  * other HTTP errors, or the generic DecryptionFailedError as fallback).
  */
+/** Coerce an unknown caught value to an Error instance. */
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   if (error instanceof NoCiphertextError || error instanceof RelayerRequestFailedError) {
     return error;

@@ -61,12 +61,8 @@ export type {
   TransactionReceipt,
   UnshieldCallbacks,
 } from "./token/token.types";
-export { TokenSDKEvents } from "./token/token-sdk-events";
-export type {
-  TokenSDKEventType,
-  TokenSDKEvent,
-  TokenSDKEventListener,
-} from "./token/token-sdk-events";
+export { ZamaSDKEvents } from "./events/sdk-events";
+export type { ZamaSDKEventType, ZamaSDKEvent, ZamaSDKEventListener } from "./events/sdk-events";
 export {
   TokenError,
   TokenErrorCode,
@@ -90,8 +86,8 @@ export type {
   UnwrapRequestedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
-  TokenEvent,
-} from "./events";
+  OnChainEvent,
+} from "./events/onchain-events";
 export {
   Topics,
   TOKEN_TOPICS,
@@ -100,11 +96,11 @@ export {
   decodeUnwrapRequested,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
-  decodeTokenEvent,
-  decodeTokenEvents,
+  decodeOnChainEvent,
+  decodeOnChainEvents,
   findUnwrapRequested,
   findWrapped,
-} from "./events";
+} from "./events/onchain-events";
 
 // Activity feed helpers and types
 export type {

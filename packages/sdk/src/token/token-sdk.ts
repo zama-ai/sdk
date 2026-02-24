@@ -4,7 +4,7 @@ import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
-import type { TokenSDKEventListener } from "./token-sdk-events";
+import type { ZamaSDKEventListener } from "../events/sdk-events";
 
 /** Configuration for {@link TokenSDK}. */
 export interface TokenSDKConfig {
@@ -17,7 +17,7 @@ export interface TokenSDKConfig {
   /** Number of days FHE credentials remain valid. Default: `1`. */
   credentialDurationDays?: number;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
-  onEvent?: TokenSDKEventListener;
+  onEvent?: ZamaSDKEventListener;
 }
 
 /**
@@ -29,7 +29,7 @@ export class TokenSDK {
   readonly signer: GenericSigner;
   readonly storage: GenericStringStorage;
   readonly #credentialDurationDays: number | undefined;
-  readonly #onEvent: TokenSDKEventListener | undefined;
+  readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: TokenSDKConfig) {
     this.relayer = config.relayer;

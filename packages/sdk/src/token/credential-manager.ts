@@ -3,8 +3,8 @@ import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStringStorage, StoredCredentials } from "./token.types";
 import { SigningRejectedError, SigningFailedError } from "./errors";
 import { assertObject, assertString, assertArray } from "../utils";
-import { TokenSDKEvents } from "./token-sdk-events";
-import type { TokenSDKEventInput, TokenSDKEventListener } from "./token-sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
 interface EncryptedData {
@@ -35,7 +35,7 @@ export interface CredentialsManagerConfig {
   /** Number of days generated credentials remain valid. */
   durationDays: number;
   /** Optional structured event listener. */
-  onEvent?: TokenSDKEventListener;
+  onEvent?: ZamaSDKEventListener;
 }
 
 export class CredentialsManager {
@@ -43,7 +43,7 @@ export class CredentialsManager {
   #signer: GenericSigner;
   #storage: GenericStringStorage;
   #durationDays: number;
-  #onEvent: TokenSDKEventListener;
+  #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
 
@@ -55,7 +55,7 @@ export class CredentialsManager {
     this.#onEvent = config.onEvent ?? Boolean;
   }
 
-  #emit(partial: TokenSDKEventInput): void {
+  #emit(partial: ZamaSDKEventInput): void {
     this.#onEvent({ ...partial, timestamp: Date.now() } as never);
   }
 
@@ -84,7 +84,7 @@ export class CredentialsManager {
    */
   async getAll(contractAddresses: Address[]): Promise<StoredCredentials> {
     const storeKey = await this.#storeKey();
-    this.#emit({ type: TokenSDKEvents.CredentialsLoading });
+    this.#emit({ type: ZamaSDKEvents.CredentialsLoading, contractAddresses });
     try {
       const stored = await this.#storage.getItem(storeKey);
       if (stored) {
@@ -92,10 +92,10 @@ export class CredentialsManager {
         this.#assertEncryptedCredentials(encrypted);
         const creds = await this.#decryptCredentials(encrypted);
         if (this.#isValid(creds, contractAddresses)) {
-          this.#emit({ type: TokenSDKEvents.CredentialsCached });
+          this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
           return creds;
         }
-        this.#emit({ type: TokenSDKEvents.CredentialsExpired });
+        this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
       }
     } catch {
       // Stored credentials unreadable (corrupt, schema change, decryption failure) — regenerate.
@@ -211,7 +211,7 @@ export class CredentialsManager {
    * ```
    */
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
-    this.#emit({ type: TokenSDKEvents.CredentialsCreating });
+    this.#emit({ type: ZamaSDKEvents.CredentialsCreating, contractAddresses });
     try {
       const keypair = await this.#sdk.generateKeypair();
       const startTimestamp = Math.floor(Date.now() / 1000);
@@ -242,7 +242,7 @@ export class CredentialsManager {
         // Store write failed — credentials still usable in memory
       }
 
-      this.#emit({ type: TokenSDKEvents.CredentialsCreated });
+      this.#emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
     } catch (error) {
       const isRejected =

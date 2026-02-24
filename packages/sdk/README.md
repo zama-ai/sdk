@@ -233,33 +233,77 @@ interface GenericStringStorage {
 
 ### `TokenSDKConfig`
 
-| Field                    | Type                    | Description                                              |
-| ------------------------ | ----------------------- | -------------------------------------------------------- |
-| `relayer`                | `RelayerSDK`            | Relayer backend (`RelayerWeb` or `RelayerNode` instance) |
-| `signer`                 | `GenericSigner`         | Wallet signer interface.                                 |
-| `storage`                | `GenericStringStorage`  | Credential storage backend.                              |
-| `credentialDurationDays` | `number`                | Optional. Days FHE credentials remain valid. Default: 1. |
-| `onEvent`                | `TokenSDKEventListener` | Optional. Structured event listener for debugging.       |
+| Field                    | Type                   | Description                                              |
+| ------------------------ | ---------------------- | -------------------------------------------------------- |
+| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance) |
+| `signer`                 | `GenericSigner`        | Wallet signer interface.                                 |
+| `storage`                | `GenericStringStorage` | Credential storage backend.                              |
+| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. |
+| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.       |
 
 #### Structured Event Listener
 
-The `onEvent` callback receives typed events at key lifecycle points (encrypt, decrypt, wrap, unshield phases). Event payloads never contain sensitive data (amounts, keys, proofs) — only metadata useful for tracing:
+The `onEvent` callback receives typed events at key lifecycle points. Event payloads never contain sensitive data (amounts, keys, proofs) — only metadata useful for debugging and telemetry.
 
 ```ts
 const sdk = new TokenSDK({
   relayer,
   signer,
   storage,
-  onEvent: (event) => {
-    console.debug(`[Zama] ${event.type}`, {
-      token: event.tokenAddress?.slice(0, 10),
-      txHash: event.txHash?.slice(0, 10),
+  onEvent: ({ type, tokenAddress, ...event }) => {
+    console.debug(`[Zama] ${type}`, {
+      tokenAddress: tokenAddress?.slice(0, 10),
+      ...event,
     });
   },
 });
 ```
 
-Event types: `encrypt:start`, `encrypt:end`, `decrypt:start`, `decrypt:end`, `wrap:submitted`, `transfer:submitted`, `unshield:phase1_submitted`, `unshield:phase2_started`, `unshield:phase2_submitted`, `credentials:loading`, `credentials:cached`, `credentials:expired`, `credentials:creating`, `credentials:created`.
+**Event types:**
+
+| Category               | Events                                                                                                                                                               | Key fields                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Credentials            | `credentials:loading`, `credentials:cached`, `credentials:expired`, `credentials:creating`, `credentials:created`                                                    | `contractAddresses`                                              |
+| Encryption             | `encrypt:start`, `encrypt:end`, `encrypt:error`                                                                                                                      | `durationMs` (end/error), `error` (error)                        |
+| Decryption             | `decrypt:start`, `decrypt:end`, `decrypt:error`                                                                                                                      | `durationMs` (end/error), `error` (error)                        |
+| Transactions           | `transaction:error`                                                                                                                                                  | `operation` (`"transfer"`, `"wrap"`, `"approve"`, etc.), `error` |
+| Write confirmations    | `wrap:submitted`, `transfer:submitted`, `transferFrom:submitted`, `approve:submitted`, `approveUnderlying:submitted`, `unwrap:submitted`, `finalizeUnwrap:submitted` | `txHash`                                                         |
+| Unshield orchestration | `unshield:phase1_submitted`, `unshield:phase2_started`, `unshield:phase2_submitted`                                                                                  | `txHash`, `operationId`                                          |
+
+All events carry `tokenAddress`, `timestamp`, and an optional `operationId` (set on unshield phase events to correlate multi-step operations).
+
+**Dispatching events to other systems:**
+
+The `onEvent` callback is a simple function — you can bridge it to any event system:
+
+```ts
+// Fan out to multiple listeners with EventEmitter
+import { EventEmitter } from "events";
+const emitter = new EventEmitter();
+const sdk = new TokenSDK({
+  // ...
+  onEvent: (event) => emitter.emit(event.type, event),
+});
+emitter.on("encrypt:start", (e) => {
+  /* listener A */
+});
+emitter.on("encrypt:start", (e) => {
+  /* listener B */
+});
+
+// Bridge to DOM CustomEvent (e.g. for cross-framework communication)
+const sdk = new TokenSDK({
+  // ...
+  onEvent: (event) => window.dispatchEvent(new CustomEvent(event.type, { detail: event })),
+});
+
+// Collect into React state
+const [events, setEvents] = useState<ZamaSDKEvent[]>([]);
+const sdk = new TokenSDK({
+  // ...
+  onEvent: (event) => setEvents((prev) => [...prev, event]),
+});
+```
 
 ### `RelayerWebConfig` (browser)
 
@@ -508,8 +552,8 @@ Individual topic hashes are accessible via the `Topics` object: `Topics.Confiden
 | `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                                       |
 | `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ burntAmountHandle, finalizeSuccess, burnAmount, unwrapAmount, feeAmount, ... }` |
 | `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }`            |
-| `decodeTokenEvent(log)`           | `TokenEvent \| null` — tries all decoders                                                                              |
-| `decodeTokenEvents(logs)`         | `TokenEvent[]` — batch decode, skips unrecognized logs                                                                 |
+| `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                            |
+| `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                               |
 
 ### Finder Helpers
 
@@ -577,7 +621,7 @@ interface ActivityItem {
   fee?: ActivityAmount;
   success?: boolean;
   metadata: ActivityLogMetadata;
-  rawEvent: TokenEvent;
+  rawEvent: OnChainEvent;
 }
 
 interface ActivityLogMetadata {

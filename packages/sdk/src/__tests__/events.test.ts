@@ -7,8 +7,8 @@ import {
   decodeUnwrapRequested,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
-  decodeTokenEvent,
-  decodeTokenEvents,
+  decodeOnChainEvent,
+  decodeOnChainEvents,
   findUnwrapRequested,
   findWrapped,
   type RawLog,
@@ -233,13 +233,13 @@ describe("decodeUnwrappedStarted", () => {
   });
 });
 
-describe("decodeTokenEvent", () => {
+describe("decodeOnChainEvent", () => {
   it("dispatches to correct decoder", () => {
     const log: RawLog = {
       topics: [Topics.UnwrapRequested, topic("abcd")],
       data: "0x" + word("ff".repeat(32)),
     };
-    const event = decodeTokenEvent(log);
+    const event = decodeOnChainEvent(log);
     expect(event?.eventName).toBe("UnwrapRequested");
   });
 
@@ -248,11 +248,11 @@ describe("decodeTokenEvent", () => {
       topics: ["0x" + "00".repeat(32)],
       data: "0x",
     };
-    expect(decodeTokenEvent(log)).toBeNull();
+    expect(decodeOnChainEvent(log)).toBeNull();
   });
 });
 
-describe("decodeTokenEvents", () => {
+describe("decodeOnChainEvents", () => {
   it("decodes array of mixed logs, skipping unknown", () => {
     const logs: RawLog[] = [
       {
@@ -270,7 +270,7 @@ describe("decodeTokenEvents", () => {
         data: "0x",
       },
     ];
-    const events = decodeTokenEvents(logs);
+    const events = decodeOnChainEvents(logs);
     expect(events).toHaveLength(2);
     expect(events[0]!.eventName).toBe("UnwrapRequested");
     expect(events[1]!.eventName).toBe("ConfidentialTransfer");

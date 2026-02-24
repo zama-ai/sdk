@@ -12,7 +12,7 @@ import {
   wrapContract,
   wrapETHContract,
 } from "../contracts";
-import { findUnwrapRequested } from "../events";
+import { findUnwrapRequested } from "../events/onchain-events";
 import type { Address, Hex } from "../relayer/relayer-sdk.types";
 import { normalizeAddress } from "../utils";
 import {
@@ -23,8 +23,13 @@ import {
   DecryptionFailedError,
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
-import { TokenSDKEvents } from "./token-sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
 import type { UnshieldCallbacks } from "./token.types";
+
+/** Coerce an unknown caught value to an Error instance. */
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
 
 /**
  * ERC-20-like interface for a single confidential token.
@@ -82,27 +87,48 @@ export class Token extends ReadonlyToken {
    */
   async confidentialTransfer(to: Address, amount: bigint): Promise<Hex> {
     const normalizedTo = normalizeAddress(to, "to");
+
+    let handles: Uint8Array[];
+    let inputProof: Uint8Array;
+    const t0 = Date.now();
     try {
-      this.emit({ type: TokenSDKEvents.EncryptStart });
-      const { handles, inputProof } = await this.sdk.encrypt({
+      this.emit({ type: ZamaSDKEvents.EncryptStart });
+      ({ handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
         contractAddress: this.address,
         userAddress: await this.signer.getAddress(),
+      }));
+      this.emit({ type: ZamaSDKEvents.EncryptEnd, durationMs: Date.now() - t0 });
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.EncryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
       });
-      this.emit({ type: TokenSDKEvents.EncryptEnd });
+      if (error instanceof TokenError) throw error;
+      throw new EncryptionFailedError("Failed to encrypt transfer amount", {
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
 
-      if (handles.length === 0) {
-        throw new EncryptionFailedError("Encryption returned no handles");
-      }
+    if (handles.length === 0) {
+      throw new EncryptionFailedError("Encryption returned no handles");
+    }
 
+    try {
       const txHash = await this.signer.writeContract(
         confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
       );
-      this.emit({ type: TokenSDKEvents.TransferSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
       return txHash;
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "transfer",
+        error: toError(error),
+      });
       if (error instanceof TokenError) throw error;
-      throw new EncryptionFailedError("Failed to encrypt transfer amount", {
+      throw new TransactionRevertedError("Transfer transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -120,19 +146,35 @@ export class Token extends ReadonlyToken {
   async confidentialTransferFrom(from: Address, to: Address, amount: bigint): Promise<Hex> {
     const normalizedFrom = normalizeAddress(from, "from");
     const normalizedTo = normalizeAddress(to, "to");
+
+    let handles: Uint8Array[];
+    let inputProof: Uint8Array;
+    const t0 = Date.now();
     try {
-      this.emit({ type: TokenSDKEvents.EncryptStart });
-      const { handles, inputProof } = await this.sdk.encrypt({
+      this.emit({ type: ZamaSDKEvents.EncryptStart });
+      ({ handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
         contractAddress: this.address,
         userAddress: normalizedFrom,
+      }));
+      this.emit({ type: ZamaSDKEvents.EncryptEnd, durationMs: Date.now() - t0 });
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.EncryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
       });
-      this.emit({ type: TokenSDKEvents.EncryptEnd });
+      if (error instanceof TokenError) throw error;
+      throw new EncryptionFailedError("Failed to encrypt transferFrom amount", {
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
 
-      if (handles.length === 0) {
-        throw new EncryptionFailedError("Encryption returned no handles");
-      }
+    if (handles.length === 0) {
+      throw new EncryptionFailedError("Encryption returned no handles");
+    }
 
+    try {
       const txHash = await this.signer.writeContract(
         confidentialTransferFromContract(
           this.address,
@@ -142,11 +184,16 @@ export class Token extends ReadonlyToken {
           inputProof,
         ),
       );
-      this.emit({ type: TokenSDKEvents.TransferFromSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.TransferFromSubmitted, txHash });
       return txHash;
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "transferFrom",
+        error: toError(error),
+      });
       if (error instanceof TokenError) throw error;
-      throw new EncryptionFailedError("Failed to encrypt transferFrom amount", {
+      throw new TransactionRevertedError("TransferFrom transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -167,9 +214,14 @@ export class Token extends ReadonlyToken {
       const txHash = await this.signer.writeContract(
         setOperatorContract(this.address, normalizedSpender, until),
       );
-      this.emit({ type: TokenSDKEvents.ApproveSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.ApproveSubmitted, txHash });
       return txHash;
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "approve",
+        error: toError(error),
+      });
       if (error instanceof TokenError) throw error;
       throw new ApprovalFailedError("Operator approval failed", {
         cause: error instanceof Error ? error : undefined,
@@ -228,9 +280,14 @@ export class Token extends ReadonlyToken {
     try {
       const address = await this.signer.getAddress();
       const txHash = await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
-      this.emit({ type: TokenSDKEvents.WrapSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.WrapSubmitted, txHash });
       return txHash;
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "wrap",
+        error: toError(error),
+      });
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Shield (wrap) transaction failed", {
         cause: error instanceof Error ? error : undefined,
@@ -252,9 +309,14 @@ export class Token extends ReadonlyToken {
       const txHash = await this.signer.writeContract(
         wrapETHContract(this.wrapper, userAddress, amount, value ?? amount),
       );
-      this.emit({ type: TokenSDKEvents.WrapSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.WrapSubmitted, txHash });
       return txHash;
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "wrap",
+        error: toError(error),
+      });
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Shield ETH (wrapETH) transaction failed", {
         cause: error instanceof Error ? error : undefined,
@@ -276,15 +338,21 @@ export class Token extends ReadonlyToken {
 
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
+    const t0 = Date.now();
     try {
-      this.emit({ type: TokenSDKEvents.EncryptStart });
+      this.emit({ type: ZamaSDKEvents.EncryptStart });
       ({ handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
         contractAddress: this.wrapper,
         userAddress,
       }));
-      this.emit({ type: TokenSDKEvents.EncryptEnd });
+      this.emit({ type: ZamaSDKEvents.EncryptEnd, durationMs: Date.now() - t0 });
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.EncryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+      });
       if (error instanceof TokenError) throw error;
       throw new EncryptionFailedError("Failed to encrypt unshield amount", {
         cause: error instanceof Error ? error : undefined,
@@ -299,9 +367,14 @@ export class Token extends ReadonlyToken {
       const txHash = await this.signer.writeContract(
         unwrapContract(this.address, userAddress, userAddress, handles[0]!, inputProof),
       );
-      this.emit({ type: TokenSDKEvents.UnwrapSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
       return txHash;
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "unwrap",
+        error: toError(error),
+      });
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Unshield transaction failed", {
         cause: error instanceof Error ? error : undefined,
@@ -331,9 +404,14 @@ export class Token extends ReadonlyToken {
       const txHash = await this.signer.writeContract(
         unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
       );
-      this.emit({ type: TokenSDKEvents.UnwrapSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
       return txHash;
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "unwrap",
+        error: toError(error),
+      });
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Unshield-all transaction failed", {
         cause: error instanceof Error ? error : undefined,
@@ -351,9 +429,10 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<Hex> {
+    const operationId = crypto.randomUUID();
     const unshieldHash = await this.unwrap(amount);
     safeCallback(() => callbacks?.onUnwrapSubmitted?.(unshieldHash));
-    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks);
+    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks, operationId);
   }
 
   /**
@@ -366,9 +445,10 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async unshieldAll(callbacks?: UnshieldCallbacks): Promise<Hex> {
+    const operationId = crypto.randomUUID();
     const unshieldHash = await this.unwrapAll();
     safeCallback(() => callbacks?.onUnwrapSubmitted?.(unshieldHash));
-    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks);
+    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks, operationId);
   }
 
   /**
@@ -382,7 +462,7 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<Hex> {
-    return this.#waitAndFinalizeUnshield(unwrapTxHash, callbacks);
+    return this.#waitAndFinalizeUnshield(unwrapTxHash, callbacks, crypto.randomUUID());
   }
 
   /**
@@ -399,10 +479,11 @@ export class Token extends ReadonlyToken {
     let clearValue: bigint;
     let decryptionProof: Address;
 
+    const t0 = Date.now();
     try {
-      this.emit({ type: TokenSDKEvents.DecryptStart });
+      this.emit({ type: ZamaSDKEvents.DecryptStart });
       const result = await this.sdk.publicDecrypt([burnAmountHandle]);
-      this.emit({ type: TokenSDKEvents.DecryptEnd });
+      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
       decryptionProof = result.decryptionProof;
       try {
         clearValue = BigInt(result.abiEncodedClearValues);
@@ -412,6 +493,11 @@ export class Token extends ReadonlyToken {
         );
       }
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+      });
       if (error instanceof TokenError) throw error;
       throw new DecryptionFailedError("Failed to finalize unshield", {
         cause: error instanceof Error ? error : undefined,
@@ -422,9 +508,14 @@ export class Token extends ReadonlyToken {
       const txHash = await this.signer.writeContract(
         finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, decryptionProof),
       );
-      this.emit({ type: TokenSDKEvents.FinalizeUnwrapSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
       return txHash;
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "finalizeUnwrap",
+        error: toError(error),
+      });
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Failed to finalize unshield", {
         cause: error instanceof Error ? error : undefined,
@@ -463,9 +554,14 @@ export class Token extends ReadonlyToken {
       const txHash = await this.signer.writeContract(
         approveContract(underlying, this.wrapper, approvalAmount),
       );
-      this.emit({ type: TokenSDKEvents.ApproveUnderlyingSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
       return txHash;
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "approveUnderlying",
+        error: toError(error),
+      });
       if (error instanceof TokenError) throw error;
       throw new ApprovalFailedError("ERC-20 approval failed", {
         cause: error instanceof Error ? error : undefined,
@@ -475,8 +571,12 @@ export class Token extends ReadonlyToken {
 
   // PRIVATE HELPERS
 
-  async #waitAndFinalizeUnshield(unshieldHash: Hex, callbacks?: UnshieldCallbacks): Promise<Hex> {
-    this.emit({ type: TokenSDKEvents.UnshieldPhase1Submitted, txHash: unshieldHash });
+  async #waitAndFinalizeUnshield(
+    unshieldHash: Hex,
+    callbacks: UnshieldCallbacks | undefined,
+    operationId: string,
+  ): Promise<Hex> {
+    this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unshieldHash, operationId });
     let receipt;
     try {
       receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
@@ -490,10 +590,10 @@ export class Token extends ReadonlyToken {
     if (!event) {
       throw new TransactionRevertedError("No UnwrapRequested event found in unshield receipt");
     }
-    this.emit({ type: TokenSDKEvents.UnshieldPhase2Started });
+    this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
     safeCallback(() => callbacks?.onFinalizing?.());
     const finalizeHash = await this.finalizeUnwrap(event.encryptedAmount);
-    this.emit({ type: TokenSDKEvents.UnshieldPhase2Submitted, txHash: finalizeHash });
+    this.emit({ type: ZamaSDKEvents.UnshieldPhase2Submitted, txHash: finalizeHash, operationId });
     safeCallback(() => callbacks?.onFinalizeSubmitted?.(finalizeHash));
     return finalizeHash;
   }

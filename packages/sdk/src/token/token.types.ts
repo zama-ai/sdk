@@ -1,4 +1,4 @@
-import type { RawLog } from "../events";
+import type { RawLog } from "../events/onchain-events";
 import type { Address, EIP712TypedData, Hex } from "../relayer/relayer-sdk.types";
 export type { Address } from "../relayer/relayer-sdk.types";
 export type { Hex } from "../relayer/relayer-sdk.types";

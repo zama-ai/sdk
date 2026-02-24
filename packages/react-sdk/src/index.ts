@@ -66,16 +66,16 @@ export type {
   BatchTransferData,
   StoredCredentials,
   UnshieldCallbacks,
-  TokenSDKEventType,
-  TokenSDKEvent,
-  TokenSDKEventListener,
+  ZamaSDKEventType,
+  ZamaSDKEvent,
+  ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 
 // Re-export pending-unshield persistence utilities
 export { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 
 // Re-export event constants
-export { TokenSDKEvents } from "@zama-fhe/sdk";
+export { ZamaSDKEvents } from "@zama-fhe/sdk";
 
 // Re-export network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
@@ -272,7 +272,7 @@ export type {
   UnwrapRequestedEvent,
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
-  TokenEvent,
+  OnChainEvent,
 } from "@zama-fhe/sdk";
 export {
   Topics,
@@ -282,8 +282,8 @@ export {
   decodeUnwrapRequested,
   decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
-  decodeTokenEvent,
-  decodeTokenEvents,
+  decodeOnChainEvent,
+  decodeOnChainEvents,
   findUnwrapRequested,
   findWrapped,
 } from "@zama-fhe/sdk";
