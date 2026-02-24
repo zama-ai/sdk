@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: npm
-    directory: /packages/token-sdk
+    directory: /packages/sdk
     schedule:
       interval: weekly
   - package-ecosystem: npm

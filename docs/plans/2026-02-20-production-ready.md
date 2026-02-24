@@ -38,16 +38,16 @@ git commit -m "chore: add tsup, changesets, and prettier"
 
 ---
 
-### Task 2: Configure tsup for token-sdk
+### Task 2: Configure tsup for sdk
 
 **Files:**
 
-- Create: `packages/token-sdk/tsup.config.ts`
-- Modify: `packages/token-sdk/package.json`
+- Create: `packages/sdk/tsup.config.ts`
+- Modify: `packages/sdk/package.json`
 
 **Step 1: Create tsup config**
 
-Create `packages/token-sdk/tsup.config.ts`:
+Create `packages/sdk/tsup.config.ts`:
 
 ```ts
 import { defineConfig } from "tsup";
@@ -71,7 +71,7 @@ export default defineConfig({
 
 **Step 2: Update package.json**
 
-Replace `packages/token-sdk/package.json` with:
+Replace `packages/sdk/package.json` with:
 
 ```json
 {
@@ -82,7 +82,7 @@ Replace `packages/token-sdk/package.json` with:
   "repository": {
     "type": "git",
     "url": "https://github.com/zama-ai/sdk",
-    "directory": "packages/token-sdk"
+    "directory": "packages/sdk"
   },
   "type": "module",
   "main": "./dist/index.js",
@@ -130,14 +130,14 @@ Replace `packages/token-sdk/package.json` with:
 Run: `pnpm --filter @zama-fhe/sdk build`
 Expected: `dist/` directory created with `index.js`, `index.d.ts`, `viem/index.js`, `viem/index.d.ts`, `ethers/index.js`, `ethers/index.d.ts`, `node/index.js`, `node/index.d.ts`
 
-Run: `ls packages/token-sdk/dist/ packages/token-sdk/dist/viem/ packages/token-sdk/dist/ethers/ packages/token-sdk/dist/node/`
+Run: `ls packages/sdk/dist/ packages/sdk/dist/viem/ packages/sdk/dist/ethers/ packages/sdk/dist/node/`
 Expected: `.js` and `.d.ts` files in each
 
 **Step 4: Commit**
 
 ```bash
-git add packages/token-sdk/tsup.config.ts packages/token-sdk/package.json
-git commit -m "feat(token-sdk): add tsup build config and npm exports"
+git add packages/sdk/tsup.config.ts packages/sdk/package.json
+git commit -m "feat(sdk): add tsup build config and npm exports"
 ```
 
 ---
@@ -536,14 +536,14 @@ git commit -m "ci: add release workflow with changesets"
 
 **Files:**
 
-- Create: `packages/token-sdk/tsconfig.build.json`
+- Create: `packages/sdk/tsconfig.build.json`
 - Create: `packages/react-sdk/tsconfig.build.json`
 
 Each package needs a build-specific tsconfig that tsup uses for declaration generation. The existing tsconfigs point `main` at `./src/index.ts` which is fine for development but the build tsconfigs exclude test files.
 
-**Step 1: Create token-sdk tsconfig.build.json**
+**Step 1: Create sdk tsconfig.build.json**
 
-Create `packages/token-sdk/tsconfig.build.json`:
+Create `packages/sdk/tsconfig.build.json`:
 
 ```json
 {
@@ -567,7 +567,7 @@ Create `packages/react-sdk/tsconfig.build.json`:
 
 Add `tsconfig: "tsconfig.build.json"` to both `tsup.config.ts` files.
 
-For `packages/token-sdk/tsup.config.ts`, add:
+For `packages/sdk/tsup.config.ts`, add:
 
 ```ts
   tsconfig: "tsconfig.build.json",
@@ -590,7 +590,7 @@ Expected: All 162 tests still pass
 **Step 5: Commit**
 
 ```bash
-git add packages/token-sdk/tsconfig.build.json packages/react-sdk/tsconfig.build.json packages/token-sdk/tsup.config.ts packages/react-sdk/tsup.config.ts
+git add packages/sdk/tsconfig.build.json packages/react-sdk/tsconfig.build.json packages/sdk/tsup.config.ts packages/react-sdk/tsup.config.ts
 git commit -m "chore: add build tsconfigs excluding test files"
 ```
 
@@ -603,7 +603,7 @@ git commit -m "chore: add build tsconfigs excluding test files"
 Run:
 
 ```bash
-rm -rf packages/token-sdk/dist packages/react-sdk/dist
+rm -rf packages/sdk/dist packages/react-sdk/dist
 pnpm build
 ```
 
@@ -624,7 +624,7 @@ Expected: All pass
 Run:
 
 ```bash
-cd packages/token-sdk && pnpm pack --dry-run && cd ../..
+cd packages/sdk && pnpm pack --dry-run && cd ../..
 cd packages/react-sdk && pnpm pack --dry-run && cd ../..
 ```
 

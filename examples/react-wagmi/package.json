@@ -9,7 +9,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",
     "@zama-fhe/react-sdk": "github:zama-ai/sdk#path:packages/react-sdk",
-    "@zama-fhe/sdk": "github:zama-ai/sdk#path:packages/token-sdk",
+    "@zama-fhe/sdk": "github:zama-ai/sdk#path:packages/sdk",
     "next": "^16.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

@@ -14,12 +14,12 @@ Thank you for your interest in contributing to the Zama Token SDK! This guide wi
 ```bash
 # Clone the repository
 git clone https://github.com/zama-ai/sdk.git
-cd token-sdk
+cd sdk
 
 # Install dependencies
 pnpm install
 
-# Build all packages (order matters: token-sdk first)
+# Build all packages (order matters: sdk first)
 pnpm build
 
 # Run tests
@@ -30,7 +30,7 @@ pnpm test:run
 
 ```
 packages/
-  token-sdk/          # Core SDK
+  sdk/          # Core SDK
   react-sdk/    # React hooks
   test-app/           # E2E test app (Playwright + Hardhat)
 ```
@@ -72,7 +72,7 @@ pnpm test
 pnpm test:run
 
 # Specific file
-pnpm test:run -- packages/token-sdk/src/token/__tests__/token.test.ts
+pnpm test:run -- packages/sdk/src/token/__tests__/token.test.ts
 
 # With coverage
 pnpm test:coverage
@@ -115,13 +115,13 @@ Select the affected packages and describe the change. Choose the appropriate sem
 
 ### Key Design Principles
 
-- **Framework-agnostic core** — `token-sdk` defines the `GenericSigner` interface; library-specific adapters (viem, ethers, wagmi) implement it
+- **Framework-agnostic core** — `sdk` defines the `GenericSigner` interface; library-specific adapters (viem, ethers, wagmi) implement it
 - **Contract call builders** — pure functions returning `ContractCallConfig` objects, composed by library-specific sub-paths
 - **Error hierarchy** — all SDK errors extend `TokenError` with typed error codes; use specific subclasses (`EncryptionFailedError`, `SigningRejectedError`, etc.)
 
 ### Adding a New Signer Adapter
 
-1. Implement the `GenericSigner` interface in a new file under `packages/token-sdk/src/<library>/`
+1. Implement the `GenericSigner` interface in a new file under `packages/sdk/src/<library>/`
 2. Add a corresponding entry point in `package.json` exports
 3. Configure tsup to build the new entry point
 4. Add tests

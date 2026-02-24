@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-23
 **Status:** Approved
-**Strategy:** Bottom-up refactor of SDK B (token-sdk) in-place
+**Strategy:** Bottom-up refactor of SDK B (sdk) in-place
 **Breaking changes:** Allowed (next major version)
 **Library support:** Keep all three (viem/ethers/wagmi)
 
@@ -10,7 +10,7 @@
 
 SDK A (`confidential-defi/react-sdk`, score 79/100) has superior architecture: state machine provider lifecycle, error hierarchy, mutation dedup, optimistic updates, chain validation, wallet lifecycle handling, and comprehensive React tests. Its signer abstraction (3-field interface) achieves zero adapter duplication.
 
-SDK B (`token-sdk`, score 67/100) has better foundational architecture (core/react split, worker threads, encrypted credentials, `ContractCallConfig` builders) and dramatically better DX (READMEs, CLAUDE.md, test-app, single import). But it suffers from severe adapter duplication (39 near-identical hook files), zero React unit tests, no mutation dedup, no chain validation, no wallet lifecycle handling, and no optimistic updates.
+SDK B (`sdk`, score 67/100) has better foundational architecture (core/react split, worker threads, encrypted credentials, `ContractCallConfig` builders) and dramatically better DX (READMEs, CLAUDE.md, test-app, single import). But it suffers from severe adapter duplication (39 near-identical hook files), zero React unit tests, no mutation dedup, no chain validation, no wallet lifecycle handling, and no optimistic updates.
 
 **Goal:** Refactor SDK B to adopt SDK A's best patterns while preserving SDK B's architecture and DX advantages.
 
@@ -28,7 +28,7 @@ Delete the 39 per-library hook files. The shared provider-based hooks in `src/to
 
 ### Changes
 
-**Keep in `token-sdk` (no change):**
+**Keep in `sdk` (no change):**
 
 - `GenericSigner` interface (6 methods) — correct abstraction for core SDK
 - `ViemSigner`, `EthersSigner` implementations
@@ -65,7 +65,7 @@ export * from "../token";
 
 ### Changes
 
-**Extend `TokenError` in `token-sdk`:**
+**Extend `TokenError` in `sdk`:**
 
 ```ts
 class TokenError extends Error {
@@ -254,7 +254,7 @@ function createProviderWrapper(options?: {
 | Phase                 | Scope     | Estimated Files Changed   | Dependencies |
 | --------------------- | --------- | ------------------------- | ------------ |
 | 1. Adapter Dedup      | react-sdk | ~45 (delete 40, modify 5) | None         |
-| 2. Error Hierarchy    | token-sdk | ~5 (modify 2, add 3)      | None         |
+| 2. Error Hierarchy    | sdk       | ~5 (modify 2, add 3)      | None         |
 | 3. Provider Lifecycle | react-sdk | ~8 (add 4, modify 4)      | Phase 2      |
 | 4. Mutation Dedup     | react-sdk | ~10 (modify 10)           | Phase 3      |
 | 5. React Tests        | react-sdk | ~12 (add 12)              | Phases 1-4   |

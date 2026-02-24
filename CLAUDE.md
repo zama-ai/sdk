@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `@zama-fhe/sdk-monorepo` — TypeScript SDKs for privacy-preserving ERC-20 token operations using Fully Homomorphic Encryption (Zama fhEVM). Three packages in a pnpm workspace:
 
-- **`packages/token-sdk`** (`@zama-fhe/sdk`) — Core SDK: confidential token operations, FHE relayer integration, contract call builders, viem/ethers adapters, Node.js worker pool
+- **`packages/sdk`** (`@zama-fhe/sdk`) — Core SDK: confidential token operations, FHE relayer integration, contract call builders, viem/ethers adapters, Node.js worker pool
 - **`packages/react-sdk`** (`@zama-fhe/react-sdk`) — React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths
 - **`packages/test-app`** (`@zama-fhe/sdk-test-app`) — Next.js E2E test app using Playwright against a local Hardhat node with FHE mock contracts
 
@@ -16,13 +16,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install
 pnpm install
 
-# Build (order matters: token-sdk first, then react-sdk)
+# Build (order matters: sdk first, then react-sdk)
 pnpm build
 
 # Unit tests (vitest, jsdom environment)
 pnpm test              # Watch mode
 pnpm test:run          # Single run
-pnpm test:run -- --reporter=verbose packages/token-sdk/src/token/__tests__/token.test.ts  # Single file
+pnpm test:run -- --reporter=verbose packages/sdk/src/token/__tests__/token.test.ts  # Single file
 
 # Type checking & linting
 pnpm typecheck         # tsc --noEmit
@@ -53,17 +53,17 @@ The `hardhat` directory is a git submodule containing FHE-enabled smart contract
 ### Package Dependency Chain
 
 ```
-test-app → react-sdk → token-sdk → @zama-fhe/relayer-sdk (external)
+test-app → react-sdk → sdk → @zama-fhe/relayer-sdk (external)
 ```
 
 Each SDK package has multiple entry points (main, `/viem`, `/ethers`, `/node` or `/wagmi`) built as separate bundles by tsup. See per-package `CLAUDE.md` files for detailed architecture.
 
 ### Key Design Patterns
 
-- **Framework-agnostic core**: `token-sdk` defines a `GenericSigner` interface (with `getChainId`, `getAddress`, `signTypedData`, `writeContract`, `readContract`, `waitForTransactionReceipt`); viem/ethers/wagmi adapters implement it. React hooks in `react-sdk` follow the same split.
+- **Framework-agnostic core**: `sdk` defines a `GenericSigner` interface (with `getChainId`, `getAddress`, `signTypedData`, `writeContract`, `readContract`, `waitForTransactionReceipt`); viem/ethers/wagmi adapters implement it. React hooks in `react-sdk` follow the same split.
 - **Lazy chain ID resolution**: `RelayerWeb` and `RelayerNode` accept a `getChainId` function. The worker/pool is re-initialized automatically when the chain changes.
 - **Single provider**: React apps use `TokenSDKProvider` directly with an explicitly constructed signer adapter. No library-specific provider wrappers.
-- **Contract call builders**: Pure functions in `token-sdk/src/contracts/` return `ContractCallConfig` objects. All builders validate address arguments at runtime via `assertAddress()` (must be `0x` + 40 hex chars). Library-specific sub-paths wrap these with execution logic.
+- **Contract call builders**: Pure functions in `sdk/src/contracts/` return `ContractCallConfig` objects. All builders validate address arguments at runtime via `assertAddress()` (must be `0x` + 40 hex chars). Library-specific sub-paths wrap these with execution logic.
 - **FHE via Web Workers**: Browser FHE operations run in a Web Worker loading WASM from CDN (`RelayerWeb`). Node.js uses `NodeWorkerClient`/`NodeWorkerPool` with worker threads.
 - **Two-phase balance polling** (React SDK): Poll encrypted handle cheaply via RPC, only decrypt when handle changes.
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { TokenSDK } from "../token-sdk";
+import { TokenSDK } from "../sdk";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";

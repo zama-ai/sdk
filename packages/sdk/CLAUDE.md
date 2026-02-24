@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`@zama-fhe/sdk` — TypeScript SDK for privacy-preserving ERC-20 token operations using Fully Homomorphic Encryption (fhEVM). Part of a pnpm monorepo at `packages/token-sdk`.
+`@zama-fhe/sdk` — TypeScript SDK for privacy-preserving ERC-20 token operations using Fully Homomorphic Encryption (fhEVM). Part of a pnpm monorepo at `packages/sdk`.
 
 ## Commands
 

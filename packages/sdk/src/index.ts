@@ -36,8 +36,8 @@ export { BATCH_SWAP_ABI } from "./abi/batch-swap.abi";
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
 
 // Token abstraction layer
-export { TokenSDK } from "./token/token-sdk";
-export type { TokenSDKConfig } from "./token/token-sdk";
+export { TokenSDK } from "./token/sdk";
+export type { TokenSDKConfig } from "./token/sdk";
 export { Token } from "./token/token";
 export type { TokenConfig } from "./token/token";
 export { ReadonlyToken } from "./token/readonly-token";

@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Refactor token-sdk to adopt confidential-defi/react-sdk's best patterns (signer dedup, state machine provider, error hierarchy, mutation dedup, React tests) while preserving existing architecture and DX.
+**Goal:** Refactor sdk to adopt confidential-defi/react-sdk's best patterns (signer dedup, state machine provider, error hierarchy, mutation dedup, React tests) while preserving existing architecture and DX.
 
 **Architecture:** Bottom-up refactor across 5 phases. Phase 1 eliminates 39 duplicated hook files by making library sub-paths thin re-export layers. Phase 2 extends the error hierarchy. Phase 3 replaces the simple provider with a reducer-based state machine. Phase 4 adds mutation dedup and phase tracking. Phase 5 adds React unit tests.
 
@@ -186,13 +186,13 @@ Expected: PASS (all E2E tests use provider-based hooks from main entry point).
 
 ---
 
-## Phase 2: Error Hierarchy (token-sdk)
+## Phase 2: Error Hierarchy (sdk)
 
 ### Task 6: Extend TokenErrorCode with new codes
 
 **Files:**
 
-- Modify: `packages/token-sdk/src/token/token.types.ts:90-127`
+- Modify: `packages/sdk/src/token/token.types.ts:90-127`
 
 **Step 1: Add new error codes**
 
@@ -241,7 +241,7 @@ export class TokenError extends Error {
 
 **Files:**
 
-- Create: `packages/token-sdk/src/token/errors.ts`
+- Create: `packages/sdk/src/token/errors.ts`
 
 **Step 1: Create error subclasses file**
 
@@ -297,11 +297,11 @@ export function toTokenError(
 }
 ```
 
-### Task 8: Export new errors from token-sdk
+### Task 8: Export new errors from sdk
 
 **Files:**
 
-- Modify: `packages/token-sdk/src/index.ts`
+- Modify: `packages/sdk/src/index.ts`
 
 **Step 1: Add exports**
 
@@ -335,7 +335,7 @@ export {
 
 **Files:**
 
-- Create: `packages/token-sdk/src/token/__tests__/errors.test.ts`
+- Create: `packages/sdk/src/token/__tests__/errors.test.ts`
 
 **Step 1: Write tests**
 
@@ -438,7 +438,7 @@ describe("toTokenError", () => {
 **Step 2: Run tests**
 
 ```bash
-pnpm test:run -- --reporter=verbose packages/token-sdk/src/token/__tests__/errors.test.ts
+pnpm test:run -- --reporter=verbose packages/sdk/src/token/__tests__/errors.test.ts
 ```
 
 Expected: All tests PASS.
@@ -454,8 +454,8 @@ Expected: PASS.
 **Step 4: Commit**
 
 ```bash
-git add packages/token-sdk/src/token/token.types.ts packages/token-sdk/src/token/errors.ts packages/token-sdk/src/token/__tests__/errors.test.ts packages/token-sdk/src/index.ts packages/react-sdk/src/index.ts
-git commit -m "feat(token-sdk): extend error hierarchy with lifecycle error codes
+git add packages/sdk/src/token/token.types.ts packages/sdk/src/token/errors.ts packages/sdk/src/token/__tests__/errors.test.ts packages/sdk/src/index.ts packages/react-sdk/src/index.ts
+git commit -m "feat(sdk): extend error hierarchy with lifecycle error codes
 
 Add ChainMismatchError, SignerMissingError, WalletDisconnectedError,
 InitTimeoutError subclasses. Add toTokenError() conversion helper.
