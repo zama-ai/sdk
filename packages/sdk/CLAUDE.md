@@ -45,7 +45,7 @@ TokenSDK (factory)
   │     └── RelayerSDK interface — FHE encrypt/decrypt operations
   └── ReadonlyToken
         ├── Balance queries, batch operations, ERC-165 checks
-        └── Static methods: authorizeAll, batchBalanceOf, batchDecryptBalances
+        └── Static methods: authorizeAll, batchDecryptBalances
 ```
 
 **Key abstractions:**
