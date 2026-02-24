@@ -19,19 +19,19 @@
     "next": "^16.1.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "viem": "^2.46.2",
+    "viem": "^2.46.3",
     "wagmi": "^3.5.0"
   },
   "devDependencies": {
     "@fhevm/mock-utils": "0.4.2",
     "@playwright/test": "^1.58.2",
-    "@tailwindcss/postcss": "^4.2.0",
+    "@tailwindcss/postcss": "^4.2.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@zama-fhe/relayer-sdk": "0.4.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "ethers": "^6.16.0",
-    "tailwindcss": "^4.2.0",
+    "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.30.2",
