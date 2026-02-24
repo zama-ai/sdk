@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-`@zama-fhe/token-sdk-monorepo` — TypeScript SDKs for privacy-preserving ERC-20 token operations using Fully Homomorphic Encryption (Zama fhEVM). Three packages in a pnpm workspace:
+`@zama-fhe/sdk-monorepo` — TypeScript SDKs for privacy-preserving ERC-20 token operations using Fully Homomorphic Encryption (Zama fhEVM). Three packages in a pnpm workspace:
 
 - **`packages/token-sdk`** (`@zama-fhe/token-sdk`) — Core SDK: confidential token operations, FHE relayer integration, contract call builders, viem/ethers adapters, Node.js worker pool
 - **`packages/token-react-sdk`** (`@zama-fhe/token-react-sdk`) — React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths

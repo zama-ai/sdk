@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package Overview
 
-`@zama-fhe/token-react-sdk` — React hooks for Zama confidential ERC-20 tokens (fhEVM). Built on `@tanstack/react-query`, wrapping `@zama-fhe/token-sdk` (workspace dependency). Part of a pnpm monorepo (`@zama-fhe/token-sdk-monorepo`).
+`@zama-fhe/token-react-sdk` — React hooks for Zama confidential ERC-20 tokens (fhEVM). Built on `@tanstack/react-query`, wrapping `@zama-fhe/token-sdk` (workspace dependency). Part of a pnpm monorepo (`@zama-fhe/sdk-monorepo`).
 
 ## Commands
 

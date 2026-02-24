@@ -1,5 +1,5 @@
 {
-  "name": "@zama-fhe/token-sdk-monorepo",
+  "name": "@zama-fhe/sdk-monorepo",
   "version": "0.1.0",
   "private": true,
   "description": "Monorepo for Zama confidential ERC-20 token SDKs (fhEVM)",
