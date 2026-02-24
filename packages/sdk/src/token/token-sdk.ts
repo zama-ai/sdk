@@ -4,6 +4,7 @@ import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
+import type { TokenSDKEventListener } from "./token-sdk-events";
 
 /** Configuration for {@link TokenSDK}. */
 export interface TokenSDKConfig {
@@ -15,6 +16,8 @@ export interface TokenSDKConfig {
   storage: GenericStringStorage;
   /** Number of days FHE credentials remain valid. Default: `1`. */
   credentialDurationDays?: number;
+  /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
+  onEvent?: TokenSDKEventListener;
 }
 
 /**
@@ -26,12 +29,14 @@ export class TokenSDK {
   readonly signer: GenericSigner;
   readonly storage: GenericStringStorage;
   readonly #credentialDurationDays: number | undefined;
+  readonly #onEvent: TokenSDKEventListener | undefined;
 
   constructor(config: TokenSDKConfig) {
     this.relayer = config.relayer;
     this.signer = config.signer;
     this.storage = config.storage;
     this.#credentialDurationDays = config.credentialDurationDays;
+    this.#onEvent = config.onEvent;
   }
 
   /**
@@ -45,6 +50,7 @@ export class TokenSDK {
       storage: this.storage,
       address: normalizeAddress(address, "address"),
       durationDays: this.#credentialDurationDays,
+      onEvent: this.#onEvent,
     });
   }
 
@@ -60,6 +66,7 @@ export class TokenSDK {
       address: normalizeAddress(address, "address"),
       wrapper: wrapper ? normalizeAddress(wrapper, "wrapper") : undefined,
       durationDays: this.#credentialDurationDays,
+      onEvent: this.#onEvent,
     });
   }
 

@@ -294,18 +294,63 @@ The relayer requires an API key. There are two approaches:
 
 **Option A — Proxy (recommended for browser apps)**
 
-Route relayer requests through your own backend that injects the API key. This keeps the key out of client-side code:
+Route relayer requests through your own backend that injects the API key. This keeps the key out of client-side code.
+
+**Client config:**
 
 ```ts
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://your-backend.com/api/relayer", // your proxy forwards to relayer.zama.ai
+      relayerUrl: "/api/relayer", // relative path — API key never reaches the client
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
 });
+```
+
+**Next.js App Router** — See [`examples/react-wagmi/src/app/api/relayer/[...path]/route.ts`](./examples/react-wagmi/src/app/api/relayer/%5B...path%5D/route.ts) for a complete implementation. It forwards all methods, strips hop-by-hop headers, and injects the API key server-side. Requires two env vars:
+
+```bash
+RELAYER_URL=https://relayer.zama.ai
+RELAYER_API_KEY=your-api-key
+```
+
+**Express** — Minimal middleware:
+
+```ts
+import type { RequestHandler } from "express";
+
+export function relayerProxy(): RequestHandler {
+  const upstream = process.env.RELAYER_URL!;
+  const apiKey = process.env.RELAYER_API_KEY!;
+
+  return async (req, res) => {
+    const path = req.path.replace(/^\/api\/relayer\/?/, "");
+    const url = new URL(path, upstream.endsWith("/") ? upstream : `${upstream}/`);
+    url.search = new URLSearchParams(req.query as Record<string, string>).toString();
+
+    const headers: Record<string, string> = {
+      "content-type": req.headers["content-type"] ?? "application/json",
+      "x-api-key": apiKey,
+    };
+    const csrf = req.headers["x-csrf-token"];
+    if (typeof csrf === "string") headers["x-csrf-token"] = csrf;
+
+    const response = await fetch(url.toString(), {
+      method: req.method,
+      headers,
+      body: ["GET", "HEAD"].includes(req.method) ? undefined : JSON.stringify(req.body),
+    });
+
+    res.status(response.status);
+    res.set("content-type", response.headers.get("content-type") ?? "application/json");
+    res.send(await response.text());
+  };
+}
+
+// Usage: app.use("/api/relayer", relayerProxy());
 ```
 
 **Option B — Direct API key via transport config**
@@ -449,6 +494,33 @@ try {
 | `DecryptionFailedError`    | `DECRYPTION_FAILED`    | FHE decryption operation failed            |
 | `ApprovalFailedError`      | `APPROVAL_FAILED`      | ERC-20 approval transaction failed         |
 | `TransactionRevertedError` | `TRANSACTION_REVERTED` | On-chain transaction reverted              |
+
+## Smart Accounts / Account Abstraction
+
+The SDK supports smart accounts when using wagmi with a compatible connector.
+
+**EIP-7702** — Accounts sign standard ECDSA and submit standard transactions. Expected to work without modification.
+
+**ERC-4337 (bundler / UserOperations)** — Two things to verify:
+
+1. **Transaction hashes** — `unshield()` and `resumeUnshield()` call `waitForTransactionReceipt(txHash)` and parse the `UnwrapRequested` event from the receipt. If your bundler returns a `userOpHash` instead of a standard `txHash`, receipt lookup will fail. The `WagmiSigner` detects this and throws a `TransactionRevertedError` with a descriptive message. Confirm your connector resolves to a standard transaction hash.
+
+2. **EIP-712 signatures** — FHE credential authorization uses `signTypedData`. Wagmi handles ERC-1271 validation at the library level, but the Zama relayer must also support your account's signature scheme. Contact Zama to confirm ERC-1271 support for non-ECDSA signers (passkeys, multisig).
+
+## Troubleshooting
+
+| Symptom                                         | Root Cause                                  | Fix                                                                                                                            |
+| ----------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `SigningRejectedError` on every decrypt         | Wallet rejected the EIP-712 signature       | Ensure the wallet supports `eth_signTypedData_v4`. Some hardware wallets require a firmware update.                            |
+| Balance stuck at `undefined`                    | Encrypted handle is `0x000...` (no balance) | Check that the user has shielded tokens first. A zero handle means nothing to decrypt.                                         |
+| `EncryptionFailedError`                         | Web Worker failed to load WASM bundle       | Check CSP headers — the worker loads WASM from a CDN. Ensure `wasm-unsafe-eval` is allowed.                                    |
+| `DecryptionFailedError` after page reload       | Unshield interrupted mid-flow               | Use `loadPendingUnshield()` on mount to detect and `resumeUnshield()` to complete the finalize step.                           |
+| Duplicate wallet popups                         | Credentials not cached or expired           | Call `useAuthorizeAll(tokenAddresses)` once on load to batch-authorize all tokens in a single signature.                       |
+| `TransactionRevertedError` on unshield finalize | Unwrap event not found or already finalized | Check the unwrap tx hash — if the tx was already finalized, clear the pending state with `clearPendingUnshield()`.             |
+| Balance not updating after transfer             | Handle polling interval too long            | Mutation hooks auto-invalidate caches, but if using direct contract calls, manually invalidate `confidentialBalanceQueryKeys`. |
+| `"Cannot find module @zama-fhe/sdk"`            | Missing or unbuilt dependency               | Run `pnpm build` from the monorepo root — `react-sdk` depends on built `sdk` output.                                           |
+| React hydration mismatch                        | Server tried to render FHE hooks            | Add `"use client"` directive to any component using SDK hooks. FHE operations require browser APIs.                            |
+| `RelayerRequestFailedError`                     | Relayer URL unreachable or auth missing     | Verify `relayerUrl` in transport config. If using API key auth, check the `auth` option is set correctly.                      |
 
 ## Development
 

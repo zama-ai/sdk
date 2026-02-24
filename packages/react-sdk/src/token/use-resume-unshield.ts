@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, UnshieldCallbacks } from "@zama-fhe/sdk";
+import type { Address, Hex, UnshieldCallbacks, Token } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -12,34 +12,34 @@ import {
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
 import { useToken, type UseTokenConfig } from "./use-token";
 
-/** Parameters passed to the `mutate` function of {@link useUnshield}. */
-export interface UnshieldParams {
-  /** Amount to unshield (plaintext — encrypted automatically). */
-  amount: bigint;
-  /** Optional progress callbacks for the multi-step unshield flow. */
+/** Parameters passed to the `mutate` function of {@link useResumeUnshield}. */
+export interface ResumeUnshieldParams {
+  /** The unwrap transaction hash from a previously interrupted unshield. */
+  unwrapTxHash: Hex;
+  /** Optional progress callbacks for the finalization flow. */
   callbacks?: UnshieldCallbacks;
 }
 
 /**
- * TanStack Query mutation options factory for unshield.
+ * TanStack Query mutation options factory for resume-unshield.
  *
  * @param token - A `Token` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */
-export function unshieldMutationOptions(token: Token) {
+export function resumeUnshieldMutationOptions(token: Token) {
   return {
-    mutationKey: ["unshield", token.address] as const,
-    mutationFn: ({ amount, callbacks }: UnshieldParams) => token.unshield(amount, callbacks),
+    mutationKey: ["resumeUnshield", token.address] as const,
+    mutationFn: ({ unwrapTxHash, callbacks }: ResumeUnshieldParams) =>
+      token.resumeUnshield(unwrapTxHash, callbacks),
   };
 }
 
 /**
- * Unshield a specific amount and finalize in one call.
- * Orchestrates: unwrap → wait for receipt → parse event → finalize.
+ * Resume an interrupted unshield from an existing unwrap tx hash.
+ * Useful when the user submitted the unwrap but the finalize step was
+ * interrupted (e.g. page reload, network error).
  *
  * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
- * - {@link SigningRejectedError} — user rejected the wallet prompt
- * - {@link EncryptionFailedError} — FHE encryption failed during unwrap
  * - {@link DecryptionFailedError} — public decryption failed during finalize
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
@@ -48,19 +48,19 @@ export function unshieldMutationOptions(token: Token) {
  *
  * @example
  * ```tsx
- * const unshield = useUnshield({ tokenAddress: "0x...", wrapperAddress: "0x..." });
- * unshield.mutate({ amount: 500n });
+ * const resumeUnshield = useResumeUnshield({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * resumeUnshield.mutate({ unwrapTxHash: "0xabc..." });
  * ```
  */
-export function useUnshield(
+export function useResumeUnshield(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, UnshieldParams, Address>,
+  options?: UseMutationOptions<Address, Error, ResumeUnshieldParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, UnshieldParams, Address>({
-    mutationKey: ["unshield", config.tokenAddress],
-    mutationFn: ({ amount, callbacks }) => token.unshield(amount, callbacks),
+  return useMutation<Address, Error, ResumeUnshieldParams, Address>({
+    mutationKey: ["resumeUnshield", config.tokenAddress],
+    mutationFn: ({ unwrapTxHash, callbacks }) => token.resumeUnshield(unwrapTxHash, callbacks),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({

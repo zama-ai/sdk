@@ -46,6 +46,11 @@ export { ZERO_HANDLE } from "./token/readonly-token";
 export { MemoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { CredentialsManager } from "./token/credential-manager";
+export {
+  savePendingUnshield,
+  loadPendingUnshield,
+  clearPendingUnshield,
+} from "./token/pending-unshield";
 export type {
   Address,
   Hex,
@@ -56,6 +61,12 @@ export type {
   TransactionReceipt,
   UnshieldCallbacks,
 } from "./token/token.types";
+export { TokenSDKEvents } from "./token/token-sdk-events";
+export type {
+  TokenSDKEventType,
+  TokenSDKEvent,
+  TokenSDKEventListener,
+} from "./token/token-sdk-events";
 export {
   TokenError,
   TokenErrorCode,

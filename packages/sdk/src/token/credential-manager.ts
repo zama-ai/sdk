@@ -3,6 +3,8 @@ import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStringStorage, StoredCredentials } from "./token.types";
 import { SigningRejectedError, SigningFailedError } from "./errors";
 import { assertObject, assertString, assertArray } from "../utils";
+import { TokenSDKEvents } from "./token-sdk-events";
+import type { TokenSDKEventInput, TokenSDKEventListener } from "./token-sdk-events";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
 interface EncryptedData {
@@ -32,6 +34,8 @@ export interface CredentialsManagerConfig {
   storage: GenericStringStorage;
   /** Number of days generated credentials remain valid. */
   durationDays: number;
+  /** Optional structured event listener. */
+  onEvent?: TokenSDKEventListener;
 }
 
 export class CredentialsManager {
@@ -39,6 +43,7 @@ export class CredentialsManager {
   #signer: GenericSigner;
   #storage: GenericStringStorage;
   #durationDays: number;
+  #onEvent: TokenSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
 
@@ -47,6 +52,11 @@ export class CredentialsManager {
     this.#signer = config.signer;
     this.#storage = config.storage;
     this.#durationDays = config.durationDays;
+    this.#onEvent = config.onEvent ?? Boolean;
+  }
+
+  #emit(partial: TokenSDKEventInput): void {
+    this.#onEvent({ ...partial, timestamp: Date.now() } as never);
   }
 
   /**
@@ -74,6 +84,7 @@ export class CredentialsManager {
    */
   async getAll(contractAddresses: Address[]): Promise<StoredCredentials> {
     const storeKey = await this.#storeKey();
+    this.#emit({ type: TokenSDKEvents.CredentialsLoading });
     try {
       const stored = await this.#storage.getItem(storeKey);
       if (stored) {
@@ -81,8 +92,10 @@ export class CredentialsManager {
         this.#assertEncryptedCredentials(encrypted);
         const creds = await this.#decryptCredentials(encrypted);
         if (this.#isValid(creds, contractAddresses)) {
+          this.#emit({ type: TokenSDKEvents.CredentialsCached });
           return creds;
         }
+        this.#emit({ type: TokenSDKEvents.CredentialsExpired });
       }
     } catch {
       // Stored credentials unreadable (corrupt, schema change, decryption failure) — regenerate.
@@ -198,6 +211,7 @@ export class CredentialsManager {
    * ```
    */
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
+    this.#emit({ type: TokenSDKEvents.CredentialsCreating });
     try {
       const keypair = await this.#sdk.generateKeypair();
       const startTimestamp = Math.floor(Date.now() / 1000);
@@ -228,6 +242,7 @@ export class CredentialsManager {
         // Store write failed — credentials still usable in memory
       }
 
+      this.#emit({ type: TokenSDKEvents.CredentialsCreated });
       return creds;
     } catch (error) {
       const isRejected =

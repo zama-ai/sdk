@@ -65,7 +65,17 @@ export type {
   InputProofBytesType,
   BatchTransferData,
   StoredCredentials,
+  UnshieldCallbacks,
+  TokenSDKEventType,
+  TokenSDKEvent,
+  TokenSDKEventListener,
 } from "@zama-fhe/sdk";
+
+// Re-export pending-unshield persistence utilities
+export { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+
+// Re-export event constants
+export { TokenSDKEvents } from "@zama-fhe/sdk";
 
 // Re-export network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
@@ -176,7 +186,16 @@ export {
   type FinalizeUnwrapParams,
 } from "./token/use-finalize-unwrap";
 export { useUnshield, unshieldMutationOptions, type UnshieldParams } from "./token/use-unshield";
-export { useUnshieldAll, unshieldAllMutationOptions } from "./token/use-unshield-all";
+export {
+  useUnshieldAll,
+  unshieldAllMutationOptions,
+  type UnshieldAllParams,
+} from "./token/use-unshield-all";
+export {
+  useResumeUnshield,
+  resumeUnshieldMutationOptions,
+  type ResumeUnshieldParams,
+} from "./token/use-resume-unshield";
 export {
   useUnderlyingAllowance,
   useUnderlyingAllowanceSuspense,

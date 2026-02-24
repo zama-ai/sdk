@@ -192,6 +192,24 @@ const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });
 const balances = await ReadonlyToken.batchDecryptBalances(tokens, { handles, owner });
 ```
 
+### Pending Unshield Persistence
+
+The unshield flow is two-phase: unwrap tx, then finalize. If the page reloads between phases, the unwrap tx hash is lost. Use these utilities to persist it:
+
+```ts
+import { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+
+// Save the unwrap hash before finalization
+await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
+
+// On next load, check for pending unshields
+const pending = await loadPendingUnshield(storage, wrapperAddress);
+if (pending) {
+  await token.resumeUnshield(pending);
+  await clearPendingUnshield(storage, wrapperAddress);
+}
+```
+
 ### Storage
 
 FHE credentials (keypair + EIP-712 signature) are persisted to storage. Three options:
@@ -215,11 +233,33 @@ interface GenericStringStorage {
 
 ### `TokenSDKConfig`
 
-| Field     | Type                   | Description                                              |
-| --------- | ---------------------- | -------------------------------------------------------- |
-| `relayer` | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance) |
-| `signer`  | `GenericSigner`        | Wallet signer interface.                                 |
-| `storage` | `GenericStringStorage` | Credential storage backend.                              |
+| Field                    | Type                    | Description                                              |
+| ------------------------ | ----------------------- | -------------------------------------------------------- |
+| `relayer`                | `RelayerSDK`            | Relayer backend (`RelayerWeb` or `RelayerNode` instance) |
+| `signer`                 | `GenericSigner`         | Wallet signer interface.                                 |
+| `storage`                | `GenericStringStorage`  | Credential storage backend.                              |
+| `credentialDurationDays` | `number`                | Optional. Days FHE credentials remain valid. Default: 1. |
+| `onEvent`                | `TokenSDKEventListener` | Optional. Structured event listener for debugging.       |
+
+#### Structured Event Listener
+
+The `onEvent` callback receives typed events at key lifecycle points (encrypt, decrypt, wrap, unshield phases). Event payloads never contain sensitive data (amounts, keys, proofs) — only metadata useful for tracing:
+
+```ts
+const sdk = new TokenSDK({
+  relayer,
+  signer,
+  storage,
+  onEvent: (event) => {
+    console.debug(`[Zama] ${event.type}`, {
+      token: event.tokenAddress?.slice(0, 10),
+      txHash: event.txHash?.slice(0, 10),
+    });
+  },
+});
+```
+
+Event types: `encrypt:start`, `encrypt:end`, `decrypt:start`, `decrypt:end`, `wrap:submitted`, `transfer:submitted`, `unshield:phase1_submitted`, `unshield:phase2_started`, `unshield:phase2_submitted`, `credentials:loading`, `credentials:cached`, `credentials:expired`, `credentials:creating`, `credentials:created`.
 
 ### `RelayerWebConfig` (browser)
 

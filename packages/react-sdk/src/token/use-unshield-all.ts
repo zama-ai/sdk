@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token } from "@zama-fhe/sdk";
+import type { Address, Token, UnshieldCallbacks } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -18,10 +18,16 @@ import { useToken, type UseTokenConfig } from "./use-token";
  * @param token - A `Token` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */
+/** Parameters passed to the `mutate` function of {@link useUnshieldAll}. */
+export interface UnshieldAllParams {
+  /** Optional progress callbacks for the multi-step unshield flow. */
+  callbacks?: UnshieldCallbacks;
+}
+
 export function unshieldAllMutationOptions(token: Token) {
   return {
     mutationKey: ["unshieldAll", token.address] as const,
-    mutationFn: () => token.unshieldAll(),
+    mutationFn: (params?: UnshieldAllParams) => token.unshieldAll(params?.callbacks),
   };
 }
 
@@ -40,13 +46,13 @@ export function unshieldAllMutationOptions(token: Token) {
  */
 export function useUnshieldAll(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, void, Address>,
+  options?: UseMutationOptions<Address, Error, UnshieldAllParams | void, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, void, Address>({
+  return useMutation<Address, Error, UnshieldAllParams | void, Address>({
     mutationKey: ["unshieldAll", config.tokenAddress],
-    mutationFn: () => token.unshieldAll(),
+    mutationFn: (params) => token.unshieldAll(params?.callbacks),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({

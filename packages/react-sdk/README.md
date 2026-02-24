@@ -348,7 +348,7 @@ These hooks orchestrate the full unshield flow in a single call: unwrap → wait
 
 #### `useUnshield`
 
-Unshield a specific amount. Handles the entire unwrap + finalize flow.
+Unshield a specific amount. Handles the entire unwrap + finalize flow. Supports optional progress callbacks to track each step.
 
 ```ts
 function useUnshield(
@@ -358,6 +358,7 @@ function useUnshield(
 
 interface UnshieldParams {
   amount: bigint;
+  callbacks?: UnshieldCallbacks;
 }
 ```
 
@@ -366,18 +367,29 @@ const { mutateAsync: unshield, isPending } = useUnshield({
   tokenAddress: "0xTokenAddress",
 });
 
-const finalizeTxHash = await unshield({ amount: 500n });
+const finalizeTxHash = await unshield({
+  amount: 500n,
+  callbacks: {
+    onUnwrapSubmitted: (txHash) => console.log("Unwrap tx:", txHash),
+    onFinalizing: () => console.log("Finalizing..."),
+    onFinalizeSubmitted: (txHash) => console.log("Finalize tx:", txHash),
+  },
+});
 ```
 
 #### `useUnshieldAll`
 
-Unshield the entire balance. Handles the entire unwrap + finalize flow.
+Unshield the entire balance. Handles the entire unwrap + finalize flow. Supports optional progress callbacks.
 
 ```ts
 function useUnshieldAll(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, void>,
-): UseMutationResult<Address, Error, void>;
+  options?: UseMutationOptions<Address, Error, UnshieldAllParams | void>,
+): UseMutationResult<Address, Error, UnshieldAllParams | void>;
+
+interface UnshieldAllParams {
+  callbacks?: UnshieldCallbacks;
+}
 ```
 
 ```tsx
@@ -386,6 +398,58 @@ const { mutateAsync: unshieldAll } = useUnshieldAll({
 });
 
 const finalizeTxHash = await unshieldAll();
+```
+
+#### `useResumeUnshield`
+
+Resume an interrupted unshield from a saved unwrap tx hash. Useful when the user submitted the unwrap but the finalize step was interrupted (e.g. page reload, network error). Pair with the `savePendingUnshield`/`loadPendingUnshield`/`clearPendingUnshield` utilities for persistence.
+
+```ts
+function useResumeUnshield(
+  config: UseTokenConfig,
+  options?: UseMutationOptions<Address, Error, ResumeUnshieldParams>,
+): UseMutationResult<Address, Error, ResumeUnshieldParams>;
+
+interface ResumeUnshieldParams {
+  unwrapTxHash: Hex;
+  callbacks?: UnshieldCallbacks;
+}
+```
+
+```tsx
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/react-sdk";
+
+const { mutateAsync: resumeUnshield } = useResumeUnshield({
+  tokenAddress: "0xTokenAddress",
+});
+
+// On mount, check for interrupted unshields
+const pending = await loadPendingUnshield(storage, wrapperAddress);
+if (pending) {
+  await resumeUnshield({ unwrapTxHash: pending });
+  await clearPendingUnshield(storage, wrapperAddress);
+}
+```
+
+#### Pending Unshield Persistence
+
+Save the unwrap tx hash before finalization so interrupted unshields can be resumed after page reloads:
+
+```ts
+import {
+  savePendingUnshield,
+  loadPendingUnshield,
+  clearPendingUnshield,
+} from "@zama-fhe/react-sdk";
+
+// Save before the finalize step
+await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
+
+// Load on next visit
+const pending = await loadPendingUnshield(storage, wrapperAddress);
+
+// Clear after successful finalization
+await clearPendingUnshield(storage, wrapperAddress);
 ```
 
 ### Unwrap Hooks (Low-Level)
@@ -711,6 +775,70 @@ import { ViemSigner } from "@zama-fhe/react-sdk/viem";
 import { EthersSigner } from "@zama-fhe/react-sdk/ethers";
 ```
 
+## Wallet Integration Guide
+
+### SSR / Next.js
+
+All components using SDK hooks must be client components. Add `"use client"` at the top of files that import from `@zama-fhe/react-sdk`. FHE operations (encryption, decryption) run in a Web Worker and require browser APIs — they cannot execute on the server.
+
+```tsx
+"use client";
+
+import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+```
+
+Place `TokenSDKProvider` inside your client-only layout. Do **not** create the relayer or signer at the module level in a server component — wrap them in a client component or use lazy initialization.
+
+### FHE Credentials Lifecycle
+
+FHE decrypt credentials are generated once per wallet + token set and cached in the storage backend you provide (e.g. `IndexedDBStorage`). The lifecycle:
+
+1. **First decrypt** — SDK generates an FHE keypair, creates EIP-712 typed data, and prompts the wallet to sign. The signed credential is stored.
+2. **Subsequent decrypts** — If cached credentials cover the requested token, they're reused silently (no wallet prompt).
+3. **Expiry** — Credentials expire based on `durationDays`. After expiry, the next decrypt re-prompts the wallet.
+4. **Pre-authorization** — Call `useAuthorizeAll(tokenAddresses)` early to batch-authorize all tokens in one wallet prompt, avoiding repeated popups.
+
+### Error-to-User-Message Mapping
+
+Map SDK errors to user-friendly messages in your UI:
+
+```tsx
+import {
+  SigningRejectedError,
+  EncryptionFailedError,
+  DecryptionFailedError,
+  TransactionRevertedError,
+  ApprovalFailedError,
+} from "@zama-fhe/react-sdk";
+
+function getUserMessage(error: Error): string {
+  if (error instanceof SigningRejectedError)
+    return "Transaction cancelled — please approve in your wallet.";
+  if (error instanceof EncryptionFailedError) return "Encryption failed — please try again.";
+  if (error instanceof DecryptionFailedError) return "Decryption failed — please try again.";
+  if (error instanceof ApprovalFailedError) return "Token approval failed — please try again.";
+  if (error instanceof TransactionRevertedError)
+    return "Transaction failed on-chain — check your balance.";
+  return "An unexpected error occurred.";
+}
+```
+
+### Balance Caching and Refresh
+
+Balance queries use two-phase polling:
+
+1. **Phase 1 (cheap)** — Polls the encrypted balance handle via a read-only RPC call at `handleRefetchInterval` (default: 10s).
+2. **Phase 2 (expensive)** — Only when the handle changes (i.e. balance updated on-chain), triggers an FHE decryption via the relayer.
+
+This means balances update within `handleRefetchInterval` ms of any on-chain change, without wasting decryption resources. Mutation hooks (`useConfidentialTransfer`, `useShield`, `useUnshield`, etc.) automatically invalidate the relevant caches on success, so the UI updates immediately after user actions.
+
+To force a refresh:
+
+```tsx
+const queryClient = useQueryClient();
+queryClient.invalidateQueries({ queryKey: confidentialBalanceQueryKeys.all });
+```
+
 ## Re-exports from Core SDK
 
 All public exports from `@zama-fhe/sdk` are re-exported from the main entry point. You never need to import from the core package directly.
@@ -718,6 +846,8 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 **Classes:** `RelayerWeb`, `TokenSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
+
+**Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
 **Types:** `Address`, `TokenSDKConfig`, `TokenConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `UnshieldCallbacks`.
 

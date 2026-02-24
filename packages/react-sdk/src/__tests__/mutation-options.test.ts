@@ -11,6 +11,7 @@ import { unwrapAllMutationOptions } from "../token/use-unwrap-all";
 import { finalizeUnwrapMutationOptions } from "../token/use-finalize-unwrap";
 import { unshieldMutationOptions } from "../token/use-unshield";
 import { unshieldAllMutationOptions } from "../token/use-unshield-all";
+import { resumeUnshieldMutationOptions } from "../token/use-resume-unshield";
 import { authorizeAllMutationOptions } from "../token/use-authorize-all";
 import { encryptMutationOptions } from "../relayer/use-encrypt";
 import { createMockSigner, createMockRelayer, createMockStorage } from "./test-utils";
@@ -32,6 +33,7 @@ function createMockToken(address: Address = TOKEN_ADDR) {
     finalizeUnwrap: vi.fn().mockResolvedValue("0xtx"),
     unshield: vi.fn().mockResolvedValue("0xtx"),
     unshieldAll: vi.fn().mockResolvedValue("0xtx"),
+    resumeUnshield: vi.fn().mockResolvedValue("0xtx"),
   } as unknown as Token;
 }
 
@@ -125,7 +127,7 @@ it("unshieldMutationOptions", async () => {
 
   expect(opts.mutationKey).toEqual(["unshield", TOKEN_ADDR]);
   await opts.mutationFn({ amount: 300n });
-  expect(token.unshield).toHaveBeenCalledWith(300n);
+  expect(token.unshield).toHaveBeenCalledWith(300n, undefined);
 });
 
 it("unshieldAllMutationOptions", async () => {
@@ -134,7 +136,17 @@ it("unshieldAllMutationOptions", async () => {
 
   expect(opts.mutationKey).toEqual(["unshieldAll", TOKEN_ADDR]);
   await opts.mutationFn();
-  expect(token.unshieldAll).toHaveBeenCalled();
+  expect(token.unshieldAll).toHaveBeenCalledWith(undefined);
+});
+
+it("resumeUnshieldMutationOptions", async () => {
+  const token = createMockToken();
+  const opts = resumeUnshieldMutationOptions(token);
+
+  expect(opts.mutationKey).toEqual(["resumeUnshield", TOKEN_ADDR]);
+  const txHash = "0xabc" as `0x${string}`;
+  await opts.mutationFn({ unwrapTxHash: txHash });
+  expect(token.resumeUnshield).toHaveBeenCalledWith(txHash, undefined);
 });
 
 it("authorizeAllMutationOptions", async () => {

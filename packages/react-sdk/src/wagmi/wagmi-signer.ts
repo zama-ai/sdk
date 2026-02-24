@@ -6,6 +6,7 @@ import type {
   Hex,
   EIP712TypedData,
 } from "@zama-fhe/sdk";
+import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 import {
   getChainId,
@@ -59,6 +60,19 @@ export class WagmiSigner implements GenericSigner {
   }
 
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
-    return waitForTransactionReceipt(this.config, { hash });
+    try {
+      return await waitForTransactionReceipt(this.config, { hash });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("could not be found") || message.includes("Transaction not found")) {
+        throw new TransactionRevertedError(
+          `Could not find transaction receipt for hash "${hash.slice(0, 10)}…". ` +
+            "If using ERC-4337 with a bundler, your connector may be returning a UserOperation hash " +
+            "instead of a transaction hash.",
+          { cause: error instanceof Error ? error : undefined },
+        );
+      }
+      throw error;
+    }
   }
 }

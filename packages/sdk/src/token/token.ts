@@ -23,6 +23,7 @@ import {
   DecryptionFailedError,
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
+import { TokenSDKEvents } from "./token-sdk-events";
 import type { UnshieldCallbacks } from "./token.types";
 
 /**
@@ -82,19 +83,23 @@ export class Token extends ReadonlyToken {
   async confidentialTransfer(to: Address, amount: bigint): Promise<Hex> {
     const normalizedTo = normalizeAddress(to, "to");
     try {
+      this.emit({ type: TokenSDKEvents.EncryptStart });
       const { handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
         contractAddress: this.address,
         userAddress: await this.signer.getAddress(),
       });
+      this.emit({ type: TokenSDKEvents.EncryptEnd });
 
       if (handles.length === 0) {
         throw new EncryptionFailedError("Encryption returned no handles");
       }
 
-      return await this.signer.writeContract(
+      const txHash = await this.signer.writeContract(
         confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
       );
+      this.emit({ type: TokenSDKEvents.TransferSubmitted, txHash });
+      return txHash;
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new EncryptionFailedError("Failed to encrypt transfer amount", {
@@ -116,17 +121,19 @@ export class Token extends ReadonlyToken {
     const normalizedFrom = normalizeAddress(from, "from");
     const normalizedTo = normalizeAddress(to, "to");
     try {
+      this.emit({ type: TokenSDKEvents.EncryptStart });
       const { handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
         contractAddress: this.address,
         userAddress: normalizedFrom,
       });
+      this.emit({ type: TokenSDKEvents.EncryptEnd });
 
       if (handles.length === 0) {
         throw new EncryptionFailedError("Encryption returned no handles");
       }
 
-      return await this.signer.writeContract(
+      const txHash = await this.signer.writeContract(
         confidentialTransferFromContract(
           this.address,
           normalizedFrom,
@@ -135,6 +142,8 @@ export class Token extends ReadonlyToken {
           inputProof,
         ),
       );
+      this.emit({ type: TokenSDKEvents.TransferFromSubmitted, txHash });
+      return txHash;
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new EncryptionFailedError("Failed to encrypt transferFrom amount", {
@@ -155,9 +164,11 @@ export class Token extends ReadonlyToken {
   async approve(spender: Address, until?: number): Promise<Hex> {
     const normalizedSpender = normalizeAddress(spender, "spender");
     try {
-      return await this.signer.writeContract(
+      const txHash = await this.signer.writeContract(
         setOperatorContract(this.address, normalizedSpender, until),
       );
+      this.emit({ type: TokenSDKEvents.ApproveSubmitted, txHash });
+      return txHash;
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new ApprovalFailedError("Operator approval failed", {
@@ -216,7 +227,9 @@ export class Token extends ReadonlyToken {
 
     try {
       const address = await this.signer.getAddress();
-      return await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
+      const txHash = await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
+      this.emit({ type: TokenSDKEvents.WrapSubmitted, txHash });
+      return txHash;
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Shield (wrap) transaction failed", {
@@ -236,9 +249,11 @@ export class Token extends ReadonlyToken {
   async wrapETH(amount: bigint, value?: bigint): Promise<Hex> {
     try {
       const userAddress = await this.signer.getAddress();
-      return await this.signer.writeContract(
+      const txHash = await this.signer.writeContract(
         wrapETHContract(this.wrapper, userAddress, amount, value ?? amount),
       );
+      this.emit({ type: TokenSDKEvents.WrapSubmitted, txHash });
+      return txHash;
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Shield ETH (wrapETH) transaction failed", {
@@ -262,11 +277,13 @@ export class Token extends ReadonlyToken {
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
     try {
+      this.emit({ type: TokenSDKEvents.EncryptStart });
       ({ handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
         contractAddress: this.wrapper,
         userAddress,
       }));
+      this.emit({ type: TokenSDKEvents.EncryptEnd });
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new EncryptionFailedError("Failed to encrypt unshield amount", {
@@ -279,9 +296,11 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      return await this.signer.writeContract(
+      const txHash = await this.signer.writeContract(
         unwrapContract(this.address, userAddress, userAddress, handles[0]!, inputProof),
       );
+      this.emit({ type: TokenSDKEvents.UnwrapSubmitted, txHash });
+      return txHash;
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Unshield transaction failed", {
@@ -309,9 +328,11 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      return await this.signer.writeContract(
+      const txHash = await this.signer.writeContract(
         unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
       );
+      this.emit({ type: TokenSDKEvents.UnwrapSubmitted, txHash });
+      return txHash;
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Unshield-all transaction failed", {
@@ -379,7 +400,9 @@ export class Token extends ReadonlyToken {
     let decryptionProof: Address;
 
     try {
+      this.emit({ type: TokenSDKEvents.DecryptStart });
       const result = await this.sdk.publicDecrypt([burnAmountHandle]);
+      this.emit({ type: TokenSDKEvents.DecryptEnd });
       decryptionProof = result.decryptionProof;
       try {
         clearValue = BigInt(result.abiEncodedClearValues);
@@ -396,9 +419,11 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      return await this.signer.writeContract(
+      const txHash = await this.signer.writeContract(
         finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, decryptionProof),
       );
+      this.emit({ type: TokenSDKEvents.FinalizeUnwrapSubmitted, txHash });
+      return txHash;
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new TransactionRevertedError("Failed to finalize unshield", {
@@ -435,9 +460,11 @@ export class Token extends ReadonlyToken {
         }
       }
 
-      return await this.signer.writeContract(
+      const txHash = await this.signer.writeContract(
         approveContract(underlying, this.wrapper, approvalAmount),
       );
+      this.emit({ type: TokenSDKEvents.ApproveUnderlyingSubmitted, txHash });
+      return txHash;
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new ApprovalFailedError("ERC-20 approval failed", {
@@ -449,6 +476,7 @@ export class Token extends ReadonlyToken {
   // PRIVATE HELPERS
 
   async #waitAndFinalizeUnshield(unshieldHash: Hex, callbacks?: UnshieldCallbacks): Promise<Hex> {
+    this.emit({ type: TokenSDKEvents.UnshieldPhase1Submitted, txHash: unshieldHash });
     let receipt;
     try {
       receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
@@ -462,8 +490,10 @@ export class Token extends ReadonlyToken {
     if (!event) {
       throw new TransactionRevertedError("No UnwrapRequested event found in unshield receipt");
     }
+    this.emit({ type: TokenSDKEvents.UnshieldPhase2Started });
     safeCallback(() => callbacks?.onFinalizing?.());
     const finalizeHash = await this.finalizeUnwrap(event.encryptedAmount);
+    this.emit({ type: TokenSDKEvents.UnshieldPhase2Submitted, txHash: finalizeHash });
     safeCallback(() => callbacks?.onFinalizeSubmitted?.(finalizeHash));
     return finalizeHash;
   }

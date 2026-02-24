@@ -17,6 +17,8 @@ import { normalizeAddress } from "../utils";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credential-manager";
+import { TokenSDKEvents } from "./token-sdk-events";
+import type { TokenSDKEventInput, TokenSDKEventListener } from "./token-sdk-events";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -44,6 +46,8 @@ export interface ReadonlyTokenConfig {
   address: Address;
   /** Number of days FHE credentials remain valid. Default: `1`. */
   durationDays?: number;
+  /** Optional structured event listener for debugging and telemetry. */
+  onEvent?: TokenSDKEventListener;
 }
 
 /**
@@ -56,6 +60,7 @@ export class ReadonlyToken {
   protected readonly sdk: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
+  readonly #onEvent: TokenSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
     const address = normalizeAddress(config.address, "address");
@@ -64,10 +69,17 @@ export class ReadonlyToken {
       signer: config.signer,
       storage: config.storage,
       durationDays: config.durationDays ?? 1,
+      onEvent: config.onEvent,
     });
     this.sdk = config.sdk;
     this.signer = config.signer;
     this.address = address;
+    this.#onEvent = config.onEvent;
+  }
+
+  /** Emit a structured event (no-op when no listener is registered). */
+  protected emit(partial: TokenSDKEventInput): void {
+    this.#onEvent?.({ ...partial, tokenAddress: this.address, timestamp: Date.now() });
   }
 
   /**
@@ -90,6 +102,7 @@ export class ReadonlyToken {
     const creds = await this.credentials.get(this.address);
 
     try {
+      this.emit({ type: TokenSDKEvents.DecryptStart });
       const result = await this.sdk.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
@@ -101,6 +114,7 @@ export class ReadonlyToken {
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });
+      this.emit({ type: TokenSDKEvents.DecryptEnd });
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
@@ -400,6 +414,7 @@ export class ReadonlyToken {
     const creds = await this.credentials.get(this.address);
 
     try {
+      this.emit({ type: TokenSDKEvents.DecryptStart });
       const result = await this.sdk.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
@@ -411,6 +426,7 @@ export class ReadonlyToken {
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });
+      this.emit({ type: TokenSDKEvents.DecryptEnd });
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
@@ -439,6 +455,7 @@ export class ReadonlyToken {
     const creds = await this.credentials.get(this.address);
 
     try {
+      this.emit({ type: TokenSDKEvents.DecryptStart });
       const decrypted = await this.sdk.userDecrypt({
         handles: nonZeroHandles,
         contractAddress: this.address,
@@ -450,6 +467,7 @@ export class ReadonlyToken {
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });
+      this.emit({ type: TokenSDKEvents.DecryptEnd });
 
       for (const handle of nonZeroHandles) {
         results.set(handle, decrypted[handle] ?? BigInt(0));
