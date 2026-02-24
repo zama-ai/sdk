@@ -12,6 +12,8 @@ export interface UseConfidentialBalancesConfig {
   tokenAddresses: Address[];
   /** Polling interval (ms) for the encrypted handles. Default: 10 000. */
   handleRefetchInterval?: number;
+  /** Maximum number of concurrent decrypt calls. Default: `Infinity` (no limit). */
+  maxConcurrency?: number;
 }
 
 /** Query options for the decrypt phase of {@link useConfidentialBalances}. */
@@ -43,7 +45,7 @@ export function useConfidentialBalances(
   config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
 ) {
-  const { tokenAddresses, handleRefetchInterval } = config;
+  const { tokenAddresses, handleRefetchInterval, maxConcurrency } = config;
   const sdk = useTokenSDK();
   // Resolve the signer address for stable query keys.
   // This prevents cache collisions when wallet switches.
@@ -92,7 +94,10 @@ export function useConfidentialBalances(
   const balancesQuery = useQuery<Map<Address, bigint>, Error>({
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, ownerKey), handlesKey],
     queryFn: async () => {
-      const raw = await ReadonlyToken.batchDecryptBalances(tokens, { handles: handles! });
+      const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
+        handles: handles!,
+        maxConcurrency,
+      });
       // Re-key the Map with the caller's original addresses so lookups
       // work regardless of address casing (tokens normalize to lowercase).
       const remapped = new Map<Address, bigint>();

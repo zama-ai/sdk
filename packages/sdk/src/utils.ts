@@ -45,3 +45,31 @@ export function assertArray(value: unknown, context: string): asserts value is u
     throw new TypeError(`${context} must be an array, got ${typeof value}`);
   }
 }
+
+// ── Concurrency helper ──────────────────────────────────────
+
+/**
+ * Execute an array of async thunks with bounded concurrency.
+ * Defaults to `Infinity` (equivalent to `Promise.all`).
+ */
+export async function pLimit<T>(
+  fns: Array<() => Promise<T>>,
+  maxConcurrency = Infinity,
+): Promise<T[]> {
+  if (!isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
+    return Promise.all(fns.map((f) => f()));
+  }
+
+  const results: T[] = new Array(fns.length);
+  let index = 0;
+
+  async function worker() {
+    while (index < fns.length) {
+      const i = index++;
+      results[i] = await fns[i]!();
+    }
+  }
+
+  await Promise.all(Array.from({ length: maxConcurrency }, worker));
+  return results;
+}

@@ -13,7 +13,7 @@ import {
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
-import { normalizeAddress } from "../utils";
+import { normalizeAddress, pLimit } from "../utils";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credential-manager";
@@ -32,6 +32,8 @@ export interface BatchDecryptOptions {
   owner?: Address;
   /** Called when decryption fails for a single token. */
   onError?: (address: Address, error: Error) => void;
+  /** Maximum number of concurrent decrypt calls. Default: `Infinity` (no limit). */
+  maxConcurrency?: number;
 }
 
 /** Configuration for constructing a {@link ReadonlyToken}. */
@@ -198,7 +200,7 @@ export class ReadonlyToken {
   ): Promise<Map<Address, bigint>> {
     if (tokens.length === 0) return new Map();
 
-    const { handles, owner, onError } = options ?? {};
+    const { handles, owner, onError, maxConcurrency } = options ?? {};
 
     const sdk = tokens[0]!.sdk;
     const signer = tokens[0]!.signer;
@@ -217,7 +219,7 @@ export class ReadonlyToken {
     const creds = await tokens[0]!.credentials.getAll(allAddresses);
 
     const results = new Map<Address, bigint>();
-    const decryptPromises: Promise<void>[] = [];
+    const decryptFns: Array<() => Promise<void>> = [];
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i]!;
@@ -228,7 +230,7 @@ export class ReadonlyToken {
         continue;
       }
 
-      decryptPromises.push(
+      decryptFns.push(() =>
         sdk
           .userDecrypt({
             handles: [handle],
@@ -251,7 +253,7 @@ export class ReadonlyToken {
       );
     }
 
-    await Promise.all(decryptPromises);
+    await pLimit(decryptFns, maxConcurrency);
     return results;
   }
 
