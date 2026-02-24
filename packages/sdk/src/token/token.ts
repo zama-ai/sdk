@@ -14,6 +14,7 @@ import {
 } from "../contracts";
 import { findUnwrapRequested } from "../events";
 import type { Address, Hex } from "../relayer/relayer-sdk.types";
+import { normalizeAddress } from "../utils";
 import {
   TokenError,
   EncryptionFailedError,
@@ -22,6 +23,7 @@ import {
   DecryptionFailedError,
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
+import type { UnshieldCallbacks } from "./token.types";
 
 /**
  * ERC-20-like interface for a single confidential token.
@@ -45,7 +47,7 @@ export class Token extends ReadonlyToken {
 
   constructor(config: TokenConfig) {
     super(config);
-    this.wrapper = config.wrapper ?? config.address;
+    this.wrapper = config.wrapper ? normalizeAddress(config.wrapper, "wrapper") : this.address;
   }
 
   async #getUnderlying(): Promise<Address> {
@@ -78,6 +80,7 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async confidentialTransfer(to: Address, amount: bigint): Promise<Hex> {
+    const normalizedTo = normalizeAddress(to, "to");
     try {
       const { handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
@@ -90,7 +93,7 @@ export class Token extends ReadonlyToken {
       }
 
       return await this.signer.writeContract(
-        confidentialTransferContract(this.address, to, handles[0]!, inputProof),
+        confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
@@ -110,11 +113,13 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async confidentialTransferFrom(from: Address, to: Address, amount: bigint): Promise<Hex> {
+    const normalizedFrom = normalizeAddress(from, "from");
+    const normalizedTo = normalizeAddress(to, "to");
     try {
       const { handles, inputProof } = await this.sdk.encrypt({
         values: [amount],
         contractAddress: this.address,
-        userAddress: from,
+        userAddress: normalizedFrom,
       });
 
       if (handles.length === 0) {
@@ -122,7 +127,13 @@ export class Token extends ReadonlyToken {
       }
 
       return await this.signer.writeContract(
-        confidentialTransferFromContract(this.address, from, to, handles[0]!, inputProof),
+        confidentialTransferFromContract(
+          this.address,
+          normalizedFrom,
+          normalizedTo,
+          handles[0]!,
+          inputProof,
+        ),
       );
     } catch (error) {
       if (error instanceof TokenError) throw error;
@@ -142,8 +153,11 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async approve(spender: Address, until?: number): Promise<Hex> {
+    const normalizedSpender = normalizeAddress(spender, "spender");
     try {
-      return await this.signer.writeContract(setOperatorContract(this.address, spender, until));
+      return await this.signer.writeContract(
+        setOperatorContract(this.address, normalizedSpender, until),
+      );
     } catch (error) {
       if (error instanceof TokenError) throw error;
       throw new ApprovalFailedError("Operator approval failed", {
@@ -163,8 +177,11 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async isApproved(spender: Address): Promise<boolean> {
+    const normalizedSpender = normalizeAddress(spender, "spender");
     const holder = await this.signer.getAddress();
-    return this.signer.readContract<boolean>(isOperatorContract(this.address, holder, spender));
+    return this.signer.readContract<boolean>(
+      isOperatorContract(this.address, holder, normalizedSpender),
+    );
   }
 
   /**
@@ -312,9 +329,10 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unshield(500n);
    * ```
    */
-  async unshield(amount: bigint): Promise<Hex> {
+  async unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<Hex> {
     const unshieldHash = await this.unwrap(amount);
-    return this.#waitAndFinalizeUnshield(unshieldHash);
+    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unshieldHash));
+    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks);
   }
 
   /**
@@ -326,9 +344,24 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unshieldAll();
    * ```
    */
-  async unshieldAll(): Promise<Hex> {
+  async unshieldAll(callbacks?: UnshieldCallbacks): Promise<Hex> {
     const unshieldHash = await this.unwrapAll();
-    return this.#waitAndFinalizeUnshield(unshieldHash);
+    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unshieldHash));
+    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks);
+  }
+
+  /**
+   * Resume an in-progress unshield from an existing unwrap tx hash.
+   * Useful when the user already submitted the unwrap but the finalize step
+   * was interrupted (e.g. page reload, network error).
+   *
+   * @example
+   * ```ts
+   * const txHash = await token.resumeUnshield(previousUnwrapTxHash);
+   * ```
+   */
+  async resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<Hex> {
+    return this.#waitAndFinalizeUnshield(unwrapTxHash, callbacks);
   }
 
   /**
@@ -415,7 +448,7 @@ export class Token extends ReadonlyToken {
 
   // PRIVATE HELPERS
 
-  async #waitAndFinalizeUnshield(unshieldHash: Hex): Promise<Hex> {
+  async #waitAndFinalizeUnshield(unshieldHash: Hex, callbacks?: UnshieldCallbacks): Promise<Hex> {
     let receipt;
     try {
       receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
@@ -429,7 +462,10 @@ export class Token extends ReadonlyToken {
     if (!event) {
       throw new TransactionRevertedError("No UnwrapRequested event found in unshield receipt");
     }
-    return this.finalizeUnwrap(event.encryptedAmount);
+    safeCallback(() => callbacks?.onFinalizing?.());
+    const finalizeHash = await this.finalizeUnwrap(event.encryptedAmount);
+    safeCallback(() => callbacks?.onFinalizeSubmitted?.(finalizeHash));
+    return finalizeHash;
   }
 
   async #ensureAllowance(amount: bigint, maxApproval: boolean): Promise<void> {
@@ -459,5 +495,17 @@ export class Token extends ReadonlyToken {
         cause: error instanceof Error ? error : undefined,
       });
     }
+  }
+}
+
+/**
+ * Invoke a callback inside a try/catch so a throwing listener
+ * can never break the unshield flow (unwrap already on-chain).
+ */
+function safeCallback(fn: () => void): void {
+  try {
+    fn();
+  } catch {
+    // Swallow – the caller must not be disrupted by listener errors.
   }
 }

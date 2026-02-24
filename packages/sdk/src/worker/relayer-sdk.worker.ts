@@ -86,13 +86,21 @@ function sendSuccess<T>(
 /**
  * Send an error response back to the main thread.
  */
-function sendError(id: string, type: WorkerRequest["type"], error: string): void {
+function sendError(
+  id: string,
+  type: WorkerRequest["type"],
+  error: string,
+  statusCode?: number,
+): void {
   const response: ErrorResponse = {
     id,
     type,
     success: false,
     error,
   };
+  if (statusCode !== undefined) {
+    response.statusCode = statusCode;
+  }
   self.postMessage(response);
 }
 
@@ -145,32 +153,25 @@ async function verifyIntegrity(content: string, expectedHash: string): Promise<v
 }
 
 /**
- * Load SDK script by fetching content and creating a Blob URL.
- * This avoids CORS issues with importScripts on some CDNs.
- * When an integrity hash is provided, verifies the content before execution.
+ * Load SDK script from CDN.
+ * When an integrity hash is provided, fetches the content first to verify the
+ * SHA-384 digest, then loads via importScripts (which will hit the browser cache).
+ * Uses importScripts directly — no blob: URLs — so this works in both regular
+ * web apps and Chrome MV3 extensions.
  */
 async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
-  // Use original fetch to avoid interception during SDK loading
-  const response = await originalFetch(cdnUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
-  }
-  const scriptContent = await response.text();
-
-  // Verify integrity before executing the script
   if (integrity) {
-    await verifyIntegrity(scriptContent, integrity);
+    // Fetch the script content to verify integrity before execution
+    const response = await originalFetch(cdnUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
+    }
+    await verifyIntegrity(await response.text(), integrity);
   }
 
-  // Create a blob URL and import it
-  const blob = new Blob([scriptContent], { type: "application/javascript" });
-  const blobUrl = URL.createObjectURL(blob);
-
-  try {
-    self.importScripts(blobUrl);
-  } finally {
-    URL.revokeObjectURL(blobUrl);
-  }
+  // importScripts is not subject to CORS and will use the browser cache
+  // when the integrity fetch already downloaded the content.
+  self.importScripts(cdnUrl);
 }
 
 /**
@@ -289,9 +290,28 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
     console.error("[Worker] UserDecrypt error:", message);
-    sendError(id, type, message);
+    sendError(id, type, message, statusCode);
   }
+}
+
+/**
+ * Extract an HTTP status code from an error, if present.
+ * Relayer SDK errors may carry a `status` or `statusCode` property.
+ */
+function extractHttpStatus(error: unknown): number | undefined {
+  if (error == null || typeof error !== "object") return undefined;
+  const e = error as Record<string, unknown>;
+  if (typeof e.statusCode === "number") return e.statusCode;
+  if (typeof e.status === "number") return e.status;
+  // Check nested cause
+  if (e.cause != null && typeof e.cause === "object") {
+    const cause = e.cause as Record<string, unknown>;
+    if (typeof cause.statusCode === "number") return cause.statusCode;
+    if (typeof cause.status === "number") return cause.status;
+  }
+  return undefined;
 }
 
 /**

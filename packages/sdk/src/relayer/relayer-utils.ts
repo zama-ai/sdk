@@ -1,4 +1,4 @@
-import { FhevmInstanceConfig } from "./relayer-sdk.types";
+import type { EIP712TypedData, FhevmInstanceConfig } from "./relayer-sdk.types";
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
@@ -109,6 +109,27 @@ export const DefaultConfigs: Record<number, FhevmInstanceConfig> = {
   [11155111]: SepoliaConfig,
   [31337]: HardhatConfig,
 } as const;
+
+/** EIP-712 domain field → Solidity type. Order follows the EIP-712 spec. */
+const DOMAIN_FIELD_TYPES: Record<string, string> = {
+  name: "string",
+  version: "string",
+  chainId: "uint256",
+  verifyingContract: "address",
+  salt: "bytes32",
+};
+
+/**
+ * Build `EIP712Domain` type entries from the keys present in a domain object.
+ * Order matches the EIP-712 spec (name → version → chainId → verifyingContract → salt).
+ */
+export function buildEIP712DomainType(
+  domain: EIP712TypedData["domain"],
+): Array<{ name: string; type: string }> {
+  return Object.keys(DOMAIN_FIELD_TYPES)
+    .filter((k) => k in domain)
+    .map((k) => ({ name: k, type: DOMAIN_FIELD_TYPES[k]! }));
+}
 
 /**
  * Merge user overrides on top of SDK defaults for a given chain.

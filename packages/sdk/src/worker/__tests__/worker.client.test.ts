@@ -377,6 +377,35 @@ describe("RelayerWorkerClient", () => {
 
     client.terminate();
   });
+
+  it("handleResponse attaches statusCode from error response", async () => {
+    setupAutoResolvingWebWorker();
+    const client = new RelayerWorkerClient(defaultWebConfig());
+    await client.initWorker();
+    const worker = lastMockWorker!;
+
+    worker.postMessage.mockImplementation(() => {});
+
+    const keypairPromise = client.generateKeypair();
+    await flush();
+
+    const req = getLastPostedRequest(worker);
+
+    const errorResponse: WorkerResponse<never> = {
+      id: req.id,
+      type: req.type,
+      success: false,
+      error: "relayer returned 400",
+      statusCode: 400,
+    };
+    worker.onmessage?.(new MessageEvent("message", { data: errorResponse }));
+
+    await expect(keypairPromise).rejects.toSatisfy((err: Error & { statusCode?: number }) => {
+      return err.message === "relayer returned 400" && err.statusCode === 400;
+    });
+
+    client.terminate();
+  });
 });
 
 // ===========================================================================

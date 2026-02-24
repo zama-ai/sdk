@@ -205,6 +205,8 @@ export interface SuccessResponse<T> extends BaseResponse {
 export interface ErrorResponse extends BaseResponse {
   success: false;
   error: string;
+  /** HTTP status code from the relayer, when available. */
+  statusCode?: number;
 }
 
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;

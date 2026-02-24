@@ -13,8 +13,9 @@ import {
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
+import { normalizeAddress } from "../utils";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
-import { DecryptionFailedError } from "./errors";
+import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credential-manager";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
@@ -47,6 +48,7 @@ export class ReadonlyToken {
   readonly address: Address;
 
   constructor(config: ReadonlyTokenConfig) {
+    const address = normalizeAddress(config.address, "address");
     this.credentials = new CredentialsManager({
       sdk: config.sdk,
       signer: config.signer,
@@ -55,7 +57,7 @@ export class ReadonlyToken {
     });
     this.sdk = config.sdk;
     this.signer = config.signer;
-    this.address = config.address;
+    this.address = address;
   }
 
   /**
@@ -70,7 +72,7 @@ export class ReadonlyToken {
    * ```
    */
   async balanceOf(owner?: Address): Promise<bigint> {
-    const ownerAddress = owner ?? (await this.signer.getAddress());
+    const ownerAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
 
     if (this.isZeroHandle(handle)) return BigInt(0);
@@ -92,9 +94,7 @@ export class ReadonlyToken {
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
-      throw new DecryptionFailedError("Failed to decrypt balance", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      throw wrapDecryptError(error, "Failed to decrypt balance");
     }
   }
 
@@ -107,7 +107,7 @@ export class ReadonlyToken {
    * ```
    */
   async confidentialBalanceOf(owner?: Address): Promise<Address> {
-    const ownerAddress = owner ?? (await this.signer.getAddress());
+    const ownerAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
     return this.readConfidentialBalanceOf(ownerAddress);
   }
 
@@ -304,11 +304,12 @@ export class ReadonlyToken {
    * ```
    */
   async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
+    const coordinator = normalizeAddress(coordinatorAddress, "coordinatorAddress");
     const exists = await this.signer.readContract<boolean>(
-      wrapperExistsContract(coordinatorAddress, this.address),
+      wrapperExistsContract(coordinator, this.address),
     );
     if (!exists) return null;
-    return this.signer.readContract<Address>(getWrapperContract(coordinatorAddress, this.address));
+    return this.signer.readContract<Address>(getWrapperContract(coordinator, this.address));
   }
 
   /**
@@ -332,9 +333,14 @@ export class ReadonlyToken {
    * ```
    */
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
-    const underlying = await this.signer.readContract<Address>(underlyingContract(wrapper));
-    const userAddress = owner ?? (await this.signer.getAddress());
-    return this.signer.readContract<bigint>(allowanceContract(underlying, userAddress, wrapper));
+    const normalizedWrapper = normalizeAddress(wrapper, "wrapper");
+    const underlying = await this.signer.readContract<Address>(
+      underlyingContract(normalizedWrapper),
+    );
+    const userAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
+    return this.signer.readContract<bigint>(
+      allowanceContract(underlying, userAddress, normalizedWrapper),
+    );
   }
 
   /**
@@ -458,9 +464,7 @@ export class ReadonlyToken {
 
       return result[handle] ?? BigInt(0);
     } catch (error) {
-      throw new DecryptionFailedError("Failed to decrypt balance", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      throw wrapDecryptError(error, "Failed to decrypt balance");
     }
   }
 
@@ -501,11 +505,47 @@ export class ReadonlyToken {
         results.set(handle, decrypted[handle] ?? BigInt(0));
       }
     } catch (error) {
-      throw new DecryptionFailedError("Failed to decrypt handles", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      throw wrapDecryptError(error, "Failed to decrypt handles");
     }
 
     return results;
   }
+}
+
+/**
+ * Inspect a caught error for an HTTP status code and return the appropriate
+ * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
+ * other HTTP errors, or the generic DecryptionFailedError as fallback).
+ */
+function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
+  if (error instanceof NoCiphertextError || error instanceof RelayerRequestFailedError) {
+    return error;
+  }
+
+  const statusCode =
+    error != null &&
+    typeof error === "object" &&
+    "statusCode" in error &&
+    typeof (error as Record<string, unknown>).statusCode === "number"
+      ? ((error as Record<string, unknown>).statusCode as number)
+      : undefined;
+
+  if (statusCode === 400) {
+    return new NoCiphertextError(
+      error instanceof Error ? error.message : "No ciphertext for this account",
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+
+  if (statusCode !== undefined) {
+    return new RelayerRequestFailedError(
+      error instanceof Error ? error.message : fallbackMessage,
+      statusCode,
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+
+  return new DecryptionFailedError(fallbackMessage, {
+    cause: error instanceof Error ? error : undefined,
+  });
 }

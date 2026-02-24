@@ -64,11 +64,11 @@ describe("TokenSDK", () => {
   });
 
   it("creates distinct instances per address", () => {
-    const t1 = sdk.createReadonlyToken("0xaaa" as Address);
-    const t2 = sdk.createReadonlyToken("0xbbb" as Address);
+    const t1 = sdk.createReadonlyToken("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address);
+    const t2 = sdk.createReadonlyToken("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address);
     expect(t1).not.toBe(t2);
-    expect(t1.address).toBe("0xaaa");
-    expect(t2.address).toBe("0xbbb");
+    expect(t1.address).toBe("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(t2.address).toBe("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
   });
 
   it("terminate delegates to relayer.terminate", () => {

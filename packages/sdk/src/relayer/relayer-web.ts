@@ -14,7 +14,7 @@ import type {
 } from "./relayer-sdk.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
-import { mergeFhevmConfig, withRetry } from "./relayer-utils";
+import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
 import { TokenError, EncryptionFailedError } from "../token/errors";
 
 /**
@@ -172,14 +172,17 @@ export class RelayerWeb implements RelayerSDK {
       durationDays,
     });
 
+    const domain = {
+      name: result.domain.name,
+      version: result.domain.version,
+      chainId: result.domain.chainId,
+      verifyingContract: result.domain.verifyingContract,
+    };
+
     return {
-      domain: {
-        name: result.domain.name,
-        version: result.domain.version,
-        chainId: result.domain.chainId,
-        verifyingContract: result.domain.verifyingContract,
-      },
+      domain,
       types: {
+        EIP712Domain: buildEIP712DomainType(domain),
         UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
       },
       message: {

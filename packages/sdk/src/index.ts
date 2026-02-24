@@ -54,6 +54,7 @@ export type {
   StoredCredentials,
   ContractCallConfig,
   TransactionReceipt,
+  UnshieldCallbacks,
 } from "./token/token.types";
 export {
   TokenError,
@@ -65,6 +66,9 @@ export {
   ApprovalFailedError,
   TransactionRevertedError,
   CredentialExpiredError,
+  InvalidCredentialsError,
+  NoCiphertextError,
+  RelayerRequestFailedError,
 } from "./token/errors";
 
 // Event decoders and types

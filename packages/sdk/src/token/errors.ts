@@ -28,6 +28,12 @@ export const TokenErrorCode = {
   TransactionReverted: "TRANSACTION_REVERTED",
   /** FHE credentials have expired and need regeneration. */
   CredentialExpired: "CREDENTIAL_EXPIRED",
+  /** Relayer rejected credentials (stale, expired, or malformed). */
+  InvalidCredentials: "INVALID_CREDENTIALS",
+  /** No FHE ciphertext exists for this account (never shielded). */
+  NoCiphertext: "NO_CIPHERTEXT",
+  /** Relayer HTTP request failed. */
+  RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
 } as const;
 
 /** Union of all {@link TokenErrorCode} string values. */
@@ -102,5 +108,33 @@ export class CredentialExpiredError extends TokenError {
   constructor(message: string, options?: ErrorOptions) {
     super(TokenErrorCode.CredentialExpired, message, options);
     this.name = "CredentialExpiredError";
+  }
+}
+
+/** Relayer rejected credentials (stale, expired, or malformed). */
+export class InvalidCredentialsError extends TokenError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(TokenErrorCode.InvalidCredentials, message, options);
+    this.name = "InvalidCredentialsError";
+  }
+}
+
+/** No FHE ciphertext exists for this account (never shielded). */
+export class NoCiphertextError extends TokenError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(TokenErrorCode.NoCiphertext, message, options);
+    this.name = "NoCiphertextError";
+  }
+}
+
+/** Relayer HTTP request failed. */
+export class RelayerRequestFailedError extends TokenError {
+  /** HTTP status code from the relayer, if available. */
+  readonly statusCode: number | undefined;
+
+  constructor(message: string, statusCode?: number, options?: ErrorOptions) {
+    super(TokenErrorCode.RelayerRequestFailed, message, options);
+    this.name = "RelayerRequestFailedError";
+    this.statusCode = statusCode;
   }
 }

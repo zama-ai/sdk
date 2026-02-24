@@ -73,6 +73,16 @@ export interface StoredCredentials {
   durationDays: number;
 }
 
+/** Progress callbacks for multi-step unshield operations. */
+export interface UnshieldCallbacks {
+  /** Fired after the unwrap transaction is submitted. */
+  onUnwrapSubmitted?: (txHash: Hex) => void;
+  /** Fired when the finalization step begins (receipt parsed, about to finalize). */
+  onFinalizing?: () => void;
+  /** Fired after the finalize transaction is submitted. */
+  onFinalizeSubmitted?: (txHash: Hex) => void;
+}
+
 // Re-export errors for backward compatibility
 export {
   TokenErrorCode,
@@ -84,4 +94,7 @@ export {
   DecryptionFailedError,
   ApprovalFailedError,
   TransactionRevertedError,
+  InvalidCredentialsError,
+  NoCiphertextError,
+  RelayerRequestFailedError,
 } from "./errors";

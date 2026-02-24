@@ -1,5 +1,6 @@
 import type { Address } from "../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
+import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
@@ -42,7 +43,7 @@ export class TokenSDK {
       sdk: this.relayer,
       signer: this.signer,
       storage: this.storage,
-      address,
+      address: normalizeAddress(address, "address"),
       durationDays: this.#credentialDurationDays,
     });
   }
@@ -56,8 +57,8 @@ export class TokenSDK {
       sdk: this.relayer,
       signer: this.signer,
       storage: this.storage,
-      address,
-      wrapper,
+      address: normalizeAddress(address, "address"),
+      wrapper: wrapper ? normalizeAddress(wrapper, "wrapper") : undefined,
       durationDays: this.#credentialDurationDays,
     });
   }

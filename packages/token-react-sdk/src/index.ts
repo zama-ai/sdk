@@ -292,4 +292,10 @@ export type {
   ContractCallConfig,
   TransactionReceipt,
 } from "@zama-fhe/sdk";
-export { TokenError, TokenErrorCode } from "@zama-fhe/sdk";
+export {
+  TokenError,
+  TokenErrorCode,
+  InvalidCredentialsError,
+  NoCiphertextError,
+  RelayerRequestFailedError,
+} from "@zama-fhe/sdk";

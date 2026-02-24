@@ -1,0 +1,122 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// ---------------------------------------------------------------------------
+// Hoisted mocks
+// ---------------------------------------------------------------------------
+
+const { mockWorkerClient, MockRelayerWorkerClient } = vi.hoisted(() => {
+  const mockWorkerClient = {
+    initWorker: vi.fn().mockResolvedValue(undefined),
+    terminate: vi.fn(),
+    updateCsrf: vi.fn().mockResolvedValue(undefined),
+    generateKeypair: vi.fn(),
+    createEIP712: vi.fn(),
+    encrypt: vi.fn(),
+    userDecrypt: vi.fn(),
+    publicDecrypt: vi.fn(),
+    createDelegatedUserDecryptEIP712: vi.fn(),
+    delegatedUserDecrypt: vi.fn(),
+    requestZKProofVerification: vi.fn(),
+    getPublicKey: vi.fn(),
+    getPublicParams: vi.fn(),
+  };
+
+  const MockRelayerWorkerClient = vi.fn(function () {
+    return mockWorkerClient;
+  });
+
+  return { mockWorkerClient, MockRelayerWorkerClient };
+});
+
+vi.mock("../../worker/worker.client", () => ({
+  RelayerWorkerClient: MockRelayerWorkerClient,
+}));
+
+import { RelayerWeb } from "../relayer-web";
+import type { Address } from "../relayer-sdk.types";
+
+const MOCK_EIP712 = {
+  domain: {
+    name: "KmsDecryptor",
+    version: "1",
+    chainId: 1,
+    verifyingContract: "0x1111111111111111111111111111111111111111",
+  },
+  types: {
+    UserDecryptRequestVerification: [
+      { name: "publicKey", type: "bytes" },
+      { name: "contractAddresses", type: "address[]" },
+    ],
+  },
+  message: {
+    publicKey: "0xpub",
+    contractAddresses: ["0x1111111111111111111111111111111111111111"],
+    startTimestamp: 1000n,
+    durationDays: 7n,
+    extraData: "0x",
+  },
+};
+
+function createRelayer() {
+  return new RelayerWeb({
+    transports: { 1: {} },
+    getChainId: async () => 1,
+  });
+}
+
+describe("createEIP712 includes EIP712Domain type", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockWorkerClient.createEIP712.mockResolvedValue(MOCK_EIP712);
+  });
+
+  it("adds EIP712Domain type with correct field types", async () => {
+    const relayer = createRelayer();
+    const result = await relayer.createEIP712(
+      "0xpub",
+      ["0x1111111111111111111111111111111111111111" as Address],
+      1000,
+      7,
+    );
+
+    expect(result.types.EIP712Domain).toEqual([
+      { name: "name", type: "string" },
+      { name: "version", type: "string" },
+      { name: "chainId", type: "uint256" },
+      { name: "verifyingContract", type: "address" },
+    ]);
+
+    relayer.terminate();
+  });
+
+  it("preserves UserDecryptRequestVerification type", async () => {
+    const relayer = createRelayer();
+    const result = await relayer.createEIP712(
+      "0xpub",
+      ["0x1111111111111111111111111111111111111111" as Address],
+      1000,
+      7,
+    );
+
+    expect(result.types.UserDecryptRequestVerification).toEqual(
+      MOCK_EIP712.types.UserDecryptRequestVerification,
+    );
+
+    relayer.terminate();
+  });
+
+  it("preserves domain and message fields", async () => {
+    const relayer = createRelayer();
+    const result = await relayer.createEIP712(
+      "0xpub",
+      ["0x1111111111111111111111111111111111111111" as Address],
+      1000,
+      7,
+    );
+
+    expect(result.domain).toEqual(MOCK_EIP712.domain);
+    expect(result.message).toEqual(MOCK_EIP712.message);
+
+    relayer.terminate();
+  });
+});

@@ -16,6 +16,15 @@ export function assertAddress(value: string, name: string): asserts value is Add
   }
 }
 
+/**
+ * Validate and lowercase an address for consistent comparison.
+ * Call at public API entry points so internal code can rely on lowercase addresses.
+ */
+export function normalizeAddress(addr: string, name: string): Address {
+  assertAddress(addr, name);
+  return addr.toLowerCase() as Address;
+}
+
 export function assertObject(
   value: unknown,
   context: string,

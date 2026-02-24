@@ -160,7 +160,11 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
         elapsed,
         error: response.error,
       });
-      pending.reject(new Error(response.error));
+      const err = new Error(response.error);
+      if ("statusCode" in response && typeof response.statusCode === "number") {
+        (err as Error & { statusCode?: number }).statusCode = response.statusCode;
+      }
+      pending.reject(err);
     }
   }
 
