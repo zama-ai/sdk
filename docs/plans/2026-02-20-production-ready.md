@@ -81,7 +81,7 @@ Replace `packages/token-sdk/package.json` with:
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zama-ai/token-sdk",
+    "url": "https://github.com/zama-ai/sdk",
     "directory": "packages/token-sdk"
   },
   "type": "module",
@@ -199,7 +199,7 @@ Replace `packages/react-sdk/package.json` with:
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zama-ai/token-sdk",
+    "url": "https://github.com/zama-ai/sdk",
     "directory": "packages/react-sdk"
   },
   "type": "module",

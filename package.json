@@ -6,7 +6,7 @@
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zama-ai/token-sdk"
+    "url": "https://github.com/zama-ai/sdk"
   },
   "author": "Guillaume Hermet <guillaume.hermet@zama.ai>",
   "scripts": {

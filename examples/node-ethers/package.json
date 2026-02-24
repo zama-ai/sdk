@@ -6,7 +6,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@zama-fhe/sdk": "github:zama-ai/token-sdk#path:packages/token-sdk",
+    "@zama-fhe/sdk": "github:zama-ai/sdk#path:packages/token-sdk",
     "ethers": "^6.13.0"
   },
   "devDependencies": {

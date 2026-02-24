@@ -13,7 +13,7 @@ Thank you for your interest in contributing to the Zama Token SDK! This guide wi
 
 ```bash
 # Clone the repository
-git clone https://github.com/zama-ai/token-sdk.git
+git clone https://github.com/zama-ai/sdk.git
 cd token-sdk
 
 # Install dependencies
@@ -134,7 +134,7 @@ Select the affected packages and describe the change. Choose the appropriate sem
 
 ## Reporting Issues
 
-Use [GitHub Issues](https://github.com/zama-ai/token-sdk/issues) for bug reports and feature requests. Please include:
+Use [GitHub Issues](https://github.com/zama-ai/sdk/issues) for bug reports and feature requests. Please include:
 
 - Steps to reproduce
 - Expected vs actual behavior
