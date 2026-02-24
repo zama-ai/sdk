@@ -68,9 +68,6 @@
     "viem": ">=2",
     "wagmi": ">=2"
   },
-  "engines": {
-    "node": ">=20"
-  },
   "sideEffects": false,
   "peerDependenciesMeta": {
     "ethers": {
@@ -82,5 +79,10 @@
     "wagmi": {
       "optional": true
     }
+  },
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
   }
 }

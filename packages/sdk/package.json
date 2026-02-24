@@ -68,9 +68,6 @@
     "ethers": ">=6",
     "@zama-fhe/relayer-sdk": ">=0.4"
   },
-  "engines": {
-    "node": ">=20"
-  },
   "sideEffects": false,
   "peerDependenciesMeta": {
     "viem": {
@@ -82,5 +79,10 @@
     "@zama-fhe/relayer-sdk": {
       "optional": true
     }
+  },
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
   }
 }
