@@ -1,5 +1,5 @@
 {
-  "name": "@zama-fhe/test-app",
+  "name": "@zama-fhe/sdk-test-app",
   "version": "0.0.0",
   "private": true,
   "scripts": {

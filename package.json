@@ -13,7 +13,7 @@
     "build": "pnpm build:sdk && pnpm build:react-sdk",
     "build:sdk": "pnpm --filter @zama-fhe/token-sdk build",
     "build:react-sdk": "pnpm --filter @zama-fhe/token-react-sdk build",
-    "build:test-app": "pnpm --filter @zama-fhe/test-app build",
+    "build:test-app": "pnpm --filter @zama-fhe/sdk-test-app build",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
@@ -32,8 +32,8 @@
     "hardhat:install": "npm --prefix hardhat install",
     "hardhat:compile": "npm --prefix hardhat run compile",
     "hardhat:node": "npm --prefix hardhat run node",
-    "e2e:test": "pnpm --filter @zama-fhe/test-app e2e:test",
-    "e2e:test:ui": "pnpm --filter @zama-fhe/test-app e2e:test:ui"
+    "e2e:test": "pnpm --filter @zama-fhe/sdk-test-app e2e:test",
+    "e2e:test:ui": "pnpm --filter @zama-fhe/sdk-test-app e2e:test:ui"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.2",

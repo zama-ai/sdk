@@ -48,7 +48,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter @zama-fhe/test-app exec playwright install --with-deps chromium
+        run: pnpm --filter @zama-fhe/sdk-test-app exec playwright install --with-deps chromium
 
       - name: Save Playwright browsers cache
         if: steps.playwright-cache.outputs.cache-hit != 'true'

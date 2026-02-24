@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **`packages/token-sdk`** (`@zama-fhe/token-sdk`) — Core SDK: confidential token operations, FHE relayer integration, contract call builders, viem/ethers adapters, Node.js worker pool
 - **`packages/token-react-sdk`** (`@zama-fhe/token-react-sdk`) — React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths
-- **`packages/test-app`** (`@zama-fhe/test-app`) — Next.js E2E test app using Playwright against a local Hardhat node with FHE mock contracts
+- **`packages/test-app`** (`@zama-fhe/sdk-test-app`) — Next.js E2E test app using Playwright against a local Hardhat node with FHE mock contracts
 
 ## Commands
 
