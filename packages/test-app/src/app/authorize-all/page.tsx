@@ -1,5 +1,5 @@
 import { AuthorizeAllPanel } from "@/components/authorize-all-panel";
-import type { Address } from "@zama-fhe/token-react-sdk";
+import type { Address } from "@zama-fhe/react-sdk";
 
 const DEFAULTS = {
   tokens: [

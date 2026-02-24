@@ -12,6 +12,7 @@ import {
   unwrapFeeQueryOptions,
   batchTransferFeeQueryOptions,
   feeRecipientQueryOptions,
+  feeQueryKeys,
 } from "../token/use-fees";
 import { publicKeyQueryOptions } from "../relayer/use-public-key";
 import { publicParamsQueryOptions } from "../relayer/use-public-params";
@@ -198,10 +199,18 @@ describe("query options factories", () => {
       expect(opts.staleTime).toBe(30_000);
     });
 
+    it("feeQueryKeys.wrapFee omits amount/from/to when amount is undefined", () => {
+      expect(feeQueryKeys.wrapFee(FEE_MANAGER)).toEqual(["wrapFee", FEE_MANAGER]);
+    });
+
     it("unwrapFeeQueryOptions key includes amount/from/to", () => {
       const opts = unwrapFeeQueryOptions(signer, feeConfig);
       expect(opts.queryKey).toEqual(["unwrapFee", FEE_MANAGER, "1000", FROM, TO]);
       expect(opts.staleTime).toBe(30_000);
+    });
+
+    it("feeQueryKeys.unwrapFee omits amount/from/to when amount is undefined", () => {
+      expect(feeQueryKeys.unwrapFee(FEE_MANAGER)).toEqual(["unwrapFee", FEE_MANAGER]);
     });
 
     it("batchTransferFeeQueryOptions key includes feeManagerAddress", () => {

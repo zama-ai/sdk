@@ -13,13 +13,13 @@ Thank you for your interest in contributing to the Zama Token SDK! This guide wi
 
 ```bash
 # Clone the repository
-git clone https://github.com/zama-ai/token-sdk.git
-cd token-sdk
+git clone https://github.com/zama-ai/sdk.git
+cd sdk
 
 # Install dependencies
 pnpm install
 
-# Build all packages (order matters: token-sdk first)
+# Build all packages (order matters: sdk first)
 pnpm build
 
 # Run tests
@@ -30,8 +30,8 @@ pnpm test:run
 
 ```
 packages/
-  token-sdk/          # Core SDK
-  token-react-sdk/    # React hooks
+  sdk/          # Core SDK
+  react-sdk/    # React hooks
   test-app/           # E2E test app (Playwright + Hardhat)
 ```
 
@@ -115,7 +115,7 @@ Select the affected packages and describe the change. Choose the appropriate sem
 
 ### Key Design Principles
 
-- **Framework-agnostic core** — `token-sdk` defines the `GenericSigner` interface; library-specific adapters (viem, ethers, wagmi) implement it
+- **Framework-agnostic core** — `sdk` defines the `GenericSigner` interface; library-specific adapters (viem, ethers, wagmi) implement it
 - **Contract call builders** — pure functions returning `ContractCallConfig` objects, composed by library-specific sub-paths
 - **Error hierarchy** — all SDK errors extend `TokenError` with typed error codes; use specific subclasses (`EncryptionFailedError`, `SigningRejectedError`, etc.)
 
@@ -128,13 +128,13 @@ Select the affected packages and describe the change. Choose the appropriate sem
 
 ### Adding React Hooks
 
-1. Provider-based hooks go in `packages/token-react-sdk/src/token/` or `src/relayer/`
-2. Library-specific hooks go in `packages/token-react-sdk/src/<library>/`
+1. Provider-based hooks go in `packages/react-sdk/src/token/` or `src/relayer/`
+2. Library-specific hooks go in `packages/react-sdk/src/<library>/`
 3. Export from the appropriate `index.ts`
 
 ## Reporting Issues
 
-Use [GitHub Issues](https://github.com/zama-ai/token-sdk/issues) for bug reports and feature requests. Please include:
+Use [GitHub Issues](https://github.com/zama-ai/sdk/issues) for bug reports and feature requests. Please include:
 
 - Steps to reproduce
 - Expected vs actual behavior

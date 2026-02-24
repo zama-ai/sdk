@@ -1,13 +1,13 @@
 {
-  "name": "@zama-fhe/token-react-sdk",
-  "version": "0.1.0",
-  "description": "React hooks for Zama confidential ERC-20 tokens (fhEVM)",
+  "name": "@zama-fhe/react-sdk",
+  "version": "1.0.0",
+  "description": "React hooks for Zama SDK",
   "license": "BSD-3-Clause",
-  "author": "Guillaume Hermet <guillaume.hermet@zama.ai>",
+  "author": "Zama",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zama-ai/token-sdk",
-    "directory": "packages/token-react-sdk"
+    "url": "https://github.com/zama-ai/sdk",
+    "directory": "packages/react-sdk"
   },
   "type": "module",
   "main": "./dist/index.js",
@@ -47,9 +47,9 @@
     "hooks",
     "ethereum"
   ],
-  "homepage": "https://github.com/zama-ai/token-sdk#readme",
+  "homepage": "https://github.com/zama-ai/sdk#readme",
   "bugs": {
-    "url": "https://github.com/zama-ai/token-sdk/issues"
+    "url": "https://github.com/zama-ai/sdk/issues"
   },
   "scripts": {
     "build": "tsup",
@@ -68,9 +68,6 @@
     "viem": ">=2",
     "wagmi": ">=2"
   },
-  "engines": {
-    "node": ">=20"
-  },
   "sideEffects": false,
   "peerDependenciesMeta": {
     "ethers": {
@@ -82,5 +79,10 @@
     "wagmi": {
       "optional": true
     }
+  },
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
   }
 }

@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Refactor token-sdk to adopt confidential-defi/react-sdk's best patterns (signer dedup, state machine provider, error hierarchy, mutation dedup, React tests) while preserving existing architecture and DX.
+**Goal:** Refactor sdk to adopt confidential-defi/react-sdk's best patterns (signer dedup, state machine provider, error hierarchy, mutation dedup, React tests) while preserving existing architecture and DX.
 
 **Architecture:** Bottom-up refactor across 5 phases. Phase 1 eliminates 39 duplicated hook files by making library sub-paths thin re-export layers. Phase 2 extends the error hierarchy. Phase 3 replaces the simple provider with a reducer-based state machine. Phase 4 adds mutation dedup and phase tracking. Phase 5 adds React unit tests.
 
@@ -12,7 +12,7 @@
 
 ---
 
-## Phase 1: Adapter Dedup (token-react-sdk)
+## Phase 1: Adapter Dedup (react-sdk)
 
 The library sub-paths (`/viem`, `/ethers`, `/wagmi`) each have 13 hook files that duplicate the same contract operations with slightly different calling conventions. The shared provider-based hooks in `src/token/` already exist and handle everything via `GenericSigner` context. The per-library hooks are redundant.
 
@@ -20,37 +20,37 @@ The library sub-paths (`/viem`, `/ethers`, `/wagmi`) each have 13 hook files tha
 
 **Files:**
 
-- Delete: `packages/token-react-sdk/src/viem/use-confidential-balance-of.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-confidential-transfer.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-confidential-batch-transfer.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-unwrap.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-unwrap-from-balance.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-finalize-unwrap.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-set-operator.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-wrapper-for-token.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-underlying-token.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-wrap.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-wrap-eth.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-wrapper-exists.ts`
-- Delete: `packages/token-react-sdk/src/viem/use-supports-interface.ts`
-- Keep: `packages/token-react-sdk/src/viem/viem-signer.ts`
-- Modify: `packages/token-react-sdk/src/viem/index.ts`
+- Delete: `packages/react-sdk/src/viem/use-confidential-balance-of.ts`
+- Delete: `packages/react-sdk/src/viem/use-confidential-transfer.ts`
+- Delete: `packages/react-sdk/src/viem/use-confidential-batch-transfer.ts`
+- Delete: `packages/react-sdk/src/viem/use-unwrap.ts`
+- Delete: `packages/react-sdk/src/viem/use-unwrap-from-balance.ts`
+- Delete: `packages/react-sdk/src/viem/use-finalize-unwrap.ts`
+- Delete: `packages/react-sdk/src/viem/use-set-operator.ts`
+- Delete: `packages/react-sdk/src/viem/use-wrapper-for-token.ts`
+- Delete: `packages/react-sdk/src/viem/use-underlying-token.ts`
+- Delete: `packages/react-sdk/src/viem/use-wrap.ts`
+- Delete: `packages/react-sdk/src/viem/use-wrap-eth.ts`
+- Delete: `packages/react-sdk/src/viem/use-wrapper-exists.ts`
+- Delete: `packages/react-sdk/src/viem/use-supports-interface.ts`
+- Keep: `packages/react-sdk/src/viem/viem-signer.ts`
+- Modify: `packages/react-sdk/src/viem/index.ts`
 
 **Step 1: Delete all viem hook files**
 
 ```bash
-rm packages/token-react-sdk/src/viem/use-*.ts
+rm packages/react-sdk/src/viem/use-*.ts
 ```
 
 **Step 2: Rewrite viem/index.ts as thin re-export**
 
-Replace `packages/token-react-sdk/src/viem/index.ts` with:
+Replace `packages/react-sdk/src/viem/index.ts` with:
 
 ```ts
 export { ViemSigner } from "./viem-signer";
 ```
 
-Note: We intentionally do NOT re-export `../token` hooks here. Those are already available from the main `@zama-fhe/token-react-sdk` entry point. Library sub-paths now only export their signer adapter. This avoids the anti-pattern of the same hooks being importable from multiple paths.
+Note: We intentionally do NOT re-export `../token` hooks here. Those are already available from the main `@zama-fhe/react-sdk` entry point. Library sub-paths now only export their signer adapter. This avoids the anti-pattern of the same hooks being importable from multiple paths.
 
 **Step 3: Verify typecheck passes**
 
@@ -61,31 +61,31 @@ Expected: No errors related to viem sub-path (may have errors from ethers/wagmi 
 
 **Files:**
 
-- Delete: `packages/token-react-sdk/src/ethers/use-confidential-balance-of.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-confidential-transfer.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-confidential-batch-transfer.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-unwrap.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-unwrap-from-balance.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-finalize-unwrap.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-set-operator.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-wrapper-for-token.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-underlying-token.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-wrap.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-wrap-eth.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-wrapper-exists.ts`
-- Delete: `packages/token-react-sdk/src/ethers/use-supports-interface.ts`
-- Keep: `packages/token-react-sdk/src/ethers/ethers-signer.ts`
-- Modify: `packages/token-react-sdk/src/ethers/index.ts`
+- Delete: `packages/react-sdk/src/ethers/use-confidential-balance-of.ts`
+- Delete: `packages/react-sdk/src/ethers/use-confidential-transfer.ts`
+- Delete: `packages/react-sdk/src/ethers/use-confidential-batch-transfer.ts`
+- Delete: `packages/react-sdk/src/ethers/use-unwrap.ts`
+- Delete: `packages/react-sdk/src/ethers/use-unwrap-from-balance.ts`
+- Delete: `packages/react-sdk/src/ethers/use-finalize-unwrap.ts`
+- Delete: `packages/react-sdk/src/ethers/use-set-operator.ts`
+- Delete: `packages/react-sdk/src/ethers/use-wrapper-for-token.ts`
+- Delete: `packages/react-sdk/src/ethers/use-underlying-token.ts`
+- Delete: `packages/react-sdk/src/ethers/use-wrap.ts`
+- Delete: `packages/react-sdk/src/ethers/use-wrap-eth.ts`
+- Delete: `packages/react-sdk/src/ethers/use-wrapper-exists.ts`
+- Delete: `packages/react-sdk/src/ethers/use-supports-interface.ts`
+- Keep: `packages/react-sdk/src/ethers/ethers-signer.ts`
+- Modify: `packages/react-sdk/src/ethers/index.ts`
 
 **Step 1: Delete all ethers hook files**
 
 ```bash
-rm packages/token-react-sdk/src/ethers/use-*.ts
+rm packages/react-sdk/src/ethers/use-*.ts
 ```
 
 **Step 2: Rewrite ethers/index.ts as thin re-export**
 
-Replace `packages/token-react-sdk/src/ethers/index.ts` with:
+Replace `packages/react-sdk/src/ethers/index.ts` with:
 
 ```ts
 export { EthersSigner } from "./ethers-signer";
@@ -95,31 +95,31 @@ export { EthersSigner } from "./ethers-signer";
 
 **Files:**
 
-- Delete: `packages/token-react-sdk/src/wagmi/use-confidential-balance-of.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-confidential-transfer.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-confidential-batch-transfer.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-unwrap.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-unwrap-from-balance.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-finalize-unwrap.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-set-operator.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-wrapper-for-token.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-underlying-token.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-wrap.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-wrap-eth.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-wrapper-exists.ts`
-- Delete: `packages/token-react-sdk/src/wagmi/use-supports-interface.ts`
-- Keep: `packages/token-react-sdk/src/wagmi/wagmi-signer.ts`
-- Modify: `packages/token-react-sdk/src/wagmi/index.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-confidential-balance-of.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-confidential-transfer.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-confidential-batch-transfer.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-unwrap.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-unwrap-from-balance.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-finalize-unwrap.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-set-operator.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-wrapper-for-token.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-underlying-token.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-wrap.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-wrap-eth.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-wrapper-exists.ts`
+- Delete: `packages/react-sdk/src/wagmi/use-supports-interface.ts`
+- Keep: `packages/react-sdk/src/wagmi/wagmi-signer.ts`
+- Modify: `packages/react-sdk/src/wagmi/index.ts`
 
 **Step 1: Delete all wagmi hook files**
 
 ```bash
-rm packages/token-react-sdk/src/wagmi/use-*.ts
+rm packages/react-sdk/src/wagmi/use-*.ts
 ```
 
 **Step 2: Rewrite wagmi/index.ts as thin re-export**
 
-Replace `packages/token-react-sdk/src/wagmi/index.ts` with:
+Replace `packages/react-sdk/src/wagmi/index.ts` with:
 
 ```ts
 export { WagmiSigner } from "./wagmi-signer";
@@ -154,7 +154,7 @@ Expected: PASS. The core SDK tests don't depend on React SDK hooks.
 **Step 4: Commit**
 
 ```bash
-git add -A packages/token-react-sdk/src/viem/ packages/token-react-sdk/src/ethers/ packages/token-react-sdk/src/wagmi/
+git add -A packages/react-sdk/src/viem/ packages/react-sdk/src/ethers/ packages/react-sdk/src/wagmi/
 git commit -m "refactor(react-sdk): eliminate adapter hook duplication
 
 Delete 39 near-identical hook files across viem/ethers/wagmi sub-paths.
@@ -171,10 +171,10 @@ All hooks are available from the main entry point via provider context."
 **Step 1: Search for imports from deleted sub-paths**
 
 ```bash
-grep -r "token-react-sdk/viem\|token-react-sdk/ethers\|token-react-sdk/wagmi" packages/test-app/src/ --include="*.ts" --include="*.tsx"
+grep -r "react-sdk/viem\|react-sdk/ethers\|react-sdk/wagmi" packages/test-app/src/ --include="*.ts" --include="*.tsx"
 ```
 
-The test-app currently imports `WagmiSigner` from `@zama-fhe/token-react-sdk/wagmi` (in `src/providers.tsx`). This still works since `WagmiSigner` is still exported. If any hook imports from sub-paths are found, update them to import from `@zama-fhe/token-react-sdk` instead.
+The test-app currently imports `WagmiSigner` from `@zama-fhe/react-sdk/wagmi` (in `src/providers.tsx`). This still works since `WagmiSigner` is still exported. If any hook imports from sub-paths are found, update them to import from `@zama-fhe/react-sdk` instead.
 
 **Step 2: Run E2E smoke test (optional)**
 
@@ -186,7 +186,7 @@ Expected: PASS (all E2E tests use provider-based hooks from main entry point).
 
 ---
 
-## Phase 2: Error Hierarchy (token-sdk)
+## Phase 2: Error Hierarchy (sdk)
 
 ### Task 6: Extend TokenErrorCode with new codes
 
@@ -297,7 +297,7 @@ export function toTokenError(
 }
 ```
 
-### Task 8: Export new errors from token-sdk
+### Task 8: Export new errors from sdk
 
 **Files:**
 
@@ -317,9 +317,9 @@ export {
 } from "./token/errors";
 ```
 
-**Step 2: Re-export from token-react-sdk**
+**Step 2: Re-export from react-sdk**
 
-In `packages/token-react-sdk/src/index.ts`, add to the re-export block (after the `TokenError, TokenErrorCode` line):
+In `packages/react-sdk/src/index.ts`, add to the re-export block (after the `TokenError, TokenErrorCode` line):
 
 ```ts
 export {
@@ -454,8 +454,8 @@ Expected: PASS.
 **Step 4: Commit**
 
 ```bash
-git add packages/sdk/src/token/token.types.ts packages/sdk/src/token/errors.ts packages/sdk/src/token/__tests__/errors.test.ts packages/sdk/src/index.ts packages/token-react-sdk/src/index.ts
-git commit -m "feat(token-sdk): extend error hierarchy with lifecycle error codes
+git add packages/sdk/src/token/token.types.ts packages/sdk/src/token/errors.ts packages/sdk/src/token/__tests__/errors.test.ts packages/sdk/src/index.ts packages/react-sdk/src/index.ts
+git commit -m "feat(sdk): extend error hierarchy with lifecycle error codes
 
 Add ChainMismatchError, SignerMissingError, WalletDisconnectedError,
 InitTimeoutError subclasses. Add toTokenError() conversion helper.
@@ -465,13 +465,13 @@ WalletSwitched, NotReady, InitTimeout codes."
 
 ---
 
-## Phase 3: Provider Lifecycle State Machine (token-react-sdk)
+## Phase 3: Provider Lifecycle State Machine (react-sdk)
 
 ### Task 10: Create provider state types
 
 **Files:**
 
-- Create: `packages/token-react-sdk/src/core/types.ts`
+- Create: `packages/react-sdk/src/core/types.ts`
 
 **Step 1: Write the types**
 
@@ -500,7 +500,7 @@ export interface ProviderState {
 
 **Files:**
 
-- Create: `packages/token-react-sdk/src/core/reducer.ts`
+- Create: `packages/react-sdk/src/core/reducer.ts`
 
 **Step 1: Write the reducer**
 
@@ -551,7 +551,7 @@ export function providerReducer(state: ProviderState, action: ProviderAction): P
 
 **Files:**
 
-- Create: `packages/token-react-sdk/src/config.ts`
+- Create: `packages/react-sdk/src/config.ts`
 
 **Step 1: Write the config factory**
 
@@ -586,7 +586,7 @@ export function createTokenSDKConfig(
 
 **Files:**
 
-- Create: `packages/token-react-sdk/src/core/__tests__/reducer.test.ts`
+- Create: `packages/react-sdk/src/core/__tests__/reducer.test.ts`
 
 **Step 1: Write tests**
 
@@ -685,7 +685,7 @@ describe("providerReducer", () => {
 **Step 2: Run tests**
 
 ```bash
-pnpm test:run -- --reporter=verbose packages/token-react-sdk/src/core/__tests__/reducer.test.ts
+pnpm test:run -- --reporter=verbose packages/react-sdk/src/core/__tests__/reducer.test.ts
 ```
 
 Expected: All tests PASS.
@@ -694,11 +694,11 @@ Expected: All tests PASS.
 
 **Files:**
 
-- Modify: `packages/token-react-sdk/src/provider.tsx`
+- Modify: `packages/react-sdk/src/provider.tsx`
 
 **Step 1: Rewrite provider with reducer, chain validation, and wallet tracking**
 
-Replace `packages/token-react-sdk/src/provider.tsx` entirely with:
+Replace `packages/react-sdk/src/provider.tsx` entirely with:
 
 ````tsx
 "use client";
@@ -902,7 +902,7 @@ export function useTokenSDKStatus() {
 
 **Step 2: Export useTokenSDKStatus from main index**
 
-In `packages/token-react-sdk/src/index.ts`, update the provider export line:
+In `packages/react-sdk/src/index.ts`, update the provider export line:
 
 ```ts
 export { TokenSDKProvider, useTokenSDK, useTokenSDKStatus } from "./provider";
@@ -927,7 +927,7 @@ Expected: PASS (existing core SDK tests unaffected).
 **Step 5: Commit**
 
 ```bash
-git add packages/token-react-sdk/src/core/ packages/token-react-sdk/src/provider.tsx packages/token-react-sdk/src/config.ts packages/token-react-sdk/src/index.ts
+git add packages/react-sdk/src/core/ packages/react-sdk/src/provider.tsx packages/react-sdk/src/config.ts packages/react-sdk/src/index.ts
 git commit -m "feat(react-sdk): add state machine provider with chain/wallet lifecycle
 
 Replace simple provider with reducer-based state machine.
@@ -938,13 +938,13 @@ Export useTokenSDKStatus() for UI phase/error rendering."
 
 ---
 
-## Phase 4: Mutation Dedup & Phase Tracking (token-react-sdk)
+## Phase 4: Mutation Dedup & Phase Tracking (react-sdk)
 
 ### Task 15: Create mutation dedup helper
 
 **Files:**
 
-- Create: `packages/token-react-sdk/src/token/use-dedup-mutation.ts`
+- Create: `packages/react-sdk/src/token/use-dedup-mutation.ts`
 
 **Step 1: Write the helper**
 
@@ -1013,11 +1013,11 @@ export function useDedupMutation<TArgs extends unknown[], TResult>(
 
 **Files:**
 
-- Modify: `packages/token-react-sdk/src/token/use-confidential-transfer.ts`
+- Modify: `packages/react-sdk/src/token/use-confidential-transfer.ts`
 
 **Step 1: Add dedup and phase tracking**
 
-Update `packages/token-react-sdk/src/token/use-confidential-transfer.ts`. The `mutationFn` should use the dedup helper internally. The key change is wrapping the `token.confidentialTransfer` call with phase tracking:
+Update `packages/react-sdk/src/token/use-confidential-transfer.ts`. The `mutationFn` should use the dedup helper internally. The key change is wrapping the `token.confidentialTransfer` call with phase tracking:
 
 Read the current file first, then update the `mutationFn` to track phases:
 
@@ -1117,13 +1117,13 @@ Note: Apply the same pattern to all other mutation hooks (`useWrap`, `useUnwrap`
 
 **Files to modify (same pattern as Task 16):**
 
-- `packages/token-react-sdk/src/token/use-wrap.ts`
-- `packages/token-react-sdk/src/token/use-wrap-eth.ts`
-- `packages/token-react-sdk/src/token/use-unwrap.ts`
-- `packages/token-react-sdk/src/token/use-finalize-unwrap.ts`
-- `packages/token-react-sdk/src/token/use-confidential-approve.ts`
-- `packages/token-react-sdk/src/token/use-confidential-transfer-from.ts`
-- `packages/token-react-sdk/src/token/use-approve-underlying.ts`
+- `packages/react-sdk/src/token/use-wrap.ts`
+- `packages/react-sdk/src/token/use-wrap-eth.ts`
+- `packages/react-sdk/src/token/use-unwrap.ts`
+- `packages/react-sdk/src/token/use-finalize-unwrap.ts`
+- `packages/react-sdk/src/token/use-confidential-approve.ts`
+- `packages/react-sdk/src/token/use-confidential-transfer-from.ts`
+- `packages/react-sdk/src/token/use-approve-underlying.ts`
 
 For each file:
 
@@ -1139,7 +1139,7 @@ Read each file, then apply the dedup pattern. The `MutationPhase` type export sh
 
 **Step 2: Export MutationPhase type**
 
-In `packages/token-react-sdk/src/index.ts`, add:
+In `packages/react-sdk/src/index.ts`, add:
 
 ```ts
 export type { MutationPhase } from "./token/use-confidential-transfer";
@@ -1156,7 +1156,7 @@ Expected: PASS.
 **Step 4: Commit**
 
 ```bash
-git add packages/token-react-sdk/src/token/
+git add packages/react-sdk/src/token/
 git commit -m "feat(react-sdk): add mutation dedup and phase tracking
 
 Prevent double-signing by deduplicating in-flight mutations.
@@ -1166,27 +1166,27 @@ to all mutation hooks for UI feedback."
 
 ---
 
-## Phase 5: React Unit Tests (token-react-sdk)
+## Phase 5: React Unit Tests (react-sdk)
 
 ### Task 18: Add testing dependencies
 
 **Step 1: Check if @testing-library/react is installed**
 
 ```bash
-grep "@testing-library/react" packages/token-react-sdk/package.json
+grep "@testing-library/react" packages/react-sdk/package.json
 ```
 
 If not present:
 
 ```bash
-pnpm --filter @zama-fhe/token-react-sdk add -D @testing-library/react @testing-library/react-hooks
+pnpm --filter @zama-fhe/react-sdk add -D @testing-library/react @testing-library/react-hooks
 ```
 
 ### Task 19: Create test utilities
 
 **Files:**
 
-- Create: `packages/token-react-sdk/src/__tests__/test-utils.tsx`
+- Create: `packages/react-sdk/src/__tests__/test-utils.tsx`
 
 **Step 1: Write test utilities**
 
@@ -1291,7 +1291,7 @@ export function createProviderWrapper(options?: {
 
 **Files:**
 
-- Create: `packages/token-react-sdk/src/__tests__/provider.test.tsx`
+- Create: `packages/react-sdk/src/__tests__/provider.test.tsx`
 
 **Step 1: Write tests**
 
@@ -1356,7 +1356,7 @@ describe("TokenSDKProvider", () => {
 **Step 2: Run tests**
 
 ```bash
-pnpm test:run -- --reporter=verbose packages/token-react-sdk/src/__tests__/provider.test.tsx
+pnpm test:run -- --reporter=verbose packages/react-sdk/src/__tests__/provider.test.tsx
 ```
 
 Expected: All tests PASS.
@@ -1378,7 +1378,7 @@ Expected: All PASS.
 **Step 2: Commit**
 
 ```bash
-git add packages/token-react-sdk/src/__tests__/ packages/token-react-sdk/src/core/__tests__/ packages/token-react-sdk/package.json
+git add packages/react-sdk/src/__tests__/ packages/react-sdk/src/core/__tests__/ packages/react-sdk/package.json
 git commit -m "test(react-sdk): add React unit tests for provider and reducer
 
 Add test utilities (createMockSigner, createMockRelayer, createProviderWrapper).

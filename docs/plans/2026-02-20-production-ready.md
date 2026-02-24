@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Make @zama-fhe/sdk and @zama-fhe/token-react-sdk publishable to npm with proper ESM builds, type declarations, changesets versioning, and GitHub Actions CI/CD.
+**Goal:** Make @zama-fhe/sdk and @zama-fhe/react-sdk publishable to npm with proper ESM builds, type declarations, changesets versioning, and GitHub Actions CI/CD.
 
 **Architecture:** tsup builds each package to ESM + .d.ts in `dist/`. Changesets manages versioning across both packages. GitHub Actions runs CI on PR and auto-publishes on merge to main.
 
@@ -38,7 +38,7 @@ git commit -m "chore: add tsup, changesets, and prettier"
 
 ---
 
-### Task 2: Configure tsup for token-sdk
+### Task 2: Configure tsup for sdk
 
 **Files:**
 
@@ -81,7 +81,7 @@ Replace `packages/sdk/package.json` with:
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zama-ai/token-sdk",
+    "url": "https://github.com/zama-ai/sdk",
     "directory": "packages/sdk"
   },
   "type": "module",
@@ -137,21 +137,21 @@ Expected: `.js` and `.d.ts` files in each
 
 ```bash
 git add packages/sdk/tsup.config.ts packages/sdk/package.json
-git commit -m "feat(token-sdk): add tsup build config and npm exports"
+git commit -m "feat(sdk): add tsup build config and npm exports"
 ```
 
 ---
 
-### Task 3: Configure tsup for token-react-sdk
+### Task 3: Configure tsup for react-sdk
 
 **Files:**
 
-- Create: `packages/token-react-sdk/tsup.config.ts`
-- Modify: `packages/token-react-sdk/package.json`
+- Create: `packages/react-sdk/tsup.config.ts`
+- Modify: `packages/react-sdk/package.json`
 
 **Step 1: Create tsup config**
 
-Create `packages/token-react-sdk/tsup.config.ts`:
+Create `packages/react-sdk/tsup.config.ts`:
 
 ```ts
 import { defineConfig } from "tsup";
@@ -189,18 +189,18 @@ Note: `banner: { js: '"use client"' }` marks all chunks as client components sin
 
 **Step 2: Update package.json**
 
-Replace `packages/token-react-sdk/package.json` with:
+Replace `packages/react-sdk/package.json` with:
 
 ```json
 {
-  "name": "@zama-fhe/token-react-sdk",
+  "name": "@zama-fhe/react-sdk",
   "version": "0.1.0",
   "description": "React hooks for Zama confidential ERC-20 tokens (fhEVM)",
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zama-ai/token-sdk",
-    "directory": "packages/token-react-sdk"
+    "url": "https://github.com/zama-ai/sdk",
+    "directory": "packages/react-sdk"
   },
   "type": "module",
   "main": "./dist/index.js",
@@ -247,14 +247,14 @@ Replace `packages/token-react-sdk/package.json` with:
 
 **Step 3: Build and verify**
 
-Run: `pnpm --filter @zama-fhe/sdk build && pnpm --filter @zama-fhe/token-react-sdk build`
+Run: `pnpm --filter @zama-fhe/sdk build && pnpm --filter @zama-fhe/react-sdk build`
 Expected: `dist/` directory created with `index.js`, `index.d.ts`, `viem/index.js`, `ethers/index.js`, `wagmi/index.js` and their `.d.ts` files
 
 **Step 4: Commit**
 
 ```bash
-git add packages/token-react-sdk/tsup.config.ts packages/token-react-sdk/package.json
-git commit -m "feat(token-react-sdk): add tsup build config and npm exports"
+git add packages/react-sdk/tsup.config.ts packages/react-sdk/package.json
+git commit -m "feat(react-sdk): add tsup build config and npm exports"
 ```
 
 ---
@@ -274,7 +274,7 @@ Add to the `"scripts"` section of root `package.json`:
 ```json
 {
   "scripts": {
-    "build": "pnpm --filter @zama-fhe/sdk build && pnpm --filter @zama-fhe/token-react-sdk build",
+    "build": "pnpm --filter @zama-fhe/sdk build && pnpm --filter @zama-fhe/react-sdk build",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
@@ -387,7 +387,7 @@ Replace `.changeset/config.json` with:
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
   "changelog": "@changesets/changelog-github",
   "commit": false,
-  "fixed": [["@zama-fhe/sdk", "@zama-fhe/token-react-sdk"]],
+  "fixed": [["@zama-fhe/sdk", "@zama-fhe/react-sdk"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
@@ -537,11 +537,11 @@ git commit -m "ci: add release workflow with changesets"
 **Files:**
 
 - Create: `packages/sdk/tsconfig.build.json`
-- Create: `packages/token-react-sdk/tsconfig.build.json`
+- Create: `packages/react-sdk/tsconfig.build.json`
 
 Each package needs a build-specific tsconfig that tsup uses for declaration generation. The existing tsconfigs point `main` at `./src/index.ts` which is fine for development but the build tsconfigs exclude test files.
 
-**Step 1: Create token-sdk tsconfig.build.json**
+**Step 1: Create sdk tsconfig.build.json**
 
 Create `packages/sdk/tsconfig.build.json`:
 
@@ -552,9 +552,9 @@ Create `packages/sdk/tsconfig.build.json`:
 }
 ```
 
-**Step 2: Create token-react-sdk tsconfig.build.json**
+**Step 2: Create react-sdk tsconfig.build.json**
 
-Create `packages/token-react-sdk/tsconfig.build.json`:
+Create `packages/react-sdk/tsconfig.build.json`:
 
 ```json
 {
@@ -573,7 +573,7 @@ For `packages/sdk/tsup.config.ts`, add:
   tsconfig: "tsconfig.build.json",
 ```
 
-For `packages/token-react-sdk/tsup.config.ts`, add:
+For `packages/react-sdk/tsup.config.ts`, add:
 
 ```ts
   tsconfig: "tsconfig.build.json",
@@ -590,7 +590,7 @@ Expected: All 162 tests still pass
 **Step 5: Commit**
 
 ```bash
-git add packages/sdk/tsconfig.build.json packages/token-react-sdk/tsconfig.build.json packages/sdk/tsup.config.ts packages/token-react-sdk/tsup.config.ts
+git add packages/sdk/tsconfig.build.json packages/react-sdk/tsconfig.build.json packages/sdk/tsup.config.ts packages/react-sdk/tsup.config.ts
 git commit -m "chore: add build tsconfigs excluding test files"
 ```
 
@@ -603,7 +603,7 @@ git commit -m "chore: add build tsconfigs excluding test files"
 Run:
 
 ```bash
-rm -rf packages/sdk/dist packages/token-react-sdk/dist
+rm -rf packages/sdk/dist packages/react-sdk/dist
 pnpm build
 ```
 
@@ -625,7 +625,7 @@ Run:
 
 ```bash
 cd packages/sdk && pnpm pack --dry-run && cd ../..
-cd packages/token-react-sdk && pnpm pack --dry-run && cd ../..
+cd packages/react-sdk && pnpm pack --dry-run && cd ../..
 ```
 
 Expected: Only `dist/` files and `README.md` listed (no `src/` files)

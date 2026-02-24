@@ -1,6 +1,6 @@
 "use client";
 
-import { useWrapperDiscovery, type Address } from "@zama-fhe/token-react-sdk";
+import { useWrapperDiscovery, type Address } from "@zama-fhe/react-sdk";
 
 export function WrapperDiscoveryPanel({
   tokenAddress,
