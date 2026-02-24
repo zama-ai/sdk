@@ -1,5 +1,5 @@
 import { TokenTable } from "@/components/token-table";
-import type { Address } from "@zama-fhe/token-react-sdk";
+import type { Address } from "@zama-fhe/react-sdk";
 
 const CONFIDENTIAL_TOKEN_ADDRESSES: Address[] = [
   "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762", // cUSDT

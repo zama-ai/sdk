@@ -7,7 +7,7 @@ TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homo
 | Package                                                    | Description                                                                                                              |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | [`@zama-fhe/sdk`](./packages/token-sdk/)             | Core SDK — confidential token operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
-| [`@zama-fhe/token-react-sdk`](./packages/token-react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                          |
+| [`@zama-fhe/react-sdk`](./packages/token-react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                          |
 
 ## What Are Confidential Tokens?
 
@@ -31,7 +31,7 @@ The SDK handles all the FHE complexity for you: key generation, encryption, decr
 pnpm add @zama-fhe/sdk
 
 # React hooks
-pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
+pnpm add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
 ### React with wagmi
@@ -47,8 +47,8 @@ import {
   useConfidentialBalance,
   useConfidentialTransfer,
   useShield,
-} from "@zama-fhe/token-react-sdk";
-import { WagmiSigner } from "@zama-fhe/token-react-sdk/wagmi";
+} from "@zama-fhe/react-sdk";
+import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 const wagmiConfig = createConfig({
   chains: [mainnet, sepolia],
@@ -237,13 +237,13 @@ Each package exposes multiple entry points for tree-shaking:
 | `@zama-fhe/sdk/ethers` | `EthersSigner` adapter + ethers read/write contract helpers |
 | `@zama-fhe/sdk/node` | `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network presets |
 
-**`@zama-fhe/token-react-sdk`**
+**`@zama-fhe/react-sdk`**
 | Import Path | Contents |
 | --- | --- |
-| `@zama-fhe/token-react-sdk` | Provider-based hooks + all re-exports from core SDK |
-| `@zama-fhe/token-react-sdk/viem` | Viem-specific hooks + `ViemSigner` |
-| `@zama-fhe/token-react-sdk/ethers` | Ethers-specific hooks + `EthersSigner` |
-| `@zama-fhe/token-react-sdk/wagmi` | Wagmi-specific hooks + `WagmiSigner` |
+| `@zama-fhe/react-sdk` | Provider-based hooks + all re-exports from core SDK |
+| `@zama-fhe/react-sdk/viem` | Viem-specific hooks + `ViemSigner` |
+| `@zama-fhe/react-sdk/ethers` | Ethers-specific hooks + `EthersSigner` |
+| `@zama-fhe/react-sdk/wagmi` | Wagmi-specific hooks + `WagmiSigner` |
 
 ## Supported Networks
 

@@ -9,7 +9,7 @@ import {
   useTokenSDK,
   findUnwrapRequested,
   type Address,
-} from "@zama-fhe/token-react-sdk";
+} from "@zama-fhe/react-sdk";
 
 export function UnwrapManualForm({
   tokenAddress,

@@ -1,6 +1,6 @@
 # React + ethers Example
 
-Next.js 15 app using `@zama-fhe/token-react-sdk` with ethers v6.
+Next.js 15 app using `@zama-fhe/react-sdk` with ethers v6.
 
 ## Setup
 

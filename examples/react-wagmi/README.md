@@ -1,6 +1,6 @@
 # React + wagmi Example
 
-Next.js 15 app using `@zama-fhe/token-react-sdk` with wagmi v2.
+Next.js 15 app using `@zama-fhe/react-sdk` with wagmi v2.
 
 ## Setup
 

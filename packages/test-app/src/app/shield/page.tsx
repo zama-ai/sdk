@@ -1,5 +1,5 @@
 import { ShieldForm } from "@/components/shield-form";
-import type { Address } from "@zama-fhe/token-react-sdk";
+import type { Address } from "@zama-fhe/react-sdk";
 
 const DEFAULTS = {
   token: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788" as Address, // USDT

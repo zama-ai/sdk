@@ -7,8 +7,8 @@ import {
   useConfidentialTransfer,
   useUnshield,
   useTokenMetadata,
-} from "@zama-fhe/token-react-sdk";
-import type { Address } from "@zama-fhe/token-react-sdk";
+} from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/react-sdk";
 import { Providers } from "../providers";
 
 const TOKEN_ADDRESS = "0x..." as Address; // Replace with your token address

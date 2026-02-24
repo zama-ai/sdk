@@ -50,7 +50,7 @@ Replace `packages/token-react-sdk/src/viem/index.ts` with:
 export { ViemSigner } from "./viem-signer";
 ```
 
-Note: We intentionally do NOT re-export `../token` hooks here. Those are already available from the main `@zama-fhe/token-react-sdk` entry point. Library sub-paths now only export their signer adapter. This avoids the anti-pattern of the same hooks being importable from multiple paths.
+Note: We intentionally do NOT re-export `../token` hooks here. Those are already available from the main `@zama-fhe/react-sdk` entry point. Library sub-paths now only export their signer adapter. This avoids the anti-pattern of the same hooks being importable from multiple paths.
 
 **Step 3: Verify typecheck passes**
 
@@ -174,7 +174,7 @@ All hooks are available from the main entry point via provider context."
 grep -r "token-react-sdk/viem\|token-react-sdk/ethers\|token-react-sdk/wagmi" packages/test-app/src/ --include="*.ts" --include="*.tsx"
 ```
 
-The test-app currently imports `WagmiSigner` from `@zama-fhe/token-react-sdk/wagmi` (in `src/providers.tsx`). This still works since `WagmiSigner` is still exported. If any hook imports from sub-paths are found, update them to import from `@zama-fhe/token-react-sdk` instead.
+The test-app currently imports `WagmiSigner` from `@zama-fhe/react-sdk/wagmi` (in `src/providers.tsx`). This still works since `WagmiSigner` is still exported. If any hook imports from sub-paths are found, update them to import from `@zama-fhe/react-sdk` instead.
 
 **Step 2: Run E2E smoke test (optional)**
 
@@ -1179,7 +1179,7 @@ grep "@testing-library/react" packages/token-react-sdk/package.json
 If not present:
 
 ```bash
-pnpm --filter @zama-fhe/token-react-sdk add -D @testing-library/react @testing-library/react-hooks
+pnpm --filter @zama-fhe/react-sdk add -D @testing-library/react @testing-library/react-hooks
 ```
 
 ### Task 19: Create test utilities

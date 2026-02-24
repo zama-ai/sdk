@@ -1,8 +1,8 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RelayerWeb, TokenSDKProvider, indexedDBStorage } from "@zama-fhe/token-react-sdk";
-import { EthersSigner } from "@zama-fhe/token-react-sdk/ethers";
+import { RelayerWeb, TokenSDKProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { EthersSigner } from "@zama-fhe/react-sdk/ethers";
 import { BrowserProvider } from "ethers";
 import type { ReactNode } from "react";
 

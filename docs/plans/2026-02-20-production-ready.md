@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Make @zama-fhe/sdk and @zama-fhe/token-react-sdk publishable to npm with proper ESM builds, type declarations, changesets versioning, and GitHub Actions CI/CD.
+**Goal:** Make @zama-fhe/sdk and @zama-fhe/react-sdk publishable to npm with proper ESM builds, type declarations, changesets versioning, and GitHub Actions CI/CD.
 
 **Architecture:** tsup builds each package to ESM + .d.ts in `dist/`. Changesets manages versioning across both packages. GitHub Actions runs CI on PR and auto-publishes on merge to main.
 
@@ -193,7 +193,7 @@ Replace `packages/token-react-sdk/package.json` with:
 
 ```json
 {
-  "name": "@zama-fhe/token-react-sdk",
+  "name": "@zama-fhe/react-sdk",
   "version": "0.1.0",
   "description": "React hooks for Zama confidential ERC-20 tokens (fhEVM)",
   "license": "BSD-3-Clause",
@@ -247,7 +247,7 @@ Replace `packages/token-react-sdk/package.json` with:
 
 **Step 3: Build and verify**
 
-Run: `pnpm --filter @zama-fhe/sdk build && pnpm --filter @zama-fhe/token-react-sdk build`
+Run: `pnpm --filter @zama-fhe/sdk build && pnpm --filter @zama-fhe/react-sdk build`
 Expected: `dist/` directory created with `index.js`, `index.d.ts`, `viem/index.js`, `ethers/index.js`, `wagmi/index.js` and their `.d.ts` files
 
 **Step 4: Commit**
@@ -274,7 +274,7 @@ Add to the `"scripts"` section of root `package.json`:
 ```json
 {
   "scripts": {
-    "build": "pnpm --filter @zama-fhe/sdk build && pnpm --filter @zama-fhe/token-react-sdk build",
+    "build": "pnpm --filter @zama-fhe/sdk build && pnpm --filter @zama-fhe/react-sdk build",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
@@ -387,7 +387,7 @@ Replace `.changeset/config.json` with:
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
   "changelog": "@changesets/changelog-github",
   "commit": false,
-  "fixed": [["@zama-fhe/sdk", "@zama-fhe/token-react-sdk"]],
+  "fixed": [["@zama-fhe/sdk", "@zama-fhe/react-sdk"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",

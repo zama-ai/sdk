@@ -1,8 +1,8 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RelayerWeb, TokenSDKProvider, indexedDBStorage } from "@zama-fhe/token-react-sdk";
-import { ViemSigner } from "@zama-fhe/token-react-sdk/viem";
+import { RelayerWeb, TokenSDKProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { ViemSigner } from "@zama-fhe/react-sdk/viem";
 import type { ReactNode } from "react";
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { mainnet, sepolia } from "viem/chains";

@@ -1,5 +1,5 @@
 import { WrapperDiscoveryPanel } from "@/components/wrapper-discovery-panel";
-import type { Address } from "@zama-fhe/token-react-sdk";
+import type { Address } from "@zama-fhe/react-sdk";
 
 export default async function WrapperDiscoveryPage({
   searchParams,

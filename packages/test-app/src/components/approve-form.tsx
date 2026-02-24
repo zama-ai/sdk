@@ -5,7 +5,7 @@ import {
   useConfidentialIsApproved,
   useTokenMetadata,
   type Address,
-} from "@zama-fhe/token-react-sdk";
+} from "@zama-fhe/react-sdk";
 
 export function ApproveForm({
   tokenAddress,

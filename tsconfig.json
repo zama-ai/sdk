@@ -17,8 +17,8 @@
     "paths": {
       "@zama-fhe/sdk": ["./packages/token-sdk/src"],
       "@zama-fhe/sdk/*": ["./packages/token-sdk/src/*"],
-      "@zama-fhe/token-react-sdk": ["./packages/token-react-sdk/src"],
-      "@zama-fhe/token-react-sdk/*": ["./packages/token-react-sdk/src/*"]
+      "@zama-fhe/react-sdk": ["./packages/token-react-sdk/src"],
+      "@zama-fhe/react-sdk/*": ["./packages/token-react-sdk/src/*"]
     }
   },
   "include": ["packages/**/*.ts", "packages/**/*.tsx"],

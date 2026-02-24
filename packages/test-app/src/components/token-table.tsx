@@ -1,7 +1,7 @@
 "use client";
 
-import { useConfidentialBalances, useTokenMetadata, type Address } from "@zama-fhe/token-react-sdk";
-import { useBalanceOf } from "@zama-fhe/token-react-sdk/wagmi";
+import { useState } from "react";
+import { useConfidentialBalances, useTokenMetadata, type Address } from "@zama-fhe/react-sdk";
 import Link from "next/link";
 import { useState } from "react";
 import { formatUnits } from "viem";

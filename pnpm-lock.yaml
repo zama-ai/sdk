@@ -101,7 +101,7 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.90.21(react@19.2.4)
-      '@zama-fhe/token-react-sdk':
+      '@zama-fhe/react-sdk':
         specifier: workspace:*
         version: link:../token-react-sdk
       '@zama-fhe/sdk':
