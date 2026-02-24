@@ -23,8 +23,15 @@ export const ERC20_METADATA_ABI = [
   },
 ] as const;
 
-/** Minimal ERC-20 ABI — only approve and allowance (needed for shield flow). */
+/** Minimal ERC-20 ABI — approve, allowance, balanceOf (needed for shield flow and balance display). */
 export const ERC20_ABI = [
+  {
+    inputs: [{ name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
   {
     inputs: [
       { name: "owner", type: "address" },

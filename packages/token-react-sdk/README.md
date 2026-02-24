@@ -650,15 +650,16 @@ queryClient.invalidateQueries({
 
 ### Read Hooks
 
-| Hook                                         | Parameters                      | Description                     |
-| -------------------------------------------- | ------------------------------- | ------------------------------- |
-| `useConfidentialBalanceOf(token?, user?)`    | Token and user addresses        | Read encrypted balance handle.  |
-| `useWrapperForToken(coordinator?, token?)`   | Coordinator and token addresses | Look up wrapper for token.      |
-| `useUnderlyingToken(wrapper?)`               | Wrapper address                 | Read underlying ERC-20 address. |
-| `useWrapperExists(coordinator?, token?)`     | Coordinator and token addresses | Check if wrapper exists.        |
-| `useSupportsInterface(token?, interfaceId?)` | Token address and interface ID  | ERC-165 support check.          |
+| Hook                                         | Parameters                      | Description                                                |
+| -------------------------------------------- | ------------------------------- | ---------------------------------------------------------- |
+| `useBalanceOf(token, user?)`                 | Token and optional user address | ERC-20 balance with symbol, decimals, and formatted value. |
+| `useConfidentialBalanceOf(token?, user?)`    | Token and user addresses        | Read encrypted balance handle.                             |
+| `useWrapperForToken(coordinator?, token?)`   | Coordinator and token addresses | Look up wrapper for token.                                 |
+| `useUnderlyingToken(wrapper?)`               | Wrapper address                 | Read underlying ERC-20 address.                            |
+| `useWrapperExists(coordinator?, token?)`     | Coordinator and token addresses | Check if wrapper exists.                                   |
+| `useSupportsInterface(token?, interfaceId?)` | Token address and interface ID  | ERC-165 support check.                                     |
 
-All read hooks are enabled only when their required parameters are defined.
+All read hooks are enabled only when their required parameters are defined. All read hooks have `*Suspense` variants for use with React Suspense boundaries.
 
 ### Write Hooks
 

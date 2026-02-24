@@ -36,6 +36,7 @@ const relayer = new RelayerWeb({
       network: hardhat.rpcUrls.default.http[0],
     },
   },
+  security: { integrityCheck: !isHardhat },
 });
 
 const storage = new MemoryStorage();

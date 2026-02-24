@@ -1,4 +1,11 @@
 export {
+  useBalanceOf,
+  useBalanceOfSuspense,
+  type UseBalanceOfConfig,
+  type UseBalanceOfSuspenseConfig,
+  type UseBalanceOfResult,
+} from "./use-balance-of";
+export {
   useConfidentialBalanceOf,
   useConfidentialBalanceOfSuspense,
   type UseConfidentialBalanceOfConfig,

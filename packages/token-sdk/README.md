@@ -220,11 +220,19 @@ interface GenericStringStorage {
 
 ### `RelayerWebConfig` (browser)
 
-| Field          | Type                                  | Description                                                                                  |
-| -------------- | ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `getChainId`   | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.   |
-| `transports`   | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses). |
-| `getCsrfToken` | `() => string`                        | Optional. Resolve the CSRF token before each authenticated network request.                  |
+| Field        | Type                                  | Description                                                                                  |
+| ------------ | ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `getChainId` | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.   |
+| `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses). |
+| `security`   | `RelayerWebSecurityConfig`            | Optional. Security options (see below).                                                      |
+| `logger`     | `GenericLogger`                       | Optional. Logger for worker lifecycle and request timing.                                    |
+
+#### `RelayerWebSecurityConfig`
+
+| Field            | Type           | Description                                                                                      |
+| ---------------- | -------------- | ------------------------------------------------------------------------------------------------ |
+| `getCsrfToken`   | `() => string` | Optional. Resolve the CSRF token before each authenticated network request.                      |
+| `integrityCheck` | `boolean`      | Optional. Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set `false` for tests. |
 
 ### `RelayerNodeConfig` (Node.js)
 
@@ -319,6 +327,7 @@ interface ContractCallConfig {
 | `nameContract(token)`                      | Read token name.         |
 | `symbolContract(token)`                    | Read token symbol.       |
 | `decimalsContract(token)`                  | Read token decimals.     |
+| `balanceOfContract(token, owner)`          | Read ERC-20 balance.     |
 | `allowanceContract(token, owner, spender)` | Read ERC-20 allowance.   |
 | `approveContract(token, spender, value)`   | Approve ERC-20 spending. |
 

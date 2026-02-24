@@ -1,9 +1,13 @@
+import { formatUnits } from "viem";
 import { test, expect } from "../fixtures/test";
 
 // Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol
 function wrapFee(amount: bigint): bigint {
   return (amount * 100n + 9999n) / 10000n;
 }
+
+const DECIMALS = 6;
+const fmt = (value: bigint) => formatUnits(value, DECIMALS);
 
 const INITIAL_BALANCE = 1_000_000_000n - wrapFee(1_000_000_000n);
 
@@ -27,7 +31,7 @@ test("should shield USDT then unshield all", async ({ page, contracts }) => {
   // Verify balance is now 0
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText("0");
+  await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(fmt(0n));
 });
 
 test("should shield USDC then unshield all", async ({ page, contracts }) => {
@@ -50,5 +54,5 @@ test("should shield USDC then unshield all", async ({ page, contracts }) => {
   // Verify balance is now 0
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  await expect(page.getByTestId("token-row-cERC20").getByTestId("balance")).toHaveText("0");
+  await expect(page.getByTestId("token-row-cERC20").getByTestId("balance")).toHaveText(fmt(0n));
 });

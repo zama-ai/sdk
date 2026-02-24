@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useConfidentialBalances, useTokenMetadata, type Address } from "@zama-fhe/token-react-sdk";
+import { useBalanceOf } from "@zama-fhe/token-react-sdk/wagmi";
 import Link from "next/link";
+import { useState } from "react";
+import { formatUnits } from "viem";
 
 function TokenRow({
   address,
@@ -20,20 +22,16 @@ function TokenRow({
   return (
     <tr data-testid={`token-row-${metadata?.symbol ?? address}`}>
       <td className="px-4 py-2">{metadata?.symbol ?? "..."}</td>
-      <td className="px-4 py-2">{metadata?.name ?? "..."}</td>
-      <td className="px-4 py-2 font-mono" data-testid="balance">
+      <td className="px-4 py-2 font-mono text-right" data-testid="balance">
         {!revealed
           ? "****"
           : isDecrypting
             ? "Decrypting..."
-            : balance !== undefined
-              ? balance.toString()
+            : balance !== undefined && metadata
+              ? formatUnits(balance, metadata.decimals)
               : "..."}
       </td>
-      <td className="px-4 py-2 flex gap-2">
-        <Link href={`/shield?token=${address}`} className="text-blue-600 hover:underline">
-          Shield
-        </Link>
+      <td className="px-4 py-2 text-right">
         <Link href={`/unshield?token=${address}`} className="text-blue-600 hover:underline">
           Unshield
         </Link>
@@ -42,7 +40,34 @@ function TokenRow({
   );
 }
 
-export function TokenTable({ tokenAddresses }: { tokenAddresses: Address[] }) {
+function ERC20TokenRow({ address, wrapper }: { address: Address; wrapper: Address }) {
+  const { data: balance, isLoading, error } = useBalanceOf({ tokenAddress: address });
+
+  return (
+    <tr data-testid={`token-row-${balance.symbol ?? address}`}>
+      <td className="px-4 py-2">{balance.symbol ?? "..."}</td>
+      <td className="px-4 py-2 font-mono text-right" data-testid="balance">
+        {error ? "Error" : isLoading ? "..." : (balance.formatted ?? "...")}
+      </td>
+      <td className="px-4 py-2 text-right">
+        <Link
+          href={`/shield?token=${address}&wrapper=${wrapper}`}
+          className="text-blue-600 hover:underline"
+        >
+          Shield
+        </Link>
+      </td>
+    </tr>
+  );
+}
+
+export function TokenTable({
+  tokenAddresses,
+  erc20Tokens = [],
+}: {
+  tokenAddresses: Address[];
+  erc20Tokens?: { address: Address; wrapper: Address }[];
+}) {
   const [revealed, setRevealed] = useState(false);
   const { data: balances, isFetching } = useConfidentialBalances({
     tokenAddresses: revealed ? tokenAddresses : [],
@@ -61,12 +86,14 @@ export function TokenTable({ tokenAddresses }: { tokenAddresses: Address[] }) {
         <thead>
           <tr className="text-left border-b">
             <th className="px-4 py-2">Symbol</th>
-            <th className="px-4 py-2">Name</th>
-            <th className="px-4 py-2">Balance</th>
-            <th className="px-4 py-2">Actions</th>
+            <th className="px-4 py-2 text-right">Balance</th>
+            <th className="px-4 py-2 text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
+          {erc20Tokens.map((token) => (
+            <ERC20TokenRow key={token.address} address={token.address} wrapper={token.wrapper} />
+          ))}
           {tokenAddresses.map((addr) => (
             <TokenRow
               key={addr}

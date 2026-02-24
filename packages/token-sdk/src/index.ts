@@ -128,6 +128,7 @@ export {
   nameContract,
   symbolContract,
   decimalsContract,
+  balanceOfContract,
   allowanceContract,
   approveContract,
   confidentialTotalSupplyContract,

@@ -1,9 +1,13 @@
+import { formatUnits } from "viem";
 import { test, expect } from "../fixtures/test";
 
 // Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol
 function wrapFee(amount: bigint): bigint {
   return (amount * 100n + 9999n) / 10000n;
 }
+
+const DECIMALS = 6;
+const fmt = (value: bigint) => formatUnits(value, DECIMALS);
 
 const INITIAL_BALANCE = 1_000_000_000n - wrapFee(1_000_000_000n);
 
@@ -35,6 +39,6 @@ test("should shield USDT then unwrap and finalize in two steps", async ({ page, 
   await page.getByTestId("reveal-button").click();
   const expectedBalance = INITIAL_BALANCE + shieldAmount - wrapFee(shieldAmount) - unwrapAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
-    expectedBalance.toString(),
+    fmt(expectedBalance),
   );
 });

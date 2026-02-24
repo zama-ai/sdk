@@ -45,13 +45,13 @@ export class RelayerWeb implements RelayerSDK {
 
   async #getWorkerConfig(): Promise<WorkerClientConfig> {
     const chainId = await this.#config.getChainId();
-    const { transports } = this.#config;
+    const { transports, security } = this.#config;
 
     return {
       cdnUrl: CDN_URL,
       fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
-      csrfToken: this.#config.getCsrfToken?.() ?? "",
-      integrity: CDN_INTEGRITY,
+      csrfToken: security?.getCsrfToken?.() ?? "",
+      integrity: security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
       logger: this.#config.logger,
     };
   }
@@ -136,7 +136,7 @@ export class RelayerWeb implements RelayerSDK {
    */
   async #refreshCsrfToken(): Promise<void> {
     if (this.#workerClient) {
-      const token = this.#config.getCsrfToken?.() ?? "";
+      const token = this.#config.security?.getCsrfToken?.() ?? "";
       if (token) {
         await this.#workerClient.updateCsrf(token);
       }

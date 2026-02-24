@@ -264,7 +264,7 @@ describe("RelayerWeb", () => {
   describe("CSRF token refresh", () => {
     it("refreshes CSRF token before encrypt", async () => {
       const getCsrfToken = vi.fn().mockReturnValue("csrf-token-123");
-      const relayer = createWebRelayer({ getCsrfToken });
+      const relayer = createWebRelayer({ security: { getCsrfToken } });
       mockWorkerClient.encrypt.mockResolvedValue({
         handles: [],
         inputProof: new Uint8Array(),
@@ -297,7 +297,7 @@ describe("RelayerWeb", () => {
 
     it("skips CSRF refresh when token is empty", async () => {
       const getCsrfToken = vi.fn().mockReturnValue("");
-      const relayer = createWebRelayer({ getCsrfToken });
+      const relayer = createWebRelayer({ security: { getCsrfToken } });
       mockWorkerClient.encrypt.mockResolvedValue({
         handles: [],
         inputProof: new Uint8Array(),

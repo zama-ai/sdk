@@ -25,13 +25,21 @@ export type Hex = `0x${string}`;
 /** Network configuration for the Relayer SDK */
 export type NetworkType = "hardhat" | "sepolia" | "mainnet";
 
+/** Security options for RelayerWeb. */
+export interface RelayerWebSecurityConfig {
+  /** Resolve the current CSRF token. Called before each authenticated network request. */
+  getCsrfToken?: () => string;
+  /** Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set to `false` only in test environments with mocked SDK scripts. */
+  integrityCheck?: boolean;
+}
+
 /** Configuration for RelayerWeb (browser backend) initialization. */
 export interface RelayerWebConfig {
   transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
   /** Resolve the current chain ID. Called lazily before each operation; the worker is re-initialized when the value changes. */
   getChainId: () => Promise<number>;
-  /** Resolve the current CSRF token. Called before each authenticated network request. */
-  getCsrfToken?: () => string;
+  /** Security options (CSRF, CDN integrity). */
+  security?: RelayerWebSecurityConfig;
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
 }

@@ -57,6 +57,27 @@ export function decimalsContract(tokenAddress: Address) {
 }
 
 /**
+ * Returns the contract config to read an ERC-20 balance.
+ *
+ * @example
+ * ```ts
+ * const balance = await signer.readContract(
+ *   balanceOfContract(tokenAddress, account),
+ * );
+ * ```
+ */
+export function balanceOfContract(tokenAddress: Address, account: Address) {
+  assertAddress(tokenAddress, "tokenAddress");
+  assertAddress(account, "account");
+  return {
+    address: tokenAddress,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [account],
+  } as const;
+}
+
+/**
  * Returns the contract config to read an ERC-20 allowance.
  *
  * @example
