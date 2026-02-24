@@ -1,19 +1,14 @@
-import { formatUnits } from "viem";
 import { test, expect } from "../fixtures/test";
-
-// Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol
-function wrapFee(amount: bigint): bigint {
-  return (amount * 100n + 9999n) / 10000n;
-}
-
-const DECIMALS = 6;
-const fmt = (value: bigint) => formatUnits(value, DECIMALS);
-
-const INITIAL_BALANCE = 1_000_000_000n - wrapFee(1_000_000_000n);
 const operator = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"; // Hardhat account #0 (test wallet)
 const recipient = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"; // Hardhat account #1
 
-test("should shield, approve, then transfer-from on cUSDT", async ({ page, contracts }) => {
+test("should shield, approve, then transfer-from on cUSDT", async ({
+  page,
+  contracts,
+  initialBalances,
+  formatUnits,
+  computeFee,
+}) => {
   const shieldAmount = 1000n;
   const transferAmount = 100n;
 
@@ -39,8 +34,9 @@ test("should shield, approve, then transfer-from on cUSDT", async ({ page, contr
   // Verify balance decreased by transfer amount
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance = INITIAL_BALANCE + shieldAmount - wrapFee(shieldAmount) - transferAmount;
+  const expectedBalance =
+    initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount) - transferAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
-    fmt(expectedBalance),
+    formatUnits(expectedBalance, 6),
   );
 });

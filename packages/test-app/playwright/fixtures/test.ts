@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, type BrowserContext } from "@playwright/test";
-import { createTestClient, http, publicActions, walletActions } from "viem";
+import { createTestClient, formatUnits, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import { mockRelayerSdk } from "./fhevm";
@@ -14,6 +14,25 @@ const contracts = {
   cUSDT: "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762",
   USDC: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
   cUSDC: "0x3B02fF1e626Ed7a8fd6eC5299e2C54e1421B626B",
+} as const;
+
+/** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */
+function computeFee(amount: bigint): bigint {
+  return (amount * 100n + 9999n) / 10000n;
+}
+
+// Hardhat deployment mints 1_000 * 10^6 ERC-20 tokens to the test account per token.
+// Wrapping (done by alice) deposits 1_000 * 10^6 into each confidential token.
+// Net initial confidential balance = wrapped - wrapFee(wrapped).
+// ERC-20 balance is untouched because alice wraps with her own tokens.
+const MINTED = 1_000n * 10n ** 6n;
+const CONFIDENTIAL = MINTED - computeFee(MINTED);
+
+const initialBalances = {
+  USDT: MINTED,
+  cUSDT: CONFIDENTIAL,
+  USDC: MINTED,
+  cUSDC: CONFIDENTIAL,
 } as const;
 
 const viemClient = createTestClient({
@@ -32,6 +51,9 @@ export interface TestFixtures {
   account: typeof account;
   viemClient: typeof viemClient;
   contracts: typeof contracts;
+  initialBalances: typeof initialBalances;
+  formatUnits: typeof formatUnits;
+  computeFee: typeof computeFee;
 }
 
 export const test = base.extend<TestFixtures>({
@@ -39,6 +61,9 @@ export const test = base.extend<TestFixtures>({
   account,
   viemClient,
   contracts,
+  initialBalances,
+  formatUnits: async ({}, use) => use(formatUnits),
+  computeFee: async ({}, use) => use(computeFee),
   page: async ({ page, baseURL, privateKey, viemClient }, use) => {
     const id = await viemClient.snapshot();
 

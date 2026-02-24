@@ -1,26 +1,12 @@
-import { formatUnits } from "viem";
 import { test, expect } from "../fixtures/test";
 
-// Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol
-function wrapFee(amount: bigint): bigint {
-  return (amount * 100n + 9999n) / 10000n;
-}
-
-const DECIMALS = 6;
-const fmt = (value: bigint) => formatUnits(value, DECIMALS);
-
-// Unwrap fee uses the same formula as wrap fee
-function unwrapFee(amount: bigint): bigint {
-  return (amount * 100n + 9999n) / 10000n;
-}
-
-const INITIAL_BALANCE = 1_000_000_000n - wrapFee(1_000_000_000n);
-
-// Hardhat deployment mints 1_000 * 10^6 ERC-20 tokens to the test account.
-// Wrapping is done by a separate signer (alice), so the test account keeps all minted ERC-20.
-const INITIAL_ERC20_BALANCE = 1_000n * 10n ** 6n;
-
-test("should shield USDT then unshield back to ERC20", async ({ page, contracts }) => {
+test("should shield USDT then unshield back to ERC20", async ({
+  page,
+  contracts,
+  initialBalances,
+  formatUnits,
+  computeFee,
+}) => {
   const shieldAmount = 1000n;
   const unshieldAmount = 500n;
 
@@ -38,20 +24,27 @@ test("should shield USDT then unshield back to ERC20", async ({ page, contracts 
   // Verify balance decreased by unshield amount
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance = INITIAL_BALANCE + shieldAmount - wrapFee(shieldAmount) - unshieldAmount;
+  const expectedBalance =
+    initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount) - unshieldAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
-    fmt(expectedBalance),
+    formatUnits(expectedBalance, 6),
   );
 
   // ERC-20 balance should increase by unshield amount minus unwrap fee
   const expectedErc20 =
-    INITIAL_ERC20_BALANCE - shieldAmount + unshieldAmount - unwrapFee(unshieldAmount);
+    initialBalances.USDT - shieldAmount + unshieldAmount - computeFee(unshieldAmount);
   await expect(page.getByTestId("token-row-USDT").getByTestId("balance")).toHaveText(
-    fmt(expectedErc20),
+    formatUnits(expectedErc20, 6),
   );
 });
 
-test("should shield USDC then unshield back to ERC20", async ({ page, contracts }) => {
+test("should shield USDC then unshield back to ERC20", async ({
+  page,
+  contracts,
+  initialBalances,
+  formatUnits,
+  computeFee,
+}) => {
   const shieldAmount = 1000n;
   const unshieldAmount = 500n;
 
@@ -69,15 +62,16 @@ test("should shield USDC then unshield back to ERC20", async ({ page, contracts 
   // Verify balance decreased by unshield amount
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance = INITIAL_BALANCE + shieldAmount - wrapFee(shieldAmount) - unshieldAmount;
+  const expectedBalance =
+    initialBalances.cUSDC + shieldAmount - computeFee(shieldAmount) - unshieldAmount;
   await expect(page.getByTestId("token-row-cERC20").getByTestId("balance")).toHaveText(
-    fmt(expectedBalance),
+    formatUnits(expectedBalance, 6),
   );
 
   // ERC-20 balance should increase by unshield amount minus unwrap fee
   const expectedErc20 =
-    INITIAL_ERC20_BALANCE - shieldAmount + unshieldAmount - unwrapFee(unshieldAmount);
+    initialBalances.USDC - shieldAmount + unshieldAmount - computeFee(unshieldAmount);
   await expect(page.getByTestId("token-row-ERC20").getByTestId("balance")).toHaveText(
-    fmt(expectedErc20),
+    formatUnits(expectedErc20, 6),
   );
 });
