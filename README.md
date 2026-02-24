@@ -208,7 +208,7 @@ const sdk = new TokenSDK({
 ┌─────────────────────────────────────────────────────┐
 │                    Your Application                 │
 ├──────────────────────┬──────────────────────────────┤
-│  react-sdk     │  sdk (vanilla TS)      │
+│  react-sdk           │  sdk (vanilla TS)            │
 │  React hooks +       │  TokenSDK                    │
 │  React Query cache   │  Token                       │
 │                      │  ReadonlyToken               │
