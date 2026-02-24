@@ -10,7 +10,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "json-summary", "html"],
-      include: ["packages/token-sdk/src/**", "packages/react-sdk/src/**"],
+      include: ["packages/sdk/src/**", "packages/react-sdk/src/**"],
       exclude: [
         "**/__tests__/**",
         "**/*.test.{ts,tsx}",
@@ -31,20 +31,12 @@ export default defineConfig({
     dedupe: ["wagmi", "react", "react-dom", "@tanstack/react-query"],
     alias: [
       {
-        find: /^@zama-fhe\/token-sdk\/(.+)/,
-        replacement: path.resolve(__dirname, "./packages/token-sdk/src/$1"),
+        find: /^@zama-fhe\/sdk\/(.+)/,
+        replacement: path.resolve(__dirname, "./packages/sdk/src/$1"),
       },
       {
-        find: "@zama-fhe/sdk",
-        replacement: path.resolve(__dirname, "./packages/token-sdk/src"),
-      },
-      {
-        find: /^@zama-fhe\/token-react-sdk\/(.+)/,
-        replacement: path.resolve(__dirname, "./packages/react-sdk/src/$1"),
-      },
-      {
-        find: /^@zama-fhe\/token-react-sdk$/,
-        replacement: path.resolve(__dirname, "./packages/react-sdk/src"),
+        find: /^@zama-fhe\/sdk$/,
+        replacement: path.resolve(__dirname, "./packages/sdk/src"),
       },
       {
         find: /^wagmi\/actions$/,
