@@ -29,7 +29,7 @@ export default defineConfig({
     {
       command: "npm --prefix ../../hardhat run node",
       port: 8545,
-      timeout: 5000,
+      timeout: 10000,
       reuseExistingServer: !process.env.CI,
     },
     {
