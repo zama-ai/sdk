@@ -23,6 +23,7 @@ pnpm add @zama-fhe/sdk
 ```ts
 import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { mainnet, sepolia } from "viem/chains";
 
 // 1. Create signer and relayer
 const signer = new ViemSigner(walletClient, publicClient);
@@ -31,11 +32,11 @@ const sdk = new TokenSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
-      [1]: {
+      [mainnet.id]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
-      [11155111]: {
+      [sepolia.id]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
@@ -67,6 +68,7 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 import { TokenSDK, MemoryStorage } from "@zama-fhe/sdk";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { mainnet, sepolia } from "viem/chains";
 
 const signer = new ViemSigner(walletClient, publicClient);
 
@@ -75,11 +77,11 @@ const sdk = new TokenSDK({
     getChainId: () => signer.getChainId(),
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
-      [1]: {
+      [mainnet.id]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
-      [11155111]: {
+      [sepolia.id]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
@@ -258,12 +260,12 @@ Each preset provides contract addresses and default values. Override `relayerUrl
 import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 
 const transports = {
-  [11155111]: {
+  [SepoliaConfig.chainId]: {
     ...SepoliaConfig,
     relayerUrl: "/api/proxy",
     network: "https://sepolia.infura.io/v3/KEY",
   },
-  [1]: {
+  [MainnetConfig.chainId]: {
     ...MainnetConfig,
     relayerUrl: "/api/proxy",
     network: "https://mainnet.infura.io/v3/KEY",

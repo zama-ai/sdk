@@ -110,6 +110,7 @@ function TokenDashboard() {
 ```ts
 import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { mainnet, sepolia } from "viem/chains";
 
 const signer = new ViemSigner(walletClient, publicClient);
 
@@ -117,11 +118,11 @@ const sdk = new TokenSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
-      [1]: {
+      [mainnet.id]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
-      [11155111]: {
+      [sepolia.id]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
@@ -149,7 +150,13 @@ await token.unshield(500n);
 ### Browser with ethers
 
 ```ts
-import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import {
+  TokenSDK,
+  RelayerWeb,
+  IndexedDBStorage,
+  MainnetConfig,
+  SepoliaConfig,
+} from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
 const signer = new EthersSigner(ethersSigner);
@@ -158,11 +165,11 @@ const sdk = new TokenSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
-      [1]: {
+      [MainnetConfig.chainId]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
-      [11155111]: {
+      [SepoliaConfig.chainId]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
@@ -179,6 +186,7 @@ const sdk = new TokenSDK({
 import { TokenSDK, MemoryStorage } from "@zama-fhe/sdk";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { mainnet, sepolia } from "viem/chains";
 
 const signer = new ViemSigner(walletClient, publicClient);
 
@@ -187,11 +195,11 @@ const sdk = new TokenSDK({
     getChainId: () => signer.getChainId(),
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
-      [1]: {
+      [mainnet.id]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
-      [11155111]: {
+      [sepolia.id]: {
         relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
@@ -292,7 +300,7 @@ Route relayer requests through your own backend that injects the API key. This k
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
-    [11155111]: {
+    [sepolia.id]: {
       relayerUrl: "https://your-backend.com/api/relayer", // your proxy forwards to relayer.zama.ai
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
@@ -309,7 +317,7 @@ Pass the API key directly using the `auth` option. Three authentication methods 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
-    [11155111]: {
+    [sepolia.id]: {
       relayerUrl: "https://relayer.zama.ai",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
       auth: { __type: "ApiKeyHeader", value: "your-api-key" },
