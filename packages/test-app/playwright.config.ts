@@ -29,13 +29,11 @@ export default defineConfig({
     {
       command: "npm --prefix ../../hardhat run node",
       port: 8545,
-      timeout: 10000,
       reuseExistingServer: !process.env.CI,
     },
     {
       command: process.env.CI ? "pnpm start" : "pnpm dev:e2e",
       port: PORT,
-      timeout: 10000,
       reuseExistingServer: !process.env.CI,
     },
   ],
