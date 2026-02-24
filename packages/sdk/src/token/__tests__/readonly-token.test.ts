@@ -203,50 +203,6 @@ describe("ReadonlyToken", () => {
     });
   });
 
-  describe("batchBalanceOf error paths", () => {
-    const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
-
-    it("calls onError with DecryptionFailedError on per-token failure", async () => {
-      const token2 = new ReadonlyToken({
-        sdk: sdk as unknown as RelayerSDK,
-        signer,
-        storage: new MemoryStorage(),
-        address: TOKEN2,
-      });
-
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce(VALID_HANDLE) // token1
-        .mockResolvedValueOnce(VALID_HANDLE2); // token2
-
-      vi.mocked(sdk.userDecrypt)
-        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
-        .mockRejectedValueOnce(new Error("relayer timeout"));
-
-      const errors: Array<{ address: Address; error: Error }> = [];
-      const result = await ReadonlyToken.batchBalanceOf(
-        [token, token2],
-        undefined,
-        (address, error) => errors.push({ address, error }),
-      );
-
-      expect(result.get(TOKEN)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(0n);
-      expect(errors).toHaveLength(1);
-      expect(errors[0]!.address).toBe(TOKEN2);
-      expect(errors[0]!.error.message).toBe("relayer timeout");
-    });
-
-    it("propagates SigningRejectedError from credential signing", async () => {
-      vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User rejected the request"));
-
-      vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-
-      await expect(ReadonlyToken.batchBalanceOf([token])).rejects.toMatchObject({
-        code: TokenErrorCode.SigningRejected,
-      });
-    });
-  });
-
   describe("batchDecryptBalances error paths", () => {
     const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
 
@@ -263,12 +219,10 @@ describe("ReadonlyToken", () => {
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
       const errors: Array<{ address: Address; error: Error }> = [];
-      const result = await ReadonlyToken.batchDecryptBalances(
-        [token, token2],
-        [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
-        undefined,
-        (address, error) => errors.push({ address, error }),
-      );
+      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+        handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+        onError: (address, error) => errors.push({ address, error }),
+      });
 
       expect(result.get(TOKEN)).toBe(1000n);
       expect(result.get(TOKEN2)).toBe(0n);

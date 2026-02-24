@@ -184,7 +184,7 @@ await ReadonlyToken.authorizeAll(tokens);
 // All subsequent decrypts reuse cached credentials — no more wallet prompts
 
 // Decrypt balances for multiple tokens in parallel
-const balances = await ReadonlyToken.batchBalanceOf(tokens, owner);
+const balances = await ReadonlyToken.batchDecryptBalances(tokens, owner);
 
 // Decrypt pre-fetched handles for multiple tokens
 const balances = await ReadonlyToken.batchDecryptBalances(tokens, handles, owner);

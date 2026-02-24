@@ -49,6 +49,7 @@ export type {
   TokenSDKConfig,
   TokenConfig,
   ReadonlyTokenConfig,
+  BatchDecryptOptions,
   FhevmInstanceConfig,
   NetworkType,
   RelayerSDKStatus,

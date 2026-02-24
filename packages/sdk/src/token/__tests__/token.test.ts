@@ -154,75 +154,12 @@ describe("Token", () => {
     });
   });
 
-  describe("batchBalanceOf", () => {
-    const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
-    const VALID_HANDLE2 = "0x" + "cd".repeat(32);
-
-    it("returns empty map for empty array", async () => {
-      const result = await Token.batchBalanceOf([]);
-      expect(result.size).toBe(0);
-    });
-
-    it("returns balances for multiple tokens in a single signing", async () => {
-      const token2 = new Token({
-        sdk: sdk as unknown as RelayerSDK,
-        signer,
-        storage: new MemoryStorage(),
-        address: TOKEN2,
-      });
-
-      vi.mocked(sdk.userDecrypt)
-        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
-        .mockResolvedValueOnce({ [VALID_HANDLE2]: 2000n });
-
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce(VALID_HANDLE)
-        .mockResolvedValueOnce(VALID_HANDLE2);
-
-      const result = await Token.batchBalanceOf([token, token2]);
-
-      expect(result.get(TOKEN)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(2000n);
-      // Single credential signing, not two
-      expect(signer.signTypedData).toHaveBeenCalledOnce();
-    });
-
-    it("skips decryption for zero-handle tokens", async () => {
-      const token2 = new Token({
-        sdk: sdk as unknown as RelayerSDK,
-        signer,
-        storage: new MemoryStorage(),
-        address: TOKEN2,
-      });
-
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce(VALID_HANDLE)
-        .mockResolvedValueOnce(ZERO_HANDLE);
-
-      const result = await Token.batchBalanceOf([token, token2]);
-
-      expect(result.get(TOKEN)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(0n);
-      expect(sdk.userDecrypt).toHaveBeenCalledOnce();
-    });
-
-    it("returns 0n for tokens that fail decryption", async () => {
-      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
-
-      vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-
-      const result = await Token.batchBalanceOf([token]);
-
-      expect(result.get(TOKEN)).toBe(0n);
-    });
-  });
-
   describe("batchDecryptBalances", () => {
     const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
     const VALID_HANDLE2 = "0x" + "cd".repeat(32);
 
     it("returns empty map for empty array", async () => {
-      const result = await Token.batchDecryptBalances([], []);
+      const result = await Token.batchDecryptBalances([]);
       expect(result.size).toBe(0);
     });
 
@@ -238,10 +175,9 @@ describe("Token", () => {
         .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
         .mockResolvedValueOnce({ [VALID_HANDLE2]: 2000n });
 
-      const result = await Token.batchDecryptBalances(
-        [token, token2],
-        [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
-      );
+      const result = await Token.batchDecryptBalances([token, token2], {
+        handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+      });
 
       expect(result.get(TOKEN)).toBe(1000n);
       expect(result.get(TOKEN2)).toBe(2000n);
@@ -257,10 +193,9 @@ describe("Token", () => {
         address: TOKEN2,
       });
 
-      const result = await Token.batchDecryptBalances(
-        [token, token2],
-        [VALID_HANDLE as Address, ZERO_HANDLE as Address],
-      );
+      const result = await Token.batchDecryptBalances([token, token2], {
+        handles: [VALID_HANDLE as Address, ZERO_HANDLE as Address],
+      });
 
       expect(result.get(TOKEN)).toBe(1000n);
       expect(result.get(TOKEN2)).toBe(0n);
@@ -270,7 +205,9 @@ describe("Token", () => {
     it("returns 0n for tokens that fail decryption", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-      const result = await Token.batchDecryptBalances([token], [VALID_HANDLE as Address]);
+      const result = await Token.batchDecryptBalances([token], {
+        handles: [VALID_HANDLE as Address],
+      });
 
       expect(result.get(TOKEN)).toBe(0n);
     });

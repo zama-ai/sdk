@@ -22,6 +22,16 @@ import { CredentialsManager } from "./credential-manager";
 export const ZERO_HANDLE =
   "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
 
+/** Options for {@link ReadonlyToken.batchDecryptBalances}. */
+export interface BatchDecryptOptions {
+  /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
+  handles?: Address[];
+  /** Balance owner address. Defaults to the connected signer. */
+  owner?: Address;
+  /** Called when decryption fails for a single token. */
+  onError?: (address: Address, error: Error) => void;
+}
+
 /** Configuration for constructing a {@link ReadonlyToken}. */
 export interface ReadonlyTokenConfig {
   /** FHE relayer backend. */
@@ -146,8 +156,10 @@ export class ReadonlyToken {
   }
 
   /**
-   * Decrypt balances for multiple tokens in parallel.
-   * Shares a single set of credentials across all tokens.
+   * Decrypt multiple token balances in parallel.
+   * When `handles` are provided, decrypts them directly (useful for two-phase
+   * polling where handles are already known). When omitted, fetches handles
+   * from the chain first.
    *
    * **Warning:** If a per-token decryption fails and no `onError` callback is
    * provided, the failed token's balance is silently set to `0n` in the result
@@ -155,109 +167,47 @@ export class ReadonlyToken {
    *
    * @example
    * ```ts
-   * const balances = await ReadonlyToken.batchBalanceOf(tokens);
-   * for (const [address, balance] of balances) {
-   *   console.log(address, balance);
-   * }
-   * ```
-   */
-  static async batchBalanceOf(
-    tokens: ReadonlyToken[],
-    owner?: Address,
-    onError?: (address: Address, error: Error) => void,
-  ): Promise<Map<Address, bigint>> {
-    if (tokens.length === 0) return new Map();
-
-    const sdk = tokens[0]!.sdk;
-    const signer = tokens[0]!.signer;
-    const ownerAddress = owner ?? (await signer.getAddress());
-    const allAddresses = tokens.map((t) => t.address);
-
-    const creds = await tokens[0]!.credentials.getAll(allAddresses);
-
-    const handles = await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress)));
-
-    const results = new Map<Address, bigint>();
-    const decryptPromises: Promise<void>[] = [];
-
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i]!;
-      const handle = handles[i]!;
-
-      if (token.isZeroHandle(handle)) {
-        results.set(token.address, BigInt(0));
-        continue;
-      }
-
-      decryptPromises.push(
-        sdk
-          .userDecrypt({
-            handles: [handle],
-            contractAddress: token.address,
-            signedContractAddresses: creds.contractAddresses,
-            privateKey: creds.privateKey,
-            publicKey: creds.publicKey,
-            signature: creds.signature,
-            signerAddress: ownerAddress,
-            startTimestamp: creds.startTimestamp,
-            durationDays: creds.durationDays,
-          })
-          .then((result) => {
-            results.set(token.address, result[handle] ?? BigInt(0));
-          })
-          .catch((error) => {
-            onError?.(token.address, error instanceof Error ? error : new Error(String(error)));
-            results.set(token.address, BigInt(0));
-          }),
-      );
-    }
-
-    await Promise.all(decryptPromises);
-    return results;
-  }
-
-  /**
-   * Decrypt pre-fetched encrypted handles for multiple tokens in parallel.
-   * Use when you already have handles from {@link confidentialBalanceOf}.
+   * // Simple one-shot:
+   * const balances = await ReadonlyToken.batchDecryptBalances(tokens);
    *
-   * **Warning:** If a per-token decryption fails and no `onError` callback is
-   * provided, the failed token's balance is silently set to `0n` in the result
-   * map. Always pass `onError` if you need to detect partial failures.
-   *
-   * @example
-   * ```ts
+   * // With pre-fetched handles and error callback:
    * const handles = await Promise.all(tokens.map(t => t.confidentialBalanceOf()));
-   * const balances = await ReadonlyToken.batchDecryptBalances(
-   *   tokens, handles, owner,
-   *   (addr, err) => console.error(`Decrypt failed for ${addr}`, err),
-   * );
+   * const balances = await ReadonlyToken.batchDecryptBalances(tokens, {
+   *   handles,
+   *   onError: (addr, err) => console.error(addr, err),
+   * });
    * ```
    */
   static async batchDecryptBalances(
     tokens: ReadonlyToken[],
-    handles: Address[],
-    owner?: Address,
-    onError?: (address: Address, error: Error) => void,
+    options?: BatchDecryptOptions,
   ): Promise<Map<Address, bigint>> {
     if (tokens.length === 0) return new Map();
-    if (tokens.length !== handles.length) {
-      throw new DecryptionFailedError(
-        `tokens.length (${tokens.length}) must equal handles.length (${handles.length})`,
-      );
-    }
+
+    const { handles, owner, onError } = options ?? {};
 
     const sdk = tokens[0]!.sdk;
     const signer = tokens[0]!.signer;
+    const signerAddress = owner ?? (await signer.getAddress());
+
+    const resolvedHandles =
+      handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(signerAddress))));
+
+    if (tokens.length !== resolvedHandles.length) {
+      throw new DecryptionFailedError(
+        `tokens.length (${tokens.length}) must equal handles.length (${resolvedHandles.length})`,
+      );
+    }
+
     const allAddresses = tokens.map((t) => t.address);
     const creds = await tokens[0]!.credentials.getAll(allAddresses);
-    const signerAddress = owner ?? (await signer.getAddress());
 
     const results = new Map<Address, bigint>();
     const decryptPromises: Promise<void>[] = [];
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i]!;
-      const handle = handles[i]!;
+      const handle = resolvedHandles[i]!;
 
       if (token.isZeroHandle(handle)) {
         results.set(token.address, BigInt(0));
