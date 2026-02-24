@@ -1,0 +1,27 @@
+{
+  "allow": [
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Apache-2.0",
+    "0BSD",
+    "Zlib",
+    "Unlicense",
+    "CC0-1.0"
+  ],
+  "denyPatterns": [
+    "GPL",
+    "AGPL",
+    "SSPL",
+    "BUSL",
+    "PolyForm",
+    "Commons Clause",
+    "Elastic License",
+    "CC-BY-NC",
+    "MS-RSL",
+    "NonCommercial",
+    "Proprietary"
+  ],
+  "reviewPatterns": ["MPL", "LGPL", "EPL", "CDDL", "CPL", "UNKNOWN", "UNLICENSED", "Custom"]
+}

@@ -1,0 +1,48 @@
+name: License Compatibility
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate license inventory
+        run: |
+          mkdir -p artifacts/license
+          pnpm licenses list --json --prod > artifacts/license/licenses-prod.json
+
+      - name: Check compatibility policy
+        run: |
+          node scripts/release/check-license-compat.mjs \
+            artifacts/license/licenses-prod.json \
+            .github/license-policy.json \
+            artifacts/license/report.md
+          cat artifacts/license/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload license artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: license-compat-report
+          path: artifacts/license/
+          retention-days: 7

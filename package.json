@@ -23,9 +23,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "changeset": "changeset",
-    "version-packages": "changeset version",
-    "release": "changeset publish",
+    "release:ci": "pnpm dlx --package semantic-release --package @semantic-release/changelog --package @semantic-release/commit-analyzer --package @semantic-release/exec --package @semantic-release/git --package @semantic-release/github --package @semantic-release/release-notes-generator semantic-release",
     "prepare": "husky",
     "submodule:init": "git submodule update --init --recursive",
     "submodule:update": "git submodule update --remote --merge",
@@ -45,8 +43,6 @@
     "api-report:check:react-sdk": "cd packages/react-sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.wagmi.json"
   },
   "devDependencies": {
-    "@changesets/changelog-github": "^0.5.2",
-    "@changesets/cli": "^2.29.8",
     "@eslint/js": "^10.0.1",
     "@faker-js/faker": "^10.3.0",
     "@fhevm/mock-utils": "0.4.2",

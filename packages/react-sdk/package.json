@@ -35,6 +35,9 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "fhe",
     "zama",
@@ -61,7 +64,7 @@
     "tsup": "^8.5.1"
   },
   "peerDependencies": {
-    "@zama-fhe/sdk": "workspace:*",
+    "@zama-fhe/sdk": "^1.0.0",
     "react": ">=18",
     "@tanstack/react-query": ">=5",
     "ethers": ">=6",

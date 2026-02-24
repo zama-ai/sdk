@@ -1,0 +1,27 @@
+name: PR Title Lint
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Conventional Commit PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          node -e '
+            const title = process.env.PR_TITLE || "";
+            const re = /^(feat|fix|perf|refactor|docs|chore|test|build|ci|revert)(\([^)]+\))?!?: .+/;
+            if (!re.test(title)) {
+              console.error("PR title must follow Conventional Commits (e.g. fix: ..., feat(scope): ...).");
+              console.error(`Current title: "${title}"`);
+              process.exit(1);
+            }
+          '
