@@ -38,7 +38,7 @@ git commit -m "chore: add tsup, changesets, and prettier"
 
 ---
 
-### Task 2: Configure tsup for token-sdk
+### Task 2: Configure tsup for sdk
 
 **Files:**
 
@@ -137,7 +137,7 @@ Expected: `.js` and `.d.ts` files in each
 
 ```bash
 git add packages/sdk/tsup.config.ts packages/sdk/package.json
-git commit -m "feat(token-sdk): add tsup build config and npm exports"
+git commit -m "feat(sdk): add tsup build config and npm exports"
 ```
 
 ---
@@ -541,7 +541,7 @@ git commit -m "ci: add release workflow with changesets"
 
 Each package needs a build-specific tsconfig that tsup uses for declaration generation. The existing tsconfigs point `main` at `./src/index.ts` which is fine for development but the build tsconfigs exclude test files.
 
-**Step 1: Create token-sdk tsconfig.build.json**
+**Step 1: Create sdk tsconfig.build.json**
 
 Create `packages/sdk/tsconfig.build.json`:
 

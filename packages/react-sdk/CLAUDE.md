@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 All commands run from monorepo root (`../../`):
 
 ```bash
-pnpm build                    # Build token-sdk then react-sdk (order matters)
+pnpm build                    # Build sdk then react-sdk (order matters)
 pnpm test                     # Run vitest in watch mode
 pnpm test:run                 # Run vitest once
 pnpm test:run -- path/to/file # Run a single test file
