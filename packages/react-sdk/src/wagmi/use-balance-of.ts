@@ -1,7 +1,7 @@
 "use client";
 
-import type { Address } from "@zama-fhe/token-sdk";
-import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/sdk";
+import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/sdk";
 import { formatUnits } from "viem";
 import { useConnection, useReadContracts } from "wagmi";
 
