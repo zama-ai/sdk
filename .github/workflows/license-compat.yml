@@ -29,7 +29,9 @@ jobs:
       - name: Generate license inventory
         run: |
           mkdir -p artifacts/license
-          pnpm licenses list --json --prod > artifacts/license/licenses-prod.json
+          pnpm --filter @zama-fhe/sdk licenses list --json --prod > artifacts/license/licenses-sdk.json
+          pnpm --filter @zama-fhe/react-sdk licenses list --json --prod > artifacts/license/licenses-react-sdk.json
+          node -e 'const fs=require("node:fs"); const sdk=JSON.parse(fs.readFileSync("artifacts/license/licenses-sdk.json","utf8")); const react=JSON.parse(fs.readFileSync("artifacts/license/licenses-react-sdk.json","utf8")); fs.writeFileSync("artifacts/license/licenses-prod.json", JSON.stringify([sdk, react], null, 2));'
 
       - name: Check compatibility policy
         run: |

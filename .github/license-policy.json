@@ -8,11 +8,12 @@
     "0BSD",
     "Zlib",
     "Unlicense",
-    "CC0-1.0"
+    "CC0-1.0",
+    "BlueOak-1.0.0"
   ],
   "denyPatterns": [
-    "GPL",
-    "AGPL",
+    "\\bAGPL(?:-|\\b)",
+    "\\bGPL(?:-|\\b)",
     "SSPL",
     "BUSL",
     "PolyForm",
@@ -23,5 +24,15 @@
     "NonCommercial",
     "Proprietary"
   ],
-  "reviewPatterns": ["MPL", "LGPL", "EPL", "CDDL", "CPL", "UNKNOWN", "UNLICENSED", "Custom"]
+  "reviewPatterns": [
+    "MPL",
+    "\\bLGPL(?:-|\\b)",
+    "EPL",
+    "CDDL",
+    "CPL",
+    "CC-BY",
+    "UNKNOWN",
+    "UNLICENSED",
+    "Custom"
+  ]
 }
