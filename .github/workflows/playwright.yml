@@ -33,7 +33,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
@@ -67,6 +67,14 @@ jobs:
       - name: Install Hardhat dependencies
         if: steps.hardhat-deps-cache.outputs.cache-hit != 'true'
         run: pnpm hardhat:install
+
+      - name: Validate Hardhat binary when cache is restored
+        if: steps.hardhat-deps-cache.outputs.cache-hit == 'true'
+        run: |
+          if [ ! -x hardhat/node_modules/.bin/hardhat ]; then
+            echo "Hardhat binary missing after cache restore, reinstalling dependencies."
+            pnpm hardhat:install
+          fi
 
       - name: Save Hardhat dependencies cache
         if: steps.hardhat-deps-cache.outputs.cache-hit != 'true'
@@ -122,6 +130,8 @@ jobs:
 
       - name: Run Playwright tests
         run: pnpm e2e:test
+        env:
+          NEXT_PUBLIC_NETWORK: hardhat
 
       - name: Upload test results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
