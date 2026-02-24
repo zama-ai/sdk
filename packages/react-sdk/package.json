@@ -63,6 +63,9 @@
   "dependencies": {
     "tsup": "^8.5.1"
   },
+  "devDependencies": {
+    "@zama-fhe/sdk": "workspace:*"
+  },
   "peerDependencies": {
     "@zama-fhe/sdk": "^1.0.0",
     "react": ">=18",
