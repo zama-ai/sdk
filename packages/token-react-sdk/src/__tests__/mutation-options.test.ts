@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import type { Token, Address } from "@zama-fhe/token-sdk";
+import type { Token, Address } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions } from "../token/use-confidential-transfer";
 import { confidentialTransferFromMutationOptions } from "../token/use-confidential-transfer-from";
 import { confidentialApproveMutationOptions } from "../token/use-confidential-approve";
@@ -142,7 +142,7 @@ it("authorizeAllMutationOptions", async () => {
   const signer = createMockSigner();
   const storage = createMockStorage();
   // We need a real-ish TokenSDK to test this
-  const { TokenSDK: TokenSDKClass } = await import("@zama-fhe/token-sdk");
+  const { TokenSDK: TokenSDKClass } = await import("@zama-fhe/sdk");
   const sdk = new TokenSDKClass({ relayer, signer, storage });
   const opts = authorizeAllMutationOptions(sdk);
 
@@ -155,7 +155,7 @@ it("encryptMutationOptions", async () => {
   const relayer = createMockRelayer();
   const signer = createMockSigner();
   const storage = createMockStorage();
-  const { TokenSDK: TokenSDKClass } = await import("@zama-fhe/token-sdk");
+  const { TokenSDK: TokenSDKClass } = await import("@zama-fhe/sdk");
   const sdk = new TokenSDKClass({ relayer, signer, storage });
   const opts = encryptMutationOptions(sdk);
 

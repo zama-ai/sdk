@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `@zama-fhe/sdk-monorepo` — TypeScript SDKs for privacy-preserving ERC-20 token operations using Fully Homomorphic Encryption (Zama fhEVM). Three packages in a pnpm workspace:
 
-- **`packages/token-sdk`** (`@zama-fhe/token-sdk`) — Core SDK: confidential token operations, FHE relayer integration, contract call builders, viem/ethers adapters, Node.js worker pool
+- **`packages/token-sdk`** (`@zama-fhe/sdk`) — Core SDK: confidential token operations, FHE relayer integration, contract call builders, viem/ethers adapters, Node.js worker pool
 - **`packages/token-react-sdk`** (`@zama-fhe/token-react-sdk`) — React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths
 - **`packages/test-app`** (`@zama-fhe/sdk-test-app`) — Next.js E2E test app using Playwright against a local Hardhat node with FHE mock contracts
 
@@ -40,13 +40,13 @@ pnpm hardhat:install   # Install hardhat deps
 pnpm hardhat:node      # Start local hardhat node
 ```
 
-Build a single package: `pnpm --filter @zama-fhe/token-sdk build` or `pnpm --filter @zama-fhe/token-react-sdk build`
+Build a single package: `pnpm --filter @zama-fhe/sdk build` or `pnpm --filter @zama-fhe/token-react-sdk build`
 
 ## Architecture
 
 ### Monorepo Structure
 
-The workspace uses pnpm with `packages/*`. Vitest is configured at the root with aliases resolving `@zama-fhe/token-sdk` and `@zama-fhe/token-react-sdk` to their source directories (not built output), so tests run against source without building first.
+The workspace uses pnpm with `packages/*`. Vitest is configured at the root with aliases resolving `@zama-fhe/sdk` and `@zama-fhe/token-react-sdk` to their source directories (not built output), so tests run against source without building first.
 
 The `hardhat` directory is a git submodule containing FHE-enabled smart contracts used for E2E testing. It runs independently with npm (not pnpm).
 

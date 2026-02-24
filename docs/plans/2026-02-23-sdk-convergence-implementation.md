@@ -328,7 +328,7 @@ export {
   WalletDisconnectedError,
   InitTimeoutError,
   toTokenError,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 ```
 
 ### Task 9: Add error tests
@@ -556,7 +556,7 @@ export function providerReducer(state: ProviderState, action: ProviderAction): P
 **Step 1: Write the config factory**
 
 ```ts
-import type { GenericStringStorage, RelayerSDK } from "@zama-fhe/token-sdk";
+import type { GenericStringStorage, RelayerSDK } from "@zama-fhe/sdk";
 
 export interface TokenSDKProviderConfig {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
@@ -703,8 +703,8 @@ Replace `packages/token-react-sdk/src/provider.tsx` entirely with:
 ````tsx
 "use client";
 
-import type { GenericSigner, RelayerSDK, GenericStringStorage } from "@zama-fhe/token-sdk";
-import { TokenSDK, ChainMismatchError } from "@zama-fhe/token-sdk";
+import type { GenericSigner, RelayerSDK, GenericStringStorage } from "@zama-fhe/sdk";
+import { TokenSDK, ChainMismatchError } from "@zama-fhe/sdk";
 import {
   createContext,
   type PropsWithChildren,
@@ -1025,7 +1025,7 @@ Read the current file first, then update the `mutationFn` to track phases:
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useRef, useState } from "react";
 import {
   confidentialBalanceQueryKeys,
@@ -1201,7 +1201,7 @@ import type {
   TransactionReceipt,
   EIP712TypedData,
   ContractCallConfig,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 import { type ReactNode } from "react";
 import { vi } from "vitest";
 

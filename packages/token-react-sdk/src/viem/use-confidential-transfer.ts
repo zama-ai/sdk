@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { writeConfidentialTransferContract } from "@zama-fhe/token-sdk/viem";
+import { writeConfidentialTransferContract } from "@zama-fhe/sdk/viem";
 
 type WriteFn = typeof writeConfidentialTransferContract;
 type Params = Parameters<WriteFn>;

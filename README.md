@@ -6,7 +6,7 @@ TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homo
 
 | Package                                                    | Description                                                                                                              |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| [`@zama-fhe/token-sdk`](./packages/token-sdk/)             | Core SDK — confidential token operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
+| [`@zama-fhe/sdk`](./packages/token-sdk/)             | Core SDK — confidential token operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
 | [`@zama-fhe/token-react-sdk`](./packages/token-react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                          |
 
 ## What Are Confidential Tokens?
@@ -28,7 +28,7 @@ The SDK handles all the FHE complexity for you: key generation, encryption, decr
 
 ```bash
 # Core SDK (vanilla TypeScript)
-pnpm add @zama-fhe/token-sdk
+pnpm add @zama-fhe/sdk
 
 # React hooks
 pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
@@ -108,8 +108,8 @@ function TokenDashboard() {
 ### Browser with viem
 
 ```ts
-import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/token-sdk";
-import { ViemSigner } from "@zama-fhe/token-sdk/viem";
+import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const signer = new ViemSigner(walletClient, publicClient);
 
@@ -149,8 +149,8 @@ await token.unshield(500n);
 ### Browser with ethers
 
 ```ts
-import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/token-sdk";
-import { EthersSigner } from "@zama-fhe/token-sdk/ethers";
+import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
 const signer = new EthersSigner(ethersSigner);
 
@@ -176,9 +176,9 @@ const sdk = new TokenSDK({
 ### Node.js
 
 ```ts
-import { TokenSDK, MemoryStorage } from "@zama-fhe/token-sdk";
-import { RelayerNode } from "@zama-fhe/token-sdk/node";
-import { ViemSigner } from "@zama-fhe/token-sdk/viem";
+import { TokenSDK, MemoryStorage } from "@zama-fhe/sdk";
+import { RelayerNode } from "@zama-fhe/sdk/node";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const signer = new ViemSigner(walletClient, publicClient);
 
@@ -229,13 +229,13 @@ const sdk = new TokenSDK({
 
 Each package exposes multiple entry points for tree-shaking:
 
-**`@zama-fhe/token-sdk`**
+**`@zama-fhe/sdk`**
 | Import Path | Contents |
 | --- | --- |
-| `@zama-fhe/token-sdk` | Core SDK, RelayerWeb, storage, ABIs, event decoders, contract call builders |
-| `@zama-fhe/token-sdk/viem` | `ViemSigner` adapter + viem read/write contract helpers |
-| `@zama-fhe/token-sdk/ethers` | `EthersSigner` adapter + ethers read/write contract helpers |
-| `@zama-fhe/token-sdk/node` | `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network presets |
+| `@zama-fhe/sdk` | Core SDK, RelayerWeb, storage, ABIs, event decoders, contract call builders |
+| `@zama-fhe/sdk/viem` | `ViemSigner` adapter + viem read/write contract helpers |
+| `@zama-fhe/sdk/ethers` | `EthersSigner` adapter + ethers read/write contract helpers |
+| `@zama-fhe/sdk/node` | `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network presets |
 
 **`@zama-fhe/token-react-sdk`**
 | Import Path | Contents |
@@ -275,8 +275,8 @@ The relayer handles FHE operations (encryption, decryption, key generation). Cho
 
 | Environment | Class         | Import                     |
 | ----------- | ------------- | -------------------------- |
-| Browser     | `RelayerWeb`  | `@zama-fhe/token-sdk`      |
-| Node.js     | `RelayerNode` | `@zama-fhe/token-sdk/node` |
+| Browser     | `RelayerWeb`  | `@zama-fhe/sdk`      |
+| Node.js     | `RelayerNode` | `@zama-fhe/sdk/node` |
 
 `RelayerWeb` runs FHE in a Web Worker loading WASM from CDN. `RelayerNode` calls the relayer SDK directly and supports worker threads via `NodeWorkerClient` / `NodeWorkerPool` for parallel operations.
 
@@ -324,7 +324,7 @@ auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 auth: { __type: "BearerToken", token: "your-bearer-token" }
 ```
 
-The `Auth` types (`ApiKeyHeader`, `ApiKeyCookie`, `BearerToken`) are exported from `@zama-fhe/token-sdk` for TypeScript usage.
+The `Auth` types (`ApiKeyHeader`, `ApiKeyCookie`, `BearerToken`) are exported from `@zama-fhe/sdk` for TypeScript usage.
 
 ### 4. Choose a Storage
 
@@ -385,7 +385,7 @@ import {
   wrapContract,
   confidentialTransferContract,
   confidentialBalanceOfContract,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 // Returns { address, abi, functionName, args, value? }
 const callConfig = wrapContract("0xWrapper", "0xRecipient", 1000n);
@@ -395,11 +395,11 @@ The `/viem` and `/ethers` sub-paths provide pre-wrapped helpers that execute cal
 
 ```ts
 // viem
-import { writeWrapContract, readConfidentialBalanceOfContract } from "@zama-fhe/token-sdk/viem";
+import { writeWrapContract, readConfidentialBalanceOfContract } from "@zama-fhe/sdk/viem";
 const txHash = await writeWrapContract(walletClient, wrapper, to, amount);
 
 // ethers
-import { writeWrapContract, readConfidentialBalanceOfContract } from "@zama-fhe/token-sdk/ethers";
+import { writeWrapContract, readConfidentialBalanceOfContract } from "@zama-fhe/sdk/ethers";
 const txHash = await writeWrapContract(signer, wrapper, to, amount);
 ```
 
@@ -413,7 +413,7 @@ import {
   SigningRejectedError,
   EncryptionFailedError,
   TransactionRevertedError,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 try {
   await token.confidentialTransfer(to, amount);

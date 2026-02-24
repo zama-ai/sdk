@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { writeFinalizeUnwrapContract } from "@zama-fhe/token-sdk/ethers";
+import { writeFinalizeUnwrapContract } from "@zama-fhe/sdk/ethers";
 
 type WriteFn = typeof writeFinalizeUnwrapContract;
 type Params = Parameters<WriteFn>;

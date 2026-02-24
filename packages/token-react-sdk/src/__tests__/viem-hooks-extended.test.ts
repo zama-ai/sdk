@@ -3,8 +3,8 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
-// Mock @zama-fhe/token-sdk/viem
-vi.mock("@zama-fhe/token-sdk/viem", () => ({
+// Mock @zama-fhe/sdk/viem
+vi.mock("@zama-fhe/sdk/viem", () => ({
   writeConfidentialBatchTransferContract: vi.fn().mockResolvedValue("0xbatchhash"),
   writeUnwrapContract: vi.fn().mockResolvedValue("0xunwraphash"),
   writeUnwrapFromBalanceContract: vi.fn().mockResolvedValue("0xunwrapbalancehash"),
@@ -15,7 +15,7 @@ vi.mock("@zama-fhe/token-sdk/viem", () => ({
   readWrapperExistsContract: vi.fn().mockResolvedValue(true),
 }));
 
-const viemMocks = await import("@zama-fhe/token-sdk/viem");
+const viemMocks = await import("@zama-fhe/sdk/viem");
 const {
   writeConfidentialBatchTransferContract,
   writeUnwrapContract,

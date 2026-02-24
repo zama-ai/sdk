@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { writeSetOperatorContract } from "@zama-fhe/token-sdk/ethers";
+import { writeSetOperatorContract } from "@zama-fhe/sdk/ethers";
 
 type WriteFn = typeof writeSetOperatorContract;
 type Params = Parameters<WriteFn>;

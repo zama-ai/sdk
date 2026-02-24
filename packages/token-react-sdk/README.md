@@ -8,7 +8,7 @@ React hooks for confidential token operations, built on [React Query](https://ta
 pnpm add @zama-fhe/token-react-sdk @tanstack/react-query
 ```
 
-`@zama-fhe/token-sdk` is included as a direct dependency — no need to install it separately.
+`@zama-fhe/sdk` is included as a direct dependency — no need to install it separately.
 
 ### Peer dependencies
 
@@ -712,7 +712,7 @@ import { EthersSigner } from "@zama-fhe/token-react-sdk/ethers";
 
 ## Re-exports from Core SDK
 
-All public exports from `@zama-fhe/token-sdk` are re-exported from the main entry point. You never need to import from the core package directly.
+All public exports from `@zama-fhe/sdk` are re-exported from the main entry point. You never need to import from the core package directly.
 
 **Classes:** `RelayerWeb`, `TokenSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
 

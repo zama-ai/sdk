@@ -61,7 +61,7 @@
     "tsup": "^8.5.1"
   },
   "peerDependencies": {
-    "@zama-fhe/token-sdk": "workspace:*",
+    "@zama-fhe/sdk": "workspace:*",
     "react": ">=18",
     "@tanstack/react-query": ">=5",
     "ethers": ">=6",

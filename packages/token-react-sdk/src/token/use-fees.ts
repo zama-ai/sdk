@@ -8,7 +8,7 @@ import {
   getFeeRecipientContract,
   type Address,
   type GenericSigner,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 import { useTokenSDK } from "../provider";
 
 /**

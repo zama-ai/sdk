@@ -1,6 +1,6 @@
 "use client";
 
-import { setOperatorContract } from "@zama-fhe/token-sdk";
+import { setOperatorContract } from "@zama-fhe/sdk";
 import { useWriteContract } from "wagmi";
 
 type SetOperatorParameters = Parameters<typeof setOperatorContract>;

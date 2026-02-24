@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-E2E test application for `@zama-fhe/token-sdk` and `@zama-fhe/token-react-sdk`. It's a Next.js app (v16, App Router) that exercises confidential token operations (shield, transfer, unshield) against a local Hardhat node with FHE mock contracts. Part of the `@zama-fhe/sdk-monorepo` pnpm workspace.
+E2E test application for `@zama-fhe/sdk` and `@zama-fhe/token-react-sdk`. It's a Next.js app (v16, App Router) that exercises confidential token operations (shield, transfer, unshield) against a local Hardhat node with FHE mock contracts. Part of the `@zama-fhe/sdk-monorepo` pnpm workspace.
 
 ## Commands
 

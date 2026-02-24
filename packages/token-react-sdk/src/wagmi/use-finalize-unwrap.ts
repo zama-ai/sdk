@@ -1,6 +1,6 @@
 "use client";
 
-import { finalizeUnwrapContract } from "@zama-fhe/token-sdk";
+import { finalizeUnwrapContract } from "@zama-fhe/sdk";
 import { useWriteContract } from "wagmi";
 
 type FinalizeUnwrapParameters = Parameters<typeof finalizeUnwrapContract>;

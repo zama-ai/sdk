@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { writeUnwrapContract } from "@zama-fhe/token-sdk/viem";
+import { writeUnwrapContract } from "@zama-fhe/sdk/viem";
 
 type WriteFn = typeof writeUnwrapContract;
 type Params = Parameters<WriteFn>;

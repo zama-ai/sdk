@@ -40,7 +40,7 @@ export {
   IndexedDBStorage,
   indexedDBStorage,
   CredentialsManager,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 // Re-export core types
 export type {
@@ -64,13 +64,13 @@ export type {
   InputProofBytesType,
   BatchTransferData,
   StoredCredentials,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 // Re-export network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/token-sdk";
+export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 // Re-export constants
-export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/token-sdk";
+export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
 
 // Re-export ABIs
 export {
@@ -83,7 +83,7 @@ export {
   TRANSFER_BATCHER_ABI,
   WRAPPER_ABI,
   BATCH_SWAP_ABI,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 // Re-export all contract call builders
 export {
@@ -118,7 +118,7 @@ export {
   getUnwrapFeeContract,
   getBatchTransferFeeContract,
   getFeeRecipientContract,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 // Token hooks
 export { useToken, type UseTokenConfig } from "./token/use-token";
@@ -244,7 +244,7 @@ export {
 } from "./token/use-fees";
 
 // Re-export event decoders, types, and constants from core SDK
-export { ZERO_HANDLE } from "@zama-fhe/token-sdk";
+export { ZERO_HANDLE } from "@zama-fhe/sdk";
 export type {
   RawLog,
   ConfidentialTransferEvent,
@@ -253,7 +253,7 @@ export type {
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   TokenEvent,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 export {
   Topics,
   TOKEN_TOPICS,
@@ -266,7 +266,7 @@ export {
   decodeTokenEvents,
   findUnwrapRequested,
   findWrapped,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 // Re-export activity feed types and helpers from core SDK
 export type {
@@ -275,13 +275,13 @@ export type {
   ActivityAmount,
   ActivityLogMetadata,
   ActivityItem,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 export {
   parseActivityFeed,
   extractEncryptedHandles,
   applyDecryptedValues,
   sortByBlockNumber,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 // Re-export token types from core SDK
 export type {
@@ -291,5 +291,5 @@ export type {
   GenericStringStorage,
   ContractCallConfig,
   TransactionReceipt,
-} from "@zama-fhe/token-sdk";
-export { TokenError, TokenErrorCode } from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
+export { TokenError, TokenErrorCode } from "@zama-fhe/sdk";

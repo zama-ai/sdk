@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { ReadonlyToken, type Address, type TokenSDK } from "@zama-fhe/token-sdk";
+import { ReadonlyToken, type Address, type TokenSDK } from "@zama-fhe/sdk";
 import { useTokenSDK } from "../provider";
 
 /**

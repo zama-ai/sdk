@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Address, Hex } from "@zama-fhe/token-sdk";
+import type { Address, Hex } from "@zama-fhe/sdk";
 
 // ---------------------------------------------------------------------------
 // Mock wagmi/actions – WagmiSigner delegates every method to these
@@ -52,7 +52,7 @@ vi.mock("wagmi", () => ({
 // ---------------------------------------------------------------------------
 // Mock contract builders – verify hooks call the correct builder with args
 // ---------------------------------------------------------------------------
-vi.mock("@zama-fhe/token-sdk", async (importOriginal) => {
+vi.mock("@zama-fhe/sdk", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
@@ -96,7 +96,7 @@ import {
   wrapperExistsContract,
   underlyingContract,
   supportsInterfaceContract,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 import { WagmiSigner } from "../wagmi/wagmi-signer";
 import { useWrap } from "../wagmi/use-wrap";

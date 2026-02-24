@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`@zama-fhe/token-sdk` — TypeScript SDK for privacy-preserving ERC-20 token operations using Fully Homomorphic Encryption (fhEVM). Part of a pnpm monorepo at `packages/token-sdk`.
+`@zama-fhe/sdk` — TypeScript SDK for privacy-preserving ERC-20 token operations using Fully Homomorphic Encryption (fhEVM). Part of a pnpm monorepo at `packages/token-sdk`.
 
 ## Commands
 
@@ -22,7 +22,7 @@ pnpm format:check      # Prettier check
 pnpm format            # Prettier fix
 ```
 
-Build this package only: `pnpm --filter @zama-fhe/token-sdk build`
+Build this package only: `pnpm --filter @zama-fhe/sdk build`
 
 ## Architecture
 
@@ -30,10 +30,10 @@ Build this package only: `pnpm --filter @zama-fhe/token-sdk build`
 
 The package exposes four entry points via `package.json` exports:
 
-- **`@zama-fhe/token-sdk`** — Core SDK: `TokenSDK`, `Token`, `ReadonlyToken`, relayer web backend (`RelayerWeb`), event decoders, activity feed helpers, contract call builders, ABIs, storage adapters, error types
-- **`@zama-fhe/token-sdk/viem`** — `ViemSigner` adapter + viem-native read/write contract helpers
-- **`@zama-fhe/token-sdk/ethers`** — `EthersSigner` adapter + ethers-native read/write contract helpers
-- **`@zama-fhe/token-sdk/node`** — `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network preset configs
+- **`@zama-fhe/sdk`** — Core SDK: `TokenSDK`, `Token`, `ReadonlyToken`, relayer web backend (`RelayerWeb`), event decoders, activity feed helpers, contract call builders, ABIs, storage adapters, error types
+- **`@zama-fhe/sdk/viem`** — `ViemSigner` adapter + viem-native read/write contract helpers
+- **`@zama-fhe/sdk/ethers`** — `EthersSigner` adapter + ethers-native read/write contract helpers
+- **`@zama-fhe/sdk/node`** — `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network preset configs
 
 ### Layered Design
 

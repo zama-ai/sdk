@@ -35,7 +35,7 @@ export default defineConfig({
         replacement: path.resolve(__dirname, "./packages/token-sdk/src/$1"),
       },
       {
-        find: "@zama-fhe/token-sdk",
+        find: "@zama-fhe/sdk",
         replacement: path.resolve(__dirname, "./packages/token-sdk/src"),
       },
       {

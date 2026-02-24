@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token } from "@zama-fhe/token-sdk";
+import type { Address, Token } from "@zama-fhe/sdk";
 import { useToken, type UseTokenConfig } from "./use-token";
 import { confidentialIsApprovedQueryKeys } from "./use-confidential-is-approved";
 

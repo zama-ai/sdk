@@ -1,28 +1,28 @@
-# @zama-fhe/token-sdk
+# @zama-fhe/sdk
 
 A TypeScript SDK for building privacy-preserving token applications using Fully Homomorphic Encryption (FHE). It abstracts the complexity of encrypted ERC-20 operations — shielding, unshielding, confidential transfers, and balance decryption — behind a clean, high-level API. Works with any Web3 library (viem, ethers, or custom signers).
 
 ## Installation
 
 ```bash
-pnpm add @zama-fhe/token-sdk
+pnpm add @zama-fhe/sdk
 ```
 
 ### Peer dependencies
 
 | Package                 | Version | Required?                                                |
 | ----------------------- | ------- | -------------------------------------------------------- |
-| `viem`                  | >= 2    | Optional — for the `@zama-fhe/token-sdk/viem` adapter    |
-| `ethers`                | >= 6    | Optional — for the `@zama-fhe/token-sdk/ethers` adapter  |
-| `@zama-fhe/relayer-sdk` | >= 0.4  | Optional — only for `@zama-fhe/token-sdk/node` (Node.js) |
+| `viem`                  | >= 2    | Optional — for the `@zama-fhe/sdk/viem` adapter    |
+| `ethers`                | >= 6    | Optional — for the `@zama-fhe/sdk/ethers` adapter  |
+| `@zama-fhe/relayer-sdk` | >= 0.4  | Optional — only for `@zama-fhe/sdk/node` (Node.js) |
 
 ## Quick Start
 
 ### Browser
 
 ```ts
-import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/token-sdk";
-import { ViemSigner } from "@zama-fhe/token-sdk/viem";
+import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 // 1. Create signer and relayer
 const signer = new ViemSigner(walletClient, publicClient);
@@ -64,9 +64,9 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 ### Node.js
 
 ```ts
-import { TokenSDK, MemoryStorage } from "@zama-fhe/token-sdk";
-import { RelayerNode } from "@zama-fhe/token-sdk/node";
-import { ViemSigner } from "@zama-fhe/token-sdk/viem";
+import { TokenSDK, MemoryStorage } from "@zama-fhe/sdk";
+import { RelayerNode } from "@zama-fhe/sdk/node";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const signer = new ViemSigner(walletClient, publicClient);
 
@@ -124,8 +124,8 @@ The `RelayerSDK` interface defines the FHE operations contract. Two implementati
 
 | Backend       | Import                     | Environment | How it works                               |
 | ------------- | -------------------------- | ----------- | ------------------------------------------ |
-| `RelayerWeb`  | `@zama-fhe/token-sdk`      | Browser     | Runs WASM in a Web Worker via CDN          |
-| `RelayerNode` | `@zama-fhe/token-sdk/node` | Node.js     | Uses `@zama-fhe/relayer-sdk/node` directly |
+| `RelayerWeb`  | `@zama-fhe/sdk`      | Browser     | Runs WASM in a Web Worker via CDN          |
+| `RelayerNode` | `@zama-fhe/sdk/node` | Node.js     | Uses `@zama-fhe/relayer-sdk/node` directly |
 
 The `/node` sub-path also exports `NodeWorkerClient` and `NodeWorkerClientConfig` for running FHE operations in a Node.js worker thread.
 
@@ -243,7 +243,7 @@ interface GenericStringStorage {
 
 ### Network Preset Configs
 
-Both the main entry (`@zama-fhe/token-sdk`) and the `/node` sub-path re-export preset configs so you don't need to import from `@zama-fhe/relayer-sdk` directly:
+Both the main entry (`@zama-fhe/sdk`) and the `/node` sub-path re-export preset configs so you don't need to import from `@zama-fhe/relayer-sdk` directly:
 
 | Config          | Chain ID | Description                         |
 | --------------- | -------- | ----------------------------------- |
@@ -254,7 +254,7 @@ Both the main entry (`@zama-fhe/token-sdk`) and the `/node` sub-path re-export p
 Each preset provides contract addresses and default values. Override `relayerUrl` and `network` (RPC URL) for your environment:
 
 ```ts
-import { SepoliaConfig, MainnetConfig } from "@zama-fhe/token-sdk";
+import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 
 const transports = {
   [11155111]: {
@@ -287,18 +287,18 @@ interface GenericSigner {
 
 ### Built-in Adapters
 
-**viem** — `@zama-fhe/token-sdk/viem`
+**viem** — `@zama-fhe/sdk/viem`
 
 ```ts
-import { ViemSigner } from "@zama-fhe/token-sdk/viem";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const signer = new ViemSigner(walletClient, publicClient);
 ```
 
-**ethers** — `@zama-fhe/token-sdk/ethers`
+**ethers** — `@zama-fhe/sdk/ethers`
 
 ```ts
-import { EthersSigner } from "@zama-fhe/token-sdk/ethers";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
 const signer = new EthersSigner(ethersSigner);
 ```
@@ -390,7 +390,7 @@ interface ContractCallConfig {
 
 Both the `/viem` and `/ethers` sub-paths export convenience wrappers that execute contract calls directly with library-native clients.
 
-### viem (`@zama-fhe/token-sdk/viem`)
+### viem (`@zama-fhe/sdk/viem`)
 
 ```ts
 import {
@@ -398,7 +398,7 @@ import {
   writeConfidentialTransferContract,
   writeWrapContract,
   // ... more
-} from "@zama-fhe/token-sdk/viem";
+} from "@zama-fhe/sdk/viem";
 
 // Read: pass a PublicClient
 const handle = await readConfidentialBalanceOfContract(publicClient, tokenAddress, userAddress);
@@ -417,7 +417,7 @@ const txHash = await writeConfidentialTransferContract(
 
 **Write helpers:** `writeConfidentialTransferContract`, `writeConfidentialBatchTransferContract`, `writeUnwrapContract`, `writeUnwrapFromBalanceContract`, `writeFinalizeUnwrapContract`, `writeSetOperatorContract`, `writeWrapContract`, `writeWrapETHContract`.
 
-### ethers (`@zama-fhe/token-sdk/ethers`)
+### ethers (`@zama-fhe/sdk/ethers`)
 
 Same set of functions, but read helpers take `Provider | Signer` and write helpers take `Signer`.
 
@@ -425,7 +425,7 @@ Same set of functions, but read helpers take `Provider | Signer` and write helpe
 import {
   readConfidentialBalanceOfContract,
   writeConfidentialTransferContract,
-} from "@zama-fhe/token-sdk/ethers";
+} from "@zama-fhe/sdk/ethers";
 
 const handle = await readConfidentialBalanceOfContract(provider, tokenAddress, userAddress);
 const txHash = await writeConfidentialTransferContract(
@@ -446,7 +446,7 @@ Decode raw log entries from `eth_getLogs` into typed event objects.
 Use `TOKEN_TOPICS` as the `topics[0]` filter for `getLogs` to capture all confidential token events:
 
 ```ts
-import { TOKEN_TOPICS } from "@zama-fhe/token-sdk";
+import { TOKEN_TOPICS } from "@zama-fhe/sdk";
 
 const logs = await publicClient.getLogs({
   address: tokenAddress,
@@ -473,7 +473,7 @@ Individual topic hashes are accessible via the `Topics` object: `Topics.Confiden
 Convenience functions that decode a logs array and return the first matching event:
 
 ```ts
-import { findWrapped, findUnwrapRequested } from "@zama-fhe/token-sdk";
+import { findWrapped, findUnwrapRequested } from "@zama-fhe/sdk";
 
 const wrappedEvent = findWrapped(receipt.logs);
 const unwrapEvent = findUnwrapRequested(receipt.logs);
@@ -491,7 +491,7 @@ import {
   extractEncryptedHandles,
   applyDecryptedValues,
   sortByBlockNumber,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 // 1. Parse raw logs into classified activity items
 const items = parseActivityFeed(logs, userAddress);
@@ -549,7 +549,7 @@ interface ActivityLogMetadata {
 All SDK errors extend `TokenError`. Use `instanceof` to catch specific error types:
 
 ```ts
-import { TokenError, SigningRejectedError, EncryptionFailedError } from "@zama-fhe/token-sdk";
+import { TokenError, SigningRejectedError, EncryptionFailedError } from "@zama-fhe/sdk";
 
 try {
   await token.confidentialTransfer(to, amount);

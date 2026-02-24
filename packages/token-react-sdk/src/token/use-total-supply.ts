@@ -7,7 +7,7 @@ import {
   type UseQueryResult,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
-import { totalSupplyContract, type Address, type ReadonlyToken } from "@zama-fhe/token-sdk";
+import { totalSupplyContract, type Address, type ReadonlyToken } from "@zama-fhe/sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 /**

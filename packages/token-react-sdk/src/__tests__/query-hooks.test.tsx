@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useTokenMetadata } from "../token/use-token-metadata";
 import { useIsConfidential, useIsWrapper } from "../token/use-is-confidential";
 import { useTotalSupply } from "../token/use-total-supply";

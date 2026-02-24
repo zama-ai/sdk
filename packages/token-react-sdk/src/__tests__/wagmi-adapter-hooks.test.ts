@@ -3,7 +3,7 @@ import {
   confidentialTransferContract,
   wrapContract,
   setOperatorContract,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 
 type Address = `0x${string}`;
 

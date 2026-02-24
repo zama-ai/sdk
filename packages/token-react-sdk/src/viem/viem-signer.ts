@@ -1,1 +1,1 @@
-export { ViemSigner } from "@zama-fhe/token-sdk/viem";
+export { ViemSigner } from "@zama-fhe/sdk/viem";

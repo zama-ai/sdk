@@ -1,9 +1,9 @@
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { mainnet, sepolia } from "viem/chains";
-import { MemoryStorage, TokenSDK, type Address } from "@zama-fhe/token-sdk";
-import { ViemSigner, readWrapperForTokenContract } from "@zama-fhe/token-sdk/viem";
-import { RelayerNode } from "@zama-fhe/token-sdk/node";
+import { MemoryStorage, TokenSDK, type Address } from "@zama-fhe/sdk";
+import { ViemSigner, readWrapperForTokenContract } from "@zama-fhe/sdk/viem";
+import { RelayerNode } from "@zama-fhe/sdk/node";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL!;

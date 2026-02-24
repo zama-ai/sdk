@@ -1,6 +1,6 @@
 "use client";
 
-import type { EncryptParams, EncryptResult, TokenSDK } from "@zama-fhe/token-sdk";
+import type { EncryptParams, EncryptResult, TokenSDK } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useTokenSDK } from "../provider";
 

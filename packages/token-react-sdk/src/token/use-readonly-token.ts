@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useTokenSDK } from "../provider";
 
 /**

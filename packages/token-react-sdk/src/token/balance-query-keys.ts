@@ -1,5 +1,5 @@
 import { Query } from "@tanstack/react-query";
-import { Address } from "@zama-fhe/token-sdk";
+import { Address } from "@zama-fhe/sdk";
 
 /**
  * Query key factories for confidential balance queries.

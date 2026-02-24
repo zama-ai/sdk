@@ -1,1 +1,1 @@
-export { EthersSigner } from "@zama-fhe/token-sdk/ethers";
+export { EthersSigner } from "@zama-fhe/sdk/ethers";

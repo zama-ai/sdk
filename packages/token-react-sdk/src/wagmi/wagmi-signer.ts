@@ -5,7 +5,7 @@ import type {
   Address,
   Hex,
   EIP712TypedData,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 import {
   getChainId,

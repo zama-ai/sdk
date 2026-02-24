@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery, skipToken, type UseQueryOptions } from "@tanstack/react-query";
-import type { Address, Token } from "@zama-fhe/token-sdk";
+import type { Address, Token } from "@zama-fhe/sdk";
 import { useToken, type UseTokenConfig } from "./use-token";
 
 /**

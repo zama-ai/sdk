@@ -104,7 +104,7 @@ importers:
       '@zama-fhe/token-react-sdk':
         specifier: workspace:*
         version: link:../token-react-sdk
-      '@zama-fhe/token-sdk':
+      '@zama-fhe/sdk':
         specifier: workspace:*
         version: link:../token-sdk
       next:
@@ -159,7 +159,7 @@ importers:
       '@tanstack/react-query':
         specifier: '>=5'
         version: 5.90.21(react@19.2.4)
-      '@zama-fhe/token-sdk':
+      '@zama-fhe/sdk':
         specifier: workspace:*
         version: link:../token-sdk
       ethers:

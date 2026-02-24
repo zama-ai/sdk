@@ -1,5 +1,5 @@
 {
-  "name": "@zama-fhe/token-sdk",
+  "name": "@zama-fhe/sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for Zama confidential ERC-20 tokens (fhEVM)",
   "license": "BSD-3-Clause",
