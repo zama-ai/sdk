@@ -1,14 +1,14 @@
 {
   "name": "@zama-fhe/sdk-monorepo",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Monorepo for Zama confidential ERC-20 token SDKs (fhEVM)",
+  "description": "Monorepo for Zama SDK packages",
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/zama-ai/sdk"
   },
-  "author": "Guillaume Hermet <guillaume.hermet@zama.ai>",
+  "author": "Zama",
   "scripts": {
     "build": "pnpm build:sdk && pnpm build:react-sdk",
     "build:sdk": "pnpm --filter @zama-fhe/sdk build",
@@ -67,12 +67,13 @@
     "typescript-eslint": "^8.56.0",
     "vitest": "^4.0.18"
   },
-  "packageManager": "pnpm@10.29.3",
-  "engines": {
-    "node": ">=20"
-  },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --cache --fix",
     "*.{ts,tsx,js,mjs,cjs,json,yaml,yml,md}": "prettier --write"
+  },
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
   }
 }

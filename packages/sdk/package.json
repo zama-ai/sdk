@@ -1,9 +1,9 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "TypeScript SDK for Zama confidential ERC-20 tokens (fhEVM)",
   "license": "BSD-3-Clause",
-  "author": "Guillaume Hermet <guillaume.hermet@zama.ai>",
+  "author": "Zama",
   "repository": {
     "type": "git",
     "url": "https://github.com/zama-ai/sdk",
@@ -68,9 +68,6 @@
     "ethers": ">=6",
     "@zama-fhe/relayer-sdk": ">=0.4"
   },
-  "engines": {
-    "node": ">=20"
-  },
   "sideEffects": false,
   "peerDependenciesMeta": {
     "viem": {
@@ -82,5 +79,10 @@
     "@zama-fhe/relayer-sdk": {
       "optional": true
     }
+  },
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
   }
 }

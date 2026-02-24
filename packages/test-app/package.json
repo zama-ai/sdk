@@ -1,7 +1,9 @@
 {
   "name": "@zama-fhe/test-app",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
+  "license": "BSD-3-Clause",
+  "author": "Zama",
   "scripts": {
     "dev": "next dev --port 3100",
     "dev:e2e": "NEXT_PUBLIC_NETWORK=hardhat next dev --port 3100",
@@ -31,5 +33,10 @@
     "ethers": "^6.16.0",
     "tailwindcss": "^4.2.0",
     "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
   }
 }
