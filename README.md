@@ -4,9 +4,9 @@ TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homo
 
 ## Packages
 
-| Package                                                    | Description                                                                                                              |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| [`@zama-fhe/sdk`](./packages/token-sdk/)             | Core SDK — confidential token operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
+| Package                                        | Description                                                                                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [`@zama-fhe/sdk`](./packages/token-sdk/)       | Core SDK — confidential token operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
 | [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                          |
 
 ## What Are Confidential Tokens?
@@ -273,8 +273,8 @@ Defaults for known chains are merged automatically — you only need to supply `
 
 The relayer handles FHE operations (encryption, decryption, key generation). Choose the right backend for your environment:
 
-| Environment | Class         | Import                     |
-| ----------- | ------------- | -------------------------- |
+| Environment | Class         | Import               |
+| ----------- | ------------- | -------------------- |
 | Browser     | `RelayerWeb`  | `@zama-fhe/sdk`      |
 | Node.js     | `RelayerNode` | `@zama-fhe/sdk/node` |
 

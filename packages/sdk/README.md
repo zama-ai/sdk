@@ -10,8 +10,8 @@ pnpm add @zama-fhe/sdk
 
 ### Peer dependencies
 
-| Package                 | Version | Required?                                                |
-| ----------------------- | ------- | -------------------------------------------------------- |
+| Package                 | Version | Required?                                          |
+| ----------------------- | ------- | -------------------------------------------------- |
 | `viem`                  | >= 2    | Optional — for the `@zama-fhe/sdk/viem` adapter    |
 | `ethers`                | >= 6    | Optional — for the `@zama-fhe/sdk/ethers` adapter  |
 | `@zama-fhe/relayer-sdk` | >= 0.4  | Optional — only for `@zama-fhe/sdk/node` (Node.js) |
@@ -122,8 +122,8 @@ The `relayer`, `signer`, and `storage` properties are public and accessible afte
 
 The `RelayerSDK` interface defines the FHE operations contract. Two implementations are provided:
 
-| Backend       | Import                     | Environment | How it works                               |
-| ------------- | -------------------------- | ----------- | ------------------------------------------ |
+| Backend       | Import               | Environment | How it works                               |
+| ------------- | -------------------- | ----------- | ------------------------------------------ |
 | `RelayerWeb`  | `@zama-fhe/sdk`      | Browser     | Runs WASM in a Web Worker via CDN          |
 | `RelayerNode` | `@zama-fhe/sdk/node` | Node.js     | Uses `@zama-fhe/relayer-sdk/node` directly |
 

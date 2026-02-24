@@ -1,5 +1,6 @@
 dist
 node_modules
+hardhat
 pnpm-lock.yaml
 coverage
 *.tsbuildinfo
