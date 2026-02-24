@@ -210,7 +210,7 @@ Implemented via `useState` + callbacks at each step of the mutation function.
 
 ### Structure
 
-Phased test structure in `packages/token-react-sdk/src/__tests__/`:
+Phased test structure in `packages/react-sdk/src/__tests__/`:
 
 **Phase 1: Types & Config** (~15 tests)
 

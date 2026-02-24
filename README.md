@@ -7,7 +7,7 @@ TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homo
 | Package                                                    | Description                                                                                                              |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | [`@zama-fhe/sdk`](./packages/token-sdk/)             | Core SDK — confidential token operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
-| [`@zama-fhe/react-sdk`](./packages/token-react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                          |
+| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                          |
 
 ## What Are Confidential Tokens?
 

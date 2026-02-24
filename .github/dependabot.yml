@@ -9,7 +9,7 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: npm
-    directory: /packages/token-react-sdk
+    directory: /packages/react-sdk
     schedule:
       interval: weekly
   - package-ecosystem: npm

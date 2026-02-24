@@ -128,8 +128,8 @@ Select the affected packages and describe the change. Choose the appropriate sem
 
 ### Adding React Hooks
 
-1. Provider-based hooks go in `packages/token-react-sdk/src/token/` or `src/relayer/`
-2. Library-specific hooks go in `packages/token-react-sdk/src/<library>/`
+1. Provider-based hooks go in `packages/react-sdk/src/token/` or `src/relayer/`
+2. Library-specific hooks go in `packages/react-sdk/src/<library>/`
 3. Export from the appropriate `index.ts`
 
 ## Reporting Issues
