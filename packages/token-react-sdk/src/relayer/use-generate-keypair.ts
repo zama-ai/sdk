@@ -1,6 +1,6 @@
 "use client";
 
-import type { FHEKeypair } from "@zama-fhe/token-sdk";
+import type { FHEKeypair } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useTokenSDK } from "../provider";
 

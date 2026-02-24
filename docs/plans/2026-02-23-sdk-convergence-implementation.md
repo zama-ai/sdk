@@ -192,7 +192,7 @@ Expected: PASS (all E2E tests use provider-based hooks from main entry point).
 
 **Files:**
 
-- Modify: `packages/token-sdk/src/token/token.types.ts:90-127`
+- Modify: `packages/sdk/src/token/token.types.ts:90-127`
 
 **Step 1: Add new error codes**
 
@@ -241,7 +241,7 @@ export class TokenError extends Error {
 
 **Files:**
 
-- Create: `packages/token-sdk/src/token/errors.ts`
+- Create: `packages/sdk/src/token/errors.ts`
 
 **Step 1: Create error subclasses file**
 
@@ -301,7 +301,7 @@ export function toTokenError(
 
 **Files:**
 
-- Modify: `packages/token-sdk/src/index.ts`
+- Modify: `packages/sdk/src/index.ts`
 
 **Step 1: Add exports**
 
@@ -328,14 +328,14 @@ export {
   WalletDisconnectedError,
   InitTimeoutError,
   toTokenError,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 ```
 
 ### Task 9: Add error tests
 
 **Files:**
 
-- Create: `packages/token-sdk/src/token/__tests__/errors.test.ts`
+- Create: `packages/sdk/src/token/__tests__/errors.test.ts`
 
 **Step 1: Write tests**
 
@@ -438,7 +438,7 @@ describe("toTokenError", () => {
 **Step 2: Run tests**
 
 ```bash
-pnpm test:run -- --reporter=verbose packages/token-sdk/src/token/__tests__/errors.test.ts
+pnpm test:run -- --reporter=verbose packages/sdk/src/token/__tests__/errors.test.ts
 ```
 
 Expected: All tests PASS.
@@ -454,7 +454,7 @@ Expected: PASS.
 **Step 4: Commit**
 
 ```bash
-git add packages/token-sdk/src/token/token.types.ts packages/token-sdk/src/token/errors.ts packages/token-sdk/src/token/__tests__/errors.test.ts packages/token-sdk/src/index.ts packages/token-react-sdk/src/index.ts
+git add packages/sdk/src/token/token.types.ts packages/sdk/src/token/errors.ts packages/sdk/src/token/__tests__/errors.test.ts packages/sdk/src/index.ts packages/token-react-sdk/src/index.ts
 git commit -m "feat(token-sdk): extend error hierarchy with lifecycle error codes
 
 Add ChainMismatchError, SignerMissingError, WalletDisconnectedError,
@@ -556,7 +556,7 @@ export function providerReducer(state: ProviderState, action: ProviderAction): P
 **Step 1: Write the config factory**
 
 ```ts
-import type { GenericStringStorage, RelayerSDK } from "@zama-fhe/token-sdk";
+import type { GenericStringStorage, RelayerSDK } from "@zama-fhe/sdk";
 
 export interface TokenSDKProviderConfig {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
@@ -703,8 +703,8 @@ Replace `packages/token-react-sdk/src/provider.tsx` entirely with:
 ````tsx
 "use client";
 
-import type { GenericSigner, RelayerSDK, GenericStringStorage } from "@zama-fhe/token-sdk";
-import { TokenSDK, ChainMismatchError } from "@zama-fhe/token-sdk";
+import type { GenericSigner, RelayerSDK, GenericStringStorage } from "@zama-fhe/sdk";
+import { TokenSDK, ChainMismatchError } from "@zama-fhe/sdk";
 import {
   createContext,
   type PropsWithChildren,
@@ -1025,7 +1025,7 @@ Read the current file first, then update the `mutationFn` to track phases:
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useRef, useState } from "react";
 import {
   confidentialBalanceQueryKeys,
@@ -1201,7 +1201,7 @@ import type {
   TransactionReceipt,
   EIP712TypedData,
   ContractCallConfig,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 import { type ReactNode } from "react";
 import { vi } from "vitest";
 

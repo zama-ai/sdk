@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 import { confidentialBalanceQueryKeys, confidentialHandleQueryKeys } from "./balance-query-keys";
 

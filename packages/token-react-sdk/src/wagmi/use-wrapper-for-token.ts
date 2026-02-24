@@ -1,7 +1,7 @@
 "use client";
 
-import { getWrapperContract } from "@zama-fhe/token-sdk";
-import type { Address } from "@zama-fhe/token-sdk";
+import { getWrapperContract } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useReadContract } from "wagmi";
 
 export interface UseWrapperForTokenConfig {

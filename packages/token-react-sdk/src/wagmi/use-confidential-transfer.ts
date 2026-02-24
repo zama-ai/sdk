@@ -1,6 +1,6 @@
 "use client";
 
-import { confidentialTransferContract } from "@zama-fhe/token-sdk";
+import { confidentialTransferContract } from "@zama-fhe/sdk";
 import { useWriteContract } from "wagmi";
 
 type EncryptedTransferParameters = Parameters<typeof confidentialTransferContract>;

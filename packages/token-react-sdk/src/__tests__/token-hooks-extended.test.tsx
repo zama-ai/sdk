@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { act, waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useConfidentialTransferFrom } from "../token/use-confidential-transfer-from";
 import { useFinalizeUnwrap } from "../token/use-finalize-unwrap";
 import { useUnshield } from "../token/use-unshield";

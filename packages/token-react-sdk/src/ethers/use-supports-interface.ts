@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { readSupportsInterfaceContract } from "@zama-fhe/token-sdk/ethers";
+import { readSupportsInterfaceContract } from "@zama-fhe/sdk/ethers";
 
 type Params = Parameters<typeof readSupportsInterfaceContract>;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { UserDecryptParams } from "@zama-fhe/token-sdk";
+import type { UserDecryptParams } from "@zama-fhe/sdk";
 import { decryptionKeys } from "./decryption-cache";
 import { useTokenSDK } from "../provider";
 

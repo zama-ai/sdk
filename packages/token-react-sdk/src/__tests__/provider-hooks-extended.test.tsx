@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useUnderlyingAllowance } from "../token/use-underlying-allowance";
 import { useUnshield } from "../token/use-unshield";
 import { useUnshieldAll } from "../token/use-unshield-all";

@@ -3,15 +3,15 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
-// Mock @zama-fhe/token-sdk/ethers
-vi.mock("@zama-fhe/token-sdk/ethers", () => ({
+// Mock @zama-fhe/sdk/ethers
+vi.mock("@zama-fhe/sdk/ethers", () => ({
   writeConfidentialTransferContract: vi.fn().mockResolvedValue("0xtxhash"),
   readConfidentialBalanceOfContract: vi.fn().mockResolvedValue(42n),
   writeWrapContract: vi.fn().mockResolvedValue("0xwraphash"),
   readWrapperForTokenContract: vi.fn().mockResolvedValue("0xwrapper"),
 }));
 
-const ethersMocks = await import("@zama-fhe/token-sdk/ethers");
+const ethersMocks = await import("@zama-fhe/sdk/ethers");
 const {
   writeConfidentialTransferContract,
   readConfidentialBalanceOfContract,

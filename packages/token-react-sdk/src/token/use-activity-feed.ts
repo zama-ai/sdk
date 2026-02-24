@@ -1,13 +1,13 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/token-sdk";
+import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/sdk";
 import {
   parseActivityFeed,
   extractEncryptedHandles,
   applyDecryptedValues,
   sortByBlockNumber,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 /**

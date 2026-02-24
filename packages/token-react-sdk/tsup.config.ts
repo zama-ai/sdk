@@ -22,7 +22,7 @@ export default defineConfig({
     "viem",
     "ethers",
     "wagmi",
-    "@zama-fhe/token-sdk",
+    "@zama-fhe/sdk",
     "@zama-fhe/relayer-sdk",
   ],
   treeshake: true,

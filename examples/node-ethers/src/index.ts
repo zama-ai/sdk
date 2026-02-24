@@ -1,8 +1,8 @@
 import { Wallet, JsonRpcProvider } from "ethers";
-import { MemoryStorage, TokenSDK } from "@zama-fhe/token-sdk";
-import { EthersSigner, readWrapperForTokenContract } from "@zama-fhe/token-sdk/ethers";
-import { RelayerNode } from "@zama-fhe/token-sdk/node";
-import type { Address } from "@zama-fhe/token-sdk";
+import { MemoryStorage, TokenSDK } from "@zama-fhe/sdk";
+import { EthersSigner, readWrapperForTokenContract } from "@zama-fhe/sdk/ethers";
+import { RelayerNode } from "@zama-fhe/sdk/node";
+import type { Address } from "@zama-fhe/sdk";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY!;
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL!;

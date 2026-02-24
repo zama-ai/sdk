@@ -1,6 +1,6 @@
 "use client";
 
-import { unwrapFromBalanceContract } from "@zama-fhe/token-sdk";
+import { unwrapFromBalanceContract } from "@zama-fhe/sdk";
 import { useWriteContract } from "wagmi";
 
 type UnwrapFromBalanceParameters = Parameters<typeof unwrapFromBalanceContract>;

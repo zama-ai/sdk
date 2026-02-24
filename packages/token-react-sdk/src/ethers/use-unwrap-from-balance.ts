@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { writeUnwrapFromBalanceContract } from "@zama-fhe/token-sdk/ethers";
+import { writeUnwrapFromBalanceContract } from "@zama-fhe/sdk/ethers";
 
 type WriteFn = typeof writeUnwrapFromBalanceContract;
 type Params = Parameters<WriteFn>;

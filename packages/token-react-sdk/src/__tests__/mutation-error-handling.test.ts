@@ -1,10 +1,10 @@
 import { expect, it, describe, vi } from "vitest";
-import type { Token, Address } from "@zama-fhe/token-sdk";
+import type { Token, Address } from "@zama-fhe/sdk";
 import {
   EncryptionFailedError,
   ApprovalFailedError,
   TransactionRevertedError,
-} from "@zama-fhe/token-sdk";
+} from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions } from "../token/use-confidential-transfer";
 import { wrapMutationOptions } from "../token/use-wrap";
 import { createMockSigner } from "./test-utils";

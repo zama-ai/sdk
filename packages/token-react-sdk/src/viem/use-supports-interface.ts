@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { readSupportsInterfaceContract } from "@zama-fhe/token-sdk/viem";
+import { readSupportsInterfaceContract } from "@zama-fhe/sdk/viem";
 
 type Params = Parameters<typeof readSupportsInterfaceContract>;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ReadonlyToken, Token, Address } from "@zama-fhe/token-sdk";
-import { TokenSDK } from "@zama-fhe/token-sdk";
+import type { ReadonlyToken, Token, Address } from "@zama-fhe/sdk";
+import { TokenSDK } from "@zama-fhe/sdk";
 import { tokenMetadataQueryOptions } from "../token/use-token-metadata";
 import { isConfidentialQueryOptions, isWrapperQueryOptions } from "../token/use-is-confidential";
 import { totalSupplyQueryOptions } from "../token/use-total-supply";

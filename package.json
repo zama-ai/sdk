@@ -11,7 +11,7 @@
   "author": "Guillaume Hermet <guillaume.hermet@zama.ai>",
   "scripts": {
     "build": "pnpm build:sdk && pnpm build:react-sdk",
-    "build:sdk": "pnpm --filter @zama-fhe/token-sdk build",
+    "build:sdk": "pnpm --filter @zama-fhe/sdk build",
     "build:react-sdk": "pnpm --filter @zama-fhe/token-react-sdk build",
     "build:test-app": "pnpm --filter @zama-fhe/test-app build",
     "test": "vitest",

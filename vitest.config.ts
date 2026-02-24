@@ -10,7 +10,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "json-summary", "html"],
-      include: ["packages/token-sdk/src/**", "packages/token-react-sdk/src/**"],
+      include: ["packages/sdk/src/**", "packages/token-react-sdk/src/**"],
       exclude: [
         "**/__tests__/**",
         "**/*.test.{ts,tsx}",
@@ -32,11 +32,11 @@ export default defineConfig({
     alias: [
       {
         find: /^@zama-fhe\/token-sdk\/(.+)/,
-        replacement: path.resolve(__dirname, "./packages/token-sdk/src/$1"),
+        replacement: path.resolve(__dirname, "./packages/sdk/src/$1"),
       },
       {
-        find: "@zama-fhe/token-sdk",
-        replacement: path.resolve(__dirname, "./packages/token-sdk/src"),
+        find: "@zama-fhe/sdk",
+        replacement: path.resolve(__dirname, "./packages/sdk/src"),
       },
       {
         find: /^@zama-fhe\/token-react-sdk\/(.+)/,

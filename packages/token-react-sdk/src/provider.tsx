@@ -1,7 +1,7 @@
 "use client";
 
-import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/token-sdk";
-import { TokenSDK } from "@zama-fhe/token-sdk";
+import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/sdk";
+import { TokenSDK } from "@zama-fhe/sdk";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
 
 /** Props for {@link TokenSDKProvider}. */

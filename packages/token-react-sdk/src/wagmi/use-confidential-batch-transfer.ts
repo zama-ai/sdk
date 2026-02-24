@@ -1,6 +1,6 @@
 "use client";
 
-import { confidentialBatchTransferContract } from "@zama-fhe/token-sdk";
+import { confidentialBatchTransferContract } from "@zama-fhe/sdk";
 import { useWriteContract } from "wagmi";
 
 type BatchTransferParameters = Parameters<typeof confidentialBatchTransferContract>;

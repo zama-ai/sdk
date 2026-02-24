@@ -1,6 +1,6 @@
 "use client";
 
-import { wrapETHContract } from "@zama-fhe/token-sdk";
+import { wrapETHContract } from "@zama-fhe/sdk";
 import { useWriteContract } from "wagmi";
 
 type WrapETHParameters = Parameters<typeof wrapETHContract>;

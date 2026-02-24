@@ -45,11 +45,11 @@ Delete the 39 per-library hook files. The shared provider-based hooks in `src/to
 
 ```ts
 // src/viem/index.ts
-export { ViemSigner } from "@zama-fhe/token-sdk/viem";
+export { ViemSigner } from "@zama-fhe/sdk/viem";
 export * from "../token"; // All shared hooks
 
 // src/ethers/index.ts
-export { EthersSigner } from "@zama-fhe/token-sdk/ethers";
+export { EthersSigner } from "@zama-fhe/sdk/ethers";
 export * from "../token";
 
 // src/wagmi/index.ts

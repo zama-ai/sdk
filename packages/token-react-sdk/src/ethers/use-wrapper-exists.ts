@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
-import { readWrapperExistsContract } from "@zama-fhe/token-sdk/ethers";
+import type { Address } from "@zama-fhe/sdk";
+import { readWrapperExistsContract } from "@zama-fhe/sdk/ethers";
 
 type Params = Parameters<typeof readWrapperExistsContract>;
 

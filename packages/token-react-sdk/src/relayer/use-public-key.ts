@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { TokenSDK } from "@zama-fhe/token-sdk";
+import type { TokenSDK } from "@zama-fhe/sdk";
 import { useTokenSDK } from "../provider";
 
 /**

@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/token-sdk";
-import { readUnderlyingTokenContract } from "@zama-fhe/token-sdk/viem";
+import type { Address } from "@zama-fhe/sdk";
+import { readUnderlyingTokenContract } from "@zama-fhe/sdk/viem";
 
 type Params = Parameters<typeof readUnderlyingTokenContract>;
 

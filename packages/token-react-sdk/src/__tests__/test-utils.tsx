@@ -2,7 +2,7 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import { vi } from "vitest";
-import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/token-sdk";
+import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/sdk";
 import { TokenSDKProvider } from "../provider";
 
 const USER = "0x2222222222222222222222222222222222222222" as `0x${string}`;

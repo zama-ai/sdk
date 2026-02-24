@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
-import type { Address, ReadonlyToken } from "@zama-fhe/token-sdk";
+import type { Address, ReadonlyToken } from "@zama-fhe/sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 
 /**

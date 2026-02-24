@@ -3,14 +3,14 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
-// Mock @zama-fhe/token-sdk/viem
-vi.mock("@zama-fhe/token-sdk/viem", () => ({
+// Mock @zama-fhe/sdk/viem
+vi.mock("@zama-fhe/sdk/viem", () => ({
   readConfidentialBalanceOfContract: vi.fn().mockResolvedValue(42n),
   readSupportsInterfaceContract: vi.fn().mockResolvedValue(true),
   readWrapperForTokenContract: vi.fn().mockResolvedValue("0xwrapper"),
 }));
 
-const viemMocks = await import("@zama-fhe/token-sdk/viem");
+const viemMocks = await import("@zama-fhe/sdk/viem");
 const {
   readConfidentialBalanceOfContract,
   readSupportsInterfaceContract,

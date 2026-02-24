@@ -15,8 +15,8 @@
     "incremental": true,
     "target": "es2022",
     "paths": {
-      "@zama-fhe/token-sdk": ["./packages/token-sdk/src"],
-      "@zama-fhe/token-sdk/*": ["./packages/token-sdk/src/*"],
+      "@zama-fhe/sdk": ["./packages/sdk/src"],
+      "@zama-fhe/sdk/*": ["./packages/sdk/src/*"],
       "@zama-fhe/token-react-sdk": ["./packages/token-react-sdk/src"],
       "@zama-fhe/token-react-sdk/*": ["./packages/token-react-sdk/src/*"]
     }

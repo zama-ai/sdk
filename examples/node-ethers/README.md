@@ -1,6 +1,6 @@
 # Node.js + ethers Example
 
-Minimal Node.js script using `@zama-fhe/token-sdk` with ethers v6.
+Minimal Node.js script using `@zama-fhe/sdk` with ethers v6.
 
 ## Setup
 

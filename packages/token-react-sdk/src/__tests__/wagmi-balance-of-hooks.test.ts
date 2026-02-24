@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Address } from "@zama-fhe/token-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 // ---------------------------------------------------------------------------
 // Mock wagmi – useBalanceOf uses useReadContracts + useConnection
@@ -24,7 +24,7 @@ vi.mock("wagmi", () => ({
 // ---------------------------------------------------------------------------
 // Mock contract builders – verify hooks call the correct builders
 // ---------------------------------------------------------------------------
-vi.mock("@zama-fhe/token-sdk", async (importOriginal) => {
+vi.mock("@zama-fhe/sdk", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
@@ -34,7 +34,7 @@ vi.mock("@zama-fhe/token-sdk", async (importOriginal) => {
   };
 });
 
-import { symbolContract, decimalsContract, balanceOfContract } from "@zama-fhe/token-sdk";
+import { symbolContract, decimalsContract, balanceOfContract } from "@zama-fhe/sdk";
 import { useBalanceOf } from "../wagmi/use-balance-of";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;

@@ -1,4 +1,4 @@
-# Contributing to @zama-fhe/token-sdk
+# Contributing to @zama-fhe/sdk
 
 Thank you for your interest in contributing to the Zama Token SDK! This guide will help you get started.
 
@@ -72,7 +72,7 @@ pnpm test
 pnpm test:run
 
 # Specific file
-pnpm test:run -- packages/token-sdk/src/token/__tests__/token.test.ts
+pnpm test:run -- packages/sdk/src/token/__tests__/token.test.ts
 
 # With coverage
 pnpm test:coverage
@@ -121,7 +121,7 @@ Select the affected packages and describe the change. Choose the appropriate sem
 
 ### Adding a New Signer Adapter
 
-1. Implement the `GenericSigner` interface in a new file under `packages/token-sdk/src/<library>/`
+1. Implement the `GenericSigner` interface in a new file under `packages/sdk/src/<library>/`
 2. Add a corresponding entry point in `package.json` exports
 3. Configure tsup to build the new entry point
 4. Add tests

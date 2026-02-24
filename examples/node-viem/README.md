@@ -1,6 +1,6 @@
 # Node.js + viem Example
 
-Minimal Node.js script using `@zama-fhe/token-sdk` with viem.
+Minimal Node.js script using `@zama-fhe/sdk` with viem.
 
 ## Setup
 

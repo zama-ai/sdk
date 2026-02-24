@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  confidentialTransferContract,
-  wrapContract,
-  setOperatorContract,
-} from "@zama-fhe/token-sdk";
+import { confidentialTransferContract, wrapContract, setOperatorContract } from "@zama-fhe/sdk";
 
 type Address = `0x${string}`;
 

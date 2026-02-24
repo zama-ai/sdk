@@ -1,7 +1,7 @@
 "use client";
 
-import { supportsInterfaceContract } from "@zama-fhe/token-sdk";
-import type { Address } from "@zama-fhe/token-sdk";
+import { supportsInterfaceContract } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useReadContract } from "wagmi";
 
 export interface UseSupportsInterfaceConfig {

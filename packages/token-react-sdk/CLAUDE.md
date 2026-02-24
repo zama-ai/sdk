@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package Overview
 
-`@zama-fhe/token-react-sdk` — React hooks for Zama confidential ERC-20 tokens (fhEVM). Built on `@tanstack/react-query`, wrapping `@zama-fhe/token-sdk` (workspace dependency). Part of a pnpm monorepo (`@zama-fhe/token-sdk-monorepo`).
+`@zama-fhe/token-react-sdk` — React hooks for Zama confidential ERC-20 tokens (fhEVM). Built on `@tanstack/react-query`, wrapping `@zama-fhe/sdk` (workspace dependency). Part of a pnpm monorepo (`@zama-fhe/token-sdk-monorepo`).
 
 ## Commands
 
@@ -50,7 +50,7 @@ Build this package only: `pnpm --filter @zama-fhe/token-react-sdk build` (runs t
 - Balance queries use **two-phase polling**: cheaply poll the encrypted handle (RPC read), only decrypt when the handle changes (expensive relayer roundtrip). See `use-confidential-balance.ts`.
 - Query key factories are exported from `confidential-balance-query-keys.ts` and `decryption-cache.ts` for manual cache control.
 - Mutation hooks call `context.client.invalidateQueries()` / `resetQueries()` in their `onSuccess` callbacks to keep caches consistent.
-- The main `src/index.ts` re-exports nearly everything from `@zama-fhe/token-sdk` (classes, types, ABIs, constants, event decoders, contract call builders) so consumers only need one import source.
+- The main `src/index.ts` re-exports nearly everything from `@zama-fhe/sdk` (classes, types, ABIs, constants, event decoders, contract call builders) so consumers only need one import source.
 
 ### Peer dependencies
 

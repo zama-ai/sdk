@@ -1,6 +1,6 @@
 "use client";
 
-import type { EIP712TypedData } from "@zama-fhe/token-sdk";
+import type { EIP712TypedData } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useTokenSDK } from "../provider";
 
