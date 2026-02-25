@@ -5,6 +5,9 @@ import {
   InvalidCredentialsError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  SigningRejectedError,
+  EncryptionFailedError,
+  matchTokenError,
 } from "../errors";
 
 describe("InvalidCredentialsError", () => {
@@ -65,5 +68,40 @@ describe("RelayerRequestFailedError", () => {
     const cause = new Error("upstream");
     const err = new RelayerRequestFailedError("request failed", 500, { cause });
     expect(err.cause).toBe(cause);
+  });
+});
+
+describe("matchTokenError", () => {
+  it("dispatches to the correct handler by error code", () => {
+    const error = new SigningRejectedError("rejected");
+    const result = matchTokenError(error, {
+      SIGNING_REJECTED: (e) => `handled: ${e.message}`,
+    });
+    expect(result).toBe("handled: rejected");
+  });
+
+  it("falls through to wildcard when no specific handler matches", () => {
+    const error = new EncryptionFailedError("failed");
+    const result = matchTokenError(error, {
+      SIGNING_REJECTED: () => "wrong",
+      _: () => "wildcard",
+    });
+    expect(result).toBe("wildcard");
+  });
+
+  it("returns undefined for non-TokenError without wildcard", () => {
+    const error = new Error("random");
+    const result = matchTokenError(error, {
+      SIGNING_REJECTED: () => "wrong",
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("passes non-TokenError to wildcard handler", () => {
+    const error = new Error("random");
+    const result = matchTokenError(error, {
+      _: (e) => `caught: ${(e as Error).message}`,
+    });
+    expect(result).toBe("caught: random");
   });
 });

@@ -138,3 +138,30 @@ export class RelayerRequestFailedError extends TokenError {
     this.statusCode = statusCode;
   }
 }
+
+/**
+ * Pattern-match on a {@link TokenError} by its error code.
+ * Falls through to the `_` wildcard handler if no specific handler matches.
+ * Returns `undefined` if the error is not a `TokenError` and no `_` handler is provided.
+ *
+ * @example
+ * ```ts
+ * matchTokenError(error, {
+ *   SIGNING_REJECTED: () => toast("Please approve in wallet"),
+ *   TRANSACTION_REVERTED: (e) => toast(`Tx failed: ${e.message}`),
+ *   _: () => toast("Unknown error"),
+ * });
+ * ```
+ */
+export function matchTokenError<R>(
+  error: unknown,
+  handlers: Partial<Record<TokenErrorCode, (error: TokenError) => R>> & {
+    _?: (error: unknown) => R;
+  },
+): R | undefined {
+  if (error instanceof TokenError) {
+    const handler = handlers[error.code];
+    if (handler) return handler(error);
+  }
+  return handlers._?.(error);
+}

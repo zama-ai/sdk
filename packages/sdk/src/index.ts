@@ -59,6 +59,7 @@ export type {
   StoredCredentials,
   ContractCallConfig,
   TransactionReceipt,
+  TransactionResult,
   UnshieldCallbacks,
 } from "./token/token.types";
 export { ZamaSDKEvents } from "./events/sdk-events";
@@ -76,6 +77,7 @@ export {
   InvalidCredentialsError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  matchTokenError,
 } from "./token/errors";
 
 // Event decoders and types
