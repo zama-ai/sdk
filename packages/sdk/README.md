@@ -26,7 +26,7 @@ import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
 // 1. Create signer and relayer
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 
 const sdk = new TokenSDK({
   relayer: new RelayerWeb({
@@ -70,7 +70,7 @@ import { RelayerNode } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 
 const sdk = new TokenSDK({
   relayer: new RelayerNode({
@@ -379,7 +379,7 @@ interface GenericSigner {
 ```ts
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 ```
 
 **ethers** — `@zama-fhe/sdk/ethers`
@@ -387,7 +387,7 @@ const signer = new ViemSigner(walletClient, publicClient);
 ```ts
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-const signer = new EthersSigner(ethersSigner);
+const signer = new EthersSigner({ signer: ethersSigner });
 ```
 
 ## Contract Call Builders

@@ -125,7 +125,7 @@ describe("WagmiSigner", () => {
   let signer: WagmiSigner;
 
   beforeEach(() => {
-    signer = new WagmiSigner(fakeConfig);
+    signer = new WagmiSigner({ config: fakeConfig });
   });
 
   it("getChainId delegates to wagmi getChainId", async () => {

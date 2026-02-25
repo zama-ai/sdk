@@ -59,7 +59,7 @@ const wagmiConfig = createConfig({
 });
 
 const queryClient = new QueryClient();
-const signer = new WagmiSigner(wagmiConfig);
+const signer = new WagmiSigner({ config: wagmiConfig });
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
@@ -112,7 +112,7 @@ import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 
 const sdk = new TokenSDK({
   relayer: new RelayerWeb({
@@ -159,7 +159,7 @@ import {
 } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-const signer = new EthersSigner(ethersSigner);
+const signer = new EthersSigner({ signer: ethersSigner });
 
 const sdk = new TokenSDK({
   relayer: new RelayerWeb({
@@ -188,7 +188,7 @@ import { RelayerNode } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 
 const sdk = new TokenSDK({
   relayer: new RelayerNode({

@@ -41,7 +41,7 @@ const wagmiConfig = createConfig({
   },
 });
 
-const signer = new WagmiSigner(wagmiConfig);
+const signer = new WagmiSigner({ config: wagmiConfig });
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
@@ -746,7 +746,7 @@ All write hooks return `{ mutate, mutateAsync, ...mutation }` from wagmi's `useW
 ```ts
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
-const signer = new WagmiSigner(wagmiConfig);
+const signer = new WagmiSigner({ config: wagmiConfig });
 ```
 
 ## Viem & Ethers Adapter Hooks

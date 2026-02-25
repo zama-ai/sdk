@@ -17,7 +17,7 @@ const wagmiConfig = createConfig({
   transports: { [mainnet.id]: http(MAINNET_RPC_URL), [sepolia.id]: http(SEPOLIA_RPC_URL) },
 });
 
-const signer = new WagmiSigner(wagmiConfig);
+const signer = new WagmiSigner({ config: wagmiConfig });
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),

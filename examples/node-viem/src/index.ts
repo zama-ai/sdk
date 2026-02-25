@@ -27,7 +27,7 @@ async function main() {
   });
 
   // 2. Create SDK components
-  const signer = new ViemSigner(walletClient, publicClient);
+  const signer = new ViemSigner({ walletClient, publicClient });
   const authConfig = { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY };
   const relayer = new RelayerNode({
     getChainId: () => signer.getChainId(),

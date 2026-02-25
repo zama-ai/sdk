@@ -43,4 +43,4 @@ export {
 } from "./use-supports-interface";
 export { useWrap } from "./use-wrap";
 export { useWrapETH } from "./use-wrap-eth";
-export { WagmiSigner } from "./wagmi-signer";
+export { WagmiSigner, type WagmiSignerConfig } from "./wagmi-signer";

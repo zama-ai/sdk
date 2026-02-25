@@ -1,4 +1,4 @@
-export { EthersSigner } from "./ethers-signer";
+export { EthersSigner, type EthersSignerConfig } from "./ethers-signer";
 export {
   readConfidentialBalanceOfContract,
   readWrapperForTokenContract,

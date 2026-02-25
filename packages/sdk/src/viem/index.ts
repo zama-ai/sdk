@@ -1,4 +1,4 @@
-export { ViemSigner } from "./viem-signer";
+export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
 export {
   readConfidentialBalanceOfContract,
   readWrapperForTokenContract,
