@@ -33,31 +33,16 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
 
+      - name: Ensure npm 11 for trusted publishing
+        run: |
+          npm i -g npm@^11
+          npm --version
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
         run: pnpm build
-
-      - name: Verify npm version for trusted publishing
-        run: |
-          npm_version="$(npm --version)"
-          node -e '
-            const min = [11, 5, 1];
-            const current = process.argv[1].split(".").map(Number);
-            const valid = current.length >= 3 && current.every((n) => Number.isFinite(n));
-            if (!valid) {
-              console.error(`Unable to parse npm version: ${process.argv[1]}`);
-              process.exit(1);
-            }
-            for (let i = 0; i < 3; i += 1) {
-              if ((current[i] ?? 0) > min[i]) process.exit(0);
-              if ((current[i] ?? 0) < min[i]) {
-                console.error(`npm ${process.argv[1]} is too old for trusted publishing (need >= ${min.join(".")}).`);
-                process.exit(1);
-              }
-            }
-          ' "$npm_version"
 
       - name: Semantic release
         run: pnpm release:ci
