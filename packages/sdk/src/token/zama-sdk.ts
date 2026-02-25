@@ -14,7 +14,7 @@ export interface ZamaSDKConfig {
   signer: GenericSigner;
   /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
   storage: GenericStringStorage;
-  /** Number of days FHE credentials remain valid. Default: `1`. */
+  /** Number of days FHE credentials remain valid. Default: `1`. Set `0` to require a wallet signature on every decrypt (high-security mode). */
   credentialDurationDays?: number;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;

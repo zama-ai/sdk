@@ -149,7 +149,7 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
   signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
   storage={storage} // GenericStringStorage
-  credentialDurationDays={1} // Optional. Days FHE credentials remain valid. Default: 1.
+  credentialDurationDays={1} // Optional. Days FHE credentials remain valid. Default: 1. Set 0 for sign-every-time.
   onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
   {children}

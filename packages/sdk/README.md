@@ -240,13 +240,13 @@ interface GenericStringStorage {
 
 ### `ZamaSDKConfig`
 
-| Field                    | Type                   | Description                                              |
-| ------------------------ | ---------------------- | -------------------------------------------------------- |
-| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance) |
-| `signer`                 | `GenericSigner`        | Wallet signer interface.                                 |
-| `storage`                | `GenericStringStorage` | Credential storage backend.                              |
-| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. |
-| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.       |
+| Field                    | Type                   | Description                                                                                                                           |
+| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                              |
+| `signer`                 | `GenericSigner`        | Wallet signer interface.                                                                                                              |
+| `storage`                | `GenericStringStorage` | Credential storage backend.                                                                                                           |
+| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. Set `0` to require a wallet signature on every decrypt (high-security mode). |
+| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                    |
 
 #### Structured Event Listener
 
