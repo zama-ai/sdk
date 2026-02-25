@@ -63,7 +63,34 @@ export type {
   UnshieldCallbacks,
 } from "./token/token.types";
 export { ZamaSDKEvents } from "./events/sdk-events";
-export type { ZamaSDKEventType, ZamaSDKEvent, ZamaSDKEventListener } from "./events/sdk-events";
+export type {
+  ZamaSDKEventType,
+  ZamaSDKEvent,
+  ZamaSDKEventInput,
+  ZamaSDKEventListener,
+  ShieldSubmittedEvent,
+  TransferSubmittedEvent,
+  TransferFromSubmittedEvent,
+  ApproveSubmittedEvent,
+  ApproveUnderlyingSubmittedEvent,
+  UnwrapSubmittedEvent,
+  FinalizeUnwrapSubmittedEvent,
+  UnshieldPhase1SubmittedEvent,
+  UnshieldPhase2StartedEvent,
+  UnshieldPhase2SubmittedEvent,
+  TransactionErrorEvent,
+  EncryptStartEvent,
+  EncryptEndEvent,
+  EncryptErrorEvent,
+  DecryptStartEvent,
+  DecryptEndEvent,
+  DecryptErrorEvent,
+  CredentialsLoadingEvent,
+  CredentialsCachedEvent,
+  CredentialsExpiredEvent,
+  CredentialsCreatingEvent,
+  CredentialsCreatedEvent,
+} from "./events/sdk-events";
 export {
   TokenError,
   TokenErrorCode,
