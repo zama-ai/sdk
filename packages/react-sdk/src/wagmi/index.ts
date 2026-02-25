@@ -44,3 +44,19 @@ export {
 export { useShield } from "./use-wrap";
 export { useShieldETH } from "./use-wrap-eth";
 export { WagmiSigner, type WagmiSignerConfig } from "./wagmi-signer";
+
+// High-level token hooks (re-exported for convenience)
+export {
+  useUnshield,
+  useUnshieldAll,
+  useResumeUnshield,
+  useConfidentialTransferFrom,
+  useConfidentialApprove,
+  useConfidentialBalance,
+  useConfidentialBalances,
+  useAuthorizeAll,
+  useTokenMetadata,
+  useActivityFeed,
+  useApproveUnderlying,
+  useUnwrapAll,
+} from "../index";

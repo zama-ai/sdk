@@ -43,3 +43,19 @@ export {
   type UseSupportsInterfaceSuspenseConfig,
 } from "./use-supports-interface";
 export { EthersSigner } from "./ethers-signer";
+
+// High-level token hooks (re-exported for convenience)
+export {
+  useUnshield,
+  useUnshieldAll,
+  useResumeUnshield,
+  useConfidentialTransferFrom,
+  useConfidentialApprove,
+  useConfidentialBalance,
+  useConfidentialBalances,
+  useAuthorizeAll,
+  useTokenMetadata,
+  useActivityFeed,
+  useApproveUnderlying,
+  useUnwrapAll,
+} from "../index";

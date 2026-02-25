@@ -43,3 +43,19 @@ export {
   type UseSupportsInterfaceSuspenseConfig,
 } from "./use-supports-interface";
 export { ViemSigner } from "./viem-signer";
+
+// High-level token hooks (re-exported for convenience)
+export {
+  useUnshield,
+  useUnshieldAll,
+  useResumeUnshield,
+  useConfidentialTransferFrom,
+  useConfidentialApprove,
+  useConfidentialBalance,
+  useConfidentialBalances,
+  useAuthorizeAll,
+  useTokenMetadata,
+  useActivityFeed,
+  useApproveUnderlying,
+  useUnwrapAll,
+} from "../index";
