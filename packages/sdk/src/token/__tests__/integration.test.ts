@@ -78,16 +78,16 @@ describe("Integration: multi-step workflows", () => {
     });
   });
 
-  describe("wrap flow: approve → wrap → verify balance", () => {
-    it("performs full wrap flow with exact approval", async () => {
+  describe("shield flow: approve → shield → verify balance", () => {
+    it("performs full shield flow with exact approval", async () => {
       // Step 1: readContract calls for underlying and allowance
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
         .mockResolvedValueOnce(0n) // allowance check (insufficient)
         .mockResolvedValueOnce(VALID_HANDLE); // confidentialBalanceOf after wrap
 
-      // Step 2: Execute wrap (triggers approve + wrap)
-      const txHash = await token.wrap(500n);
+      // Step 2: Execute shield (triggers approve + wrap)
+      const txHash = await token.shield(500n);
       expect(txHash).toBe("0xtxhash");
 
       // Verify approve was called first, then wrap
@@ -101,7 +101,7 @@ describe("Integration: multi-step workflows", () => {
         expect.objectContaining({ functionName: "wrap" }),
       );
 
-      // Step 3: Check balance after wrap — should read the new handle
+      // Step 3: Check balance after shield — should read the new handle
       const handle = await token.confidentialBalanceOf();
       expect(handle).toBe(VALID_HANDLE);
 

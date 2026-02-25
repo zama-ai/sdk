@@ -248,18 +248,18 @@ export class Token extends ReadonlyToken {
   }
 
   /**
-   * Wrap public ERC-20 tokens into confidential tokens.
+   * Shield public ERC-20 tokens into confidential tokens.
    * Handles ERC-20 approval automatically based on `approvalStrategy`
    * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
    * @example
    * ```ts
-   * const txHash = await token.wrap(1000n);
+   * const txHash = await token.shield(1000n);
    * // or with exact approval:
-   * const txHash = await token.wrap(1000n, { approvalStrategy: "exact" });
+   * const txHash = await token.shield(1000n, { approvalStrategy: "exact" });
    * ```
    */
-  async wrap(
+  async shield(
     amount: bigint,
     options?: {
       approvalStrategy?: "max" | "exact" | "skip";
@@ -269,7 +269,7 @@ export class Token extends ReadonlyToken {
     const underlying = await this.#getUnderlying();
 
     if (underlying === Token.ZERO_ADDRESS) {
-      return this.wrapETH(amount, amount + (options?.fees ?? 0n));
+      return this.shieldETH(amount, amount + (options?.fees ?? 0n));
     }
 
     const strategy = options?.approvalStrategy ?? "exact";
@@ -280,45 +280,45 @@ export class Token extends ReadonlyToken {
     try {
       const address = await this.signer.getAddress();
       const txHash = await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
-      this.emit({ type: ZamaSDKEvents.WrapSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
       return txHash;
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
-        operation: "wrap",
+        operation: "shield",
         error: toError(error),
       });
       if (error instanceof TokenError) throw error;
-      throw new TransactionRevertedError("Shield (wrap) transaction failed", {
+      throw new TransactionRevertedError("Shield transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
   }
 
   /**
-   * Wrap native ETH into confidential tokens. `value` defaults to `amount`.
+   * Shield native ETH into confidential tokens. `value` defaults to `amount`.
    *
    * @example
    * ```ts
-   * const txHash = await token.wrapETH(1000000000000000000n); // 1 ETH
+   * const txHash = await token.shieldETH(1000000000000000000n); // 1 ETH
    * ```
    */
-  async wrapETH(amount: bigint, value?: bigint): Promise<Hex> {
+  async shieldETH(amount: bigint, value?: bigint): Promise<Hex> {
     try {
       const userAddress = await this.signer.getAddress();
       const txHash = await this.signer.writeContract(
         wrapETHContract(this.wrapper, userAddress, amount, value ?? amount),
       );
-      this.emit({ type: ZamaSDKEvents.WrapSubmitted, txHash });
+      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
       return txHash;
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
-        operation: "wrap",
+        operation: "shieldETH",
         error: toError(error),
       });
       if (error instanceof TokenError) throw error;
-      throw new TransactionRevertedError("Shield ETH (wrapETH) transaction failed", {
+      throw new TransactionRevertedError("Shield ETH transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }

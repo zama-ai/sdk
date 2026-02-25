@@ -41,7 +41,7 @@ export function wrapMutationOptions(token: Token) {
   return {
     mutationKey: ["wrap", token.address] as const,
     mutationFn: async ({ amount, fees, approvalStrategy }: WrapParams) =>
-      token.wrap(amount, { fees, approvalStrategy }),
+      token.shield(amount, { fees, approvalStrategy }),
   };
 }
 
@@ -74,7 +74,7 @@ export function useWrap(
   return useMutation<Address, Error, WrapParams, Address>({
     mutationKey: ["wrap", config.tokenAddress],
     mutationFn: async ({ amount, fees, approvalStrategy }) =>
-      token.wrap(amount, { fees, approvalStrategy }),
+      token.shield(amount, { fees, approvalStrategy }),
     ...options,
     onMutate: config.optimistic
       ? async (variables, mutationContext) => {

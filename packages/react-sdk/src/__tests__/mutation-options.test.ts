@@ -26,8 +26,8 @@ function createMockToken(address: Address = TOKEN_ADDR) {
     confidentialTransferFrom: vi.fn().mockResolvedValue("0xtx"),
     approve: vi.fn().mockResolvedValue("0xtx"),
     approveUnderlying: vi.fn().mockResolvedValue("0xtx"),
-    wrap: vi.fn().mockResolvedValue("0xtx"),
-    wrapETH: vi.fn().mockResolvedValue("0xtx"),
+    shield: vi.fn().mockResolvedValue("0xtx"),
+    shieldETH: vi.fn().mockResolvedValue("0xtx"),
     unwrap: vi.fn().mockResolvedValue("0xtx"),
     unwrapAll: vi.fn().mockResolvedValue("0xtx"),
     finalizeUnwrap: vi.fn().mockResolvedValue("0xtx"),
@@ -79,7 +79,7 @@ it("wrapMutationOptions", async () => {
 
   expect(opts.mutationKey).toEqual(["wrap", TOKEN_ADDR]);
   await opts.mutationFn({ amount: 1000n });
-  expect(token.wrap).toHaveBeenCalledWith(1000n, {
+  expect(token.shield).toHaveBeenCalledWith(1000n, {
     fees: undefined,
     approvalStrategy: undefined,
   });
@@ -91,7 +91,7 @@ it("wrapETHMutationOptions", async () => {
 
   expect(opts.mutationKey).toEqual(["wrapETH", TOKEN_ADDR]);
   await opts.mutationFn({ amount: 1000n, value: 2000n });
-  expect(token.wrapETH).toHaveBeenCalledWith(1000n, 2000n);
+  expect(token.shieldETH).toHaveBeenCalledWith(1000n, 2000n);
 });
 
 it("unwrapMutationOptions", async () => {

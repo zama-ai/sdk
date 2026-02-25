@@ -412,13 +412,13 @@ describe("Token", () => {
     });
   });
 
-  describe("wrap", () => {
-    it("checks allowance and wraps", async () => {
+  describe("shield", () => {
+    it("checks allowance and shields", async () => {
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
-      const txHash = await token.wrap(100n);
+      const txHash = await token.shield(100n);
 
       // approve + wrap = 2 writeContract calls
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
@@ -438,7 +438,7 @@ describe("Token", () => {
         .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(200n); // enough allowance
 
-      await token.wrap(100n);
+      await token.shield(100n);
 
       // Only wrap, no approve
       expect(signer.writeContract).toHaveBeenCalledOnce();
@@ -452,7 +452,7 @@ describe("Token", () => {
         "0x9999999999999999999999999999999999999999",
       ); // #getUnderlying
 
-      await token.wrap(100n, { approvalStrategy: "skip" });
+      await token.shield(100n, { approvalStrategy: "skip" });
 
       // Only readContract for #getUnderlying, no allowance check
       expect(signer.readContract).toHaveBeenCalledOnce();
@@ -460,9 +460,9 @@ describe("Token", () => {
     });
   });
 
-  describe("wrapETH", () => {
-    it("sends wrapETH with value", async () => {
-      const txHash = await token.wrapETH(1000n);
+  describe("shieldETH", () => {
+    it("sends shieldETH with value", async () => {
+      const txHash = await token.shieldETH(1000n);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -717,10 +717,10 @@ describe("Token", () => {
   describe("wrap (additional branches)", () => {
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
 
-    it("calls wrapETH when underlying is zero address", async () => {
+    it("calls shieldETH when underlying is zero address", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
 
-      const txHash = await token.wrap(100n);
+      const txHash = await token.shield(100n);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -734,7 +734,7 @@ describe("Token", () => {
     it("passes amount + fees as value when underlying is zero address with fees", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
 
-      await token.wrap(100n, { fees: 10n });
+      await token.shield(100n, { fees: 10n });
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -749,7 +749,7 @@ describe("Token", () => {
         .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
-      await token.wrap(100n, { approvalStrategy: "max" });
+      await token.shield(100n, { approvalStrategy: "max" });
 
       // First writeContract call is approve with max uint256
       expect(signer.writeContract).toHaveBeenNthCalledWith(
@@ -766,7 +766,7 @@ describe("Token", () => {
         .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(50n); // existing non-zero allowance < amount
 
-      await token.wrap(100n);
+      await token.shield(100n);
 
       // reset to zero, then approve exact, then wrap = 3 calls
       expect(signer.writeContract).toHaveBeenCalledTimes(3);
@@ -797,12 +797,12 @@ describe("Token", () => {
       // skip approval
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.wrap(100n, { approvalStrategy: "skip" })).rejects.toSatisfy(
+      await expect(token.shield(100n, { approvalStrategy: "skip" })).rejects.toSatisfy(
         (err: TokenError) => {
           return (
             err instanceof TokenError &&
             err.code === TokenErrorCode.TransactionReverted &&
-            err.message === "Shield (wrap) transaction failed"
+            err.message === "Shield transaction failed"
           );
         },
       );
@@ -815,19 +815,19 @@ describe("Token", () => {
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
 
-      await expect(token.wrap(100n)).rejects.toSatisfy((err: TokenError) => {
+      await expect(token.shield(100n)).rejects.toSatisfy((err: TokenError) => {
         return err instanceof TokenError && err.code === TokenErrorCode.ApprovalFailed;
       });
     });
   });
 
-  describe("wrapETH (error wrapping)", () => {
+  describe("shieldETH (error wrapping)", () => {
     it("wraps TokenError thrown by writeContract", async () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.wrapETH(1000n)).rejects.toMatchObject({
+      await expect(token.shieldETH(1000n)).rejects.toMatchObject({
         code: TokenErrorCode.TransactionReverted,
-        message: "Shield ETH (wrapETH) transaction failed",
+        message: "Shield ETH transaction failed",
       });
     });
 
@@ -835,13 +835,13 @@ describe("Token", () => {
       const original = new TokenError(TokenErrorCode.EncryptionFailed, "already wrapped");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
-      await expect(token.wrapETH(1000n)).rejects.toBe(original);
+      await expect(token.shieldETH(1000n)).rejects.toBe(original);
     });
   });
 
-  describe("wrapETH (additional branches)", () => {
+  describe("shieldETH (additional branches)", () => {
     it("uses custom value parameter when provided", async () => {
-      const txHash = await token.wrapETH(1000n, 2000n);
+      const txHash = await token.shieldETH(1000n, 2000n);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({

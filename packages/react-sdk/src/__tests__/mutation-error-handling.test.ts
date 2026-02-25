@@ -19,8 +19,8 @@ function createMockToken(address: Address = TOKEN_ADDR) {
     confidentialTransferFrom: vi.fn(),
     approve: vi.fn(),
     approveUnderlying: vi.fn(),
-    wrap: vi.fn(),
-    wrapETH: vi.fn(),
+    shield: vi.fn(),
+    shieldETH: vi.fn(),
     unwrap: vi.fn(),
     unwrapAll: vi.fn(),
     finalizeUnwrap: vi.fn(),
@@ -48,7 +48,7 @@ describe("mutation error propagation", () => {
   it("wrap surfaces ApprovalFailedError", async () => {
     const token = createMockToken();
     const error = new ApprovalFailedError("ERC-20 approval failed");
-    vi.mocked(token.wrap).mockRejectedValueOnce(error);
+    vi.mocked(token.shield).mockRejectedValueOnce(error);
 
     const opts = wrapMutationOptions(token);
 
@@ -58,7 +58,7 @@ describe("mutation error propagation", () => {
   it("wrap surfaces TransactionRevertedError", async () => {
     const token = createMockToken();
     const error = new TransactionRevertedError("Shield (wrap) transaction failed");
-    vi.mocked(token.wrap).mockRejectedValueOnce(error);
+    vi.mocked(token.shield).mockRejectedValueOnce(error);
 
     const opts = wrapMutationOptions(token);
 

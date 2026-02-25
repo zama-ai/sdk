@@ -27,7 +27,7 @@ export interface WrapETHParams {
 export function wrapETHMutationOptions(token: Token) {
   return {
     mutationKey: ["wrapETH", token.address] as const,
-    mutationFn: ({ amount, value }: WrapETHParams) => token.wrapETH(amount, value),
+    mutationFn: ({ amount, value }: WrapETHParams) => token.shieldETH(amount, value),
   };
 }
 
@@ -52,7 +52,7 @@ export function useWrapETH(
 
   return useMutation<Address, Error, WrapETHParams, Address>({
     mutationKey: ["wrapETH", config.tokenAddress],
-    mutationFn: ({ amount, value }) => token.wrapETH(amount, value),
+    mutationFn: ({ amount, value }) => token.shieldETH(amount, value),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({

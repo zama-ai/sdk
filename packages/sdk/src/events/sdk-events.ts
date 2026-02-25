@@ -19,7 +19,7 @@ export const ZamaSDKEvents = {
   DecryptError: "decrypt:error",
   // Write operations
   TransactionError: "transaction:error",
-  WrapSubmitted: "wrap:submitted",
+  ShieldSubmitted: "shield:submitted",
   TransferSubmitted: "transfer:submitted",
   TransferFromSubmitted: "transferFrom:submitted",
   ApproveSubmitted: "approve:submitted",
@@ -116,8 +116,8 @@ export interface TransactionErrorEvent extends BaseEvent {
   error: Error;
 }
 
-export interface WrapSubmittedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.WrapSubmitted;
+export interface ShieldSubmittedEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.ShieldSubmitted;
   txHash: Hex;
 }
 
@@ -179,7 +179,7 @@ export type ZamaSDKEvent =
   | DecryptEndEvent
   | DecryptErrorEvent
   | TransactionErrorEvent
-  | WrapSubmittedEvent
+  | ShieldSubmittedEvent
   | TransferSubmittedEvent
   | TransferFromSubmittedEvent
   | ApproveSubmittedEvent
