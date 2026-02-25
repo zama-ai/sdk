@@ -1,5 +1,10 @@
 # Zama Confidential Token SDK
 
+[![npm](https://img.shields.io/npm/v/@zama-fhe/sdk)](https://www.npmjs.com/package/@zama-fhe/sdk)
+[![Vitest](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml/badge.svg?branch=main)](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml)
+[![Playwright](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml/badge.svg?branch=main)](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
 TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homomorphic Encryption](https://www.zama.ai/fhevm) (Zama fhEVM). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
 
 ## Packages
