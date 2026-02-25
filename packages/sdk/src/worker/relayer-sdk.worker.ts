@@ -56,10 +56,8 @@ const CSRF_HEADER_NAME = "x-csrf-token";
 const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 
 // Web Worker global scope with SDK
-interface WorkerGlobalScopeWithSDK {
+interface WorkerGlobalScopeWithSDK extends Worker {
   relayerSDK?: RelayerSDKGlobal;
-  postMessage: (message: unknown, transfer?: Transferable[]) => void;
-  onmessage: ((event: MessageEvent<WorkerRequest>) => void) | null;
   importScripts: (...urls: string[]) => void;
 }
 
@@ -81,7 +79,7 @@ function sendSuccess<T>(
     success: true,
     data,
   };
-  self.postMessage(response, transfer);
+  return transfer ? self.postMessage(response, transfer) : self.postMessage(response);
 }
 
 /**
@@ -107,6 +105,35 @@ function sendError(
 
 // Store original fetch for use in SDK loading
 const originalFetch = fetch;
+
+// ── CDN URL validation ───────────────────────────────────────
+
+/** Allowed CDN hostnames for loading the relayer SDK script. */
+const ALLOWED_CDN_HOSTS = new Set<string>(["cdn.zama.org"]);
+
+/**
+ * Validate the CDN URL supplied by the caller.
+ * Ensures only HTTPS URLs from approved hosts are used when loading
+ * SDK code into the worker.
+ */
+function validateCdnUrl(rawUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid CDN URL");
+  }
+
+  if (url.protocol !== "https:") {
+    throw new Error("CDN URL must use https");
+  }
+
+  if (!ALLOWED_CDN_HOSTS.has(url.hostname)) {
+    throw new Error(`CDN URL host is not allowed: ${url.hostname}`);
+  }
+
+  return url.toString();
+}
 
 /**
  * Set up fetch interceptor to add credentials and CSRF token for relayer requests.
@@ -230,6 +257,9 @@ async function handleInit(request: InitRequest): Promise<void> {
   const { cdnUrl, fhevmConfig, csrfToken, integrity } = payload;
 
   try {
+    // Validate CDN URL before any script loading
+    validateCdnUrl(cdnUrl);
+
     // Extract relayerUrl from config for fetch interception
     relayerUrlBase = fhevmConfig.relayerUrl ?? "";
     csrfTokenBase = csrfToken;
