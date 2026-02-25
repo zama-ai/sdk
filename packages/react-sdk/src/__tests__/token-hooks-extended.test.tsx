@@ -474,7 +474,7 @@ describe("useConfidentialBalance", () => {
     expect(result.current.handleQuery.data).toBe("0xbalancehandle");
   });
 
-  it("exposes signerError when getAddress fails", async () => {
+  it("disables downstream queries when getAddress fails", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.getAddress).mockRejectedValue(new Error("no wallet"));
 
@@ -482,8 +482,11 @@ describe("useConfidentialBalance", () => {
       signer,
     });
 
-    await waitFor(() => expect(result.current.signerError).toBeDefined());
-    expect(result.current.signerError?.message).toBe("no wallet");
+    // Wait for the address query to settle in error state
+    await waitFor(() => expect(result.current.handleQuery.isFetching).toBe(false));
+    // The handle and balance queries should stay disabled since signerAddress is undefined
+    expect(result.current.handleQuery.data).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 
   it("does not fetch when signer address is unavailable", () => {
@@ -537,7 +540,7 @@ describe("useConfidentialBalances", () => {
     expect(result.current.handlesQuery.isFetching).toBe(false);
   });
 
-  it("exposes signerError when getAddress fails", async () => {
+  it("disables downstream queries when getAddress fails", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.getAddress).mockRejectedValue(new Error("disconnected"));
 
@@ -546,8 +549,11 @@ describe("useConfidentialBalances", () => {
       { signer },
     );
 
-    await waitFor(() => expect(result.current.signerError).toBeDefined());
-    expect(result.current.signerError?.message).toBe("disconnected");
+    // Wait for the address query to settle in error state
+    await waitFor(() => expect(result.current.handlesQuery.isFetching).toBe(false));
+    // The handles and balances queries should stay disabled since signerAddress is undefined
+    expect(result.current.handlesQuery.data).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 
   it("does not fetch when signer address is unavailable", () => {

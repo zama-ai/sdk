@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import { ReadonlyToken, type Address } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
@@ -47,31 +47,13 @@ export function useConfidentialBalances(
 ) {
   const { tokenAddresses, handleRefetchInterval, maxConcurrency } = config;
   const sdk = useZamaSDK();
-  // Resolve the signer address for stable query keys.
-  // This prevents cache collisions when wallet switches.
-  const [signerAddress, setSignerAddress] = useState<Address | undefined>();
 
-  const [signerError, setSignerError] = useState<Error | undefined>();
+  const addressQuery = useQuery<Address, Error>({
+    queryKey: ["zama", "signer-address"],
+    queryFn: () => sdk.signer.getAddress(),
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    setSignerError(undefined);
-    sdk.signer
-      .getAddress()
-      .then((addr) => {
-        if (!cancelled) setSignerAddress(addr);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setSignerAddress(undefined);
-          setSignerError(error instanceof Error ? error : new Error(String(error)));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [sdk.signer]);
-
+  const signerAddress = addressQuery.data;
   const ownerKey = signerAddress ?? "";
 
   const tokens = useMemo(
@@ -112,5 +94,5 @@ export function useConfidentialBalances(
     ...options,
   });
 
-  return { ...balancesQuery, handlesQuery, signerError };
+  return { ...balancesQuery, handlesQuery };
 }
