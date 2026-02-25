@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Address, Hex } from "../../relayer/relayer-sdk.types";
+import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
 import { ReadonlyToken } from "../readonly-token";
 import { MemoryStorage } from "../memory-storage";
