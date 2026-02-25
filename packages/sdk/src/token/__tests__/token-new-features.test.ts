@@ -318,7 +318,7 @@ describe("Address normalization (P6)", () => {
     signer = createMockSigner();
   });
 
-  it("normalizes token address to lowercase in constructor", () => {
+  it("preserves token address case in constructor", () => {
     const token = new Token({
       sdk: sdk as unknown as RelayerSDK,
       signer,
@@ -326,10 +326,10 @@ describe("Address normalization (P6)", () => {
       address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
-    expect(token.address).toBe("0xabcdef1234567890abcdef1234567890abcdef12");
+    expect(token.address).toBe("0xABCDEF1234567890ABCDEF1234567890ABCDEF12");
   });
 
-  it("normalizes wrapper address to lowercase in constructor", () => {
+  it("preserves wrapper address case in constructor", () => {
     const token = new Token({
       sdk: sdk as unknown as RelayerSDK,
       signer,
@@ -338,7 +338,7 @@ describe("Address normalization (P6)", () => {
       wrapper: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
-    expect(token.wrapper).toBe("0xabcdef1234567890abcdef1234567890abcdef12");
+    expect(token.wrapper).toBe("0xABCDEF1234567890ABCDEF1234567890ABCDEF12");
   });
 
   it("defaults wrapper to normalized address when not provided", () => {
