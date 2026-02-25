@@ -1,6 +1,11 @@
 "use client";
 
-import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/sdk";
+import type {
+  GenericSigner,
+  GenericStringStorage,
+  RelayerSDK,
+  ZamaSDKEventListener,
+} from "@zama-fhe/sdk";
 import { TokenSDK } from "@zama-fhe/sdk";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
 
@@ -12,6 +17,10 @@ interface ZamaProviderProps extends PropsWithChildren {
   signer: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
   storage: GenericStringStorage;
+  /** Number of days credentials remain valid (default: relayer default). */
+  credentialDurationDays?: number;
+  /** Callback invoked on SDK lifecycle events. */
+  onEvent?: ZamaSDKEventListener;
 }
 
 const TokenSDKContext = createContext<TokenSDK | null>(null);
@@ -27,15 +36,24 @@ const TokenSDKContext = createContext<TokenSDK | null>(null);
  * </ZamaProvider>
  * ```
  */
-export function ZamaProvider({ children, relayer, signer, storage }: ZamaProviderProps) {
+export function ZamaProvider({
+  children,
+  relayer,
+  signer,
+  storage,
+  credentialDurationDays,
+  onEvent,
+}: ZamaProviderProps) {
   const sdk = useMemo(
     () =>
       new TokenSDK({
         relayer,
         signer,
         storage,
+        credentialDurationDays,
+        onEvent,
       }),
-    [relayer, signer, storage],
+    [relayer, signer, storage, credentialDurationDays, onEvent],
   );
 
   useEffect(() => {
