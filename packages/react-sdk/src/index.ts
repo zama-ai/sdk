@@ -56,7 +56,7 @@ export type {
   RelayerSDK,
   RelayerWebConfig,
   ZamaSDKConfig,
-  ZamaConfig,
+  TokenConfig,
   ReadonlyTokenConfig,
   BatchDecryptOptions,
   FhevmInstanceConfig,
