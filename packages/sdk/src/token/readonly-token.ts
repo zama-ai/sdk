@@ -99,6 +99,10 @@ export class ReadonlyToken {
    * Decrypt and return the plaintext balance for the given owner.
    * Generates FHE credentials automatically if they don't exist.
    *
+   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @returns The decrypted plaintext balance as a bigint.
+   * @throws {@link DecryptionFailedError} if FHE decryption fails.
+   *
    * @example
    * ```ts
    * const balance = await token.balanceOf();
@@ -144,6 +148,9 @@ export class ReadonlyToken {
   /**
    * Return the raw encrypted balance handle without decrypting.
    *
+   * @param owner - Optional balance owner address. Defaults to the connected signer.
+   * @returns The encrypted balance handle as a hex string.
+   *
    * @example
    * ```ts
    * const handle = await token.confidentialBalanceOf();
@@ -156,6 +163,8 @@ export class ReadonlyToken {
 
   /**
    * ERC-165 check for {@link ERC7984_INTERFACE_ID} support.
+   *
+   * @returns `true` if the contract implements the ERC-7984 confidential token interface.
    *
    * @example
    * ```ts
@@ -173,6 +182,8 @@ export class ReadonlyToken {
 
   /**
    * ERC-165 check for {@link ERC7984_WRAPPER_INTERFACE_ID} support.
+   *
+   * @returns `true` if the contract implements the ERC-7984 wrapper interface.
    *
    * @example
    * ```ts
@@ -197,6 +208,11 @@ export class ReadonlyToken {
    * **Error handling:** If a per-token decryption fails and no `onError` callback
    * is provided, errors are collected and thrown as an aggregated
    * `DecryptionFailedError`. Pass `onError: () => 0n` for the old silent behavior.
+   *
+   * @param tokens - Array of ReadonlyToken instances to decrypt balances for.
+   * @param options - Optional configuration for handles, owner, error handling, and concurrency.
+   * @returns A Map from token address to decrypted balance.
+   * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` callback is provided.
    *
    * @example
    * ```ts
@@ -291,6 +307,9 @@ export class ReadonlyToken {
    * Look up the wrapper contract for this token via the deployment coordinator.
    * Returns `null` if no wrapper is deployed.
    *
+   * @param coordinatorAddress - The deployment coordinator contract address.
+   * @returns The wrapper address, or `null` if no wrapper exists.
+   *
    * @example
    * ```ts
    * const wrapper = await token.discoverWrapper("0xCoordinator");
@@ -311,6 +330,8 @@ export class ReadonlyToken {
   /**
    * Read the underlying ERC-20 address from this token's wrapper contract.
    *
+   * @returns The underlying ERC-20 token address.
+   *
    * @example
    * ```ts
    * const underlying = await token.underlyingToken();
@@ -322,6 +343,10 @@ export class ReadonlyToken {
 
   /**
    * Read the ERC-20 allowance of the underlying token for a given wrapper.
+   *
+   * @param wrapper - The wrapper contract address to check allowance for.
+   * @param owner - Optional owner address. Defaults to the connected signer.
+   * @returns The current allowance as a bigint.
    *
    * @example
    * ```ts
@@ -342,6 +367,8 @@ export class ReadonlyToken {
   /**
    * Read the token name from the contract.
    *
+   * @returns The token name string.
+   *
    * @example
    * ```ts
    * const name = await token.name(); // "Wrapped USDC"
@@ -354,6 +381,8 @@ export class ReadonlyToken {
   /**
    * Read the token symbol from the contract.
    *
+   * @returns The token symbol string.
+   *
    * @example
    * ```ts
    * const symbol = await token.symbol(); // "cUSDC"
@@ -365,6 +394,8 @@ export class ReadonlyToken {
 
   /**
    * Read the token decimals from the contract.
+   *
+   * @returns The number of decimals.
    *
    * @example
    * ```ts
@@ -379,6 +410,8 @@ export class ReadonlyToken {
    * Ensure FHE decrypt credentials exist for this token.
    * Generates a keypair and requests an EIP-712 signature if needed.
    * Call this before any decrypt operation to avoid mid-flow wallet prompts.
+   *
+   * @returns Resolves when credentials are cached.
    *
    * @example
    * ```ts
@@ -395,6 +428,9 @@ export class ReadonlyToken {
    * Ensure FHE decrypt credentials exist for all given tokens in a single
    * wallet signature. Call this early (e.g. after loading the token list) so
    * that subsequent individual decrypt operations reuse cached credentials.
+   *
+   * @param tokens - Array of ReadonlyToken instances to authorize.
+   * @returns Resolves when all credentials are cached.
    *
    * @example
    * ```ts
@@ -433,6 +469,11 @@ export class ReadonlyToken {
   /**
    * Decrypt a single encrypted handle into a plaintext bigint.
    * Returns `0n` for zero handles without calling the relayer.
+   *
+   * @param handle - The encrypted balance handle to decrypt.
+   * @param owner - Optional owner address for the decrypt request.
+   * @returns The decrypted plaintext value as a bigint.
+   * @throws {@link DecryptionFailedError} if FHE decryption fails.
    *
    * @example
    * ```ts
@@ -475,6 +516,11 @@ export class ReadonlyToken {
   /**
    * Batch-decrypt arbitrary encrypted handles in a single relayer call.
    * Zero handles are returned as 0n without hitting the relayer.
+   *
+   * @param handles - Array of encrypted handles to decrypt.
+   * @param owner - Optional owner address for the decrypt request.
+   * @returns A Map from handle to decrypted bigint value.
+   * @throws {@link DecryptionFailedError} if FHE decryption fails.
    */
   async decryptHandles(handles: Address[], owner?: Address): Promise<Map<Address, bigint>> {
     const results = new Map<Address, bigint>();
