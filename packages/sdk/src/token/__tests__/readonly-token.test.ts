@@ -6,6 +6,7 @@ import type { GenericSigner } from "../token.types";
 import { TokenErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
+import { DecryptionFailedError } from "../errors";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const USER = "0x2222222222222222222222222222222222222222" as Address;
@@ -206,7 +207,7 @@ describe("ReadonlyToken", () => {
   describe("batchDecryptBalances error paths", () => {
     const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
 
-    it("reports mixed success/failure via onError", async () => {
+    it("throws DecryptionFailedError by default when decryption fails", async () => {
       const token2 = new ReadonlyToken({
         sdk: sdk as unknown as RelayerSDK,
         signer,
@@ -218,16 +219,71 @@ describe("ReadonlyToken", () => {
         .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
-      const errors: Array<{ address: Address; error: Error }> = [];
+      await expect(
+        ReadonlyToken.batchDecryptBalances([token, token2], {
+          handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+        }),
+      ).rejects.toThrow(DecryptionFailedError);
+
+      // Reset mocks for second assertion
+      vi.mocked(sdk.userDecrypt)
+        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
+        .mockRejectedValueOnce(new Error("decrypt failed"));
+
+      await expect(
+        ReadonlyToken.batchDecryptBalances([token, token2], {
+          handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+        }),
+      ).rejects.toThrow(/Batch decryption failed for 1 token\(s\)/);
+    });
+
+    it("returns fallback from onError callback instead of throwing", async () => {
+      const token2 = new ReadonlyToken({
+        sdk: sdk as unknown as RelayerSDK,
+        signer,
+        storage: new MemoryStorage(),
+        address: TOKEN2,
+      });
+
+      vi.mocked(sdk.userDecrypt)
+        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
+        .mockRejectedValueOnce(new Error("decrypt failed"));
+
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
         handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
-        onError: (address, error) => errors.push({ address, error }),
+        onError: () => 0n,
       });
 
       expect(result.get(TOKEN)).toBe(1000n);
       expect(result.get(TOKEN2)).toBe(0n);
-      expect(errors).toHaveLength(1);
-      expect(errors[0]!.address).toBe(TOKEN2);
+    });
+
+    it("onError receives correct error and address", async () => {
+      const token2 = new ReadonlyToken({
+        sdk: sdk as unknown as RelayerSDK,
+        signer,
+        storage: new MemoryStorage(),
+        address: TOKEN2,
+      });
+
+      vi.mocked(sdk.userDecrypt)
+        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
+        .mockRejectedValueOnce(new Error("decrypt failed"));
+
+      const captured: Array<{ error: Error; address: Address }> = [];
+      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+        handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+        onError: (error, address) => {
+          captured.push({ error, address });
+          return 42n;
+        },
+      });
+
+      expect(result.get(TOKEN)).toBe(1000n);
+      expect(result.get(TOKEN2)).toBe(42n);
+      expect(captured).toHaveLength(1);
+      expect(captured[0]!.address).toBe(TOKEN2);
+      expect(captured[0]!.error.message).toBe("decrypt failed");
     });
   });
 });

@@ -202,14 +202,25 @@ describe("Token", () => {
       expect(sdk.userDecrypt).toHaveBeenCalledOnce();
     });
 
-    it("returns 0n for tokens that fail decryption", async () => {
+    it("returns 0n for tokens that fail decryption when onError returns 0n", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       const result = await Token.batchDecryptBalances([token], {
         handles: [VALID_HANDLE as Address],
+        onError: () => 0n,
       });
 
       expect(result.get(TOKEN)).toBe(0n);
+    });
+
+    it("throws DecryptionFailedError by default when decryption fails", async () => {
+      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
+
+      await expect(
+        Token.batchDecryptBalances([token], {
+          handles: [VALID_HANDLE as Address],
+        }),
+      ).rejects.toThrow("Batch decryption failed for 1 token(s)");
     });
   });
 

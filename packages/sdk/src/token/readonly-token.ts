@@ -30,8 +30,19 @@ export interface BatchDecryptOptions {
   handles?: Address[];
   /** Balance owner address. Defaults to the connected signer. */
   owner?: Address;
-  /** Called when decryption fails for a single token. */
-  onError?: (address: Address, error: Error) => void;
+  /**
+   * Called when decryption fails for a single token. Return a fallback bigint value.
+   * When omitted, errors are collected and thrown as an aggregated DecryptionFailedError.
+   *
+   * @example
+   * ```ts
+   * // Silent zero (old behavior):
+   * onError: () => 0n
+   * // Log and use zero:
+   * onError: (err, addr) => { console.error(addr, err); return 0n; }
+   * ```
+   */
+  onError?: (error: Error, address: Address) => bigint;
   /** Maximum number of concurrent decrypt calls. Default: `Infinity` (no limit). */
   maxConcurrency?: number;
 }
@@ -183,9 +194,9 @@ export class ReadonlyToken {
    * polling where handles are already known). When omitted, fetches handles
    * from the chain first.
    *
-   * **Warning:** If a per-token decryption fails and no `onError` callback is
-   * provided, the failed token's balance is silently set to `0n` in the result
-   * map. Always pass `onError` if you need to detect partial failures.
+   * **Error handling:** If a per-token decryption fails and no `onError` callback
+   * is provided, errors are collected and thrown as an aggregated
+   * `DecryptionFailedError`. Pass `onError: () => 0n` for the old silent behavior.
    *
    * @example
    * ```ts
@@ -196,7 +207,7 @@ export class ReadonlyToken {
    * const handles = await Promise.all(tokens.map(t => t.confidentialBalanceOf()));
    * const balances = await ReadonlyToken.batchDecryptBalances(tokens, {
    *   handles,
-   *   onError: (addr, err) => console.error(addr, err),
+   *   onError: (err, addr) => { console.error(addr, err); return 0n; },
    * });
    * ```
    */
@@ -225,6 +236,7 @@ export class ReadonlyToken {
     const creds = await tokens[0]!.credentials.getAll(allAddresses);
 
     const results = new Map<Address, bigint>();
+    const errors: Array<{ address: Address; error: Error }> = [];
     const decryptFns: Array<() => Promise<void>> = [];
 
     for (let i = 0; i < tokens.length; i++) {
@@ -253,13 +265,25 @@ export class ReadonlyToken {
             results.set(token.address, result[handle] ?? BigInt(0));
           })
           .catch((error) => {
-            onError?.(token.address, error instanceof Error ? error : new Error(String(error)));
-            results.set(token.address, BigInt(0));
+            const err = error instanceof Error ? error : new Error(String(error));
+            if (onError) {
+              results.set(token.address, onError(err, token.address));
+            } else {
+              errors.push({ address: token.address, error: err });
+            }
           }),
       );
     }
 
     await pLimit(decryptFns, maxConcurrency);
+
+    if (errors.length > 0) {
+      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
+      throw new DecryptionFailedError(
+        `Batch decryption failed for ${errors.length} token(s): ${message}`,
+      );
+    }
+
     return results;
   }
 
