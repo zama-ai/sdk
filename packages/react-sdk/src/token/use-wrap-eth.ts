@@ -10,8 +10,8 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
-/** Parameters passed to the `mutate` function of {@link useWrapETH}. */
-export interface WrapETHParams {
+/** Parameters passed to the `mutate` function of {@link useShieldETH}. */
+export interface ShieldETHParams {
   /** Amount of ETH to wrap (in wei). */
   amount: bigint;
   /** ETH value to send with the transaction. Defaults to `amount`. */
@@ -19,20 +19,20 @@ export interface WrapETHParams {
 }
 
 /**
- * TanStack Query mutation options factory for wrap ETH (shield).
+ * TanStack Query mutation options factory for shield ETH.
  *
  * @param token - A `Token` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */
-export function wrapETHMutationOptions(token: Token) {
+export function shieldETHMutationOptions(token: Token) {
   return {
-    mutationKey: ["wrapETH", token.address] as const,
-    mutationFn: ({ amount, value }: WrapETHParams) => token.shieldETH(amount, value),
+    mutationKey: ["shieldETH", token.address] as const,
+    mutationFn: ({ amount, value }: ShieldETHParams) => token.shieldETH(amount, value),
   };
 }
 
 /**
- * Wrap (shield) native ETH into confidential tokens.
+ * Shield native ETH into confidential tokens.
  * Invalidates balance caches on success.
  *
  * @param config - Token and wrapper addresses.
@@ -40,18 +40,18 @@ export function wrapETHMutationOptions(token: Token) {
  *
  * @example
  * ```tsx
- * const wrapETH = useWrapETH({ tokenAddress: "0x...", wrapperAddress: "0x..." });
- * wrapETH.mutate({ amount: 1000000000000000000n }); // 1 ETH
+ * const shieldETH = useShieldETH({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * shieldETH.mutate({ amount: 1000000000000000000n }); // 1 ETH
  * ```
  */
-export function useWrapETH(
+export function useShieldETH(
   config: UseTokenConfig,
-  options?: UseMutationOptions<TransactionResult, Error, WrapETHParams, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<TransactionResult, Error, WrapETHParams, Address>({
-    mutationKey: ["wrapETH", config.tokenAddress],
+  return useMutation<TransactionResult, Error, ShieldETHParams, Address>({
+    mutationKey: ["shieldETH", config.tokenAddress],
     mutationFn: ({ amount, value }) => token.shieldETH(amount, value),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {

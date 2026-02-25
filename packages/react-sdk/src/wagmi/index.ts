@@ -41,6 +41,6 @@ export {
   type UseSupportsInterfaceConfig,
   type UseSupportsInterfaceSuspenseConfig,
 } from "./use-supports-interface";
-export { useWrap } from "./use-wrap";
-export { useWrapETH } from "./use-wrap-eth";
+export { useShield } from "./use-wrap";
+export { useShieldETH } from "./use-wrap-eth";
 export { WagmiSigner, type WagmiSignerConfig } from "./wagmi-signer";

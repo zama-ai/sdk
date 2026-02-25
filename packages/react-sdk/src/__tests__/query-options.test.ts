@@ -8,8 +8,8 @@ import { confidentialIsApprovedQueryOptions } from "../token/use-confidential-is
 import { underlyingAllowanceQueryOptions } from "../token/use-underlying-allowance";
 import { wrapperDiscoveryQueryOptions } from "../token/use-wrapper-discovery";
 import {
-  wrapFeeQueryOptions,
-  unwrapFeeQueryOptions,
+  shieldFeeQueryOptions,
+  unshieldFeeQueryOptions,
   batchTransferFeeQueryOptions,
   feeRecipientQueryOptions,
   feeQueryKeys,
@@ -193,24 +193,24 @@ describe("query options factories", () => {
       to: TO,
     };
 
-    it("wrapFeeQueryOptions key includes amount/from/to", () => {
-      const opts = wrapFeeQueryOptions(signer, feeConfig);
-      expect(opts.queryKey).toEqual(["wrapFee", FEE_MANAGER, "1000", FROM, TO]);
+    it("shieldFeeQueryOptions key includes amount/from/to", () => {
+      const opts = shieldFeeQueryOptions(signer, feeConfig);
+      expect(opts.queryKey).toEqual(["shieldFee", FEE_MANAGER, "1000", FROM, TO]);
       expect(opts.staleTime).toBe(30_000);
     });
 
-    it("feeQueryKeys.wrapFee omits amount/from/to when amount is undefined", () => {
-      expect(feeQueryKeys.wrapFee(FEE_MANAGER)).toEqual(["wrapFee", FEE_MANAGER]);
+    it("feeQueryKeys.shieldFee omits amount/from/to when amount is undefined", () => {
+      expect(feeQueryKeys.shieldFee(FEE_MANAGER)).toEqual(["shieldFee", FEE_MANAGER]);
     });
 
-    it("unwrapFeeQueryOptions key includes amount/from/to", () => {
-      const opts = unwrapFeeQueryOptions(signer, feeConfig);
-      expect(opts.queryKey).toEqual(["unwrapFee", FEE_MANAGER, "1000", FROM, TO]);
+    it("unshieldFeeQueryOptions key includes amount/from/to", () => {
+      const opts = unshieldFeeQueryOptions(signer, feeConfig);
+      expect(opts.queryKey).toEqual(["unshieldFee", FEE_MANAGER, "1000", FROM, TO]);
       expect(opts.staleTime).toBe(30_000);
     });
 
-    it("feeQueryKeys.unwrapFee omits amount/from/to when amount is undefined", () => {
-      expect(feeQueryKeys.unwrapFee(FEE_MANAGER)).toEqual(["unwrapFee", FEE_MANAGER]);
+    it("feeQueryKeys.unshieldFee omits amount/from/to when amount is undefined", () => {
+      expect(feeQueryKeys.unshieldFee(FEE_MANAGER)).toEqual(["unshieldFee", FEE_MANAGER]);
     });
 
     it("batchTransferFeeQueryOptions key includes feeManagerAddress", () => {
@@ -225,9 +225,9 @@ describe("query options factories", () => {
       expect(opts.staleTime).toBe(30_000);
     });
 
-    it("wrapFeeQueryOptions queryFn calls signer.readContract", async () => {
+    it("shieldFeeQueryOptions queryFn calls signer.readContract", async () => {
       vi.mocked(signer.readContract).mockResolvedValue(50n);
-      const opts = wrapFeeQueryOptions(signer, feeConfig);
+      const opts = shieldFeeQueryOptions(signer, feeConfig);
       const result = await opts.queryFn();
 
       expect(signer.readContract).toHaveBeenCalled();

@@ -7,10 +7,8 @@ import { useUnshield } from "../token/use-unshield";
 import { useUnshieldAll } from "../token/use-unshield-all";
 import { useUnwrap } from "../token/use-unwrap";
 import { useUnwrapAll } from "../token/use-unwrap-all";
-import { useWrapETH } from "../token/use-wrap-eth";
-import { useShield } from "../token/use-shield";
-import { useShieldETH } from "../token/use-shield-eth";
-import { useWrap } from "../token/use-wrap";
+import { useShieldETH } from "../token/use-wrap-eth";
+import { useShield } from "../token/use-wrap";
 import { useActivityFeed } from "../token/use-activity-feed";
 import { useConfidentialBalance } from "../token/use-confidential-balance";
 import { useConfidentialBalances } from "../token/use-confidential-balances";
@@ -346,22 +344,22 @@ describe("useUnshieldAll", () => {
   });
 });
 
-describe("useWrapETH", () => {
+describe("useShieldETH", () => {
   it("provides mutate function", () => {
     const { result } = renderWithProviders(() =>
-      useWrapETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.wrapETH on mutate", async () => {
+  it("calls token.shieldETH on mutate", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result } = renderWithProviders(
-      () => useWrapETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      () => useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
       { signer },
     );
 
@@ -378,7 +376,7 @@ describe("useWrapETH", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result } = renderWithProviders(
-      () => useWrapETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      () => useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
       { signer },
     );
 
@@ -397,7 +395,7 @@ describe("useWrapETH", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(
-      () => useWrapETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      () => useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
       { signer },
     );
 
@@ -427,29 +425,10 @@ describe("useWrapETH", () => {
 // Alias hooks
 // ---------------------------------------------------------------------------
 
-describe("useShield (alias for useWrap)", () => {
-  it("is the same function as useWrap", () => {
-    expect(useShield).toBe(useWrap);
-  });
-
+describe("useShield", () => {
   it("provides mutate function", () => {
     const { result } = renderWithProviders(() =>
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
-
-    expect(result.current.mutate).toBeDefined();
-    expect(result.current.isIdle).toBe(true);
-  });
-});
-
-describe("useShieldETH (alias for useWrapETH)", () => {
-  it("is the same function as useWrapETH", () => {
-    expect(useShieldETH).toBe(useWrapETH);
-  });
-
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
 
     expect(result.current.mutate).toBeDefined();

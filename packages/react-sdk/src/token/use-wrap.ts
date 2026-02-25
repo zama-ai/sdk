@@ -11,8 +11,8 @@ import {
 } from "./balance-query-keys";
 import { useToken, type UseTokenConfig } from "./use-token";
 
-/** Parameters passed to the `mutate` function of {@link useWrap}. */
-export interface WrapParams {
+/** Parameters passed to the `mutate` function of {@link useShield}. */
+export interface ShieldParams {
   /** Amount of underlying ERC-20 tokens to wrap. */
   amount: bigint;
   /** Optional fee amount (for native ETH wrapping with fees). */
@@ -21,8 +21,8 @@ export interface WrapParams {
   approvalStrategy?: "max" | "exact" | "skip";
 }
 
-/** Configuration for {@link useWrap}. */
-export interface UseWrapConfig extends UseTokenConfig {
+/** Configuration for {@link useShield}. */
+export interface UseShieldConfig extends UseTokenConfig {
   /**
    * When `true`, optimistically adds the wrap amount to the cached confidential balance
    * before the transaction confirms. Rolls back on error.
@@ -32,27 +32,27 @@ export interface UseWrapConfig extends UseTokenConfig {
 }
 
 /**
- * TanStack Query mutation options factory for wrap (shield).
+ * TanStack Query mutation options factory for shield.
  *
  * @param token - A `Token` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */
-export function wrapMutationOptions(token: Token) {
+export function shieldMutationOptions(token: Token) {
   return {
-    mutationKey: ["wrap", token.address] as const,
-    mutationFn: async ({ amount, fees, approvalStrategy }: WrapParams) =>
+    mutationKey: ["shield", token.address] as const,
+    mutationFn: async ({ amount, fees, approvalStrategy }: ShieldParams) =>
       token.shield(amount, { fees, approvalStrategy }),
   };
 }
 
 /**
- * Wrap (shield) public ERC-20 tokens into confidential tokens.
+ * Shield public ERC-20 tokens into confidential tokens.
  * Handles ERC-20 approval automatically. Invalidates balance caches on success.
  *
  * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link ApprovalFailedError} — ERC-20 approval transaction failed
- * - {@link TransactionRevertedError} — wrap transaction reverted
+ * - {@link TransactionRevertedError} — shield transaction reverted
  *
  * @param config - Token and wrapper addresses.
  *   Set `optimistic: true` to add the amount to the cached balance immediately.
@@ -60,19 +60,19 @@ export function wrapMutationOptions(token: Token) {
  *
  * @example
  * ```tsx
- * const wrap = useWrap({ tokenAddress: "0x...", wrapperAddress: "0x...", optimistic: true });
- * wrap.mutate({ amount: 1000n });
+ * const shield = useShield({ tokenAddress: "0x...", wrapperAddress: "0x...", optimistic: true });
+ * shield.mutate({ amount: 1000n });
  * ```
  */
-export function useWrap(
-  config: UseWrapConfig,
-  options?: UseMutationOptions<TransactionResult, Error, WrapParams, Address>,
+export function useShield(
+  config: UseShieldConfig,
+  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, Address>,
 ) {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<TransactionResult, Error, WrapParams, Address>({
-    mutationKey: ["wrap", config.tokenAddress],
+  return useMutation<TransactionResult, Error, ShieldParams, Address>({
+    mutationKey: ["shield", config.tokenAddress],
     mutationFn: async ({ amount, fees, approvalStrategy }) =>
       token.shield(amount, { fees, approvalStrategy }),
     ...options,

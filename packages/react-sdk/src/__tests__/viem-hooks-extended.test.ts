@@ -32,7 +32,7 @@ import { useUnwrap } from "../viem/use-unwrap";
 import { useUnwrapFromBalance } from "../viem/use-unwrap-from-balance";
 import { useFinalizeUnwrap } from "../viem/use-finalize-unwrap";
 import { useSetOperator } from "../viem/use-set-operator";
-import { useWrapETH } from "../viem/use-wrap-eth";
+import { useShieldETH } from "../viem/use-wrap-eth";
 import { useUnderlyingToken, useUnderlyingTokenSuspense } from "../viem/use-underlying-token";
 import { useWrapperExists, useWrapperExistsSuspense } from "../viem/use-wrapper-exists";
 
@@ -217,10 +217,10 @@ describe("useSetOperator", () => {
   });
 });
 
-describe("useWrapETH", () => {
+describe("useShieldETH", () => {
   it("calls writeWrapETHContract with correct params", async () => {
     const wrapper = createWrapper();
-    const { result } = renderHook(() => useWrapETH(), { wrapper });
+    const { result } = renderHook(() => useShieldETH(), { wrapper });
 
     result.current.mutate({
       client: mockClient,

@@ -28,8 +28,8 @@ export {
   type UseUnderlyingTokenConfig,
   type UseUnderlyingTokenSuspenseConfig,
 } from "./use-underlying-token";
-export { useWrap, type WrapParams } from "./use-wrap";
-export { useWrapETH, type WrapETHParams } from "./use-wrap-eth";
+export { useShield, type ShieldParams } from "./use-wrap";
+export { useShieldETH, type ShieldETHParams } from "./use-wrap-eth";
 export {
   useWrapperExists,
   useWrapperExistsSuspense,

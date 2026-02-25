@@ -99,8 +99,8 @@ import {
 } from "@zama-fhe/sdk";
 
 import { WagmiSigner } from "../wagmi/wagmi-signer";
-import { useWrap } from "../wagmi/use-wrap";
-import { useWrapETH } from "../wagmi/use-wrap-eth";
+import { useShield } from "../wagmi/use-wrap";
+import { useShieldETH } from "../wagmi/use-wrap-eth";
 import { useUnwrap } from "../wagmi/use-unwrap";
 import { useUnwrapFromBalance } from "../wagmi/use-unwrap-from-balance";
 import { useFinalizeUnwrap } from "../wagmi/use-finalize-unwrap";
@@ -224,9 +224,9 @@ describe("WagmiSigner", () => {
 
 // ======================== Mutation Hooks ====================================
 describe("Wagmi mutation hooks", () => {
-  describe("useWrap", () => {
+  describe("useShield", () => {
     it("calls wrapContract and passes result to mutate", () => {
-      const hook = useWrap();
+      const hook = useShield();
 
       hook.mutate(
         "0x4444444444444444444444444444444444444444" as Address,
@@ -249,7 +249,7 @@ describe("Wagmi mutation hooks", () => {
 
     it("calls wrapContract and passes result to mutateAsync", async () => {
       mockMutateAsync.mockResolvedValue("0xtxhash");
-      const hook = useWrap();
+      const hook = useShield();
 
       await hook.mutateAsync(
         "0x4444444444444444444444444444444444444444" as Address,
@@ -268,16 +268,16 @@ describe("Wagmi mutation hooks", () => {
     });
 
     it("exposes mutation state from useWriteContract", () => {
-      const hook = useWrap();
+      const hook = useShield();
 
       expect(hook.isPending).toBe(false);
       expect(hook.isIdle).toBe(true);
     });
   });
 
-  describe("useWrapETH", () => {
+  describe("useShieldETH", () => {
     it("calls wrapETHContract with value and passes result to mutate", () => {
-      const hook = useWrapETH();
+      const hook = useShieldETH();
 
       hook.mutate(
         "0x4444444444444444444444444444444444444444" as Address,
@@ -299,7 +299,7 @@ describe("Wagmi mutation hooks", () => {
 
     it("calls wrapETHContract and passes result to mutateAsync", async () => {
       mockMutateAsync.mockResolvedValue("0xtxhash");
-      const hook = useWrapETH();
+      const hook = useShieldETH();
 
       await hook.mutateAsync(
         "0x4444444444444444444444444444444444444444" as Address,

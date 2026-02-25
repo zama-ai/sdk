@@ -6,7 +6,7 @@ import {
   TransactionRevertedError,
 } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions } from "../token/use-confidential-transfer";
-import { wrapMutationOptions } from "../token/use-wrap";
+import { shieldMutationOptions } from "../token/use-wrap";
 import { createMockSigner } from "./test-utils";
 
 const TOKEN_ADDR = "0xtoken" as Address;
@@ -46,22 +46,22 @@ describe("mutation error propagation", () => {
     );
   });
 
-  it("wrap surfaces ApprovalFailedError", async () => {
+  it("shield surfaces ApprovalFailedError", async () => {
     const token = createMockToken();
     const error = new ApprovalFailedError("ERC-20 approval failed");
     vi.mocked(token.shield).mockRejectedValueOnce(error);
 
-    const opts = wrapMutationOptions(token);
+    const opts = shieldMutationOptions(token);
 
     await expect(opts.mutationFn({ amount: 100n })).rejects.toThrow(ApprovalFailedError);
   });
 
-  it("wrap surfaces TransactionRevertedError", async () => {
+  it("shield surfaces TransactionRevertedError", async () => {
     const token = createMockToken();
     const error = new TransactionRevertedError("Shield (wrap) transaction failed");
     vi.mocked(token.shield).mockRejectedValueOnce(error);
 
-    const opts = wrapMutationOptions(token);
+    const opts = shieldMutationOptions(token);
 
     await expect(opts.mutationFn({ amount: 100n })).rejects.toThrow(TransactionRevertedError);
   });

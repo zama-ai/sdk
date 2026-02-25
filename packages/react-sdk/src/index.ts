@@ -170,14 +170,12 @@ export {
   type UseConfidentialIsApprovedSuspenseConfig,
 } from "./token/use-confidential-is-approved";
 export {
-  useWrap,
-  wrapMutationOptions,
-  type WrapParams,
-  type UseWrapConfig,
+  useShield,
+  shieldMutationOptions,
+  type ShieldParams,
+  type UseShieldConfig,
 } from "./token/use-wrap";
-export { useShield } from "./token/use-shield";
-export { useWrapETH, wrapETHMutationOptions, type WrapETHParams } from "./token/use-wrap-eth";
-export { useShieldETH } from "./token/use-shield-eth";
+export { useShieldETH, shieldETHMutationOptions, type ShieldETHParams } from "./token/use-wrap-eth";
 export { useUnwrap, unwrapMutationOptions, type UnwrapParams } from "./token/use-unwrap";
 export { useUnwrapAll, unwrapAllMutationOptions } from "./token/use-unwrap-all";
 export {
@@ -251,12 +249,12 @@ export {
   totalSupplyQueryOptions,
 } from "./token/use-total-supply";
 export {
-  useWrapFee,
-  useUnwrapFee,
+  useShieldFee,
+  useUnshieldFee,
   useBatchTransferFee,
   useFeeRecipient,
-  wrapFeeQueryOptions,
-  unwrapFeeQueryOptions,
+  shieldFeeQueryOptions,
+  unshieldFeeQueryOptions,
   batchTransferFeeQueryOptions,
   feeRecipientQueryOptions,
   feeQueryKeys,

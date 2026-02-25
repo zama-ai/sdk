@@ -6,15 +6,15 @@ import { writeWrapETHContract } from "@zama-fhe/sdk/viem";
 type WriteFn = typeof writeWrapETHContract;
 type Params = Parameters<WriteFn>;
 
-export interface WrapETHParams {
+export interface ShieldETHParams {
   client: Params[0];
   wrapperAddress: Params[1];
   to: Params[2];
   amount: Params[3];
   value: Params[4];
 }
-export function useWrapETH() {
-  return useMutation<Awaited<ReturnType<WriteFn>>, Error, WrapETHParams>({
+export function useShieldETH() {
+  return useMutation<Awaited<ReturnType<WriteFn>>, Error, ShieldETHParams>({
     mutationFn: (params) =>
       writeWrapETHContract(
         params.client,

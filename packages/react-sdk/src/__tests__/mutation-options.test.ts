@@ -4,8 +4,8 @@ import { confidentialTransferMutationOptions } from "../token/use-confidential-t
 import { confidentialTransferFromMutationOptions } from "../token/use-confidential-transfer-from";
 import { confidentialApproveMutationOptions } from "../token/use-confidential-approve";
 import { approveUnderlyingMutationOptions } from "../token/use-approve-underlying";
-import { wrapMutationOptions } from "../token/use-wrap";
-import { wrapETHMutationOptions } from "../token/use-wrap-eth";
+import { shieldMutationOptions } from "../token/use-wrap";
+import { shieldETHMutationOptions } from "../token/use-wrap-eth";
 import { unwrapMutationOptions } from "../token/use-unwrap";
 import { unwrapAllMutationOptions } from "../token/use-unwrap-all";
 import { finalizeUnwrapMutationOptions } from "../token/use-finalize-unwrap";
@@ -75,11 +75,11 @@ it("approveUnderlyingMutationOptions", async () => {
   expect(token.approveUnderlying).toHaveBeenCalledWith(500n);
 });
 
-it("wrapMutationOptions", async () => {
+it("shieldMutationOptions", async () => {
   const token = createMockToken();
-  const opts = wrapMutationOptions(token);
+  const opts = shieldMutationOptions(token);
 
-  expect(opts.mutationKey).toEqual(["wrap", TOKEN_ADDR]);
+  expect(opts.mutationKey).toEqual(["shield", TOKEN_ADDR]);
   await opts.mutationFn({ amount: 1000n });
   expect(token.shield).toHaveBeenCalledWith(1000n, {
     fees: undefined,
@@ -87,11 +87,11 @@ it("wrapMutationOptions", async () => {
   });
 });
 
-it("wrapETHMutationOptions", async () => {
+it("shieldETHMutationOptions", async () => {
   const token = createMockToken();
-  const opts = wrapETHMutationOptions(token);
+  const opts = shieldETHMutationOptions(token);
 
-  expect(opts.mutationKey).toEqual(["wrapETH", TOKEN_ADDR]);
+  expect(opts.mutationKey).toEqual(["shieldETH", TOKEN_ADDR]);
   await opts.mutationFn({ amount: 1000n, value: 2000n });
   expect(token.shieldETH).toHaveBeenCalledWith(1000n, 2000n);
 });
