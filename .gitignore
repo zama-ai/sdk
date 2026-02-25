@@ -33,3 +33,6 @@ npm-debug.log*
 
 # worktrees
 .worktrees/
+
+# generated api docs
+docs/api/
