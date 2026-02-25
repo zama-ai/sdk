@@ -9,6 +9,7 @@ import type {
   RelayerSDKGlobal,
 } from "../relayer/relayer-sdk.types";
 import { convertToBigIntRecord } from "../relayer/relayer-utils";
+import { assertObject, assertString } from "../utils";
 import type {
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,
@@ -139,6 +140,29 @@ function setupFetchInterceptor(): void {
 }
 
 /**
+ * Detect browser extension environment (Chrome, Firefox, Safari).
+ * Extensions have restricted CSP that blocks blob: URLs, so we must
+ * fall back to importScripts with the CDN URL directly.
+ * - Chrome/Edge: `chrome.runtime.id`
+ * - Firefox/Safari: `browser.runtime.id`
+ */
+function isBrowserExtension(): boolean {
+  try {
+    // Chrome/Edge expose chrome.runtime.id, Firefox/Safari expose browser.runtime.id
+    const g = globalThis as unknown as Record<string, unknown>;
+    for (const ns of [g.chrome, g.browser]) {
+      assertObject(ns, "ns");
+      assertObject(ns.runtime, "runtime");
+      assertString(ns.runtime.id, "id");
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+/**
  * Verify a fetched script's SHA-384 hash matches the expected integrity value.
  */
 async function verifyIntegrity(content: string, expectedHash: string): Promise<void> {
@@ -154,24 +178,48 @@ async function verifyIntegrity(content: string, expectedHash: string): Promise<v
 
 /**
  * Load SDK script from CDN.
- * When an integrity hash is provided, fetches the content first to verify the
- * SHA-384 digest, then loads via importScripts (which will hit the browser cache).
- * Uses importScripts directly — no blob: URLs — so this works in both regular
- * web apps and Chrome MV3 extensions.
+ * Uses two strategies depending on the environment:
+ * - **Web apps (default):** fetch + blob URL + importScripts. Avoids MIME-type
+ *   rejections (some CDNs serve .cjs as `application/node`) and CSP
+ *   `unsafe-eval` violations.
+ * - **Browser extensions (Chrome/Firefox/Safari):** importScripts directly.
+ *   Blob URLs are blocked by extension CSP, but the CDN must be allowed
+ *   in the extension's manifest CSP.
+ *
+ * Integrity is always verified when a hash is provided, regardless of strategy.
  */
+async function fetchScript(cdnUrl: string): Promise<string> {
+  const response = await originalFetch(cdnUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
+  }
+  return response.text();
+}
+
 async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
-  if (integrity) {
-    // Fetch the script content to verify integrity before execution
-    const response = await originalFetch(cdnUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
+  if (isBrowserExtension()) {
+    // Extensions: blob: URLs are forbidden. Use importScripts directly —
+    // the CDN origin must be allowed in the extension's CSP manifest.
+    if (integrity) {
+      await verifyIntegrity(await fetchScript(cdnUrl), integrity);
     }
-    await verifyIntegrity(await response.text(), integrity);
+    return self.importScripts(cdnUrl);
   }
 
-  // importScripts is not subject to CORS and will use the browser cache
-  // when the integrity fetch already downloaded the content.
-  self.importScripts(cdnUrl);
+  // Web apps: fetch + blob URL avoids MIME-type and eval CSP issues.
+  const scriptContent = await fetchScript(cdnUrl);
+
+  if (integrity) {
+    await verifyIntegrity(scriptContent, integrity);
+  }
+
+  const blob = new Blob([scriptContent], { type: "application/javascript" });
+  const blobUrl = URL.createObjectURL(blob);
+  try {
+    self.importScripts(blobUrl);
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
 }
 
 /**
