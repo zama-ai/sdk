@@ -54,7 +54,7 @@ export function ShieldForm({
 
       {shield.isSuccess && (
         <p className="text-green-600" data-testid="shield-success">
-          Shielded successfully! Tx: {shield.data}
+          Shielded successfully! Tx: {shield.data?.txHash}
         </p>
       )}
 

@@ -55,7 +55,7 @@ export function ApproveForm({
 
       {approve.isSuccess && (
         <p className="text-green-600" data-testid="approve-success">
-          Approved successfully! Tx: {approve.data}
+          Approved successfully! Tx: {approve.data?.txHash}
         </p>
       )}
 

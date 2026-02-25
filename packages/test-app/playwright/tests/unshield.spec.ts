@@ -30,7 +30,7 @@ test("should shield USDT then unshield back to ERC20", async ({
     formatUnits(expectedBalance, 6),
   );
 
-  // ERC-20 balance should increase by unshield amount minus unwrap fee
+  // ERC-20 balance should increase by unshield amount minus unshield fee
   const expectedErc20 =
     initialBalances.USDT - shieldAmount + unshieldAmount - computeFee(unshieldAmount);
   await expect(page.getByTestId("token-row-USDT").getByTestId("balance")).toHaveText(
@@ -68,7 +68,7 @@ test("should shield USDC then unshield back to ERC20", async ({
     formatUnits(expectedBalance, 6),
   );
 
-  // ERC-20 balance should increase by unshield amount minus unwrap fee
+  // ERC-20 balance should increase by unshield amount minus unshield fee
   const expectedErc20 =
     initialBalances.USDC - shieldAmount + unshieldAmount - computeFee(unshieldAmount);
   await expect(page.getByTestId("token-row-ERC20").getByTestId("balance")).toHaveText(

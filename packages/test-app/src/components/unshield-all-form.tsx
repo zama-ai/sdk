@@ -45,7 +45,7 @@ export function UnshieldAllForm({
 
       {unshieldAll.isSuccess && (
         <p className="text-green-600" data-testid="unshield-all-success">
-          Unshielded all successfully! Tx: {unshieldAll.data}
+          Unshielded all successfully! Tx: {unshieldAll.data?.txHash}
         </p>
       )}
 
