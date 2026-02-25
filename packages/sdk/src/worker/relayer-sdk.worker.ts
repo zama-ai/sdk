@@ -59,7 +59,6 @@ interface WorkerGlobalScopeWithSDK {
   relayerSDK?: RelayerSDKGlobal;
   postMessage: (message: unknown, transfer?: Transferable[]) => void;
   onmessage: ((event: MessageEvent<WorkerRequest>) => void) | null;
-  importScripts: (...urls: string[]) => void;
 }
 
 declare const self: WorkerGlobalScopeWithSDK;
@@ -154,24 +153,25 @@ async function verifyIntegrity(content: string, expectedHash: string): Promise<v
 
 /**
  * Load SDK script from CDN.
- * When an integrity hash is provided, fetches the content first to verify the
- * SHA-384 digest, then loads via importScripts (which will hit the browser cache).
- * Uses importScripts directly — no blob: URLs — so this works in both regular
- * web apps and Chrome MV3 extensions.
+ * Fetches the script content and evaluates it directly to avoid MIME-type
+ * rejections — some CDNs serve `.cjs` files with `application/node`, which
+ * browsers refuse for `importScripts()`.
+ * When an integrity hash is provided, verifies the SHA-384 digest before execution.
  */
 async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
+  const response = await originalFetch(cdnUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
+  }
+  const scriptContent = await response.text();
+
   if (integrity) {
-    // Fetch the script content to verify integrity before execution
-    const response = await originalFetch(cdnUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
-    }
-    await verifyIntegrity(await response.text(), integrity);
+    await verifyIntegrity(scriptContent, integrity);
   }
 
-  // importScripts is not subject to CORS and will use the browser cache
-  // when the integrity fetch already downloaded the content.
-  self.importScripts(cdnUrl);
+  // Evaluate in worker global scope (equivalent to importScripts but
+  // immune to Content-Type restrictions).
+  (0, eval)(scriptContent);
 }
 
 /**
@@ -189,7 +189,7 @@ async function handleInit(request: InitRequest): Promise<void> {
     // Set up fetch interceptor before loading SDK
     setupFetchInterceptor();
 
-    // Load SDK via fetch + blob URL (avoids CORS issues with importScripts)
+    // Load SDK via fetch + eval (avoids MIME-type issues with importScripts)
     await loadSdkScript(cdnUrl, integrity);
 
     if (!self.relayerSDK) {
