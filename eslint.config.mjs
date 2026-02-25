@@ -11,6 +11,7 @@ export default defineConfig([
     "hardhat/**",
     "packages/test-app/.next/**",
     "packages/test-app/playwright/**",
+    "docs/api/**",
   ]),
   js.configs.recommended,
   ...tseslint.configs.recommended,
