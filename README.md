@@ -689,4 +689,4 @@ Release prerequisites:
 
 ## License
 
-[BSD-3-Clause](./LICENSE)
+[BSD-3-Clause-Clear](./LICENSE)

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Monorepo for Zama SDK packages",
-  "license": "BSD-3-Clause",
+  "license": "BSD-3-Clause-Clear",
   "repository": {
     "type": "git",
     "url": "https://github.com/zama-ai/sdk"

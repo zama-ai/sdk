@@ -153,4 +153,4 @@ Use [GitHub Issues](https://github.com/zama-ai/sdk/issues) for bug reports and f
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [BSD-3-Clause License](LICENSE).
+By contributing, you agree that your contributions will be licensed under the [BSD-3-Clause-Clear License](LICENSE).

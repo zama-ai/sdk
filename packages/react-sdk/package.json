@@ -2,7 +2,7 @@
   "name": "@zama-fhe/react-sdk",
   "version": "1.0.0",
   "description": "React hooks for Zama SDK",
-  "license": "BSD-3-Clause",
+  "license": "BSD-3-Clause-Clear",
   "author": "Zama",
   "repository": {
     "type": "git",
