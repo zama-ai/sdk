@@ -41,8 +41,8 @@ function createMockReadonlyToken(address: Address = TOKEN_ADDR) {
 function createMockToken(address: Address = TOKEN_ADDR) {
   return {
     ...createMockReadonlyToken(address),
-    confidentialTransfer: vi.fn().mockResolvedValue("0xtx"),
-    approve: vi.fn().mockResolvedValue("0xtx"),
+    confidentialTransfer: vi.fn().mockResolvedValue({ txHash: "0xtx", receipt: { logs: [] } }),
+    approve: vi.fn().mockResolvedValue({ txHash: "0xtx", receipt: { logs: [] } }),
   } as unknown as Token;
 }
 

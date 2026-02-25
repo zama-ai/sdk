@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token } from "@zama-fhe/sdk";
+import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -47,11 +47,11 @@ export function finalizeUnwrapMutationOptions(token: Token) {
  */
 export function useFinalizeUnwrap(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, FinalizeUnwrapParams, Address>({
+  return useMutation<TransactionResult, Error, FinalizeUnwrapParams, Address>({
     mutationKey: ["finalizeUnwrap", config.tokenAddress],
     mutationFn: ({ burnAmountHandle }) => token.finalizeUnwrap(burnAmountHandle),
     ...options,

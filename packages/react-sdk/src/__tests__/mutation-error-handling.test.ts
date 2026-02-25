@@ -12,20 +12,21 @@ import { createMockSigner } from "./test-utils";
 const TOKEN_ADDR = "0xtoken" as Address;
 
 function createMockToken(address: Address = TOKEN_ADDR) {
+  const mockResult = { txHash: "0xtx", receipt: { logs: [] } };
   return {
     address,
     signer: createMockSigner(),
-    confidentialTransfer: vi.fn(),
-    confidentialTransferFrom: vi.fn(),
-    approve: vi.fn(),
-    approveUnderlying: vi.fn(),
-    shield: vi.fn(),
-    shieldETH: vi.fn(),
-    unwrap: vi.fn(),
-    unwrapAll: vi.fn(),
-    finalizeUnwrap: vi.fn(),
-    unshield: vi.fn(),
-    unshieldAll: vi.fn(),
+    confidentialTransfer: vi.fn().mockResolvedValue(mockResult),
+    confidentialTransferFrom: vi.fn().mockResolvedValue(mockResult),
+    approve: vi.fn().mockResolvedValue(mockResult),
+    approveUnderlying: vi.fn().mockResolvedValue(mockResult),
+    shield: vi.fn().mockResolvedValue(mockResult),
+    shieldETH: vi.fn().mockResolvedValue(mockResult),
+    unwrap: vi.fn().mockResolvedValue(mockResult),
+    unwrapAll: vi.fn().mockResolvedValue(mockResult),
+    finalizeUnwrap: vi.fn().mockResolvedValue(mockResult),
+    unshield: vi.fn().mockResolvedValue(mockResult),
+    unshieldAll: vi.fn().mockResolvedValue(mockResult),
   } as unknown as Token;
 }
 

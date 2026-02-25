@@ -87,8 +87,8 @@ describe("Integration: multi-step workflows", () => {
         .mockResolvedValueOnce(VALID_HANDLE); // confidentialBalanceOf after wrap
 
       // Step 2: Execute shield (triggers approve + wrap)
-      const txHash = await token.shield(500n);
-      expect(txHash).toBe("0xtxhash");
+      const shieldResult = await token.shield(500n);
+      expect(shieldResult.txHash).toBe("0xtxhash");
 
       // Verify approve was called first, then wrap
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
@@ -117,8 +117,8 @@ describe("Integration: multi-step workflows", () => {
   describe("confidentialTransfer flow: encrypt → transfer → verify", () => {
     it("performs full transfer flow", async () => {
       // Step 1: Execute transfer (encrypts amount, sends tx)
-      const txHash = await token.confidentialTransfer(RECIPIENT, 250n);
-      expect(txHash).toBe("0xtxhash");
+      const transferResult = await token.confidentialTransfer(RECIPIENT, 250n);
+      expect(transferResult.txHash).toBe("0xtxhash");
 
       // Verify encrypt was called with correct params
       expect(sdk.encrypt).toHaveBeenCalledWith({
@@ -156,8 +156,8 @@ describe("Integration: multi-step workflows", () => {
   describe("unwrap flow: unwrap → finalize → verify", () => {
     it("performs full unwrap and finalize flow", async () => {
       // Step 1: Execute unwrap (encrypts amount, sends tx)
-      const unwrapHash = await token.unwrap(500n);
-      expect(unwrapHash).toBe("0xtxhash");
+      const unwrapResult = await token.unwrap(500n);
+      expect(unwrapResult.txHash).toBe("0xtxhash");
 
       // Verify encryption happened
       expect(sdk.encrypt).toHaveBeenCalledWith({
@@ -181,8 +181,8 @@ describe("Integration: multi-step workflows", () => {
       vi.mocked(signer.writeContract).mockClear();
       vi.mocked(signer.writeContract).mockResolvedValue("0xfinalizetx");
 
-      const finalizeHash = await token.finalizeUnwrap(BURN_HANDLE);
-      expect(finalizeHash).toBe("0xfinalizetx");
+      const finalizeResult = await token.finalizeUnwrap(BURN_HANDLE);
+      expect(finalizeResult.txHash).toBe("0xfinalizetx");
 
       // Verify publicDecrypt was called with the burn handle
       expect(sdk.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
@@ -194,18 +194,25 @@ describe("Integration: multi-step workflows", () => {
     });
 
     it("performs combined unshield (unwrap + finalize) in one call", async () => {
-      // Mock receipt with UnwrapRequested event for the auto-finalize path
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValueOnce({
+      // Mock receipt with UnwrapRequested event for the auto-finalize path.
+      // unwrap() now calls waitForTransactionReceipt (1st call),
+      // then #waitAndFinalizeUnshield calls it again (2nd call) to parse the event,
+      // then finalizeUnwrap calls it (3rd call) for the finalize receipt.
+      const eventReceipt = {
         logs: [
           {
             topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
             data: BURN_HANDLE,
           },
         ],
-      });
+      };
+      vi.mocked(signer.waitForTransactionReceipt)
+        .mockResolvedValueOnce(eventReceipt) // unwrap receipt
+        .mockResolvedValueOnce(eventReceipt) // #waitAndFinalizeUnshield receipt (parses event)
+        .mockResolvedValueOnce({ logs: [] }); // finalizeUnwrap receipt
 
-      const txHash = await token.unshield(500n);
-      expect(txHash).toBe("0xtxhash");
+      const unshieldResult = await token.unshield(500n);
+      expect(unshieldResult.txHash).toBe("0xtxhash");
 
       // Verify full pipeline: encrypt → unwrap → waitForReceipt → publicDecrypt → finalizeUnwrap
       expect(sdk.encrypt).toHaveBeenCalled();

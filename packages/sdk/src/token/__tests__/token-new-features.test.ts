@@ -244,14 +244,15 @@ describe("Unshield callbacks (P4)", () => {
   it("works without callbacks (backward compatible)", async () => {
     mockReceiptWithUnwrapRequested();
 
-    const txHash = await token.unshield(50n);
-    expect(txHash).toBe("0xtxhash");
+    const result = await token.unshield(50n);
+    expect(result.txHash).toBe("0xtxhash");
+    expect(result.receipt).toBeDefined();
   });
 
   it("completes unshield even when callbacks throw", async () => {
     mockReceiptWithUnwrapRequested();
 
-    const txHash = await token.unshield(50n, {
+    const result = await token.unshield(50n, {
       onUnwrapSubmitted: () => {
         throw new Error("callback exploded");
       },
@@ -263,7 +264,7 @@ describe("Unshield callbacks (P4)", () => {
       },
     });
 
-    expect(txHash).toBe("0xtxhash");
+    expect(result.txHash).toBe("0xtxhash");
     expect(signer.writeContract).toHaveBeenCalledTimes(2); // unwrap + finalize
   });
 

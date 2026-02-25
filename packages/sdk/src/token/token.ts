@@ -24,7 +24,7 @@ import {
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { UnshieldCallbacks } from "./token.types";
+import type { TransactionResult, UnshieldCallbacks } from "./token.types";
 
 /** Coerce an unknown caught value to an Error instance. */
 function toError(error: unknown): Error {
@@ -85,7 +85,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.confidentialTransfer("0xRecipient", 1000n);
    * ```
    */
-  async confidentialTransfer(to: Address, amount: bigint): Promise<Hex> {
+  async confidentialTransfer(to: Address, amount: bigint): Promise<TransactionResult> {
     const normalizedTo = normalizeAddress(to, "to");
 
     let handles: Uint8Array[];
@@ -120,7 +120,8 @@ export class Token extends ReadonlyToken {
         confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
       );
       this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -143,7 +144,11 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
    * ```
    */
-  async confidentialTransferFrom(from: Address, to: Address, amount: bigint): Promise<Hex> {
+  async confidentialTransferFrom(
+    from: Address,
+    to: Address,
+    amount: bigint,
+  ): Promise<TransactionResult> {
     const normalizedFrom = normalizeAddress(from, "from");
     const normalizedTo = normalizeAddress(to, "to");
 
@@ -185,7 +190,8 @@ export class Token extends ReadonlyToken {
         ),
       );
       this.emit({ type: ZamaSDKEvents.TransferFromSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -208,14 +214,15 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.approve("0xSpender");
    * ```
    */
-  async approve(spender: Address, until?: number): Promise<Hex> {
+  async approve(spender: Address, until?: number): Promise<TransactionResult> {
     const normalizedSpender = normalizeAddress(spender, "spender");
     try {
       const txHash = await this.signer.writeContract(
         setOperatorContract(this.address, normalizedSpender, until),
       );
       this.emit({ type: ZamaSDKEvents.ApproveSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -265,7 +272,7 @@ export class Token extends ReadonlyToken {
       approvalStrategy?: "max" | "exact" | "skip";
       fees?: bigint;
     },
-  ): Promise<Hex> {
+  ): Promise<TransactionResult> {
     const underlying = await this.#getUnderlying();
 
     if (underlying === Token.ZERO_ADDRESS) {
@@ -281,7 +288,8 @@ export class Token extends ReadonlyToken {
       const address = await this.signer.getAddress();
       const txHash = await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -303,14 +311,15 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.shieldETH(1000000000000000000n); // 1 ETH
    * ```
    */
-  async shieldETH(amount: bigint, value?: bigint): Promise<Hex> {
+  async shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult> {
     try {
       const userAddress = await this.signer.getAddress();
       const txHash = await this.signer.writeContract(
         wrapETHContract(this.wrapper, userAddress, amount, value ?? amount),
       );
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -333,7 +342,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unwrap(500n);
    * ```
    */
-  async unwrap(amount: bigint): Promise<Hex> {
+  async unwrap(amount: bigint): Promise<TransactionResult> {
     const userAddress = await this.signer.getAddress();
 
     let handles: Uint8Array[];
@@ -368,7 +377,8 @@ export class Token extends ReadonlyToken {
         unwrapContract(this.address, userAddress, userAddress, handles[0]!, inputProof),
       );
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -392,7 +402,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unwrapAll();
    * ```
    */
-  async unwrapAll(): Promise<Hex> {
+  async unwrapAll(): Promise<TransactionResult> {
     const userAddress = await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
@@ -405,7 +415,8 @@ export class Token extends ReadonlyToken {
         unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
       );
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -428,11 +439,11 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unshield(500n);
    * ```
    */
-  async unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<Hex> {
+  async unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
-    const unshieldHash = await this.unwrap(amount);
-    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unshieldHash));
-    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks, operationId);
+    const unwrapResult = await this.unwrap(amount);
+    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash));
+    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, callbacks, operationId);
   }
 
   /**
@@ -444,11 +455,11 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unshieldAll();
    * ```
    */
-  async unshieldAll(callbacks?: UnshieldCallbacks): Promise<Hex> {
+  async unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
-    const unshieldHash = await this.unwrapAll();
-    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unshieldHash));
-    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks, operationId);
+    const unwrapResult = await this.unwrapAll();
+    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash));
+    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, callbacks, operationId);
   }
 
   /**
@@ -461,7 +472,10 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.resumeUnshield(previousUnwrapTxHash);
    * ```
    */
-  async resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<Hex> {
+  async resumeUnshield(
+    unwrapTxHash: Hex,
+    callbacks?: UnshieldCallbacks,
+  ): Promise<TransactionResult> {
     return this.#waitAndFinalizeUnshield(unwrapTxHash, callbacks, crypto.randomUUID());
   }
 
@@ -475,7 +489,7 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.finalizeUnwrap(event.encryptedAmount);
    * ```
    */
-  async finalizeUnwrap(burnAmountHandle: Address): Promise<Hex> {
+  async finalizeUnwrap(burnAmountHandle: Address): Promise<TransactionResult> {
     let clearValue: bigint;
     let decryptionProof: Address;
 
@@ -509,7 +523,8 @@ export class Token extends ReadonlyToken {
         finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, decryptionProof),
       );
       this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -534,7 +549,7 @@ export class Token extends ReadonlyToken {
    * await token.approveUnderlying(1000n); // exact amount
    * ```
    */
-  async approveUnderlying(amount?: bigint): Promise<Hex> {
+  async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
     const underlying = await this.#getUnderlying();
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
@@ -555,7 +570,8 @@ export class Token extends ReadonlyToken {
         approveContract(underlying, this.wrapper, approvalAmount),
       );
       this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
@@ -575,7 +591,7 @@ export class Token extends ReadonlyToken {
     unshieldHash: Hex,
     callbacks: UnshieldCallbacks | undefined,
     operationId: string,
-  ): Promise<Hex> {
+  ): Promise<TransactionResult> {
     this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unshieldHash, operationId });
     let receipt;
     try {
@@ -592,10 +608,14 @@ export class Token extends ReadonlyToken {
     }
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
     safeCallback(() => callbacks?.onFinalizing?.());
-    const finalizeHash = await this.finalizeUnwrap(event.encryptedAmount);
-    this.emit({ type: ZamaSDKEvents.UnshieldPhase2Submitted, txHash: finalizeHash, operationId });
-    safeCallback(() => callbacks?.onFinalizeSubmitted?.(finalizeHash));
-    return finalizeHash;
+    const finalizeResult = await this.finalizeUnwrap(event.encryptedAmount);
+    this.emit({
+      type: ZamaSDKEvents.UnshieldPhase2Submitted,
+      txHash: finalizeResult.txHash,
+      operationId,
+    });
+    safeCallback(() => callbacks?.onFinalizeSubmitted?.(finalizeResult.txHash));
+    return finalizeResult;
   }
 
   async #ensureAllowance(amount: bigint, maxApproval: boolean): Promise<void> {

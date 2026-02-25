@@ -18,22 +18,24 @@ import { createMockSigner, createMockRelayer, createMockStorage } from "./test-u
 
 const TOKEN_ADDR = "0xtoken" as Address;
 
+const MOCK_TX_RESULT = { txHash: "0xtx", receipt: { logs: [] } };
+
 function createMockToken(address: Address = TOKEN_ADDR) {
   return {
     address,
     signer: createMockSigner(),
-    confidentialTransfer: vi.fn().mockResolvedValue("0xtx"),
-    confidentialTransferFrom: vi.fn().mockResolvedValue("0xtx"),
-    approve: vi.fn().mockResolvedValue("0xtx"),
-    approveUnderlying: vi.fn().mockResolvedValue("0xtx"),
-    shield: vi.fn().mockResolvedValue("0xtx"),
-    shieldETH: vi.fn().mockResolvedValue("0xtx"),
-    unwrap: vi.fn().mockResolvedValue("0xtx"),
-    unwrapAll: vi.fn().mockResolvedValue("0xtx"),
-    finalizeUnwrap: vi.fn().mockResolvedValue("0xtx"),
-    unshield: vi.fn().mockResolvedValue("0xtx"),
-    unshieldAll: vi.fn().mockResolvedValue("0xtx"),
-    resumeUnshield: vi.fn().mockResolvedValue("0xtx"),
+    confidentialTransfer: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    confidentialTransferFrom: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    approve: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    approveUnderlying: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    shield: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    shieldETH: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    unwrap: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    unwrapAll: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    finalizeUnwrap: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    unshield: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    unshieldAll: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    resumeUnshield: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
   } as unknown as Token;
 }
 

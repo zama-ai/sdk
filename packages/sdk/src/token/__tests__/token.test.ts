@@ -393,7 +393,7 @@ describe("Token", () => {
 
   describe("confidentialTransfer", () => {
     it("encrypts amount and sends transaction", async () => {
-      const txHash = await token.confidentialTransfer(
+      const result = await token.confidentialTransfer(
         "0x8888888888888888888888888888888888888888" as Address,
         100n,
       );
@@ -408,7 +408,8 @@ describe("Token", () => {
           functionName: "confidentialTransfer",
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
@@ -430,7 +431,8 @@ describe("Token", () => {
         2,
         expect.objectContaining({ functionName: "wrap" }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(txHash.txHash).toBe("0xtxhash");
+      expect(txHash.receipt).toEqual({ logs: [] });
     });
 
     it("skips approval when allowance is sufficient", async () => {
@@ -462,7 +464,7 @@ describe("Token", () => {
 
   describe("shieldETH", () => {
     it("sends shieldETH with value", async () => {
-      const txHash = await token.shieldETH(1000n);
+      const result = await token.shieldETH(1000n);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -470,13 +472,14 @@ describe("Token", () => {
           value: 1000n,
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
   describe("unwrap", () => {
     it("encrypts amount and sends unwrap to user address", async () => {
-      const txHash = await token.unwrap(50n);
+      const result = await token.unwrap(50n);
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
         values: [50n],
@@ -489,7 +492,8 @@ describe("Token", () => {
           args: expect.arrayContaining([USER, USER]),
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
@@ -518,13 +522,14 @@ describe("Token", () => {
   describe("finalizeUnwrap", () => {
     it("decrypts burn amount and finalizes", async () => {
       const burnHandle = "0xburn" as Address;
-      const txHash = await token.finalizeUnwrap(burnHandle);
+      const result = await token.finalizeUnwrap(burnHandle);
 
       expect(sdk.publicDecrypt).toHaveBeenCalledWith([burnHandle]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
@@ -545,7 +550,7 @@ describe("Token", () => {
     it("orchestrates unwrap → receipt → finalizeUnwrap", async () => {
       mockReceiptWithUnwrapRequested();
 
-      const txHash = await token.unshield(50n);
+      const result = await token.unshield(50n);
 
       expect(sdk.encrypt).toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -556,7 +561,8 @@ describe("Token", () => {
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toBeDefined();
     });
 
     it("throws when no UnwrapRequested event in receipt", async () => {
@@ -588,14 +594,15 @@ describe("Token", () => {
       vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
       mockReceiptWithUnwrapRequested();
 
-      const txHash = await token.unshieldAll();
+      const result = await token.unshieldAll();
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(signer.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
       expect(sdk.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toBeDefined();
     });
 
     it("throws when no UnwrapRequested event in receipt", async () => {
@@ -633,7 +640,7 @@ describe("Token", () => {
       const from = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
       const to = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
 
-      const txHash = await token.confidentialTransferFrom(from, to, 200n);
+      const result = await token.confidentialTransferFrom(from, to, 200n);
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
         values: [200n],
@@ -645,7 +652,8 @@ describe("Token", () => {
           functionName: "confidentialTransferFrom",
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
 
     it("wraps non-TokenError in EncryptionFailed", async () => {
@@ -671,7 +679,7 @@ describe("Token", () => {
     it("calls setOperatorContract with spender", async () => {
       const spender = "0x3333333333333333333333333333333333333333" as Address;
 
-      const txHash = await token.approve(spender);
+      const result = await token.approve(spender);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -679,7 +687,8 @@ describe("Token", () => {
           args: expect.arrayContaining([spender]),
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
 
     it("wraps error in ApprovalFailed", async () => {
@@ -720,7 +729,7 @@ describe("Token", () => {
     it("calls shieldETH when underlying is zero address", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
 
-      const txHash = await token.shield(100n);
+      const result = await token.shield(100n);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -728,7 +737,8 @@ describe("Token", () => {
           value: 100n,
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
 
     it("passes amount + fees as value when underlying is zero address with fees", async () => {
@@ -841,7 +851,7 @@ describe("Token", () => {
 
   describe("shieldETH (additional branches)", () => {
     it("uses custom value parameter when provided", async () => {
-      const txHash = await token.shieldETH(1000n, 2000n);
+      const result = await token.shieldETH(1000n, 2000n);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -849,7 +859,8 @@ describe("Token", () => {
           value: 2000n,
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 

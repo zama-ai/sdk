@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, UnshieldCallbacks } from "@zama-fhe/sdk";
+import type { Address, Token, TransactionResult, UnshieldCallbacks } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -54,11 +54,11 @@ export function unshieldMutationOptions(token: Token) {
  */
 export function useUnshield(
   config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, UnshieldParams, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, UnshieldParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, UnshieldParams, Address>({
+  return useMutation<TransactionResult, Error, UnshieldParams, Address>({
     mutationKey: ["unshield", config.tokenAddress],
     mutationFn: ({ amount, callbacks }) => token.unshield(amount, callbacks),
     ...options,
