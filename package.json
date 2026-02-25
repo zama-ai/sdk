@@ -37,7 +37,10 @@
     "docs": "typedoc",
     "api-report": "pnpm build && pnpm api-report:sdk && pnpm api-report:react-sdk",
     "api-report:sdk": "cd packages/sdk && api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.node.json",
-    "api-report:react-sdk": "cd packages/react-sdk && api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.wagmi.json"
+    "api-report:react-sdk": "cd packages/react-sdk && api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.wagmi.json",
+    "api-report:check": "pnpm build && pnpm api-report:check:sdk && pnpm api-report:check:react-sdk",
+    "api-report:check:sdk": "cd packages/sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json",
+    "api-report:check:react-sdk": "cd packages/react-sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.wagmi.json"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.2",
