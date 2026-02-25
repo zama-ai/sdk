@@ -267,7 +267,7 @@ async function handleInit(request: InitRequest): Promise<void> {
     // Set up fetch interceptor before loading SDK
     setupFetchInterceptor();
 
-    // Load SDK via fetch + blob URL (avoids CORS issues with importScripts)
+    // Load SDK via fetch + eval (avoids MIME-type issues with importScripts)
     await loadSdkScript(cdnUrl, integrity);
 
     if (!self.relayerSDK) {
