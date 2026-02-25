@@ -882,6 +882,21 @@ function getUserMessage(error: Error): string {
 }
 ```
 
+Or use `matchZamaError` for a more concise pattern:
+
+```tsx
+import { matchZamaError } from "@zama-fhe/react-sdk";
+
+const message = matchZamaError(error, {
+  SIGNING_REJECTED: () => "Transaction cancelled — please approve in your wallet.",
+  ENCRYPTION_FAILED: () => "Encryption failed — please try again.",
+  DECRYPTION_FAILED: () => "Decryption failed — please try again.",
+  APPROVAL_FAILED: () => "Token approval failed — please try again.",
+  TRANSACTION_REVERTED: () => "Transaction failed on-chain — check your balance.",
+  _: () => "An unexpected error occurred.",
+});
+```
+
 ### Balance Caching and Refresh
 
 Balance queries use two-phase polling:

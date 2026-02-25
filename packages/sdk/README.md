@@ -328,6 +328,8 @@ const sdk = new ZamaSDK({
 | `getCsrfToken`   | `() => string` | Optional. Resolve the CSRF token before each authenticated network request.                      |
 | `integrityCheck` | `boolean`      | Optional. Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set `false` for tests. |
 
+> **Security note:** `RelayerWeb` loads FHE WASM from a CDN at runtime. The `integrityCheck` option (enabled by default) verifies the SHA-384 hash of the bundle before execution, protecting against CDN compromise or MITM attacks. Only disable it in local development or testing.
+
 ### `RelayerNodeConfig` (Node.js)
 
 | Field        | Type                                  | Description                                                                                        |
@@ -673,6 +675,20 @@ try {
 | `InvalidCredentialsError`   | `INVALID_CREDENTIALS`    | Relayer rejected credentials (stale or expired).                          |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No FHE ciphertext exists for this account (e.g. never shielded).          |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP error. Carries a `statusCode` property with the HTTP status. |
+
+### `matchZamaError`
+
+Pattern-match on error codes without `instanceof` chains. Falls through to the `_` wildcard if no handler matches. Returns `undefined` for non-SDK errors when no `_` handler is provided.
+
+```ts
+import { matchZamaError } from "@zama-fhe/sdk";
+
+matchZamaError(error, {
+  SIGNING_REJECTED: () => toast("Please approve in wallet"),
+  TRANSACTION_REVERTED: (e) => toast(`Tx failed: ${e.message}`),
+  _: () => toast("Unknown error"),
+});
+```
 
 **Distinguishing "no ciphertext" from "zero balance":**
 

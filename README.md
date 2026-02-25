@@ -489,6 +489,38 @@ try {
 | `ApprovalFailedError`      | `APPROVAL_FAILED`      | ERC-20 approval transaction failed         |
 | `TransactionRevertedError` | `TRANSACTION_REVERTED` | On-chain transaction reverted              |
 
+### `matchZamaError`
+
+For cleaner error handling without `instanceof` chains, use `matchZamaError`:
+
+```ts
+import { matchZamaError } from "@zama-fhe/sdk";
+
+matchZamaError(error, {
+  SIGNING_REJECTED: () => toast("Please approve in wallet"),
+  ENCRYPTION_FAILED: () => toast("Encryption failed — try again"),
+  TRANSACTION_REVERTED: (e) => toast(`Tx failed: ${e.message}`),
+  _: () => toast("Something went wrong"),
+});
+```
+
+## Migration from `wrap`/`wrapETH`
+
+The `wrap` and `wrapETH` methods on `Token` have been renamed to `shield` and `shieldETH`. The `TokenSDK` class is now `ZamaSDK`, and `TokenError` is now `ZamaError`.
+
+| Before                                      | After                     |
+| ------------------------------------------- | ------------------------- |
+| `new TokenSDK(...)`                         | `new ZamaSDK(...)`        |
+| `token.wrap(amount)`                        | `token.shield(amount)`    |
+| `token.wrapETH(amount)`                     | `token.shieldETH(amount)` |
+| `TokenError`                                | `ZamaError`               |
+| `useWrap(...)` (react-sdk provider hook)    | `useShield(...)`          |
+| `useWrapETH(...)` (react-sdk provider hook) | `useShieldETH(...)`       |
+
+Write methods now return `TransactionResult` (`{ txHash, receipt }`) instead of a bare transaction hash.
+
+The low-level contract call builders (`wrapContract`, `wrapETHContract`) and library-adapter hooks (`useShield`/`useShieldETH` in viem/ethers/wagmi sub-paths) retain the on-chain naming since they map directly to smart contract functions.
+
 ## Smart Accounts / Account Abstraction
 
 The SDK supports smart accounts when using wagmi with a compatible connector.
