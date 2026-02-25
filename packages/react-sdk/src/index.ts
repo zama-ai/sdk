@@ -1,5 +1,5 @@
 // Provider
-export { TokenSDKProvider, useTokenSDK } from "./provider";
+export { ZamaProvider, useZamaSDK } from "./provider";
 
 // SDK method hooks
 export { useEncrypt, encryptMutationOptions } from "./relayer/use-encrypt";

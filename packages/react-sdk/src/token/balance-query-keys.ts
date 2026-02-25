@@ -69,7 +69,7 @@ export const confidentialHandlesQueryKeys = {
  * Invalidate after operations that change the underlying ERC-20 balance
  * (e.g. unshield, finalize unwrap) so wagmi refetches automatically.
  *
- * Requires the app to share the same `QueryClient` between wagmi and `TokenSDKProvider`.
+ * Requires the app to share the same `QueryClient` between wagmi and `ZamaProvider`.
  */
 export const wagmiBalancePredicates = {
   /** Match all wagmi balance queries. */

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import { ReadonlyToken, type Address } from "@zama-fhe/sdk";
-import { useTokenSDK } from "../provider";
+import { useZamaSDK } from "../provider";
 import { confidentialBalancesQueryKeys, confidentialHandlesQueryKeys } from "./balance-query-keys";
 
 /** Configuration for {@link useConfidentialBalances}. */
@@ -46,7 +46,7 @@ export function useConfidentialBalances(
   options?: UseConfidentialBalancesOptions,
 ) {
   const { tokenAddresses, handleRefetchInterval, maxConcurrency } = config;
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
   // Resolve the signer address for stable query keys.
   // This prevents cache collisions when wallet switches.
   const [signerAddress, setSignerAddress] = useState<Address | undefined>();

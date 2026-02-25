@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage, RelayerWeb, TokenSDKProvider } from "@zama-fhe/react-sdk";
+import { MemoryStorage, RelayerWeb, ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import { type ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
@@ -47,9 +47,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <TokenSDKProvider relayer={relayer} storage={storage} signer={signer}>
+        <ZamaProvider relayer={relayer} storage={storage} signer={signer}>
           {children}
-        </TokenSDKProvider>
+        </ZamaProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

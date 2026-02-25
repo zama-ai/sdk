@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RelayerWeb, TokenSDKProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { RelayerWeb, ZamaProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { ViemSigner } from "@zama-fhe/react-sdk/viem";
 import type { ReactNode } from "react";
 import { createPublicClient, createWalletClient, custom, http } from "viem";
@@ -41,9 +41,9 @@ const queryClient = new QueryClient();
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <TokenSDKProvider relayer={relayer} storage={indexedDBStorage} signer={signer}>
+      <ZamaProvider relayer={relayer} storage={indexedDBStorage} signer={signer}>
         {children}
-      </TokenSDKProvider>
+      </ZamaProvider>
     </QueryClientProvider>
   );
 }

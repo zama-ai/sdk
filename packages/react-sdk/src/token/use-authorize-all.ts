@@ -2,7 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { ReadonlyToken, type Address, type TokenSDK } from "@zama-fhe/sdk";
-import { useTokenSDK } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /**
  * TanStack Query mutation options factory for authorize-all.
@@ -32,7 +32,7 @@ export function authorizeAllMutationOptions(sdk: TokenSDK) {
  * ```
  */
 export function useAuthorizeAll() {
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
 
   return useMutation<void, Error, Address[]>(authorizeAllMutationOptions(sdk));
 }

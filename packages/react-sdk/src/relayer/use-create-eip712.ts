@@ -2,7 +2,7 @@
 
 import type { EIP712TypedData } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
-import { useTokenSDK } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /** Parameters for {@link useCreateEIP712}. */
 export interface CreateEIP712Params {
@@ -33,7 +33,7 @@ export interface CreateEIP712Params {
  * ```
  */
 export function useCreateEIP712() {
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
   return useMutation<EIP712TypedData, Error, CreateEIP712Params>({
     mutationFn: ({ publicKey, contractAddresses, startTimestamp, durationDays }) =>
       sdk.relayer.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays),

@@ -2,7 +2,7 @@
 
 import type { EncryptParams, EncryptResult, TokenSDK } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
-import { useTokenSDK } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /**
  * TanStack Query mutation options factory for FHE encrypt.
@@ -30,6 +30,6 @@ export function encryptMutationOptions(sdk: TokenSDK) {
  * ```
  */
 export function useEncrypt() {
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
   return useMutation<EncryptResult, Error, EncryptParams>(encryptMutationOptions(sdk));
 }

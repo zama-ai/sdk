@@ -4,8 +4,8 @@ import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/
 import { TokenSDK } from "@zama-fhe/sdk";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
 
-/** Props for {@link TokenSDKProvider}. */
-interface TokenSDKProviderProps extends PropsWithChildren {
+/** Props for {@link ZamaProvider}. */
+interface ZamaProviderProps extends PropsWithChildren {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
   relayer: RelayerSDK;
   /** Wallet signer (ViemSigner, EthersSigner, or custom GenericSigner). */
@@ -22,12 +22,12 @@ const TokenSDKContext = createContext<TokenSDK | null>(null);
  *
  * @example
  * ```tsx
- * <TokenSDKProvider relayer={relayer} signer={signer} storage={storage}>
+ * <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
  *   <App />
- * </TokenSDKProvider>
+ * </ZamaProvider>
  * ```
  */
-export function TokenSDKProvider({ children, relayer, signer, storage }: TokenSDKProviderProps) {
+export function ZamaProvider({ children, relayer, signer, storage }: ZamaProviderProps) {
   const sdk = useMemo(
     () =>
       new TokenSDK({
@@ -47,19 +47,19 @@ export function TokenSDKProvider({ children, relayer, signer, storage }: TokenSD
 
 /**
  * Access the {@link TokenSDK} instance from context.
- * Must be used within a {@link TokenSDKProvider}.
+ * Must be used within a {@link ZamaProvider}.
  *
  * @example
  * ```tsx
- * const sdk = useTokenSDK();
+ * const sdk = useZamaSDK();
  * const token = sdk.createReadonlyToken("0x...");
  * ```
  */
-export function useTokenSDK(): TokenSDK {
+export function useZamaSDK(): TokenSDK {
   const context = useContext(TokenSDKContext);
 
   if (!context) {
-    throw new Error("useTokenSDK must be used within a TokenSDKProvider");
+    throw new Error("useZamaSDK must be used within a ZamaProvider");
   }
 
   return context;

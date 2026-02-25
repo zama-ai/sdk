@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PublicDecryptResult } from "@zama-fhe/sdk";
 import { decryptionKeys } from "./decryption-cache";
-import { useTokenSDK } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /**
  * Decrypt FHE ciphertext handles using the network public key (no credential needed).
@@ -20,7 +20,7 @@ import { useTokenSDK } from "../provider";
  * ```
  */
 export function usePublicDecrypt() {
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
   const queryClient = useQueryClient();
   return useMutation<PublicDecryptResult, Error, string[]>({
     mutationFn: (handles) => sdk.relayer.publicDecrypt(handles),

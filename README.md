@@ -41,7 +41,7 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  TokenSDKProvider,
+  ZamaProvider,
   RelayerWeb,
   indexedDBStorage,
   useConfidentialBalance,
@@ -78,9 +78,9 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <TokenSDKProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
+        <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
           <TokenDashboard />
-        </TokenSDKProvider>
+        </ZamaProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -267,15 +267,15 @@ Defaults for known chains are merged automatically — you only need to supply `
 
 ### 1. Choose Your Stack
 
-| Stack                 | SDK             | Provider           | Signer                         |
-| --------------------- | --------------- | ------------------ | ------------------------------ |
-| React + wagmi         | `react-sdk`     | `TokenSDKProvider` | `WagmiSigner`                  |
-| React + viem          | `react-sdk`     | `TokenSDKProvider` | `ViemSigner`                   |
-| React + ethers        | `react-sdk`     | `TokenSDKProvider` | `EthersSigner`                 |
-| React + custom signer | `react-sdk`     | `TokenSDKProvider` | Implement `GenericSigner`      |
-| Vanilla TS + viem     | `sdk`           | N/A                | `ViemSigner`                   |
-| Vanilla TS + ethers   | `sdk`           | N/A                | `EthersSigner`                 |
-| Node.js backend       | `sdk` + `/node` | N/A                | `ViemSigner` or `EthersSigner` |
+| Stack                 | SDK             | Provider       | Signer                         |
+| --------------------- | --------------- | -------------- | ------------------------------ |
+| React + wagmi         | `react-sdk`     | `ZamaProvider` | `WagmiSigner`                  |
+| React + viem          | `react-sdk`     | `ZamaProvider` | `ViemSigner`                   |
+| React + ethers        | `react-sdk`     | `ZamaProvider` | `EthersSigner`                 |
+| React + custom signer | `react-sdk`     | `ZamaProvider` | Implement `GenericSigner`      |
+| Vanilla TS + viem     | `sdk`           | N/A            | `ViemSigner`                   |
+| Vanilla TS + ethers   | `sdk`           | N/A            | `EthersSigner`                 |
+| Node.js backend       | `sdk` + `/node` | N/A            | `ViemSigner` or `EthersSigner` |
 
 ### 2. Configure the Relayer
 

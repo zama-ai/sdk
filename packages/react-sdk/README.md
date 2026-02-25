@@ -28,7 +28,7 @@ pnpm add @zama-fhe/react-sdk @tanstack/react-query
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TokenSDKProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 const queryClient = new QueryClient();
@@ -61,9 +61,9 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <TokenSDKProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
+        <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
           <TokenBalance />
-        </TokenSDKProvider>
+        </ZamaProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -83,7 +83,7 @@ function TokenBalance() {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { mainnet, sepolia } from "wagmi/chains"; // or define your own chain IDs
 import {
-  TokenSDKProvider,
+  ZamaProvider,
   RelayerWeb,
   useConfidentialBalance,
   useConfidentialTransfer,
@@ -109,9 +109,9 @@ const relayer = new RelayerWeb({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TokenSDKProvider relayer={relayer} signer={yourCustomSigner} storage={new MemoryStorage()}>
+      <ZamaProvider relayer={relayer} signer={yourCustomSigner} storage={new MemoryStorage()}>
         <TransferForm />
-      </TokenSDKProvider>
+      </ZamaProvider>
     </QueryClientProvider>
   );
 }
@@ -140,32 +140,32 @@ function TransferForm() {
 
 ## Provider Setup
 
-All setups use `TokenSDKProvider`. Create a signer with the adapter for your library, then pass it directly.
+All setups use `ZamaProvider`. Create a signer with the adapter for your library, then pass it directly.
 
 ```tsx
-import { TokenSDKProvider } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
 
-<TokenSDKProvider
+<ZamaProvider
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
   signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
   storage={storage} // GenericStringStorage
 >
   {children}
-</TokenSDKProvider>;
+</ZamaProvider>;
 ```
 
 ## Hooks Reference
 
-All hooks require a `TokenSDKProvider` (or one of its variants) in the component tree.
+All hooks require a `ZamaProvider` (or one of its variants) in the component tree.
 
 ### SDK Access
 
-#### `useTokenSDK`
+#### `useZamaSDK`
 
 Returns the `TokenSDK` instance from context. Use this when you need direct access to the SDK (e.g. for low-level relayer operations).
 
 ```ts
-function useTokenSDK(): TokenSDK;
+function useZamaSDK(): TokenSDK;
 ```
 
 #### `useToken`
@@ -787,7 +787,7 @@ All components using SDK hooks must be client components. Add `"use client"` at 
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
 ```
 
-Place `TokenSDKProvider` inside your client-only layout. Do **not** create the relayer or signer at the module level in a server component — wrap them in a client component or use lazy initialization.
+Place `ZamaProvider` inside your client-only layout. Do **not** create the relayer or signer at the module level in a server component — wrap them in a client component or use lazy initialization.
 
 ### FHE Credentials Lifecycle
 

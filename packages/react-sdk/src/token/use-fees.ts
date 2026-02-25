@@ -9,7 +9,7 @@ import {
   type Address,
   type GenericSigner,
 } from "@zama-fhe/sdk";
-import { useTokenSDK } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /**
  * Query key factory for fee-related queries.
@@ -125,7 +125,7 @@ export function useWrapFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
 
   return useQuery<bigint, Error>({
     ...wrapFeeQueryOptions(sdk.signer, config),
@@ -154,7 +154,7 @@ export function useUnwrapFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
 
   return useQuery<bigint, Error>({
     ...unwrapFeeQueryOptions(sdk.signer, config),
@@ -178,7 +178,7 @@ export function useBatchTransferFee(
   feeManagerAddress: Address,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
 
   return useQuery<bigint, Error>({
     ...batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress),
@@ -202,7 +202,7 @@ export function useFeeRecipient(
   feeManagerAddress: Address,
   options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<Address, Error> {
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
 
   return useQuery<Address, Error>({
     ...feeRecipientQueryOptions(sdk.signer, feeManagerAddress),

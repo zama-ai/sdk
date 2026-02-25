@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, createConfig, WagmiProvider } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
-import { RelayerWeb, TokenSDKProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { RelayerWeb, ZamaProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import type { ReactNode } from "react";
 
@@ -39,9 +39,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <TokenSDKProvider relayer={relayer} storage={indexedDBStorage} signer={signer}>
+        <ZamaProvider relayer={relayer} storage={indexedDBStorage} signer={signer}>
           {children}
-        </TokenSDKProvider>
+        </ZamaProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

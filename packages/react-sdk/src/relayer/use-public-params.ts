@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { TokenSDK } from "@zama-fhe/sdk";
-import { useTokenSDK } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /**
  * Query key factory for FHE public params queries.
@@ -54,6 +54,6 @@ export function publicParamsQueryOptions(sdk: TokenSDK, bits: number) {
  * ```
  */
 export function usePublicParams(bits: number) {
-  const sdk = useTokenSDK();
+  const sdk = useZamaSDK();
   return useQuery<PublicParamsResult, Error>(publicParamsQueryOptions(sdk, bits));
 }

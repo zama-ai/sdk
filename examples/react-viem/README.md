@@ -24,7 +24,7 @@ Open [http://localhost:3000](http://localhost:3000) and connect your wallet (Met
 - **Next.js 15** (App Router)
 - **React 18** + viem
 - **@tanstack/react-query** for async state
-- **TokenSDKProvider** + **ViemSigner** — takes `walletClient` + `publicClient` directly
+- **ZamaProvider** + **ViemSigner** — takes `walletClient` + `publicClient` directly
 
 ## How it differs from react-wagmi
 

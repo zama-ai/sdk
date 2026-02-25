@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import { vi } from "vitest";
 import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/sdk";
-import { TokenSDKProvider } from "../provider";
+import { ZamaProvider } from "../provider";
 
 const USER = "0x2222222222222222222222222222222222222222" as `0x${string}`;
 
@@ -87,9 +87,9 @@ export function createWrapper(overrides?: WrapperOverrides) {
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <TokenSDKProvider relayer={relayer} signer={signer} storage={storage}>
+        <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
           {children}
-        </TokenSDKProvider>
+        </ZamaProvider>
       </QueryClientProvider>
     );
   }
