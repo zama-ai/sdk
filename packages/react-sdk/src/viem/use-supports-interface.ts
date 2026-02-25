@@ -1,20 +1,20 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import type { PublicClient } from "viem";
 import { readSupportsInterfaceContract } from "@zama-fhe/sdk/viem";
 
-type Params = Parameters<typeof readSupportsInterfaceContract>;
-
 export interface UseSupportsInterfaceConfig {
-  client: Params[0];
-  tokenAddress: Params[1] | undefined;
-  interfaceId: Params[2] | undefined;
+  client: PublicClient;
+  tokenAddress: Address | undefined;
+  interfaceId: Address | undefined;
 }
 
 export interface UseSupportsInterfaceSuspenseConfig {
-  client: Params[0];
-  tokenAddress: Params[1];
-  interfaceId: Params[2];
+  client: PublicClient;
+  tokenAddress: Address;
+  interfaceId: Address;
 }
 
 export function useSupportsInterface(config: UseSupportsInterfaceConfig) {
@@ -23,7 +23,7 @@ export function useSupportsInterface(config: UseSupportsInterfaceConfig) {
   return useQuery({
     queryKey: ["supportsInterface", client, tokenAddress, interfaceId],
     queryFn: () =>
-      readSupportsInterfaceContract(client, tokenAddress as Params[1], interfaceId as Params[2]),
+      readSupportsInterfaceContract(client, tokenAddress as Address, interfaceId as Address),
     enabled,
   });
 }

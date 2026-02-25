@@ -2,18 +2,17 @@
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
+import type { PublicClient } from "viem";
 import { readWrapperForTokenContract } from "@zama-fhe/sdk/viem";
 
-type Params = Parameters<typeof readWrapperForTokenContract>;
-
 export interface UseWrapperForZamaConfig {
-  client: Params[0];
+  client: PublicClient;
   coordinator: Address | undefined;
   tokenAddress: Address | undefined;
 }
 
 export interface UseWrapperForTokenSuspenseConfig {
-  client: Params[0];
+  client: PublicClient;
   coordinator: Address;
   tokenAddress: Address;
 }

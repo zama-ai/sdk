@@ -2,18 +2,17 @@
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
+import type { Provider, Signer } from "ethers";
 import { readWrapperForTokenContract } from "@zama-fhe/sdk/ethers";
 
-type Params = Parameters<typeof readWrapperForTokenContract>;
-
 export interface UseWrapperForZamaConfig {
-  provider: Params[0];
+  provider: Provider | Signer;
   coordinator: Address | undefined;
   tokenAddress: Address | undefined;
 }
 
 export interface UseWrapperForTokenSuspenseConfig {
-  provider: Params[0];
+  provider: Provider | Signer;
   coordinator: Address;
   tokenAddress: Address;
 }

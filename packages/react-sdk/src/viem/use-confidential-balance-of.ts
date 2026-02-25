@@ -2,18 +2,17 @@
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
+import type { PublicClient } from "viem";
 import { readConfidentialBalanceOfContract } from "@zama-fhe/sdk/viem";
 
-type Params = Parameters<typeof readConfidentialBalanceOfContract>;
-
 export interface UseConfidentialBalanceOfConfig {
-  client: Params[0];
+  client: PublicClient;
   tokenAddress: Address | undefined;
   userAddress: Address | undefined;
 }
 
 export interface UseConfidentialBalanceOfSuspenseConfig {
-  client: Params[0];
+  client: PublicClient;
   tokenAddress: Address;
   userAddress: Address;
 }
