@@ -4,3 +4,5 @@ pnpm-lock.yaml
 coverage
 *.tsbuildinfo
 hardhat
+packages/sdk/etc
+packages/react-sdk/etc
