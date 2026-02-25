@@ -1,4 +1,4 @@
-name: Playwright
+name: Test
 
 on:
   pull_request:
@@ -12,9 +12,45 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
-  test:
+  vitest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm lint
+
+      - run: pnpm format:check
+
+      - run: pnpm test:coverage
+
+      - name: Coverage report
+        if: github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
+
+  playwright:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
