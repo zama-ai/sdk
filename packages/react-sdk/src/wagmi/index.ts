@@ -1,7 +1,7 @@
 /**
  * Wagmi-specific React hooks for low-level contract interactions.
  *
- * These hooks do NOT require {@link ZamaProvider} — they operate through
+ * These hooks do NOT require {@link react-sdk/src.ZamaProvider | ZamaProvider} — they operate through
  * wagmi's `Config` and `useWriteContract`.
  *
  * @packageDocumentation

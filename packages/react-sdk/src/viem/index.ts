@@ -1,7 +1,7 @@
 /**
  * Viem-specific React hooks for low-level contract interactions.
  *
- * These hooks do NOT require {@link ZamaProvider} — they operate directly
+ * These hooks do NOT require {@link react-sdk/src.ZamaProvider | ZamaProvider} — they operate directly
  * through viem `PublicClient` and `WalletClient`.
  *
  * @packageDocumentation

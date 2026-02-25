@@ -19,5 +19,10 @@
   "excludeExternals": true,
   "tsconfig": "tsconfig.json",
   "skipErrorChecking": true,
-  "categorizeByGroup": true
+  "categorizeByGroup": true,
+  "externalSymbolLinkMappings": {
+    "@zama-fhe/relayer-sdk": {
+      "ZKProofLike": "https://docs.zama.ai/fhevm"
+    }
+  }
 }
