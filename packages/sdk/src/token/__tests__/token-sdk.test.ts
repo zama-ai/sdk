@@ -75,4 +75,27 @@ describe("TokenSDK", () => {
     sdk.terminate();
     expect(relayer.terminate).toHaveBeenCalledOnce();
   });
+
+  describe("createTokenFromWrapper", () => {
+    it("resolves underlying token and creates Token with correct addresses", async () => {
+      const wrapperAddress = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
+      const underlyingAddress = "0x1234567890123456789012345678901234567890" as Address;
+
+      const freshSigner = createMockSigner();
+      freshSigner.readContract.mockResolvedValueOnce(underlyingAddress);
+
+      const freshSdk = new TokenSDK({
+        relayer: createMockRelayer(),
+        signer: freshSigner,
+        storage: new MemoryStorage(),
+      });
+
+      const token = await freshSdk.createTokenFromWrapper(wrapperAddress);
+
+      expect(token).toBeInstanceOf(Token);
+      expect(token.address).toBe(underlyingAddress.toLowerCase());
+      expect(token.wrapper).toBe(wrapperAddress);
+      expect(freshSigner.readContract).toHaveBeenCalled();
+    });
+  });
 });

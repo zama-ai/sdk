@@ -71,6 +71,20 @@ export class TokenSDK {
   }
 
   /**
+   * Create a Token from a wrapper address by auto-discovering the underlying token.
+   * Reads the underlying ERC-20 address from the wrapper contract.
+   *
+   * @param wrapperAddress - Address of the wrapper (confidential token) contract.
+   * @returns A `Token` instance with both `address` (underlying) and `wrapper` set.
+   */
+  async createTokenFromWrapper(wrapperAddress: Address): Promise<Token> {
+    const normalizedWrapper = normalizeAddress(wrapperAddress, "wrapperAddress");
+    const readonlyToken = this.createReadonlyToken(normalizedWrapper);
+    const underlying = await readonlyToken.underlyingToken();
+    return this.createToken(underlying, normalizedWrapper);
+  }
+
+  /**
    * Terminate the relayer backend and clean up resources.
    */
   terminate(): void {
