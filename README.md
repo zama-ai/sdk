@@ -674,6 +674,7 @@ This repository uses [semantic-release](https://semantic-release.gitbook.io/sema
 - Versions are auto-calculated from Conventional Commit messages on both release branches.
 - PR titles must follow Conventional Commits because squash merges use PR titles as commit messages.
 - On pushes to either release branch, the workflow publishes to npm and creates GitHub releases/tags automatically.
+- Publishing uses npm trusted publishing (OIDC) from GitHub Actions (no npm token-based auth).
 
 Install examples:
 
@@ -684,7 +685,7 @@ Release prerequisites:
 
 - Branch protection on `main` should require both `Vitest` and `Playwright`.
 - Branch protection on `prerelease` should require the same checks as `main`.
-- Maintainers must configure publish credentials in repository settings.
+- Maintainers must configure npm trusted publishers for both `@zama-fhe/sdk` and `@zama-fhe/react-sdk` using this repository and `release.yml`.
 
 ## License
 

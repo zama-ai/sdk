@@ -16,10 +16,17 @@ if [[ "$sdk_version" != "$next_version" || "$react_version" != "$next_version" ]
   exit 1
 fi
 
-publish_args=(--access public --no-git-checks)
+publish_args=(--access public)
 if [[ -n "$channel" ]]; then
   publish_args+=(--tag "$channel")
 fi
 
-pnpm --filter @zama-fhe/sdk publish "${publish_args[@]}"
-pnpm --filter @zama-fhe/react-sdk publish "${publish_args[@]}"
+(
+  cd packages/sdk
+  npm publish "${publish_args[@]}"
+)
+
+(
+  cd packages/react-sdk
+  npm publish "${publish_args[@]}"
+)

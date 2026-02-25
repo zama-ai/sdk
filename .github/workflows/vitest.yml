@@ -2,9 +2,9 @@ name: Vitest
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, prerelease]
   push:
-    branches: [main]
+    branches: [main, prerelease]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
