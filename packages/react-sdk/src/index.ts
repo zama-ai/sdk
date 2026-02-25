@@ -199,8 +199,12 @@ export {
   shieldMutationOptions,
   type ShieldParams,
   type UseShieldConfig,
-} from "./token/use-wrap";
-export { useShieldETH, shieldETHMutationOptions, type ShieldETHParams } from "./token/use-wrap-eth";
+} from "./token/use-shield";
+export {
+  useShieldETH,
+  shieldETHMutationOptions,
+  type ShieldETHParams,
+} from "./token/use-shield-eth";
 export { useUnwrap, unwrapMutationOptions, type UnwrapParams } from "./token/use-unwrap";
 export { useUnwrapAll, unwrapAllMutationOptions } from "./token/use-unwrap-all";
 export {

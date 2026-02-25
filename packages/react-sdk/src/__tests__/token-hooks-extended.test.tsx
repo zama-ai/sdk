@@ -7,8 +7,8 @@ import { useUnshield } from "../token/use-unshield";
 import { useUnshieldAll } from "../token/use-unshield-all";
 import { useUnwrap } from "../token/use-unwrap";
 import { useUnwrapAll } from "../token/use-unwrap-all";
-import { useShieldETH } from "../token/use-wrap-eth";
-import { useShield } from "../token/use-wrap";
+import { useShield } from "../token/use-shield";
+import { useShieldETH } from "../token/use-shield-eth";
 import { useActivityFeed } from "../token/use-activity-feed";
 import { useConfidentialBalance } from "../token/use-confidential-balance";
 import { useConfidentialBalances } from "../token/use-confidential-balances";
@@ -418,21 +418,6 @@ describe("useShieldETH", () => {
         queryKey: confidentialBalanceQueryKeys.token(TOKEN),
       }),
     );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Alias hooks
-// ---------------------------------------------------------------------------
-
-describe("useShield", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
-
-    expect(result.current.mutate).toBeDefined();
-    expect(result.current.isIdle).toBe(true);
   });
 });
 

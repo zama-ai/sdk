@@ -4,8 +4,8 @@ import { confidentialTransferMutationOptions } from "../token/use-confidential-t
 import { confidentialTransferFromMutationOptions } from "../token/use-confidential-transfer-from";
 import { confidentialApproveMutationOptions } from "../token/use-confidential-approve";
 import { approveUnderlyingMutationOptions } from "../token/use-approve-underlying";
-import { shieldMutationOptions } from "../token/use-wrap";
-import { shieldETHMutationOptions } from "../token/use-wrap-eth";
+import { shieldMutationOptions } from "../token/use-shield";
+import { shieldETHMutationOptions } from "../token/use-shield-eth";
 import { unwrapMutationOptions } from "../token/use-unwrap";
 import { unwrapAllMutationOptions } from "../token/use-unwrap-all";
 import { finalizeUnwrapMutationOptions } from "../token/use-finalize-unwrap";

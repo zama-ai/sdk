@@ -4,7 +4,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { useConfidentialTransfer } from "../token/use-confidential-transfer";
 import { useConfidentialApprove } from "../token/use-confidential-approve";
 import { useApproveUnderlying } from "../token/use-approve-underlying";
-import { useShield } from "../token/use-wrap";
+import { useShield } from "../token/use-shield";
 import { useAuthorizeAll } from "../token/use-authorize-all";
 import { useEncrypt } from "../relayer/use-encrypt";
 import { confidentialBalanceQueryKeys } from "../token/balance-query-keys";

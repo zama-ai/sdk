@@ -6,7 +6,7 @@ import {
   TransactionRevertedError,
 } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions } from "../token/use-confidential-transfer";
-import { shieldMutationOptions } from "../token/use-wrap";
+import { shieldMutationOptions } from "../token/use-shield";
 import { createMockSigner } from "./test-utils";
 
 const TOKEN_ADDR = "0xtoken" as Address;
