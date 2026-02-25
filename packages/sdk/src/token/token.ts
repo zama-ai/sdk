@@ -22,7 +22,7 @@ import {
   TransactionRevertedError,
   DecryptionFailedError,
 } from "./errors";
-import { ReadonlyToken, type ReadonlyZamaConfig } from "./readonly-token";
+import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { TransactionResult, UnshieldCallbacks } from "./token.types";
 
@@ -39,7 +39,7 @@ function toError(error: unknown): Error {
  * Extends ReadonlyToken with write operations
  * (transfer, shield, unshield).
  */
-export interface ZamaConfig extends ReadonlyZamaConfig {
+export interface TokenConfig extends ReadonlyTokenConfig {
   /** Override the wrapper address. Defaults to `address` (the token IS the wrapper). */
   wrapper?: Address;
 }
@@ -51,7 +51,7 @@ export class Token extends ReadonlyToken {
   #underlying: Address | undefined;
   #underlyingPromise: Promise<Address> | null = null;
 
-  constructor(config: ZamaConfig) {
+  constructor(config: TokenConfig) {
     super(config);
     this.wrapper = config.wrapper ? normalizeAddress(config.wrapper, "wrapper") : this.address;
   }

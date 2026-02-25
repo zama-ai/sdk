@@ -104,7 +104,7 @@ import { rateContract } from '@zama-fhe/sdk';
 import { RawLog } from '@zama-fhe/sdk';
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { ReadonlyToken } from '@zama-fhe/sdk';
-import { ReadonlyZamaConfig } from '@zama-fhe/sdk';
+import { ReadonlyTokenConfig } from '@zama-fhe/sdk';
 import { RelayerRequestFailedError } from '@zama-fhe/sdk';
 import { RelayerSDK } from '@zama-fhe/sdk';
 import { RelayerSDKStatus } from '@zama-fhe/sdk';
@@ -589,7 +589,7 @@ export { RawLog }
 
 export { ReadonlyToken }
 
-export { ReadonlyZamaConfig }
+export { ReadonlyTokenConfig }
 
 export { RelayerRequestFailedError }
 

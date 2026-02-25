@@ -47,9 +47,9 @@ export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts"
 export { ZamaSDK } from "./token/zama-sdk";
 export type { ZamaSDKConfig } from "./token/zama-sdk";
 export { Token } from "./token/token";
-export type { ZamaConfig } from "./token/token";
+export type { TokenConfig } from "./token/token";
 export { ReadonlyToken } from "./token/readonly-token";
-export type { ReadonlyZamaConfig, BatchDecryptOptions } from "./token/readonly-token";
+export type { ReadonlyTokenConfig, BatchDecryptOptions } from "./token/readonly-token";
 export { ZERO_HANDLE } from "./token/readonly-token";
 export { MemoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";

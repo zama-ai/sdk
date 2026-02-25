@@ -48,7 +48,7 @@ export interface BatchDecryptOptions {
 }
 
 /** Configuration for constructing a {@link ReadonlyToken}. */
-export interface ReadonlyZamaConfig {
+export interface ReadonlyTokenConfig {
   /** FHE relayer backend. */
   sdk: RelayerSDK;
   /** Wallet signer for read calls and credential signing. */
@@ -75,7 +75,7 @@ export class ReadonlyToken {
   readonly address: Address;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
-  constructor(config: ReadonlyZamaConfig) {
+  constructor(config: ReadonlyTokenConfig) {
     const address = normalizeAddress(config.address, "address");
     this.credentials = new CredentialsManager({
       sdk: config.sdk,

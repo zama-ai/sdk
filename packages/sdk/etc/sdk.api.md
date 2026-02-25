@@ -19229,7 +19229,7 @@ export interface RawLog {
 
 // @public
 export class ReadonlyToken {
-    constructor(config: ReadonlyZamaConfig);
+    constructor(config: ReadonlyTokenConfig);
     // (undocumented)
     readonly address: Address;
     allowance(wrapper: Address, owner?: Address): Promise<bigint>;
@@ -19263,7 +19263,7 @@ export class ReadonlyToken {
 }
 
 // @public
-export interface ReadonlyZamaConfig {
+export interface ReadonlyTokenConfig {
     address: Address;
     durationDays?: number;
     onEvent?: ZamaSDKEventListener;
@@ -32864,7 +32864,7 @@ export function wrapperExistsContract(coordinator: Address, tokenAddress: Addres
 };
 
 // @public
-export interface ZamaConfig extends ReadonlyZamaConfig {
+export interface ZamaConfig extends ReadonlyTokenConfig {
     wrapper?: Address;
 }
 
