@@ -42,6 +42,9 @@ export class ZamaSDK {
   /**
    * Create a read-only interface for a confidential token.
    * Supports balance queries and authorization without a wrapper address.
+   *
+   * @param address - The confidential token contract address.
+   * @returns A {@link ReadonlyToken} instance bound to this SDK's relayer, signer, and storage.
    */
   createReadonlyToken(address: Address): ReadonlyToken {
     return new ReadonlyToken({
@@ -57,6 +60,10 @@ export class ZamaSDK {
   /**
    * Create a high-level ERC-20-like interface for a confidential token.
    * Includes write operations (transfer, shield, unshield).
+   *
+   * @param address - The confidential token contract address (also used as wrapper by default).
+   * @param wrapper - Optional explicit wrapper address, if it differs from the token address.
+   * @returns A {@link Token} instance bound to this SDK's relayer, signer, and storage.
    */
   createToken(address: Address, wrapper?: Address): Token {
     return new Token({
@@ -72,6 +79,7 @@ export class ZamaSDK {
 
   /**
    * Terminate the relayer backend and clean up resources.
+   * Call this when the SDK is no longer needed (e.g. on unmount or shutdown).
    */
   terminate(): void {
     this.relayer.terminate();

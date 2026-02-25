@@ -80,6 +80,12 @@ export class Token extends ReadonlyToken {
    * Confidential transfer. Encrypts the amount via FHE, then calls the contract.
    * Returns the transaction hash.
    *
+   * @param to - Recipient address.
+   * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.confidentialTransfer("0xRecipient", 1000n);
@@ -138,6 +144,13 @@ export class Token extends ReadonlyToken {
   /**
    * Operator encrypted transfer on behalf of another address.
    * The caller must be an approved operator for `from`.
+   *
+   * @param from - The address to transfer from (caller must be an approved operator).
+   * @param to - Recipient address.
+   * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
    *
    * @example
    * ```ts
@@ -209,6 +222,11 @@ export class Token extends ReadonlyToken {
    * Set operator approval for the confidential token.
    * Defaults to 1 hour from now if `until` is not specified.
    *
+   * @param spender - The address to approve as an operator.
+   * @param until - Optional Unix timestamp for approval expiry. Defaults to now + 1 hour.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link ApprovalFailedError} if the approval transaction fails.
+   *
    * @example
    * ```ts
    * const txHash = await token.approve("0xSpender");
@@ -239,6 +257,9 @@ export class Token extends ReadonlyToken {
   /**
    * Check if a spender is an approved operator for the connected wallet.
    *
+   * @param spender - The address to check operator approval for.
+   * @returns `true` if the spender is an approved operator for the connected wallet.
+   *
    * @example
    * ```ts
    * if (await token.isApproved("0xSpender")) {
@@ -258,6 +279,14 @@ export class Token extends ReadonlyToken {
    * Shield public ERC-20 tokens into confidential tokens.
    * Handles ERC-20 approval automatically based on `approvalStrategy`
    * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
+   *
+   * @param amount - The plaintext amount to shield.
+   * @param options - Optional configuration.
+   * @param options.approvalStrategy - `"exact"` (default), `"max"`, or `"skip"`.
+   * @param options.fees - Optional fee amount to add to the ETH value (for native ETH wrappers).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
+   * @throws {@link TransactionRevertedError} if the shield transaction reverts.
    *
    * @example
    * ```ts
@@ -306,6 +335,11 @@ export class Token extends ReadonlyToken {
   /**
    * Shield native ETH into confidential tokens. `value` defaults to `amount`.
    *
+   * @param amount - The amount of ETH to shield (in wei).
+   * @param value - Optional ETH value to send. Defaults to `amount`.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link TransactionRevertedError} if the shield transaction reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.shieldETH(1000000000000000000n); // 1 ETH
@@ -336,6 +370,11 @@ export class Token extends ReadonlyToken {
   /**
    * Request an unwrap for a specific amount. Encrypts the amount first.
    * Call {@link finalizeUnwrap} after the request is processed on-chain.
+   *
+   * @param amount - The plaintext amount to unwrap (encrypted automatically).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   * @throws {@link TransactionRevertedError} if the unwrap transaction reverts.
    *
    * @example
    * ```ts
@@ -397,6 +436,10 @@ export class Token extends ReadonlyToken {
    * Uses the on-chain balance handle directly (no encryption needed).
    * Throws if the balance is zero.
    *
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link DecryptionFailedError} if the balance is zero.
+   * @throws {@link TransactionRevertedError} if the unwrap transaction reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.unwrapAll();
@@ -434,6 +477,12 @@ export class Token extends ReadonlyToken {
    * Unshield a specific amount and finalize in one call.
    * Orchestrates: unshield → wait for receipt → parse event → finalize.
    *
+   * @param amount - The plaintext amount to unshield.
+   * @param callbacks - Optional progress callbacks for each phase.
+   * @returns The finalize transaction hash and mined receipt.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   * @throws {@link TransactionRevertedError} if any transaction in the flow reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.unshield(500n);
@@ -449,6 +498,11 @@ export class Token extends ReadonlyToken {
   /**
    * Unshield the entire balance and finalize in one call.
    * Orchestrates: unshieldAll → wait for receipt → parse event → finalize.
+   *
+   * @param callbacks - Optional progress callbacks for each phase.
+   * @returns The finalize transaction hash and mined receipt.
+   * @throws {@link DecryptionFailedError} if the balance is zero.
+   * @throws {@link TransactionRevertedError} if any transaction in the flow reverts.
    *
    * @example
    * ```ts
@@ -467,6 +521,11 @@ export class Token extends ReadonlyToken {
    * Useful when the user already submitted the unwrap but the finalize step
    * was interrupted (e.g. page reload, network error).
    *
+   * @param unwrapTxHash - The transaction hash of the previously submitted unwrap.
+   * @param callbacks - Optional progress callbacks.
+   * @returns The finalize transaction hash and mined receipt.
+   * @throws {@link TransactionRevertedError} if finalization fails.
+   *
    * @example
    * ```ts
    * const txHash = await token.resumeUnshield(previousUnwrapTxHash);
@@ -482,6 +541,11 @@ export class Token extends ReadonlyToken {
   /**
    * Complete an unwrap by providing the public decryption proof.
    * Call this after an unshield request has been processed on-chain.
+   *
+   * @param burnAmountHandle - The encrypted amount handle from the `UnwrapRequested` event.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link DecryptionFailedError} if public decryption fails.
+   * @throws {@link TransactionRevertedError} if the finalize transaction reverts.
    *
    * @example
    * ```ts
@@ -542,6 +606,10 @@ export class Token extends ReadonlyToken {
    * Approve this token contract to spend the underlying ERC-20.
    * Defaults to max uint256. Resets to zero first if there's an existing
    * non-zero allowance (required by tokens like USDT).
+   *
+   * @param amount - Optional approval amount. Defaults to max uint256.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link ApprovalFailedError} if the approval transaction fails.
    *
    * @example
    * ```ts
