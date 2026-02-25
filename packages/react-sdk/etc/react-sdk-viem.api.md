@@ -7,13 +7,10 @@
 import { ActivityItem } from '@zama-fhe/sdk';
 import { ActivityLogMetadata } from '@zama-fhe/sdk';
 import { Address } from '@zama-fhe/sdk';
+import { BatchTransferData } from '@zama-fhe/sdk';
 import { Hex } from '@zama-fhe/sdk';
+import { PublicClient } from 'viem';
 import { RawLog } from '@zama-fhe/sdk';
-import { readConfidentialBalanceOfContract } from '@zama-fhe/sdk/viem';
-import { readSupportsInterfaceContract } from '@zama-fhe/sdk/viem';
-import { readUnderlyingTokenContract } from '@zama-fhe/sdk/viem';
-import { readWrapperExistsContract } from '@zama-fhe/sdk/viem';
-import { readWrapperForTokenContract } from '@zama-fhe/sdk/viem';
 import * as _tanstack_react_query from '@tanstack/react-query';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { UnshieldCallbacks } from '@zama-fhe/sdk';
@@ -21,141 +18,118 @@ import { UseMutationOptions } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
 import { ViemSigner } from '@zama-fhe/sdk/viem';
-import { writeConfidentialBatchTransferContract } from '@zama-fhe/sdk/viem';
-import { writeConfidentialTransferContract } from '@zama-fhe/sdk/viem';
-import { writeFinalizeUnwrapContract } from '@zama-fhe/sdk/viem';
-import { writeSetOperatorContract } from '@zama-fhe/sdk/viem';
-import { writeUnwrapContract } from '@zama-fhe/sdk/viem';
-import { writeUnwrapFromBalanceContract } from '@zama-fhe/sdk/viem';
-import { writeWrapContract } from '@zama-fhe/sdk/viem';
-import { writeWrapETHContract } from '@zama-fhe/sdk/viem';
+import { WalletClient } from 'viem';
 
 // @public (undocumented)
 export interface ConfidentialBatchTransferParams {
     // (undocumented)
-    batcherAddress: Params$a[1];
+    batcherAddress: Address;
     // (undocumented)
-    batchTransferData: Params$a[4];
-    // Warning: (ae-forgotten-export) The symbol "Params$a" needs to be exported by the entry point index.d.ts
-    //
+    batchTransferData: BatchTransferData[];
     // (undocumented)
-    client: Params$a[0];
+    client: WalletClient;
     // (undocumented)
-    fees: Params$a[5];
+    fees: bigint;
     // (undocumented)
-    fromAddress: Params$a[3];
+    fromAddress: Address;
     // (undocumented)
-    tokenAddress: Params$a[2];
+    tokenAddress: Address;
 }
 
 // @public (undocumented)
 export interface ConfidentialTransferParams {
-    // Warning: (ae-forgotten-export) The symbol "Params$b" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    client: Params$b[0];
+    client: WalletClient;
     // (undocumented)
-    handle: Params$b[3];
+    handle: Uint8Array;
     // (undocumented)
-    inputProof: Params$b[4];
+    inputProof: Uint8Array;
     // (undocumented)
-    to: Params$b[2];
+    to: Address;
     // (undocumented)
-    tokenAddress: Params$b[1];
+    tokenAddress: Address;
 }
 
 // @public (undocumented)
 export interface FinalizeUnwrapParams {
     // (undocumented)
-    burntAmount: Params$7[2];
+    burntAmount: Address;
     // (undocumented)
-    burntAmountCleartext: Params$7[3];
-    // Warning: (ae-forgotten-export) The symbol "Params$7" needs to be exported by the entry point index.d.ts
-    //
+    burntAmountCleartext: bigint;
     // (undocumented)
-    client: Params$7[0];
+    client: WalletClient;
     // (undocumented)
-    decryptionProof: Params$7[4];
+    decryptionProof: Address;
     // (undocumented)
-    wrapper: Params$7[1];
+    wrapper: Address;
 }
 
 // @public (undocumented)
 export interface SetOperatorParams {
-    // Warning: (ae-forgotten-export) The symbol "Params$6" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    client: Params$6[0];
+    client: WalletClient;
     // (undocumented)
-    spender: Params$6[2];
+    spender: Address;
     // (undocumented)
-    timestamp?: Params$6[3];
+    timestamp?: number;
     // (undocumented)
-    tokenAddress: Params$6[1];
+    tokenAddress: Address;
 }
 
 // @public (undocumented)
 export interface ShieldETHParams {
     // (undocumented)
-    amount: Params$2[3];
-    // Warning: (ae-forgotten-export) The symbol "Params$2" needs to be exported by the entry point index.d.ts
-    //
+    amount: bigint;
     // (undocumented)
-    client: Params$2[0];
+    client: WalletClient;
     // (undocumented)
-    to: Params$2[2];
+    to: Address;
     // (undocumented)
-    value: Params$2[4];
+    value: bigint;
     // (undocumented)
-    wrapperAddress: Params$2[1];
+    wrapperAddress: Address;
 }
 
 // @public (undocumented)
 export interface ShieldParams {
     // (undocumented)
-    amount: Params$3[3];
-    // Warning: (ae-forgotten-export) The symbol "Params$3" needs to be exported by the entry point index.d.ts
-    //
+    amount: bigint;
     // (undocumented)
-    client: Params$3[0];
+    client: WalletClient;
     // (undocumented)
-    to: Params$3[2];
+    to: Address;
     // (undocumented)
-    wrapperAddress: Params$3[1];
+    wrapperAddress: Address;
 }
 
 // @public (undocumented)
 export interface UnwrapFromBalanceParams {
-    // Warning: (ae-forgotten-export) The symbol "Params$8" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    client: Params$8[0];
+    client: WalletClient;
     // (undocumented)
-    encryptedBalance: Params$8[4];
+    encryptedBalance: Address;
     // (undocumented)
-    encryptedErc20: Params$8[1];
+    encryptedErc20: Address;
     // (undocumented)
-    from: Params$8[2];
+    from: Address;
     // (undocumented)
-    to: Params$8[3];
+    to: Address;
 }
 
 // @public (undocumented)
 export interface UnwrapParams {
-    // Warning: (ae-forgotten-export) The symbol "Params$9" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    client: Params$9[0];
+    client: WalletClient;
     // (undocumented)
-    encryptedAmount: Params$9[4];
+    encryptedAmount: Uint8Array;
     // (undocumented)
-    encryptedErc20: Params$9[1];
+    encryptedErc20: Address;
     // (undocumented)
-    from: Params$9[2];
+    from: Address;
     // (undocumented)
-    inputProof: Params$9[5];
+    inputProof: Uint8Array;
     // (undocumented)
-    to: Params$9[3];
+    to: Address;
 }
 
 // Warning: (ae-forgotten-export) The symbol "UseActivityFeedConfig" needs to be exported by the entry point index.d.ts
@@ -356,10 +330,8 @@ export function useConfidentialBalanceOf(config: UseConfidentialBalanceOfConfig)
 
 // @public (undocumented)
 export interface UseConfidentialBalanceOfConfig {
-    // Warning: (ae-forgotten-export) The symbol "Params$c" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    client: Params$c[0];
+    client: PublicClient;
     // (undocumented)
     tokenAddress: Address | undefined;
     // (undocumented)
@@ -372,7 +344,7 @@ export function useConfidentialBalanceOfSuspense(config: UseConfidentialBalanceO
 // @public (undocumented)
 export interface UseConfidentialBalanceOfSuspenseConfig {
     // (undocumented)
-    client: Params$c[0];
+    client: PublicClient;
     // (undocumented)
     tokenAddress: Address;
     // (undocumented)
@@ -586,14 +558,12 @@ export function useSupportsInterface(config: UseSupportsInterfaceConfig): _tanst
 
 // @public (undocumented)
 export interface UseSupportsInterfaceConfig {
-    // Warning: (ae-forgotten-export) The symbol "Params" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    client: Params[0];
+    client: PublicClient;
     // (undocumented)
-    interfaceId: Params[2] | undefined;
+    interfaceId: Address | undefined;
     // (undocumented)
-    tokenAddress: Params[1] | undefined;
+    tokenAddress: Address | undefined;
 }
 
 // @public (undocumented)
@@ -602,11 +572,11 @@ export function useSupportsInterfaceSuspense(config: UseSupportsInterfaceSuspens
 // @public (undocumented)
 export interface UseSupportsInterfaceSuspenseConfig {
     // (undocumented)
-    client: Params[0];
+    client: PublicClient;
     // (undocumented)
-    interfaceId: Params[2];
+    interfaceId: Address;
     // (undocumented)
-    tokenAddress: Params[1];
+    tokenAddress: Address;
 }
 
 // Warning: (ae-forgotten-export) The symbol "TokenMetadata" needs to be exported by the entry point index.d.ts
@@ -622,10 +592,8 @@ export function useUnderlyingTokenSuspense(config: UseUnderlyingTokenSuspenseCon
 
 // @public (undocumented)
 export interface UseUnderlyingTokenSuspenseConfig {
-    // Warning: (ae-forgotten-export) The symbol "Params$4" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    client: Params$4[0];
+    client: PublicClient;
     // (undocumented)
     wrapperAddress: Address;
 }
@@ -633,7 +601,7 @@ export interface UseUnderlyingTokenSuspenseConfig {
 // @public (undocumented)
 export interface UseUnderlyingZamaConfig {
     // (undocumented)
-    client: Params$4[0];
+    client: PublicClient;
     // (undocumented)
     wrapperAddress: Address | undefined;
 }
@@ -662,10 +630,8 @@ export function useWrapperExists(config: UseWrapperExistsConfig): _tanstack_reac
 
 // @public (undocumented)
 export interface UseWrapperExistsConfig {
-    // Warning: (ae-forgotten-export) The symbol "Params$1" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    client: Params$1[0];
+    client: PublicClient;
     // (undocumented)
     coordinator: Address | undefined;
     // (undocumented)
@@ -678,7 +644,7 @@ export function useWrapperExistsSuspense(config: UseWrapperExistsSuspenseConfig)
 // @public (undocumented)
 export interface UseWrapperExistsSuspenseConfig {
     // (undocumented)
-    client: Params$1[0];
+    client: PublicClient;
     // (undocumented)
     coordinator: Address;
     // (undocumented)
@@ -693,10 +659,8 @@ export function useWrapperForTokenSuspense(config: UseWrapperForTokenSuspenseCon
 
 // @public (undocumented)
 export interface UseWrapperForTokenSuspenseConfig {
-    // Warning: (ae-forgotten-export) The symbol "Params$5" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    client: Params$5[0];
+    client: PublicClient;
     // (undocumented)
     coordinator: Address;
     // (undocumented)
@@ -706,7 +670,7 @@ export interface UseWrapperForTokenSuspenseConfig {
 // @public (undocumented)
 export interface UseWrapperForZamaConfig {
     // (undocumented)
-    client: Params$5[0];
+    client: PublicClient;
     // (undocumented)
     coordinator: Address | undefined;
     // (undocumented)

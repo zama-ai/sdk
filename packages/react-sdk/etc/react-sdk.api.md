@@ -124,6 +124,7 @@ import { symbolContract } from '@zama-fhe/sdk';
 import * as _tanstack_react_query from '@tanstack/react-query';
 import { Token } from '@zama-fhe/sdk';
 import { TOKEN_TOPICS } from '@zama-fhe/sdk';
+import { TokenConfig } from '@zama-fhe/sdk';
 import { Topics } from '@zama-fhe/sdk';
 import { totalSupplyContract } from '@zama-fhe/sdk';
 import { TransactionErrorEvent } from '@zama-fhe/sdk';
@@ -156,7 +157,6 @@ import { WRAPPER_ABI } from '@zama-fhe/sdk';
 import { wrapperExistsContract } from '@zama-fhe/sdk';
 import * as _zama_fhe_relayer_sdk_web from '@zama-fhe/relayer-sdk/web';
 import * as _zama_fhe_sdk from '@zama-fhe/sdk';
-import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaError } from '@zama-fhe/sdk';
 import { ZamaErrorCode } from '@zama-fhe/sdk';
 import { ZamaSDK } from '@zama-fhe/sdk';
@@ -670,6 +670,8 @@ export { symbolContract }
 export { Token }
 
 export { TOKEN_TOPICS }
+
+export { TokenConfig }
 
 // @public
 export interface TokenMetadata {
@@ -1402,8 +1404,6 @@ export function wrapperDiscoveryQueryOptions(token: ReadonlyToken, coordinatorAd
 };
 
 export { wrapperExistsContract }
-
-export { ZamaConfig }
 
 export { ZamaError }
 

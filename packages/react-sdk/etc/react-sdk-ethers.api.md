@@ -7,61 +7,47 @@
 import { ActivityItem } from '@zama-fhe/sdk';
 import { ActivityLogMetadata } from '@zama-fhe/sdk';
 import { Address } from '@zama-fhe/sdk';
+import { BatchTransferData } from '@zama-fhe/sdk';
 import { EthersSigner } from '@zama-fhe/sdk/ethers';
 import { Hex } from '@zama-fhe/sdk';
+import { Provider } from 'ethers';
 import { RawLog } from '@zama-fhe/sdk';
-import { readConfidentialBalanceOfContract } from '@zama-fhe/sdk/ethers';
-import { readSupportsInterfaceContract } from '@zama-fhe/sdk/ethers';
-import { readUnderlyingTokenContract } from '@zama-fhe/sdk/ethers';
-import { readWrapperExistsContract } from '@zama-fhe/sdk/ethers';
-import { readWrapperForTokenContract } from '@zama-fhe/sdk/ethers';
+import { Signer } from 'ethers';
 import * as _tanstack_react_query from '@tanstack/react-query';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { UnshieldCallbacks } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
-import { writeConfidentialBatchTransferContract } from '@zama-fhe/sdk/ethers';
-import { writeConfidentialTransferContract } from '@zama-fhe/sdk/ethers';
-import { writeFinalizeUnwrapContract } from '@zama-fhe/sdk/ethers';
-import { writeSetOperatorContract } from '@zama-fhe/sdk/ethers';
-import { writeUnwrapContract } from '@zama-fhe/sdk/ethers';
-import { writeUnwrapFromBalanceContract } from '@zama-fhe/sdk/ethers';
-import { writeWrapContract } from '@zama-fhe/sdk/ethers';
-import { writeWrapETHContract } from '@zama-fhe/sdk/ethers';
 
 // @public (undocumented)
 export interface ConfidentialBatchTransferParams {
     // (undocumented)
-    batcherAddress: Params$a[1];
+    batcherAddress: Address;
     // (undocumented)
-    batchTransferData: Params$a[4];
+    batchTransferData: BatchTransferData[];
     // (undocumented)
-    fees: Params$a[5];
+    fees: bigint;
     // (undocumented)
-    fromAddress: Params$a[3];
-    // Warning: (ae-forgotten-export) The symbol "Params$a" needs to be exported by the entry point index.d.ts
-    //
+    fromAddress: Address;
     // (undocumented)
-    signer: Params$a[0];
+    signer: Signer;
     // (undocumented)
-    tokenAddress: Params$a[2];
+    tokenAddress: Address;
 }
 
 // @public (undocumented)
 export interface ConfidentialTransferParams {
     // (undocumented)
-    handle: Params$b[3];
+    handle: Uint8Array;
     // (undocumented)
-    inputProof: Params$b[4];
-    // Warning: (ae-forgotten-export) The symbol "Params$b" needs to be exported by the entry point index.d.ts
-    //
+    inputProof: Uint8Array;
     // (undocumented)
-    signer: Params$b[0];
+    signer: Signer;
     // (undocumented)
-    to: Params$b[2];
+    to: Address;
     // (undocumented)
-    tokenAddress: Params$b[1];
+    tokenAddress: Address;
 }
 
 export { EthersSigner }
@@ -69,95 +55,83 @@ export { EthersSigner }
 // @public (undocumented)
 export interface FinalizeUnwrapParams {
     // (undocumented)
-    burntAmount: Params$7[2];
+    burntAmount: Address;
     // (undocumented)
-    burntAmountCleartext: Params$7[3];
+    burntAmountCleartext: bigint;
     // (undocumented)
-    decryptionProof: Params$7[4];
-    // Warning: (ae-forgotten-export) The symbol "Params$7" needs to be exported by the entry point index.d.ts
-    //
+    decryptionProof: Address;
     // (undocumented)
-    signer: Params$7[0];
+    signer: Signer;
     // (undocumented)
-    wrapper: Params$7[1];
+    wrapper: Address;
 }
 
 // @public (undocumented)
 export interface SetOperatorParams {
-    // Warning: (ae-forgotten-export) The symbol "Params$6" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    signer: Params$6[0];
+    signer: Signer;
     // (undocumented)
-    spender: Params$6[2];
+    spender: Address;
     // (undocumented)
-    timestamp?: Params$6[3];
+    timestamp?: number;
     // (undocumented)
-    tokenAddress: Params$6[1];
+    tokenAddress: Address;
 }
 
 // @public (undocumented)
 export interface ShieldETHParams {
     // (undocumented)
-    amount: Params$2[3];
-    // Warning: (ae-forgotten-export) The symbol "Params$2" needs to be exported by the entry point index.d.ts
-    //
+    amount: bigint;
     // (undocumented)
-    signer: Params$2[0];
+    signer: Signer;
     // (undocumented)
-    to: Params$2[2];
+    to: Address;
     // (undocumented)
-    value: Params$2[4];
+    value: bigint;
     // (undocumented)
-    wrapperAddress: Params$2[1];
+    wrapperAddress: Address;
 }
 
 // @public (undocumented)
 export interface ShieldParams {
     // (undocumented)
-    amount: Params$3[3];
-    // Warning: (ae-forgotten-export) The symbol "Params$3" needs to be exported by the entry point index.d.ts
-    //
+    amount: bigint;
     // (undocumented)
-    signer: Params$3[0];
+    signer: Signer;
     // (undocumented)
-    to: Params$3[2];
+    to: Address;
     // (undocumented)
-    wrapperAddress: Params$3[1];
+    wrapperAddress: Address;
 }
 
 // @public (undocumented)
 export interface UnwrapFromBalanceParams {
     // (undocumented)
-    encryptedBalance: Params$8[4];
+    encryptedBalance: Address;
     // (undocumented)
-    encryptedErc20: Params$8[1];
+    encryptedErc20: Address;
     // (undocumented)
-    from: Params$8[2];
-    // Warning: (ae-forgotten-export) The symbol "Params$8" needs to be exported by the entry point index.d.ts
-    //
+    from: Address;
     // (undocumented)
-    signer: Params$8[0];
+    signer: Signer;
     // (undocumented)
-    to: Params$8[3];
+    to: Address;
 }
 
 // @public (undocumented)
 export interface UnwrapParams {
     // (undocumented)
-    encryptedAmount: Params$9[4];
+    encryptedAmount: Uint8Array;
     // (undocumented)
-    encryptedErc20: Params$9[1];
+    encryptedErc20: Address;
     // (undocumented)
-    from: Params$9[2];
+    from: Address;
     // (undocumented)
-    inputProof: Params$9[5];
-    // Warning: (ae-forgotten-export) The symbol "Params$9" needs to be exported by the entry point index.d.ts
-    //
+    inputProof: Uint8Array;
     // (undocumented)
-    signer: Params$9[0];
+    signer: Signer;
     // (undocumented)
-    to: Params$9[3];
+    to: Address;
 }
 
 // Warning: (ae-forgotten-export) The symbol "UseActivityFeedConfig" needs to be exported by the entry point index.d.ts
@@ -358,10 +332,8 @@ export function useConfidentialBalanceOf(config: UseConfidentialBalanceOfConfig)
 
 // @public (undocumented)
 export interface UseConfidentialBalanceOfConfig {
-    // Warning: (ae-forgotten-export) The symbol "Params$c" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    provider: Params$c[0];
+    provider: Provider | Signer;
     // (undocumented)
     tokenAddress: Address | undefined;
     // (undocumented)
@@ -374,7 +346,7 @@ export function useConfidentialBalanceOfSuspense(config: UseConfidentialBalanceO
 // @public (undocumented)
 export interface UseConfidentialBalanceOfSuspenseConfig {
     // (undocumented)
-    provider: Params$c[0];
+    provider: Provider | Signer;
     // (undocumented)
     tokenAddress: Address;
     // (undocumented)
@@ -589,13 +561,11 @@ export function useSupportsInterface(config: UseSupportsInterfaceConfig): _tanst
 // @public (undocumented)
 export interface UseSupportsInterfaceConfig {
     // (undocumented)
-    interfaceId: Params[2] | undefined;
-    // Warning: (ae-forgotten-export) The symbol "Params" needs to be exported by the entry point index.d.ts
-    //
+    interfaceId: Address | undefined;
     // (undocumented)
-    provider: Params[0];
+    provider: Provider | Signer;
     // (undocumented)
-    tokenAddress: Params[1] | undefined;
+    tokenAddress: Address | undefined;
 }
 
 // @public (undocumented)
@@ -604,11 +574,11 @@ export function useSupportsInterfaceSuspense(config: UseSupportsInterfaceSuspens
 // @public (undocumented)
 export interface UseSupportsInterfaceSuspenseConfig {
     // (undocumented)
-    interfaceId: Params[2];
+    interfaceId: Address;
     // (undocumented)
-    provider: Params[0];
+    provider: Provider | Signer;
     // (undocumented)
-    tokenAddress: Params[1];
+    tokenAddress: Address;
 }
 
 // Warning: (ae-forgotten-export) The symbol "TokenMetadata" needs to be exported by the entry point index.d.ts
@@ -624,10 +594,8 @@ export function useUnderlyingTokenSuspense(config: UseUnderlyingTokenSuspenseCon
 
 // @public (undocumented)
 export interface UseUnderlyingTokenSuspenseConfig {
-    // Warning: (ae-forgotten-export) The symbol "Params$4" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    provider: Params$4[0];
+    provider: Provider | Signer;
     // (undocumented)
     wrapperAddress: Address;
 }
@@ -635,7 +603,7 @@ export interface UseUnderlyingTokenSuspenseConfig {
 // @public (undocumented)
 export interface UseUnderlyingZamaConfig {
     // (undocumented)
-    provider: Params$4[0];
+    provider: Provider | Signer;
     // (undocumented)
     wrapperAddress: Address | undefined;
 }
@@ -666,10 +634,8 @@ export function useWrapperExists(config: UseWrapperExistsConfig): _tanstack_reac
 export interface UseWrapperExistsConfig {
     // (undocumented)
     coordinator: Address | undefined;
-    // Warning: (ae-forgotten-export) The symbol "Params$1" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    provider: Params$1[0];
+    provider: Provider | Signer;
     // (undocumented)
     tokenAddress: Address | undefined;
 }
@@ -682,7 +648,7 @@ export interface UseWrapperExistsSuspenseConfig {
     // (undocumented)
     coordinator: Address;
     // (undocumented)
-    provider: Params$1[0];
+    provider: Provider | Signer;
     // (undocumented)
     tokenAddress: Address;
 }
@@ -697,10 +663,8 @@ export function useWrapperForTokenSuspense(config: UseWrapperForTokenSuspenseCon
 export interface UseWrapperForTokenSuspenseConfig {
     // (undocumented)
     coordinator: Address;
-    // Warning: (ae-forgotten-export) The symbol "Params$5" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    provider: Params$5[0];
+    provider: Provider | Signer;
     // (undocumented)
     tokenAddress: Address;
 }
@@ -710,7 +674,7 @@ export interface UseWrapperForZamaConfig {
     // (undocumented)
     coordinator: Address | undefined;
     // (undocumented)
-    provider: Params$5[0];
+    provider: Provider | Signer;
     // (undocumented)
     tokenAddress: Address | undefined;
 }
