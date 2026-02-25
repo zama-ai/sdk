@@ -1,3 +1,10 @@
+/**
+ * Node.js backend for `@zama-fhe/sdk` — provides {@link RelayerNode},
+ * {@link NodeWorkerClient}, and {@link NodeWorkerPool} for server-side FHE operations.
+ *
+ * @packageDocumentation
+ */
+
 export { RelayerNode } from "../relayer/relayer-node";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
 export { NodeWorkerClient } from "../worker/worker.node-client";

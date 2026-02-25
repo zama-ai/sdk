@@ -1,3 +1,12 @@
+/**
+ * Ethers-specific React hooks for low-level contract interactions.
+ *
+ * These hooks do NOT require {@link ZamaProvider} — they operate directly
+ * through ethers `Provider` and `Signer`.
+ *
+ * @packageDocumentation
+ */
+
 export {
   useConfidentialBalanceOf,
   useConfidentialBalanceOfSuspense,

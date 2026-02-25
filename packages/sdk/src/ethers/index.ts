@@ -1,3 +1,10 @@
+/**
+ * Ethers adapter for `@zama-fhe/sdk` — provides {@link EthersSigner} and
+ * ethers-native contract read/write helpers.
+ *
+ * @packageDocumentation
+ */
+
 export { EthersSigner, type EthersSignerConfig } from "./ethers-signer";
 export {
   readConfidentialBalanceOfContract,

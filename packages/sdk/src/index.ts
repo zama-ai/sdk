@@ -1,3 +1,11 @@
+/**
+ * Core SDK for confidential token operations using Fully Homomorphic Encryption.
+ *
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link RelayerWeb}.
+ *
+ * @packageDocumentation
+ */
+
 // Core SDK
 export { RelayerWeb } from "./relayer/relayer-web";
 export type { RelayerSDK } from "./relayer/relayer-sdk";

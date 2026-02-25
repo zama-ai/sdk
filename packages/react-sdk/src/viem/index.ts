@@ -1,3 +1,12 @@
+/**
+ * Viem-specific React hooks for low-level contract interactions.
+ *
+ * These hooks do NOT require {@link ZamaProvider} — they operate directly
+ * through viem `PublicClient` and `WalletClient`.
+ *
+ * @packageDocumentation
+ */
+
 export {
   useConfidentialBalanceOf,
   useConfidentialBalanceOfSuspense,

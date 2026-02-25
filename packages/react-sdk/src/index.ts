@@ -1,3 +1,12 @@
+/**
+ * React hooks for confidential token operations, built on React Query.
+ *
+ * Requires {@link ZamaProvider} in the component tree. Re-exports all public
+ * symbols from `@zama-fhe/sdk`.
+ *
+ * @packageDocumentation
+ */
+
 // Provider
 export { ZamaProvider, useZamaSDK } from "./provider";
 
