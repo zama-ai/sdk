@@ -33,7 +33,8 @@
     "hardhat:compile": "npm --prefix hardhat run compile",
     "hardhat:node": "npm --prefix hardhat run node",
     "e2e:test": "pnpm --filter @zama-fhe/test-app e2e:test",
-    "e2e:test:ui": "pnpm --filter @zama-fhe/test-app e2e:test:ui"
+    "e2e:test:ui": "pnpm --filter @zama-fhe/test-app e2e:test:ui",
+    "docs": "typedoc"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.2",
@@ -63,6 +64,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "tsup": "^8.5.1",
+    "typedoc": "^0.28.17",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
