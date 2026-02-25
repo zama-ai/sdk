@@ -23,7 +23,7 @@ export interface UseConfidentialTransferConfig extends UseZamaConfig {
   /**
    * When `true`, optimistically subtracts the transfer amount from cached balance
    * before the transaction confirms. Rolls back on error.
-   * @default false
+   * @defaultValue false
    */
   optimistic?: boolean;
 }

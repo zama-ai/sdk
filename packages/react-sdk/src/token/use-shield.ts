@@ -26,7 +26,7 @@ export interface UseShieldConfig extends UseZamaConfig {
   /**
    * When `true`, optimistically adds the wrap amount to the cached confidential balance
    * before the transaction confirms. Rolls back on error.
-   * @default false
+   * @defaultValue false
    */
   optimistic?: boolean;
 }
