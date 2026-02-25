@@ -281,9 +281,7 @@ export class Token extends ReadonlyToken {
    * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
    * @param amount - The plaintext amount to shield.
-   * @param options - Optional configuration.
-   * @param options.approvalStrategy - `"exact"` (default), `"max"`, or `"skip"`.
-   * @param options.fees - Optional fee amount to add to the ETH value (for native ETH wrappers).
+   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`), `fees` (extra ETH for native wrappers).
    * @returns The transaction hash and mined receipt.
    * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
    * @throws {@link TransactionRevertedError} if the shield transaction reverts.
