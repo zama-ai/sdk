@@ -108,13 +108,13 @@ function TokenDashboard() {
 ### Browser with viem
 
 ```ts
-import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
 const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
@@ -135,7 +135,7 @@ const sdk = new TokenSDK({
 const token = sdk.createToken("0xEncryptedERC20Address");
 
 // Shield 1000 tokens (handles ERC-20 approval automatically)
-await token.wrap(1000n);
+const { txHash } = await token.shield(1000n);
 
 // Check your decrypted balance
 const balance = await token.balanceOf();
@@ -150,18 +150,12 @@ await token.unshield(500n);
 ### Browser with ethers
 
 ```ts
-import {
-  TokenSDK,
-  RelayerWeb,
-  IndexedDBStorage,
-  MainnetConfig,
-  SepoliaConfig,
-} from "@zama-fhe/sdk";
+import { ZamaSDK, RelayerWeb, IndexedDBStorage, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
 const signer = new EthersSigner({ signer: ethersSigner });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
@@ -183,14 +177,14 @@ const sdk = new TokenSDK({
 ### Node.js
 
 ```ts
-import { TokenSDK, MemoryStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, MemoryStorage } from "@zama-fhe/sdk";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
 const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerNode({
     getChainId: () => signer.getChainId(),
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
@@ -217,7 +211,7 @@ const sdk = new TokenSDK({
 │                    Your Application                 │
 ├──────────────────────┬──────────────────────────────┤
 │  react-sdk           │  sdk (vanilla TS)            │
-│  React hooks +       │  TokenSDK                    │
+│  React hooks +       │  ZamaSDK                     │
 │  React Query cache   │  Token                       │
 │                      │  ReadonlyToken               │
 ├──────────────────────┴──────────────────────────────┤
@@ -396,8 +390,8 @@ FHE credentials (keypair + EIP-712 signature) need to be persisted so users don'
 const token = sdk.createToken("0xEncryptedERC20Address");
 
 // Shield: public ERC-20 → confidential
-await token.wrap(1000n);
-await token.wrapETH(1000n); // for native ETH wrappers
+await token.shield(1000n);
+await token.shieldETH(1000n); // for native ETH wrappers
 
 // Read balance (decrypts automatically)
 const balance = await token.balanceOf();
@@ -458,11 +452,11 @@ const txHash = await writeWrapContract(signer, wrapper, to, amount);
 
 ## Error Handling
 
-All SDK errors extend `TokenError`. Use `instanceof` to catch specific error types:
+All SDK errors extend `ZamaError`. Use `instanceof` to catch specific error types:
 
 ```ts
 import {
-  TokenError,
+  ZamaError,
   SigningRejectedError,
   EncryptionFailedError,
   TransactionRevertedError,
@@ -480,7 +474,7 @@ try {
   if (error instanceof TransactionRevertedError) {
     // On-chain transaction reverted
   }
-  if (error instanceof TokenError) {
+  if (error instanceof ZamaError) {
     // Any other SDK error — check error.code for details
   }
 }

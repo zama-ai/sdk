@@ -149,6 +149,8 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
   signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
   storage={storage} // GenericStringStorage
+  credentialDurationDays={1} // Optional. Days FHE credentials remain valid. Default: 1.
+  onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
   {children}
 </ZamaProvider>;
@@ -300,7 +302,7 @@ interface ConfidentialTransferFromParams {
 
 ### Shield Hooks
 
-#### `useShield` (alias: `useWrap`)
+#### `useShield`
 
 Shield public ERC-20 tokens into confidential tokens. Handles ERC-20 approval automatically.
 
@@ -326,7 +328,7 @@ await shield({ amount: 1000n });
 await shield({ amount: 1000n, approvalStrategy: "max" });
 ```
 
-#### `useShieldETH` (alias: `useWrapETH`)
+#### `useShieldETH`
 
 Shield native ETH into confidential tokens. Use when the underlying token is the zero address (native ETH).
 
@@ -615,6 +617,61 @@ feed?.forEach((item) => {
 });
 ```
 
+### Fee Hooks
+
+#### `useShieldFee`
+
+Read the shield (wrap) fee for a given amount and address pair.
+
+```ts
+function useShieldFee(
+  config: UseFeeConfig,
+  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<bigint, Error>;
+
+interface UseFeeConfig {
+  feeManagerAddress: Address;
+  amount: bigint;
+  from: Address;
+  to: Address;
+}
+```
+
+```tsx
+const { data: fee } = useShieldFee({
+  feeManagerAddress: "0xFeeManager",
+  amount: 1000n,
+  from: "0xSender",
+  to: "0xReceiver",
+});
+```
+
+#### `useUnshieldFee`
+
+Read the unshield (unwrap) fee for a given amount and address pair. Same signature as `useShieldFee`.
+
+#### `useBatchTransferFee`
+
+Read the batch transfer fee from the fee manager.
+
+```ts
+function useBatchTransferFee(
+  feeManagerAddress: Address,
+  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<bigint, Error>;
+```
+
+#### `useFeeRecipient`
+
+Read the fee recipient address from the fee manager.
+
+```ts
+function useFeeRecipient(
+  feeManagerAddress: Address,
+  options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<Address, Error>;
+```
+
 ### Low-Level FHE Hooks
 
 These hooks expose the raw `RelayerSDK` operations as React Query mutations.
@@ -680,19 +737,21 @@ import {
   confidentialHandlesQueryKeys,
   underlyingAllowanceQueryKeys,
   activityFeedQueryKeys,
+  feeQueryKeys,
   decryptionKeys,
 } from "@zama-fhe/react-sdk";
 ```
 
-| Factory                         | Keys                                                | Description                         |
-| ------------------------------- | --------------------------------------------------- | ----------------------------------- |
-| `confidentialBalanceQueryKeys`  | `.all`, `.token(address)`, `.owner(address, owner)` | Single-token decrypted balance.     |
-| `confidentialBalancesQueryKeys` | `.all`, `.tokens(addresses, owner)`                 | Multi-token batch balances.         |
-| `confidentialHandleQueryKeys`   | `.all`, `.token(address)`, `.owner(address, owner)` | Single-token encrypted handle.      |
-| `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addresses, owner)`                 | Multi-token batch handles.          |
-| `underlyingAllowanceQueryKeys`  | `.all`, `.token(address, wrapper)`                  | Underlying ERC-20 allowance.        |
-| `activityFeedQueryKeys`         | `.all`, `.token(address)`                           | Activity feed items.                |
-| `decryptionKeys`                | `.value(handle)`                                    | Individual decrypted handle values. |
+| Factory                         | Keys                                                                                     | Description                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
+| `confidentialBalanceQueryKeys`  | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token decrypted balance.     |
+| `confidentialBalancesQueryKeys` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
+| `confidentialHandleQueryKeys`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
+| `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
+| `underlyingAllowanceQueryKeys`  | `.all`, `.token(address, wrapper)`                                                       | Underlying ERC-20 allowance.        |
+| `activityFeedQueryKeys`         | `.all`, `.token(address)`                                                                | Activity feed items.                |
+| `feeQueryKeys`                  | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
+| `decryptionKeys`                | `.value(handle)`                                                                         | Individual decrypted handle values. |
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
@@ -738,8 +797,8 @@ All write hooks return `{ mutate, mutateAsync, ...mutation }` from wagmi's `useW
 | `useUnwrapFromBalance()`         | `(token, from, to, encryptedBalance)`            | Unwrap using on-chain handle. |
 | `useFinalizeUnwrap()`            | `(wrapper, burntAmount, cleartext, proof)`       | Finalize unwrap.              |
 | `useSetOperator()`               | `(token, spender, timestamp?)`                   | Set operator approval.        |
-| `useWrap()`                      | `(wrapper, to, amount)`                          | Wrap ERC-20 tokens.           |
-| `useWrapETH()`                   | `(wrapper, to, amount, value)`                   | Wrap native ETH.              |
+| `useShield()`                    | `(wrapper, to, amount)`                          | Shield ERC-20 tokens.         |
+| `useShieldETH()`                 | `(wrapper, to, amount, value)`                   | Shield native ETH.            |
 
 ### Wagmi Signer Adapter
 
@@ -849,9 +908,9 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
-**Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyZamaConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `UnshieldCallbacks`.
+**Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyZamaConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
-**Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`.
+**Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 
 **Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`.
 

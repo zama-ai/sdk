@@ -52,7 +52,7 @@ const token = sdk.createToken("0xEncryptedERC20Address");
 // const token = sdk.createToken("0xEncryptedERC20Address", "0xWrapperAddress");
 
 // 3. Shield (wrap) public tokens into confidential tokens
-const wrapTx = await token.wrap(1000n);
+const { txHash } = await token.shield(1000n);
 
 // 4. Check decrypted balance
 const balance = await token.balanceOf();
@@ -139,8 +139,8 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 
 | Method                                     | Description                                                                                                                                                                                                  |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `wrap(amount, options?)`                   | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
-| `wrapETH(amount, value?)`                  | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
+| `shield(amount, options?)`                 | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
+| `shieldETH(amount, value?)`                | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
 | `unshield(amount, callbacks?)`             | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                                   |
 | `unshieldAll(callbacks?)`                  | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                               |
 | `unwrap(amount)`                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
@@ -155,7 +155,14 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `balanceOf(owner?)`                        | Decrypt and return the plaintext balance.                                                                                                                                                                    |
 | `decryptHandles(handles, owner?)`          | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
 
-All write methods return the transaction hash (`Address`).
+All write methods return a `TransactionResult` object:
+
+```ts
+interface TransactionResult {
+  txHash: Hex;
+  receipt: TransactionReceipt;
+}
+```
 
 ### ReadonlyToken
 
@@ -394,7 +401,7 @@ const signer = new EthersSigner({ signer: ethersSigner });
 
 Every function returns a `ContractCallConfig` object (address, ABI, function name, args) that can be used with any Web3 library. These are the low-level building blocks — they map 1:1 to on-chain contract calls without any orchestration. Use them when the high-level `Token` API doesn't cover your use case.
 
-> **High-level vs low-level:** `token.wrap()` / `token.unshield()` handle the full flow (approval, encryption, receipt waiting, finalization). The contract call builders (`wrapContract()`, `unwrapContract()`, etc.) produce raw call configs for a single contract interaction.
+> **High-level vs low-level:** `token.shield()` / `token.unshield()` handle the full flow (approval, encryption, receipt waiting, finalization). The contract call builders (`wrapContract()`, `unwrapContract()`, etc.) produce raw call configs for a single contract interaction.
 
 ```ts
 interface ContractCallConfig {
