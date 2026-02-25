@@ -669,13 +669,21 @@ pnpm e2e:test:ui       # Playwright UI mode
 This repository uses [semantic-release](https://semantic-release.gitbook.io/semantic-release/) as the release mechanism.
 
 - `@zama-fhe/sdk` and `@zama-fhe/react-sdk` release in lockstep and always share the same version.
-- Versions are auto-calculated from Conventional Commit messages on `main`.
+- `main` publishes stable releases to npm `latest` (for example `1.4.0`).
+- `prerelease` publishes prereleases to npm `alpha` (for example `1.5.0-alpha.2`).
+- Versions are auto-calculated from Conventional Commit messages on both release branches.
 - PR titles must follow Conventional Commits because squash merges use PR titles as commit messages.
-- On pushes to `main`, the release workflow publishes to npm and creates GitHub releases/tags automatically.
+- On pushes to either release branch, the workflow publishes to npm and creates GitHub releases/tags automatically.
+
+Install examples:
+
+- Stable: `npm i @zama-fhe/sdk`
+- Prerelease: `npm i @zama-fhe/sdk@alpha`
 
 Release prerequisites:
 
 - Branch protection on `main` should require both `Vitest` and `Playwright`.
+- Branch protection on `prerelease` should require the same checks as `main`.
 - Maintainers must configure publish credentials in repository settings.
 
 ## License

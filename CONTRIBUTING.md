@@ -104,14 +104,21 @@ We use [semantic-release](https://semantic-release.gitbook.io/semantic-release/)
 Release behavior:
 
 1. PR titles are validated against Conventional Commits.
-2. Squash-merging into `main` preserves that title as the release signal.
+2. Squash-merging into a release branch (`main` or `prerelease`) preserves that title as the release signal.
 3. semantic-release computes the next version (`patch`/`minor`/`major`) from merged commits.
 4. `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are versioned and published together in lockstep.
-5. GitHub release notes and tags are generated automatically.
+5. `main` publishes stable versions to npm `latest`, while `prerelease` publishes prerelease versions to npm `alpha`.
+6. GitHub release notes and tags are generated automatically.
+
+Install channels:
+
+- Stable: `npm i @zama-fhe/sdk`
+- Prerelease: `npm i @zama-fhe/sdk@alpha`
 
 Maintainer requirements:
 
 - Configure branch protection on `main` to require both `Vitest` and `Playwright` checks before merge.
+- Configure branch protection on `prerelease` with the same required checks.
 - Configure publish credentials in repository settings for npm releases.
 - Keep npm provenance enabled in CI (`NPM_CONFIG_PROVENANCE=true`).
 

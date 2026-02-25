@@ -1,5 +1,5 @@
 module.exports = {
-  branches: ["main"],
+  branches: ["main", { name: "prerelease", channel: "alpha", prerelease: "alpha" }],
   tagFormat: "v${version}",
   plugins: [
     [
@@ -42,7 +42,8 @@ module.exports = {
       "@semantic-release/exec",
       {
         prepareCmd: "node scripts/release/prepare-lockstep.mjs ${nextRelease.version}",
-        publishCmd: "bash scripts/release/publish-lockstep.sh ${nextRelease.version}",
+        publishCmd:
+          "bash scripts/release/publish-lockstep.sh ${nextRelease.version} ${nextRelease.channel}",
       },
     ],
     [

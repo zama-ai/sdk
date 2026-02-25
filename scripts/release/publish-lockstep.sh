@@ -2,8 +2,9 @@
 set -euo pipefail
 
 next_version="${1:-}"
+channel="${2:-}"
 if [[ -z "$next_version" ]]; then
-  echo "Usage: scripts/release/publish-lockstep.sh <next-version>"
+  echo "Usage: scripts/release/publish-lockstep.sh <next-version> [channel]"
   exit 1
 fi
 
@@ -15,5 +16,10 @@ if [[ "$sdk_version" != "$next_version" || "$react_version" != "$next_version" ]
   exit 1
 fi
 
-pnpm --filter @zama-fhe/sdk publish --access public --no-git-checks
-pnpm --filter @zama-fhe/react-sdk publish --access public --no-git-checks
+publish_args=(--access public --no-git-checks)
+if [[ -n "$channel" ]]; then
+  publish_args+=(--tag "$channel")
+fi
+
+pnpm --filter @zama-fhe/sdk publish "${publish_args[@]}"
+pnpm --filter @zama-fhe/react-sdk publish "${publish_args[@]}"
