@@ -33,7 +33,7 @@ export { decryptionKeys } from "./relayer/decryption-cache";
 // Re-export core classes
 export {
   RelayerWeb,
-  TokenSDK,
+  ZamaSDK,
   Token,
   ReadonlyToken,
   MemoryStorage,
@@ -46,9 +46,9 @@ export {
 export type {
   RelayerSDK,
   RelayerWebConfig,
-  TokenSDKConfig,
-  TokenConfig,
-  ReadonlyTokenConfig,
+  ZamaSDKConfig,
+  ZamaConfig,
+  ReadonlyZamaConfig,
   BatchDecryptOptions,
   FhevmInstanceConfig,
   NetworkType,
@@ -157,7 +157,7 @@ export {
 } from "@zama-fhe/sdk";
 
 // Token hooks
-export { useToken, type UseTokenConfig } from "./token/use-token";
+export { useToken, type UseZamaConfig } from "./token/use-token";
 export { useReadonlyToken } from "./token/use-readonly-token";
 export {
   useConfidentialBalance,
@@ -341,8 +341,8 @@ export type {
   TransactionResult,
 } from "@zama-fhe/sdk";
 export {
-  TokenError,
-  TokenErrorCode,
+  ZamaError,
+  ZamaErrorCode,
   SigningRejectedError,
   SigningFailedError,
   EncryptionFailedError,
@@ -353,5 +353,5 @@ export {
   InvalidCredentialsError,
   NoCiphertextError,
   RelayerRequestFailedError,
-  matchTokenError,
+  matchZamaError,
 } from "@zama-fhe/sdk";

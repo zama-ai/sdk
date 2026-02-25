@@ -10,7 +10,7 @@ import {
   wagmiBalancePredicates,
 } from "./balance-query-keys";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /**
  * TanStack Query mutation options factory for unshield-all.
@@ -45,7 +45,7 @@ export function unshieldAllMutationOptions(token: Token) {
  * ```
  */
 export function useUnshieldAll(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>,
 ) {
   const token = useToken(config);

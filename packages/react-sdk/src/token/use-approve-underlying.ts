@@ -3,7 +3,7 @@
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useApproveUnderlying}. */
 export interface ApproveUnderlyingParams {
@@ -40,7 +40,7 @@ export function approveUnderlyingMutationOptions(token: Token) {
  * ```
  */
 export function useApproveUnderlying(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>,
 ) {
   const token = useToken(config);

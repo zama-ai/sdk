@@ -222,7 +222,7 @@ describe("RelayerWeb", () => {
   // -------------------------------------------------------------------------
 
   describe("initialization errors", () => {
-    it("wraps non-TokenError init failures in EncryptionFailedError", async () => {
+    it("wraps non-ZamaError init failures in EncryptionFailedError", async () => {
       mockWorkerClient.initWorker.mockRejectedValueOnce(new Error("WASM load failed"));
       const relayer = createWebRelayer();
 
@@ -231,7 +231,7 @@ describe("RelayerWeb", () => {
       await expect(promise).rejects.toThrow("Failed to initialize FHE worker");
     });
 
-    it("passes through TokenError from init without re-wrapping", async () => {
+    it("passes through ZamaError from init without re-wrapping", async () => {
       const tokenError = new EncryptionFailedError("already an SDK error");
       mockWorkerClient.initWorker.mockRejectedValueOnce(tokenError);
       const relayer = createWebRelayer();
@@ -587,7 +587,7 @@ describe("RelayerNode", () => {
   // -------------------------------------------------------------------------
 
   describe("initialization errors", () => {
-    it("wraps non-TokenError init failures in EncryptionFailedError", async () => {
+    it("wraps non-ZamaError init failures in EncryptionFailedError", async () => {
       mockPool.initPool.mockRejectedValueOnce(new Error("pool init failed"));
       const relayer = createNodeRelayer();
 
@@ -596,7 +596,7 @@ describe("RelayerNode", () => {
       await expect(promise).rejects.toThrow("Failed to initialize FHE worker pool");
     });
 
-    it("passes through TokenError from init without re-wrapping", async () => {
+    it("passes through ZamaError from init without re-wrapping", async () => {
       const tokenError = new EncryptionFailedError("already an SDK error");
       mockPool.initPool.mockRejectedValueOnce(tokenError);
       const relayer = createNodeRelayer();

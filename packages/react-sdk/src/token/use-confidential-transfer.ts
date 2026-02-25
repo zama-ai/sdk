@@ -8,7 +8,7 @@ import {
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
 } from "./balance-query-keys";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useConfidentialTransfer}. */
 export interface ConfidentialTransferParams {
@@ -19,7 +19,7 @@ export interface ConfidentialTransferParams {
 }
 
 /** Configuration for {@link useConfidentialTransfer}. */
-export interface UseConfidentialTransferConfig extends UseTokenConfig {
+export interface UseConfidentialTransferConfig extends UseZamaConfig {
   /**
    * When `true`, optimistically subtracts the transfer amount from cached balance
    * before the transaction confirms. Rolls back on error.
@@ -45,7 +45,7 @@ export function confidentialTransferMutationOptions(token: Token) {
 /**
  * Encrypt and send a confidential transfer. Invalidates balance caches on success.
  *
- * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link EncryptionFailedError} — FHE encryption failed
  * - {@link TransactionRevertedError} — on-chain transaction reverted

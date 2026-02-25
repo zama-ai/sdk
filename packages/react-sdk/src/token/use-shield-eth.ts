@@ -8,7 +8,7 @@ import {
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
 } from "./balance-query-keys";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useShieldETH}. */
 export interface ShieldETHParams {
@@ -45,7 +45,7 @@ export function shieldETHMutationOptions(token: Token) {
  * ```
  */
 export function useShieldETH(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, Address>,
 ) {
   const token = useToken(config);

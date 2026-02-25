@@ -21,14 +21,14 @@ pnpm add @zama-fhe/sdk
 ### Browser
 
 ```ts
-import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
 // 1. Create signer and relayer
 const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
@@ -65,14 +65,14 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 ### Node.js
 
 ```ts
-import { TokenSDK, MemoryStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, MemoryStorage } from "@zama-fhe/sdk";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
 const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerNode({
     getChainId: () => signer.getChainId(),
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
@@ -97,12 +97,12 @@ const balance = await token.balanceOf();
 
 ## Core Concepts
 
-### TokenSDK
+### ZamaSDK
 
 Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Acts as a factory for token instances.
 
 ```ts
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer, // RelayerSDK — either RelayerWeb (browser) or RelayerNode (Node.js)
   signer, // GenericSigner
   storage, // GenericStringStorage
@@ -231,7 +231,7 @@ interface GenericStringStorage {
 
 ## Configuration Reference
 
-### `TokenSDKConfig`
+### `ZamaSDKConfig`
 
 | Field                    | Type                   | Description                                              |
 | ------------------------ | ---------------------- | -------------------------------------------------------- |
@@ -246,7 +246,7 @@ interface GenericStringStorage {
 The `onEvent` callback receives typed events at key lifecycle points. Event payloads never contain sensitive data (amounts, keys, proofs) — only metadata useful for debugging and telemetry.
 
 ```ts
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer,
   signer,
   storage,
@@ -280,7 +280,7 @@ The `onEvent` callback is a simple function — you can bridge it to any event s
 // Fan out to multiple listeners with EventEmitter
 import { EventEmitter } from "events";
 const emitter = new EventEmitter();
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   // ...
   onEvent: (event) => emitter.emit(event.type, event),
 });
@@ -292,14 +292,14 @@ emitter.on("encrypt:start", (e) => {
 });
 
 // Bridge to DOM CustomEvent (e.g. for cross-framework communication)
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   // ...
   onEvent: (event) => window.dispatchEvent(new CustomEvent(event.type, { detail: event })),
 });
 
 // Collect into React state
 const [events, setEvents] = useState<ZamaSDKEvent[]>([]);
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   // ...
   onEvent: (event) => setEvents((prev) => [...prev, event]),
 });
@@ -633,10 +633,10 @@ interface ActivityLogMetadata {
 
 ## Error Handling
 
-All SDK errors extend `TokenError`. Use `instanceof` to catch specific error types:
+All SDK errors extend `ZamaError`. Use `instanceof` to catch specific error types:
 
 ```ts
-import { TokenError, SigningRejectedError, EncryptionFailedError } from "@zama-fhe/sdk";
+import { ZamaError, SigningRejectedError, EncryptionFailedError } from "@zama-fhe/sdk";
 
 try {
   await token.confidentialTransfer(to, amount);
@@ -647,7 +647,7 @@ try {
   if (error instanceof EncryptionFailedError) {
     // FHE encryption failed
   }
-  if (error instanceof TokenError) {
+  if (error instanceof ZamaError) {
     // Any other SDK error — check error.code for details
   }
 }

@@ -6,8 +6,8 @@ import { ReadonlyToken } from "./readonly-token";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 
-/** Configuration for {@link TokenSDK}. */
-export interface TokenSDKConfig {
+/** Configuration for {@link ZamaSDK}. */
+export interface ZamaSDKConfig {
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
   relayer: RelayerSDK;
   /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
@@ -21,17 +21,17 @@ export interface TokenSDKConfig {
 }
 
 /**
- * TokenSDK — composes a RelayerSDK with token abstraction.
+ * ZamaSDK — composes a RelayerSDK with token abstraction.
  * Provides signer, storage, and high-level ERC-20-like token interface.
  */
-export class TokenSDK {
+export class ZamaSDK {
   readonly relayer: RelayerSDK;
   readonly signer: GenericSigner;
   readonly storage: GenericStringStorage;
   readonly #credentialDurationDays: number | undefined;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
-  constructor(config: TokenSDKConfig) {
+  constructor(config: ZamaSDKConfig) {
     this.relayer = config.relayer;
     this.signer = config.signer;
     this.storage = config.storage;

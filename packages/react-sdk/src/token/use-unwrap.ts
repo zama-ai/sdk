@@ -8,7 +8,7 @@ import {
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
 } from "./balance-query-keys";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useUnwrap}. */
 export interface UnwrapParams {
@@ -44,7 +44,7 @@ export function unwrapMutationOptions(token: Token) {
  * ```
  */
 export function useUnwrap(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>,
 ) {
   const token = useToken(config);

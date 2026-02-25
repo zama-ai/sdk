@@ -93,9 +93,9 @@ export interface UnshieldCallbacks {
 
 // Re-export errors for backward compatibility
 export {
-  TokenErrorCode,
-  type TokenErrorCode as TokenErrorCodeType,
-  TokenError,
+  ZamaErrorCode,
+  type ZamaErrorCode as ZamaErrorCodeType,
+  ZamaError,
   SigningRejectedError,
   SigningFailedError,
   EncryptionFailedError,

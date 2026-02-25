@@ -6,7 +6,7 @@ import { readWrapperForTokenContract } from "@zama-fhe/sdk/ethers";
 
 type Params = Parameters<typeof readWrapperForTokenContract>;
 
-export interface UseWrapperForTokenConfig {
+export interface UseWrapperForZamaConfig {
   provider: Params[0];
   coordinator: Address | undefined;
   tokenAddress: Address | undefined;
@@ -18,7 +18,7 @@ export interface UseWrapperForTokenSuspenseConfig {
   tokenAddress: Address;
 }
 
-export function useWrapperForToken(config: UseWrapperForTokenConfig) {
+export function useWrapperForToken(config: UseWrapperForZamaConfig) {
   const { provider, coordinator, tokenAddress } = config;
   const enabled = !!coordinator && !!tokenAddress;
   return useQuery({

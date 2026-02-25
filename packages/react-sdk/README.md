@@ -162,10 +162,10 @@ All hooks require a `ZamaProvider` (or one of its variants) in the component tre
 
 #### `useZamaSDK`
 
-Returns the `TokenSDK` instance from context. Use this when you need direct access to the SDK (e.g. for low-level relayer operations).
+Returns the `ZamaSDK` instance from context. Use this when you need direct access to the SDK (e.g. for low-level relayer operations).
 
 ```ts
-function useZamaSDK(): TokenSDK;
+function useZamaSDK(): ZamaSDK;
 ```
 
 #### `useToken`
@@ -263,7 +263,7 @@ Encrypted transfer. Encrypts the amount and calls the contract. Automatically in
 
 ```ts
 function useConfidentialTransfer(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ConfidentialTransferParams>,
 ): UseMutationResult<Address, Error, ConfidentialTransferParams>;
 
@@ -287,7 +287,7 @@ Operator transfer on behalf of another address.
 
 ```ts
 function useConfidentialTransferFrom(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ConfidentialTransferFromParams>,
 ): UseMutationResult<Address, Error, ConfidentialTransferFromParams>;
 
@@ -306,7 +306,7 @@ Shield public ERC-20 tokens into confidential tokens. Handles ERC-20 approval au
 
 ```ts
 function useShield(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ShieldParams>,
 ): UseMutationResult<Address, Error, ShieldParams>;
 
@@ -332,7 +332,7 @@ Shield native ETH into confidential tokens. Use when the underlying token is the
 
 ```ts
 function useShieldETH(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ShieldETHParams>,
 ): UseMutationResult<Address, Error, ShieldETHParams>;
 
@@ -352,7 +352,7 @@ Unshield a specific amount. Handles the entire unwrap + finalize flow. Supports 
 
 ```ts
 function useUnshield(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, UnshieldParams>,
 ): UseMutationResult<Address, Error, UnshieldParams>;
 
@@ -383,7 +383,7 @@ Unshield the entire balance. Handles the entire unwrap + finalize flow. Supports
 
 ```ts
 function useUnshieldAll(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, UnshieldAllParams | void>,
 ): UseMutationResult<Address, Error, UnshieldAllParams | void>;
 
@@ -406,7 +406,7 @@ Resume an interrupted unshield from a saved unwrap tx hash. Useful when the user
 
 ```ts
 function useResumeUnshield(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ResumeUnshieldParams>,
 ): UseMutationResult<Address, Error, ResumeUnshieldParams>;
 
@@ -462,7 +462,7 @@ Request unwrap for a specific amount (requires manual finalization via `useFinal
 
 ```ts
 function useUnwrap(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, UnwrapParams>,
 ): UseMutationResult<Address, Error, UnwrapParams>;
 
@@ -477,7 +477,7 @@ Request unwrap for the entire balance (requires manual finalization).
 
 ```ts
 function useUnwrapAll(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, void>,
 ): UseMutationResult<Address, Error, void>;
 ```
@@ -488,7 +488,7 @@ Complete an unwrap by providing the decryption proof.
 
 ```ts
 function useFinalizeUnwrap(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams>,
 ): UseMutationResult<Address, Error, FinalizeUnwrapParams>;
 
@@ -505,7 +505,7 @@ Set operator approval for the confidential token.
 
 ```ts
 function useConfidentialApprove(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ConfidentialApproveParams>,
 ): UseMutationResult<Address, Error, ConfidentialApproveParams>;
 
@@ -521,7 +521,7 @@ Check if a spender is an approved operator. Enabled only when `spender` is defin
 
 ```ts
 function useConfidentialIsApproved(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   spender: Address | undefined,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<boolean, Error>;
@@ -843,15 +843,15 @@ queryClient.invalidateQueries({ queryKey: confidentialBalanceQueryKeys.all });
 
 All public exports from `@zama-fhe/sdk` are re-exported from the main entry point. You never need to import from the core package directly.
 
-**Classes:** `RelayerWeb`, `TokenSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
+**Classes:** `RelayerWeb`, `ZamaSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
-**Types:** `Address`, `TokenSDKConfig`, `TokenConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `UnshieldCallbacks`.
+**Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyZamaConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `UnshieldCallbacks`.
 
-**Errors:** `TokenError`, `TokenErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`.
+**Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`.
 
 **Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`.
 

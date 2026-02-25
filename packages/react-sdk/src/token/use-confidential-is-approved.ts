@@ -2,7 +2,7 @@
 
 import { useQuery, useSuspenseQuery, skipToken, type UseQueryOptions } from "@tanstack/react-query";
 import type { Address, Token } from "@zama-fhe/sdk";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /**
  * Query key factory for confidential approval queries.
@@ -19,13 +19,13 @@ export const confidentialIsApprovedQueryKeys = {
 } as const;
 
 /** Configuration for {@link useConfidentialIsApproved}. */
-export interface UseConfidentialIsApprovedConfig extends UseTokenConfig {
+export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
   /** Address to check approval for. Pass `undefined` to disable the query. */
   spender: Address | undefined;
 }
 
 /** Configuration for {@link useConfidentialIsApprovedSuspense}. */
-export interface UseConfidentialIsApprovedSuspenseConfig extends UseTokenConfig {
+export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
   /** Address to check approval for. */
   spender: Address;
 }

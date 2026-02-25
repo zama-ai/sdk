@@ -10,7 +10,7 @@ import {
   wagmiBalancePredicates,
 } from "./balance-query-keys";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useResumeUnshield}. */
 export interface ResumeUnshieldParams {
@@ -39,7 +39,7 @@ export function resumeUnshieldMutationOptions(token: Token) {
  * Useful when the user submitted the unwrap but the finalize step was
  * interrupted (e.g. page reload, network error).
  *
- * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link DecryptionFailedError} — public decryption failed during finalize
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
@@ -53,7 +53,7 @@ export function resumeUnshieldMutationOptions(token: Token) {
  * ```
  */
 export function useResumeUnshield(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>,
 ) {
   const token = useToken(config);

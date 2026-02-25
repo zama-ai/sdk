@@ -3,7 +3,7 @@ import { ReadonlyToken } from "../readonly-token";
 import { ZERO_HANDLE } from "../readonly-token";
 import { MemoryStorage } from "../memory-storage";
 import type { GenericSigner } from "../token.types";
-import { TokenErrorCode } from "../token.types";
+import { ZamaErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { DecryptionFailedError } from "../errors";
@@ -152,11 +152,11 @@ describe("ReadonlyToken", () => {
       expect(result.get(unknownHandle)).toBe(0n);
     });
 
-    it("throws TokenError on decryption failure", async () => {
+    it("throws ZamaError on decryption failure", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
       await expect(token.decryptHandles([VALID_HANDLE as Address])).rejects.toMatchObject({
-        code: TokenErrorCode.DecryptionFailed,
+        code: ZamaErrorCode.DecryptionFailed,
         message: "Failed to decrypt handles",
       });
     });
@@ -288,7 +288,7 @@ describe("ReadonlyToken", () => {
   });
 });
 
-describe("TokenSDK token factory", () => {
+describe("ZamaSDK token factory", () => {
   it("creates ReadonlyToken with correct address", () => {
     const sdk = createMockSdk();
     const signer = createMockSigner();

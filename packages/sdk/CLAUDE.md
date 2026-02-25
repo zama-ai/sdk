@@ -30,7 +30,7 @@ Build this package only: `pnpm --filter @zama-fhe/sdk build`
 
 The package exposes four entry points via `package.json` exports:
 
-- **`@zama-fhe/sdk`** — Core SDK: `TokenSDK`, `Token`, `ReadonlyToken`, relayer web backend (`RelayerWeb`), event decoders, activity feed helpers, contract call builders, ABIs, storage adapters, error types
+- **`@zama-fhe/sdk`** — Core SDK: `ZamaSDK`, `Token`, `ReadonlyToken`, relayer web backend (`RelayerWeb`), event decoders, activity feed helpers, contract call builders, ABIs, storage adapters, error types
 - **`@zama-fhe/sdk/viem`** — `ViemSigner` adapter + viem-native read/write contract helpers
 - **`@zama-fhe/sdk/ethers`** — `EthersSigner` adapter + ethers-native read/write contract helpers
 - **`@zama-fhe/sdk/node`** — `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network preset configs
@@ -38,7 +38,7 @@ The package exposes four entry points via `package.json` exports:
 ### Layered Design
 
 ```
-TokenSDK (factory)
+ZamaSDK (factory)
   ├── Token (extends ReadonlyToken)
   │     ├── Contract call builders (src/contracts/) — pure functions returning ContractCallConfig
   │     ├── CredentialsManager — AES-GCM encrypted FHE credential storage
@@ -65,7 +65,7 @@ Browser FHE runs in a Web Worker (`src/worker/`):
 
 ### Error Handling
 
-All SDK errors extend `TokenError` (base class in `src/token/errors.ts`). Each error code has a dedicated subclass (e.g. `EncryptionFailedError`, `SigningRejectedError`). Methods catch non-SDK errors and re-wrap them with the appropriate subclass. Use `instanceof` to match specific errors.
+All SDK errors extend `ZamaError` (base class in `src/token/errors.ts`). Each error code has a dedicated subclass (e.g. `EncryptionFailedError`, `SigningRejectedError`). Methods catch non-SDK errors and re-wrap them with the appropriate subclass. Use `instanceof` to match specific errors.
 
 ## Code Conventions
 

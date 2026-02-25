@@ -15,7 +15,7 @@ import type {
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
 import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { TokenError, EncryptionFailedError } from "../token/errors";
+import { ZamaError, EncryptionFailedError } from "../token/errors";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -90,7 +90,7 @@ export class RelayerWeb implements RelayerSDK {
     if (!this.#initPromise) {
       this.#initPromise = this.#initWorker().catch((error) => {
         this.#initPromise = null;
-        throw error instanceof TokenError
+        throw error instanceof ZamaError
           ? error
           : new EncryptionFailedError("Failed to initialize FHE worker", {
               cause: error instanceof Error ? error : undefined,

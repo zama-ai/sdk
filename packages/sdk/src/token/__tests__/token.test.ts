@@ -3,7 +3,7 @@ import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
-import { TokenError, TokenErrorCode, type GenericSigner } from "../token.types";
+import { ZamaError, ZamaErrorCode, type GenericSigner } from "../token.types";
 import { MemoryStorage } from "../memory-storage";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
@@ -278,7 +278,7 @@ describe("Token", () => {
       );
     });
 
-    it("throws TokenError on decryption failure", async () => {
+    it("throws ZamaError on decryption failure", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(token.decryptBalance(VALID_HANDLE as Address)).rejects.toThrow(
@@ -631,15 +631,15 @@ describe("Token", () => {
   // ── Additional coverage ──────────────────────────────────────────────
 
   describe("confidentialTransfer (error handling)", () => {
-    it("wraps non-TokenError in EncryptionFailed", async () => {
+    it("wraps non-ZamaError in EncryptionFailed", async () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
       await expect(
         token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
-      ).rejects.toSatisfy((err: TokenError) => {
+      ).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.EncryptionFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.EncryptionFailed &&
           err.message === "Failed to encrypt transfer amount"
         );
       });
@@ -667,7 +667,7 @@ describe("Token", () => {
       expect(result.receipt).toEqual({ logs: [] });
     });
 
-    it("wraps non-TokenError in EncryptionFailed", async () => {
+    it("wraps non-ZamaError in EncryptionFailed", async () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
       await expect(
@@ -676,10 +676,10 @@ describe("Token", () => {
           "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
           200n,
         ),
-      ).rejects.toSatisfy((err: TokenError) => {
+      ).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.EncryptionFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.EncryptionFailed &&
           err.message === "Failed to encrypt transferFrom amount"
         );
       });
@@ -707,10 +707,10 @@ describe("Token", () => {
 
       await expect(
         token.approve("0x3333333333333333333333333333333333333333" as Address),
-      ).rejects.toSatisfy((err: TokenError) => {
+      ).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.ApprovalFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.ApprovalFailed &&
           err.message === "Operator approval failed"
         );
       });
@@ -819,10 +819,10 @@ describe("Token", () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(token.shield(100n, { approvalStrategy: "skip" })).rejects.toSatisfy(
-        (err: TokenError) => {
+        (err: ZamaError) => {
           return (
-            err instanceof TokenError &&
-            err.code === TokenErrorCode.TransactionReverted &&
+            err instanceof ZamaError &&
+            err.code === ZamaErrorCode.TransactionReverted &&
             err.message === "Shield transaction failed"
           );
         },
@@ -836,24 +836,24 @@ describe("Token", () => {
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
 
-      await expect(token.shield(100n)).rejects.toSatisfy((err: TokenError) => {
-        return err instanceof TokenError && err.code === TokenErrorCode.ApprovalFailed;
+      await expect(token.shield(100n)).rejects.toSatisfy((err: ZamaError) => {
+        return err instanceof ZamaError && err.code === ZamaErrorCode.ApprovalFailed;
       });
     });
   });
 
   describe("shieldETH (error wrapping)", () => {
-    it("wraps TokenError thrown by writeContract", async () => {
+    it("wraps ZamaError thrown by writeContract", async () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(token.shieldETH(1000n)).rejects.toMatchObject({
-        code: TokenErrorCode.TransactionReverted,
+        code: ZamaErrorCode.TransactionReverted,
         message: "Shield ETH transaction failed",
       });
     });
 
-    it("re-throws TokenError as-is", async () => {
-      const original = new TokenError(TokenErrorCode.EncryptionFailed, "already wrapped");
+    it("re-throws ZamaError as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(token.shieldETH(1000n)).rejects.toBe(original);
@@ -879,10 +879,10 @@ describe("Token", () => {
     it("wraps encrypt failure in EncryptionFailed", async () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("encrypt failed"));
 
-      await expect(token.unwrap(50n)).rejects.toSatisfy((err: TokenError) => {
+      await expect(token.unwrap(50n)).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.EncryptionFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.EncryptionFailed &&
           err.message === "Failed to encrypt unshield amount"
         );
       });
@@ -894,10 +894,10 @@ describe("Token", () => {
       vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.unwrapAll()).rejects.toSatisfy((err: TokenError) => {
+      await expect(token.unwrapAll()).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.TransactionReverted &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.TransactionReverted &&
           err.message === "Unshield-all transaction failed"
         );
       });
@@ -909,10 +909,10 @@ describe("Token", () => {
       vi.mocked(sdk.publicDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toSatisfy(
-        (err: TokenError) => {
+        (err: ZamaError) => {
           return (
-            err instanceof TokenError &&
-            err.code === TokenErrorCode.DecryptionFailed &&
+            err instanceof ZamaError &&
+            err.code === ZamaErrorCode.DecryptionFailed &&
             err.message === "Failed to finalize unshield"
           );
         },
@@ -982,10 +982,10 @@ describe("Token", () => {
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
 
-      await expect(token.approveUnderlying()).rejects.toSatisfy((err: TokenError) => {
+      await expect(token.approveUnderlying()).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.ApprovalFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.ApprovalFailed &&
           err.message === "ERC-20 approval failed"
         );
       });

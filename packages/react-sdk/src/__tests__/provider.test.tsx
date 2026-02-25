@@ -2,7 +2,7 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ZamaSDKEventListener, TokenSDKConfig } from "@zama-fhe/sdk";
+import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
 import { useZamaSDK, ZamaProvider } from "../provider";
 import {
   createMockRelayer,
@@ -11,14 +11,14 @@ import {
   renderWithProviders,
 } from "./test-utils";
 
-// Spy on TokenSDK constructor by wrapping the real class
-const tokenSDKConstructorArgs: TokenSDKConfig[] = [];
+// Spy on ZamaSDK constructor by wrapping the real class
+const tokenSDKConstructorArgs: ZamaSDKConfig[] = [];
 vi.mock("@zama-fhe/sdk", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@zama-fhe/sdk")>();
   return {
     ...actual,
-    TokenSDK: class MockTokenSDK extends actual.TokenSDK {
-      constructor(config: TokenSDKConfig) {
+    ZamaSDK: class MockZamaSDK extends actual.ZamaSDK {
+      constructor(config: ZamaSDKConfig) {
         super(config);
         tokenSDKConstructorArgs.push(config);
       }
@@ -33,7 +33,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     );
   });
 
-  it("returns a TokenSDK instance inside provider", () => {
+  it("returns a ZamaSDK instance inside provider", () => {
     const { result } = renderWithProviders(() => useZamaSDK());
 
     expect(result.current).toBeDefined();
@@ -50,7 +50,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(relayer.terminate).toHaveBeenCalledOnce();
   });
 
-  it("passes credentialDurationDays and onEvent to TokenSDK", () => {
+  it("passes credentialDurationDays and onEvent to ZamaSDK", () => {
     tokenSDKConstructorArgs.length = 0;
 
     const relayer = createMockRelayer();
@@ -81,7 +81,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.signer).toBe(signer);
     expect(result.current.relayer).toBe(relayer);
 
-    // Verify TokenSDK was constructed with credentialDurationDays and onEvent
+    // Verify ZamaSDK was constructed with credentialDurationDays and onEvent
     expect(tokenSDKConstructorArgs).toHaveLength(1);
     expect(tokenSDKConstructorArgs[0]).toEqual(
       expect.objectContaining({

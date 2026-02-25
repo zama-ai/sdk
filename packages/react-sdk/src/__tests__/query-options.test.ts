@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ReadonlyToken, Token, Address } from "@zama-fhe/sdk";
-import { TokenSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { tokenMetadataQueryOptions } from "../token/use-token-metadata";
 import { isConfidentialQueryOptions, isWrapperQueryOptions } from "../token/use-is-confidential";
 import { totalSupplyQueryOptions } from "../token/use-total-supply";
@@ -237,7 +237,7 @@ describe("query options factories", () => {
 
   describe("publicKeyQueryOptions", () => {
     it("returns correct queryKey and staleTime Infinity", () => {
-      const sdk = new TokenSDK({
+      const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
         signer: createMockSigner(),
         storage: createMockStorage(),
@@ -250,7 +250,7 @@ describe("query options factories", () => {
 
     it("queryFn calls relayer.getPublicKey", async () => {
       const relayer = createMockRelayer();
-      const sdk = new TokenSDK({
+      const sdk = new ZamaSDK({
         relayer,
         signer: createMockSigner(),
         storage: createMockStorage(),
@@ -265,7 +265,7 @@ describe("query options factories", () => {
 
   describe("publicParamsQueryOptions", () => {
     it("queryKey includes bits", () => {
-      const sdk = new TokenSDK({
+      const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
         signer: createMockSigner(),
         storage: createMockStorage(),
@@ -278,7 +278,7 @@ describe("query options factories", () => {
 
     it("queryFn calls relayer.getPublicParams", async () => {
       const relayer = createMockRelayer();
-      const sdk = new TokenSDK({
+      const sdk = new ZamaSDK({
         relayer,
         signer: createMockSigner(),
         storage: createMockStorage(),

@@ -8,7 +8,7 @@ import {
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
 } from "./balance-query-keys";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /**
  * TanStack Query mutation options factory for unwrap-all.
@@ -38,7 +38,7 @@ export function unwrapAllMutationOptions(token: Token) {
  * ```
  */
 export function useUnwrapAll(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<TransactionResult, Error, void, Address>,
 ) {
   const token = useToken(config);

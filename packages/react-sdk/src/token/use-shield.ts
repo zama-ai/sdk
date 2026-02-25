@@ -9,7 +9,7 @@ import {
   confidentialHandlesQueryKeys,
   wagmiBalancePredicates,
 } from "./balance-query-keys";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useShield}. */
 export interface ShieldParams {
@@ -22,7 +22,7 @@ export interface ShieldParams {
 }
 
 /** Configuration for {@link useShield}. */
-export interface UseShieldConfig extends UseTokenConfig {
+export interface UseShieldConfig extends UseZamaConfig {
   /**
    * When `true`, optimistically adds the wrap amount to the cached confidential balance
    * before the transaction confirms. Rolls back on error.
@@ -49,7 +49,7 @@ export function shieldMutationOptions(token: Token) {
  * Shield public ERC-20 tokens into confidential tokens.
  * Handles ERC-20 approval automatically. Invalidates balance caches on success.
  *
- * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link ApprovalFailedError} — ERC-20 approval transaction failed
  * - {@link TransactionRevertedError} — shield transaction reverted

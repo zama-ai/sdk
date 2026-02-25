@@ -6,7 +6,7 @@ import { readUnderlyingTokenContract } from "@zama-fhe/sdk/viem";
 
 type Params = Parameters<typeof readUnderlyingTokenContract>;
 
-export interface UseUnderlyingTokenConfig {
+export interface UseUnderlyingZamaConfig {
   client: Params[0];
   wrapperAddress: Address | undefined;
 }
@@ -16,7 +16,7 @@ export interface UseUnderlyingTokenSuspenseConfig {
   wrapperAddress: Address;
 }
 
-export function useUnderlyingToken(config: UseUnderlyingTokenConfig) {
+export function useUnderlyingToken(config: UseUnderlyingZamaConfig) {
   const { client, wrapperAddress } = config;
   const enabled = !!wrapperAddress;
   return useQuery({

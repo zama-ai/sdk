@@ -19,13 +19,13 @@ export { useSetOperator, type SetOperatorParams } from "./use-set-operator";
 export {
   useWrapperForToken,
   useWrapperForTokenSuspense,
-  type UseWrapperForTokenConfig,
+  type UseWrapperForZamaConfig,
   type UseWrapperForTokenSuspenseConfig,
 } from "./use-wrapper-for-token";
 export {
   useUnderlyingToken,
   useUnderlyingTokenSuspense,
-  type UseUnderlyingTokenConfig,
+  type UseUnderlyingZamaConfig,
   type UseUnderlyingTokenSuspenseConfig,
 } from "./use-underlying-token";
 export { useShield, type ShieldParams } from "./use-wrap";

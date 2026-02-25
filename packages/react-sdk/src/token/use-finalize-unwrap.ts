@@ -10,7 +10,7 @@ import {
   wagmiBalancePredicates,
 } from "./balance-query-keys";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useFinalizeUnwrap}. */
 export interface FinalizeUnwrapParams {
@@ -46,7 +46,7 @@ export function finalizeUnwrapMutationOptions(token: Token) {
  * ```
  */
 export function useFinalizeUnwrap(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>,
 ) {
   const token = useToken(config);

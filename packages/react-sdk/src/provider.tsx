@@ -6,7 +6,7 @@ import type {
   RelayerSDK,
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
-import { TokenSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
 
 /** Props for {@link ZamaProvider}. */
@@ -23,10 +23,10 @@ interface ZamaProviderProps extends PropsWithChildren {
   onEvent?: ZamaSDKEventListener;
 }
 
-const TokenSDKContext = createContext<TokenSDK | null>(null);
+const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
 /**
- * Provides a {@link TokenSDK} instance to all descendant hooks.
+ * Provides a {@link ZamaSDK} instance to all descendant hooks.
  * Terminates the relayer on unmount.
  *
  * @example
@@ -46,7 +46,7 @@ export function ZamaProvider({
 }: ZamaProviderProps) {
   const sdk = useMemo(
     () =>
-      new TokenSDK({
+      new ZamaSDK({
         relayer,
         signer,
         storage,
@@ -60,11 +60,11 @@ export function ZamaProvider({
     return () => sdk.terminate();
   }, [sdk]);
 
-  return <TokenSDKContext.Provider value={sdk}>{children}</TokenSDKContext.Provider>;
+  return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;
 }
 
 /**
- * Access the {@link TokenSDK} instance from context.
+ * Access the {@link ZamaSDK} instance from context.
  * Must be used within a {@link ZamaProvider}.
  *
  * @example
@@ -73,8 +73,8 @@ export function ZamaProvider({
  * const token = sdk.createReadonlyToken("0x...");
  * ```
  */
-export function useZamaSDK(): TokenSDK {
-  const context = useContext(TokenSDKContext);
+export function useZamaSDK(): ZamaSDK {
+  const context = useContext(ZamaSDKContext);
 
   if (!context) {
     throw new Error("useZamaSDK must be used within a ZamaProvider");

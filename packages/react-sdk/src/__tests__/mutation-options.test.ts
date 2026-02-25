@@ -155,9 +155,9 @@ it("authorizeAllMutationOptions", async () => {
   const relayer = createMockRelayer();
   const signer = createMockSigner();
   const storage = createMockStorage();
-  // We need a real-ish TokenSDK to test this
-  const { TokenSDK: TokenSDKClass } = await import("@zama-fhe/sdk");
-  const sdk = new TokenSDKClass({ relayer, signer, storage });
+  // We need a real-ish ZamaSDK to test this
+  const { ZamaSDK: ZamaSDKClass } = await import("@zama-fhe/sdk");
+  const sdk = new ZamaSDKClass({ relayer, signer, storage });
   const opts = authorizeAllMutationOptions(sdk);
 
   expect(opts.mutationKey).toEqual(["authorizeAll"]);
@@ -169,8 +169,8 @@ it("encryptMutationOptions", async () => {
   const relayer = createMockRelayer();
   const signer = createMockSigner();
   const storage = createMockStorage();
-  const { TokenSDK: TokenSDKClass } = await import("@zama-fhe/sdk");
-  const sdk = new TokenSDKClass({ relayer, signer, storage });
+  const { ZamaSDK: ZamaSDKClass } = await import("@zama-fhe/sdk");
+  const sdk = new ZamaSDKClass({ relayer, signer, storage });
   const opts = encryptMutationOptions(sdk);
 
   expect(opts.mutationKey).toEqual(["encrypt"]);
