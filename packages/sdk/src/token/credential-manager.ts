@@ -12,9 +12,14 @@ interface EncryptedData {
   ciphertext: string; // Base64-encoded encrypted data
 }
 
-/** Internal storage shape — privateKey is replaced by its encrypted form. */
-interface EncryptedCredentials extends Omit<StoredCredentials, "privateKey"> {
+/** Internal storage shape — privateKey and signature are excluded; only encrypted privateKey is stored. */
+interface EncryptedCredentials extends Omit<StoredCredentials, "privateKey" | "signature"> {
   encryptedPrivateKey: EncryptedData;
+}
+
+/** Legacy format that included the signature in persisted data (pre-migration). */
+interface LegacyEncryptedCredentials extends EncryptedCredentials {
+  signature: string;
 }
 
 /**
@@ -46,6 +51,7 @@ export class CredentialsManager {
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
+  #sessionSignatures: Map<string, string> = new Map();
 
   constructor(config: CredentialsManagerConfig) {
     this.#sdk = config.sdk;
@@ -90,19 +96,47 @@ export class CredentialsManager {
       if (stored) {
         const encrypted = JSON.parse(stored) as unknown;
         this.#assertEncryptedCredentials(encrypted);
-        const creds = await this.#decryptCredentials(encrypted);
-        if (this.#isValid(creds, contractAddresses)) {
-          this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
-          return creds;
+
+        // Migration: if legacy format has signature, use it and cache in session
+        if (this.#hasLegacySignature(encrypted)) {
+          const creds = await this.#decryptCredentials(encrypted, encrypted.signature);
+          if (this.#isValid(creds, contractAddresses)) {
+            this.#sessionSignatures.set(storeKey, encrypted.signature);
+            // Re-persist without signature (migration)
+            const migrated = await this.#encryptCredentials(creds);
+            await this.#storage.setItem(storeKey, JSON.stringify(migrated)).catch(() => {});
+            this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+            return creds;
+          }
+          this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
+        } else {
+          // New format: check session map
+          const sessionSig = this.#sessionSignatures.get(storeKey);
+          if (sessionSig) {
+            const creds = await this.#decryptCredentials(encrypted, sessionSig);
+            if (this.#isValid(creds, contractAddresses)) {
+              this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+              return creds;
+            }
+            this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
+          } else {
+            // No session signature — need to re-sign
+            if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
+              const signature = await this.#reSign(encrypted);
+              this.#sessionSignatures.set(storeKey, signature);
+              const creds = await this.#decryptCredentials(encrypted, signature);
+              this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+              return creds;
+            }
+            this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
+          }
         }
-        this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
       }
     } catch {
-      // Stored credentials unreadable (corrupt, schema change, decryption failure) — regenerate.
       try {
         await this.#storage.removeItem(storeKey);
       } catch {
-        // Best effort cleanup
+        /* best effort */
       }
     }
 
@@ -143,10 +177,9 @@ export class CredentialsManager {
 
       const encrypted = JSON.parse(stored) as unknown;
       this.#assertEncryptedCredentials(encrypted);
-      const creds = await this.#decryptCredentials(encrypted);
 
       const requiredContracts = contractAddress ? [contractAddress] : [];
-      return !this.#isValid(creds, requiredContracts);
+      return !this.#isValidWithoutDecrypt(encrypted, requiredContracts);
     } catch {
       return false;
     }
@@ -183,11 +216,15 @@ export class CredentialsManager {
 
   #assertEncryptedCredentials(data: unknown): asserts data is EncryptedCredentials {
     assertObject(data, "Stored credentials");
-    assertString(data.signature, "credentials.signature");
+    assertString(data.publicKey, "credentials.publicKey");
     assertArray(data.contractAddresses, "credentials.contractAddresses");
     assertObject(data.encryptedPrivateKey, "credentials.encryptedPrivateKey");
     assertString(data.encryptedPrivateKey.iv, "encryptedPrivateKey.iv");
     assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
+  }
+
+  #hasLegacySignature(data: EncryptedCredentials): data is LegacyEncryptedCredentials {
+    return "signature" in data && typeof (data as Record<string, unknown>).signature === "string";
   }
 
   #isValid(creds: StoredCredentials, requiredContracts: Address[]): boolean {
@@ -197,6 +234,24 @@ export class CredentialsManager {
 
     const signedSet = new Set(creds.contractAddresses.map((a) => a.toLowerCase()));
     return requiredContracts.every((addr) => signedSet.has(addr.toLowerCase()));
+  }
+
+  #isValidWithoutDecrypt(encrypted: EncryptedCredentials, requiredContracts: Address[]): boolean {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const expiresAt = encrypted.startTimestamp + encrypted.durationDays * 86400;
+    if (nowSeconds >= expiresAt) return false;
+    const signedSet = new Set(encrypted.contractAddresses.map((a) => a.toLowerCase()));
+    return requiredContracts.every((addr) => signedSet.has(addr.toLowerCase()));
+  }
+
+  async #reSign(encrypted: EncryptedCredentials): Promise<string> {
+    const eip712 = await this.#sdk.createEIP712(
+      encrypted.publicKey,
+      encrypted.contractAddresses,
+      encrypted.startTimestamp,
+      this.#durationDays,
+    );
+    return this.#signer.signTypedData(eip712);
   }
 
   // ── Credential generation ───────────────────────────────────
@@ -224,6 +279,7 @@ export class CredentialsManager {
       );
 
       const signature = await this.#signer.signTypedData(eip712);
+      this.#sessionSignatures.set(await this.#storeKey(), signature);
 
       const creds: StoredCredentials = {
         publicKey: keypair.publicKey,
@@ -265,19 +321,18 @@ export class CredentialsManager {
   async #encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials> {
     const address = (await this.#signer.getAddress()).toLowerCase();
     const encryptedPrivateKey = await this.#encrypt(creds.privateKey, creds.signature, address);
-    const { privateKey: _, ...rest } = creds;
+    const { privateKey: _, signature: _sig, ...rest } = creds;
     return { ...rest, encryptedPrivateKey };
   }
 
-  async #decryptCredentials(encrypted: EncryptedCredentials): Promise<StoredCredentials> {
+  async #decryptCredentials(
+    encrypted: EncryptedCredentials,
+    signature: string,
+  ): Promise<StoredCredentials> {
     const address = (await this.#signer.getAddress()).toLowerCase();
-    const privateKey = await this.#decrypt(
-      encrypted.encryptedPrivateKey,
-      encrypted.signature,
-      address,
-    );
+    const privateKey = await this.#decrypt(encrypted.encryptedPrivateKey, signature, address);
     const { encryptedPrivateKey: _, ...rest } = encrypted;
-    return { ...rest, privateKey };
+    return { ...rest, privateKey, signature };
   }
 
   /**
