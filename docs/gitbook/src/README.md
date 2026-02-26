@@ -37,7 +37,10 @@ const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
-      [11155111]: { relayerUrl: "https://relayer.zama.ai", network: YOUR_RPC_URL },
+      [11155111]: {
+        relayerUrl: "https://your-app.com/api/relayer",
+        network: YOUR_RPC_URL,
+      },
     },
   }),
   signer: new ViemSigner({ walletClient, publicClient }),

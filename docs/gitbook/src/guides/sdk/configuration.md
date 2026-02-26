@@ -28,11 +28,11 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
     [mainnet.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
   },
@@ -66,7 +66,7 @@ const relayer = new RelayerNode({
   poolSize: 4, // worker threads (defaults to min(CPU cores, 4))
   transports: {
     [11155111]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-backend.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -83,12 +83,12 @@ import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 const transports = {
   [SepoliaConfig.chainId]: {
     ...SepoliaConfig,
-    relayerUrl: "/api/relayer",
+    relayerUrl: "https://your-app.com/api/relayer",
     network: "https://sepolia.infura.io/v3/YOUR_KEY",
   },
   [MainnetConfig.chainId]: {
     ...MainnetConfig,
-    relayerUrl: "/api/relayer",
+    relayerUrl: "https://your-app.com/api/relayer",
     network: "https://mainnet.infura.io/v3/YOUR_KEY",
   },
 };
@@ -171,7 +171,8 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "/api/relayer", // your backend proxy
+      // your backend proxy
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },

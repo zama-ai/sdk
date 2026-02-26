@@ -2,6 +2,23 @@
 
 Pick the setup that matches your stack. Each example gets you from zero to a working confidential transfer.
 
+## Authentication
+
+The relayer requires an API key. In the examples below, replace the relayer URL with your own backend proxy that injects the key (recommended for browser apps), or pass the key directly for server-side use:
+
+```ts
+// Option A: proxy through your backend (browser apps)
+relayerUrl: "https://your-app.com/api/relayer"
+
+// Option B: direct API key (server-side / prototyping)
+relayerUrl: "https://relayer.zama.ai",
+auth: { __type: "ApiKeyHeader", value: "your-api-key" }
+```
+
+See [Configuration > Authentication](sdk/configuration.md#authentication) for full details and a backend proxy example.
+
+---
+
 ## React + wagmi
 
 The most common setup for dApps. You'll need wagmi, React Query, and the React SDK.
@@ -32,7 +49,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -106,7 +123,7 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -154,7 +171,7 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [11155111]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -190,7 +207,7 @@ const sdk = new ZamaSDK({
     poolSize: 4, // worker threads (defaults to min(CPU cores, 4))
     transports: {
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },

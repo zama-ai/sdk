@@ -40,7 +40,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -76,7 +76,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -108,7 +108,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [11155111]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
