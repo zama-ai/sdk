@@ -18,6 +18,16 @@ export default defineConfig([
   ...tseslint.configs.recommended,
   prettierConfig,
   {
+    files: ["scripts/**/*.mjs", "*.cjs"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        module: "readonly",
+        process: "readonly",
+      },
+    },
+  },
+  {
     rules: {
       "@typescript-eslint/no-unused-vars": [
         "warn",

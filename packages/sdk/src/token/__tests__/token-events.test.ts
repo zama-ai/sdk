@@ -89,8 +89,8 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.UnshieldPhase2Submitted).toBe("unshield:phase2_submitted");
   });
 
-  it("has exactly 24 event types", () => {
-    expect(Object.keys(ZamaSDKEvents)).toHaveLength(24);
+  it("has exactly 22 event types", () => {
+    expect(Object.keys(ZamaSDKEvents)).toHaveLength(22);
   });
 
   it("has unique event values", () => {

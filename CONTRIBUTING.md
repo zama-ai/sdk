@@ -6,8 +6,8 @@ Thank you for your interest in contributing to the Zama SDK! This guide will hel
 
 ### Prerequisites
 
-- **Node.js** >= 20
-- **pnpm** >= 9
+- **Node.js** >= 22
+- **pnpm** >= 10
 
 ### Getting Started
 
@@ -95,21 +95,32 @@ pnpm e2e:test
 2. **Add tests** — new features and bug fixes should include tests
 3. **Update types** — if you change public APIs, update TypeScript types accordingly
 4. **Run all checks** — ensure `pnpm typecheck && pnpm lint && pnpm test:run && pnpm build` passes
-5. **Add a changeset** — run `pnpm changeset` to describe your change for the changelog
+5. **Use a Conventional Commit PR title** — examples: `fix: handle signer timeout`, `feat(react-sdk): add cached token balance hook`
 
-### Changesets
+### Release Automation
 
-We use [Changesets](https://github.com/changesets/changesets) for versioning:
+We use [semantic-release](https://semantic-release.gitbook.io/semantic-release/) for automated versioning and publishing.
 
-```bash
-pnpm changeset
-```
+Release behavior:
 
-Select the affected packages and describe the change. Choose the appropriate semver bump:
+1. PR titles are validated against Conventional Commits.
+2. Squash-merging into a release branch (`main` or `prerelease`) preserves that title as the release signal.
+3. semantic-release computes the next version (`patch`/`minor`/`major`) from merged commits.
+4. `@zama-fhe/sdk` and `@zama-fhe/react-sdk` are versioned and published together in lockstep.
+5. `main` publishes stable versions to npm `latest`, while `prerelease` publishes prerelease versions to npm `alpha`.
+6. GitHub release notes and tags are generated automatically.
 
-- **patch** — bug fixes, documentation
-- **minor** — new features, non-breaking additions
-- **major** — breaking changes to public APIs
+Install channels:
+
+- Stable: `npm i @zama-fhe/sdk`
+- Prerelease: `npm i @zama-fhe/sdk@alpha`
+
+Maintainer requirements:
+
+- Configure branch protection on `main` to require both `Vitest` and `Playwright` checks before merge.
+- Configure branch protection on `prerelease` with the same required checks.
+- Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` workflow.
+- Keep npm provenance enabled in CI (`NPM_CONFIG_PROVENANCE=true`).
 
 ## Architecture Guidelines
 
@@ -142,4 +153,4 @@ Use [GitHub Issues](https://github.com/zama-ai/sdk/issues) for bug reports and f
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [BSD-3-Clause License](LICENSE).
+By contributing, you agree that your contributions will be licensed under the [BSD-3-Clause-Clear License](LICENSE).

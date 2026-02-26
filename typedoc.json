@@ -23,7 +23,7 @@
   "categorizeByGroup": true,
   "externalSymbolLinkMappings": {
     "@zama-fhe/relayer-sdk": {
-      "ZKProofLike": "https://docs.zama.ai/fhevm"
+      "ZKProofLike": "https://docs.zama.org/protocol/protocol/overview"
     }
   }
 }
