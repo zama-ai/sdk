@@ -33,11 +33,12 @@ import {
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
 // Setup (see Quick Start for the full wagmi config)
-const queryClient = new QueryClient();
 const signer = new WagmiSigner({ config: wagmiConfig });
 const relayer = new RelayerWeb({
   /* ... */
 });
+
+const queryClient = new QueryClient();
 
 function App() {
   return (

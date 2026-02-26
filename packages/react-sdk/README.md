@@ -31,8 +31,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
-const queryClient = new QueryClient();
-
 const wagmiConfig = createConfig({
   chains: [mainnet, sepolia],
   transports: {
@@ -56,6 +54,8 @@ const relayer = new RelayerWeb({
     },
   },
 });
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
@@ -90,8 +90,6 @@ import {
   MemoryStorage,
 } from "@zama-fhe/react-sdk";
 
-const queryClient = new QueryClient();
-
 const relayer = new RelayerWeb({
   getChainId: () => yourCustomSigner.getChainId(),
   transports: {
@@ -105,6 +103,8 @@ const relayer = new RelayerWeb({
     },
   },
 });
+
+const queryClient = new QueryClient();
 
 function App() {
   return (

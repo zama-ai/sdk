@@ -34,7 +34,6 @@ const wagmiConfig = createConfig({
   },
 });
 
-const queryClient = new QueryClient();
 const signer = new WagmiSigner({ config: wagmiConfig });
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
@@ -45,6 +44,8 @@ const relayer = new RelayerWeb({
     },
   },
 });
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
@@ -68,8 +69,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { ViemSigner } from "@zama-fhe/react-sdk/viem";
 
-const queryClient = new QueryClient();
-
 // walletClient and publicClient from your viem setup
 const signer = new ViemSigner({ walletClient, publicClient });
 const relayer = new RelayerWeb({
@@ -81,6 +80,8 @@ const relayer = new RelayerWeb({
     },
   },
 });
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
@@ -100,8 +101,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { EthersSigner } from "@zama-fhe/react-sdk/ethers";
 
-const queryClient = new QueryClient();
-
 // ethersSigner from BrowserProvider.getSigner() or similar
 const signer = new EthersSigner({ signer: ethersSigner });
 const relayer = new RelayerWeb({
@@ -113,6 +112,8 @@ const relayer = new RelayerWeb({
     },
   },
 });
+
+const queryClient = new QueryClient();
 
 function App() {
   return (

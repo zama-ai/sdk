@@ -43,7 +43,6 @@ const wagmiConfig = createConfig({
   },
 });
 
-const queryClient = new QueryClient();
 const signer = new WagmiSigner({ config: wagmiConfig });
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
@@ -54,6 +53,8 @@ const relayer = new RelayerWeb({
     },
   },
 });
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
