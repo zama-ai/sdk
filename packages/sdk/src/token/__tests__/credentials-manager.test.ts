@@ -108,6 +108,8 @@ describe("CredentialsManager", () => {
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored!);
     expect(parsed.publicKey).toBe("0xpub123");
+    // Signature should NOT be persisted (session-scoped only)
+    expect(parsed.signature).toBeUndefined();
   });
 
   it("does not store the full address as key", async () => {
@@ -129,7 +131,35 @@ describe("CredentialsManager", () => {
     });
     await manager2.get("0xtoken" as Address);
 
+    // Keypair should NOT be regenerated — only re-signed
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+    // signTypedData called twice: once for original create, once for re-sign on new instance
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+  });
+
+  it("loads credentials stored without signature field (new format)", async () => {
+    // Create credentials to get valid encrypted data
+    await manager.get("0xtoken" as Address);
+
+    // Read stored data and strip the signature field (simulate new format)
+    const stored = await store.getItem(storeKey);
+    const parsed = JSON.parse(stored!);
+    delete parsed.signature;
+    await store.setItem(storeKey, JSON.stringify(parsed));
+
+    // New manager instance should re-sign and return valid credentials
+    const manager2 = new CredentialsManager({
+      sdk: sdk as unknown as RelayerSDK,
+      signer,
+      storage: store,
+      durationDays: 1,
+    });
+    const creds2 = await manager2.get("0xtoken" as Address);
+
+    // Should have re-signed (1 original + 1 re-sign)
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    expect(creds2.privateKey).toBe("0xpriv456");
+    expect(creds2.signature).toBe("0xsig789");
   });
 
   it("invalidates expired credentials", async () => {
