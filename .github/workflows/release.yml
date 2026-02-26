@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     branches: [main, prerelease]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,14 +17,17 @@ permissions:
 
 jobs:
   vitest:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/vitest.yml
 
   playwright:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/playwright.yml
     secrets:
       SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
   release:
+    if: github.event_name == 'push'
     needs: [vitest, playwright]
     runs-on: ubuntu-latest
     steps:
@@ -58,3 +62,35 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+  release-dry-run:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@9fd676a19091d4595eefd76e4bd31c97133911f1 # v4.2.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure npm 11 for trusted publishing
+        run: |
+          npm i -g npm@^11
+          npm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Semantic release (dry-run)
+        run: pnpm release:dry-run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
