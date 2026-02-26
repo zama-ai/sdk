@@ -2,7 +2,7 @@
   "name": "@zama-fhe/test-app",
   "version": "1.0.0",
   "private": true,
-  "license": "BSD-3-Clause",
+  "license": "BSD-3-Clause-Clear",
   "author": "Zama",
   "scripts": {
     "dev": "next dev --port 3100",

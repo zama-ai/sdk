@@ -1,0 +1,39 @@
+{
+  "allow": [
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSD-3-Clause-Clear",
+    "ISC",
+    "Apache-2.0",
+    "0BSD",
+    "Zlib",
+    "Unlicense",
+    "CC0-1.0",
+    "BlueOak-1.0.0"
+  ],
+  "denyPatterns": [
+    "\\bAGPL(?:-|\\b)",
+    "\\bGPL(?:-|\\b)",
+    "SSPL",
+    "BUSL",
+    "PolyForm",
+    "Commons Clause",
+    "Elastic License",
+    "CC-BY-NC",
+    "MS-RSL",
+    "NonCommercial",
+    "Proprietary"
+  ],
+  "reviewPatterns": [
+    "MPL",
+    "\\bLGPL(?:-|\\b)",
+    "EPL",
+    "CDDL",
+    "CPL",
+    "CC-BY",
+    "UNKNOWN",
+    "UNLICENSED",
+    "Custom"
+  ]
+}

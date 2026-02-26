@@ -1,0 +1,54 @@
+name: License Compatibility
+
+on:
+  pull_request:
+    branches: [main, prerelease]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@9fd676a19091d4595eefd76e4bd31c97133911f1 # v4.2.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Generate license inventory
+        run: |
+          mkdir -p artifacts/license
+          pnpm --filter @zama-fhe/sdk licenses list --json --prod > artifacts/license/licenses-sdk.json
+          pnpm --filter @zama-fhe/react-sdk licenses list --json --prod > artifacts/license/licenses-react-sdk.json
+          node -e 'const fs=require("node:fs"); const sdk=JSON.parse(fs.readFileSync("artifacts/license/licenses-sdk.json","utf8")); const react=JSON.parse(fs.readFileSync("artifacts/license/licenses-react-sdk.json","utf8")); fs.writeFileSync("artifacts/license/licenses-prod.json", JSON.stringify([sdk, react], null, 2));'
+
+      - name: Check compatibility policy
+        run: |
+          node scripts/release/check-license-compat.mjs \
+            artifacts/license/licenses-prod.json \
+            .github/license-policy.json \
+            artifacts/license/report.md
+          cat artifacts/license/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload license artifacts
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: license-compat-report
+          path: artifacts/license/
+          retention-days: 7

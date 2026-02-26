@@ -1,10 +1,8 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows: [Playwright]
-    branches: [main]
-    types: [completed]
+  push:
+    branches: [main, prerelease]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,37 +10,51 @@ concurrency:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
   id-token: write
 
 jobs:
+  vitest:
+    uses: ./.github/workflows/vitest.yml
+
+  playwright:
+    uses: ./.github/workflows/playwright.yml
+    secrets:
+      SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
+
   release:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: [vitest, playwright]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+        uses: pnpm/action-setup@9fd676a19091d4595eefd76e4bd31c97133911f1 # v4.2.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure npm 11 for trusted publishing
+        run: |
+          npm i -g npm@^11
+          npm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Create Release PR
-        id: changesets
-        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1.7.0
-        with:
-          # publish: pnpm release  # TODO: re-enable when NPM_TOKEN is configured
-          version: pnpm version-packages
-          title: "chore: version packages"
-          commit: "chore: version packages"
+      - name: Build packages
+        run: pnpm build
+
+      - name: Semantic release
+        run: pnpm release:ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

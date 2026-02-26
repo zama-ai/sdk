@@ -2,7 +2,7 @@
   "name": "@zama-fhe/react-sdk",
   "version": "1.0.0",
   "description": "React hooks for Zama SDK",
-  "license": "BSD-3-Clause",
+  "license": "BSD-3-Clause-Clear",
   "author": "Zama",
   "repository": {
     "type": "git",
@@ -35,6 +35,9 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "fhe",
     "zama",
@@ -53,11 +56,11 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepare": "tsup",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
+  "devDependencies": {
+    "@zama-fhe/sdk": "workspace:*",
     "tsup": "^8.5.1"
   },
   "peerDependencies": {
