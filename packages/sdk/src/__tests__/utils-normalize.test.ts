@@ -2,22 +2,22 @@ import { describe, it, expect } from "vitest";
 import { normalizeAddress } from "../utils";
 
 describe("normalizeAddress", () => {
-  it("lowercases a checksummed address", () => {
+  it("preserves a checksummed address", () => {
     const checksummed = "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B";
     const result = normalizeAddress(checksummed, "test");
-    expect(result).toBe("0xab5801a7d398351b8be11c439e05c5b3259aec9b");
+    expect(result).toBe(checksummed);
   });
 
-  it("returns already-lowercase address unchanged", () => {
+  it("returns a lowercase address unchanged", () => {
     const lower = "0x1111111111111111111111111111111111111111";
     const result = normalizeAddress(lower, "test");
     expect(result).toBe(lower);
   });
 
-  it("lowercases mixed-case address", () => {
+  it("preserves mixed-case address", () => {
     const mixed = "0xABCDEF1234567890abcdef1234567890ABCDEF12";
     const result = normalizeAddress(mixed, "test");
-    expect(result).toBe("0xabcdef1234567890abcdef1234567890abcdef12");
+    expect(result).toBe(mixed);
   });
 
   it("throws for invalid address (too short)", () => {
