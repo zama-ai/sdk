@@ -1,6 +1,6 @@
 # Zama SDK
 
-Add private token balances and transfers to your dApp. Users can shield ERC-20 tokens so their balances and transfer amounts are encrypted on-chain using [Fully Homomorphic Encryption](https://www.zama.ai/fhevm) — nobody can see how much they hold or send.
+Add private token balances and transfers to your dApp. Users can shield ERC-20 tokens so their balances and transfer amounts are encrypted on-chain using [Fully Homomorphic Encryption](https://docs.zama.org/protocol/protocol/overview) — nobody can see how much they hold or send.
 
 ## What you can build
 
