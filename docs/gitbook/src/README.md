@@ -38,7 +38,7 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: YOUR_RPC_URL,
       },
     },

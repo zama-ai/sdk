@@ -33,11 +33,11 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://your-app.com/api/relayer",
+        relayerUrl: "https://your-app.com/api/relayer/1",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
       [sepolia.id]: {
-        relayerUrl: "https://your-app.com/api/relayer",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -356,7 +356,7 @@ import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 const transports = {
   [SepoliaConfig.chainId]: {
     ...SepoliaConfig,
-    relayerUrl: "https://your-app.com/api/relayer",
+    relayerUrl: "https://your-app.com/api/relayer/11155111",
     network: "https://sepolia.infura.io/v3/KEY",
   },
 };

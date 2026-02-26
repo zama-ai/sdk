@@ -45,11 +45,11 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [mainnet.id]: {
-      relayerUrl: "https://your-app.com/api/relayer",
+      relayerUrl: "https://your-app.com/api/relayer/1",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
     [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -94,11 +94,11 @@ const relayer = new RelayerWeb({
   getChainId: () => yourCustomSigner.getChainId(),
   transports: {
     [mainnet.id]: {
-      relayerUrl: "https://your-app.com/api/relayer",
+      relayerUrl: "https://your-app.com/api/relayer/1",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
     [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },

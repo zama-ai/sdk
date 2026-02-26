@@ -8,7 +8,7 @@ The relayer requires an API key. In the examples below, replace the relayer URL 
 
 ```ts
 // Option A: proxy through your backend (browser apps)
-relayerUrl: "https://your-app.com/api/relayer"
+relayerUrl: "https://your-app.com/api/relayer/11155111"
 
 // Option B: direct API key (server-side / prototyping)
 // relayerUrl is optional — presets include it by default
@@ -48,7 +48,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -124,7 +124,7 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [sepolia.id]: {
-        relayerUrl: "https://your-app.com/api/relayer",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -172,7 +172,7 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
