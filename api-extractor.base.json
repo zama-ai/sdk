@@ -22,10 +22,10 @@
     "reportFolder": "<projectFolder>/etc/"
   },
   "docModel": {
-    "enabled": false
+    "enabled": true
   },
   "dtsRollup": {
-    "enabled": false
+    "enabled": true
   },
   "messages": {
     "compilerMessageReporting": {

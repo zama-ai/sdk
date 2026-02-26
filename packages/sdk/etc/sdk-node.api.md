@@ -12,6 +12,11 @@ import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'
 import { Worker as Worker_2 } from 'node:worker_threads';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
+// Warning: (ae-forgotten-export) The symbol "AsyncLocalMapStorage" needs to be exported by the entry point index.d.ts
+//
+// @public
+export const asyncLocalStorage: AsyncLocalMapStorage;
+
 // @public
 export interface GenericLogger {
     // (undocumented)

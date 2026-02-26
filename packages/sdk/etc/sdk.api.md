@@ -17692,6 +17692,9 @@ export class MemoryStorage implements GenericStringStorage {
 }
 
 // @public
+export const memoryStorage: MemoryStorage;
+
+// @public
 export function nameContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
