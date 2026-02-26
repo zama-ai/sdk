@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { TokenSDK } from "@zama-fhe/sdk";
+import type { ZamaSDK } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
 
 /**
@@ -28,11 +28,11 @@ type PublicParamsResult = PublicParamsData | null;
 /**
  * TanStack Query options factory for FHE public parameters.
  *
- * @param sdk - A `TokenSDK` instance.
+ * @param sdk - A `ZamaSDK` instance.
  * @param bits - The FHE bit size to fetch parameters for (e.g. 2048).
  * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
  */
-export function publicParamsQueryOptions(sdk: TokenSDK, bits: number) {
+export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number) {
   return {
     queryKey: publicParamsQueryKeys.bits(bits),
     queryFn: () => sdk.relayer.getPublicParams(bits) as Promise<PublicParamsResult>,

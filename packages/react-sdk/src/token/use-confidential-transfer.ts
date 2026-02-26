@@ -1,14 +1,14 @@
 "use client";
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token } from "@zama-fhe/sdk";
+import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
 } from "./balance-query-keys";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useConfidentialTransfer}. */
 export interface ConfidentialTransferParams {
@@ -19,11 +19,11 @@ export interface ConfidentialTransferParams {
 }
 
 /** Configuration for {@link useConfidentialTransfer}. */
-export interface UseConfidentialTransferConfig extends UseTokenConfig {
+export interface UseConfidentialTransferConfig extends UseZamaConfig {
   /**
    * When `true`, optimistically subtracts the transfer amount from cached balance
    * before the transaction confirms. Rolls back on error.
-   * @default false
+   * @defaultValue false
    */
   optimistic?: boolean;
 }
@@ -45,7 +45,7 @@ export function confidentialTransferMutationOptions(token: Token) {
 /**
  * Encrypt and send a confidential transfer. Invalidates balance caches on success.
  *
- * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link EncryptionFailedError} — FHE encryption failed
  * - {@link TransactionRevertedError} — on-chain transaction reverted
@@ -74,12 +74,12 @@ export function confidentialTransferMutationOptions(token: Token) {
  */
 export function useConfidentialTransfer(
   config: UseConfidentialTransferConfig,
-  options?: UseMutationOptions<Address, Error, ConfidentialTransferParams, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, Address>,
 ) {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<Address, Error, ConfidentialTransferParams, Address>({
+  return useMutation<TransactionResult, Error, ConfidentialTransferParams, Address>({
     mutationKey: ["confidentialTransfer", config.tokenAddress],
     mutationFn: ({ to, amount }) => token.confidentialTransfer(to, amount),
     ...options,

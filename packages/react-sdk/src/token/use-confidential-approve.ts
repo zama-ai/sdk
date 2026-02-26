@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token } from "@zama-fhe/sdk";
-import { useToken, type UseTokenConfig } from "./use-token";
+import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
+import { useToken, type UseZamaConfig } from "./use-token";
 import { confidentialIsApprovedQueryKeys } from "./use-confidential-is-approved";
 
 /** Parameters passed to the `mutate` function of {@link useConfidentialApprove}. */
@@ -29,7 +29,7 @@ export function confidentialApproveMutationOptions(token: Token) {
 /**
  * Set operator approval for a confidential token. Defaults to 1 hour.
  *
- * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
@@ -43,12 +43,12 @@ export function confidentialApproveMutationOptions(token: Token) {
  * ```
  */
 export function useConfidentialApprove(
-  config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, ConfidentialApproveParams, Address>,
+  config: UseZamaConfig,
+  options?: UseMutationOptions<TransactionResult, Error, ConfidentialApproveParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, ConfidentialApproveParams, Address>({
+  return useMutation<TransactionResult, Error, ConfidentialApproveParams, Address>({
     mutationKey: ["confidentialApprove", config.tokenAddress],
     mutationFn: ({ spender, until }) => token.approve(spender, until),
     ...options,

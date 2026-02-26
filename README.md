@@ -1,4 +1,9 @@
-# Zama Confidential Token SDK
+# Zama SDK
+
+[![npm](https://img.shields.io/npm/v/@zama-fhe/sdk)](https://www.npmjs.com/package/@zama-fhe/sdk)
+[![Vitest](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml/badge.svg?branch=main)](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml)
+[![Playwright](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml/badge.svg?branch=main)](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homomorphic Encryption](https://www.zama.ai/fhevm) (Zama fhEVM). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
 
@@ -23,6 +28,8 @@ The SDK handles all the FHE complexity for you: key generation, encryption, decr
 - **Balance decryption** — Decrypt your own balance using FHE credentials stored locally.
 
 ## Quick Start
+
+The examples below use a backend proxy (`relayerUrl`) to keep your API key server-side. See [Authentication](#3-authentication) for the proxy setup and direct API key alternatives.
 
 ### Install
 
@@ -58,21 +65,22 @@ const wagmiConfig = createConfig({
   },
 });
 
-const queryClient = new QueryClient();
-const signer = new WagmiSigner(wagmiConfig);
+const signer = new WagmiSigner({ config: wagmiConfig });
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [mainnet.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer/1",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
 });
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
@@ -87,7 +95,7 @@ function App() {
 }
 
 function TokenDashboard() {
-  const { data: balance, isLoading } = useConfidentialBalance("0xTokenAddress");
+  const { data: balance, isLoading } = useConfidentialBalance({ tokenAddress: "0xTokenAddress" });
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
     tokenAddress: "0xTokenAddress",
   });
@@ -108,22 +116,22 @@ function TokenDashboard() {
 ### Browser with viem
 
 ```ts
-import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer/1",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -135,7 +143,7 @@ const sdk = new TokenSDK({
 const token = sdk.createToken("0xEncryptedERC20Address");
 
 // Shield 1000 tokens (handles ERC-20 approval automatically)
-await token.wrap(1000n);
+const { txHash } = await token.shield(1000n);
 
 // Check your decrypted balance
 const balance = await token.balanceOf();
@@ -150,27 +158,21 @@ await token.unshield(500n);
 ### Browser with ethers
 
 ```ts
-import {
-  TokenSDK,
-  RelayerWeb,
-  IndexedDBStorage,
-  MainnetConfig,
-  SepoliaConfig,
-} from "@zama-fhe/sdk";
+import { ZamaSDK, RelayerWeb, IndexedDBStorage, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-const signer = new EthersSigner(ethersSigner);
+const signer = new EthersSigner({ signer: ethersSigner });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
       [MainnetConfig.chainId]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer/1",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
       [SepoliaConfig.chainId]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -183,30 +185,30 @@ const sdk = new TokenSDK({
 ### Node.js
 
 ```ts
-import { TokenSDK, MemoryStorage } from "@zama-fhe/sdk";
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { RelayerNode, asyncLocalStorage } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerNode({
     getChainId: () => signer.getChainId(),
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://relayer.zama.ai",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
       },
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
       },
     },
   }),
   signer,
-  storage: new MemoryStorage(),
+  storage: asyncLocalStorage,
 });
 ```
 
@@ -217,7 +219,7 @@ const sdk = new TokenSDK({
 │                    Your Application                 │
 ├──────────────────────┬──────────────────────────────┤
 │  react-sdk           │  sdk (vanilla TS)            │
-│  React hooks +       │  TokenSDK                    │
+│  React hooks +       │  ZamaSDK                     │
 │  React Query cache   │  Token                       │
 │                      │  ReadonlyToken               │
 ├──────────────────────┴──────────────────────────────┤
@@ -303,7 +305,8 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "/api/relayer", // relative path — API key never reaches the client
+      // your backend proxy — NOT the relayer directly
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -313,8 +316,9 @@ const relayer = new RelayerWeb({
 **Next.js App Router** — See [`examples/react-wagmi/src/app/api/relayer/[...path]/route.ts`](./examples/react-wagmi/src/app/api/relayer/%5B...path%5D/route.ts) for a complete implementation. It forwards all methods, strips hop-by-hop headers, and injects the API key server-side. Requires two env vars:
 
 ```bash
-RELAYER_URL=https://relayer.zama.ai
 RELAYER_API_KEY=your-api-key
+RELAYER_URL_TESTNET=https://relayer.testnet.zama.org
+RELAYER_URL_MAINNET=https://relayer.mainnet.zama.org
 ```
 
 **Express** — Minimal middleware:
@@ -322,12 +326,20 @@ RELAYER_API_KEY=your-api-key
 ```ts
 import type { RequestHandler } from "express";
 
+const RELAYER_URLS: Record<string, string | undefined> = {
+  "11155111": process.env.RELAYER_URL_TESTNET,
+  "1": process.env.RELAYER_URL_MAINNET,
+};
+
 export function relayerProxy(): RequestHandler {
-  const upstream = process.env.RELAYER_URL!;
   const apiKey = process.env.RELAYER_API_KEY!;
 
   return async (req, res) => {
-    const path = req.path.replace(/^\/api\/relayer\/?/, "");
+    const chainId = req.params.chainId;
+    const upstream = RELAYER_URLS[chainId];
+    if (!upstream) return res.status(400).send("Unsupported chain");
+
+    const path = req.path.replace(/^\/api\/relayer\/\d+\/?/, "");
     const url = new URL(path, upstream.endsWith("/") ? upstream : `${upstream}/`);
     url.search = new URLSearchParams(req.query as Record<string, string>).toString();
 
@@ -342,6 +354,8 @@ export function relayerProxy(): RequestHandler {
       method: req.method,
       headers,
       body: ["GET", "HEAD"].includes(req.method) ? undefined : JSON.stringify(req.body),
+      // @ts-expect-error: required by the relayer
+      duplex: "half",
     });
 
     res.status(response.status);
@@ -350,7 +364,7 @@ export function relayerProxy(): RequestHandler {
   };
 }
 
-// Usage: app.use("/api/relayer", relayerProxy());
+// Usage: app.use("/api/relayer/:chainId", relayerProxy());
 ```
 
 **Option B — Direct API key via transport config**
@@ -363,7 +377,6 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
       auth: { __type: "ApiKeyHeader", value: "your-api-key" },
     },
@@ -383,12 +396,12 @@ The `Auth` types (`ApiKeyHeader`, `ApiKeyCookie`, `BearerToken`) are exported fr
 
 FHE credentials (keypair + EIP-712 signature) need to be persisted so users don't re-sign on every page load:
 
-| Storage            | Use Case                                                                         |
-| ------------------ | -------------------------------------------------------------------------------- |
-| `IndexedDBStorage` | Browser production (persistent across sessions)                                  |
-| `indexedDBStorage` | Pre-built singleton of `IndexedDBStorage`                                        |
-| `MemoryStorage`    | Testing / Node.js scripts (lost on restart)                                      |
-| Custom             | Implement `GenericStringStorage` (3 methods: `getItem`, `setItem`, `removeItem`) |
+| Storage             | Use Case                                                                         |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                         |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                                               |
+| `asyncLocalStorage` | Node.js servers — isolate credentials per request                                |
+| Custom              | Implement `GenericStringStorage` (3 methods: `getItem`, `setItem`, `removeItem`) |
 
 ### 5. Token Operations
 
@@ -396,8 +409,8 @@ FHE credentials (keypair + EIP-712 signature) need to be persisted so users don'
 const token = sdk.createToken("0xEncryptedERC20Address");
 
 // Shield: public ERC-20 → confidential
-await token.wrap(1000n);
-await token.wrapETH(1000n); // for native ETH wrappers
+await token.shield(1000n);
+await token.shieldETH(1000n); // for native ETH wrappers
 
 // Read balance (decrypts automatically)
 const balance = await token.balanceOf();
@@ -422,10 +435,10 @@ If you're not using viem or ethers, implement the `GenericSigner` interface:
 interface GenericSigner {
   getChainId(): Promise<number>;
   getAddress(): Promise<Address>;
-  signTypedData(typedData: EIP712TypedData): Promise<Address>;
-  writeContract(config: ContractCallConfig): Promise<Address>;
+  signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+  writeContract(config: ContractCallConfig): Promise<Hex>;
   readContract(config: ContractCallConfig): Promise<unknown>;
-  waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt>;
+  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 ```
 
@@ -458,11 +471,11 @@ const txHash = await writeWrapContract(signer, wrapper, to, amount);
 
 ## Error Handling
 
-All SDK errors extend `TokenError`. Use `instanceof` to catch specific error types:
+All SDK errors extend `ZamaError`. Use `instanceof` to catch specific error types:
 
 ```ts
 import {
-  TokenError,
+  ZamaError,
   SigningRejectedError,
   EncryptionFailedError,
   TransactionRevertedError,
@@ -480,7 +493,7 @@ try {
   if (error instanceof TransactionRevertedError) {
     // On-chain transaction reverted
   }
-  if (error instanceof TokenError) {
+  if (error instanceof ZamaError) {
     // Any other SDK error — check error.code for details
   }
 }
@@ -495,6 +508,38 @@ try {
 | `ApprovalFailedError`      | `APPROVAL_FAILED`      | ERC-20 approval transaction failed         |
 | `TransactionRevertedError` | `TRANSACTION_REVERTED` | On-chain transaction reverted              |
 
+### `matchZamaError`
+
+For cleaner error handling without `instanceof` chains, use `matchZamaError`:
+
+```ts
+import { matchZamaError } from "@zama-fhe/sdk";
+
+matchZamaError(error, {
+  SIGNING_REJECTED: () => toast("Please approve in wallet"),
+  ENCRYPTION_FAILED: () => toast("Encryption failed — try again"),
+  TRANSACTION_REVERTED: (e) => toast(`Tx failed: ${e.message}`),
+  _: () => toast("Something went wrong"),
+});
+```
+
+## Migration from `wrap`/`wrapETH`
+
+The `wrap` and `wrapETH` methods on `Token` have been renamed to `shield` and `shieldETH`. The `TokenSDK` class is now `ZamaSDK`, and `TokenError` is now `ZamaError`.
+
+| Before                                      | After                     |
+| ------------------------------------------- | ------------------------- |
+| `new TokenSDK(...)`                         | `new ZamaSDK(...)`        |
+| `token.wrap(amount)`                        | `token.shield(amount)`    |
+| `token.wrapETH(amount)`                     | `token.shieldETH(amount)` |
+| `TokenError`                                | `ZamaError`               |
+| `useWrap(...)` (react-sdk provider hook)    | `useShield(...)`          |
+| `useWrapETH(...)` (react-sdk provider hook) | `useShieldETH(...)`       |
+
+Write methods now return `TransactionResult` (`{ txHash, receipt }`) instead of a bare transaction hash.
+
+The low-level contract call builders (`wrapContract`, `wrapETHContract`) and library-adapter hooks (`useShield`/`useShieldETH` in viem/ethers/wagmi sub-paths) retain the on-chain naming since they map directly to smart contract functions.
+
 ## Smart Accounts / Account Abstraction
 
 The SDK supports smart accounts when using wagmi with a compatible connector.
@@ -506,6 +551,61 @@ The SDK supports smart accounts when using wagmi with a compatible connector.
 1. **Transaction hashes** — `unshield()` and `resumeUnshield()` call `waitForTransactionReceipt(txHash)` and parse the `UnwrapRequested` event from the receipt. If your bundler returns a `userOpHash` instead of a standard `txHash`, receipt lookup will fail. The `WagmiSigner` detects this and throws a `TransactionRevertedError` with a descriptive message. Confirm your connector resolves to a standard transaction hash.
 
 2. **EIP-712 signatures** — FHE credential authorization uses `signTypedData`. Wagmi handles ERC-1271 validation at the library level, but the Zama relayer must also support your account's signature scheme. Contact Zama to confirm ERC-1271 support for non-ECDSA signers (passkeys, multisig).
+
+## Security
+
+### WASM bundle integrity
+
+`RelayerWeb` loads its FHE WASM bundle from `cdn.zama.org`. Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a pinned hash compiled into the library. If they don't match, initialization fails with a clear error. This is enabled by default; disable it only in test environments:
+
+```ts
+const relayer = new RelayerWeb({
+  // ...transports
+  security: {
+    integrityCheck: false, // default: true
+  },
+});
+```
+
+### Credential storage model
+
+FHE decrypt credentials (a keypair + EIP-712 wallet signature) are cached so users aren't prompted on every decrypt. Before writing to storage, the SDK encrypts the private key with AES-256-GCM. The encryption key is derived via PBKDF2 (600 000 iterations, SHA-256) from the wallet signature — a secret known only to the wallet holder.
+
+What's stored:
+
+| Field                 | Plaintext? | Notes                                            |
+| --------------------- | ---------- | ------------------------------------------------ |
+| `publicKey`           | Yes        | Needed by the relayer to create decrypt requests |
+| `signature`           | Yes        | EIP-712 authorization, already visible on-chain  |
+| `contractAddresses`   | Yes        | Token addresses covered by the credential        |
+| `startTimestamp`      | Yes        | Credential validity start                        |
+| `durationDays`        | Yes        | Credential validity window                       |
+| `encryptedPrivateKey` | No         | AES-256-GCM encrypted, IV stored alongside       |
+
+Storage keys are truncated SHA-256 hashes of the wallet address — the raw address is never written to the store.
+
+### CSP headers
+
+The Web Worker loads WASM from CDN and executes it. Your Content Security Policy must allow:
+
+- `worker-src blob:` — workers are created from blob URLs
+- `script-src 'wasm-unsafe-eval'` — required for WASM execution
+- `connect-src https://cdn.zama.org` — CDN fetch for the WASM bundle
+
+### CSRF protection
+
+For browser apps, `RelayerWeb` supports CSRF tokens injected into relayer requests:
+
+```ts
+const relayer = new RelayerWeb({
+  // ...transports
+  security: {
+    getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
+  },
+});
+```
+
+The token is refreshed before each encrypt/decrypt call.
 
 ## Troubleshooting
 

@@ -1,3 +1,12 @@
+/**
+ * Wagmi-specific React hooks for low-level contract interactions.
+ *
+ * These hooks do NOT require {@link react-sdk/src.ZamaProvider | ZamaProvider} — they operate through
+ * wagmi's `Config` and `useWriteContract`.
+ *
+ * @packageDocumentation
+ */
+
 export {
   useBalanceOf,
   useBalanceOfSuspense,
@@ -20,13 +29,13 @@ export { useSetOperator } from "./use-set-operator";
 export {
   useWrapperForToken,
   useWrapperForTokenSuspense,
-  type UseWrapperForTokenConfig,
+  type UseWrapperForZamaConfig,
   type UseWrapperForTokenSuspenseConfig,
 } from "./use-wrapper-for-token";
 export {
   useUnderlyingToken,
   useUnderlyingTokenSuspense,
-  type UseUnderlyingTokenConfig,
+  type UseUnderlyingZamaConfig,
   type UseUnderlyingTokenSuspenseConfig,
 } from "./use-underlying-token";
 export {
@@ -41,6 +50,22 @@ export {
   type UseSupportsInterfaceConfig,
   type UseSupportsInterfaceSuspenseConfig,
 } from "./use-supports-interface";
-export { useWrap } from "./use-wrap";
-export { useWrapETH } from "./use-wrap-eth";
-export { WagmiSigner } from "./wagmi-signer";
+export { useShield } from "./use-wrap";
+export { useShieldETH } from "./use-wrap-eth";
+export { WagmiSigner, type WagmiSignerConfig } from "./wagmi-signer";
+
+// High-level token hooks (re-exported for convenience)
+export {
+  useUnshield,
+  useUnshieldAll,
+  useResumeUnshield,
+  useConfidentialTransferFrom,
+  useConfidentialApprove,
+  useConfidentialBalance,
+  useConfidentialBalances,
+  useAuthorizeAll,
+  useTokenMetadata,
+  useActivityFeed,
+  useApproveUnderlying,
+  useUnwrapAll,
+} from "../index";

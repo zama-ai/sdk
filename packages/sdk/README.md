@@ -21,23 +21,23 @@ pnpm add @zama-fhe/sdk
 ### Browser
 
 ```ts
-import { TokenSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
 // 1. Create signer and relayer
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer/1",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -52,7 +52,7 @@ const token = sdk.createToken("0xEncryptedERC20Address");
 // const token = sdk.createToken("0xEncryptedERC20Address", "0xWrapperAddress");
 
 // 3. Shield (wrap) public tokens into confidential tokens
-const wrapTx = await token.wrap(1000n);
+const { txHash } = await token.shield(1000n);
 
 // 4. Check decrypted balance
 const balance = await token.balanceOf();
@@ -65,30 +65,30 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 ### Node.js
 
 ```ts
-import { TokenSDK, MemoryStorage } from "@zama-fhe/sdk";
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { RelayerNode, asyncLocalStorage } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer: new RelayerNode({
     getChainId: () => signer.getChainId(),
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://relayer.zama.ai",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
       },
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
       },
     },
   }),
   signer,
-  storage: new MemoryStorage(),
+  storage: asyncLocalStorage,
 });
 
 const token = sdk.createToken("0xEncryptedERC20Address");
@@ -97,12 +97,12 @@ const balance = await token.balanceOf();
 
 ## Core Concepts
 
-### TokenSDK
+### ZamaSDK
 
 Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Acts as a factory for token instances.
 
 ```ts
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer, // RelayerSDK — either RelayerWeb (browser) or RelayerNode (Node.js)
   signer, // GenericSigner
   storage, // GenericStringStorage
@@ -139,8 +139,8 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 
 | Method                                     | Description                                                                                                                                                                                                  |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `wrap(amount, options?)`                   | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
-| `wrapETH(amount, value?)`                  | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
+| `shield(amount, options?)`                 | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
+| `shieldETH(amount, value?)`                | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
 | `unshield(amount, callbacks?)`             | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                                   |
 | `unshieldAll(callbacks?)`                  | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                               |
 | `unwrap(amount)`                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
@@ -155,7 +155,14 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | `balanceOf(owner?)`                        | Decrypt and return the plaintext balance.                                                                                                                                                                    |
 | `decryptHandles(handles, owner?)`          | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
 
-All write methods return the transaction hash (`Address`).
+All write methods return a `TransactionResult` object:
+
+```ts
+interface TransactionResult {
+  txHash: Hex;
+  receipt: TransactionReceipt;
+}
+```
 
 ### ReadonlyToken
 
@@ -214,12 +221,12 @@ if (pending) {
 
 FHE credentials (keypair + EIP-712 signature) are persisted to storage. Three options:
 
-| Storage            | Use case                                          |
-| ------------------ | ------------------------------------------------- |
-| `MemoryStorage`    | Testing. In-memory `Map`, lost on page reload.    |
-| `IndexedDBStorage` | Browser production. IndexedDB-backed, persistent. |
-| `indexedDBStorage` | Pre-built singleton `IndexedDBStorage` instance.  |
-| Custom             | Implement the `GenericStringStorage` interface.   |
+| Storage             | Use case                                                 |
+| ------------------- | -------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                       |
+| `asyncLocalStorage` | Node.js servers — isolate credentials per request        |
+| Custom              | Implement the `GenericStringStorage` interface           |
 
 ```ts
 interface GenericStringStorage {
@@ -231,22 +238,22 @@ interface GenericStringStorage {
 
 ## Configuration Reference
 
-### `TokenSDKConfig`
+### `ZamaSDKConfig`
 
-| Field                    | Type                   | Description                                              |
-| ------------------------ | ---------------------- | -------------------------------------------------------- |
-| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance) |
-| `signer`                 | `GenericSigner`        | Wallet signer interface.                                 |
-| `storage`                | `GenericStringStorage` | Credential storage backend.                              |
-| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. |
-| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.       |
+| Field                    | Type                   | Description                                                                                                                           |
+| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                              |
+| `signer`                 | `GenericSigner`        | Wallet signer interface.                                                                                                              |
+| `storage`                | `GenericStringStorage` | Credential storage backend.                                                                                                           |
+| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. Set `0` to require a wallet signature on every decrypt (high-security mode). |
+| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                    |
 
 #### Structured Event Listener
 
 The `onEvent` callback receives typed events at key lifecycle points. Event payloads never contain sensitive data (amounts, keys, proofs) — only metadata useful for debugging and telemetry.
 
 ```ts
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   relayer,
   signer,
   storage,
@@ -280,7 +287,7 @@ The `onEvent` callback is a simple function — you can bridge it to any event s
 // Fan out to multiple listeners with EventEmitter
 import { EventEmitter } from "events";
 const emitter = new EventEmitter();
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   // ...
   onEvent: (event) => emitter.emit(event.type, event),
 });
@@ -292,14 +299,14 @@ emitter.on("encrypt:start", (e) => {
 });
 
 // Bridge to DOM CustomEvent (e.g. for cross-framework communication)
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   // ...
   onEvent: (event) => window.dispatchEvent(new CustomEvent(event.type, { detail: event })),
 });
 
 // Collect into React state
 const [events, setEvents] = useState<ZamaSDKEvent[]>([]);
-const sdk = new TokenSDK({
+const sdk = new ZamaSDK({
   // ...
   onEvent: (event) => setEvents((prev) => [...prev, event]),
 });
@@ -321,6 +328,8 @@ const sdk = new TokenSDK({
 | `getCsrfToken`   | `() => string` | Optional. Resolve the CSRF token before each authenticated network request.                      |
 | `integrityCheck` | `boolean`      | Optional. Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set `false` for tests. |
 
+> **Security note:** `RelayerWeb` loads FHE WASM from a CDN at runtime. The `integrityCheck` option (enabled by default) verifies the SHA-384 hash of the bundle before execution, protecting against CDN compromise or MITM attacks. Only disable it in local development or testing.
+
 ### `RelayerNodeConfig` (Node.js)
 
 | Field        | Type                                  | Description                                                                                        |
@@ -338,21 +347,26 @@ Both the main entry (`@zama-fhe/sdk`) and the `/node` sub-path re-export preset 
 | `MainnetConfig` | 1        | Mainnet contract addresses.         |
 | `HardhatConfig` | 31337    | Local Hardhat node addresses.       |
 
-Each preset provides contract addresses and default values. Override `relayerUrl` and `network` (RPC URL) for your environment:
+Each preset provides contract addresses and default relayer URL. Override `network` (RPC URL) for your environment. Browser apps should override `relayerUrl` with a proxy; server-side apps add `auth`:
 
 ```ts
 import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 
+// Browser — proxy through your backend
 const transports = {
   [SepoliaConfig.chainId]: {
     ...SepoliaConfig,
-    relayerUrl: "/api/proxy",
+    relayerUrl: "https://your-app.com/api/relayer/11155111",
     network: "https://sepolia.infura.io/v3/KEY",
   },
-  [MainnetConfig.chainId]: {
-    ...MainnetConfig,
-    relayerUrl: "/api/proxy",
-    network: "https://mainnet.infura.io/v3/KEY",
+};
+
+// Node.js — auth is safe server-side
+const transports = {
+  [SepoliaConfig.chainId]: {
+    ...SepoliaConfig,
+    network: "https://sepolia.infura.io/v3/KEY",
+    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
   },
 };
 ```
@@ -365,10 +379,10 @@ The `GenericSigner` interface has six methods. Any Web3 library can back it.
 interface GenericSigner {
   getChainId(): Promise<number>;
   getAddress(): Promise<Address>;
-  signTypedData(typedData: EIP712TypedData): Promise<Address>;
-  writeContract(config: ContractCallConfig): Promise<Address>;
+  signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+  writeContract(config: ContractCallConfig): Promise<Hex>;
   readContract(config: ContractCallConfig): Promise<unknown>;
-  waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt>;
+  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 ```
 
@@ -379,7 +393,7 @@ interface GenericSigner {
 ```ts
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 ```
 
 **ethers** — `@zama-fhe/sdk/ethers`
@@ -387,14 +401,14 @@ const signer = new ViemSigner(walletClient, publicClient);
 ```ts
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-const signer = new EthersSigner(ethersSigner);
+const signer = new EthersSigner({ signer: ethersSigner });
 ```
 
 ## Contract Call Builders
 
 Every function returns a `ContractCallConfig` object (address, ABI, function name, args) that can be used with any Web3 library. These are the low-level building blocks — they map 1:1 to on-chain contract calls without any orchestration. Use them when the high-level `Token` API doesn't cover your use case.
 
-> **High-level vs low-level:** `token.wrap()` / `token.unshield()` handle the full flow (approval, encryption, receipt waiting, finalization). The contract call builders (`wrapContract()`, `unwrapContract()`, etc.) produce raw call configs for a single contract interaction.
+> **High-level vs low-level:** `token.shield()` / `token.unshield()` handle the full flow (approval, encryption, receipt waiting, finalization). The contract call builders (`wrapContract()`, `unwrapContract()`, etc.) produce raw call configs for a single contract interaction.
 
 ```ts
 interface ContractCallConfig {
@@ -633,10 +647,10 @@ interface ActivityLogMetadata {
 
 ## Error Handling
 
-All SDK errors extend `TokenError`. Use `instanceof` to catch specific error types:
+All SDK errors extend `ZamaError`. Use `instanceof` to catch specific error types:
 
 ```ts
-import { TokenError, SigningRejectedError, EncryptionFailedError } from "@zama-fhe/sdk";
+import { ZamaError, SigningRejectedError, EncryptionFailedError } from "@zama-fhe/sdk";
 
 try {
   await token.confidentialTransfer(to, amount);
@@ -647,7 +661,7 @@ try {
   if (error instanceof EncryptionFailedError) {
     // FHE encryption failed
   }
-  if (error instanceof TokenError) {
+  if (error instanceof ZamaError) {
     // Any other SDK error — check error.code for details
   }
 }
@@ -666,6 +680,20 @@ try {
 | `InvalidCredentialsError`   | `INVALID_CREDENTIALS`    | Relayer rejected credentials (stale or expired).                          |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No FHE ciphertext exists for this account (e.g. never shielded).          |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP error. Carries a `statusCode` property with the HTTP status. |
+
+### `matchZamaError`
+
+Pattern-match on error codes without `instanceof` chains. Falls through to the `_` wildcard if no handler matches. Returns `undefined` for non-SDK errors when no `_` handler is provided.
+
+```ts
+import { matchZamaError } from "@zama-fhe/sdk";
+
+matchZamaError(error, {
+  SIGNING_REJECTED: () => toast("Please approve in wallet"),
+  TRANSACTION_REVERTED: (e) => toast(`Tx failed: ${e.message}`),
+  _: () => toast("Unknown error"),
+});
+```
 
 **Distinguishing "no ciphertext" from "zero balance":**
 

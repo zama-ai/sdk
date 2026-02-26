@@ -3,7 +3,7 @@ import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
-import { TokenError, TokenErrorCode, type GenericSigner } from "../token.types";
+import { ZamaError, ZamaErrorCode, type GenericSigner } from "../token.types";
 import { MemoryStorage } from "../memory-storage";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
@@ -202,14 +202,25 @@ describe("Token", () => {
       expect(sdk.userDecrypt).toHaveBeenCalledOnce();
     });
 
-    it("returns 0n for tokens that fail decryption", async () => {
+    it("returns 0n for tokens that fail decryption when onError returns 0n", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       const result = await Token.batchDecryptBalances([token], {
         handles: [VALID_HANDLE as Address],
+        onError: () => 0n,
       });
 
       expect(result.get(TOKEN)).toBe(0n);
+    });
+
+    it("throws DecryptionFailedError by default when decryption fails", async () => {
+      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
+
+      await expect(
+        Token.batchDecryptBalances([token], {
+          handles: [VALID_HANDLE as Address],
+        }),
+      ).rejects.toThrow("Batch decryption failed for 1 token(s)");
     });
   });
 
@@ -267,7 +278,7 @@ describe("Token", () => {
       );
     });
 
-    it("throws TokenError on decryption failure", async () => {
+    it("throws ZamaError on decryption failure", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(token.decryptBalance(VALID_HANDLE as Address)).rejects.toThrow(
@@ -393,7 +404,7 @@ describe("Token", () => {
 
   describe("confidentialTransfer", () => {
     it("encrypts amount and sends transaction", async () => {
-      const txHash = await token.confidentialTransfer(
+      const result = await token.confidentialTransfer(
         "0x8888888888888888888888888888888888888888" as Address,
         100n,
       );
@@ -408,17 +419,18 @@ describe("Token", () => {
           functionName: "confidentialTransfer",
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
-  describe("wrap", () => {
-    it("checks allowance and wraps", async () => {
+  describe("shield", () => {
+    it("checks allowance and shields", async () => {
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
-      const txHash = await token.wrap(100n);
+      const txHash = await token.shield(100n);
 
       // approve + wrap = 2 writeContract calls
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
@@ -430,7 +442,8 @@ describe("Token", () => {
         2,
         expect.objectContaining({ functionName: "wrap" }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(txHash.txHash).toBe("0xtxhash");
+      expect(txHash.receipt).toEqual({ logs: [] });
     });
 
     it("skips approval when allowance is sufficient", async () => {
@@ -438,7 +451,7 @@ describe("Token", () => {
         .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(200n); // enough allowance
 
-      await token.wrap(100n);
+      await token.shield(100n);
 
       // Only wrap, no approve
       expect(signer.writeContract).toHaveBeenCalledOnce();
@@ -452,7 +465,7 @@ describe("Token", () => {
         "0x9999999999999999999999999999999999999999",
       ); // #getUnderlying
 
-      await token.wrap(100n, { approvalStrategy: "skip" });
+      await token.shield(100n, { approvalStrategy: "skip" });
 
       // Only readContract for #getUnderlying, no allowance check
       expect(signer.readContract).toHaveBeenCalledOnce();
@@ -460,9 +473,9 @@ describe("Token", () => {
     });
   });
 
-  describe("wrapETH", () => {
-    it("sends wrapETH with value", async () => {
-      const txHash = await token.wrapETH(1000n);
+  describe("shieldETH", () => {
+    it("sends shieldETH with value", async () => {
+      const result = await token.shieldETH(1000n);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -470,13 +483,14 @@ describe("Token", () => {
           value: 1000n,
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
   describe("unwrap", () => {
     it("encrypts amount and sends unwrap to user address", async () => {
-      const txHash = await token.unwrap(50n);
+      const result = await token.unwrap(50n);
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
         values: [50n],
@@ -489,7 +503,8 @@ describe("Token", () => {
           args: expect.arrayContaining([USER, USER]),
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
@@ -518,13 +533,14 @@ describe("Token", () => {
   describe("finalizeUnwrap", () => {
     it("decrypts burn amount and finalizes", async () => {
       const burnHandle = "0xburn" as Address;
-      const txHash = await token.finalizeUnwrap(burnHandle);
+      const result = await token.finalizeUnwrap(burnHandle);
 
       expect(sdk.publicDecrypt).toHaveBeenCalledWith([burnHandle]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
@@ -545,7 +561,7 @@ describe("Token", () => {
     it("orchestrates unwrap → receipt → finalizeUnwrap", async () => {
       mockReceiptWithUnwrapRequested();
 
-      const txHash = await token.unshield(50n);
+      const result = await token.unshield(50n);
 
       expect(sdk.encrypt).toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -556,7 +572,8 @@ describe("Token", () => {
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toBeDefined();
     });
 
     it("throws when no UnwrapRequested event in receipt", async () => {
@@ -588,14 +605,15 @@ describe("Token", () => {
       vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
       mockReceiptWithUnwrapRequested();
 
-      const txHash = await token.unshieldAll();
+      const result = await token.unshieldAll();
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(signer.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
       expect(sdk.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toBeDefined();
     });
 
     it("throws when no UnwrapRequested event in receipt", async () => {
@@ -613,15 +631,15 @@ describe("Token", () => {
   // ── Additional coverage ──────────────────────────────────────────────
 
   describe("confidentialTransfer (error handling)", () => {
-    it("wraps non-TokenError in EncryptionFailed", async () => {
+    it("wraps non-ZamaError in EncryptionFailed", async () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
       await expect(
         token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
-      ).rejects.toSatisfy((err: TokenError) => {
+      ).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.EncryptionFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.EncryptionFailed &&
           err.message === "Failed to encrypt transfer amount"
         );
       });
@@ -633,7 +651,7 @@ describe("Token", () => {
       const from = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
       const to = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
 
-      const txHash = await token.confidentialTransferFrom(from, to, 200n);
+      const result = await token.confidentialTransferFrom(from, to, 200n);
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
         values: [200n],
@@ -645,10 +663,11 @@ describe("Token", () => {
           functionName: "confidentialTransferFrom",
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
 
-    it("wraps non-TokenError in EncryptionFailed", async () => {
+    it("wraps non-ZamaError in EncryptionFailed", async () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("boom"));
 
       await expect(
@@ -657,10 +676,10 @@ describe("Token", () => {
           "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
           200n,
         ),
-      ).rejects.toSatisfy((err: TokenError) => {
+      ).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.EncryptionFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.EncryptionFailed &&
           err.message === "Failed to encrypt transferFrom amount"
         );
       });
@@ -671,7 +690,7 @@ describe("Token", () => {
     it("calls setOperatorContract with spender", async () => {
       const spender = "0x3333333333333333333333333333333333333333" as Address;
 
-      const txHash = await token.approve(spender);
+      const result = await token.approve(spender);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -679,7 +698,8 @@ describe("Token", () => {
           args: expect.arrayContaining([spender]),
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
 
     it("wraps error in ApprovalFailed", async () => {
@@ -687,10 +707,10 @@ describe("Token", () => {
 
       await expect(
         token.approve("0x3333333333333333333333333333333333333333" as Address),
-      ).rejects.toSatisfy((err: TokenError) => {
+      ).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.ApprovalFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.ApprovalFailed &&
           err.message === "Operator approval failed"
         );
       });
@@ -717,10 +737,10 @@ describe("Token", () => {
   describe("wrap (additional branches)", () => {
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
 
-    it("calls wrapETH when underlying is zero address", async () => {
+    it("calls shieldETH when underlying is zero address", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
 
-      const txHash = await token.wrap(100n);
+      const result = await token.shield(100n);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -728,13 +748,14 @@ describe("Token", () => {
           value: 100n,
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
 
     it("passes amount + fees as value when underlying is zero address with fees", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_ADDRESS); // #getUnderlying
 
-      await token.wrap(100n, { fees: 10n });
+      await token.shield(100n, { fees: 10n });
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -749,7 +770,7 @@ describe("Token", () => {
         .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
-      await token.wrap(100n, { approvalStrategy: "max" });
+      await token.shield(100n, { approvalStrategy: "max" });
 
       // First writeContract call is approve with max uint256
       expect(signer.writeContract).toHaveBeenNthCalledWith(
@@ -766,7 +787,7 @@ describe("Token", () => {
         .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(50n); // existing non-zero allowance < amount
 
-      await token.wrap(100n);
+      await token.shield(100n);
 
       // reset to zero, then approve exact, then wrap = 3 calls
       expect(signer.writeContract).toHaveBeenCalledTimes(3);
@@ -797,12 +818,12 @@ describe("Token", () => {
       // skip approval
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.wrap(100n, { approvalStrategy: "skip" })).rejects.toSatisfy(
-        (err: TokenError) => {
+      await expect(token.shield(100n, { approvalStrategy: "skip" })).rejects.toSatisfy(
+        (err: ZamaError) => {
           return (
-            err instanceof TokenError &&
-            err.code === TokenErrorCode.TransactionReverted &&
-            err.message === "Shield (wrap) transaction failed"
+            err instanceof ZamaError &&
+            err.code === ZamaErrorCode.TransactionReverted &&
+            err.message === "Shield transaction failed"
           );
         },
       );
@@ -815,33 +836,33 @@ describe("Token", () => {
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
 
-      await expect(token.wrap(100n)).rejects.toSatisfy((err: TokenError) => {
-        return err instanceof TokenError && err.code === TokenErrorCode.ApprovalFailed;
+      await expect(token.shield(100n)).rejects.toSatisfy((err: ZamaError) => {
+        return err instanceof ZamaError && err.code === ZamaErrorCode.ApprovalFailed;
       });
     });
   });
 
-  describe("wrapETH (error wrapping)", () => {
-    it("wraps TokenError thrown by writeContract", async () => {
+  describe("shieldETH (error wrapping)", () => {
+    it("wraps ZamaError thrown by writeContract", async () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.wrapETH(1000n)).rejects.toMatchObject({
-        code: TokenErrorCode.TransactionReverted,
-        message: "Shield ETH (wrapETH) transaction failed",
+      await expect(token.shieldETH(1000n)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+        message: "Shield ETH transaction failed",
       });
     });
 
-    it("re-throws TokenError as-is", async () => {
-      const original = new TokenError(TokenErrorCode.EncryptionFailed, "already wrapped");
+    it("re-throws ZamaError as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
-      await expect(token.wrapETH(1000n)).rejects.toBe(original);
+      await expect(token.shieldETH(1000n)).rejects.toBe(original);
     });
   });
 
-  describe("wrapETH (additional branches)", () => {
+  describe("shieldETH (additional branches)", () => {
     it("uses custom value parameter when provided", async () => {
-      const txHash = await token.wrapETH(1000n, 2000n);
+      const result = await token.shieldETH(1000n, 2000n);
 
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -849,7 +870,8 @@ describe("Token", () => {
           value: 2000n,
         }),
       );
-      expect(txHash).toBe("0xtxhash");
+      expect(result.txHash).toBe("0xtxhash");
+      expect(result.receipt).toEqual({ logs: [] });
     });
   });
 
@@ -857,10 +879,10 @@ describe("Token", () => {
     it("wraps encrypt failure in EncryptionFailed", async () => {
       vi.mocked(sdk.encrypt).mockRejectedValueOnce(new Error("encrypt failed"));
 
-      await expect(token.unwrap(50n)).rejects.toSatisfy((err: TokenError) => {
+      await expect(token.unwrap(50n)).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.EncryptionFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.EncryptionFailed &&
           err.message === "Failed to encrypt unshield amount"
         );
       });
@@ -872,10 +894,10 @@ describe("Token", () => {
       vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
-      await expect(token.unwrapAll()).rejects.toSatisfy((err: TokenError) => {
+      await expect(token.unwrapAll()).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.TransactionReverted &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.TransactionReverted &&
           err.message === "Unshield-all transaction failed"
         );
       });
@@ -887,10 +909,10 @@ describe("Token", () => {
       vi.mocked(sdk.publicDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toSatisfy(
-        (err: TokenError) => {
+        (err: ZamaError) => {
           return (
-            err instanceof TokenError &&
-            err.code === TokenErrorCode.DecryptionFailed &&
+            err instanceof ZamaError &&
+            err.code === ZamaErrorCode.DecryptionFailed &&
             err.message === "Failed to finalize unshield"
           );
         },
@@ -960,10 +982,10 @@ describe("Token", () => {
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
 
-      await expect(token.approveUnderlying()).rejects.toSatisfy((err: TokenError) => {
+      await expect(token.approveUnderlying()).rejects.toSatisfy((err: ZamaError) => {
         return (
-          err instanceof TokenError &&
-          err.code === TokenErrorCode.ApprovalFailed &&
+          err instanceof ZamaError &&
+          err.code === ZamaErrorCode.ApprovalFailed &&
           err.message === "ERC-20 approval failed"
         );
       });

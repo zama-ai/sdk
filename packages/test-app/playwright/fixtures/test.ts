@@ -22,9 +22,9 @@ function computeFee(amount: bigint): bigint {
 }
 
 // Hardhat deployment mints 1_000 * 10^6 ERC-20 tokens to the test account per token.
-// Wrapping (done by alice) deposits 1_000 * 10^6 into each confidential token.
-// Net initial confidential balance = wrapped - wrapFee(wrapped).
-// ERC-20 balance is untouched because alice wraps with her own tokens.
+// Shielding (done by alice) deposits 1_000 * 10^6 into each confidential token.
+// Net initial confidential balance = shielded - shieldFee(shielded).
+// ERC-20 balance is untouched because alice shields with her own tokens.
 const MINTED = 1_000n * 10n ** 6n;
 const CONFIDENTIAL = MINTED - computeFee(MINTED);
 

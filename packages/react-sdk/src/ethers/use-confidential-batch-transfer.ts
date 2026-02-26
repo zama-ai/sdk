@@ -1,21 +1,24 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import type { Address, BatchTransferData } from "@zama-fhe/sdk";
+import type { Signer } from "ethers";
 import { writeConfidentialBatchTransferContract } from "@zama-fhe/sdk/ethers";
 
-type WriteFn = typeof writeConfidentialBatchTransferContract;
-type Params = Parameters<WriteFn>;
-
 export interface ConfidentialBatchTransferParams {
-  signer: Params[0];
-  batcherAddress: Params[1];
-  tokenAddress: Params[2];
-  fromAddress: Params[3];
-  batchTransferData: Params[4];
-  fees: Params[5];
+  signer: Signer;
+  batcherAddress: Address;
+  tokenAddress: Address;
+  fromAddress: Address;
+  batchTransferData: BatchTransferData[];
+  fees: bigint;
 }
 export function useConfidentialBatchTransfer() {
-  return useMutation<Awaited<ReturnType<WriteFn>>, Error, ConfidentialBatchTransferParams>({
+  return useMutation<
+    Awaited<ReturnType<typeof writeConfidentialBatchTransferContract>>,
+    Error,
+    ConfidentialBatchTransferParams
+  >({
     mutationFn: (params) =>
       writeConfidentialBatchTransferContract(
         params.signer,

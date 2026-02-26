@@ -16,19 +16,23 @@ import { useZamaSDK } from "../provider";
  * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
  */
 export const feeQueryKeys = {
-  /** Match wrap fee query for given parameters. */
-  wrapFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) =>
-    ["wrapFee", feeManagerAddress, ...(amount !== undefined ? [amount, from, to] : [])] as const,
-  /** Match unwrap fee query for given parameters. */
-  unwrapFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) =>
-    ["unwrapFee", feeManagerAddress, ...(amount !== undefined ? [amount, from, to] : [])] as const,
+  /** Match shield fee query for given parameters. */
+  shieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) =>
+    ["shieldFee", feeManagerAddress, ...(amount !== undefined ? [amount, from, to] : [])] as const,
+  /** Match unshield fee query for given parameters. */
+  unshieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) =>
+    [
+      "unshieldFee",
+      feeManagerAddress,
+      ...(amount !== undefined ? [amount, from, to] : []),
+    ] as const,
   /** Match batch transfer fee query for a specific fee manager. */
   batchTransferFee: (feeManagerAddress: string) => ["batchTransferFee", feeManagerAddress] as const,
   /** Match fee recipient query for a specific fee manager. */
   feeRecipient: (feeManagerAddress: string) => ["feeRecipient", feeManagerAddress] as const,
 } as const;
 
-/** Configuration for {@link useWrapFee} and {@link useUnwrapFee}. */
+/** Configuration for {@link useShieldFee} and {@link useUnshieldFee}. */
 export interface UseFeeConfig {
   /** Address of the fee manager contract. */
   feeManagerAddress: Address;
@@ -41,16 +45,16 @@ export interface UseFeeConfig {
 }
 
 /**
- * TanStack Query options factory for wrap fee.
+ * TanStack Query options factory for shield fee.
  *
  * @param signer - A `GenericSigner` instance.
  * @param config - {@link UseFeeConfig} with fee manager address, amount, from, and to.
  * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
  */
-export function wrapFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig) {
+export function shieldFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig) {
   const { feeManagerAddress, amount, from, to } = config;
   return {
-    queryKey: feeQueryKeys.wrapFee(feeManagerAddress, amount.toString(), from, to),
+    queryKey: feeQueryKeys.shieldFee(feeManagerAddress, amount.toString(), from, to),
     queryFn: () =>
       signer.readContract<bigint>(getWrapFeeContract(feeManagerAddress, amount, from, to)),
     staleTime: 30_000,
@@ -58,16 +62,16 @@ export function wrapFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig)
 }
 
 /**
- * TanStack Query options factory for unwrap fee.
+ * TanStack Query options factory for unshield fee.
  *
  * @param signer - A `GenericSigner` instance.
  * @param config - Fee manager address, amount, from, and to.
  * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
  */
-export function unwrapFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig) {
+export function unshieldFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig) {
   const { feeManagerAddress, amount, from, to } = config;
   return {
-    queryKey: feeQueryKeys.unwrapFee(feeManagerAddress, amount.toString(), from, to),
+    queryKey: feeQueryKeys.unshieldFee(feeManagerAddress, amount.toString(), from, to),
     queryFn: () =>
       signer.readContract<bigint>(getUnwrapFeeContract(feeManagerAddress, amount, from, to)),
     staleTime: 30_000,
@@ -105,7 +109,7 @@ export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddres
 }
 
 /**
- * Read the wrap fee for a given amount and address pair.
+ * Read the shield fee for a given amount and address pair.
  *
  * @param config - Fee manager address, amount, from, and to.
  * @param options - React Query options (forwarded to `useQuery`).
@@ -113,7 +117,7 @@ export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddres
  *
  * @example
  * ```tsx
- * const { data: fee } = useWrapFee({
+ * const { data: fee } = useShieldFee({
  *   feeManagerAddress: "0xFeeManager",
  *   amount: 1000n,
  *   from: "0xSender",
@@ -121,20 +125,20 @@ export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddres
  * });
  * ```
  */
-export function useWrapFee(
+export function useShieldFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
   const sdk = useZamaSDK();
 
   return useQuery<bigint, Error>({
-    ...wrapFeeQueryOptions(sdk.signer, config),
+    ...shieldFeeQueryOptions(sdk.signer, config),
     ...options,
   });
 }
 
 /**
- * Read the unwrap fee for a given amount and address pair.
+ * Read the unshield fee for a given amount and address pair.
  *
  * @param config - Fee manager address, amount, from, and to.
  * @param options - React Query options (forwarded to `useQuery`).
@@ -142,7 +146,7 @@ export function useWrapFee(
  *
  * @example
  * ```tsx
- * const { data: fee } = useUnwrapFee({
+ * const { data: fee } = useUnshieldFee({
  *   feeManagerAddress: "0xFeeManager",
  *   amount: 1000n,
  *   from: "0xSender",
@@ -150,14 +154,14 @@ export function useWrapFee(
  * });
  * ```
  */
-export function useUnwrapFee(
+export function useUnshieldFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<bigint, Error> {
   const sdk = useZamaSDK();
 
   return useQuery<bigint, Error>({
-    ...unwrapFeeQueryOptions(sdk.signer, config),
+    ...unshieldFeeQueryOptions(sdk.signer, config),
     ...options,
   });
 }

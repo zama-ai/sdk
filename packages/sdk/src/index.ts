@@ -1,3 +1,11 @@
+/**
+ * Core SDK for confidential token operations using Fully Homomorphic Encryption.
+ *
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link RelayerWeb}.
+ *
+ * @packageDocumentation
+ */
+
 // Core SDK
 export { RelayerWeb } from "./relayer/relayer-web";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
@@ -36,14 +44,14 @@ export { BATCH_SWAP_ABI } from "./abi/batch-swap.abi";
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
 
 // Token abstraction layer
-export { TokenSDK } from "./token/token-sdk";
-export type { TokenSDKConfig } from "./token/token-sdk";
+export { ZamaSDK } from "./token/zama-sdk";
+export type { ZamaSDKConfig } from "./token/zama-sdk";
 export { Token } from "./token/token";
 export type { TokenConfig } from "./token/token";
 export { ReadonlyToken } from "./token/readonly-token";
 export type { ReadonlyTokenConfig, BatchDecryptOptions } from "./token/readonly-token";
 export { ZERO_HANDLE } from "./token/readonly-token";
-export { MemoryStorage } from "./token/memory-storage";
+export { MemoryStorage, memoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { CredentialsManager } from "./token/credential-manager";
 export {
@@ -59,13 +67,41 @@ export type {
   StoredCredentials,
   ContractCallConfig,
   TransactionReceipt,
+  TransactionResult,
   UnshieldCallbacks,
 } from "./token/token.types";
 export { ZamaSDKEvents } from "./events/sdk-events";
-export type { ZamaSDKEventType, ZamaSDKEvent, ZamaSDKEventListener } from "./events/sdk-events";
+export type {
+  ZamaSDKEventType,
+  ZamaSDKEvent,
+  ZamaSDKEventInput,
+  ZamaSDKEventListener,
+  ShieldSubmittedEvent,
+  TransferSubmittedEvent,
+  TransferFromSubmittedEvent,
+  ApproveSubmittedEvent,
+  ApproveUnderlyingSubmittedEvent,
+  UnwrapSubmittedEvent,
+  FinalizeUnwrapSubmittedEvent,
+  UnshieldPhase1SubmittedEvent,
+  UnshieldPhase2StartedEvent,
+  UnshieldPhase2SubmittedEvent,
+  TransactionErrorEvent,
+  EncryptStartEvent,
+  EncryptEndEvent,
+  EncryptErrorEvent,
+  DecryptStartEvent,
+  DecryptEndEvent,
+  DecryptErrorEvent,
+  CredentialsLoadingEvent,
+  CredentialsCachedEvent,
+  CredentialsExpiredEvent,
+  CredentialsCreatingEvent,
+  CredentialsCreatedEvent,
+} from "./events/sdk-events";
 export {
-  TokenError,
-  TokenErrorCode,
+  ZamaError,
+  ZamaErrorCode,
   SigningRejectedError,
   SigningFailedError,
   EncryptionFailedError,
@@ -76,6 +112,7 @@ export {
   InvalidCredentialsError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  matchZamaError,
 } from "./token/errors";
 
 // Event decoders and types

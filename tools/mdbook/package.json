@@ -1,0 +1,12 @@
+{
+  "name": "mdbook",
+  "version": "0.5.2",
+  "private": true,
+  "description": "Downloads the mdBook binary from GitHub releases",
+  "bin": {
+    "mdbook": "./mdbook"
+  },
+  "scripts": {
+    "postinstall": "node install.mjs"
+  }
+}

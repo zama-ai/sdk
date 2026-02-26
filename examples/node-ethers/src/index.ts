@@ -21,7 +21,7 @@ async function main() {
   const wallet = new Wallet(PRIVATE_KEY, provider);
 
   // 2. Create SDK components
-  const signer = new EthersSigner(wallet);
+  const signer = new EthersSigner({ signer: wallet });
   const authConfig = { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY };
   const relayer = new RelayerNode({
     getChainId: () => signer.getChainId(),

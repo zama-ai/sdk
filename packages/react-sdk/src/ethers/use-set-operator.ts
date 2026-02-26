@@ -1,19 +1,22 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import type { Signer } from "ethers";
 import { writeSetOperatorContract } from "@zama-fhe/sdk/ethers";
 
-type WriteFn = typeof writeSetOperatorContract;
-type Params = Parameters<WriteFn>;
-
 export interface SetOperatorParams {
-  signer: Params[0];
-  tokenAddress: Params[1];
-  spender: Params[2];
-  timestamp?: Params[3];
+  signer: Signer;
+  tokenAddress: Address;
+  spender: Address;
+  timestamp?: number;
 }
 export function useSetOperator() {
-  return useMutation<Awaited<ReturnType<WriteFn>>, Error, SetOperatorParams>({
+  return useMutation<
+    Awaited<ReturnType<typeof writeSetOperatorContract>>,
+    Error,
+    SetOperatorParams
+  >({
     mutationFn: (params) =>
       writeSetOperatorContract(
         params.signer,

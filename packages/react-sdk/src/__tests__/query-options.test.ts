@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ReadonlyToken, Token, Address } from "@zama-fhe/sdk";
-import { TokenSDK } from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { tokenMetadataQueryOptions } from "../token/use-token-metadata";
 import { isConfidentialQueryOptions, isWrapperQueryOptions } from "../token/use-is-confidential";
 import { totalSupplyQueryOptions } from "../token/use-total-supply";
@@ -8,8 +8,8 @@ import { confidentialIsApprovedQueryOptions } from "../token/use-confidential-is
 import { underlyingAllowanceQueryOptions } from "../token/use-underlying-allowance";
 import { wrapperDiscoveryQueryOptions } from "../token/use-wrapper-discovery";
 import {
-  wrapFeeQueryOptions,
-  unwrapFeeQueryOptions,
+  shieldFeeQueryOptions,
+  unshieldFeeQueryOptions,
   batchTransferFeeQueryOptions,
   feeRecipientQueryOptions,
   feeQueryKeys,
@@ -41,8 +41,8 @@ function createMockReadonlyToken(address: Address = TOKEN_ADDR) {
 function createMockToken(address: Address = TOKEN_ADDR) {
   return {
     ...createMockReadonlyToken(address),
-    confidentialTransfer: vi.fn().mockResolvedValue("0xtx"),
-    approve: vi.fn().mockResolvedValue("0xtx"),
+    confidentialTransfer: vi.fn().mockResolvedValue({ txHash: "0xtx", receipt: { logs: [] } }),
+    approve: vi.fn().mockResolvedValue({ txHash: "0xtx", receipt: { logs: [] } }),
   } as unknown as Token;
 }
 
@@ -193,24 +193,24 @@ describe("query options factories", () => {
       to: TO,
     };
 
-    it("wrapFeeQueryOptions key includes amount/from/to", () => {
-      const opts = wrapFeeQueryOptions(signer, feeConfig);
-      expect(opts.queryKey).toEqual(["wrapFee", FEE_MANAGER, "1000", FROM, TO]);
+    it("shieldFeeQueryOptions key includes amount/from/to", () => {
+      const opts = shieldFeeQueryOptions(signer, feeConfig);
+      expect(opts.queryKey).toEqual(["shieldFee", FEE_MANAGER, "1000", FROM, TO]);
       expect(opts.staleTime).toBe(30_000);
     });
 
-    it("feeQueryKeys.wrapFee omits amount/from/to when amount is undefined", () => {
-      expect(feeQueryKeys.wrapFee(FEE_MANAGER)).toEqual(["wrapFee", FEE_MANAGER]);
+    it("feeQueryKeys.shieldFee omits amount/from/to when amount is undefined", () => {
+      expect(feeQueryKeys.shieldFee(FEE_MANAGER)).toEqual(["shieldFee", FEE_MANAGER]);
     });
 
-    it("unwrapFeeQueryOptions key includes amount/from/to", () => {
-      const opts = unwrapFeeQueryOptions(signer, feeConfig);
-      expect(opts.queryKey).toEqual(["unwrapFee", FEE_MANAGER, "1000", FROM, TO]);
+    it("unshieldFeeQueryOptions key includes amount/from/to", () => {
+      const opts = unshieldFeeQueryOptions(signer, feeConfig);
+      expect(opts.queryKey).toEqual(["unshieldFee", FEE_MANAGER, "1000", FROM, TO]);
       expect(opts.staleTime).toBe(30_000);
     });
 
-    it("feeQueryKeys.unwrapFee omits amount/from/to when amount is undefined", () => {
-      expect(feeQueryKeys.unwrapFee(FEE_MANAGER)).toEqual(["unwrapFee", FEE_MANAGER]);
+    it("feeQueryKeys.unshieldFee omits amount/from/to when amount is undefined", () => {
+      expect(feeQueryKeys.unshieldFee(FEE_MANAGER)).toEqual(["unshieldFee", FEE_MANAGER]);
     });
 
     it("batchTransferFeeQueryOptions key includes feeManagerAddress", () => {
@@ -225,9 +225,9 @@ describe("query options factories", () => {
       expect(opts.staleTime).toBe(30_000);
     });
 
-    it("wrapFeeQueryOptions queryFn calls signer.readContract", async () => {
+    it("shieldFeeQueryOptions queryFn calls signer.readContract", async () => {
       vi.mocked(signer.readContract).mockResolvedValue(50n);
-      const opts = wrapFeeQueryOptions(signer, feeConfig);
+      const opts = shieldFeeQueryOptions(signer, feeConfig);
       const result = await opts.queryFn();
 
       expect(signer.readContract).toHaveBeenCalled();
@@ -237,7 +237,7 @@ describe("query options factories", () => {
 
   describe("publicKeyQueryOptions", () => {
     it("returns correct queryKey and staleTime Infinity", () => {
-      const sdk = new TokenSDK({
+      const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
         signer: createMockSigner(),
         storage: createMockStorage(),
@@ -250,7 +250,7 @@ describe("query options factories", () => {
 
     it("queryFn calls relayer.getPublicKey", async () => {
       const relayer = createMockRelayer();
-      const sdk = new TokenSDK({
+      const sdk = new ZamaSDK({
         relayer,
         signer: createMockSigner(),
         storage: createMockStorage(),
@@ -265,7 +265,7 @@ describe("query options factories", () => {
 
   describe("publicParamsQueryOptions", () => {
     it("queryKey includes bits", () => {
-      const sdk = new TokenSDK({
+      const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
         signer: createMockSigner(),
         storage: createMockStorage(),
@@ -278,7 +278,7 @@ describe("query options factories", () => {
 
     it("queryFn calls relayer.getPublicParams", async () => {
       const relayer = createMockRelayer();
-      const sdk = new TokenSDK({
+      const sdk = new ZamaSDK({
         relayer,
         signer: createMockSigner(),
         storage: createMockStorage(),

@@ -5,10 +5,10 @@ import { useWriteContract } from "wagmi";
 
 type WrapETHParameters = Parameters<typeof wrapETHContract>;
 
-export function useWrapETH() {
+export function useShieldETH() {
   const { mutate, mutateAsync, ...mutation } = useWriteContract();
 
-  function wrapETH(
+  function shieldETH(
     wrapperAddress: WrapETHParameters[0],
     to: WrapETHParameters[1],
     amount: WrapETHParameters[2],
@@ -17,7 +17,7 @@ export function useWrapETH() {
     return mutate(wrapETHContract(wrapperAddress, to, amount, value));
   }
 
-  async function wrapETHAsync(
+  async function shieldETHAsync(
     wrapperAddress: WrapETHParameters[0],
     to: WrapETHParameters[1],
     amount: WrapETHParameters[2],
@@ -27,8 +27,8 @@ export function useWrapETH() {
   }
 
   return {
-    mutate: wrapETH,
-    mutateAsync: wrapETHAsync,
+    mutate: shieldETH,
+    mutateAsync: shieldETHAsync,
     ...mutation,
   };
 }

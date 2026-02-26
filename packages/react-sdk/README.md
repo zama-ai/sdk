@@ -31,8 +31,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
-const queryClient = new QueryClient();
-
 const wagmiConfig = createConfig({
   chains: [mainnet, sepolia],
   transports: {
@@ -41,21 +39,23 @@ const wagmiConfig = createConfig({
   },
 });
 
-const signer = new WagmiSigner(wagmiConfig);
+const signer = new WagmiSigner({ config: wagmiConfig });
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [mainnet.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer/1",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
 });
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
@@ -70,7 +70,7 @@ function App() {
 }
 
 function TokenBalance() {
-  const { data: balance, isLoading } = useConfidentialBalance("0xTokenAddress");
+  const { data: balance, isLoading } = useConfidentialBalance({ tokenAddress: "0xTokenAddress" });
 
   if (isLoading) return <p>Decrypting balance...</p>;
   return <p>Balance: {balance?.toString()}</p>;
@@ -87,29 +87,29 @@ import {
   RelayerWeb,
   useConfidentialBalance,
   useConfidentialTransfer,
-  MemoryStorage,
+  memoryStorage,
 } from "@zama-fhe/react-sdk";
-
-const queryClient = new QueryClient();
 
 const relayer = new RelayerWeb({
   getChainId: () => yourCustomSigner.getChainId(),
   transports: {
     [mainnet.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer/1",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
 });
 
+const queryClient = new QueryClient();
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider relayer={relayer} signer={yourCustomSigner} storage={new MemoryStorage()}>
+      <ZamaProvider relayer={relayer} signer={yourCustomSigner} storage={memoryStorage}>
         <TransferForm />
       </ZamaProvider>
     </QueryClientProvider>
@@ -117,7 +117,7 @@ function App() {
 }
 
 function TransferForm() {
-  const { data: balance } = useConfidentialBalance("0xTokenAddress");
+  const { data: balance } = useConfidentialBalance({ tokenAddress: "0xTokenAddress" });
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
     tokenAddress: "0xTokenAddress",
   });
@@ -149,10 +149,56 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
   signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
   storage={storage} // GenericStringStorage
+  credentialDurationDays={1} // Optional. Days FHE credentials remain valid. Default: 1. Set 0 for sign-every-time.
+  onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
   {children}
 </ZamaProvider>;
 ```
+
+## Which Hooks Should I Use?
+
+The React SDK exports hooks from two layers. **Pick one layer per operation — never mix them.**
+
+**Use the main import** (`@zama-fhe/react-sdk`) when you have a `ZamaProvider` in your component tree. These hooks handle FHE encryption, cache invalidation, and error wrapping automatically:
+
+```tsx
+import { useShield, useConfidentialTransfer } from "@zama-fhe/react-sdk";
+
+const { mutateAsync: shield } = useShield({ tokenAddress });
+await shield({ amount: 1000n }); // encryption + approval handled for you
+```
+
+**Use the library sub-path** (`/viem`, `/ethers`, `/wagmi`) when you need direct contract-level control without a provider. You handle encryption and cache management yourself:
+
+```tsx
+import { useShield } from "@zama-fhe/react-sdk/viem";
+
+const { mutateAsync: shield } = useShield();
+await shield({ client: walletClient, wrapperAddress, to, amount }); // raw contract call
+```
+
+### Comparison of Colliding Hook Names
+
+Five hooks share names across both layers. Here's how they differ:
+
+| Hook                      | Main (`@zama-fhe/react-sdk`)                                | Sub-path (`/viem`, `/ethers`, `/wagmi`)                                              |
+| ------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `useConfidentialTransfer` | `mutate({ to, amount })` — auto-encrypts                    | `mutate({ client, token, to, handle, inputProof })` — pre-encrypted                  |
+| `useShield`               | `mutate({ amount, approvalStrategy? })` — auto-approves     | `mutate({ client, wrapper, to, amount })` — raw wrap call                            |
+| `useShieldETH`            | `mutate({ amount, value? })` — `value` defaults to `amount` | `mutate({ client, wrapper, to, amount, value })` — all fields required               |
+| `useUnwrap`               | `mutate({ amount })` — auto-encrypts                        | `mutate({ client, token, from, to, encryptedAmount, inputProof })` — pre-encrypted   |
+| `useFinalizeUnwrap`       | `mutate({ burnAmountHandle })` — fetches proof from relayer | `mutate({ client, wrapper, burntAmount, cleartext, proof })` — caller provides proof |
+
+| Feature                 | Main                    | Sub-path                      |
+| ----------------------- | ----------------------- | ----------------------------- |
+| Requires `ZamaProvider` | Yes                     | No                            |
+| FHE encryption          | Automatic               | Manual (caller pre-encrypts)  |
+| ERC-20 approval         | Automatic (`useShield`) | None                          |
+| Cache invalidation      | Automatic               | None                          |
+| Return type             | `TransactionResult`     | Raw tx hash or wagmi mutation |
+
+> **Rule of thumb:** If you're building a standard dApp UI, use the main import. If you're building custom transaction pipelines or need to compose with other wagmi hooks at the contract level, use the sub-path.
 
 ## Hooks Reference
 
@@ -162,10 +208,10 @@ All hooks require a `ZamaProvider` (or one of its variants) in the component tre
 
 #### `useZamaSDK`
 
-Returns the `TokenSDK` instance from context. Use this when you need direct access to the SDK (e.g. for low-level relayer operations).
+Returns the `ZamaSDK` instance from context. Use this when you need direct access to the SDK (e.g. for low-level relayer operations).
 
 ```ts
-function useZamaSDK(): TokenSDK;
+function useZamaSDK(): ZamaSDK;
 ```
 
 #### `useToken`
@@ -192,28 +238,27 @@ Single-token balance with automatic decryption. Uses two-phase polling: polls th
 
 ```ts
 function useConfidentialBalance(
-  tokenAddress: Address,
-  owner?: Address, // defaults to connected wallet
+  config: UseConfidentialBalanceConfig,
   options?: UseConfidentialBalanceOptions,
 ): UseQueryResult<bigint, Error>;
+
+interface UseConfidentialBalanceConfig {
+  tokenAddress: Address;
+  handleRefetchInterval?: number; // default: 10000ms
+}
 ```
 
-Options extend `UseQueryOptions` and add:
-
-| Option                  | Type     | Default | Description                                     |
-| ----------------------- | -------- | ------- | ----------------------------------------------- |
-| `handleRefetchInterval` | `number` | `10000` | Polling interval (ms) for the encrypted handle. |
+Options extend `UseQueryOptions`.
 
 ```tsx
 const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance(
-  "0xTokenAddress",
-  undefined, // use connected wallet
-  { handleRefetchInterval: 5_000 },
-);
+} = useConfidentialBalance({
+  tokenAddress: "0xTokenAddress",
+  handleRefetchInterval: 5_000,
+});
 ```
 
 #### `useConfidentialBalances`
@@ -222,14 +267,21 @@ Multi-token batch balance. Same two-phase polling pattern.
 
 ```ts
 function useConfidentialBalances(
-  tokenAddresses: Address[],
-  owner?: Address,
+  config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
 ): UseQueryResult<Map<Address, bigint>, Error>;
+
+interface UseConfidentialBalancesConfig {
+  tokenAddresses: Address[];
+  handleRefetchInterval?: number;
+  maxConcurrency?: number;
+}
 ```
 
 ```tsx
-const { data: balances } = useConfidentialBalances(["0xTokenA", "0xTokenB", "0xTokenC"]);
+const { data: balances } = useConfidentialBalances({
+  tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+});
 
 // balances is a Map<Address, bigint>
 const tokenABalance = balances?.get("0xTokenA");
@@ -263,7 +315,7 @@ Encrypted transfer. Encrypts the amount and calls the contract. Automatically in
 
 ```ts
 function useConfidentialTransfer(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ConfidentialTransferParams>,
 ): UseMutationResult<Address, Error, ConfidentialTransferParams>;
 
@@ -287,7 +339,7 @@ Operator transfer on behalf of another address.
 
 ```ts
 function useConfidentialTransferFrom(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ConfidentialTransferFromParams>,
 ): UseMutationResult<Address, Error, ConfidentialTransferFromParams>;
 
@@ -300,13 +352,13 @@ interface ConfidentialTransferFromParams {
 
 ### Shield Hooks
 
-#### `useShield` (alias: `useWrap`)
+#### `useShield`
 
 Shield public ERC-20 tokens into confidential tokens. Handles ERC-20 approval automatically.
 
 ```ts
 function useShield(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ShieldParams>,
 ): UseMutationResult<Address, Error, ShieldParams>;
 
@@ -326,13 +378,13 @@ await shield({ amount: 1000n });
 await shield({ amount: 1000n, approvalStrategy: "max" });
 ```
 
-#### `useShieldETH` (alias: `useWrapETH`)
+#### `useShieldETH`
 
 Shield native ETH into confidential tokens. Use when the underlying token is the zero address (native ETH).
 
 ```ts
 function useShieldETH(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ShieldETHParams>,
 ): UseMutationResult<Address, Error, ShieldETHParams>;
 
@@ -352,7 +404,7 @@ Unshield a specific amount. Handles the entire unwrap + finalize flow. Supports 
 
 ```ts
 function useUnshield(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, UnshieldParams>,
 ): UseMutationResult<Address, Error, UnshieldParams>;
 
@@ -383,7 +435,7 @@ Unshield the entire balance. Handles the entire unwrap + finalize flow. Supports
 
 ```ts
 function useUnshieldAll(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, UnshieldAllParams | void>,
 ): UseMutationResult<Address, Error, UnshieldAllParams | void>;
 
@@ -406,7 +458,7 @@ Resume an interrupted unshield from a saved unwrap tx hash. Useful when the user
 
 ```ts
 function useResumeUnshield(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ResumeUnshieldParams>,
 ): UseMutationResult<Address, Error, ResumeUnshieldParams>;
 
@@ -462,7 +514,7 @@ Request unwrap for a specific amount (requires manual finalization via `useFinal
 
 ```ts
 function useUnwrap(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, UnwrapParams>,
 ): UseMutationResult<Address, Error, UnwrapParams>;
 
@@ -477,7 +529,7 @@ Request unwrap for the entire balance (requires manual finalization).
 
 ```ts
 function useUnwrapAll(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, void>,
 ): UseMutationResult<Address, Error, void>;
 ```
@@ -488,7 +540,7 @@ Complete an unwrap by providing the decryption proof.
 
 ```ts
 function useFinalizeUnwrap(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, FinalizeUnwrapParams>,
 ): UseMutationResult<Address, Error, FinalizeUnwrapParams>;
 
@@ -505,7 +557,7 @@ Set operator approval for the confidential token.
 
 ```ts
 function useConfidentialApprove(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   options?: UseMutationOptions<Address, Error, ConfidentialApproveParams>,
 ): UseMutationResult<Address, Error, ConfidentialApproveParams>;
 
@@ -521,7 +573,7 @@ Check if a spender is an approved operator. Enabled only when `spender` is defin
 
 ```ts
 function useConfidentialIsApproved(
-  config: UseTokenConfig,
+  config: UseZamaConfig,
   spender: Address | undefined,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<boolean, Error>;
@@ -615,6 +667,61 @@ feed?.forEach((item) => {
 });
 ```
 
+### Fee Hooks
+
+#### `useShieldFee`
+
+Read the shield (wrap) fee for a given amount and address pair.
+
+```ts
+function useShieldFee(
+  config: UseFeeConfig,
+  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<bigint, Error>;
+
+interface UseFeeConfig {
+  feeManagerAddress: Address;
+  amount: bigint;
+  from: Address;
+  to: Address;
+}
+```
+
+```tsx
+const { data: fee } = useShieldFee({
+  feeManagerAddress: "0xFeeManager",
+  amount: 1000n,
+  from: "0xSender",
+  to: "0xReceiver",
+});
+```
+
+#### `useUnshieldFee`
+
+Read the unshield (unwrap) fee for a given amount and address pair. Same signature as `useShieldFee`.
+
+#### `useBatchTransferFee`
+
+Read the batch transfer fee from the fee manager.
+
+```ts
+function useBatchTransferFee(
+  feeManagerAddress: Address,
+  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<bigint, Error>;
+```
+
+#### `useFeeRecipient`
+
+Read the fee recipient address from the fee manager.
+
+```ts
+function useFeeRecipient(
+  feeManagerAddress: Address,
+  options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
+): UseQueryResult<Address, Error>;
+```
+
 ### Low-Level FHE Hooks
 
 These hooks expose the raw `RelayerSDK` operations as React Query mutations.
@@ -680,19 +787,21 @@ import {
   confidentialHandlesQueryKeys,
   underlyingAllowanceQueryKeys,
   activityFeedQueryKeys,
+  feeQueryKeys,
   decryptionKeys,
 } from "@zama-fhe/react-sdk";
 ```
 
-| Factory                         | Keys                                                | Description                         |
-| ------------------------------- | --------------------------------------------------- | ----------------------------------- |
-| `confidentialBalanceQueryKeys`  | `.all`, `.token(address)`, `.owner(address, owner)` | Single-token decrypted balance.     |
-| `confidentialBalancesQueryKeys` | `.all`, `.tokens(addresses, owner)`                 | Multi-token batch balances.         |
-| `confidentialHandleQueryKeys`   | `.all`, `.token(address)`, `.owner(address, owner)` | Single-token encrypted handle.      |
-| `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addresses, owner)`                 | Multi-token batch handles.          |
-| `underlyingAllowanceQueryKeys`  | `.all`, `.token(address, wrapper)`                  | Underlying ERC-20 allowance.        |
-| `activityFeedQueryKeys`         | `.all`, `.token(address)`                           | Activity feed items.                |
-| `decryptionKeys`                | `.value(handle)`                                    | Individual decrypted handle values. |
+| Factory                         | Keys                                                                                     | Description                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
+| `confidentialBalanceQueryKeys`  | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token decrypted balance.     |
+| `confidentialBalancesQueryKeys` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
+| `confidentialHandleQueryKeys`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
+| `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
+| `underlyingAllowanceQueryKeys`  | `.all`, `.token(address, wrapper)`                                                       | Underlying ERC-20 allowance.        |
+| `activityFeedQueryKeys`         | `.all`, `.token(address)`                                                                | Activity feed items.                |
+| `feeQueryKeys`                  | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
+| `decryptionKeys`                | `.value(handle)`                                                                         | Individual decrypted handle values. |
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
@@ -738,15 +847,15 @@ All write hooks return `{ mutate, mutateAsync, ...mutation }` from wagmi's `useW
 | `useUnwrapFromBalance()`         | `(token, from, to, encryptedBalance)`            | Unwrap using on-chain handle. |
 | `useFinalizeUnwrap()`            | `(wrapper, burntAmount, cleartext, proof)`       | Finalize unwrap.              |
 | `useSetOperator()`               | `(token, spender, timestamp?)`                   | Set operator approval.        |
-| `useWrap()`                      | `(wrapper, to, amount)`                          | Wrap ERC-20 tokens.           |
-| `useWrapETH()`                   | `(wrapper, to, amount, value)`                   | Wrap native ETH.              |
+| `useShield()`                    | `(wrapper, to, amount)`                          | Shield ERC-20 tokens.         |
+| `useShieldETH()`                 | `(wrapper, to, amount, value)`                   | Shield native ETH.            |
 
 ### Wagmi Signer Adapter
 
 ```ts
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
-const signer = new WagmiSigner(wagmiConfig);
+const signer = new WagmiSigner({ config: wagmiConfig });
 ```
 
 ## Viem & Ethers Adapter Hooks
@@ -823,6 +932,21 @@ function getUserMessage(error: Error): string {
 }
 ```
 
+Or use `matchZamaError` for a more concise pattern:
+
+```tsx
+import { matchZamaError } from "@zama-fhe/react-sdk";
+
+const message = matchZamaError(error, {
+  SIGNING_REJECTED: () => "Transaction cancelled — please approve in your wallet.",
+  ENCRYPTION_FAILED: () => "Encryption failed — please try again.",
+  DECRYPTION_FAILED: () => "Decryption failed — please try again.",
+  APPROVAL_FAILED: () => "Token approval failed — please try again.",
+  TRANSACTION_REVERTED: () => "Transaction failed on-chain — check your balance.",
+  _: () => "An unexpected error occurred.",
+});
+```
+
 ### Balance Caching and Refresh
 
 Balance queries use two-phase polling:
@@ -843,15 +967,15 @@ queryClient.invalidateQueries({ queryKey: confidentialBalanceQueryKeys.all });
 
 All public exports from `@zama-fhe/sdk` are re-exported from the main entry point. You never need to import from the core package directly.
 
-**Classes:** `RelayerWeb`, `TokenSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
+**Classes:** `RelayerWeb`, `ZamaSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `memoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
-**Types:** `Address`, `TokenSDKConfig`, `TokenConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `UnshieldCallbacks`.
+**Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
-**Errors:** `TokenError`, `TokenErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`.
+**Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 
 **Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`.
 

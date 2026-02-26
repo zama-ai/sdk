@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Address, Hex } from "../../relayer/relayer-sdk.types";
+import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
 import { ReadonlyToken } from "../readonly-token";
 import { MemoryStorage } from "../memory-storage";
@@ -77,7 +77,7 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.DecryptEnd).toBe("decrypt:end");
     expect(ZamaSDKEvents.DecryptError).toBe("decrypt:error");
     expect(ZamaSDKEvents.TransactionError).toBe("transaction:error");
-    expect(ZamaSDKEvents.WrapSubmitted).toBe("wrap:submitted");
+    expect(ZamaSDKEvents.ShieldSubmitted).toBe("shield:submitted");
     expect(ZamaSDKEvents.TransferSubmitted).toBe("transfer:submitted");
     expect(ZamaSDKEvents.TransferFromSubmitted).toBe("transferFrom:submitted");
     expect(ZamaSDKEvents.ApproveSubmitted).toBe("approve:submitted");
@@ -359,25 +359,25 @@ describe("Token event emissions", () => {
     });
   });
 
-  describe("wrap events", () => {
-    it("emits WrapSubmitted for ERC-20 wrap", async () => {
+  describe("shield events", () => {
+    it("emits ShieldSubmitted for ERC-20 shield", async () => {
       const token = createToken();
       vi.mocked(signer.readContract).mockResolvedValueOnce(
         "0x9999999999999999999999999999999999999999",
       ); // underlying
 
-      await token.wrap(100n, { approvalStrategy: "skip" });
+      await token.shield(100n, { approvalStrategy: "skip" });
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(ZamaSDKEvents.WrapSubmitted);
+      expect(types).toContain(ZamaSDKEvents.ShieldSubmitted);
     });
 
-    it("emits WrapSubmitted for wrapETH", async () => {
+    it("emits ShieldSubmitted for shieldETH", async () => {
       const token = createToken();
-      await token.wrapETH(1000n);
+      await token.shieldETH(1000n);
 
       const types = events.map((e) => e.type);
-      expect(types).toContain(ZamaSDKEvents.WrapSubmitted);
+      expect(types).toContain(ZamaSDKEvents.ShieldSubmitted);
     });
   });
 
@@ -521,18 +521,18 @@ describe("Token event emissions", () => {
   });
 
   describe("TransactionError events", () => {
-    it("emits TransactionError with operation 'wrap' on wrap failure", async () => {
+    it("emits TransactionError with operation 'shield' on shield failure", async () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(
         "0x9999999999999999999999999999999999999999",
       );
-      vi.mocked(signer.writeContract).mockRejectedValue(new Error("wrap failed"));
+      vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
       const token = createToken();
 
-      await expect(token.wrap(100n, { approvalStrategy: "skip" })).rejects.toThrow();
+      await expect(token.shield(100n, { approvalStrategy: "skip" })).rejects.toThrow();
 
       const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
       expect(txError).toBeDefined();
-      expect("operation" in txError! && txError.operation).toBe("wrap");
+      expect("operation" in txError! && txError.operation).toBe("shield");
     });
 
     it("emits TransactionError with operation 'approve' on approve failure", async () => {

@@ -20,7 +20,7 @@ export const publicClient = createPublicClient({
   transport: http(SEPOLIA_RPC_URL),
 });
 
-const signer = new ViemSigner(walletClient, publicClient);
+const signer = new ViemSigner({ walletClient, publicClient });
 
 const relayer = new RelayerWeb({
   getChainId: () => walletClient.getChainId(),

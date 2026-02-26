@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, UnshieldCallbacks } from "@zama-fhe/sdk";
+import type { Address, Token, TransactionResult, UnshieldCallbacks } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -10,7 +10,7 @@ import {
   wagmiBalancePredicates,
 } from "./balance-query-keys";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useUnshield}. */
 export interface UnshieldParams {
@@ -37,7 +37,7 @@ export function unshieldMutationOptions(token: Token) {
  * Unshield a specific amount and finalize in one call.
  * Orchestrates: unwrap → wait for receipt → parse event → finalize.
  *
- * Errors are {@link TokenError} subclasses — use `instanceof` to handle specific failures:
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link EncryptionFailedError} — FHE encryption failed during unwrap
  * - {@link DecryptionFailedError} — public decryption failed during finalize
@@ -53,12 +53,12 @@ export function unshieldMutationOptions(token: Token) {
  * ```
  */
 export function useUnshield(
-  config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, UnshieldParams, Address>,
+  config: UseZamaConfig,
+  options?: UseMutationOptions<TransactionResult, Error, UnshieldParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, UnshieldParams, Address>({
+  return useMutation<TransactionResult, Error, UnshieldParams, Address>({
     mutationKey: ["unshield", config.tokenAddress],
     mutationFn: ({ amount, callbacks }) => token.unshield(amount, callbacks),
     ...options,

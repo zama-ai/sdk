@@ -4,7 +4,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { useConfidentialTransfer } from "../token/use-confidential-transfer";
 import { useConfidentialApprove } from "../token/use-confidential-approve";
 import { useApproveUnderlying } from "../token/use-approve-underlying";
-import { useWrap } from "../token/use-wrap";
+import { useShield } from "../token/use-shield";
 import { useAuthorizeAll } from "../token/use-authorize-all";
 import { useEncrypt } from "../relayer/use-encrypt";
 import { confidentialBalanceQueryKeys } from "../token/balance-query-keys";
@@ -49,10 +49,10 @@ describe("useApproveUnderlying", () => {
   });
 });
 
-describe("useWrap", () => {
+describe("useShield", () => {
   it("provides mutate function", () => {
     const { result } = renderWithProviders(() =>
-      useWrap({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
 
     expect(result.current.mutate).toBeDefined();
@@ -192,7 +192,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
   });
 });
 
-describe("useWrap optimistic updates", () => {
+describe("useShield optimistic updates", () => {
   it("adds amount to cached balance on mutate when optimistic=true", async () => {
     const signer = createMockSigner();
     let resolveWrap: (v: string) => void;
@@ -203,7 +203,7 @@ describe("useWrap optimistic updates", () => {
     );
 
     const { result, queryClient } = renderWithProviders(
-      () => useWrap({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+      () => useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
       { signer },
     );
 
@@ -224,12 +224,12 @@ describe("useWrap optimistic updates", () => {
     });
   });
 
-  it("invalidates balance queries on wrap error when optimistic=true", async () => {
+  it("invalidates balance queries on shield error when optimistic=true", async () => {
     const signer = createMockSigner();
-    vi.mocked(signer.writeContract).mockRejectedValue(new Error("wrap failed"));
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const { result, queryClient } = renderWithProviders(
-      () => useWrap({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+      () => useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
       { signer },
     );
 

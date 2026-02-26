@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { TokenSDK } from "@zama-fhe/sdk";
+import type { ZamaSDK } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
 
 /**
@@ -26,10 +26,10 @@ type PublicKeyResult = PublicKeyData | null;
 /**
  * TanStack Query options factory for the FHE public key.
  *
- * @param sdk - A `TokenSDK` instance.
+ * @param sdk - A `ZamaSDK` instance.
  * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
  */
-export function publicKeyQueryOptions(sdk: TokenSDK) {
+export function publicKeyQueryOptions(sdk: ZamaSDK) {
   return {
     queryKey: publicKeyQueryKeys.all,
     queryFn: () => sdk.relayer.getPublicKey() as Promise<PublicKeyResult>,

@@ -1,3 +1,12 @@
+/**
+ * React hooks for confidential token operations, built on React Query.
+ *
+ * Requires {@link ZamaProvider} in the component tree. Re-exports all public
+ * symbols from `@zama-fhe/sdk`.
+ *
+ * @packageDocumentation
+ */
+
 // Provider
 export { ZamaProvider, useZamaSDK } from "./provider";
 
@@ -33,7 +42,7 @@ export { decryptionKeys } from "./relayer/decryption-cache";
 // Re-export core classes
 export {
   RelayerWeb,
-  TokenSDK,
+  ZamaSDK,
   Token,
   ReadonlyToken,
   MemoryStorage,
@@ -46,7 +55,7 @@ export {
 export type {
   RelayerSDK,
   RelayerWebConfig,
-  TokenSDKConfig,
+  ZamaSDKConfig,
   TokenConfig,
   ReadonlyTokenConfig,
   BatchDecryptOptions,
@@ -68,7 +77,30 @@ export type {
   UnshieldCallbacks,
   ZamaSDKEventType,
   ZamaSDKEvent,
+  ZamaSDKEventInput,
   ZamaSDKEventListener,
+  ShieldSubmittedEvent,
+  TransferSubmittedEvent,
+  TransferFromSubmittedEvent,
+  ApproveSubmittedEvent,
+  ApproveUnderlyingSubmittedEvent,
+  UnwrapSubmittedEvent,
+  FinalizeUnwrapSubmittedEvent,
+  UnshieldPhase1SubmittedEvent,
+  UnshieldPhase2StartedEvent,
+  UnshieldPhase2SubmittedEvent,
+  TransactionErrorEvent,
+  EncryptStartEvent,
+  EncryptEndEvent,
+  EncryptErrorEvent,
+  DecryptStartEvent,
+  DecryptEndEvent,
+  DecryptErrorEvent,
+  CredentialsLoadingEvent,
+  CredentialsCachedEvent,
+  CredentialsExpiredEvent,
+  CredentialsCreatingEvent,
+  CredentialsCreatedEvent,
 } from "@zama-fhe/sdk";
 
 // Re-export pending-unshield persistence utilities
@@ -113,6 +145,8 @@ export {
   wrapContract,
   wrapETHContract,
   supportsInterfaceContract,
+  isConfidentialTokenContract,
+  isConfidentialWrapperContract,
   nameContract,
   symbolContract,
   decimalsContract,
@@ -132,7 +166,7 @@ export {
 } from "@zama-fhe/sdk";
 
 // Token hooks
-export { useToken, type UseTokenConfig } from "./token/use-token";
+export { useToken, type UseZamaConfig } from "./token/use-token";
 export { useReadonlyToken } from "./token/use-readonly-token";
 export {
   useConfidentialBalance,
@@ -170,14 +204,16 @@ export {
   type UseConfidentialIsApprovedSuspenseConfig,
 } from "./token/use-confidential-is-approved";
 export {
-  useWrap,
-  wrapMutationOptions,
-  type WrapParams,
-  type UseWrapConfig,
-} from "./token/use-wrap";
-export { useShield } from "./token/use-shield";
-export { useWrapETH, wrapETHMutationOptions, type WrapETHParams } from "./token/use-wrap-eth";
-export { useShieldETH } from "./token/use-shield-eth";
+  useShield,
+  shieldMutationOptions,
+  type ShieldParams,
+  type UseShieldConfig,
+} from "./token/use-shield";
+export {
+  useShieldETH,
+  shieldETHMutationOptions,
+  type ShieldETHParams,
+} from "./token/use-shield-eth";
 export { useUnwrap, unwrapMutationOptions, type UnwrapParams } from "./token/use-unwrap";
 export { useUnwrapAll, unwrapAllMutationOptions } from "./token/use-unwrap-all";
 export {
@@ -251,12 +287,12 @@ export {
   totalSupplyQueryOptions,
 } from "./token/use-total-supply";
 export {
-  useWrapFee,
-  useUnwrapFee,
+  useShieldFee,
+  useUnshieldFee,
   useBatchTransferFee,
   useFeeRecipient,
-  wrapFeeQueryOptions,
-  unwrapFeeQueryOptions,
+  shieldFeeQueryOptions,
+  unshieldFeeQueryOptions,
   batchTransferFeeQueryOptions,
   feeRecipientQueryOptions,
   feeQueryKeys,
@@ -311,11 +347,20 @@ export type {
   GenericStringStorage,
   ContractCallConfig,
   TransactionReceipt,
+  TransactionResult,
 } from "@zama-fhe/sdk";
 export {
-  TokenError,
-  TokenErrorCode,
+  ZamaError,
+  ZamaErrorCode,
+  SigningRejectedError,
+  SigningFailedError,
+  EncryptionFailedError,
+  DecryptionFailedError,
+  ApprovalFailedError,
+  TransactionRevertedError,
+  CredentialExpiredError,
   InvalidCredentialsError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  matchZamaError,
 } from "@zama-fhe/sdk";

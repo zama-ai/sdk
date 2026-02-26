@@ -33,7 +33,16 @@
     "hardhat:compile": "npm --prefix hardhat run compile",
     "hardhat:node": "npm --prefix hardhat run node",
     "e2e:test": "pnpm --filter @zama-fhe/test-app e2e:test",
-    "e2e:test:ui": "pnpm --filter @zama-fhe/test-app e2e:test:ui"
+    "e2e:test:ui": "pnpm --filter @zama-fhe/test-app e2e:test:ui",
+    "docs:preview": "mdbook serve docs/gitbook --open",
+    "docs:build": "mdbook build docs/gitbook",
+    "typedoc": "typedoc",
+    "api-report": "pnpm build && pnpm api-report:sdk && pnpm api-report:react-sdk",
+    "api-report:sdk": "cd packages/sdk && api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.node.json",
+    "api-report:react-sdk": "cd packages/react-sdk && api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.wagmi.json",
+    "api-report:check": "pnpm build && pnpm api-report:check:sdk && pnpm api-report:check:react-sdk",
+    "api-report:check:sdk": "cd packages/sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json",
+    "api-report:check:react-sdk": "cd packages/react-sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.wagmi.json"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.2",
@@ -41,6 +50,7 @@
     "@eslint/js": "^10.0.1",
     "@faker-js/faker": "^10.3.0",
     "@fhevm/mock-utils": "0.4.2",
+    "@microsoft/api-extractor": "^7.57.5",
     "@tanstack/react-query": "^5.90.21",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -58,11 +68,14 @@
     "husky": "^9.1.7",
     "jsdom": "^28.1.0",
     "lint-staged": "^16.2.7",
+    "mdbook": "workspace:*",
     "prettier": "^3.8.1",
     "prettier-plugin-solidity": "^2.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "tsup": "^8.5.1",
+    "typedoc": "^0.28.17",
+    "typedoc-plugin-markdown": "^4.10.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
@@ -73,7 +86,7 @@
   },
   "packageManager": "pnpm@10.30.2",
   "engines": {
-    "node": ">=24",
+    "node": ">=22",
     "pnpm": ">=10"
   }
 }

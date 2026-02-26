@@ -15,11 +15,12 @@ import type {
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
 import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { TokenError, EncryptionFailedError } from "../token/errors";
+import { ZamaError, EncryptionFailedError } from "../token/errors";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
- * Update this when upgrading @zama-fhe/relayer-sdk.
+ * Update this when upgrading @zama-fhe/relayer-sdk, and keep the
+ * peerDependencies range in package.json in sync (~x.y.z).
  */
 const RELAYER_SDK_VERSION = "0.4.1";
 const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
@@ -28,8 +29,28 @@ const CDN_INTEGRITY =
   "2bd5401738b74509549bed2029bbbabedd481b10ac260f66e64a4ff3723d6d704180c51e882757c56ca1840491e90e33";
 
 /**
- * RelayerWeb — browser FHE backend using a Web Worker.
+ * RelayerWeb — browser encryption/decryption layer using a Web Worker.
  * Handles WASM initialization in a Web Worker for non-blocking operations.
+ *
+ * ## Worker initialization / promise lock pattern
+ *
+ * Every public method calls `#ensureWorker()` before proceeding.
+ * Initialization is managed by three private fields:
+ *
+ * - `#workerClient` — the live worker instance (null until first init)
+ * - `#initPromise` — cached promise from `#initWorker()`; once resolved,
+ *   all subsequent callers reuse the same worker without re-initializing.
+ *   Cleared on error so the next caller retries a fresh init.
+ * - `#ensureLock` — short-lived promise that serializes concurrent calls
+ *   to `#ensureWorkerInner()`. While one caller is checking chain IDs and
+ *   potentially tearing down an old worker, all other callers await the
+ *   same lock instead of racing through the same logic. Cleared in
+ *   `finally` so it's never leaked.
+ *
+ * Chain switching: when `getChainId()` returns a value different from the
+ * previously resolved chain, the old worker is terminated, `#initPromise`
+ * is cleared, and a fresh worker is created for the new chain — all within
+ * the `#ensureLock` critical section.
  */
 export class RelayerWeb implements RelayerSDK {
   #workerClient: RelayerWorkerClient | null = null;
@@ -90,7 +111,7 @@ export class RelayerWeb implements RelayerSDK {
     if (!this.#initPromise) {
       this.#initPromise = this.#initWorker().catch((error) => {
         this.#initPromise = null;
-        throw error instanceof TokenError
+        throw error instanceof ZamaError
           ? error
           : new EncryptionFailedError("Failed to initialize FHE worker", {
               cause: error instanceof Error ? error : undefined,

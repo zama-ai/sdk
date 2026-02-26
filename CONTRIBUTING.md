@@ -1,6 +1,6 @@
 # Contributing to @zama-fhe/sdk
 
-Thank you for your interest in contributing to the Zama Token SDK! This guide will help you get started.
+Thank you for your interest in contributing to the Zama SDK! This guide will help you get started.
 
 ## Development Setup
 

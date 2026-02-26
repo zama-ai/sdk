@@ -1,20 +1,23 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import type { WalletClient } from "viem";
 import { writeConfidentialTransferContract } from "@zama-fhe/sdk/viem";
 
-type WriteFn = typeof writeConfidentialTransferContract;
-type Params = Parameters<WriteFn>;
-
 export interface ConfidentialTransferParams {
-  client: Params[0];
-  tokenAddress: Params[1];
-  to: Params[2];
-  handle: Params[3];
-  inputProof: Params[4];
+  client: WalletClient;
+  tokenAddress: Address;
+  to: Address;
+  handle: Uint8Array;
+  inputProof: Uint8Array;
 }
 export function useConfidentialTransfer() {
-  return useMutation<Awaited<ReturnType<WriteFn>>, Error, ConfidentialTransferParams>({
+  return useMutation<
+    Awaited<ReturnType<typeof writeConfidentialTransferContract>>,
+    Error,
+    ConfidentialTransferParams
+  >({
     mutationFn: (params) =>
       writeConfidentialTransferContract(
         params.client,

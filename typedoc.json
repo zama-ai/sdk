@@ -1,0 +1,29 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "plugin": ["typedoc-plugin-markdown"],
+  "entryPoints": [
+    "packages/sdk/src/index.ts",
+    "packages/sdk/src/viem/index.ts",
+    "packages/sdk/src/ethers/index.ts",
+    "packages/sdk/src/node/index.ts",
+    "packages/react-sdk/src/index.ts",
+    "packages/react-sdk/src/viem/index.ts",
+    "packages/react-sdk/src/ethers/index.ts",
+    "packages/react-sdk/src/wagmi/index.ts"
+  ],
+  "entryPointStrategy": "expand",
+  "out": "docs/api",
+  "name": "Zama SDK",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "tsconfig": "tsconfig.json",
+  "skipErrorChecking": true,
+  "categorizeByGroup": true,
+  "externalSymbolLinkMappings": {
+    "@zama-fhe/relayer-sdk": {
+      "ZKProofLike": "https://docs.zama.ai/fhevm"
+    }
+  }
+}

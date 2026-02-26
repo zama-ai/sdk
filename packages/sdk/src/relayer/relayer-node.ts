@@ -1,7 +1,7 @@
 import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
 import type { RelayerSDK } from "./relayer-sdk";
 import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { TokenError, EncryptionFailedError } from "../token/errors";
+import { ZamaError, EncryptionFailedError } from "../token/errors";
 import type {
   Address,
   DelegatedUserDecryptParams,
@@ -27,8 +27,13 @@ export interface RelayerNodeConfig {
 }
 
 /**
- * RelayerNode — Node.js FHE backend using a worker thread.
- * Offloads CPU-intensive WASM/FHE operations to a node:worker_threads worker.
+ * RelayerNode — Node.js encryption/decryption layer using a worker thread pool.
+ * Offloads CPU-intensive WASM/FHE operations to `node:worker_threads`.
+ *
+ * Uses the same promise lock pattern as {@link RelayerWeb}:
+ * `#ensureLock` serializes concurrent callers, `#initPromise` caches the
+ * resolved pool, and chain switches tear down the old pool within the lock.
+ * See the RelayerWeb class doc for a detailed explanation.
  */
 export class RelayerNode implements RelayerSDK {
   readonly #config: RelayerNodeConfig;
@@ -82,7 +87,7 @@ export class RelayerNode implements RelayerSDK {
     if (!this.#initPromise) {
       this.#initPromise = this.#initPool().catch((error) => {
         this.#initPromise = null;
-        throw error instanceof TokenError
+        throw error instanceof ZamaError
           ? error
           : new EncryptionFailedError("Failed to initialize FHE worker pool", {
               cause: error instanceof Error ? error : undefined,

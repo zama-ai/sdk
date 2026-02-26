@@ -1,14 +1,14 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token } from "@zama-fhe/sdk";
+import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
 } from "./balance-query-keys";
-import { useToken, type UseTokenConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Parameters passed to the `mutate` function of {@link useConfidentialTransferFrom}. */
 export interface ConfidentialTransferFromParams {
@@ -48,12 +48,12 @@ export function confidentialTransferFromMutationOptions(token: Token) {
  * ```
  */
 export function useConfidentialTransferFrom(
-  config: UseTokenConfig,
-  options?: UseMutationOptions<Address, Error, ConfidentialTransferFromParams, Address>,
+  config: UseZamaConfig,
+  options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferFromParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<Address, Error, ConfidentialTransferFromParams, Address>({
+  return useMutation<TransactionResult, Error, ConfidentialTransferFromParams, Address>({
     mutationKey: ["confidentialTransferFrom", config.tokenAddress],
     mutationFn: ({ from, to, amount }) => token.confidentialTransferFrom(from, to, amount),
     ...options,

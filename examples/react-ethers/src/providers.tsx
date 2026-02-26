@@ -11,7 +11,7 @@ const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL!;
 
 const provider = new BrowserProvider(window.ethereum!);
 
-const signer = new EthersSigner(provider);
+const signer = new EthersSigner({ signer: provider });
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
