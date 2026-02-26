@@ -10,8 +10,6 @@ export const ZamaSDKEvents = {
   CredentialsExpired: "credentials:expired",
   CredentialsCreating: "credentials:creating",
   CredentialsCreated: "credentials:created",
-  CredentialsLocked: "credentials:locked",
-  CredentialsUnlocked: "credentials:unlocked",
   // FHE operations
   EncryptStart: "encrypt:start",
   EncryptEnd: "encrypt:end",
@@ -76,14 +74,6 @@ export interface CredentialsCreatedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.CredentialsCreated;
   /** Contract addresses covered by the new credentials. */
   contractAddresses?: Address[];
-}
-
-export interface CredentialsLockedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsLocked;
-}
-
-export interface CredentialsUnlockedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsUnlocked;
 }
 
 export interface EncryptStartEvent extends BaseEvent {
@@ -182,8 +172,6 @@ export type ZamaSDKEvent =
   | CredentialsExpiredEvent
   | CredentialsCreatingEvent
   | CredentialsCreatedEvent
-  | CredentialsLockedEvent
-  | CredentialsUnlockedEvent
   | EncryptStartEvent
   | EncryptEndEvent
   | EncryptErrorEvent
