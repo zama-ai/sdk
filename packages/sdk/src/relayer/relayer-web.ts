@@ -19,7 +19,8 @@ import { ZamaError, EncryptionFailedError } from "../token/errors";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
- * Update this when upgrading @zama-fhe/relayer-sdk.
+ * Update this when upgrading @zama-fhe/relayer-sdk, and keep the
+ * peerDependencies range in package.json in sync (~x.y.z).
  */
 const RELAYER_SDK_VERSION = "0.4.1";
 const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
