@@ -36,6 +36,7 @@ npm-debug.log*
 
 # generated api docs
 docs/api/
+docs/gitbook/book
 
 # api-extractor temp files
 packages/sdk/temp/

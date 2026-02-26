@@ -1,0 +1,8 @@
+[book]
+title = "Zama Token SDK"
+authors = ["Zama"]
+language = "en"
+src = "src"
+
+[output.html]
+no-section-label = true

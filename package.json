@@ -34,6 +34,8 @@
     "hardhat:node": "npm --prefix hardhat run node",
     "e2e:test": "pnpm --filter @zama-fhe/test-app e2e:test",
     "e2e:test:ui": "pnpm --filter @zama-fhe/test-app e2e:test:ui",
+    "docs:preview": "mdbook serve docs/gitbook --open",
+    "docs:build": "mdbook build docs/gitbook",
     "typedoc": "typedoc",
     "api-report": "pnpm build && pnpm api-report:sdk && pnpm api-report:react-sdk",
     "api-report:sdk": "cd packages/sdk && api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.node.json",
