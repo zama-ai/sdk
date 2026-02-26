@@ -22,7 +22,7 @@ jobs:
         run: |
           node -e '
             const title = process.env.PR_TITLE || "";
-            const re = /^(feat|fix|perf|refactor|docs|chore|test|build|ci|revert)(\([^)]+\))?!?: .+/;
+            const re = /^(feat|fix|perf|refactor|docs|chore|test|build|ci|revert|style)(\([^)]+\))?!?: .+/;
             if (!re.test(title)) {
               console.error("PR title must follow Conventional Commits (e.g. fix: ..., feat(scope): ...).");
               console.error(`Current title: "${title}"`);
