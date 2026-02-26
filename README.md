@@ -29,6 +29,8 @@ The SDK handles all the FHE complexity for you: key generation, encryption, decr
 
 ## Quick Start
 
+The examples below use a backend proxy (`relayerUrl`) to keep your API key server-side. See [Authentication](#3-authentication) for the proxy setup and direct API key alternatives.
+
 ### Install
 
 ```bash
