@@ -183,8 +183,8 @@ const sdk = new ZamaSDK({
 ### Node.js
 
 ```ts
-import { ZamaSDK, MemoryStorage } from "@zama-fhe/sdk";
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { RelayerNode, asyncLocalStorage } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
@@ -206,7 +206,7 @@ const sdk = new ZamaSDK({
     },
   }),
   signer,
-  storage: new MemoryStorage(),
+  storage: asyncLocalStorage,
 });
 ```
 
@@ -384,12 +384,12 @@ The `Auth` types (`ApiKeyHeader`, `ApiKeyCookie`, `BearerToken`) are exported fr
 
 FHE credentials (keypair + EIP-712 signature) need to be persisted so users don't re-sign on every page load:
 
-| Storage            | Use Case                                                                         |
-| ------------------ | -------------------------------------------------------------------------------- |
-| `IndexedDBStorage` | Browser production (persistent across sessions)                                  |
-| `indexedDBStorage` | Pre-built singleton of `IndexedDBStorage`                                        |
-| `MemoryStorage`    | Testing / Node.js scripts (lost on restart)                                      |
-| Custom             | Implement `GenericStringStorage` (3 methods: `getItem`, `setItem`, `removeItem`) |
+| Storage             | Use Case                                                                         |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                         |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                                               |
+| `asyncLocalStorage` | Node.js servers — isolate credentials per request                                |
+| Custom              | Implement `GenericStringStorage` (3 methods: `getItem`, `setItem`, `removeItem`) |
 
 ### 5. Token Operations
 

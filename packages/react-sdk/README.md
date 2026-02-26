@@ -87,7 +87,7 @@ import {
   RelayerWeb,
   useConfidentialBalance,
   useConfidentialTransfer,
-  MemoryStorage,
+  memoryStorage,
 } from "@zama-fhe/react-sdk";
 
 const relayer = new RelayerWeb({
@@ -109,7 +109,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider relayer={relayer} signer={yourCustomSigner} storage={new MemoryStorage()}>
+      <ZamaProvider relayer={relayer} signer={yourCustomSigner} storage={memoryStorage}>
         <TransferForm />
       </ZamaProvider>
     </QueryClientProvider>
@@ -967,7 +967,7 @@ queryClient.invalidateQueries({ queryKey: confidentialBalanceQueryKeys.all });
 
 All public exports from `@zama-fhe/sdk` are re-exported from the main entry point. You never need to import from the core package directly.
 
-**Classes:** `RelayerWeb`, `ZamaSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
+**Classes:** `RelayerWeb`, `ZamaSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `memoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
 
 **Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
 

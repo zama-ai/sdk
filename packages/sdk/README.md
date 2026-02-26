@@ -65,8 +65,8 @@ const transferTx = await token.confidentialTransfer("0xRecipient", 500n);
 ### Node.js
 
 ```ts
-import { ZamaSDK, MemoryStorage } from "@zama-fhe/sdk";
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { RelayerNode, asyncLocalStorage } from "@zama-fhe/sdk/node";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { mainnet, sepolia } from "viem/chains";
 
@@ -88,7 +88,7 @@ const sdk = new ZamaSDK({
     },
   }),
   signer,
-  storage: new MemoryStorage(),
+  storage: asyncLocalStorage,
 });
 
 const token = sdk.createToken("0xEncryptedERC20Address");
@@ -221,12 +221,12 @@ if (pending) {
 
 FHE credentials (keypair + EIP-712 signature) are persisted to storage. Three options:
 
-| Storage            | Use case                                          |
-| ------------------ | ------------------------------------------------- |
-| `MemoryStorage`    | Testing. In-memory `Map`, lost on page reload.    |
-| `IndexedDBStorage` | Browser production. IndexedDB-backed, persistent. |
-| `indexedDBStorage` | Pre-built singleton `IndexedDBStorage` instance.  |
-| Custom             | Implement the `GenericStringStorage` interface.   |
+| Storage             | Use case                                                 |
+| ------------------- | -------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                       |
+| `asyncLocalStorage` | Node.js servers — isolate credentials per request        |
+| Custom              | Implement the `GenericStringStorage` interface           |
 
 ```ts
 interface GenericStringStorage {
