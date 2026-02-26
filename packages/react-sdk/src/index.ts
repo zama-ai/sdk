@@ -180,6 +180,12 @@ export {
 } from "./token/use-confidential-balances";
 export { useTokenAllow, tokenAllowMutationOptions } from "./token/use-token-allow";
 export {
+  useIsTokenAllowed,
+  isAllowedQueryKeys,
+  isAllowedQueryOptions,
+} from "./token/use-is-allowed";
+export { useTokenRevoke, tokenRevokeMutationOptions } from "./token/use-token-revoke";
+export {
   useConfidentialTransfer,
   confidentialTransferMutationOptions,
   type ConfidentialTransferParams,

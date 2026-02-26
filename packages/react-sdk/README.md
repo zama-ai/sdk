@@ -287,6 +287,37 @@ await tokenAllow(allTokenAddresses);
 const { data: balance } = useConfidentialBalance("0xTokenA");
 ```
 
+#### `useIsTokenAllowed`
+
+Check whether a session signature is cached for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt. Use this to conditionally enable UI elements (e.g. a "Reveal Balances" button).
+
+```ts
+function useIsTokenAllowed(tokenAddress: Address): UseQueryResult<boolean, Error>;
+```
+
+```tsx
+const { data: allowed } = useIsTokenAllowed("0xTokenAddress");
+
+<button disabled={!allowed}>Reveal Balance</button>;
+```
+
+Automatically invalidated when `useTokenAllow` or `useTokenRevoke` succeed.
+
+#### `useTokenRevoke`
+
+Revoke the session signature for the connected wallet. Stored credentials remain intact, but the next decrypt operation will require a fresh wallet signature.
+
+```ts
+function useTokenRevoke(): UseMutationResult<void, Error, Address[]>;
+```
+
+```tsx
+const { mutate: tokenRevoke } = useTokenRevoke();
+
+// Revoke session for specific tokens
+tokenRevoke(["0xTokenA", "0xTokenB"]);
+```
+
 ### Transfer Hooks
 
 #### `useConfidentialTransfer`
@@ -765,6 +796,7 @@ import {
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
+  isAllowedQueryKeys,
   underlyingAllowanceQueryKeys,
   activityFeedQueryKeys,
   feeQueryKeys,
@@ -778,6 +810,7 @@ import {
 | `confidentialBalancesQueryKeys` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
 | `confidentialHandleQueryKeys`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
 | `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
+| `isAllowedQueryKeys`            | `.all`, `.token(address)`                                                                | Session signature status.           |
 | `underlyingAllowanceQueryKeys`  | `.all`, `.token(address, wrapper)`                                                       | Underlying ERC-20 allowance.        |
 | `activityFeedQueryKeys`         | `.all`, `.token(address)`                                                                | Activity feed items.                |
 | `feeQueryKeys`                  | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
@@ -870,7 +903,8 @@ FHE decrypt credentials are generated once per wallet + token set and cached in 
 3. **Page reload** — Encrypted credentials are loaded from storage; the wallet is prompted once to re-sign for the session.
 4. **Expiry** — Credentials expire based on `credentialDurationDays`. After expiry, the next decrypt regenerates and re-prompts.
 5. **Pre-authorization** — Call `useTokenAllow(tokenAddresses)` early to batch-authorize all tokens in one wallet prompt, avoiding repeated popups.
-6. **Disconnect** — Call `await credentials.revoke()` to clear the session signature from memory.
+6. **Check status** — Use `useIsTokenAllowed(tokenAddress)` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
+7. **Disconnect** — Call `useTokenRevoke(tokenAddresses)` or `await credentials.revoke()` to clear the session signature from memory.
 
 ### Error-to-User-Message Mapping
 

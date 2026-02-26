@@ -41,13 +41,12 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.relayer).toBeDefined();
   });
 
-  it("calls terminate on unmount", () => {
+  it("does not terminate relayer on unmount (caller owns the relayer)", () => {
     const relayer = createMockRelayer();
     const { unmount } = renderWithProviders(() => useZamaSDK(), { relayer });
 
-    expect(relayer.terminate).not.toHaveBeenCalled();
     unmount();
-    expect(relayer.terminate).toHaveBeenCalledOnce();
+    expect(relayer.terminate).not.toHaveBeenCalled();
   });
 
   it("passes credentialDurationDays and onEvent to ZamaSDK", () => {

@@ -7,6 +7,7 @@ import { ZamaErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { DecryptionFailedError } from "../errors";
+import { CredentialsManager } from "../credential-manager";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const USER = "0x2222222222222222222222222222222222222222" as Address;
@@ -59,6 +60,7 @@ describe("ReadonlyToken", () => {
   let token: ReadonlyToken;
 
   beforeEach(() => {
+    CredentialsManager.clearSessionSignatures();
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new ReadonlyToken({

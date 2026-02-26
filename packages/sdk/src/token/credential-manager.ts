@@ -44,6 +44,8 @@ export interface CredentialsManagerConfig {
 }
 
 export class CredentialsManager {
+  static #sessionSignatures: Map<string, string> = new Map();
+
   #sdk: RelayerSDK;
   #signer: GenericSigner;
   #storage: GenericStringStorage;
@@ -51,7 +53,11 @@ export class CredentialsManager {
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
-  #sessionSignatures: Map<string, string> = new Map();
+
+  /** Clear all cached session signatures. Useful for test isolation. */
+  static clearSessionSignatures(): void {
+    CredentialsManager.#sessionSignatures.clear();
+  }
 
   constructor(config: CredentialsManagerConfig) {
     this.#sdk = config.sdk;
@@ -90,7 +96,7 @@ export class CredentialsManager {
         if (this.#hasLegacySignature(encrypted)) {
           const creds = await this.#decryptCredentials(encrypted, encrypted.signature);
           if (this.#isValid(creds, contractAddresses)) {
-            this.#sessionSignatures.set(storeKey, encrypted.signature);
+            CredentialsManager.#sessionSignatures.set(storeKey, encrypted.signature);
             // Re-persist without signature (migration)
             const migrated = await this.#encryptCredentials(creds);
             await this.#storage.setItem(storeKey, JSON.stringify(migrated)).catch(() => {});
@@ -100,7 +106,7 @@ export class CredentialsManager {
           this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
         } else {
           // New format: check session map
-          const sessionSig = this.#sessionSignatures.get(storeKey);
+          const sessionSig = CredentialsManager.#sessionSignatures.get(storeKey);
           if (sessionSig) {
             const creds = await this.#decryptCredentials(encrypted, sessionSig);
             if (this.#isValid(creds, contractAddresses)) {
@@ -112,7 +118,7 @@ export class CredentialsManager {
             // No session signature — need to re-sign
             if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
               const signature = await this.#reSign(encrypted);
-              this.#sessionSignatures.set(storeKey, signature);
+              CredentialsManager.#sessionSignatures.set(storeKey, signature);
               const creds = await this.#decryptCredentials(encrypted, signature);
               this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
               return creds;
@@ -191,7 +197,7 @@ export class CredentialsManager {
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
     const storeKey = await this.#storeKey();
-    this.#sessionSignatures.delete(storeKey);
+    CredentialsManager.#sessionSignatures.delete(storeKey);
     this.#emit({
       type: ZamaSDKEvents.CredentialsRevoked,
       ...(contractAddresses.length > 0 && { contractAddresses }),
@@ -203,7 +209,7 @@ export class CredentialsManager {
    */
   async isAllowed(): Promise<boolean> {
     const storeKey = await this.#storeKey();
-    return this.#sessionSignatures.has(storeKey);
+    return CredentialsManager.#sessionSignatures.has(storeKey);
   }
 
   /**
@@ -216,7 +222,7 @@ export class CredentialsManager {
    */
   async clear(): Promise<void> {
     const storeKey = await this.#storeKey();
-    this.#sessionSignatures.delete(storeKey);
+    CredentialsManager.#sessionSignatures.delete(storeKey);
     try {
       await this.#storage.removeItem(storeKey);
     } catch {
@@ -301,7 +307,7 @@ export class CredentialsManager {
       );
 
       const signature = await this.#signer.signTypedData(eip712);
-      this.#sessionSignatures.set(await this.#storeKey(), signature);
+      CredentialsManager.#sessionSignatures.set(await this.#storeKey(), signature);
 
       const creds: StoredCredentials = {
         publicKey: keypair.publicKey,

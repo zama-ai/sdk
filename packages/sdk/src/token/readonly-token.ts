@@ -471,6 +471,23 @@ export class ReadonlyToken {
   }
 
   /**
+   * Whether a session signature is currently cached for the connected wallet.
+   * Use this to check if decrypt operations can proceed without a wallet prompt.
+   */
+  async isAllowed(): Promise<boolean> {
+    return this.credentials.isAllowed();
+  }
+
+  /**
+   * Revoke the session signature for the connected wallet.
+   * Stored credentials remain intact, but the next decrypt operation
+   * will require a fresh wallet signature.
+   */
+  async revoke(): Promise<void> {
+    await this.credentials.revoke();
+  }
+
+  /**
    * Ensure FHE decrypt credentials exist for all given tokens in a single
    * wallet signature. Call this early (e.g. after loading the token list) so
    * that subsequent individual decrypt operations reuse cached credentials.
@@ -485,35 +502,6 @@ export class ReadonlyToken {
    * // All tokens now share the same credentials
    * ```
    */
-  /**
-   * Whether session credentials are currently cached for this wallet.
-   *
-   * @returns `true` if a session signature exists, `false` otherwise.
-   *
-   * @example
-   * ```ts
-   * if (await token.isAllowed()) {
-   *   const balance = await token.balanceOf();
-   * }
-   * ```
-   */
-  async isAllowed(): Promise<boolean> {
-    return this.credentials.isAllowed();
-  }
-
-  /**
-   * Clear the session signature. The next decrypt will require a fresh
-   * wallet signature. Call this on wallet disconnect.
-   *
-   * @example
-   * ```ts
-   * await token.revoke();
-   * ```
-   */
-  async revoke(): Promise<void> {
-    await this.credentials.revoke();
-  }
-
   static async allow(...tokens: ReadonlyToken[]): Promise<void> {
     if (tokens.length === 0) return;
     const allAddresses = tokens.map((t) => t.address);

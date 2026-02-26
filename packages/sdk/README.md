@@ -176,6 +176,8 @@ Read-only subset. No wrapper address needed.
 | `decryptHandles(handles, owner?)`     | Batch-decrypt handles in a single relayer call.                             |
 | `allow()`                             | Ensure FHE decrypt credentials exist (generates/signs if needed).           |
 | `allow(...tokens)` _(static)_         | Pre-authorize multiple tokens with a single wallet signature.               |
+| `isAllowed()`                         | Whether a session signature is currently cached for this token.             |
+| `revoke()`                            | Clear the session signature for the connected wallet.                       |
 | `credentials.allow(...addresses)`     | Pre-authorize and cache the session signature for specific token addresses. |
 | `credentials.revoke(...addresses?)`   | Clear the session signature for the connected wallet.                       |
 | `credentials.isAllowed()`             | Whether a session signature is currently cached.                            |

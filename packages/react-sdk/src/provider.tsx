@@ -7,7 +7,7 @@ import type {
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
-import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
+import { createContext, type PropsWithChildren, useContext, useMemo } from "react";
 
 /** Props for {@link ZamaProvider}. */
 interface ZamaProviderProps extends PropsWithChildren {
@@ -56,9 +56,10 @@ export function ZamaProvider({
     [relayer, signer, storage, credentialDurationDays, onEvent],
   );
 
-  useEffect(() => {
-    return () => sdk.terminate();
-  }, [sdk]);
+  // Note: we do NOT terminate the SDK on unmount because the relayer is
+  // owned by the caller (passed in as a prop). Terminating it here would
+  // break React Strict Mode (dev double-mount) and any scenario where the
+  // provider remounts with the same relayer instance.
 
   return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;
 }

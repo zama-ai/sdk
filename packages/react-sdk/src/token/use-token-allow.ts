@@ -1,8 +1,9 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ReadonlyToken, type Address, type ZamaSDK } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
+import { isAllowedQueryKeys } from "./use-is-allowed";
 
 /**
  * TanStack Query mutation options factory for token allow.
@@ -33,6 +34,12 @@ export function tokenAllowMutationOptions(sdk: ZamaSDK) {
  */
 export function useTokenAllow() {
   const sdk = useZamaSDK();
+  const queryClient = useQueryClient();
 
-  return useMutation<void, Error, Address[]>(tokenAllowMutationOptions(sdk));
+  return useMutation<void, Error, Address[]>({
+    ...tokenAllowMutationOptions(sdk),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: isAllowedQueryKeys.all });
+    },
+  });
 }

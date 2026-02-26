@@ -63,6 +63,7 @@ describe("CredentialsManager", () => {
   let storeKey: string;
 
   beforeEach(async () => {
+    CredentialsManager.clearSessionSignatures();
     sdk = createMockSdk();
     signer = createMockSigner();
     store = new MemoryStorage();
@@ -123,6 +124,8 @@ describe("CredentialsManager", () => {
   it("loads credentials from store on new instance", async () => {
     await manager.allow("0xtoken" as Address);
 
+    // Simulate page reload: session signatures are lost
+    CredentialsManager.clearSessionSignatures();
     const manager2 = new CredentialsManager({
       sdk: sdk as unknown as RelayerSDK,
       signer,
@@ -147,6 +150,8 @@ describe("CredentialsManager", () => {
     delete parsed.signature;
     await store.setItem(storeKey, JSON.stringify(parsed));
 
+    // Simulate page reload: session signatures are lost
+    CredentialsManager.clearSessionSignatures();
     // New manager instance should re-sign and return valid credentials
     const manager2 = new CredentialsManager({
       sdk: sdk as unknown as RelayerSDK,
@@ -387,6 +392,7 @@ describe("session allow/revoke", () => {
   let manager: CredentialsManager;
 
   beforeEach(async () => {
+    CredentialsManager.clearSessionSignatures();
     sdk = createMockSdk();
     signer = createMockSigner();
     store = new MemoryStorage();
