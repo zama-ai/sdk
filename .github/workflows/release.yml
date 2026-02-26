@@ -17,11 +17,11 @@ permissions:
 jobs:
   vitest:
     uses: ./.github/workflows/vitest.yml
-    secrets: inherit
 
   playwright:
     uses: ./.github/workflows/playwright.yml
-    secrets: inherit
+    secrets:
+      SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
   release:
     needs: [vitest, playwright]

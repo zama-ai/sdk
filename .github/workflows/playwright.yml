@@ -6,7 +6,7 @@ on:
   workflow_call:
     secrets:
       SUBMODULE_TOKEN:
-        required: false
+        required: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
