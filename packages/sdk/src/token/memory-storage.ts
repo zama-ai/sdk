@@ -16,3 +16,6 @@ export class MemoryStorage implements GenericStringStorage {
     this.#map.delete(key);
   }
 }
+
+/** Default singleton for application-wide use. */
+export const memoryStorage = new MemoryStorage();

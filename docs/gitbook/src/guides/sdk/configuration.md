@@ -143,18 +143,31 @@ interface GenericSigner {
 
 FHE credentials (a keypair + EIP-712 signature) are cached so users don't get a wallet popup on every decrypt. You choose where to store them:
 
-| Storage                  | When to use                                                                            |
-| ------------------------ | -------------------------------------------------------------------------------------- |
-| `indexedDBStorage`       | Browser apps — persists across page reloads and sessions                               |
-| `new IndexedDBStorage()` | Same thing, but you control the instance                                               |
-| `new MemoryStorage()`    | Tests, scripts, throwaway sessions                                                     |
-| Custom                   | Implement `GenericStringStorage` (3 async methods: `getItem`, `setItem`, `removeItem`) |
+| Storage             | When to use                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                 |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                                                                       |
+| `asyncLocalStorage` | Node.js servers — isolate credentials per request ([example below](#per-request-storage-nodejs-servers)) |
+| Custom              | Implement `GenericStringStorage` (3 async methods: `getItem`, `setItem`, `removeItem`)                   |
 
 ```ts
-import { indexedDBStorage } from "@zama-fhe/sdk";
+import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
+```
 
-// or for Node.js / tests:
-import { MemoryStorage } from "@zama-fhe/sdk";
+### Per-request storage (Node.js servers)
+
+For servers where each request has its own user context, use `asyncLocalStorage` from the `/node` sub-path. It uses Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to isolate credentials per request:
+
+```ts
+import { asyncLocalStorage } from "@zama-fhe/sdk/node";
+
+app.post("/api/transfer", (req, res) => {
+  asyncLocalStorage.run(async () => {
+    const sdk = new ZamaSDK({ relayer, signer, storage: asyncLocalStorage });
+    // credentials are scoped to this request
+    await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
+  });
+});
 ```
 
 ## Authentication

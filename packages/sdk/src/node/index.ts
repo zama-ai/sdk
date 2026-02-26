@@ -13,5 +13,8 @@ export { NodeWorkerPool } from "../worker/worker.node-pool";
 export type { NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 export type { GenericLogger } from "../worker/worker.types";
 
+// Storage
+export { asyncLocalStorage } from "../token/async-local-storage";
+
 // Network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";

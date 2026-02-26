@@ -51,7 +51,7 @@ export type { TokenConfig } from "./token/token";
 export { ReadonlyToken } from "./token/readonly-token";
 export type { ReadonlyTokenConfig, BatchDecryptOptions } from "./token/readonly-token";
 export { ZERO_HANDLE } from "./token/readonly-token";
-export { MemoryStorage } from "./token/memory-storage";
+export { MemoryStorage, memoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { CredentialsManager } from "./token/credential-manager";
 export {
