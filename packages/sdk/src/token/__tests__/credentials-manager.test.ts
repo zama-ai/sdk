@@ -357,6 +357,26 @@ describe("CredentialsManager", () => {
       await store.setItem(storeKey, "corrupted-json{{{");
       expect(await manager.isExpired()).toBe(false);
     });
+
+    it("works without session signature (checks timestamp only)", async () => {
+      await manager.get("0xtoken" as Address);
+      manager.lock();
+
+      // Should still report not expired without needing the signature
+      expect(await manager.isExpired()).toBe(false);
+    });
+  });
+
+  it("clear() also clears the session signature", async () => {
+    await manager.get("0xtoken" as Address);
+    expect(await manager.isUnlocked()).toBe(true);
+
+    await manager.clear();
+    expect(await manager.isUnlocked()).toBe(false);
+
+    // Storage should also be empty
+    const stored = await store.getItem(storeKey);
+    expect(stored).toBeNull();
   });
 });
 
