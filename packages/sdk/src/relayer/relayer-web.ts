@@ -29,7 +29,7 @@ const CDN_INTEGRITY =
   "2bd5401738b74509549bed2029bbbabedd481b10ac260f66e64a4ff3723d6d704180c51e882757c56ca1840491e90e33";
 
 /**
- * RelayerWeb — browser FHE backend using a Web Worker.
+ * RelayerWeb — browser encryption/decryption layer using a Web Worker.
  * Handles WASM initialization in a Web Worker for non-blocking operations.
  */
 export class RelayerWeb implements RelayerSDK {

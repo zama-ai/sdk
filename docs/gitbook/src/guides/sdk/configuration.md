@@ -4,7 +4,7 @@ Every SDK setup has three required pieces and two optional ones:
 
 ```ts
 const sdk = new ZamaSDK({
-  relayer,                       // required — FHE encryption/decryption backend
+  relayer,                       // required — handles encryption & decryption
   signer,                        // required — wallet interface
   storage,                       // required — credential persistence
   credentialDurationDays: 1,     // optional (default: 1 day)

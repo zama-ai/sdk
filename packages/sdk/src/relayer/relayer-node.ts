@@ -27,7 +27,7 @@ export interface RelayerNodeConfig {
 }
 
 /**
- * RelayerNode — Node.js FHE backend using a worker thread.
+ * RelayerNode — Node.js encryption/decryption layer using a worker thread.
  * Offloads CPU-intensive WASM/FHE operations to a node:worker_threads worker.
  */
 export class RelayerNode implements RelayerSDK {
