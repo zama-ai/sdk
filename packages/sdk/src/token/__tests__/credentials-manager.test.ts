@@ -108,6 +108,8 @@ describe("CredentialsManager", () => {
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored!);
     expect(parsed.publicKey).toBe("0xpub123");
+    // Signature should NOT be persisted (session-scoped only)
+    expect(parsed.signature).toBeUndefined();
   });
 
   it("does not store the full address as key", async () => {
@@ -129,7 +131,35 @@ describe("CredentialsManager", () => {
     });
     await manager2.get("0xtoken" as Address);
 
+    // Keypair should NOT be regenerated — only re-signed
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+    // signTypedData called twice: once for original create, once for re-sign on new instance
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+  });
+
+  it("loads credentials stored without signature field (new format)", async () => {
+    // Create credentials to get valid encrypted data
+    await manager.get("0xtoken" as Address);
+
+    // Read stored data and strip the signature field (simulate new format)
+    const stored = await store.getItem(storeKey);
+    const parsed = JSON.parse(stored!);
+    delete parsed.signature;
+    await store.setItem(storeKey, JSON.stringify(parsed));
+
+    // New manager instance should re-sign and return valid credentials
+    const manager2 = new CredentialsManager({
+      sdk: sdk as unknown as RelayerSDK,
+      signer,
+      storage: store,
+      durationDays: 1,
+    });
+    const creds2 = await manager2.get("0xtoken" as Address);
+
+    // Should have re-signed (1 original + 1 re-sign)
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    expect(creds2.privateKey).toBe("0xpriv456");
+    expect(creds2.signature).toBe("0xsig789");
   });
 
   it("invalidates expired credentials", async () => {
@@ -327,6 +357,92 @@ describe("CredentialsManager", () => {
       await store.setItem(storeKey, "corrupted-json{{{");
       expect(await manager.isExpired()).toBe(false);
     });
+
+    it("works without session signature (checks timestamp only)", async () => {
+      await manager.get("0xtoken" as Address);
+      manager.lock();
+
+      // Should still report not expired without needing the signature
+      expect(await manager.isExpired()).toBe(false);
+    });
+  });
+
+  it("clear() also clears the session signature", async () => {
+    await manager.get("0xtoken" as Address);
+    expect(await manager.isUnlocked()).toBe(true);
+
+    await manager.clear();
+    expect(await manager.isUnlocked()).toBe(false);
+
+    // Storage should also be empty
+    const stored = await store.getItem(storeKey);
+    expect(stored).toBeNull();
+  });
+});
+
+describe("session lock/unlock", () => {
+  let sdk: ReturnType<typeof createMockSdk>;
+  let signer: GenericSigner;
+  let store: MemoryStorage;
+  let manager: CredentialsManager;
+
+  beforeEach(async () => {
+    sdk = createMockSdk();
+    signer = createMockSigner();
+    store = new MemoryStorage();
+    manager = new CredentialsManager({
+      sdk: sdk as unknown as RelayerSDK,
+      signer,
+      storage: store,
+      durationDays: 1,
+    });
+  });
+
+  it("lock() clears session signature, next get() re-signs", async () => {
+    await manager.get("0xtoken" as Address);
+    expect(signer.signTypedData).toHaveBeenCalledTimes(1);
+
+    manager.lock();
+
+    await manager.get("0xtoken" as Address);
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+  });
+
+  it("isUnlocked() returns true after get(), false after lock()", async () => {
+    expect(await manager.isUnlocked()).toBe(false);
+
+    await manager.get("0xtoken" as Address);
+    expect(await manager.isUnlocked()).toBe(true);
+
+    manager.lock();
+    expect(await manager.isUnlocked()).toBe(false);
+  });
+
+  it("unlock() pre-caches session signature without needing stored credentials", async () => {
+    await manager.unlock(["0xtoken" as Address]);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await manager.isUnlocked()).toBe(true);
+
+    // Subsequent get() should not re-sign
+    await manager.get("0xtoken" as Address);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  it("lock() emits CredentialsLocked event", async () => {
+    const events: string[] = [];
+    const manager2 = new CredentialsManager({
+      sdk: sdk as unknown as RelayerSDK,
+      signer,
+      storage: store,
+      durationDays: 1,
+      onEvent: (e) => events.push(e.type),
+    });
+
+    await manager2.get("0xtoken" as Address);
+    manager2.lock();
+
+    expect(events).toContain("credentials:locked");
   });
 });
 
