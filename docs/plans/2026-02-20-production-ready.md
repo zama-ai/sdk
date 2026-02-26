@@ -78,7 +78,7 @@ Replace `packages/sdk/package.json` with:
   "name": "@zama-fhe/sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for Zama confidential ERC-20 tokens (fhEVM)",
-  "license": "BSD-3-Clause",
+  "license": "BSD-3-Clause-Clear",
   "repository": {
     "type": "git",
     "url": "https://github.com/zama-ai/sdk",
@@ -196,7 +196,7 @@ Replace `packages/react-sdk/package.json` with:
   "name": "@zama-fhe/react-sdk",
   "version": "0.1.0",
   "description": "React hooks for Zama confidential ERC-20 tokens (fhEVM)",
-  "license": "BSD-3-Clause",
+  "license": "BSD-3-Clause-Clear",
   "repository": {
     "type": "git",
     "url": "https://github.com/zama-ai/sdk",

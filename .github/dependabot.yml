@@ -1,26 +1,25 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /
+    target-branch: prerelease
+    directories:
+      - /
+      - /packages/sdk
+      - /packages/react-sdk
+      - /packages/test-app
     schedule:
       interval: weekly
-  - package-ecosystem: npm
-    directory: /packages/sdk
-    schedule:
-      interval: weekly
-  - package-ecosystem: npm
-    directory: /packages/react-sdk
-    schedule:
-      interval: weekly
-  - package-ecosystem: npm
-    directory: /packages/test-app
-    schedule:
-      interval: weekly
-  - package-ecosystem: npm
-    directory: /hardhat
-    schedule:
-      interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-patch
+
   - package-ecosystem: github-actions
+    target-branch: prerelease
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-patch
