@@ -210,12 +210,6 @@ export interface ApproveUnderlyingParams {
 
 export { ApproveUnderlyingSubmittedEvent }
 
-// @public
-export function authorizeAllMutationOptions(sdk: ZamaSDK): {
-    mutationKey: readonly ["authorizeAll"];
-    mutationFn: (tokenAddresses: Address[]) => Promise<void>;
-};
-
 export { balanceOfContract }
 
 export { BATCH_SWAP_ABI }
@@ -671,6 +665,12 @@ export { Token }
 
 export { TOKEN_TOPICS }
 
+// @public
+export function tokenAllowMutationOptions(sdk: ZamaSDK): {
+    mutationKey: readonly ["tokenAllow"];
+    mutationFn: (tokenAddresses: Address[]) => Promise<void>;
+};
+
 export { TokenConfig }
 
 // @public
@@ -819,9 +819,6 @@ export interface UseActivityFeedConfig {
 
 // @public
 export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
-
-// @public
-export function useAuthorizeAll(): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useBatchTransferFee(feeManagerAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
@@ -1302,6 +1299,9 @@ export function useShieldFee(config: UseFeeConfig, options?: Omit<UseQueryOption
 
 // @public
 export function useToken(config: UseZamaConfig): _zama_fhe_sdk.Token;
+
+// @public
+export function useTokenAllow(): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useTokenMetadata(tokenAddress: Address, options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">): UseQueryResult<TokenMetadata, Error>;

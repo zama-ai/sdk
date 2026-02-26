@@ -133,7 +133,7 @@ export class ReadonlyToken {
     });
     if (cached !== null) return cached;
 
-    const creds = await this.credentials.get(this.address);
+    const creds = await this.credentials.allow(this.address);
 
     const t0 = Date.now();
     try {
@@ -274,7 +274,7 @@ export class ReadonlyToken {
     }
 
     const allAddresses = tokens.map((t) => t.address);
-    const creds = await tokens[0]!.credentials.getAll(allAddresses);
+    const creds = await tokens[0]!.credentials.allow(...allAddresses);
 
     const tokenStorage = tokens[0]!.storage;
     const results = new Map<Address, bigint>();
@@ -461,13 +461,13 @@ export class ReadonlyToken {
    *
    * @example
    * ```ts
-   * await token.authorize();
+   * await token.allow();
    * // Credentials are now cached — subsequent decrypts won't prompt
    * const balance = await token.balanceOf();
    * ```
    */
-  async authorize(): Promise<void> {
-    await this.credentials.get(this.address);
+  async allow(): Promise<void> {
+    await this.credentials.allow(this.address);
   }
 
   /**
@@ -475,20 +475,49 @@ export class ReadonlyToken {
    * wallet signature. Call this early (e.g. after loading the token list) so
    * that subsequent individual decrypt operations reuse cached credentials.
    *
-   * @param tokens - Array of ReadonlyToken instances to authorize.
+   * @param tokens - Array of ReadonlyToken instances to allow.
    * @returns Resolves when all credentials are cached.
    *
    * @example
    * ```ts
    * const tokens = addresses.map(a => sdk.createReadonlyToken(a));
-   * await ReadonlyToken.authorizeAll(tokens);
+   * await ReadonlyToken.allow(...tokens);
    * // All tokens now share the same credentials
    * ```
    */
-  static async authorizeAll(tokens: ReadonlyToken[]): Promise<void> {
+  /**
+   * Whether session credentials are currently cached for this wallet.
+   *
+   * @returns `true` if a session signature exists, `false` otherwise.
+   *
+   * @example
+   * ```ts
+   * if (await token.isAllowed()) {
+   *   const balance = await token.balanceOf();
+   * }
+   * ```
+   */
+  async isAllowed(): Promise<boolean> {
+    return this.credentials.isAllowed();
+  }
+
+  /**
+   * Clear the session signature. The next decrypt will require a fresh
+   * wallet signature. Call this on wallet disconnect.
+   *
+   * @example
+   * ```ts
+   * await token.revoke();
+   * ```
+   */
+  async revoke(): Promise<void> {
+    await this.credentials.revoke();
+  }
+
+  static async allow(...tokens: ReadonlyToken[]): Promise<void> {
     if (tokens.length === 0) return;
     const allAddresses = tokens.map((t) => t.address);
-    await tokens[0]!.credentials.getAll(allAddresses);
+    await tokens[0]!.credentials.allow(...allAddresses);
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Address> {
@@ -541,7 +570,7 @@ export class ReadonlyToken {
     });
     if (cached !== null) return cached;
 
-    const creds = await this.credentials.get(this.address);
+    const creds = await this.credentials.allow(this.address);
 
     const t0 = Date.now();
     try {
@@ -601,7 +630,7 @@ export class ReadonlyToken {
 
     if (nonZeroHandles.length === 0) return results;
 
-    const creds = await this.credentials.get(this.address);
+    const creds = await this.credentials.allow(this.address);
 
     const t0 = Date.now();
     try {

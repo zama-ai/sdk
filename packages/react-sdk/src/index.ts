@@ -178,7 +178,7 @@ export {
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
-export { useAuthorizeAll, authorizeAllMutationOptions } from "./token/use-authorize-all";
+export { useTokenAllow, tokenAllowMutationOptions } from "./token/use-token-allow";
 export {
   useConfidentialTransfer,
   confidentialTransferMutationOptions,

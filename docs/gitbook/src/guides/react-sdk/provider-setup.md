@@ -169,7 +169,7 @@ When a user first decrypts a balance, the SDK:
 4. Stores the encrypted credential in your storage backend
 5. Caches the wallet signature **in memory only** for the session
 
-The wallet signature is never written to disk — only the encrypted credential is persisted. On subsequent page loads, the user must re-sign once to unlock their credentials for the session.
+The wallet signature is never written to disk — only the encrypted credential is persisted. On subsequent page loads, the user must re-sign once to authorize their credentials for the session.
 
 ### Session flow
 
@@ -177,7 +177,7 @@ The wallet signature is never written to disk — only the encrypted credential 
 First visit:  generate keypair → wallet signs → encrypt & store → cache signature
 Page reload:  load encrypted creds → wallet re-signs → cache signature
 Same session: reuse cached signature — no wallet popup
-Disconnect:   lock() clears signature from memory
+Disconnect:   await revoke() clears signature from memory
 ```
 
 ### Pre-authorize to avoid popups
@@ -185,10 +185,10 @@ Disconnect:   lock() clears signature from memory
 To avoid multiple popups when your app shows several token balances, pre-authorize all tokens at once:
 
 ```tsx
-const { mutateAsync: authorizeAll } = useAuthorizeAll();
+const { mutateAsync: tokenAllow } = useTokenAllow();
 
 // Call this early, e.g. after loading the token list
-await authorizeAll(allTokenAddresses);
+await tokenAllow(allTokenAddresses);
 // All balance decrypts reuse the cached session signature
 ```
 

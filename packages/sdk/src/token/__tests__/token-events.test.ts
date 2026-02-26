@@ -70,6 +70,8 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.CredentialsExpired).toBe("credentials:expired");
     expect(ZamaSDKEvents.CredentialsCreating).toBe("credentials:creating");
     expect(ZamaSDKEvents.CredentialsCreated).toBe("credentials:created");
+    expect(ZamaSDKEvents.CredentialsRevoked).toBe("credentials:revoked");
+    expect(ZamaSDKEvents.CredentialsAllowed).toBe("credentials:allowed");
     expect(ZamaSDKEvents.EncryptStart).toBe("encrypt:start");
     expect(ZamaSDKEvents.EncryptEnd).toBe("encrypt:end");
     expect(ZamaSDKEvents.EncryptError).toBe("encrypt:error");
@@ -89,8 +91,8 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.UnshieldPhase2Submitted).toBe("unshield:phase2_submitted");
   });
 
-  it("has exactly 22 event types", () => {
-    expect(Object.keys(ZamaSDKEvents)).toHaveLength(22);
+  it("has exactly 24 event types", () => {
+    expect(Object.keys(ZamaSDKEvents)).toHaveLength(24);
   });
 
   it("has unique event values", () => {
@@ -595,7 +597,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
@@ -613,11 +615,11 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
     events.length = 0; // reset
 
     // Second call should hit cache
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
@@ -635,7 +637,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     // Tamper stored data to simulate expiration
     const address = (await signer.getAddress()).toLowerCase();
@@ -659,7 +661,7 @@ describe("CredentialsManager event emissions", () => {
       durationDays: 1,
       onEvent,
     });
-    await manager2.get("0xtoken" as Address);
+    await manager2.allow("0xtoken" as Address);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsExpired);
@@ -676,7 +678,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     const credEvents = events.filter(
       (e) =>
@@ -699,7 +701,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     for (const event of events) {
       expect(event.timestamp).toBeGreaterThan(0);
@@ -714,7 +716,7 @@ describe("CredentialsManager event emissions", () => {
       durationDays: 1,
     });
 
-    const creds = await manager.get("0xtoken" as Address);
+    const creds = await manager.allow("0xtoken" as Address);
     expect(creds.publicKey).toBe("0xpub");
   });
 });

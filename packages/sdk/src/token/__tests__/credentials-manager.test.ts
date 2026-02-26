@@ -76,7 +76,7 @@ describe("CredentialsManager", () => {
   });
 
   it("generates new credentials on first call", async () => {
-    const creds = await manager.get("0xtoken" as Address);
+    const creds = await manager.allow("0xtoken" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
     expect(sdk.createEIP712).toHaveBeenCalledOnce();
@@ -87,22 +87,22 @@ describe("CredentialsManager", () => {
   });
 
   it("returns cached credentials on second call with same contracts", async () => {
-    await manager.get("0xtoken" as Address);
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
   });
 
   it("re-signs when new contract not in signed list", async () => {
-    await manager.get("0xtoken1" as Address);
-    await manager.getAll(["0xtoken1" as Address, "0xtoken2" as Address]);
+    await manager.allow("0xtoken1" as Address);
+    await manager.allow("0xtoken1" as Address, "0xtoken2" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledTimes(2);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
   });
 
   it("persists credentials to store with hashed key", async () => {
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     const stored = await store.getItem(storeKey);
     expect(stored).not.toBeNull();
@@ -113,7 +113,7 @@ describe("CredentialsManager", () => {
   });
 
   it("does not store the full address as key", async () => {
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     const rawKey = (await signer.getAddress()).toLowerCase();
     const stored = await store.getItem(rawKey);
@@ -121,7 +121,7 @@ describe("CredentialsManager", () => {
   });
 
   it("loads credentials from store on new instance", async () => {
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     const manager2 = new CredentialsManager({
       sdk: sdk as unknown as RelayerSDK,
@@ -129,7 +129,7 @@ describe("CredentialsManager", () => {
       storage: store,
       durationDays: 7,
     });
-    await manager2.get("0xtoken" as Address);
+    await manager2.allow("0xtoken" as Address);
 
     // Keypair should NOT be regenerated — only re-signed
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
@@ -139,7 +139,7 @@ describe("CredentialsManager", () => {
 
   it("loads credentials stored without signature field (new format)", async () => {
     // Create credentials to get valid encrypted data
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     // Read stored data and strip the signature field (simulate new format)
     const stored = await store.getItem(storeKey);
@@ -154,7 +154,7 @@ describe("CredentialsManager", () => {
       storage: store,
       durationDays: 1,
     });
-    const creds2 = await manager2.get("0xtoken" as Address);
+    const creds2 = await manager2.allow("0xtoken" as Address);
 
     // Should have re-signed (1 original + 1 re-sign)
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -164,7 +164,7 @@ describe("CredentialsManager", () => {
 
   it("invalidates expired credentials", async () => {
     // First call creates credentials — which get stored under the hashed key
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
 
     // Tamper the stored data to simulate expiration
@@ -180,14 +180,14 @@ describe("CredentialsManager", () => {
       storage: store,
       durationDays: 7,
     });
-    const creds = await manager2.get("0xtoken" as Address);
+    const creds = await manager2.allow("0xtoken" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledTimes(2);
     expect(creds.publicKey).toBe("0xpub123");
   });
 
   it("clears credentials", async () => {
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
     await manager.clear();
 
     const stored = await store.getItem(storeKey);
@@ -197,14 +197,14 @@ describe("CredentialsManager", () => {
   it("throws SigningRejected when user rejects signature (rejected)", async () => {
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User rejected the request"));
 
-    await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
+    await expect(manager.allow("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningRejected,
       }),
     );
 
     try {
-      await manager.get("0xtoken" as Address);
+      await manager.allow("0xtoken" as Address);
     } catch (e) {
       expect(e).toBeInstanceOf(ZamaError);
     }
@@ -213,14 +213,14 @@ describe("CredentialsManager", () => {
   it("throws SigningRejected when user denies signature (denied)", async () => {
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("User denied transaction"));
 
-    await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
+    await expect(manager.allow("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningRejected,
       }),
     );
 
     try {
-      await manager.get("0xtoken" as Address);
+      await manager.allow("0xtoken" as Address);
     } catch (e) {
       expect(e).toBeInstanceOf(ZamaError);
     }
@@ -229,14 +229,14 @@ describe("CredentialsManager", () => {
   it("throws SigningFailed for other signing errors", async () => {
     vi.mocked(signer.signTypedData).mockRejectedValue(new Error("network timeout"));
 
-    await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
+    await expect(manager.allow("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningFailed,
       }),
     );
 
     try {
-      await manager.get("0xtoken" as Address);
+      await manager.allow("0xtoken" as Address);
     } catch (e) {
       expect(e).toBeInstanceOf(ZamaError);
     }
@@ -245,14 +245,14 @@ describe("CredentialsManager", () => {
   it("throws SigningFailed for non-Error exceptions", async () => {
     vi.mocked(signer.signTypedData).mockRejectedValue("unexpected");
 
-    await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
+    await expect(manager.allow("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
         code: ZamaErrorCode.SigningFailed,
       }),
     );
 
     try {
-      await manager.get("0xtoken" as Address);
+      await manager.allow("0xtoken" as Address);
     } catch (e) {
       expect(e).toBeInstanceOf(ZamaError);
       expect((e as ZamaError).cause).toBeUndefined();
@@ -263,7 +263,7 @@ describe("CredentialsManager", () => {
     // Write garbage to the store
     await store.setItem(storeKey, "not-valid-json{{{{");
 
-    const creds = await manager.get("0xtoken" as Address);
+    const creds = await manager.allow("0xtoken" as Address);
 
     // Should regenerate fresh credentials
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
@@ -286,13 +286,13 @@ describe("CredentialsManager", () => {
     });
 
     // Should still regenerate and return valid credentials
-    const creds = await manager.get("0xtoken" as Address);
+    const creds = await manager.allow("0xtoken" as Address);
     expect(creds.publicKey).toBe("0xpub123");
     expect(store.removeItem).toHaveBeenCalledWith(storeKey);
   });
 
   it("invalidates credentials at exact expiration boundary", async () => {
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
 
     // Set startTimestamp to exactly durationDays ago (expired at boundary)
@@ -308,7 +308,7 @@ describe("CredentialsManager", () => {
       storage: store,
       durationDays: 1,
     });
-    await manager2.get("0xtoken" as Address);
+    await manager2.allow("0xtoken" as Address);
 
     expect(sdk.generateKeypair).toHaveBeenCalledTimes(2);
   });
@@ -319,12 +319,12 @@ describe("CredentialsManager", () => {
     });
 
     it("returns false when credentials are valid", async () => {
-      await manager.get("0xtoken" as Address);
+      await manager.allow("0xtoken" as Address);
       expect(await manager.isExpired()).toBe(false);
     });
 
     it("returns true when credentials are expired", async () => {
-      await manager.get("0xtoken" as Address);
+      await manager.allow("0xtoken" as Address);
 
       // Tamper stored data to simulate expiration
       const stored = await store.getItem(storeKey);
@@ -342,7 +342,7 @@ describe("CredentialsManager", () => {
     });
 
     it("returns true when credentials don't cover the requested contract", async () => {
-      await manager.get("0xtoken" as Address);
+      await manager.allow("0xtoken" as Address);
 
       const manager2 = new CredentialsManager({
         sdk: sdk as unknown as RelayerSDK,
@@ -359,21 +359,90 @@ describe("CredentialsManager", () => {
     });
 
     it("works without session signature (checks timestamp only)", async () => {
-      await manager.get("0xtoken" as Address);
+      await manager.allow("0xtoken" as Address);
+      await manager.revoke();
 
       // Should still report not expired without needing the signature
       expect(await manager.isExpired()).toBe(false);
     });
   });
 
-  it("clear() also clears the session signature and storage", async () => {
-    await manager.get("0xtoken" as Address);
+  it("clear() also clears the session signature", async () => {
+    await manager.allow("0xtoken" as Address);
+    expect(await manager.isAllowed()).toBe(true);
 
     await manager.clear();
+    expect(await manager.isAllowed()).toBe(false);
 
     // Storage should be empty
     const stored = await store.getItem(storeKey);
     expect(stored).toBeNull();
+  });
+});
+
+describe("session allow/revoke", () => {
+  let sdk: ReturnType<typeof createMockSdk>;
+  let signer: GenericSigner;
+  let store: MemoryStorage;
+  let manager: CredentialsManager;
+
+  beforeEach(async () => {
+    sdk = createMockSdk();
+    signer = createMockSigner();
+    store = new MemoryStorage();
+    manager = new CredentialsManager({
+      sdk: sdk as unknown as RelayerSDK,
+      signer,
+      storage: store,
+      durationDays: 1,
+    });
+  });
+
+  it("revoke() clears session signature, next get() re-signs", async () => {
+    await manager.allow("0xtoken" as Address);
+    expect(signer.signTypedData).toHaveBeenCalledTimes(1);
+
+    await manager.revoke();
+
+    await manager.allow("0xtoken" as Address);
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+  });
+
+  it("isAllowed() returns true after allow(), false after revoke()", async () => {
+    expect(await manager.isAllowed()).toBe(false);
+
+    await manager.allow("0xtoken" as Address);
+    expect(await manager.isAllowed()).toBe(true);
+
+    await manager.revoke();
+    expect(await manager.isAllowed()).toBe(false);
+  });
+
+  it("allow() pre-caches session signature without needing stored credentials", async () => {
+    await manager.allow("0xtoken" as Address);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await manager.isAllowed()).toBe(true);
+
+    // Subsequent get() should not re-sign
+    await manager.allow("0xtoken" as Address);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  it("revoke() emits CredentialsRevoked event", async () => {
+    const events: string[] = [];
+    const manager2 = new CredentialsManager({
+      sdk: sdk as unknown as RelayerSDK,
+      signer,
+      storage: store,
+      durationDays: 1,
+      onEvent: (e) => events.push(e.type),
+    });
+
+    await manager2.allow("0xtoken" as Address);
+    await manager2.revoke();
+
+    expect(events).toContain("credentials:revoked");
   });
 });
 

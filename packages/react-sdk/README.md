@@ -269,19 +269,19 @@ const tokenABalance = balances?.get("0xTokenA");
 
 ### Authorization
 
-#### `useAuthorizeAll`
+#### `useTokenAllow`
 
 Pre-authorize FHE decrypt credentials for a list of token addresses with a single wallet signature. Call this early (e.g. after loading the token list) so that subsequent individual decrypt operations reuse cached credentials without prompting the wallet again.
 
 ```ts
-function useAuthorizeAll(): UseMutationResult<void, Error, Address[]>;
+function useTokenAllow(): UseMutationResult<void, Error, Address[]>;
 ```
 
 ```tsx
-const { mutateAsync: authorizeAll, isPending } = useAuthorizeAll();
+const { mutateAsync: tokenAllow, isPending } = useTokenAllow();
 
 // Pre-authorize all known tokens up front
-await authorizeAll(allTokenAddresses);
+await tokenAllow(allTokenAddresses);
 
 // Individual balance decrypts now reuse cached credentials
 const { data: balance } = useConfidentialBalance("0xTokenA");
@@ -863,12 +863,14 @@ Place `ZamaProvider` inside your client-only layout. Do **not** create the relay
 
 ### FHE Credentials Lifecycle
 
-FHE decrypt credentials are generated once per wallet + token set and cached in the storage backend you provide (e.g. `IndexedDBStorage`). The lifecycle:
+FHE decrypt credentials are generated once per wallet + token set and cached in the storage backend you provide (e.g. `IndexedDBStorage`). The wallet signature is kept **in memory only** — never persisted to disk. The lifecycle:
 
-1. **First decrypt** — SDK generates an FHE keypair, creates EIP-712 typed data, and prompts the wallet to sign. The signed credential is stored.
-2. **Subsequent decrypts** — If cached credentials cover the requested token, they're reused silently (no wallet prompt).
-3. **Expiry** — Credentials expire based on `durationDays`. After expiry, the next decrypt re-prompts the wallet.
-4. **Pre-authorization** — Call `useAuthorizeAll(tokenAddresses)` early to batch-authorize all tokens in one wallet prompt, avoiding repeated popups.
+1. **First decrypt** — SDK generates an FHE keypair, creates EIP-712 typed data, and prompts the wallet to sign. The encrypted credential is stored; the signature is cached in memory.
+2. **Same session** — Cached credentials and session signature are reused silently (no wallet prompt).
+3. **Page reload** — Encrypted credentials are loaded from storage; the wallet is prompted once to re-sign for the session.
+4. **Expiry** — Credentials expire based on `credentialDurationDays`. After expiry, the next decrypt regenerates and re-prompts.
+5. **Pre-authorization** — Call `useTokenAllow(tokenAddresses)` early to batch-authorize all tokens in one wallet prompt, avoiding repeated popups.
+6. **Disconnect** — Call `await credentials.revoke()` to clear the session signature from memory.
 
 ### Error-to-User-Message Mapping
 

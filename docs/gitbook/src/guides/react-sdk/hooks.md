@@ -158,32 +158,36 @@ If you need to control each step separately:
 
 ## Authorization
 
-### `useAuthorizeAll`
+### `useTokenAllow`
 
 Pre-authorize FHE credentials for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually.
 
 ```tsx
-const { mutateAsync: authorizeAll } = useAuthorizeAll();
+const { mutateAsync: tokenAllow } = useTokenAllow();
 
-await authorizeAll(["0xTokenA", "0xTokenB", "0xTokenC"]);
+await tokenAllow(["0xTokenA", "0xTokenB", "0xTokenC"]);
 // All subsequent balance reads reuse the cached credential
 ```
 
 ### Session management
 
-FHE credentials require a wallet re-sign once per page session. Use the `CredentialsManager` via `useToken` or `useZamaSDK` to control the session lifecycle:
+FHE credentials require a wallet signature once per page session. Use `useToken` to control the session lifecycle:
 
 ```tsx
-const token = useToken({ tokenAddress: "0xToken" });
+const tokenA = useToken({ tokenAddress: "0xTokenA" });
+const tokenB = useToken({ tokenAddress: "0xTokenB" });
 
-// Unlock once after wallet connect — caches the session signature
-await token.credentials.unlock(["0xTokenA", "0xTokenB"]);
+// Allow a single token — signs once, then caches for the session
+await tokenA.allow();
 
-// Check session status
-const isUnlocked = await token.credentials.isUnlocked();
+// Or allow multiple tokens with a single wallet signature
+await ReadonlyToken.allow(tokenA, tokenB);
 
-// Clear session on disconnect
-token.credentials.lock();
+// Check if session credentials are still valid
+const allowed = await tokenA.isAllowed();
+
+// Clear session credentials on disconnect
+await tokenA.revoke();
 ```
 
 See [Session management](../sdk/configuration.md#session-management) for details on the security model.

@@ -125,7 +125,7 @@ When your app manages multiple tokens, you can pre-authorize them all with one w
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 
 // One wallet signature covers all tokens
-await ReadonlyToken.authorizeAll(tokens);
+await ReadonlyToken.allow(...tokens);
 
 // Decrypt all balances in parallel
 const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });

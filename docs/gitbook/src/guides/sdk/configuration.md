@@ -273,30 +273,35 @@ const sdk = new ZamaSDK({
 
 FHE credentials are stored encrypted at rest. The wallet signature that unlocks them is kept **in memory only** — it's never written to disk. This means:
 
-- On page load, the user must re-sign once to "unlock" their credentials for the session
-- Closing the tab (or calling `lock()`) clears the signature from memory
-- The encrypted credentials survive across sessions in storage; only the unlock step repeats
+- On page load, the user must re-sign once to authorize their credentials for the session
+- Closing the tab (or calling `await token.revoke()`) clears the signature from memory
+- The encrypted credentials survive across sessions in storage; only the allow step repeats
 
-### Unlock (pre-authorize for the session)
+### Allow (pre-authorize for the session)
 
 Prompt the wallet to sign and cache the session signature. Call this early (e.g. after wallet connect) to avoid popups during balance decrypts:
 
 ```ts
 const token = sdk.createToken("0xTokenAddress");
 
-// Unlock for specific tokens
-await token.credentials.unlock(["0xTokenA", "0xTokenB"]);
+// Allow a single token
+await token.allow();
+
+// Or allow multiple tokens with a single wallet signature
+const tokenA = sdk.createToken("0xTokenA");
+const tokenB = sdk.createToken("0xTokenB");
+await ReadonlyToken.allow(tokenA, tokenB);
 
 // Check if session is active
-const unlocked = await token.credentials.isUnlocked();
+const allowed = await token.isAllowed();
 ```
 
-### Lock (clear session)
+### Revoke (clear session)
 
 Clear the session signature when the user disconnects or locks their wallet:
 
 ```ts
-token.credentials.lock();
+await token.revoke();
 // Next decrypt will require a fresh wallet signature
 ```
 
@@ -306,14 +311,14 @@ token.credentials.lock();
 // 1. User connects wallet
 const token = sdk.createToken("0xTokenAddress");
 
-// 2. Unlock once for the session
-await token.credentials.unlock(["0xTokenAddress"]);
+// 2. Allow once for the session
+await token.allow();
 
 // 3. All decrypts reuse the cached session signature — no popups
 const balance = await token.decryptBalance(handle);
 
 // 4. User disconnects
-token.credentials.lock();
+await token.revoke();
 ```
 
 ## Event listener
@@ -331,7 +336,7 @@ const sdk = new ZamaSDK({
 });
 ```
 
-Events include: credential lifecycle (`credentials:loading`, `credentials:created`, `credentials:locked`, `credentials:unlocked`, ...), encryption/decryption timing (`encrypt:start`, `decrypt:end`, ...), transaction confirmations (`transfer:submitted`, `shield:submitted`, ...), and errors.
+Events include: credential lifecycle (`credentials:loading`, `credentials:created`, `credentials:revoked`, `credentials:allowed`, ...), encryption/decryption timing (`encrypt:start`, `decrypt:end`, ...), transaction confirmations (`transfer:submitted`, `shield:submitted`, ...), and errors.
 
 ## Cleanup
 

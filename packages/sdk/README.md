@@ -168,28 +168,33 @@ interface TransactionResult {
 
 Read-only subset. No wrapper address needed.
 
-| Method                                | Description                                                       |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| `balanceOf(owner?)`                   | Decrypt and return the plaintext balance.                         |
-| `confidentialBalanceOf(owner?)`       | Return the raw encrypted balance handle (no decryption).          |
-| `decryptBalance(handle, owner?)`      | Decrypt a single encrypted handle.                                |
-| `decryptHandles(handles, owner?)`     | Batch-decrypt handles in a single relayer call.                   |
-| `authorize()`                         | Ensure FHE decrypt credentials exist (generates/signs if needed). |
-| `authorizeAll(tokens)` _(static)_     | Pre-authorize multiple tokens with a single wallet signature.     |
-| `isConfidential()`                    | ERC-165 check for ERC-7984 support.                               |
-| `isWrapper()`                         | ERC-165 check for wrapper interface.                              |
-| `discoverWrapper(coordinatorAddress)` | Look up a wrapper for this token via the deployment coordinator.  |
-| `underlyingToken()`                   | Read the underlying ERC-20 address from a wrapper.                |
-| `allowance(wrapper, owner?)`          | Read ERC-20 allowance of the underlying token.                    |
-| `isZeroHandle(handle)`                | Returns `true` if the handle is the zero sentinel.                |
-| `name()` / `symbol()` / `decimals()`  | Read token metadata.                                              |
+| Method                                | Description                                                                 |
+| ------------------------------------- | --------------------------------------------------------------------------- |
+| `balanceOf(owner?)`                   | Decrypt and return the plaintext balance.                                   |
+| `confidentialBalanceOf(owner?)`       | Return the raw encrypted balance handle (no decryption).                    |
+| `decryptBalance(handle, owner?)`      | Decrypt a single encrypted handle.                                          |
+| `decryptHandles(handles, owner?)`     | Batch-decrypt handles in a single relayer call.                             |
+| `allow()`                             | Ensure FHE decrypt credentials exist (generates/signs if needed).           |
+| `allow(...tokens)` _(static)_         | Pre-authorize multiple tokens with a single wallet signature.               |
+| `credentials.allow(...addresses)`     | Pre-authorize and cache the session signature for specific token addresses. |
+| `credentials.revoke(...addresses?)`   | Clear the session signature for the connected wallet.                       |
+| `credentials.isAllowed()`             | Whether a session signature is currently cached.                            |
+| `credentials.isExpired(address?)`     | Whether stored credentials are past their expiration time.                  |
+| `credentials.clear()`                 | Delete stored credentials for the connected wallet.                         |
+| `isConfidential()`                    | ERC-165 check for ERC-7984 support.                                         |
+| `isWrapper()`                         | ERC-165 check for wrapper interface.                                        |
+| `discoverWrapper(coordinatorAddress)` | Look up a wrapper for this token via the deployment coordinator.            |
+| `underlyingToken()`                   | Read the underlying ERC-20 address from a wrapper.                          |
+| `allowance(wrapper, owner?)`          | Read ERC-20 allowance of the underlying token.                              |
+| `isZeroHandle(handle)`                | Returns `true` if the handle is the zero sentinel.                          |
+| `name()` / `symbol()` / `decimals()`  | Read token metadata.                                                        |
 
 Static methods for multi-token operations:
 
 ```ts
 // Pre-authorize all tokens with a single wallet signature
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
-await ReadonlyToken.authorizeAll(tokens);
+await ReadonlyToken.allow(...tokens);
 // All subsequent decrypts reuse cached credentials — no more wallet prompts
 
 // Decrypt balances for multiple tokens in parallel
@@ -219,7 +224,7 @@ if (pending) {
 
 ### Storage
 
-FHE credentials (keypair + EIP-712 signature) are persisted to storage. Three options:
+FHE credentials (encrypted keypair + metadata) are persisted to storage. The wallet signature is kept in memory only — never written to disk. Three storage options:
 
 | Storage             | Use case                                                 |
 | ------------------- | -------------------------------------------------------- |
@@ -270,7 +275,7 @@ const sdk = new ZamaSDK({
 
 | Category               | Events                                                                                                                                                               | Key fields                                                       |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Credentials            | `credentials:loading`, `credentials:cached`, `credentials:expired`, `credentials:creating`, `credentials:created`                                                    | `contractAddresses`                                              |
+| Credentials            | `credentials:loading`, `credentials:cached`, `credentials:expired`, `credentials:creating`, `credentials:created`, `credentials:revoked`, `credentials:allowed`      | `contractAddresses`                                              |
 | Encryption             | `encrypt:start`, `encrypt:end`, `encrypt:error`                                                                                                                      | `durationMs` (end/error), `error` (error)                        |
 | Decryption             | `decrypt:start`, `decrypt:end`, `decrypt:error`                                                                                                                      | `durationMs` (end/error), `error` (error)                        |
 | Transactions           | `transaction:error`                                                                                                                                                  | `operation` (`"transfer"`, `"wrap"`, `"approve"`, etc.), `error` |

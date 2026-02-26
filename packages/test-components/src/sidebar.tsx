@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { to: "/approve", label: "Approve" },
   { to: "/transfer-from", label: "Transfer From" },
   { to: "/unshield-all", label: "Unshield All" },
-  { to: "/authorize-all", label: "Authorize All" },
+  { to: "/allow-all", label: "Allow All" },
   { to: "/wrapper-discovery", label: "Wrapper Discovery" },
   { to: "/fhe-relayer", label: "FHE Relayer" },
   { to: "/unwrap-manual", label: "Manual Unwrap" },

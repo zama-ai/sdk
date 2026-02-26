@@ -66,29 +66,18 @@ export class CredentialsManager {
   }
 
   /**
-   * Get or create FHE credentials for a single contract address.
-   * Shorthand for `getAll([contractAddress])`.
-   *
-   * @example
-   * ```ts
-   * const creds = await credentials.get("0xTokenAddress");
-   * ```
-   */
-  async get(contractAddress: Address): Promise<StoredCredentials> {
-    return this.getAll([contractAddress]);
-  }
-
-  /**
-   * Get or create FHE credentials covering multiple contract addresses.
+   * Authorize FHE credentials for one or more contract addresses.
    * Returns cached credentials if still valid and covering all addresses,
    * otherwise generates a fresh keypair and requests an EIP-712 signature.
+   * The wallet signature is cached in memory for the session.
    *
    * @example
    * ```ts
-   * const creds = await credentials.getAll(["0xTokenA", "0xTokenB"]);
+   * const creds = await credentials.allow("0xTokenAddress");
+   * const creds = await credentials.allow("0xTokenA", "0xTokenB");
    * ```
    */
-  async getAll(contractAddresses: Address[]): Promise<StoredCredentials> {
+  async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
     const storeKey = await this.#storeKey();
     this.#emit({ type: ZamaSDKEvents.CredentialsLoading, contractAddresses });
     try {
@@ -183,6 +172,38 @@ export class CredentialsManager {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Revoke the session signature for the connected wallet. Stored credentials
+   * remain intact, but the next decrypt operation will require a fresh wallet
+   * signature.
+   *
+   * @param contractAddresses - Optional addresses included in the revoked event
+   *   for observability. The session signature is always fully revoked since it
+   *   is atomic over all addresses.
+   *
+   * @example
+   * ```ts
+   * await credentials.revoke();
+   * await credentials.revoke("0xTokenA", "0xTokenB");
+   * ```
+   */
+  async revoke(...contractAddresses: Address[]): Promise<void> {
+    const storeKey = await this.#storeKey();
+    this.#sessionSignatures.delete(storeKey);
+    this.#emit({
+      type: ZamaSDKEvents.CredentialsRevoked,
+      ...(contractAddresses.length > 0 && { contractAddresses }),
+    });
+  }
+
+  /**
+   * Whether a session signature is currently cached for the connected wallet.
+   */
+  async isAllowed(): Promise<boolean> {
+    const storeKey = await this.#storeKey();
+    return this.#sessionSignatures.has(storeKey);
   }
 
   /**

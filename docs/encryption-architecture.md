@@ -116,16 +116,16 @@ The signature lives in a `#sessionSignatures` Map (JS private field) keyed by a 
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Locked: Page load
+    [*] --> Revoked: Page load
 
-    Locked --> Unlocked: get() / unlock() — wallet signs EIP-712
-    Locked --> Unlocked: Legacy migration — stored signature used once
+    Revoked --> Allowed: get() / allow() — wallet signs EIP-712
+    Revoked --> Allowed: Legacy migration — stored signature used once
 
-    Unlocked --> Locked: lock() called
-    Unlocked --> Locked: clear() called
-    Unlocked --> Locked: Page close / refresh
+    Allowed --> Revoked: revoke() called
+    Allowed --> Revoked: clear() called
+    Allowed --> Revoked: Page close / refresh
 
-    Unlocked --> Unlocked: get() — reuses cached signature
+    Allowed --> Allowed: get() — reuses cached signature
 ```
 
 ### Re-Sign Flow (New Session, Existing Credentials)

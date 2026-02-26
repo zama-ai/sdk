@@ -392,9 +392,9 @@ describe("Token", () => {
     });
   });
 
-  describe("authorize", () => {
+  describe("allow", () => {
     it("generates credentials without reading balance", async () => {
-      await token.authorize();
+      await token.allow();
 
       expect(sdk.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();

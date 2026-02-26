@@ -5,17 +5,17 @@ import { ReadonlyToken, type Address, type ZamaSDK } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
 
 /**
- * TanStack Query mutation options factory for authorize-all.
+ * TanStack Query mutation options factory for token allow.
  *
  * @param sdk - A `ZamaSDK` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */
-export function authorizeAllMutationOptions(sdk: ZamaSDK) {
+export function tokenAllowMutationOptions(sdk: ZamaSDK) {
   return {
-    mutationKey: ["authorizeAll"] as const,
+    mutationKey: ["tokenAllow"] as const,
     mutationFn: async (tokenAddresses: Address[]) => {
       const tokens = tokenAddresses.map((addr) => sdk.createReadonlyToken(addr));
-      return ReadonlyToken.authorizeAll(tokens);
+      return ReadonlyToken.allow(...tokens);
     },
   };
 }
@@ -27,12 +27,12 @@ export function authorizeAllMutationOptions(sdk: ZamaSDK) {
  *
  * @example
  * ```tsx
- * const { mutateAsync: authorizeAll, isPending } = useAuthorizeAll();
- * // Call authorizeAll(allTokenAddresses) before any individual reveal
+ * const { mutateAsync: tokenAllow, isPending } = useTokenAllow();
+ * // Call tokenAllow(allTokenAddresses) before any individual reveal
  * ```
  */
-export function useAuthorizeAll() {
+export function useTokenAllow() {
   const sdk = useZamaSDK();
 
-  return useMutation<void, Error, Address[]>(authorizeAllMutationOptions(sdk));
+  return useMutation<void, Error, Address[]>(tokenAllowMutationOptions(sdk));
 }
