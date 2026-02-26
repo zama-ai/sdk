@@ -227,6 +227,7 @@ export class CredentialsManager {
    */
   async clear(): Promise<void> {
     const storeKey = await this.#storeKey();
+    this.#sessionSignatures.delete(storeKey);
     try {
       await this.#storage.removeItem(storeKey);
     } catch {
