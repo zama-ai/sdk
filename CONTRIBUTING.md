@@ -6,7 +6,7 @@ Thank you for your interest in contributing to the Zama SDK! This guide will hel
 
 ### Prerequisites
 
-- **Node.js** >= 24
+- **Node.js** >= 22
 - **pnpm** >= 10
 
 ### Getting Started
