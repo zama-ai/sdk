@@ -165,11 +165,22 @@ When a user first decrypts a balance, the SDK:
 
 1. Generates an FHE keypair
 2. Creates EIP-712 typed data and prompts the wallet to sign
-3. Stores the signed credential in your storage backend
+3. Encrypts the private key with AES-GCM (key derived from the signature via PBKDF2)
+4. Stores the encrypted credential in your storage backend
+5. Caches the wallet signature **in memory only** for the session
 
-On subsequent decrypts, cached credentials are reused silently — no wallet popup.
+The wallet signature is never written to disk — only the encrypted credential is persisted. On subsequent page loads, the user must re-sign once to unlock their credentials for the session.
 
-Credentials expire after `credentialDurationDays` (default: 1). After expiry, the wallet is prompted again.
+### Session flow
+
+```
+First visit:  generate keypair → wallet signs → encrypt & store → cache signature
+Page reload:  load encrypted creds → wallet re-signs → cache signature
+Same session: reuse cached signature — no wallet popup
+Disconnect:   lock() clears signature from memory
+```
+
+### Pre-authorize to avoid popups
 
 To avoid multiple popups when your app shows several token balances, pre-authorize all tokens at once:
 
@@ -178,5 +189,7 @@ const { mutateAsync: authorizeAll } = useAuthorizeAll();
 
 // Call this early, e.g. after loading the token list
 await authorizeAll(allTokenAddresses);
-// Now all balance decrypts reuse the cached credential
+// All balance decrypts reuse the cached session signature
 ```
+
+Credentials expire after `credentialDurationDays` (default: 1). After expiry, fresh credentials are generated and the wallet is prompted again.
