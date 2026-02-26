@@ -15,7 +15,16 @@ permissions:
   id-token: write
 
 jobs:
+  vitest:
+    uses: ./.github/workflows/vitest.yml
+    secrets: inherit
+
+  playwright:
+    uses: ./.github/workflows/playwright.yml
+    secrets: inherit
+
   release:
+    needs: [vitest, playwright]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
