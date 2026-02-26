@@ -12,6 +12,7 @@ export default defineConfig([
     "packages/test-app/.next/**",
     "packages/test-app/playwright/**",
     "docs/api/**",
+    "tools/**",
   ]),
   js.configs.recommended,
   ...tseslint.configs.recommended,
