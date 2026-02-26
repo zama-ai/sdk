@@ -209,11 +209,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  tools/mdbook:
-    devDependencies:
-      '@types/node':
-        specifier: ^20.19.33
-        version: 20.19.33
+  tools/mdbook: {}
 
 packages:
 
