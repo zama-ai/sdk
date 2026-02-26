@@ -17,12 +17,16 @@ export function assertAddress(value: string, name: string): asserts value is Add
 }
 
 /**
- * Validate and lowercase an address for consistent comparison.
- * Call at public API entry points so internal code can rely on lowercase addresses.
+ * Validate an address and return it unchanged.
+ * Call at public API entry points so invalid addresses are caught early.
+ *
+ * Addresses are **not** lowercased — the relayer SDK requires EIP-55
+ * checksummed addresses for encrypt / decrypt calls.
+ * Use case-insensitive comparison (`.toLowerCase()`) when comparing addresses.
  */
 export function normalizeAddress(addr: string, name: string): Address {
   assertAddress(addr, name);
-  return addr.toLowerCase() as Address;
+  return addr as Address;
 }
 
 export function assertObject(

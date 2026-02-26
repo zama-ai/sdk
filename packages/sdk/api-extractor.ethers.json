@@ -1,0 +1,9 @@
+{
+  "extends": "../../api-extractor.base.json",
+  "mainEntryPointFilePath": "<projectFolder>/dist/ethers/index.d.ts",
+  "apiReport": {
+    "enabled": true,
+    "reportFileName": "sdk-ethers.api.md",
+    "reportFolder": "<projectFolder>/etc/"
+  }
+}

@@ -1,21 +1,20 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import type { Signer } from "ethers";
 import { writeUnwrapContract } from "@zama-fhe/sdk/ethers";
 
-type WriteFn = typeof writeUnwrapContract;
-type Params = Parameters<WriteFn>;
-
 export interface UnwrapParams {
-  signer: Params[0];
-  encryptedErc20: Params[1];
-  from: Params[2];
-  to: Params[3];
-  encryptedAmount: Params[4];
-  inputProof: Params[5];
+  signer: Signer;
+  encryptedErc20: Address;
+  from: Address;
+  to: Address;
+  encryptedAmount: Uint8Array;
+  inputProof: Uint8Array;
 }
 export function useUnwrap() {
-  return useMutation<Awaited<ReturnType<WriteFn>>, Error, UnwrapParams>({
+  return useMutation<Awaited<ReturnType<typeof writeUnwrapContract>>, Error, UnwrapParams>({
     mutationFn: (params) =>
       writeUnwrapContract(
         params.signer,

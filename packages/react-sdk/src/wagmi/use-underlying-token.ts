@@ -4,11 +4,11 @@ import { underlyingContract } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
 import { useReadContract } from "wagmi";
 
-export interface UseUnderlyingTokenConfig {
+export interface UseUnderlyingZamaConfig {
   wrapperAddress: Address | undefined;
 }
 
-export function useUnderlyingToken(config: UseUnderlyingTokenConfig) {
+export function useUnderlyingToken(config: UseUnderlyingZamaConfig) {
   const { wrapperAddress } = config;
   const enabled = !!wrapperAddress;
   const contract = enabled ? underlyingContract(wrapperAddress) : {};

@@ -1,20 +1,23 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import type { WalletClient } from "viem";
 import { writeUnwrapFromBalanceContract } from "@zama-fhe/sdk/viem";
 
-type WriteFn = typeof writeUnwrapFromBalanceContract;
-type Params = Parameters<WriteFn>;
-
 export interface UnwrapFromBalanceParams {
-  client: Params[0];
-  encryptedErc20: Params[1];
-  from: Params[2];
-  to: Params[3];
-  encryptedBalance: Params[4];
+  client: WalletClient;
+  encryptedErc20: Address;
+  from: Address;
+  to: Address;
+  encryptedBalance: Address;
 }
 export function useUnwrapFromBalance() {
-  return useMutation<Awaited<ReturnType<WriteFn>>, Error, UnwrapFromBalanceParams>({
+  return useMutation<
+    Awaited<ReturnType<typeof writeUnwrapFromBalanceContract>>,
+    Error,
+    UnwrapFromBalanceParams
+  >({
     mutationFn: (params) =>
       writeUnwrapFromBalanceContract(
         params.client,

@@ -7,10 +7,8 @@ import { useUnshield } from "../token/use-unshield";
 import { useUnshieldAll } from "../token/use-unshield-all";
 import { useUnwrap } from "../token/use-unwrap";
 import { useUnwrapAll } from "../token/use-unwrap-all";
-import { useWrapETH } from "../token/use-wrap-eth";
 import { useShield } from "../token/use-shield";
 import { useShieldETH } from "../token/use-shield-eth";
-import { useWrap } from "../token/use-wrap";
 import { useActivityFeed } from "../token/use-activity-feed";
 import { useConfidentialBalance } from "../token/use-confidential-balance";
 import { useConfidentialBalances } from "../token/use-confidential-balances";
@@ -346,22 +344,22 @@ describe("useUnshieldAll", () => {
   });
 });
 
-describe("useWrapETH", () => {
+describe("useShieldETH", () => {
   it("provides mutate function", () => {
     const { result } = renderWithProviders(() =>
-      useWrapETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.wrapETH on mutate", async () => {
+  it("calls token.shieldETH on mutate", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result } = renderWithProviders(
-      () => useWrapETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      () => useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
       { signer },
     );
 
@@ -378,7 +376,7 @@ describe("useWrapETH", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result } = renderWithProviders(
-      () => useWrapETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      () => useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
       { signer },
     );
 
@@ -397,7 +395,7 @@ describe("useWrapETH", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(
-      () => useWrapETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      () => useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
       { signer },
     );
 
@@ -424,40 +422,6 @@ describe("useWrapETH", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Alias hooks
-// ---------------------------------------------------------------------------
-
-describe("useShield (alias for useWrap)", () => {
-  it("is the same function as useWrap", () => {
-    expect(useShield).toBe(useWrap);
-  });
-
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
-
-    expect(result.current.mutate).toBeDefined();
-    expect(result.current.isIdle).toBe(true);
-  });
-});
-
-describe("useShieldETH (alias for useWrapETH)", () => {
-  it("is the same function as useWrapETH", () => {
-    expect(useShieldETH).toBe(useWrapETH);
-  });
-
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
-
-    expect(result.current.mutate).toBeDefined();
-    expect(result.current.isIdle).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Query hooks
 // ---------------------------------------------------------------------------
 
@@ -474,7 +438,7 @@ describe("useConfidentialBalance", () => {
     expect(result.current.handleQuery.data).toBe("0xbalancehandle");
   });
 
-  it("exposes signerError when getAddress fails", async () => {
+  it("disables downstream queries when getAddress fails", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.getAddress).mockRejectedValue(new Error("no wallet"));
 
@@ -482,8 +446,11 @@ describe("useConfidentialBalance", () => {
       signer,
     });
 
-    await waitFor(() => expect(result.current.signerError).toBeDefined());
-    expect(result.current.signerError?.message).toBe("no wallet");
+    // Wait for the address query to settle in error state
+    await waitFor(() => expect(result.current.handleQuery.isFetching).toBe(false));
+    // The handle and balance queries should stay disabled since signerAddress is undefined
+    expect(result.current.handleQuery.data).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 
   it("does not fetch when signer address is unavailable", () => {
@@ -537,7 +504,7 @@ describe("useConfidentialBalances", () => {
     expect(result.current.handlesQuery.isFetching).toBe(false);
   });
 
-  it("exposes signerError when getAddress fails", async () => {
+  it("disables downstream queries when getAddress fails", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.getAddress).mockRejectedValue(new Error("disconnected"));
 
@@ -546,8 +513,11 @@ describe("useConfidentialBalances", () => {
       { signer },
     );
 
-    await waitFor(() => expect(result.current.signerError).toBeDefined());
-    expect(result.current.signerError?.message).toBe("disconnected");
+    // Wait for the address query to settle in error state
+    await waitFor(() => expect(result.current.handlesQuery.isFetching).toBe(false));
+    // The handles and balances queries should stay disabled since signerAddress is undefined
+    expect(result.current.handlesQuery.data).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 
   it("does not fetch when signer address is unavailable", () => {

@@ -1,16 +1,16 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { ReadonlyToken, type Address, type TokenSDK } from "@zama-fhe/sdk";
+import { ReadonlyToken, type Address, type ZamaSDK } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
 
 /**
  * TanStack Query mutation options factory for authorize-all.
  *
- * @param sdk - A `TokenSDK` instance.
+ * @param sdk - A `ZamaSDK` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */
-export function authorizeAllMutationOptions(sdk: TokenSDK) {
+export function authorizeAllMutationOptions(sdk: ZamaSDK) {
   return {
     mutationKey: ["authorizeAll"] as const,
     mutationFn: async (tokenAddresses: Address[]) => {

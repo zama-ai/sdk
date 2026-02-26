@@ -5,7 +5,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
 
 /** Base configuration shared by all mutation hooks that need a Token instance. */
-export interface UseTokenConfig {
+export interface UseZamaConfig {
   /** Address of the confidential token contract. */
   tokenAddress: Address;
   /** Address of the wrapper contract (required for shield/unshield operations). */
@@ -24,7 +24,7 @@ export interface UseTokenConfig {
  * const token = useToken({ tokenAddress: "0xToken", wrapperAddress: "0xWrapper" });
  * ```
  */
-export function useToken(config: UseTokenConfig) {
+export function useToken(config: UseZamaConfig) {
   const sdk = useZamaSDK();
 
   return useMemo(

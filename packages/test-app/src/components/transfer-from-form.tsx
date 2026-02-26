@@ -79,7 +79,7 @@ export function TransferFromForm({
 
       {transferFrom.isSuccess && (
         <p className="text-green-600" data-testid="transfer-from-success">
-          Transfer successful! Tx: {transferFrom.data}
+          Transfer successful! Tx: {transferFrom.data?.txHash}
         </p>
       )}
 

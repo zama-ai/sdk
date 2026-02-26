@@ -23,7 +23,7 @@ const {
 
 import { useConfidentialTransfer } from "../viem/use-confidential-transfer";
 import { useConfidentialBalanceOf } from "../viem/use-confidential-balance-of";
-import { useWrap } from "../viem/use-wrap";
+import { useShield } from "../viem/use-wrap";
 import { useWrapperForToken } from "../viem/use-wrapper-for-token";
 import { useSupportsInterface } from "../viem/use-supports-interface";
 
@@ -105,10 +105,10 @@ describe("useConfidentialBalanceOf", () => {
   });
 });
 
-describe("useWrap", () => {
+describe("useShield", () => {
   it("calls writeWrapContract with correct params", async () => {
     const wrapper = createWrapper();
-    const { result } = renderHook(() => useWrap(), { wrapper });
+    const { result } = renderHook(() => useShield(), { wrapper });
 
     result.current.mutate({
       client: mockClient,

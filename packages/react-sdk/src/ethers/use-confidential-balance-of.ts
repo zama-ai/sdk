@@ -2,18 +2,17 @@
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
+import type { Provider, Signer } from "ethers";
 import { readConfidentialBalanceOfContract } from "@zama-fhe/sdk/ethers";
 
-type Params = Parameters<typeof readConfidentialBalanceOfContract>;
-
 export interface UseConfidentialBalanceOfConfig {
-  provider: Params[0];
+  provider: Provider | Signer;
   tokenAddress: Address | undefined;
   userAddress: Address | undefined;
 }
 
 export interface UseConfidentialBalanceOfSuspenseConfig {
-  provider: Params[0];
+  provider: Provider | Signer;
   tokenAddress: Address;
   userAddress: Address;
 }

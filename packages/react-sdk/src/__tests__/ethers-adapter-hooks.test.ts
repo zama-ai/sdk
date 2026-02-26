@@ -21,7 +21,7 @@ const {
 
 import { useConfidentialTransfer } from "../ethers/use-confidential-transfer";
 import { useConfidentialBalanceOf } from "../ethers/use-confidential-balance-of";
-import { useWrap } from "../ethers/use-wrap";
+import { useShield } from "../ethers/use-wrap";
 import { useWrapperForToken } from "../ethers/use-wrapper-for-token";
 
 type Address = `0x${string}`;
@@ -91,10 +91,10 @@ describe("useConfidentialBalanceOf", () => {
   });
 });
 
-describe("useWrap", () => {
+describe("useShield", () => {
   it("calls writeWrapContract with correct params", async () => {
     const wrapper = createWrapper();
-    const { result } = renderHook(() => useWrap(), { wrapper });
+    const { result } = renderHook(() => useShield(), { wrapper });
 
     result.current.mutate({
       signer: mockSigner,

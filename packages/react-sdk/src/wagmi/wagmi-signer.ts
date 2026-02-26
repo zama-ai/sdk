@@ -17,16 +17,21 @@ import {
   writeContract,
 } from "wagmi/actions";
 
+/** Configuration for {@link WagmiSigner}. */
+export interface WagmiSignerConfig {
+  config: Config;
+}
+
 /**
  * GenericSigner backed by wagmi.
  *
- * @param config - Wagmi config (from useConfig())
+ * @param signerConfig - {@link WagmiSignerConfig} with wagmi config
  */
 export class WagmiSigner implements GenericSigner {
   private readonly config: Config;
 
-  constructor(config: Config) {
-    this.config = config;
+  constructor(signerConfig: WagmiSignerConfig) {
+    this.config = signerConfig.config;
   }
 
   async getChainId(): Promise<number> {

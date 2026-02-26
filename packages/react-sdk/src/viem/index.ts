@@ -1,3 +1,12 @@
+/**
+ * Viem-specific React hooks for low-level contract interactions.
+ *
+ * These hooks do NOT require {@link react-sdk/src.ZamaProvider | ZamaProvider} — they operate directly
+ * through viem `PublicClient` and `WalletClient`.
+ *
+ * @packageDocumentation
+ */
+
 export {
   useConfidentialBalanceOf,
   useConfidentialBalanceOfSuspense,
@@ -19,17 +28,17 @@ export { useSetOperator, type SetOperatorParams } from "./use-set-operator";
 export {
   useWrapperForToken,
   useWrapperForTokenSuspense,
-  type UseWrapperForTokenConfig,
+  type UseWrapperForZamaConfig,
   type UseWrapperForTokenSuspenseConfig,
 } from "./use-wrapper-for-token";
 export {
   useUnderlyingToken,
   useUnderlyingTokenSuspense,
-  type UseUnderlyingTokenConfig,
+  type UseUnderlyingZamaConfig,
   type UseUnderlyingTokenSuspenseConfig,
 } from "./use-underlying-token";
-export { useWrap, type WrapParams } from "./use-wrap";
-export { useWrapETH, type WrapETHParams } from "./use-wrap-eth";
+export { useShield, type ShieldParams } from "./use-wrap";
+export { useShieldETH, type ShieldETHParams } from "./use-wrap-eth";
 export {
   useWrapperExists,
   useWrapperExistsSuspense,
@@ -43,3 +52,19 @@ export {
   type UseSupportsInterfaceSuspenseConfig,
 } from "./use-supports-interface";
 export { ViemSigner } from "./viem-signer";
+
+// High-level token hooks (re-exported for convenience)
+export {
+  useUnshield,
+  useUnshieldAll,
+  useResumeUnshield,
+  useConfidentialTransferFrom,
+  useConfidentialApprove,
+  useConfidentialBalance,
+  useConfidentialBalances,
+  useAuthorizeAll,
+  useTokenMetadata,
+  useActivityFeed,
+  useApproveUnderlying,
+  useUnwrapAll,
+} from "../index";

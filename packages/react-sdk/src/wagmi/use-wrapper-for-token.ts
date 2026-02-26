@@ -4,12 +4,12 @@ import { getWrapperContract } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
 import { useReadContract } from "wagmi";
 
-export interface UseWrapperForTokenConfig {
+export interface UseWrapperForZamaConfig {
   coordinator: Address | undefined;
   tokenAddress: Address | undefined;
 }
 
-export function useWrapperForToken(config: UseWrapperForTokenConfig) {
+export function useWrapperForToken(config: UseWrapperForZamaConfig) {
   const { coordinator, tokenAddress } = config;
   const enabled = !!coordinator && !!tokenAddress;
   const contract = enabled ? getWrapperContract(coordinator, tokenAddress) : {};

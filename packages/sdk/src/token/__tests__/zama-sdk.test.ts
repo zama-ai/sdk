@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { TokenSDK } from "../token-sdk";
+import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
@@ -34,12 +34,12 @@ function createMockRelayer(): RelayerSDK {
   };
 }
 
-describe("TokenSDK", () => {
+describe("ZamaSDK", () => {
   const storage = new MemoryStorage();
   const signer = createMockSigner();
   const relayer = createMockRelayer();
 
-  const sdk = new TokenSDK({
+  const sdk = new ZamaSDK({
     relayer,
     signer,
     storage,

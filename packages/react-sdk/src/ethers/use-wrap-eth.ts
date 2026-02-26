@@ -1,20 +1,19 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import type { Signer } from "ethers";
 import { writeWrapETHContract } from "@zama-fhe/sdk/ethers";
 
-type WriteFn = typeof writeWrapETHContract;
-type Params = Parameters<WriteFn>;
-
-export interface WrapETHParams {
-  signer: Params[0];
-  wrapperAddress: Params[1];
-  to: Params[2];
-  amount: Params[3];
-  value: Params[4];
+export interface ShieldETHParams {
+  signer: Signer;
+  wrapperAddress: Address;
+  to: Address;
+  amount: bigint;
+  value: bigint;
 }
-export function useWrapETH() {
-  return useMutation<Awaited<ReturnType<WriteFn>>, Error, WrapETHParams>({
+export function useShieldETH() {
+  return useMutation<Awaited<ReturnType<typeof writeWrapETHContract>>, Error, ShieldETHParams>({
     mutationFn: (params) =>
       writeWrapETHContract(
         params.signer,

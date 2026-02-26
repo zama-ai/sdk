@@ -9,6 +9,14 @@ export interface TransactionReceipt {
   readonly logs: readonly RawLog[];
 }
 
+/** Result of a write operation: the tx hash and its mined receipt. */
+export interface TransactionResult {
+  /** The transaction hash. */
+  txHash: Hex;
+  /** The mined transaction receipt. */
+  receipt: TransactionReceipt;
+}
+
 /**
  * Minimal contract call configuration.
  * Matches the shape returned by contract call builder functions in `src/contracts/`.
@@ -85,9 +93,9 @@ export interface UnshieldCallbacks {
 
 // Re-export errors for backward compatibility
 export {
-  TokenErrorCode,
-  type TokenErrorCode as TokenErrorCodeType,
-  TokenError,
+  ZamaErrorCode,
+  type ZamaErrorCode as ZamaErrorCodeType,
+  ZamaError,
   SigningRejectedError,
   SigningFailedError,
   EncryptionFailedError,

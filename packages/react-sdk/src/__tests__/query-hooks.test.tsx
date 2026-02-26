@@ -6,7 +6,12 @@ import { useIsConfidential, useIsWrapper } from "../token/use-is-confidential";
 import { useTotalSupply } from "../token/use-total-supply";
 import { useConfidentialIsApproved } from "../token/use-confidential-is-approved";
 import { useWrapperDiscovery } from "../token/use-wrapper-discovery";
-import { useWrapFee, useUnwrapFee, useBatchTransferFee, useFeeRecipient } from "../token/use-fees";
+import {
+  useShieldFee,
+  useUnshieldFee,
+  useBatchTransferFee,
+  useFeeRecipient,
+} from "../token/use-fees";
 import { usePublicKey } from "../relayer/use-public-key";
 import { usePublicParams } from "../relayer/use-public-params";
 import { renderWithProviders, createMockSigner } from "./test-utils";
@@ -134,22 +139,22 @@ describe("query hooks", () => {
       to: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
     };
 
-    it("useWrapFee calls signer.readContract", async () => {
+    it("useShieldFee calls signer.readContract", async () => {
       const signer = createMockSigner();
       vi.mocked(signer.readContract).mockResolvedValue(50n);
 
-      const { result } = renderWithProviders(() => useWrapFee(feeConfig), { signer });
+      const { result } = renderWithProviders(() => useShieldFee(feeConfig), { signer });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(50n);
       expect(signer.readContract).toHaveBeenCalled();
     });
 
-    it("useUnwrapFee calls signer.readContract", async () => {
+    it("useUnshieldFee calls signer.readContract", async () => {
       const signer = createMockSigner();
       vi.mocked(signer.readContract).mockResolvedValue(25n);
 
-      const { result } = renderWithProviders(() => useUnwrapFee(feeConfig), { signer });
+      const { result } = renderWithProviders(() => useUnshieldFee(feeConfig), { signer });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(25n);

@@ -1,7 +1,12 @@
 "use client";
 
-import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/sdk";
-import { TokenSDK } from "@zama-fhe/sdk";
+import type {
+  GenericSigner,
+  GenericStringStorage,
+  RelayerSDK,
+  ZamaSDKEventListener,
+} from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
 
 /** Props for {@link ZamaProvider}. */
@@ -12,12 +17,16 @@ interface ZamaProviderProps extends PropsWithChildren {
   signer: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
   storage: GenericStringStorage;
+  /** Number of days credentials remain valid (default: relayer default). */
+  credentialDurationDays?: number;
+  /** Callback invoked on SDK lifecycle events. */
+  onEvent?: ZamaSDKEventListener;
 }
 
-const TokenSDKContext = createContext<TokenSDK | null>(null);
+const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
 /**
- * Provides a {@link TokenSDK} instance to all descendant hooks.
+ * Provides a {@link ZamaSDK} instance to all descendant hooks.
  * Terminates the relayer on unmount.
  *
  * @example
@@ -27,26 +36,35 @@ const TokenSDKContext = createContext<TokenSDK | null>(null);
  * </ZamaProvider>
  * ```
  */
-export function ZamaProvider({ children, relayer, signer, storage }: ZamaProviderProps) {
+export function ZamaProvider({
+  children,
+  relayer,
+  signer,
+  storage,
+  credentialDurationDays,
+  onEvent,
+}: ZamaProviderProps) {
   const sdk = useMemo(
     () =>
-      new TokenSDK({
+      new ZamaSDK({
         relayer,
         signer,
         storage,
+        credentialDurationDays,
+        onEvent,
       }),
-    [relayer, signer, storage],
+    [relayer, signer, storage, credentialDurationDays, onEvent],
   );
 
   useEffect(() => {
     return () => sdk.terminate();
   }, [sdk]);
 
-  return <TokenSDKContext.Provider value={sdk}>{children}</TokenSDKContext.Provider>;
+  return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;
 }
 
 /**
- * Access the {@link TokenSDK} instance from context.
+ * Access the {@link ZamaSDK} instance from context.
  * Must be used within a {@link ZamaProvider}.
  *
  * @example
@@ -55,8 +73,8 @@ export function ZamaProvider({ children, relayer, signer, storage }: ZamaProvide
  * const token = sdk.createReadonlyToken("0x...");
  * ```
  */
-export function useZamaSDK(): TokenSDK {
-  const context = useContext(TokenSDKContext);
+export function useZamaSDK(): ZamaSDK {
+  const context = useContext(ZamaSDKContext);
 
   if (!context) {
     throw new Error("useZamaSDK must be used within a ZamaProvider");

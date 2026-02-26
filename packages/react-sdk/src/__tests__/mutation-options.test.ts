@@ -4,8 +4,8 @@ import { confidentialTransferMutationOptions } from "../token/use-confidential-t
 import { confidentialTransferFromMutationOptions } from "../token/use-confidential-transfer-from";
 import { confidentialApproveMutationOptions } from "../token/use-confidential-approve";
 import { approveUnderlyingMutationOptions } from "../token/use-approve-underlying";
-import { wrapMutationOptions } from "../token/use-wrap";
-import { wrapETHMutationOptions } from "../token/use-wrap-eth";
+import { shieldMutationOptions } from "../token/use-shield";
+import { shieldETHMutationOptions } from "../token/use-shield-eth";
 import { unwrapMutationOptions } from "../token/use-unwrap";
 import { unwrapAllMutationOptions } from "../token/use-unwrap-all";
 import { finalizeUnwrapMutationOptions } from "../token/use-finalize-unwrap";
@@ -18,22 +18,24 @@ import { createMockSigner, createMockRelayer, createMockStorage } from "./test-u
 
 const TOKEN_ADDR = "0xtoken" as Address;
 
+const MOCK_TX_RESULT = { txHash: "0xtx", receipt: { logs: [] } };
+
 function createMockToken(address: Address = TOKEN_ADDR) {
   return {
     address,
     signer: createMockSigner(),
-    confidentialTransfer: vi.fn().mockResolvedValue("0xtx"),
-    confidentialTransferFrom: vi.fn().mockResolvedValue("0xtx"),
-    approve: vi.fn().mockResolvedValue("0xtx"),
-    approveUnderlying: vi.fn().mockResolvedValue("0xtx"),
-    wrap: vi.fn().mockResolvedValue("0xtx"),
-    wrapETH: vi.fn().mockResolvedValue("0xtx"),
-    unwrap: vi.fn().mockResolvedValue("0xtx"),
-    unwrapAll: vi.fn().mockResolvedValue("0xtx"),
-    finalizeUnwrap: vi.fn().mockResolvedValue("0xtx"),
-    unshield: vi.fn().mockResolvedValue("0xtx"),
-    unshieldAll: vi.fn().mockResolvedValue("0xtx"),
-    resumeUnshield: vi.fn().mockResolvedValue("0xtx"),
+    confidentialTransfer: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    confidentialTransferFrom: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    approve: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    approveUnderlying: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    shield: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    shieldETH: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    unwrap: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    unwrapAll: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    finalizeUnwrap: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    unshield: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    unshieldAll: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
+    resumeUnshield: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
   } as unknown as Token;
 }
 
@@ -73,25 +75,25 @@ it("approveUnderlyingMutationOptions", async () => {
   expect(token.approveUnderlying).toHaveBeenCalledWith(500n);
 });
 
-it("wrapMutationOptions", async () => {
+it("shieldMutationOptions", async () => {
   const token = createMockToken();
-  const opts = wrapMutationOptions(token);
+  const opts = shieldMutationOptions(token);
 
-  expect(opts.mutationKey).toEqual(["wrap", TOKEN_ADDR]);
+  expect(opts.mutationKey).toEqual(["shield", TOKEN_ADDR]);
   await opts.mutationFn({ amount: 1000n });
-  expect(token.wrap).toHaveBeenCalledWith(1000n, {
+  expect(token.shield).toHaveBeenCalledWith(1000n, {
     fees: undefined,
     approvalStrategy: undefined,
   });
 });
 
-it("wrapETHMutationOptions", async () => {
+it("shieldETHMutationOptions", async () => {
   const token = createMockToken();
-  const opts = wrapETHMutationOptions(token);
+  const opts = shieldETHMutationOptions(token);
 
-  expect(opts.mutationKey).toEqual(["wrapETH", TOKEN_ADDR]);
+  expect(opts.mutationKey).toEqual(["shieldETH", TOKEN_ADDR]);
   await opts.mutationFn({ amount: 1000n, value: 2000n });
-  expect(token.wrapETH).toHaveBeenCalledWith(1000n, 2000n);
+  expect(token.shieldETH).toHaveBeenCalledWith(1000n, 2000n);
 });
 
 it("unwrapMutationOptions", async () => {
@@ -153,9 +155,9 @@ it("authorizeAllMutationOptions", async () => {
   const relayer = createMockRelayer();
   const signer = createMockSigner();
   const storage = createMockStorage();
-  // We need a real-ish TokenSDK to test this
-  const { TokenSDK: TokenSDKClass } = await import("@zama-fhe/sdk");
-  const sdk = new TokenSDKClass({ relayer, signer, storage });
+  // We need a real-ish ZamaSDK to test this
+  const { ZamaSDK: ZamaSDKClass } = await import("@zama-fhe/sdk");
+  const sdk = new ZamaSDKClass({ relayer, signer, storage });
   const opts = authorizeAllMutationOptions(sdk);
 
   expect(opts.mutationKey).toEqual(["authorizeAll"]);
@@ -167,8 +169,8 @@ it("encryptMutationOptions", async () => {
   const relayer = createMockRelayer();
   const signer = createMockSigner();
   const storage = createMockStorage();
-  const { TokenSDK: TokenSDKClass } = await import("@zama-fhe/sdk");
-  const sdk = new TokenSDKClass({ relayer, signer, storage });
+  const { ZamaSDK: ZamaSDKClass } = await import("@zama-fhe/sdk");
+  const sdk = new ZamaSDKClass({ relayer, signer, storage });
   const opts = encryptMutationOptions(sdk);
 
   expect(opts.mutationKey).toEqual(["encrypt"]);

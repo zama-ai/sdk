@@ -92,7 +92,7 @@ describe("EthersSigner", () => {
   describe("constructor", () => {
     it("accepts a BrowserProvider and lazily resolves its signer", async () => {
       const { browserProvider, signer } = createMockBrowserProvider();
-      const ethersSigner = new EthersSigner(browserProvider as never);
+      const ethersSigner = new EthersSigner({ signer: browserProvider as never });
 
       const address = await ethersSigner.getAddress();
       expect(browserProvider.getSigner).toHaveBeenCalled();
@@ -102,7 +102,7 @@ describe("EthersSigner", () => {
 
     it("accepts a Signer directly", async () => {
       const signer = createMockSigner();
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       const address = await ethersSigner.getAddress();
       expect(signer.getAddress).toHaveBeenCalled();
@@ -113,7 +113,7 @@ describe("EthersSigner", () => {
   describe("getChainId", () => {
     it("returns the numeric chain ID from the provider network", async () => {
       const signer = createMockSigner();
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       const chainId = await ethersSigner.getChainId();
       expect(signer.provider.getNetwork).toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe("EthersSigner", () => {
 
     it("throws when signer has no provider", async () => {
       const signer = { ...createMockSigner(), provider: null };
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       await expect(ethersSigner.getChainId()).rejects.toThrow("Signer has no provider");
     });
@@ -131,7 +131,7 @@ describe("EthersSigner", () => {
   describe("getAddress", () => {
     it("returns the hex address from the signer", async () => {
       const signer = createMockSigner();
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       const address = await ethersSigner.getAddress();
       expect(address).toBe("0xMyAddress");
@@ -140,7 +140,7 @@ describe("EthersSigner", () => {
     it("throws when address does not start with 0x", async () => {
       const signer = createMockSigner();
       signer.getAddress.mockResolvedValue("notHex");
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       await expect(ethersSigner.getAddress()).rejects.toThrow("Expected hex string");
     });
@@ -149,7 +149,7 @@ describe("EthersSigner", () => {
   describe("signTypedData", () => {
     it("delegates to signer.signTypedData, filtering out EIP712Domain", async () => {
       const signer = createMockSigner();
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       const typedData = {
         domain: {
@@ -184,7 +184,7 @@ describe("EthersSigner", () => {
     it("throws when signature does not start with 0x", async () => {
       const signer = createMockSigner();
       signer.signTypedData.mockResolvedValue("notHex");
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       const typedData = {
         domain: {
@@ -210,7 +210,7 @@ describe("EthersSigner", () => {
   describe("writeContract", () => {
     it("creates an ethers Contract, calls the function, and returns the tx hash", async () => {
       const signer = createMockSigner();
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       mockContractMethod.mockResolvedValueOnce({ hash: "0xTxHash" });
 
@@ -228,7 +228,7 @@ describe("EthersSigner", () => {
 
     it("passes value in overrides when provided", async () => {
       const signer = createMockSigner();
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       mockContractMethod.mockResolvedValueOnce({ hash: "0xTxHash" });
 
@@ -246,7 +246,7 @@ describe("EthersSigner", () => {
 
     it("throws when tx hash does not start with 0x", async () => {
       const signer = createMockSigner();
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       mockContractMethod.mockResolvedValueOnce({ hash: "notHex" });
 
@@ -264,7 +264,7 @@ describe("EthersSigner", () => {
   describe("readContract", () => {
     it("creates an ethers Contract and calls the function with args", async () => {
       const signer = createMockSigner();
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       mockContractMethod.mockResolvedValueOnce(42n);
 
@@ -284,7 +284,7 @@ describe("EthersSigner", () => {
   describe("waitForTransactionReceipt", () => {
     it("waits for the transaction and maps logs correctly", async () => {
       const signer = createMockSigner();
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
 
@@ -297,7 +297,7 @@ describe("EthersSigner", () => {
       signer.provider.waitForTransaction.mockResolvedValue({
         logs: [{ topics: [null, "0xa", null, "0xb"], data: "0x" }],
       });
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
       expect(receipt.logs[0]!.topics).toEqual(["0xa", "0xb"]);
@@ -305,7 +305,7 @@ describe("EthersSigner", () => {
 
     it("throws when signer has no provider", async () => {
       const signer = { ...createMockSigner(), provider: null };
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       await expect(ethersSigner.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
         "Signer has no provider",
@@ -315,7 +315,7 @@ describe("EthersSigner", () => {
     it("throws when receipt is null", async () => {
       const signer = createMockSigner();
       signer.provider.waitForTransaction.mockResolvedValue(null);
-      const ethersSigner = new EthersSigner(signer as never);
+      const ethersSigner = new EthersSigner({ signer: signer as never });
 
       await expect(ethersSigner.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
         "Transaction receipt not found",

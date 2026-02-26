@@ -13,16 +13,24 @@ function toHex(s: string): Hex {
   return s as Hex;
 }
 
+/** Configuration for {@link EthersSigner}. */
+export interface EthersSignerConfig {
+  signer: BrowserProvider | Signer;
+}
+
 /**
  * GenericSigner backed by ethers.
  *
  * Accepts either a `BrowserProvider` (signer resolved lazily via `getSigner()`)
  * or a `Signer` directly (e.g. `Wallet` for Node.js scripts).
+ *
+ * @param config - {@link EthersSignerConfig} with signer or provider
  */
 export class EthersSigner implements GenericSigner {
   private signerPromise: Promise<Signer>;
 
-  constructor(providerOrSigner: BrowserProvider | Signer) {
+  constructor(config: EthersSignerConfig) {
+    const providerOrSigner = config.signer;
     if ("getSigner" in providerOrSigner) {
       this.signerPromise = providerOrSigner.getSigner();
     } else {

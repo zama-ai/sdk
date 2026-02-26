@@ -6,7 +6,7 @@ import type { GenericStringStorage } from "./token.types";
  * IndexedDB-backed {@link GenericStringStorage}.
  *
  * Stores encrypted credential JSON strings keyed by a hashed wallet address.
- * Encryption is handled by {@link CredentialManager} — this store only
+ * Encryption is handled by {@link CredentialsManager} — this store only
  * persists opaque string values.
  */
 export class IndexedDBStorage implements GenericStringStorage {

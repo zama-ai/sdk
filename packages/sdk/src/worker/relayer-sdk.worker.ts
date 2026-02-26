@@ -9,6 +9,7 @@ import type {
   RelayerSDKGlobal,
 } from "../relayer/relayer-sdk.types";
 import { convertToBigIntRecord } from "../relayer/relayer-utils";
+import { assertObject, assertString } from "../utils";
 import type {
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,
@@ -55,10 +56,9 @@ const CSRF_HEADER_NAME = "x-csrf-token";
 const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 
 // Web Worker global scope with SDK
-interface WorkerGlobalScopeWithSDK {
+interface WorkerGlobalScopeWithSDK extends Worker {
   relayerSDK?: RelayerSDKGlobal;
-  postMessage: (message: unknown, transfer?: Transferable[]) => void;
-  onmessage: ((event: MessageEvent<WorkerRequest>) => void) | null;
+  importScripts: (...urls: string[]) => void;
 }
 
 declare const self: WorkerGlobalScopeWithSDK;
@@ -79,7 +79,7 @@ function sendSuccess<T>(
     success: true,
     data,
   };
-  self.postMessage(response, transfer);
+  return transfer ? self.postMessage(response, transfer) : self.postMessage(response);
 }
 
 /**
@@ -105,6 +105,35 @@ function sendError(
 
 // Store original fetch for use in SDK loading
 const originalFetch = fetch;
+
+// ── CDN URL validation ───────────────────────────────────────
+
+/** Allowed CDN hostnames for loading the relayer SDK script. */
+const ALLOWED_CDN_HOSTS = new Set<string>(["cdn.zama.org"]);
+
+/**
+ * Validate the CDN URL supplied by the caller.
+ * Ensures only HTTPS URLs from approved hosts are used when loading
+ * SDK code into the worker.
+ */
+function validateCdnUrl(rawUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid CDN URL");
+  }
+
+  if (url.protocol !== "https:") {
+    throw new Error("CDN URL must use https");
+  }
+
+  if (!ALLOWED_CDN_HOSTS.has(url.hostname)) {
+    throw new Error(`CDN URL host is not allowed: ${url.hostname}`);
+  }
+
+  return url.toString();
+}
 
 /**
  * Set up fetch interceptor to add credentials and CSRF token for relayer requests.
@@ -138,6 +167,29 @@ function setupFetchInterceptor(): void {
 }
 
 /**
+ * Detect browser extension environment (Chrome, Firefox, Safari).
+ * Extensions have restricted CSP that blocks blob: URLs, so we must
+ * fall back to importScripts with the CDN URL directly.
+ * - Chrome/Edge: `chrome.runtime.id`
+ * - Firefox/Safari: `browser.runtime.id`
+ */
+function isBrowserExtension(): boolean {
+  try {
+    // Chrome/Edge expose chrome.runtime.id, Firefox/Safari expose browser.runtime.id
+    const g = globalThis as unknown as Record<string, unknown>;
+    for (const ns of [g.chrome, g.browser]) {
+      assertObject(ns, "ns");
+      assertObject(ns.runtime, "runtime");
+      assertString(ns.runtime.id, "id");
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+/**
  * Verify a fetched script's SHA-384 hash matches the expected integrity value.
  */
 async function verifyIntegrity(content: string, expectedHash: string): Promise<void> {
@@ -153,25 +205,48 @@ async function verifyIntegrity(content: string, expectedHash: string): Promise<v
 
 /**
  * Load SDK script from CDN.
- * Fetches the script content and evaluates it directly to avoid MIME-type
- * rejections — some CDNs serve `.cjs` files with `application/node`, which
- * browsers refuse for `importScripts()`.
- * When an integrity hash is provided, verifies the SHA-384 digest before execution.
+ * Uses two strategies depending on the environment:
+ * - **Web apps (default):** fetch + blob URL + importScripts. Avoids MIME-type
+ *   rejections (some CDNs serve .cjs as `application/node`) and CSP
+ *   `unsafe-eval` violations.
+ * - **Browser extensions (Chrome/Firefox/Safari):** importScripts directly.
+ *   Blob URLs are blocked by extension CSP, but the CDN must be allowed
+ *   in the extension's manifest CSP.
+ *
+ * Integrity is always verified when a hash is provided, regardless of strategy.
  */
-async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
+async function fetchScript(cdnUrl: string): Promise<string> {
   const response = await originalFetch(cdnUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
   }
-  const scriptContent = await response.text();
+  return response.text();
+}
+
+async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
+  if (isBrowserExtension()) {
+    // Extensions: blob: URLs are forbidden. Use importScripts directly —
+    // the CDN origin must be allowed in the extension's CSP manifest.
+    if (integrity) {
+      await verifyIntegrity(await fetchScript(cdnUrl), integrity);
+    }
+    return self.importScripts(cdnUrl);
+  }
+
+  // Web apps: fetch + blob URL avoids MIME-type and eval CSP issues.
+  const scriptContent = await fetchScript(cdnUrl);
 
   if (integrity) {
     await verifyIntegrity(scriptContent, integrity);
   }
 
-  // Evaluate in worker global scope (equivalent to importScripts but
-  // immune to Content-Type restrictions).
-  (0, eval)(scriptContent);
+  const blob = new Blob([scriptContent], { type: "application/javascript" });
+  const blobUrl = URL.createObjectURL(blob);
+  try {
+    self.importScripts(blobUrl);
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
 }
 
 /**
@@ -182,6 +257,9 @@ async function handleInit(request: InitRequest): Promise<void> {
   const { cdnUrl, fhevmConfig, csrfToken, integrity } = payload;
 
   try {
+    // Validate CDN URL before any script loading
+    validateCdnUrl(cdnUrl);
+
     // Extract relayerUrl from config for fetch interception
     relayerUrlBase = fhevmConfig.relayerUrl ?? "";
     csrfTokenBase = csrfToken;
@@ -189,7 +267,7 @@ async function handleInit(request: InitRequest): Promise<void> {
     // Set up fetch interceptor before loading SDK
     setupFetchInterceptor();
 
-    // Load SDK via fetch + eval (avoids MIME-type issues with importScripts)
+    // Load SDK via fetch + blob URL (avoids CORS issues with importScripts)
     await loadSdkScript(cdnUrl, integrity);
 
     if (!self.relayerSDK) {

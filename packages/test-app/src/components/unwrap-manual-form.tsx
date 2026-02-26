@@ -6,7 +6,6 @@ import {
   useFinalizeUnwrap,
   useConfidentialBalance,
   useTokenMetadata,
-  useZamaSDK,
   findUnwrapRequested,
   type Address,
 } from "@zama-fhe/react-sdk";
@@ -21,7 +20,6 @@ export function UnwrapManualForm({
   const [burnAmountHandle, setBurnAmountHandle] = useState<Address | null>(null);
   const { data: metadata } = useTokenMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ tokenAddress });
-  const sdk = useZamaSDK();
   const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
   const finalizeUnwrap = useFinalizeUnwrap({ tokenAddress, wrapperAddress });
 
@@ -30,11 +28,10 @@ export function UnwrapManualForm({
       {/* Step 1: Unwrap */}
       <form
         action={async (formData) => {
-          const txHash = await unwrap.mutateAsync({
+          const result = await unwrap.mutateAsync({
             amount: BigInt(formData.get("amount") as string),
           });
-          const receipt = await sdk.signer.waitForTransactionReceipt(txHash);
-          const event = findUnwrapRequested(receipt.logs);
+          const event = findUnwrapRequested(result.receipt.logs);
           if (event) {
             setBurnAmountHandle(event.encryptedAmount as Address);
           }
@@ -70,7 +67,7 @@ export function UnwrapManualForm({
 
         {unwrap.isSuccess && (
           <p className="text-green-600" data-testid="unwrap-success">
-            Unwrap requested! Tx: {unwrap.data}
+            Unwrap requested! Tx: {unwrap.data?.txHash}
           </p>
         )}
 
@@ -109,7 +106,7 @@ export function UnwrapManualForm({
 
         {finalizeUnwrap.isSuccess && (
           <p className="text-green-600" data-testid="finalize-success">
-            Finalized successfully! Tx: {finalizeUnwrap.data}
+            Finalized successfully! Tx: {finalizeUnwrap.data?.txHash}
           </p>
         )}
 

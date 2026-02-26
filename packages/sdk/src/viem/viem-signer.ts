@@ -8,19 +8,24 @@ import type { PublicClient, WalletClient } from "viem";
 import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { writeContract } from "viem/actions";
 
+/** Configuration for {@link ViemSigner}. */
+export interface ViemSignerConfig {
+  walletClient: WalletClient;
+  publicClient: PublicClient;
+}
+
 /**
  * GenericSigner backed by viem.
  *
- * @param walletClient - viem WalletClient (for signing + writes)
- * @param publicClient - viem PublicClient (for reads)
+ * @param config - {@link ViemSignerConfig} with walletClient and publicClient
  */
 export class ViemSigner implements GenericSigner {
   private readonly walletClient: WalletClient;
   private readonly publicClient: PublicClient;
 
-  constructor(walletClient: WalletClient, publicClient: PublicClient) {
-    this.walletClient = walletClient;
-    this.publicClient = publicClient;
+  constructor(config: ViemSignerConfig) {
+    this.walletClient = config.walletClient;
+    this.publicClient = config.publicClient;
   }
 
   async getChainId(): Promise<number> {

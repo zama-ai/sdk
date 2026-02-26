@@ -5,10 +5,10 @@ import { useWriteContract } from "wagmi";
 
 type WrapParameters = Parameters<typeof wrapContract>;
 
-export function useWrap() {
+export function useShield() {
   const { mutate, mutateAsync, ...mutation } = useWriteContract();
 
-  function wrap(
+  function shield(
     wrapperAddress: WrapParameters[0],
     to: WrapParameters[1],
     amount: WrapParameters[2],
@@ -16,7 +16,7 @@ export function useWrap() {
     return mutate(wrapContract(wrapperAddress, to, amount));
   }
 
-  async function wrapAsync(
+  async function shieldAsync(
     wrapperAddress: WrapParameters[0],
     to: WrapParameters[1],
     amount: WrapParameters[2],
@@ -25,8 +25,8 @@ export function useWrap() {
   }
 
   return {
-    mutate: wrap,
-    mutateAsync: wrapAsync,
+    mutate: shield,
+    mutateAsync: shieldAsync,
     ...mutation,
   };
 }

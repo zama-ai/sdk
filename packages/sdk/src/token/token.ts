@@ -16,7 +16,7 @@ import { findUnwrapRequested } from "../events/onchain-events";
 import type { Address, Hex } from "../relayer/relayer-sdk.types";
 import { normalizeAddress } from "../utils";
 import {
-  TokenError,
+  ZamaError,
   EncryptionFailedError,
   ApprovalFailedError,
   TransactionRevertedError,
@@ -24,7 +24,7 @@ import {
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { UnshieldCallbacks } from "./token.types";
+import type { TransactionResult, UnshieldCallbacks } from "./token.types";
 
 /** Coerce an unknown caught value to an Error instance. */
 function toError(error: unknown): Error {
@@ -80,12 +80,18 @@ export class Token extends ReadonlyToken {
    * Confidential transfer. Encrypts the amount via FHE, then calls the contract.
    * Returns the transaction hash.
    *
+   * @param to - Recipient address.
+   * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.confidentialTransfer("0xRecipient", 1000n);
    * ```
    */
-  async confidentialTransfer(to: Address, amount: bigint): Promise<Hex> {
+  async confidentialTransfer(to: Address, amount: bigint): Promise<TransactionResult> {
     const normalizedTo = normalizeAddress(to, "to");
 
     let handles: Uint8Array[];
@@ -105,7 +111,7 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new EncryptionFailedError("Failed to encrypt transfer amount", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -120,14 +126,15 @@ export class Token extends ReadonlyToken {
         confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
       );
       this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
         operation: "transfer",
         error: toError(error),
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new TransactionRevertedError("Transfer transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -138,12 +145,23 @@ export class Token extends ReadonlyToken {
    * Operator encrypted transfer on behalf of another address.
    * The caller must be an approved operator for `from`.
    *
+   * @param from - The address to transfer from (caller must be an approved operator).
+   * @param to - Recipient address.
+   * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
    * ```
    */
-  async confidentialTransferFrom(from: Address, to: Address, amount: bigint): Promise<Hex> {
+  async confidentialTransferFrom(
+    from: Address,
+    to: Address,
+    amount: bigint,
+  ): Promise<TransactionResult> {
     const normalizedFrom = normalizeAddress(from, "from");
     const normalizedTo = normalizeAddress(to, "to");
 
@@ -164,7 +182,7 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new EncryptionFailedError("Failed to encrypt transferFrom amount", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -185,14 +203,15 @@ export class Token extends ReadonlyToken {
         ),
       );
       this.emit({ type: ZamaSDKEvents.TransferFromSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
         operation: "transferFrom",
         error: toError(error),
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new TransactionRevertedError("TransferFrom transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -203,26 +222,32 @@ export class Token extends ReadonlyToken {
    * Set operator approval for the confidential token.
    * Defaults to 1 hour from now if `until` is not specified.
    *
+   * @param spender - The address to approve as an operator.
+   * @param until - Optional Unix timestamp for approval expiry. Defaults to now + 1 hour.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link ApprovalFailedError} if the approval transaction fails.
+   *
    * @example
    * ```ts
    * const txHash = await token.approve("0xSpender");
    * ```
    */
-  async approve(spender: Address, until?: number): Promise<Hex> {
+  async approve(spender: Address, until?: number): Promise<TransactionResult> {
     const normalizedSpender = normalizeAddress(spender, "spender");
     try {
       const txHash = await this.signer.writeContract(
         setOperatorContract(this.address, normalizedSpender, until),
       );
       this.emit({ type: ZamaSDKEvents.ApproveSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
         operation: "approve",
         error: toError(error),
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new ApprovalFailedError("Operator approval failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -231,6 +256,9 @@ export class Token extends ReadonlyToken {
 
   /**
    * Check if a spender is an approved operator for the connected wallet.
+   *
+   * @param spender - The address to check operator approval for.
+   * @returns `true` if the spender is an approved operator for the connected wallet.
    *
    * @example
    * ```ts
@@ -248,28 +276,34 @@ export class Token extends ReadonlyToken {
   }
 
   /**
-   * Wrap public ERC-20 tokens into confidential tokens.
+   * Shield public ERC-20 tokens into confidential tokens.
    * Handles ERC-20 approval automatically based on `approvalStrategy`
    * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
+   * @param amount - The plaintext amount to shield.
+   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`), `fees` (extra ETH for native wrappers).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
+   * @throws {@link TransactionRevertedError} if the shield transaction reverts.
+   *
    * @example
    * ```ts
-   * const txHash = await token.wrap(1000n);
+   * const txHash = await token.shield(1000n);
    * // or with exact approval:
-   * const txHash = await token.wrap(1000n, { approvalStrategy: "exact" });
+   * const txHash = await token.shield(1000n, { approvalStrategy: "exact" });
    * ```
    */
-  async wrap(
+  async shield(
     amount: bigint,
     options?: {
       approvalStrategy?: "max" | "exact" | "skip";
       fees?: bigint;
     },
-  ): Promise<Hex> {
+  ): Promise<TransactionResult> {
     const underlying = await this.#getUnderlying();
 
     if (underlying === Token.ZERO_ADDRESS) {
-      return this.wrapETH(amount, amount + (options?.fees ?? 0n));
+      return this.shieldETH(amount, amount + (options?.fees ?? 0n));
     }
 
     const strategy = options?.approvalStrategy ?? "exact";
@@ -280,45 +314,52 @@ export class Token extends ReadonlyToken {
     try {
       const address = await this.signer.getAddress();
       const txHash = await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
-      this.emit({ type: ZamaSDKEvents.WrapSubmitted, txHash });
-      return txHash;
+      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
-        operation: "wrap",
+        operation: "shield",
         error: toError(error),
       });
-      if (error instanceof TokenError) throw error;
-      throw new TransactionRevertedError("Shield (wrap) transaction failed", {
+      if (error instanceof ZamaError) throw error;
+      throw new TransactionRevertedError("Shield transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
   }
 
   /**
-   * Wrap native ETH into confidential tokens. `value` defaults to `amount`.
+   * Shield native ETH into confidential tokens. `value` defaults to `amount`.
+   *
+   * @param amount - The amount of ETH to shield (in wei).
+   * @param value - Optional ETH value to send. Defaults to `amount`.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link TransactionRevertedError} if the shield transaction reverts.
    *
    * @example
    * ```ts
-   * const txHash = await token.wrapETH(1000000000000000000n); // 1 ETH
+   * const txHash = await token.shieldETH(1000000000000000000n); // 1 ETH
    * ```
    */
-  async wrapETH(amount: bigint, value?: bigint): Promise<Hex> {
+  async shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult> {
     try {
       const userAddress = await this.signer.getAddress();
       const txHash = await this.signer.writeContract(
         wrapETHContract(this.wrapper, userAddress, amount, value ?? amount),
       );
-      this.emit({ type: ZamaSDKEvents.WrapSubmitted, txHash });
-      return txHash;
+      this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
-        operation: "wrap",
+        operation: "shieldETH",
         error: toError(error),
       });
-      if (error instanceof TokenError) throw error;
-      throw new TransactionRevertedError("Shield ETH (wrapETH) transaction failed", {
+      if (error instanceof ZamaError) throw error;
+      throw new TransactionRevertedError("Shield ETH transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -328,12 +369,17 @@ export class Token extends ReadonlyToken {
    * Request an unwrap for a specific amount. Encrypts the amount first.
    * Call {@link finalizeUnwrap} after the request is processed on-chain.
    *
+   * @param amount - The plaintext amount to unwrap (encrypted automatically).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   * @throws {@link TransactionRevertedError} if the unwrap transaction reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.unwrap(500n);
    * ```
    */
-  async unwrap(amount: bigint): Promise<Hex> {
+  async unwrap(amount: bigint): Promise<TransactionResult> {
     const userAddress = await this.signer.getAddress();
 
     let handles: Uint8Array[];
@@ -353,7 +399,7 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new EncryptionFailedError("Failed to encrypt unshield amount", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -368,14 +414,15 @@ export class Token extends ReadonlyToken {
         unwrapContract(this.address, userAddress, userAddress, handles[0]!, inputProof),
       );
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
         operation: "unwrap",
         error: toError(error),
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new TransactionRevertedError("Unshield transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -387,12 +434,16 @@ export class Token extends ReadonlyToken {
    * Uses the on-chain balance handle directly (no encryption needed).
    * Throws if the balance is zero.
    *
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link DecryptionFailedError} if the balance is zero.
+   * @throws {@link TransactionRevertedError} if the unwrap transaction reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.unwrapAll();
    * ```
    */
-  async unwrapAll(): Promise<Hex> {
+  async unwrapAll(): Promise<TransactionResult> {
     const userAddress = await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
@@ -405,14 +456,15 @@ export class Token extends ReadonlyToken {
         unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
       );
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
         operation: "unwrap",
         error: toError(error),
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new TransactionRevertedError("Unshield-all transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -423,32 +475,43 @@ export class Token extends ReadonlyToken {
    * Unshield a specific amount and finalize in one call.
    * Orchestrates: unshield → wait for receipt → parse event → finalize.
    *
+   * @param amount - The plaintext amount to unshield.
+   * @param callbacks - Optional progress callbacks for each phase.
+   * @returns The finalize transaction hash and mined receipt.
+   * @throws {@link EncryptionFailedError} if FHE encryption fails.
+   * @throws {@link TransactionRevertedError} if any transaction in the flow reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.unshield(500n);
    * ```
    */
-  async unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<Hex> {
+  async unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
-    const unshieldHash = await this.unwrap(amount);
-    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unshieldHash));
-    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks, operationId);
+    const unwrapResult = await this.unwrap(amount);
+    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash));
+    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, callbacks, operationId);
   }
 
   /**
    * Unshield the entire balance and finalize in one call.
    * Orchestrates: unshieldAll → wait for receipt → parse event → finalize.
    *
+   * @param callbacks - Optional progress callbacks for each phase.
+   * @returns The finalize transaction hash and mined receipt.
+   * @throws {@link DecryptionFailedError} if the balance is zero.
+   * @throws {@link TransactionRevertedError} if any transaction in the flow reverts.
+   *
    * @example
    * ```ts
    * const txHash = await token.unshieldAll();
    * ```
    */
-  async unshieldAll(callbacks?: UnshieldCallbacks): Promise<Hex> {
+  async unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
-    const unshieldHash = await this.unwrapAll();
-    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unshieldHash));
-    return this.#waitAndFinalizeUnshield(unshieldHash, callbacks, operationId);
+    const unwrapResult = await this.unwrapAll();
+    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash));
+    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, callbacks, operationId);
   }
 
   /**
@@ -456,12 +519,20 @@ export class Token extends ReadonlyToken {
    * Useful when the user already submitted the unwrap but the finalize step
    * was interrupted (e.g. page reload, network error).
    *
+   * @param unwrapTxHash - The transaction hash of the previously submitted unwrap.
+   * @param callbacks - Optional progress callbacks.
+   * @returns The finalize transaction hash and mined receipt.
+   * @throws {@link TransactionRevertedError} if finalization fails.
+   *
    * @example
    * ```ts
    * const txHash = await token.resumeUnshield(previousUnwrapTxHash);
    * ```
    */
-  async resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<Hex> {
+  async resumeUnshield(
+    unwrapTxHash: Hex,
+    callbacks?: UnshieldCallbacks,
+  ): Promise<TransactionResult> {
     return this.#waitAndFinalizeUnshield(unwrapTxHash, callbacks, crypto.randomUUID());
   }
 
@@ -469,13 +540,18 @@ export class Token extends ReadonlyToken {
    * Complete an unwrap by providing the public decryption proof.
    * Call this after an unshield request has been processed on-chain.
    *
+   * @param burnAmountHandle - The encrypted amount handle from the `UnwrapRequested` event.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link DecryptionFailedError} if public decryption fails.
+   * @throws {@link TransactionRevertedError} if the finalize transaction reverts.
+   *
    * @example
    * ```ts
    * const event = findUnwrapRequested(receipt.logs);
    * const txHash = await token.finalizeUnwrap(event.encryptedAmount);
    * ```
    */
-  async finalizeUnwrap(burnAmountHandle: Address): Promise<Hex> {
+  async finalizeUnwrap(burnAmountHandle: Address): Promise<TransactionResult> {
     let clearValue: bigint;
     let decryptionProof: Address;
 
@@ -498,7 +574,7 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new DecryptionFailedError("Failed to finalize unshield", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -509,14 +585,15 @@ export class Token extends ReadonlyToken {
         finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, decryptionProof),
       );
       this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
         operation: "finalizeUnwrap",
         error: toError(error),
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new TransactionRevertedError("Failed to finalize unshield", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -528,13 +605,17 @@ export class Token extends ReadonlyToken {
    * Defaults to max uint256. Resets to zero first if there's an existing
    * non-zero allowance (required by tokens like USDT).
    *
+   * @param amount - Optional approval amount. Defaults to max uint256.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link ApprovalFailedError} if the approval transaction fails.
+   *
    * @example
    * ```ts
    * await token.approveUnderlying(); // max approval
    * await token.approveUnderlying(1000n); // exact amount
    * ```
    */
-  async approveUnderlying(amount?: bigint): Promise<Hex> {
+  async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
     const underlying = await this.#getUnderlying();
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
@@ -555,14 +636,15 @@ export class Token extends ReadonlyToken {
         approveContract(underlying, this.wrapper, approvalAmount),
       );
       this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
-      return txHash;
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.TransactionError,
         operation: "approveUnderlying",
         error: toError(error),
       });
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new ApprovalFailedError("ERC-20 approval failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -575,13 +657,13 @@ export class Token extends ReadonlyToken {
     unshieldHash: Hex,
     callbacks: UnshieldCallbacks | undefined,
     operationId: string,
-  ): Promise<Hex> {
+  ): Promise<TransactionResult> {
     this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unshieldHash, operationId });
     let receipt;
     try {
       receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
     } catch (error) {
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new TransactionRevertedError("Failed to get unshield receipt", {
         cause: error,
       });
@@ -592,10 +674,14 @@ export class Token extends ReadonlyToken {
     }
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
     safeCallback(() => callbacks?.onFinalizing?.());
-    const finalizeHash = await this.finalizeUnwrap(event.encryptedAmount);
-    this.emit({ type: ZamaSDKEvents.UnshieldPhase2Submitted, txHash: finalizeHash, operationId });
-    safeCallback(() => callbacks?.onFinalizeSubmitted?.(finalizeHash));
-    return finalizeHash;
+    const finalizeResult = await this.finalizeUnwrap(event.encryptedAmount);
+    this.emit({
+      type: ZamaSDKEvents.UnshieldPhase2Submitted,
+      txHash: finalizeResult.txHash,
+      operationId,
+    });
+    safeCallback(() => callbacks?.onFinalizeSubmitted?.(finalizeResult.txHash));
+    return finalizeResult;
   }
 
   async #ensureAllowance(amount: bigint, maxApproval: boolean): Promise<void> {
@@ -620,7 +706,7 @@ export class Token extends ReadonlyToken {
 
       await this.signer.writeContract(approveContract(underlying, this.wrapper, approvalAmount));
     } catch (error) {
-      if (error instanceof TokenError) throw error;
+      if (error instanceof ZamaError) throw error;
       throw new ApprovalFailedError("ERC-20 approval failed", {
         cause: error instanceof Error ? error : undefined,
       });

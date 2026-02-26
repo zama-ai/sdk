@@ -1,20 +1,23 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import type { Signer } from "ethers";
 import { writeFinalizeUnwrapContract } from "@zama-fhe/sdk/ethers";
 
-type WriteFn = typeof writeFinalizeUnwrapContract;
-type Params = Parameters<WriteFn>;
-
 export interface FinalizeUnwrapParams {
-  signer: Params[0];
-  wrapper: Params[1];
-  burntAmount: Params[2];
-  burntAmountCleartext: Params[3];
-  decryptionProof: Params[4];
+  signer: Signer;
+  wrapper: Address;
+  burntAmount: Address;
+  burntAmountCleartext: bigint;
+  decryptionProof: Address;
 }
 export function useFinalizeUnwrap() {
-  return useMutation<Awaited<ReturnType<WriteFn>>, Error, FinalizeUnwrapParams>({
+  return useMutation<
+    Awaited<ReturnType<typeof writeFinalizeUnwrapContract>>,
+    Error,
+    FinalizeUnwrapParams
+  >({
     mutationFn: (params) =>
       writeFinalizeUnwrapContract(
         params.signer,

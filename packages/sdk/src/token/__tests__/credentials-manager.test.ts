@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CredentialsManager } from "../credential-manager";
 import { MemoryStorage } from "../memory-storage";
 import type { GenericSigner } from "../token.types";
-import { TokenError, TokenErrorCode } from "../token.types";
+import { ZamaError, ZamaErrorCode } from "../token.types";
 import { CredentialExpiredError } from "../errors";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
@@ -169,14 +169,14 @@ describe("CredentialsManager", () => {
 
     await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
-        code: TokenErrorCode.SigningRejected,
+        code: ZamaErrorCode.SigningRejected,
       }),
     );
 
     try {
       await manager.get("0xtoken" as Address);
     } catch (e) {
-      expect(e).toBeInstanceOf(TokenError);
+      expect(e).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -185,14 +185,14 @@ describe("CredentialsManager", () => {
 
     await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
-        code: TokenErrorCode.SigningRejected,
+        code: ZamaErrorCode.SigningRejected,
       }),
     );
 
     try {
       await manager.get("0xtoken" as Address);
     } catch (e) {
-      expect(e).toBeInstanceOf(TokenError);
+      expect(e).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -201,14 +201,14 @@ describe("CredentialsManager", () => {
 
     await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
-        code: TokenErrorCode.SigningFailed,
+        code: ZamaErrorCode.SigningFailed,
       }),
     );
 
     try {
       await manager.get("0xtoken" as Address);
     } catch (e) {
-      expect(e).toBeInstanceOf(TokenError);
+      expect(e).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -217,15 +217,15 @@ describe("CredentialsManager", () => {
 
     await expect(manager.get("0xtoken" as Address)).rejects.toThrow(
       expect.objectContaining({
-        code: TokenErrorCode.SigningFailed,
+        code: ZamaErrorCode.SigningFailed,
       }),
     );
 
     try {
       await manager.get("0xtoken" as Address);
     } catch (e) {
-      expect(e).toBeInstanceOf(TokenError);
-      expect((e as TokenError).cause).toBeUndefined();
+      expect(e).toBeInstanceOf(ZamaError);
+      expect((e as ZamaError).cause).toBeUndefined();
     }
   });
 
@@ -333,8 +333,8 @@ describe("CredentialsManager", () => {
 describe("CredentialExpiredError", () => {
   it("has the correct error code", () => {
     const error = new CredentialExpiredError("credentials expired");
-    expect(error.code).toBe(TokenErrorCode.CredentialExpired);
+    expect(error.code).toBe(ZamaErrorCode.CredentialExpired);
     expect(error.name).toBe("CredentialExpiredError");
-    expect(error).toBeInstanceOf(TokenError);
+    expect(error).toBeInstanceOf(ZamaError);
   });
 });

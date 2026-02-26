@@ -244,14 +244,15 @@ describe("Unshield callbacks (P4)", () => {
   it("works without callbacks (backward compatible)", async () => {
     mockReceiptWithUnwrapRequested();
 
-    const txHash = await token.unshield(50n);
-    expect(txHash).toBe("0xtxhash");
+    const result = await token.unshield(50n);
+    expect(result.txHash).toBe("0xtxhash");
+    expect(result.receipt).toBeDefined();
   });
 
   it("completes unshield even when callbacks throw", async () => {
     mockReceiptWithUnwrapRequested();
 
-    const txHash = await token.unshield(50n, {
+    const result = await token.unshield(50n, {
       onUnwrapSubmitted: () => {
         throw new Error("callback exploded");
       },
@@ -263,7 +264,7 @@ describe("Unshield callbacks (P4)", () => {
       },
     });
 
-    expect(txHash).toBe("0xtxhash");
+    expect(result.txHash).toBe("0xtxhash");
     expect(signer.writeContract).toHaveBeenCalledTimes(2); // unwrap + finalize
   });
 
@@ -318,7 +319,7 @@ describe("Address normalization (P6)", () => {
     signer = createMockSigner();
   });
 
-  it("normalizes token address to lowercase in constructor", () => {
+  it("preserves token address case in constructor", () => {
     const token = new Token({
       sdk: sdk as unknown as RelayerSDK,
       signer,
@@ -326,10 +327,10 @@ describe("Address normalization (P6)", () => {
       address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
-    expect(token.address).toBe("0xabcdef1234567890abcdef1234567890abcdef12");
+    expect(token.address).toBe("0xABCDEF1234567890ABCDEF1234567890ABCDEF12");
   });
 
-  it("normalizes wrapper address to lowercase in constructor", () => {
+  it("preserves wrapper address case in constructor", () => {
     const token = new Token({
       sdk: sdk as unknown as RelayerSDK,
       signer,
@@ -338,7 +339,7 @@ describe("Address normalization (P6)", () => {
       wrapper: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
-    expect(token.wrapper).toBe("0xabcdef1234567890abcdef1234567890abcdef12");
+    expect(token.wrapper).toBe("0xABCDEF1234567890ABCDEF1234567890ABCDEF12");
   });
 
   it("defaults wrapper to normalized address when not provided", () => {

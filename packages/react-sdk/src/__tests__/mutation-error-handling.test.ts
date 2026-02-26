@@ -6,26 +6,27 @@ import {
   TransactionRevertedError,
 } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions } from "../token/use-confidential-transfer";
-import { wrapMutationOptions } from "../token/use-wrap";
+import { shieldMutationOptions } from "../token/use-shield";
 import { createMockSigner } from "./test-utils";
 
 const TOKEN_ADDR = "0xtoken" as Address;
 
 function createMockToken(address: Address = TOKEN_ADDR) {
+  const mockResult = { txHash: "0xtx", receipt: { logs: [] } };
   return {
     address,
     signer: createMockSigner(),
-    confidentialTransfer: vi.fn(),
-    confidentialTransferFrom: vi.fn(),
-    approve: vi.fn(),
-    approveUnderlying: vi.fn(),
-    wrap: vi.fn(),
-    wrapETH: vi.fn(),
-    unwrap: vi.fn(),
-    unwrapAll: vi.fn(),
-    finalizeUnwrap: vi.fn(),
-    unshield: vi.fn(),
-    unshieldAll: vi.fn(),
+    confidentialTransfer: vi.fn().mockResolvedValue(mockResult),
+    confidentialTransferFrom: vi.fn().mockResolvedValue(mockResult),
+    approve: vi.fn().mockResolvedValue(mockResult),
+    approveUnderlying: vi.fn().mockResolvedValue(mockResult),
+    shield: vi.fn().mockResolvedValue(mockResult),
+    shieldETH: vi.fn().mockResolvedValue(mockResult),
+    unwrap: vi.fn().mockResolvedValue(mockResult),
+    unwrapAll: vi.fn().mockResolvedValue(mockResult),
+    finalizeUnwrap: vi.fn().mockResolvedValue(mockResult),
+    unshield: vi.fn().mockResolvedValue(mockResult),
+    unshieldAll: vi.fn().mockResolvedValue(mockResult),
   } as unknown as Token;
 }
 
@@ -45,22 +46,22 @@ describe("mutation error propagation", () => {
     );
   });
 
-  it("wrap surfaces ApprovalFailedError", async () => {
+  it("shield surfaces ApprovalFailedError", async () => {
     const token = createMockToken();
     const error = new ApprovalFailedError("ERC-20 approval failed");
-    vi.mocked(token.wrap).mockRejectedValueOnce(error);
+    vi.mocked(token.shield).mockRejectedValueOnce(error);
 
-    const opts = wrapMutationOptions(token);
+    const opts = shieldMutationOptions(token);
 
     await expect(opts.mutationFn({ amount: 100n })).rejects.toThrow(ApprovalFailedError);
   });
 
-  it("wrap surfaces TransactionRevertedError", async () => {
+  it("shield surfaces TransactionRevertedError", async () => {
     const token = createMockToken();
     const error = new TransactionRevertedError("Shield (wrap) transaction failed");
-    vi.mocked(token.wrap).mockRejectedValueOnce(error);
+    vi.mocked(token.shield).mockRejectedValueOnce(error);
 
-    const opts = wrapMutationOptions(token);
+    const opts = shieldMutationOptions(token);
 
     await expect(opts.mutationFn({ amount: 100n })).rejects.toThrow(TransactionRevertedError);
   });

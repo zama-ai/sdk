@@ -27,7 +27,7 @@ const wagmiConfig = createConfig({
   },
 });
 
-const signer = new WagmiSigner(wagmiConfig);
+const signer = new WagmiSigner({ config: wagmiConfig });
 
 const relayer = new RelayerWeb({
   getChainId: async () => signer.getChainId(),

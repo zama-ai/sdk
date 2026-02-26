@@ -13,7 +13,7 @@
  * }
  * ```
  */
-export const TokenErrorCode = {
+export const ZamaErrorCode = {
   /** User rejected the wallet signature prompt. */
   SigningRejected: "SIGNING_REJECTED",
   /** Wallet signature failed for a reason other than rejection. */
@@ -36,105 +36,132 @@ export const TokenErrorCode = {
   RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
 } as const;
 
-/** Union of all {@link TokenErrorCode} string values. */
-export type TokenErrorCode = (typeof TokenErrorCode)[keyof typeof TokenErrorCode];
+/** Union of all {@link ZamaErrorCode} string values. */
+export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 
 /**
  * Base error thrown by all SDK operations.
- * Carries a {@link TokenErrorCode} for programmatic error handling.
+ * Carries a {@link ZamaErrorCode} for programmatic error handling.
  * Prefer catching specific subclasses (e.g. {@link EncryptionFailedError}).
  */
-export class TokenError extends Error {
+export class ZamaError extends Error {
   /** Machine-readable error code. */
-  readonly code: TokenErrorCode;
+  readonly code: ZamaErrorCode;
 
-  constructor(code: TokenErrorCode, message: string, options?: ErrorOptions) {
+  constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = "TokenError";
+    this.name = "ZamaError";
     this.code = code;
   }
 }
 
 /** User rejected the wallet signature prompt. */
-export class SigningRejectedError extends TokenError {
+export class SigningRejectedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(TokenErrorCode.SigningRejected, message, options);
+    super(ZamaErrorCode.SigningRejected, message, options);
     this.name = "SigningRejectedError";
   }
 }
 
 /** Wallet signature failed for a reason other than rejection. */
-export class SigningFailedError extends TokenError {
+export class SigningFailedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(TokenErrorCode.SigningFailed, message, options);
+    super(ZamaErrorCode.SigningFailed, message, options);
     this.name = "SigningFailedError";
   }
 }
 
 /** FHE encryption failed. */
-export class EncryptionFailedError extends TokenError {
+export class EncryptionFailedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(TokenErrorCode.EncryptionFailed, message, options);
+    super(ZamaErrorCode.EncryptionFailed, message, options);
     this.name = "EncryptionFailedError";
   }
 }
 
 /** FHE decryption failed. */
-export class DecryptionFailedError extends TokenError {
+export class DecryptionFailedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(TokenErrorCode.DecryptionFailed, message, options);
+    super(ZamaErrorCode.DecryptionFailed, message, options);
     this.name = "DecryptionFailedError";
   }
 }
 
 /** ERC-20 approval transaction failed. */
-export class ApprovalFailedError extends TokenError {
+export class ApprovalFailedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(TokenErrorCode.ApprovalFailed, message, options);
+    super(ZamaErrorCode.ApprovalFailed, message, options);
     this.name = "ApprovalFailedError";
   }
 }
 
 /** On-chain transaction reverted. */
-export class TransactionRevertedError extends TokenError {
+export class TransactionRevertedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(TokenErrorCode.TransactionReverted, message, options);
+    super(ZamaErrorCode.TransactionReverted, message, options);
     this.name = "TransactionRevertedError";
   }
 }
 
 /** FHE credentials have expired and need regeneration. */
-export class CredentialExpiredError extends TokenError {
+export class CredentialExpiredError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(TokenErrorCode.CredentialExpired, message, options);
+    super(ZamaErrorCode.CredentialExpired, message, options);
     this.name = "CredentialExpiredError";
   }
 }
 
 /** Relayer rejected credentials (stale, expired, or malformed). */
-export class InvalidCredentialsError extends TokenError {
+export class InvalidCredentialsError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(TokenErrorCode.InvalidCredentials, message, options);
+    super(ZamaErrorCode.InvalidCredentials, message, options);
     this.name = "InvalidCredentialsError";
   }
 }
 
 /** No FHE ciphertext exists for this account (never shielded). */
-export class NoCiphertextError extends TokenError {
+export class NoCiphertextError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(TokenErrorCode.NoCiphertext, message, options);
+    super(ZamaErrorCode.NoCiphertext, message, options);
     this.name = "NoCiphertextError";
   }
 }
 
 /** Relayer HTTP request failed. */
-export class RelayerRequestFailedError extends TokenError {
+export class RelayerRequestFailedError extends ZamaError {
   /** HTTP status code from the relayer, if available. */
   readonly statusCode: number | undefined;
 
   constructor(message: string, statusCode?: number, options?: ErrorOptions) {
-    super(TokenErrorCode.RelayerRequestFailed, message, options);
+    super(ZamaErrorCode.RelayerRequestFailed, message, options);
     this.name = "RelayerRequestFailedError";
     this.statusCode = statusCode;
   }
+}
+
+/**
+ * Pattern-match on a {@link ZamaError} by its error code.
+ * Falls through to the `_` wildcard handler if no specific handler matches.
+ * Returns `undefined` if the error is not a `ZamaError` and no `_` handler is provided.
+ *
+ * @example
+ * ```ts
+ * matchZamaError(error, {
+ *   SIGNING_REJECTED: () => toast("Please approve in wallet"),
+ *   TRANSACTION_REVERTED: (e) => toast(`Tx failed: ${e.message}`),
+ *   _: () => toast("Unknown error"),
+ * });
+ * ```
+ */
+export function matchZamaError<R>(
+  error: unknown,
+  handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
+    _?: (error: unknown) => R;
+  },
+): R | undefined {
+  if (error instanceof ZamaError) {
+    const handler = handlers[error.code];
+    if (handler) return handler(error);
+  }
+  return handlers._?.(error);
 }
