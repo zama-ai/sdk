@@ -186,6 +186,38 @@ export class CredentialsManager {
   }
 
   /**
+   * Clear the session signature. Stored credentials remain intact, but the
+   * next decrypt operation will require a fresh wallet signature.
+   */
+  lock(): void {
+    this.#sessionSignatures.clear();
+    this.#emit({ type: ZamaSDKEvents.CredentialsLocked });
+  }
+
+  /**
+   * Pre-authorize by prompting the wallet to sign and caching the session
+   * signature. If credentials already exist in storage, re-signs against them.
+   * Otherwise creates fresh credentials.
+   *
+   * @param contractAddresses - Contract addresses to authorize for.
+   */
+  async unlock(contractAddresses?: Address[]): Promise<void> {
+    const addresses = contractAddresses ?? [];
+    if (addresses.length > 0) {
+      await this.getAll(addresses);
+    }
+    this.#emit({ type: ZamaSDKEvents.CredentialsUnlocked });
+  }
+
+  /**
+   * Whether a session signature is currently cached for the connected wallet.
+   */
+  async isUnlocked(): Promise<boolean> {
+    const storeKey = await this.#storeKey();
+    return this.#sessionSignatures.has(storeKey);
+  }
+
+  /**
    * Delete stored credentials for the connected wallet (best-effort).
    *
    * @example
