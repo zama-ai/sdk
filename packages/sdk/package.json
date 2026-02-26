@@ -56,14 +56,11 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepare": "tsup",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@zama-fhe/relayer-sdk": "0.4.1"
-  },
-  "dependencies": {
+    "@zama-fhe/relayer-sdk": "0.4.1",
     "tsup": "^8.5.1"
   },
   "peerDependencies": {
