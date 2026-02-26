@@ -78,12 +78,12 @@ const sdk = new ZamaSDK({
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
       },
       [sepolia.id]: {
-        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
       },
     },
   }),
@@ -347,21 +347,26 @@ Both the main entry (`@zama-fhe/sdk`) and the `/node` sub-path re-export preset 
 | `MainnetConfig` | 1        | Mainnet contract addresses.         |
 | `HardhatConfig` | 31337    | Local Hardhat node addresses.       |
 
-Each preset provides contract addresses and default values. Override `relayerUrl` and `network` (RPC URL) for your environment:
+Each preset provides contract addresses and default relayer URL. Override `network` (RPC URL) for your environment. Browser apps should override `relayerUrl` with a proxy; server-side apps add `auth`:
 
 ```ts
 import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 
+// Browser — proxy through your backend
 const transports = {
   [SepoliaConfig.chainId]: {
     ...SepoliaConfig,
     relayerUrl: "https://your-app.com/api/relayer",
     network: "https://sepolia.infura.io/v3/KEY",
   },
-  [MainnetConfig.chainId]: {
-    ...MainnetConfig,
-    relayerUrl: "https://your-app.com/api/relayer",
-    network: "https://mainnet.infura.io/v3/KEY",
+};
+
+// Node.js — auth is safe server-side
+const transports = {
+  [SepoliaConfig.chainId]: {
+    ...SepoliaConfig,
+    network: "https://sepolia.infura.io/v3/KEY",
+    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
   },
 };
 ```

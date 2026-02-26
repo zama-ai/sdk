@@ -21,8 +21,7 @@ The relayer handles all FHE operations — encrypting amounts before they go on-
 Runs FHE in a Web Worker using WASM loaded from CDN. This is what you'll use in any browser app.
 
 ```ts
-import { RelayerWeb } from "@zama-fhe/sdk";
-import { sepolia, mainnet } from "viem/chains";
+import { RelayerWeb, SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
@@ -59,15 +58,16 @@ const relayer = new RelayerWeb({
 Uses native worker threads instead of a Web Worker. Import from the `/node` sub-path.
 
 ```ts
+import { SepoliaConfig } from "@zama-fhe/sdk";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 
 const relayer = new RelayerNode({
   getChainId: () => signer.getChainId(),
   poolSize: 4, // worker threads (defaults to min(CPU cores, 4))
   transports: {
-    [11155111]: {
-      relayerUrl: "https://your-backend.com/api/relayer",
+    [SepoliaConfig.chainId]: {
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
+      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
     },
   },
 });
@@ -75,21 +75,26 @@ const relayer = new RelayerNode({
 
 ### Network presets
 
-You don't need to figure out contract addresses. Use the built-in presets and just add your URLs:
+You don't need to figure out contract addresses or relayer URLs. Use the built-in presets and just add your RPC URL. For browser apps, override `relayerUrl` with your proxy; for server-side apps, add `auth` instead:
 
 ```ts
 import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 
+// Browser — proxy through your backend
 const transports = {
   [SepoliaConfig.chainId]: {
     ...SepoliaConfig,
     relayerUrl: "https://your-app.com/api/relayer",
     network: "https://sepolia.infura.io/v3/YOUR_KEY",
   },
-  [MainnetConfig.chainId]: {
-    ...MainnetConfig,
-    relayerUrl: "https://your-app.com/api/relayer",
-    network: "https://mainnet.infura.io/v3/YOUR_KEY",
+};
+
+// Node.js — auth is safe server-side
+const transports = {
+  [SepoliaConfig.chainId]: {
+    ...SepoliaConfig,
+    network: "https://sepolia.infura.io/v3/YOUR_KEY",
+    auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
   },
 };
 ```
@@ -184,7 +189,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      // your backend proxy
+      // your backend proxy — NOT the relayer directly
       relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
@@ -194,17 +199,33 @@ const relayer = new RelayerWeb({
 
 Your backend proxy just forwards requests and injects the key:
 
+```bash
+RELAYER_API_KEY=your-api-key
+RELAYER_URL_TESTNET=https://relayer.testnet.zama.org
+RELAYER_URL_MAINNET=https://relayer.mainnet.zama.org
+```
+
 ```ts
 // Express example
-app.use("/api/relayer", async (req, res) => {
-  const upstream = process.env.RELAYER_URL;
-  const response = await fetch(`${upstream}${req.path}`, {
+const RELAYER_URLS: Record<string, string | undefined> = {
+  "11155111": process.env.RELAYER_URL_TESTNET,
+  "1": process.env.RELAYER_URL_MAINNET,
+};
+
+app.use("/api/relayer/:chainId", async (req, res) => {
+  const upstream = RELAYER_URLS[req.params.chainId];
+  if (!upstream) return res.status(400).send("Unsupported chain");
+  const url = new URL(req.path, upstream);
+  const body = ["GET", "HEAD"].includes(req.method) ? undefined : JSON.stringify(req.body);
+  const response = await fetch(url, {
     method: req.method,
     headers: {
       "content-type": "application/json",
       "x-api-key": process.env.RELAYER_API_KEY,
     },
-    body: ["GET", "HEAD"].includes(req.method) ? undefined : JSON.stringify(req.body),
+    body,
+    // @ts-expect-error: required by the relayer
+    duplex: "half",
   });
   res.status(response.status).send(await response.text());
 });
@@ -217,7 +238,6 @@ For server-side apps or prototypes where exposing the key is acceptable:
 ```ts
 const transports = {
   [sepolia.id]: {
-    relayerUrl: "https://relayer.zama.ai",
     network: "https://sepolia.infura.io/v3/YOUR_KEY",
     auth: { __type: "ApiKeyHeader", value: "your-api-key" },
   },

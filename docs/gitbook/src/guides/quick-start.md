@@ -11,7 +11,7 @@ The relayer requires an API key. In the examples below, replace the relayer URL 
 relayerUrl: "https://your-app.com/api/relayer"
 
 // Option B: direct API key (server-side / prototyping)
-relayerUrl: "https://relayer.zama.ai",
+// relayerUrl is optional — presets include it by default
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 ```
 
@@ -208,8 +208,8 @@ const sdk = new ZamaSDK({
     poolSize: 4, // worker threads (defaults to min(CPU cores, 4))
     transports: {
       [sepolia.id]: {
-        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
       },
     },
   }),

@@ -196,12 +196,12 @@ const sdk = new ZamaSDK({
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
       },
       [sepolia.id]: {
-        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
+        auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
       },
     },
   }),
@@ -303,7 +303,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      // API key never reaches the client
+      // your backend proxy — NOT the relayer directly
       relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
@@ -314,8 +314,9 @@ const relayer = new RelayerWeb({
 **Next.js App Router** — See [`examples/react-wagmi/src/app/api/relayer/[...path]/route.ts`](./examples/react-wagmi/src/app/api/relayer/%5B...path%5D/route.ts) for a complete implementation. It forwards all methods, strips hop-by-hop headers, and injects the API key server-side. Requires two env vars:
 
 ```bash
-RELAYER_URL=https://relayer.zama.ai
 RELAYER_API_KEY=your-api-key
+RELAYER_URL_TESTNET=https://relayer.testnet.zama.org
+RELAYER_URL_MAINNET=https://relayer.mainnet.zama.org
 ```
 
 **Express** — Minimal middleware:
@@ -323,12 +324,20 @@ RELAYER_API_KEY=your-api-key
 ```ts
 import type { RequestHandler } from "express";
 
+const RELAYER_URLS: Record<string, string | undefined> = {
+  "11155111": process.env.RELAYER_URL_TESTNET,
+  "1": process.env.RELAYER_URL_MAINNET,
+};
+
 export function relayerProxy(): RequestHandler {
-  const upstream = process.env.RELAYER_URL!;
   const apiKey = process.env.RELAYER_API_KEY!;
 
   return async (req, res) => {
-    const path = req.path.replace(/^\/api\/relayer\/?/, "");
+    const chainId = req.params.chainId;
+    const upstream = RELAYER_URLS[chainId];
+    if (!upstream) return res.status(400).send("Unsupported chain");
+
+    const path = req.path.replace(/^\/api\/relayer\/\d+\/?/, "");
     const url = new URL(path, upstream.endsWith("/") ? upstream : `${upstream}/`);
     url.search = new URLSearchParams(req.query as Record<string, string>).toString();
 
@@ -343,6 +352,8 @@ export function relayerProxy(): RequestHandler {
       method: req.method,
       headers,
       body: ["GET", "HEAD"].includes(req.method) ? undefined : JSON.stringify(req.body),
+      // @ts-expect-error: required by the relayer
+      duplex: "half",
     });
 
     res.status(response.status);
@@ -351,7 +362,7 @@ export function relayerProxy(): RequestHandler {
   };
 }
 
-// Usage: app.use("/api/relayer", relayerProxy());
+// Usage: app.use("/api/relayer/:chainId", relayerProxy());
 ```
 
 **Option B — Direct API key via transport config**
@@ -364,7 +375,6 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
       auth: { __type: "ApiKeyHeader", value: "your-api-key" },
     },
