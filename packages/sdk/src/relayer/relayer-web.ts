@@ -31,6 +31,26 @@ const CDN_INTEGRITY =
 /**
  * RelayerWeb — browser encryption/decryption layer using a Web Worker.
  * Handles WASM initialization in a Web Worker for non-blocking operations.
+ *
+ * ## Worker initialization / promise lock pattern
+ *
+ * Every public method calls `#ensureWorker()` before proceeding.
+ * Initialization is managed by three private fields:
+ *
+ * - `#workerClient` — the live worker instance (null until first init)
+ * - `#initPromise` — cached promise from `#initWorker()`; once resolved,
+ *   all subsequent callers reuse the same worker without re-initializing.
+ *   Cleared on error so the next caller retries a fresh init.
+ * - `#ensureLock` — short-lived promise that serializes concurrent calls
+ *   to `#ensureWorkerInner()`. While one caller is checking chain IDs and
+ *   potentially tearing down an old worker, all other callers await the
+ *   same lock instead of racing through the same logic. Cleared in
+ *   `finally` so it's never leaked.
+ *
+ * Chain switching: when `getChainId()` returns a value different from the
+ * previously resolved chain, the old worker is terminated, `#initPromise`
+ * is cleared, and a fresh worker is created for the new chain — all within
+ * the `#ensureLock` critical section.
  */
 export class RelayerWeb implements RelayerSDK {
   #workerClient: RelayerWorkerClient | null = null;

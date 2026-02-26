@@ -550,6 +550,61 @@ The SDK supports smart accounts when using wagmi with a compatible connector.
 
 2. **EIP-712 signatures** — FHE credential authorization uses `signTypedData`. Wagmi handles ERC-1271 validation at the library level, but the Zama relayer must also support your account's signature scheme. Contact Zama to confirm ERC-1271 support for non-ECDSA signers (passkeys, multisig).
 
+## Security
+
+### WASM bundle integrity
+
+`RelayerWeb` loads its FHE WASM bundle from `cdn.zama.org`. Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a pinned hash compiled into the library. If they don't match, initialization fails with a clear error. This is enabled by default; disable it only in test environments:
+
+```ts
+const relayer = new RelayerWeb({
+  // ...transports
+  security: {
+    integrityCheck: false, // default: true
+  },
+});
+```
+
+### Credential storage model
+
+FHE decrypt credentials (a keypair + EIP-712 wallet signature) are cached so users aren't prompted on every decrypt. Before writing to storage, the SDK encrypts the private key with AES-256-GCM. The encryption key is derived via PBKDF2 (600 000 iterations, SHA-256) from the wallet signature — a secret known only to the wallet holder.
+
+What's stored:
+
+| Field                 | Plaintext? | Notes                                            |
+| --------------------- | ---------- | ------------------------------------------------ |
+| `publicKey`           | Yes        | Needed by the relayer to create decrypt requests |
+| `signature`           | Yes        | EIP-712 authorization, already visible on-chain  |
+| `contractAddresses`   | Yes        | Token addresses covered by the credential        |
+| `startTimestamp`      | Yes        | Credential validity start                        |
+| `durationDays`        | Yes        | Credential validity window                       |
+| `encryptedPrivateKey` | No         | AES-256-GCM encrypted, IV stored alongside       |
+
+Storage keys are truncated SHA-256 hashes of the wallet address — the raw address is never written to the store.
+
+### CSP headers
+
+The Web Worker loads WASM from CDN and executes it. Your Content Security Policy must allow:
+
+- `worker-src blob:` — workers are created from blob URLs
+- `script-src 'wasm-unsafe-eval'` — required for WASM execution
+- `connect-src https://cdn.zama.org` — CDN fetch for the WASM bundle
+
+### CSRF protection
+
+For browser apps, `RelayerWeb` supports CSRF tokens injected into relayer requests:
+
+```ts
+const relayer = new RelayerWeb({
+  // ...transports
+  security: {
+    getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
+  },
+});
+```
+
+The token is refreshed before each encrypt/decrypt call.
+
 ## Troubleshooting
 
 | Symptom                                         | Root Cause                                  | Fix                                                                                                                            |

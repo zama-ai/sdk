@@ -27,8 +27,13 @@ export interface RelayerNodeConfig {
 }
 
 /**
- * RelayerNode — Node.js encryption/decryption layer using a worker thread.
- * Offloads CPU-intensive WASM/FHE operations to a node:worker_threads worker.
+ * RelayerNode — Node.js encryption/decryption layer using a worker thread pool.
+ * Offloads CPU-intensive WASM/FHE operations to `node:worker_threads`.
+ *
+ * Uses the same promise lock pattern as {@link RelayerWeb}:
+ * `#ensureLock` serializes concurrent callers, `#initPromise` caches the
+ * resolved pool, and chain switches tear down the old pool within the lock.
+ * See the RelayerWeb class doc for a detailed explanation.
  */
 export class RelayerNode implements RelayerSDK {
   readonly #config: RelayerNodeConfig;
