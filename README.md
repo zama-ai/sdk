@@ -1,4 +1,4 @@
-# Zama Confidential Token SDK
+# Zama SDK
 
 [![npm](https://img.shields.io/npm/v/@zama-fhe/sdk)](https://www.npmjs.com/package/@zama-fhe/sdk)
 [![Vitest](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml/badge.svg?branch=main)](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml)

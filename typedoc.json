@@ -13,7 +13,7 @@
   ],
   "entryPointStrategy": "expand",
   "out": "docs/api",
-  "name": "Zama Confidential Token SDK",
+  "name": "Zama SDK",
   "readme": "none",
   "excludePrivate": true,
   "excludeInternal": true,
