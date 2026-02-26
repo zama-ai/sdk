@@ -69,11 +69,11 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [mainnet.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -92,7 +92,7 @@ function App() {
 }
 
 function TokenDashboard() {
-  const { data: balance, isLoading } = useConfidentialBalance("0xTokenAddress");
+  const { data: balance, isLoading } = useConfidentialBalance({ tokenAddress: "0xTokenAddress" });
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
     tokenAddress: "0xTokenAddress",
   });
@@ -124,11 +124,11 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -165,11 +165,11 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [MainnetConfig.chainId]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
       [SepoliaConfig.chainId]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -195,11 +195,11 @@ const sdk = new ZamaSDK({
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -302,7 +302,8 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "/api/relayer", // relative path — API key never reaches the client
+      // API key never reaches the client
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -362,7 +363,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
       auth: { __type: "ApiKeyHeader", value: "your-api-key" },
     },
@@ -421,10 +422,10 @@ If you're not using viem or ethers, implement the `GenericSigner` interface:
 interface GenericSigner {
   getChainId(): Promise<number>;
   getAddress(): Promise<Address>;
-  signTypedData(typedData: EIP712TypedData): Promise<Address>;
-  writeContract(config: ContractCallConfig): Promise<Address>;
+  signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+  writeContract(config: ContractCallConfig): Promise<Hex>;
   readContract(config: ContractCallConfig): Promise<unknown>;
-  waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt>;
+  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 ```
 

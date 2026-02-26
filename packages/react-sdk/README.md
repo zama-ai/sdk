@@ -47,11 +47,11 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [mainnet.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -70,7 +70,7 @@ function App() {
 }
 
 function TokenBalance() {
-  const { data: balance, isLoading } = useConfidentialBalance("0xTokenAddress");
+  const { data: balance, isLoading } = useConfidentialBalance({ tokenAddress: "0xTokenAddress" });
 
   if (isLoading) return <p>Decrypting balance...</p>;
   return <p>Balance: {balance?.toString()}</p>;
@@ -96,11 +96,11 @@ const relayer = new RelayerWeb({
   getChainId: () => yourCustomSigner.getChainId(),
   transports: {
     [mainnet.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
     },
     [sepolia.id]: {
-      relayerUrl: "https://relayer.zama.ai",
+      relayerUrl: "https://your-app.com/api/relayer",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -117,7 +117,7 @@ function App() {
 }
 
 function TransferForm() {
-  const { data: balance } = useConfidentialBalance("0xTokenAddress");
+  const { data: balance } = useConfidentialBalance({ tokenAddress: "0xTokenAddress" });
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
     tokenAddress: "0xTokenAddress",
   });
@@ -238,28 +238,27 @@ Single-token balance with automatic decryption. Uses two-phase polling: polls th
 
 ```ts
 function useConfidentialBalance(
-  tokenAddress: Address,
-  owner?: Address, // defaults to connected wallet
+  config: UseConfidentialBalanceConfig,
   options?: UseConfidentialBalanceOptions,
 ): UseQueryResult<bigint, Error>;
+
+interface UseConfidentialBalanceConfig {
+  tokenAddress: Address;
+  handleRefetchInterval?: number; // default: 10000ms
+}
 ```
 
-Options extend `UseQueryOptions` and add:
-
-| Option                  | Type     | Default | Description                                     |
-| ----------------------- | -------- | ------- | ----------------------------------------------- |
-| `handleRefetchInterval` | `number` | `10000` | Polling interval (ms) for the encrypted handle. |
+Options extend `UseQueryOptions`.
 
 ```tsx
 const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance(
-  "0xTokenAddress",
-  undefined, // use connected wallet
-  { handleRefetchInterval: 5_000 },
-);
+} = useConfidentialBalance({
+  tokenAddress: "0xTokenAddress",
+  handleRefetchInterval: 5_000,
+});
 ```
 
 #### `useConfidentialBalances`
@@ -268,14 +267,21 @@ Multi-token batch balance. Same two-phase polling pattern.
 
 ```ts
 function useConfidentialBalances(
-  tokenAddresses: Address[],
-  owner?: Address,
+  config: UseConfidentialBalancesConfig,
   options?: UseConfidentialBalancesOptions,
 ): UseQueryResult<Map<Address, bigint>, Error>;
+
+interface UseConfidentialBalancesConfig {
+  tokenAddresses: Address[];
+  handleRefetchInterval?: number;
+  maxConcurrency?: number;
+}
 ```
 
 ```tsx
-const { data: balances } = useConfidentialBalances(["0xTokenA", "0xTokenB", "0xTokenC"]);
+const { data: balances } = useConfidentialBalances({
+  tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+});
 
 // balances is a Map<Address, bigint>
 const tokenABalance = balances?.get("0xTokenA");

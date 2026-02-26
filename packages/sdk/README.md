@@ -33,11 +33,11 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -78,11 +78,11 @@ const sdk = new ZamaSDK({
     poolSize: 4, // number of worker threads (default: min(CPUs, 4))
     transports: {
       [mainnet.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://mainnet.infura.io/v3/YOUR_KEY",
       },
       [sepolia.id]: {
-        relayerUrl: "https://relayer.zama.ai",
+        relayerUrl: "https://your-app.com/api/relayer",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -355,12 +355,12 @@ import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 const transports = {
   [SepoliaConfig.chainId]: {
     ...SepoliaConfig,
-    relayerUrl: "/api/proxy",
+    relayerUrl: "https://your-app.com/api/relayer",
     network: "https://sepolia.infura.io/v3/KEY",
   },
   [MainnetConfig.chainId]: {
     ...MainnetConfig,
-    relayerUrl: "/api/proxy",
+    relayerUrl: "https://your-app.com/api/relayer",
     network: "https://mainnet.infura.io/v3/KEY",
   },
 };
@@ -374,10 +374,10 @@ The `GenericSigner` interface has six methods. Any Web3 library can back it.
 interface GenericSigner {
   getChainId(): Promise<number>;
   getAddress(): Promise<Address>;
-  signTypedData(typedData: EIP712TypedData): Promise<Address>;
-  writeContract(config: ContractCallConfig): Promise<Address>;
+  signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+  writeContract(config: ContractCallConfig): Promise<Hex>;
   readContract(config: ContractCallConfig): Promise<unknown>;
-  waitForTransactionReceipt(hash: Address): Promise<TransactionReceipt>;
+  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 ```
 
