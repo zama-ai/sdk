@@ -1075,7 +1075,7 @@ export interface BatchTransferData {
 }
 
 // @public
-export function clearPendingUnshield(storage: GenericStringStorage, wrapperAddress: Address): Promise<void>;
+export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -12468,13 +12468,13 @@ export interface GenericSigner {
 }
 
 // @public
-export interface GenericStringStorage {
+export interface GenericStorage<T = unknown> {
     // (undocumented)
-    getItem(key: string): Promise<string | null>;
+    getItem(key: string): Promise<T | null>;
     // (undocumented)
     removeItem(key: string): Promise<void>;
     // (undocumented)
-    setItem(key: string, value: string): Promise<void>;
+    setItem(key: string, value: T): Promise<void>;
 }
 
 // @public
@@ -14668,20 +14668,20 @@ export const HardhatConfig: FhevmInstanceConfig;
 export type Hex = `0x${string}`;
 
 // @public
-export class IndexedDBStorage implements GenericStringStorage {
+export class IndexedDBStorage<T = unknown> implements GenericStorage<T> {
     constructor(dbName?: string, dbVersion?: number);
     // (undocumented)
     clear(): Promise<void>;
     // (undocumented)
-    getItem(key: string): Promise<string | null>;
+    getItem(key: string): Promise<T | null>;
     // (undocumented)
     removeItem(key: string): Promise<void>;
     // (undocumented)
-    setItem(key: string, value: string): Promise<void>;
+    setItem(key: string, value: T): Promise<void>;
 }
 
 // @public
-export const indexedDBStorage: IndexedDBStorage;
+export const indexedDBStorage: IndexedDBStorage<unknown>;
 
 export { InputProofBytesType }
 
@@ -17679,7 +17679,7 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 export { KmsDelegatedUserDecryptEIP712Type }
 
 // @public
-export function loadPendingUnshield(storage: GenericStringStorage, wrapperAddress: Address): Promise<Hex | null>;
+export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
 
 // @public
 export const MainnetConfig: FhevmInstanceConfig;
@@ -17690,17 +17690,17 @@ export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaE
 }): R | undefined;
 
 // @public
-export class MemoryStorage implements GenericStringStorage {
+export class MemoryStorage<T = unknown> implements GenericStorage<T> {
     // (undocumented)
-    getItem(key: string): Promise<string | null>;
+    getItem(key: string): Promise<T | null>;
     // (undocumented)
     removeItem(key: string): Promise<void>;
     // (undocumented)
-    setItem(key: string, value: string): Promise<void>;
+    setItem(key: string, value: T): Promise<void>;
 }
 
 // @public
-export const memoryStorage: MemoryStorage;
+export const memoryStorage: MemoryStorage<unknown>;
 
 // @public
 export function nameContract(tokenAddress: Address): {
@@ -19283,8 +19283,9 @@ export interface ReadonlyTokenConfig {
     durationDays?: number;
     onEvent?: ZamaSDKEventListener;
     sdk: RelayerSDK;
+    sessionStorage: GenericStorage;
     signer: GenericSigner;
-    storage: GenericStringStorage;
+    storage: GenericStorage;
 }
 
 // @public
@@ -19350,7 +19351,7 @@ export interface RelayerWebConfig {
 }
 
 // @public
-export function savePendingUnshield(storage: GenericStringStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
+export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
 
 // @public
 export const SepoliaConfig: FhevmInstanceConfig;
@@ -32920,9 +32921,11 @@ export class ZamaSDK {
     // (undocumented)
     readonly relayer: RelayerSDK;
     // (undocumented)
+    readonly sessionStorage: GenericStorage;
+    // (undocumented)
     readonly signer: GenericSigner;
     // (undocumented)
-    readonly storage: GenericStringStorage;
+    readonly storage: GenericStorage;
     terminate(): void;
 }
 
@@ -32931,8 +32934,9 @@ export interface ZamaSDKConfig {
     credentialDurationDays?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
+    sessionStorage?: GenericStorage;
     signer: GenericSigner;
-    storage: GenericStringStorage;
+    storage: GenericStorage;
 }
 
 // Warning: (ae-forgotten-export) The symbol "CredentialsRevokedEvent" needs to be exported by the entry point index.d.ts

@@ -1,6 +1,6 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
-import type { GenericSigner, GenericStringStorage, StoredCredentials } from "./token.types";
+import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
 import { SigningRejectedError, SigningFailedError } from "./errors";
 import { assertObject, assertString, assertArray } from "../utils";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -36,9 +36,9 @@ export interface CredentialsManagerConfig {
   /** Wallet signer for signing EIP-712 typed data. */
   signer: GenericSigner;
   /** Credential storage backend for persisting encrypted credentials. */
-  storage: GenericStringStorage;
+  storage: GenericStorage;
   /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
-  sessionStorage: GenericStringStorage;
+  sessionStorage: GenericStorage;
   /** Number of days generated credentials remain valid. */
   durationDays: number;
   /** Optional structured event listener. */
@@ -48,8 +48,8 @@ export interface CredentialsManagerConfig {
 export class CredentialsManager {
   #sdk: RelayerSDK;
   #signer: GenericSigner;
-  #storage: GenericStringStorage;
-  #sessionStorage: GenericStringStorage;
+  #storage: GenericStorage;
+  #sessionStorage: GenericStorage;
   #durationDays: number;
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
@@ -86,7 +86,7 @@ export class CredentialsManager {
     try {
       const stored = await this.#storage.getItem(storeKey);
       if (stored) {
-        const encrypted = JSON.parse(stored) as unknown;
+        const encrypted = stored as unknown;
         this.#assertEncryptedCredentials(encrypted);
 
         // Migration: if legacy format has signature, use it and cache in session
@@ -96,7 +96,7 @@ export class CredentialsManager {
             await this.#sessionStorage.setItem(storeKey, encrypted.signature);
             // Re-persist without signature (migration)
             const migrated = await this.#encryptCredentials(creds);
-            await this.#storage.setItem(storeKey, JSON.stringify(migrated)).catch(() => {});
+            await this.#storage.setItem(storeKey, migrated).catch(() => {});
             this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
             return creds;
           }
@@ -105,7 +105,7 @@ export class CredentialsManager {
           // New format: check session storage
           const sessionSig = await this.#sessionStorage.getItem(storeKey);
           if (sessionSig) {
-            const creds = await this.#decryptCredentials(encrypted, sessionSig);
+            const creds = await this.#decryptCredentials(encrypted, sessionSig as string);
             if (this.#isValid(creds, contractAddresses)) {
               this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
               return creds;
@@ -167,7 +167,7 @@ export class CredentialsManager {
       const stored = await this.#storage.getItem(storeKey);
       if (!stored) return false;
 
-      const encrypted = JSON.parse(stored) as unknown;
+      const encrypted = stored as unknown;
       this.#assertEncryptedCredentials(encrypted);
 
       const requiredContracts = contractAddress ? [contractAddress] : [];
@@ -318,7 +318,7 @@ export class CredentialsManager {
       const storeKey = await this.#storeKey();
       try {
         const encrypted = await this.#encryptCredentials(creds);
-        await this.#storage.setItem(storeKey, JSON.stringify(encrypted));
+        await this.#storage.setItem(storeKey, encrypted);
       } catch {
         // Store write failed — credentials still usable in memory
       }

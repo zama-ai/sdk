@@ -350,7 +350,7 @@ export type {
   Address,
   Hex,
   GenericSigner,
-  GenericStringStorage,
+  GenericStorage,
   ContractCallConfig,
   TransactionReceipt,
   TransactionResult,

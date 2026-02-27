@@ -105,7 +105,7 @@ Entry point to the SDK. Composes a relayer backend with a signer and storage lay
 const sdk = new ZamaSDK({
   relayer, // RelayerSDK — either RelayerWeb (browser) or RelayerNode (Node.js)
   signer, // GenericSigner
-  storage, // GenericStringStorage
+  storage, // GenericStorage
 });
 
 // Read-only — balances, metadata, decryption. No wrapper needed.
@@ -235,7 +235,7 @@ FHE credentials (encrypted keypair + metadata) are persisted to `storage`. The w
 | `indexedDBStorage`  | Browser apps — persists across page reloads and sessions |
 | `memoryStorage`     | Tests, scripts, throwaway sessions                       |
 | `asyncLocalStorage` | Node.js servers — isolate credentials per request        |
-| Custom              | Implement the `GenericStringStorage` interface           |
+| Custom              | Implement the `GenericStorage` interface                 |
 
 **Session storage** (`sessionStorage`) — holds wallet signatures for the current session:
 
@@ -243,13 +243,13 @@ FHE credentials (encrypted keypair + metadata) are persisted to `storage`. The w
 | ------------------------ | ----------------------------------------------------------- |
 | Default (in-memory)      | Standard web apps — signature lost on reload, user re-signs |
 | `chrome.storage.session` | MV3 web extensions — survives service worker restarts       |
-| Custom                   | Implement the `GenericStringStorage` interface              |
+| Custom                   | Implement the `GenericStorage` interface                    |
 
 ```ts
-interface GenericStringStorage {
-  getItem(key: string): string | Promise<string | null> | null;
-  setItem(key: string, value: string): void | Promise<void>;
-  removeItem(key: string): void | Promise<void>;
+interface GenericStorage<T = unknown> {
+  getItem(key: string): Promise<T | null>;
+  setItem(key: string, value: T): Promise<void>;
+  removeItem(key: string): Promise<void>;
 }
 ```
 
@@ -259,9 +259,9 @@ For MV3 extensions, wrap `chrome.storage.session` to share the wallet signature 
 
 ```ts
 import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import type { GenericStringStorage } from "@zama-fhe/sdk";
+import type { GenericStorage } from "@zama-fhe/sdk";
 
-const chromeSessionStorage: GenericStringStorage = {
+const chromeSessionStorage: GenericStorage = {
   async getItem(key) {
     const result = await chrome.storage.session.get(key);
     return result[key] ?? null;
@@ -290,8 +290,8 @@ const sdk = new ZamaSDK({
 | ------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                               |
 | `signer`                 | `GenericSigner`        | Wallet signer interface.                                                                                                               |
-| `storage`                | `GenericStringStorage` | Credential storage backend.                                                                                                            |
-| `sessionStorage`         | `GenericStringStorage` | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
+| `storage`                | `GenericStorage`       | Credential storage backend.                                                                                                            |
+| `sessionStorage`         | `GenericStorage`       | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
 | `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. Set `0` to require a wallet signature on every decrypt (high-security mode).  |
 | `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                     |
 

@@ -2,7 +2,7 @@
 
 import type {
   GenericSigner,
-  GenericStringStorage,
+  GenericStorage,
   RelayerSDK,
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
@@ -16,12 +16,12 @@ interface ZamaProviderProps extends PropsWithChildren {
   /** Wallet signer (ViemSigner, EthersSigner, or custom GenericSigner). */
   signer: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
-  storage: GenericStringStorage;
+  storage: GenericStorage;
   /**
    * Session storage for wallet signatures. Defaults to in-memory (lost on reload).
    * Pass a `chrome.storage.session`-backed store for web extensions.
    */
-  sessionStorage?: GenericStringStorage;
+  sessionStorage?: GenericStorage;
   /** Number of days credentials remain valid (default: relayer default). */
   credentialDurationDays?: number;
   /** Callback invoked on SDK lifecycle events. */

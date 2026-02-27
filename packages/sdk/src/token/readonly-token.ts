@@ -14,7 +14,7 @@ import {
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
 import { normalizeAddress, pLimit } from "../utils";
-import type { GenericSigner, GenericStringStorage } from "./token.types";
+import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credential-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -55,9 +55,9 @@ export interface ReadonlyTokenConfig {
   /** Wallet signer for read calls and credential signing. */
   signer: GenericSigner;
   /** Credential storage backend. */
-  storage: GenericStringStorage;
+  storage: GenericStorage;
   /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
-  sessionStorage: GenericStringStorage;
+  sessionStorage: GenericStorage;
   /** Address of the confidential token contract. */
   address: Address;
   /** Number of days FHE credentials remain valid. Default: `1`. */

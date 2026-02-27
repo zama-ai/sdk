@@ -107,7 +107,7 @@ describe("CredentialsManager", () => {
 
     const stored = await store.getItem(storeKey);
     expect(stored).not.toBeNull();
-    const parsed = JSON.parse(stored!);
+    const parsed = stored as Record<string, unknown>;
     expect(parsed.publicKey).toBe("0xpub123");
     // Signature should NOT be persisted (session-scoped only)
     expect(parsed.signature).toBeUndefined();
@@ -146,9 +146,9 @@ describe("CredentialsManager", () => {
 
     // Read stored data and strip the signature field (simulate new format)
     const stored = await store.getItem(storeKey);
-    const parsed = JSON.parse(stored!);
+    const parsed = { ...(stored as Record<string, unknown>) };
     delete parsed.signature;
-    await store.setItem(storeKey, JSON.stringify(parsed));
+    await store.setItem(storeKey, parsed);
 
     // Simulate page reload: session signatures are lost
     // New manager instance should re-sign and return valid credentials
@@ -174,9 +174,9 @@ describe("CredentialsManager", () => {
 
     // Tamper the stored data to simulate expiration
     const stored = await store.getItem(storeKey);
-    const parsed = JSON.parse(stored!);
+    const parsed = { ...(stored as Record<string, unknown>) };
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
-    await store.setItem(storeKey, JSON.stringify(parsed));
+    await store.setItem(storeKey, parsed);
 
     // New manager (no cache) reads expired data from store → re-generates
     const manager2 = new CredentialsManager({
@@ -303,9 +303,9 @@ describe("CredentialsManager", () => {
 
     // Set startTimestamp to exactly durationDays ago (expired at boundary)
     const stored = await store.getItem(storeKey);
-    const parsed = JSON.parse(stored!);
+    const parsed = { ...(stored as Record<string, unknown>) };
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 1 * 86400; // exactly 1 day ago
-    await store.setItem(storeKey, JSON.stringify(parsed));
+    await store.setItem(storeKey, parsed);
 
     // New manager should see expired credentials (nowSeconds >= expiresAt)
     const manager2 = new CredentialsManager({
@@ -335,9 +335,9 @@ describe("CredentialsManager", () => {
 
       // Tamper stored data to simulate expiration
       const stored = await store.getItem(storeKey);
-      const parsed = JSON.parse(stored!);
+      const parsed = { ...(stored as Record<string, unknown>) };
       parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
-      await store.setItem(storeKey, JSON.stringify(parsed));
+      await store.setItem(storeKey, parsed);
 
       const manager2 = new CredentialsManager({
         sdk: sdk as unknown as RelayerSDK,

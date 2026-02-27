@@ -15,7 +15,7 @@ import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 // Warning: (ae-forgotten-export) The symbol "AsyncLocalMapStorage" needs to be exported by the entry point index.d.ts
 //
 // @public
-export const asyncLocalStorage: AsyncLocalMapStorage;
+export const asyncLocalStorage: AsyncLocalMapStorage<unknown>;
 
 // @public
 export interface GenericLogger {

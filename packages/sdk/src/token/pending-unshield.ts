@@ -1,4 +1,4 @@
-import type { Address, GenericStringStorage, Hex } from "./token.types";
+import type { Address, GenericStorage, Hex } from "./token.types";
 
 const STORAGE_PREFIX = "zama:pending-unshield:";
 
@@ -11,7 +11,7 @@ function storageKey(wrapperAddress: Address): string {
  * (e.g. after a page reload).
  */
 export async function savePendingUnshield(
-  storage: GenericStringStorage,
+  storage: GenericStorage,
   wrapperAddress: Address,
   unwrapTxHash: Hex,
 ): Promise<void> {
@@ -22,7 +22,7 @@ export async function savePendingUnshield(
  * Load a previously saved unwrap tx hash, or `null` if none exists.
  */
 export async function loadPendingUnshield(
-  storage: GenericStringStorage,
+  storage: GenericStorage,
   wrapperAddress: Address,
 ): Promise<Hex | null> {
   return (await storage.getItem(storageKey(wrapperAddress))) as Hex | null;
@@ -32,7 +32,7 @@ export async function loadPendingUnshield(
  * Clear the saved unwrap tx hash after a successful finalization.
  */
 export async function clearPendingUnshield(
-  storage: GenericStringStorage,
+  storage: GenericStorage,
   wrapperAddress: Address,
 ): Promise<void> {
   await storage.removeItem(storageKey(wrapperAddress));

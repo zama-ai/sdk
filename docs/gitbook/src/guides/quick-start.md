@@ -214,7 +214,7 @@ const sdk = new ZamaSDK({
     },
   }),
   signer,
-  // in-memory for scripts; implement GenericStringStorage for persistence
+  // in-memory for scripts; implement GenericStorage for persistence
   storage: new MemoryStorage(),
 });
 

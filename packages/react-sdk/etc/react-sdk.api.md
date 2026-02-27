@@ -72,7 +72,7 @@ import { FinalizeUnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { findUnwrapRequested } from '@zama-fhe/sdk';
 import { findWrapped } from '@zama-fhe/sdk';
 import { GenericSigner } from '@zama-fhe/sdk';
-import { GenericStringStorage } from '@zama-fhe/sdk';
+import { GenericStorage } from '@zama-fhe/sdk';
 import { getBatchTransferFeeContract } from '@zama-fhe/sdk';
 import { getFeeRecipientContract } from '@zama-fhe/sdk';
 import { getUnwrapFeeContract } from '@zama-fhe/sdk';
@@ -460,7 +460,7 @@ export { findWrapped }
 
 export { GenericSigner }
 
-export { GenericStringStorage }
+export { GenericStorage }
 
 export { getBatchTransferFeeContract }
 
@@ -483,6 +483,18 @@ export { indexedDBStorage }
 export { InputProofBytesType }
 
 export { InvalidCredentialsError }
+
+// @public (undocumented)
+export const isAllowedQueryKeys: {
+    all: readonly ["zama", "isAllowed"];
+    token: (tokenAddress: Address) => readonly ["zama", "isAllowed", `0x${string}`];
+};
+
+// @public (undocumented)
+export function isAllowedQueryOptions(sdk: ZamaSDK, tokenAddress: Address): {
+    queryKey: readonly ["zama", "isAllowed", `0x${string}`];
+    queryFn: () => Promise<boolean>;
+};
 
 // @public
 export const isConfidentialQueryKeys: {
@@ -691,6 +703,12 @@ export function tokenMetadataQueryOptions(token: ReadonlyToken): {
     readonly queryKey: readonly ["tokenMetadata", string];
     readonly queryFn: () => Promise<TokenMetadata>;
     readonly staleTime: number;
+};
+
+// @public
+export function tokenRevokeMutationOptions(sdk: ZamaSDK): {
+    mutationKey: readonly ["tokenRevoke"];
+    mutationFn: (tokenAddresses: Address[]) => Promise<void>;
 };
 
 export { Topics }
@@ -1255,6 +1273,9 @@ export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQuery
 export function useIsConfidentialSuspense(tokenAddress: Address): UseSuspenseQueryResult<boolean, Error>;
 
 // @public
+export function useIsTokenAllowed(tokenAddress: Address): _tanstack_react_query.UseQueryResult<boolean, Error>;
+
+// @public
 export function useIsWrapper(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
 
 // @public
@@ -1308,6 +1329,9 @@ export function useTokenMetadata(tokenAddress: Address, options?: Omit<UseQueryO
 
 // @public
 export function useTokenMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
+
+// @public
+export function useTokenRevoke(): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useTotalSupply(tokenAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;

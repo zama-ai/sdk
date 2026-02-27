@@ -63,7 +63,7 @@ export type {
   Address,
   Hex,
   GenericSigner,
-  GenericStringStorage,
+  GenericStorage,
   StoredCredentials,
   ContractCallConfig,
   TransactionReceipt,

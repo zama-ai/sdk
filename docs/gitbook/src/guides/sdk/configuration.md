@@ -154,7 +154,7 @@ FHE credentials (a keypair + EIP-712 signature) and decrypted balances are cache
 | `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                 |
 | `memoryStorage`     | Tests, scripts, throwaway sessions                                                                       |
 | `asyncLocalStorage` | Node.js servers — isolate credentials per request ([example below](#per-request-storage-nodejs-servers)) |
-| Custom              | Implement `GenericStringStorage` (3 async methods: `getItem`, `setItem`, `removeItem`)                   |
+| Custom              | Implement `GenericStorage` (3 async methods: `getItem`, `setItem`, `removeItem`)                         |
 
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
@@ -168,7 +168,7 @@ By default, wallet signatures live in an in-memory store that's lost on page rel
 | ------------------------ | ----------------------------------------------------------------------------- |
 | Default (in-memory)      | Standard web apps — user re-signs once per page load                          |
 | `chrome.storage.session` | MV3 web extensions — survives service worker restarts, shared across contexts |
-| Custom                   | Implement `GenericStringStorage`                                              |
+| Custom                   | Implement `GenericStorage`                                                    |
 
 ### Per-request storage (Node.js servers)
 
@@ -337,14 +337,14 @@ await token.revoke();
 
 MV3 extensions run background logic in a service worker that Chrome can terminate at any time. The default in-memory session storage is lost when this happens, forcing the user to re-sign.
 
-To fix this, wrap `chrome.storage.session` as a `GenericStringStorage` and pass it as `sessionStorage`:
+To fix this, wrap `chrome.storage.session` as a `GenericStorage` and pass it as `sessionStorage`:
 
 ```ts
 import { ZamaSDK, indexedDBStorage } from "@zama-fhe/sdk";
-import type { GenericStringStorage } from "@zama-fhe/sdk";
+import type { GenericStorage } from "@zama-fhe/sdk";
 
 // Adapter for chrome.storage.session
-const chromeSessionStorage: GenericStringStorage = {
+const chromeSessionStorage: GenericStorage = {
   async getItem(key) {
     const result = await chrome.storage.session.get(key);
     return result[key] ?? null;

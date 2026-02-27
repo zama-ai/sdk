@@ -4,7 +4,7 @@ import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
-import type { GenericSigner, GenericStringStorage } from "./token.types";
+import type { GenericSigner, GenericStorage } from "./token.types";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 
 /** Configuration for {@link ZamaSDK}. */
@@ -14,13 +14,13 @@ export interface ZamaSDKConfig {
   /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
   signer: GenericSigner;
   /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
-  storage: GenericStringStorage;
+  storage: GenericStorage;
   /**
    * Session storage for wallet signatures. Shared across all tokens created by this SDK instance.
    * Defaults to an in-memory store (lost on page reload). Pass a `chrome.storage.session`-backed
    * implementation for web extensions so signatures survive service worker restarts.
    */
-  sessionStorage?: GenericStringStorage;
+  sessionStorage?: GenericStorage;
   /** Number of days FHE credentials remain valid. Default: `1`. Set `0` to require a wallet signature on every decrypt (high-security mode). */
   credentialDurationDays?: number;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
@@ -34,8 +34,8 @@ export interface ZamaSDKConfig {
 export class ZamaSDK {
   readonly relayer: RelayerSDK;
   readonly signer: GenericSigner;
-  readonly storage: GenericStringStorage;
-  readonly sessionStorage: GenericStringStorage;
+  readonly storage: GenericStorage;
+  readonly sessionStorage: GenericStorage;
   readonly #credentialDurationDays: number | undefined;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 

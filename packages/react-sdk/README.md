@@ -148,7 +148,7 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 <ZamaProvider
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
   signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
-  storage={storage} // GenericStringStorage
+  storage={storage} // GenericStorage
   sessionStorage={sessionStorage} // Optional. Session storage for wallet signatures. Default: in-memory (lost on reload).
   credentialDurationDays={1} // Optional. Days FHE credentials remain valid. Default: 1. Set 0 for sign-every-time.
   onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
@@ -912,9 +912,9 @@ FHE decrypt credentials are generated once per wallet + token set and cached in 
 By default, wallet signatures are stored in memory and lost on page reload (or service worker restart). For MV3 web extensions, pass a `sessionStorage` backed by `chrome.storage.session` so signatures survive service worker restarts and are shared across popup, background, and content script contexts:
 
 ```ts
-import type { GenericStringStorage } from "@zama-fhe/react-sdk";
+import type { GenericStorage } from "@zama-fhe/react-sdk";
 
-const chromeSessionStorage: GenericStringStorage = {
+const chromeSessionStorage: GenericStorage = {
   async getItem(key) {
     const result = await chrome.storage.session.get(key);
     return result[key] ?? null;
@@ -1009,7 +1009,7 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
-**Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
+**Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `ContractCallConfig`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
 **Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 
