@@ -20,6 +20,8 @@ import { balanceOfContract } from '@zama-fhe/sdk';
 import { BATCH_SWAP_ABI } from '@zama-fhe/sdk';
 import { BatchDecryptOptions } from '@zama-fhe/sdk';
 import { BatchTransferData } from '@zama-fhe/sdk';
+import { ChromeSessionStorage } from '@zama-fhe/sdk';
+import { chromeSessionStorage } from '@zama-fhe/sdk';
 import { clearPendingUnshield } from '@zama-fhe/sdk';
 import { confidentialBalanceOfContract } from '@zama-fhe/sdk';
 import { confidentialBatchTransferContract } from '@zama-fhe/sdk';
@@ -224,6 +226,10 @@ export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAd
     readonly queryFn: () => Promise<bigint>;
     readonly staleTime: 30000;
 };
+
+export { ChromeSessionStorage }
+
+export { chromeSessionStorage }
 
 export { clearPendingUnshield }
 

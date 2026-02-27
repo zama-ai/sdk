@@ -1075,6 +1075,19 @@ export interface BatchTransferData {
 }
 
 // @public
+export class ChromeSessionStorage<T = unknown> implements GenericStorage<T> {
+    // (undocumented)
+    delete(key: string): Promise<void>;
+    // (undocumented)
+    get(key: string): Promise<T | null>;
+    // (undocumented)
+    set(key: string, value: T): Promise<void>;
+}
+
+// @public
+export const chromeSessionStorage: ChromeSessionStorage<unknown>;
+
+// @public
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
 // @public
