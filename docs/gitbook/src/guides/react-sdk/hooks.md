@@ -6,7 +6,7 @@ All hooks on this page require a `ZamaProvider` ancestor. For low-level hooks th
 
 ### `useConfidentialBalance`
 
-Decrypt and poll a single token's balance. Uses two-phase polling — cheaply checks the encrypted handle every 10 seconds, only decrypts when it changes.
+Decrypt and poll a single token's balance. Uses two-phase polling — cheaply checks the encrypted handle every 10 seconds, only decrypts when it changes. Decrypted values are persisted in storage, so page reloads show the balance instantly without a "Decrypting..." spinner.
 
 ```tsx
 const {

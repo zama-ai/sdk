@@ -109,16 +109,12 @@ const originalFetch = fetch;
 // ── CDN URL validation ───────────────────────────────────────
 
 /** Allowed CDN hostnames for loading the relayer SDK script. */
-const ALLOWED_CDN_HOSTS = new Set<string>(["cdn.zama.org", "localhost", "127.0.0.1"]);
-
-/** Hostnames treated as local development environments. */
-const LOCAL_HOSTS = new Set<string>(["localhost", "127.0.0.1"]);
+const ALLOWED_CDN_HOSTS = new Set<string>(["cdn.zama.org"]);
 
 /**
  * Validate the CDN URL supplied by the caller.
  * Ensures only HTTPS URLs from approved hosts are used when loading
- * SDK code into the worker. Localhost is allowed over HTTP for local
- * development with dev proxies (Vite, webpack-dev-server, etc.).
+ * SDK code into the worker.
  */
 function validateCdnUrl(rawUrl: string): string {
   let url: URL;
@@ -128,9 +124,7 @@ function validateCdnUrl(rawUrl: string): string {
     throw new Error("Invalid CDN URL");
   }
 
-  const isLocal = LOCAL_HOSTS.has(url.hostname);
-
-  if (!isLocal && url.protocol !== "https:") {
+  if (url.protocol !== "https:") {
     throw new Error("CDN URL must use https");
   }
 

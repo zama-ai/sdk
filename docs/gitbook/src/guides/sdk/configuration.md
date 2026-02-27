@@ -146,7 +146,7 @@ interface GenericSigner {
 
 ## Storage
 
-FHE credentials (a keypair + EIP-712 signature) are cached so users don't get a wallet popup on every decrypt. You choose where to store them:
+FHE credentials (a keypair + EIP-712 signature) and decrypted balances are cached so users don't get a wallet popup on every decrypt or a loading spinner on page reload. You choose where to store them:
 
 | Storage             | When to use                                                                                              |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |
