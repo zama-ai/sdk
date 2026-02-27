@@ -2723,6 +2723,7 @@ export function confidentialBatchTransferContract(batcherAddress: Address, token
     readonly functionName: "confidentialBatchTransfer";
     readonly args: readonly [`0x${string}`, `0x${string}`, BatchTransferData[]];
     readonly value: bigint;
+    readonly gas: 5000000n;
 };
 
 // @public
@@ -5665,6 +5666,7 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
     }];
     readonly functionName: "confidentialTransfer";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
+    readonly gas: 5000000n;
 };
 
 // @public
@@ -7145,6 +7147,7 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
     }];
     readonly functionName: "confidentialTransferFrom";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+    readonly gas: 5000000n;
 };
 
 // @public
@@ -10990,6 +10993,9 @@ export const FEE_MANAGER_ABI: readonly [{
 }];
 
 // @public
+export const FHE_GAS_LIMIT = 5000000n;
+
+// @public
 export interface FHEKeypair {
     // (undocumented)
     privateKey: string;
@@ -12421,6 +12427,7 @@ export function finalizeUnwrapContract(wrapper: Address, burntAmount: Address, b
     }];
     readonly functionName: "finalizeUnwrap";
     readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
+    readonly gas: 5000000n;
 };
 
 // @public (undocumented)
@@ -19261,6 +19268,7 @@ export class ReadonlyToken {
     protected readonly sdk: RelayerSDK;
     // (undocumented)
     readonly signer: GenericSigner;
+    protected get storage(): GenericStringStorage;
     symbol(): Promise<string>;
     underlyingToken(): Promise<Address>;
 }
@@ -20812,6 +20820,7 @@ export function setFinalizeUnwrapOperatorContract(tokenAddress: Address, operato
     }];
     readonly functionName: "setFinalizeUnwrapOperator";
     readonly args: readonly [`0x${string}`, number];
+    readonly gas: 5000000n;
 };
 
 // @public
@@ -22283,6 +22292,7 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
     }];
     readonly functionName: "setOperator";
     readonly args: readonly [`0x${string}`, number];
+    readonly gas: 5000000n;
 };
 
 // @public (undocumented)
@@ -27019,6 +27029,7 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
     }];
     readonly functionName: "unwrap";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+    readonly gas: 5000000n;
 };
 
 // @public
@@ -28490,6 +28501,7 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
     }];
     readonly functionName: "unwrap";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
+    readonly gas: 5000000n;
 };
 
 // @public
@@ -29978,6 +29990,7 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
     }];
     readonly functionName: "wrap";
     readonly args: readonly [`0x${string}`, bigint];
+    readonly gas: 5000000n;
 };
 
 // @public
@@ -31403,6 +31416,7 @@ export function wrapETHContract(wrapperAddress: Address, to: Address, amount: bi
     readonly functionName: "wrapETH";
     readonly args: readonly [`0x${string}`, bigint];
     readonly value: bigint;
+    readonly gas: 5000000n;
 };
 
 // @public
