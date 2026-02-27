@@ -285,6 +285,40 @@ describe("ReadonlyToken", () => {
       expect(captured[0]!.error.message).toBe("decrypt failed");
     });
   });
+
+  describe("batchDecryptBalances (length mismatch)", () => {
+    it("throws DecryptionFailedError when tokens and handles have different lengths", async () => {
+      await expect(
+        ReadonlyToken.batchDecryptBalances([token], {
+          handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+        }),
+      ).rejects.toThrow(/tokens\.length.*must equal.*handles\.length/);
+    });
+  });
+
+  describe("authorizeAll", () => {
+    it("returns immediately for empty token array", async () => {
+      await ReadonlyToken.authorizeAll([]);
+
+      expect(sdk.generateKeypair).not.toHaveBeenCalled();
+      expect(signer.signTypedData).not.toHaveBeenCalled();
+    });
+
+    it("authorizes credentials for all tokens in a single signature", async () => {
+      const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+      const token2 = new ReadonlyToken({
+        sdk: sdk as unknown as RelayerSDK,
+        signer,
+        storage: new MemoryStorage(),
+        address: TOKEN2,
+      });
+
+      await ReadonlyToken.authorizeAll([token, token2]);
+
+      expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
+    });
+  });
 });
 
 describe("ZamaSDK token factory", () => {

@@ -585,6 +585,28 @@ describe("Token", () => {
         "No UnwrapRequested event found in unshield receipt",
       );
     });
+
+    it("re-throws ZamaError from waitForTransactionReceipt as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
+      // First call succeeds (unwrap), second call fails (waitAndFinalize)
+      vi.mocked(signer.waitForTransactionReceipt)
+        .mockResolvedValueOnce({ logs: [] }) // unwrap receipt (no event triggers error in another path)
+        .mockRejectedValueOnce(original);
+
+      // Need the unwrap to succeed and produce a receipt with the event
+      vi.mocked(signer.waitForTransactionReceipt).mockReset();
+      vi.mocked(signer.waitForTransactionReceipt).mockRejectedValueOnce(original);
+
+      await expect(token.unshield(50n)).rejects.toBe(original);
+    });
+
+    it("wraps non-ZamaError from waitForTransactionReceipt in TransactionReverted", async () => {
+      vi.mocked(signer.waitForTransactionReceipt).mockRejectedValueOnce(new Error("timeout"));
+
+      await expect(token.unshield(50n)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
+    });
   });
 
   describe("unshieldAll", () => {
@@ -644,6 +666,49 @@ describe("Token", () => {
         );
       });
     });
+
+    it("re-throws ZamaError from encrypt as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
+      vi.mocked(sdk.encrypt).mockRejectedValueOnce(original);
+
+      await expect(
+        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+      ).rejects.toBe(original);
+    });
+
+    it("throws EncryptionFailed when encrypt returns empty handles", async () => {
+      vi.mocked(sdk.encrypt).mockResolvedValueOnce({
+        handles: [],
+        inputProof: new Uint8Array([4, 5, 6]),
+      });
+
+      await expect(
+        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+      ).rejects.toMatchObject({
+        code: ZamaErrorCode.EncryptionFailed,
+        message: "Encryption returned no handles",
+      });
+    });
+
+    it("re-throws ZamaError from writeContract as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(
+        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+      ).rejects.toBe(original);
+    });
+
+    it("wraps non-ZamaError from writeContract in TransactionReverted", async () => {
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+
+      await expect(
+        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+      ).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+        message: "Transfer transaction failed",
+      });
+    });
   });
 
   describe("confidentialTransferFrom", () => {
@@ -682,6 +747,65 @@ describe("Token", () => {
           err.code === ZamaErrorCode.EncryptionFailed &&
           err.message === "Failed to encrypt transferFrom amount"
         );
+      });
+    });
+
+    it("re-throws ZamaError from encrypt as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
+      vi.mocked(sdk.encrypt).mockRejectedValueOnce(original);
+
+      await expect(
+        token.confidentialTransferFrom(
+          "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          200n,
+        ),
+      ).rejects.toBe(original);
+    });
+
+    it("throws EncryptionFailed when encrypt returns empty handles", async () => {
+      vi.mocked(sdk.encrypt).mockResolvedValueOnce({
+        handles: [],
+        inputProof: new Uint8Array([4, 5, 6]),
+      });
+
+      await expect(
+        token.confidentialTransferFrom(
+          "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          200n,
+        ),
+      ).rejects.toMatchObject({
+        code: ZamaErrorCode.EncryptionFailed,
+        message: "Encryption returned no handles",
+      });
+    });
+
+    it("re-throws ZamaError from writeContract as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(
+        token.confidentialTransferFrom(
+          "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          200n,
+        ),
+      ).rejects.toBe(original);
+    });
+
+    it("wraps non-ZamaError from writeContract in TransactionReverted", async () => {
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+
+      await expect(
+        token.confidentialTransferFrom(
+          "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
+          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          200n,
+        ),
+      ).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+        message: "TransferFrom transaction failed",
       });
     });
   });
@@ -887,6 +1011,41 @@ describe("Token", () => {
         );
       });
     });
+
+    it("re-throws ZamaError from encrypt as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
+      vi.mocked(sdk.encrypt).mockRejectedValueOnce(original);
+
+      await expect(token.unwrap(50n)).rejects.toBe(original);
+    });
+
+    it("throws EncryptionFailed when encrypt returns empty handles", async () => {
+      vi.mocked(sdk.encrypt).mockResolvedValueOnce({
+        handles: [],
+        inputProof: new Uint8Array([4, 5, 6]),
+      });
+
+      await expect(token.unwrap(50n)).rejects.toMatchObject({
+        code: ZamaErrorCode.EncryptionFailed,
+        message: "Encryption returned no handles",
+      });
+    });
+
+    it("re-throws ZamaError from writeContract as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(token.unwrap(50n)).rejects.toBe(original);
+    });
+
+    it("wraps non-ZamaError from writeContract in TransactionReverted", async () => {
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+
+      await expect(token.unwrap(50n)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+        message: "Unshield transaction failed",
+      });
+    });
   });
 
   describe("unwrapAll (error handling)", () => {
@@ -901,6 +1060,14 @@ describe("Token", () => {
           err.message === "Unshield-all transaction failed"
         );
       });
+    });
+
+    it("re-throws ZamaError from writeContract as-is", async () => {
+      vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+      const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(token.unwrapAll()).rejects.toBe(original);
     });
   });
 
@@ -917,6 +1084,42 @@ describe("Token", () => {
           );
         },
       );
+    });
+
+    it("re-throws ZamaError from publicDecrypt as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.DecryptionFailed, "already wrapped");
+      vi.mocked(sdk.publicDecrypt).mockRejectedValueOnce(original);
+
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
+    });
+
+    it("throws DecryptionFailed when abiEncodedClearValues is not a valid BigInt", async () => {
+      vi.mocked(sdk.publicDecrypt).mockResolvedValueOnce({
+        clearValues: {},
+        abiEncodedClearValues: "not-a-number",
+        decryptionProof: "0xproof",
+      });
+
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toMatchObject({
+        code: ZamaErrorCode.DecryptionFailed,
+        message: expect.stringContaining("Cannot parse decrypted value"),
+      });
+    });
+
+    it("re-throws ZamaError from writeContract as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
+    });
+
+    it("wraps non-ZamaError from writeContract in TransactionReverted", async () => {
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+
+      await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+        message: "Failed to finalize unshield",
+      });
     });
   });
 
@@ -989,6 +1192,84 @@ describe("Token", () => {
           err.message === "ERC-20 approval failed"
         );
       });
+    });
+
+    it("re-throws ZamaError from writeContract as-is", async () => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
+        .mockResolvedValueOnce(0n); // currentAllowance
+
+      const original = new ZamaError(ZamaErrorCode.ApprovalFailed, "already wrapped");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(token.approveUnderlying()).rejects.toBe(original);
+    });
+
+    it("skips allowance check when amount is 0n", async () => {
+      vi.mocked(signer.readContract).mockResolvedValueOnce(
+        "0x9999999999999999999999999999999999999999",
+      ); // underlying
+
+      await token.approveUnderlying(0n);
+
+      // Only readContract for underlying, no allowance check (approvalAmount is 0)
+      expect(signer.readContract).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("approve (ZamaError re-throw)", () => {
+    it("re-throws ZamaError from writeContract as-is", async () => {
+      const original = new ZamaError(ZamaErrorCode.ApprovalFailed, "already wrapped");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(
+        token.approve("0x3333333333333333333333333333333333333333" as Address),
+      ).rejects.toBe(original);
+    });
+  });
+
+  describe("shield (ZamaError re-throw from ensureAllowance)", () => {
+    it("re-throws ZamaError from approve in ensureAllowance as-is", async () => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying
+        .mockResolvedValueOnce(0n); // allowance
+
+      const original = new ZamaError(ZamaErrorCode.ApprovalFailed, "already wrapped");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(token.shield(100n)).rejects.toBe(original);
+    });
+
+    it("re-throws ZamaError from wrap writeContract as-is", async () => {
+      vi.mocked(signer.readContract).mockResolvedValueOnce(
+        "0x9999999999999999999999999999999999999999",
+      ); // #getUnderlying
+
+      const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
+
+      await expect(token.shield(100n, { approvalStrategy: "skip" })).rejects.toBe(original);
+    });
+  });
+
+  describe("resumeUnshield", () => {
+    const BURN_HANDLE = "0x" + "ff".repeat(32);
+
+    it("resumes from an existing unwrap tx hash", async () => {
+      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
+            data: "0x" + "ff".repeat(32),
+          },
+        ],
+      });
+
+      const result = await token.resumeUnshield("0xprevioustx" as `0x${string}`);
+
+      expect(signer.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
+      expect(sdk.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(result.txHash).toBe("0xtxhash");
     });
   });
 });
