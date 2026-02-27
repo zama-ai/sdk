@@ -247,9 +247,9 @@ FHE credentials (encrypted keypair + metadata) are persisted to `storage`. The w
 
 ```ts
 interface GenericStorage<T = unknown> {
-  getItem(key: string): Promise<T | null>;
-  setItem(key: string, value: T): Promise<void>;
-  removeItem(key: string): Promise<void>;
+  get(key: string): Promise<T | null>;
+  set(key: string, value: T): Promise<void>;
+  delete(key: string): Promise<void>;
 }
 ```
 
@@ -262,14 +262,14 @@ import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
 import type { GenericStorage } from "@zama-fhe/sdk";
 
 const chromeSessionStorage: GenericStorage = {
-  async getItem(key) {
+  async get(key) {
     const result = await chrome.storage.session.get(key);
     return result[key] ?? null;
   },
-  async setItem(key, value) {
+  async set(key, value) {
     await chrome.storage.session.set({ [key]: value });
   },
-  async removeItem(key) {
+  async delete(key) {
     await chrome.storage.session.remove(key);
   },
 };

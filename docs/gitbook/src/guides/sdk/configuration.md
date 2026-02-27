@@ -154,7 +154,7 @@ FHE credentials (a keypair + EIP-712 signature) and decrypted balances are cache
 | `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                 |
 | `memoryStorage`     | Tests, scripts, throwaway sessions                                                                       |
 | `asyncLocalStorage` | Node.js servers — isolate credentials per request ([example below](#per-request-storage-nodejs-servers)) |
-| Custom              | Implement `GenericStorage` (3 async methods: `getItem`, `setItem`, `removeItem`)                         |
+| Custom              | Implement `GenericStorage` (3 async methods: `get`, `set`, `delete`)                                     |
 
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
@@ -345,14 +345,14 @@ import type { GenericStorage } from "@zama-fhe/sdk";
 
 // Adapter for chrome.storage.session
 const chromeSessionStorage: GenericStorage = {
-  async getItem(key) {
+  async get(key) {
     const result = await chrome.storage.session.get(key);
     return result[key] ?? null;
   },
-  async setItem(key, value) {
+  async set(key, value) {
     await chrome.storage.session.set({ [key]: value });
   },
-  async removeItem(key) {
+  async delete(key) {
     await chrome.storage.session.remove(key);
   },
 };

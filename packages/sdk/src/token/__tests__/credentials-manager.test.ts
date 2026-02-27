@@ -105,7 +105,7 @@ describe("CredentialsManager", () => {
   it("persists credentials to store with hashed key", async () => {
     await manager.allow("0xtoken" as Address);
 
-    const stored = await store.getItem(storeKey);
+    const stored = await store.get(storeKey);
     expect(stored).not.toBeNull();
     const parsed = stored as Record<string, unknown>;
     expect(parsed.publicKey).toBe("0xpub123");
@@ -117,7 +117,7 @@ describe("CredentialsManager", () => {
     await manager.allow("0xtoken" as Address);
 
     const rawKey = (await signer.getAddress()).toLowerCase();
-    const stored = await store.getItem(rawKey);
+    const stored = await store.get(rawKey);
     expect(stored).toBeNull();
   });
 
@@ -145,10 +145,10 @@ describe("CredentialsManager", () => {
     await manager.allow("0xtoken" as Address);
 
     // Read stored data and strip the signature field (simulate new format)
-    const stored = await store.getItem(storeKey);
+    const stored = await store.get(storeKey);
     const parsed = { ...(stored as Record<string, unknown>) };
     delete parsed.signature;
-    await store.setItem(storeKey, parsed);
+    await store.set(storeKey, parsed);
 
     // Simulate page reload: session signatures are lost
     // New manager instance should re-sign and return valid credentials
@@ -173,10 +173,10 @@ describe("CredentialsManager", () => {
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
 
     // Tamper the stored data to simulate expiration
-    const stored = await store.getItem(storeKey);
+    const stored = await store.get(storeKey);
     const parsed = { ...(stored as Record<string, unknown>) };
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
-    await store.setItem(storeKey, parsed);
+    await store.set(storeKey, parsed);
 
     // New manager (no cache) reads expired data from store → re-generates
     const manager2 = new CredentialsManager({
@@ -196,7 +196,7 @@ describe("CredentialsManager", () => {
     await manager.allow("0xtoken" as Address);
     await manager.clear();
 
-    const stored = await store.getItem(storeKey);
+    const stored = await store.get(storeKey);
     expect(stored).toBeNull();
   });
 
@@ -267,7 +267,7 @@ describe("CredentialsManager", () => {
 
   it("regenerates when stored JSON is corrupted", async () => {
     // Write garbage to the store
-    await store.setItem(storeKey, "not-valid-json{{{{");
+    await store.set(storeKey, "not-valid-json{{{{");
 
     const creds = await manager.allow("0xtoken" as Address);
 
@@ -276,17 +276,17 @@ describe("CredentialsManager", () => {
     expect(creds.publicKey).toBe("0xpub123");
 
     // Corrupted data should have been cleaned up
-    const stored = await store.getItem(storeKey);
+    const stored = await store.get(storeKey);
     expect(stored).not.toBe("not-valid-json{{{{");
   });
 
   it("continues when storage removeItem fails during cleanup", async () => {
     // Write corrupted data to trigger the catch path
-    await store.setItem(storeKey, "corrupted");
+    await store.set(storeKey, "corrupted");
 
     // Make removeItem throw to test best-effort cleanup
-    const originalRemoveItem = store.removeItem.bind(store);
-    store.removeItem = vi.fn().mockImplementation((key: string) => {
+    const originalRemoveItem = store.delete.bind(store);
+    store.delete = vi.fn().mockImplementation((key: string) => {
       if (key === storeKey) throw new Error("storage unavailable");
       return originalRemoveItem(key);
     });
@@ -294,7 +294,7 @@ describe("CredentialsManager", () => {
     // Should still regenerate and return valid credentials
     const creds = await manager.allow("0xtoken" as Address);
     expect(creds.publicKey).toBe("0xpub123");
-    expect(store.removeItem).toHaveBeenCalledWith(storeKey);
+    expect(store.delete).toHaveBeenCalledWith(storeKey);
   });
 
   it("invalidates credentials at exact expiration boundary", async () => {
@@ -302,10 +302,10 @@ describe("CredentialsManager", () => {
     expect(sdk.generateKeypair).toHaveBeenCalledOnce();
 
     // Set startTimestamp to exactly durationDays ago (expired at boundary)
-    const stored = await store.getItem(storeKey);
+    const stored = await store.get(storeKey);
     const parsed = { ...(stored as Record<string, unknown>) };
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 1 * 86400; // exactly 1 day ago
-    await store.setItem(storeKey, parsed);
+    await store.set(storeKey, parsed);
 
     // New manager should see expired credentials (nowSeconds >= expiresAt)
     const manager2 = new CredentialsManager({
@@ -334,10 +334,10 @@ describe("CredentialsManager", () => {
       await manager.allow("0xtoken" as Address);
 
       // Tamper stored data to simulate expiration
-      const stored = await store.getItem(storeKey);
+      const stored = await store.get(storeKey);
       const parsed = { ...(stored as Record<string, unknown>) };
       parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
-      await store.setItem(storeKey, parsed);
+      await store.set(storeKey, parsed);
 
       const manager2 = new CredentialsManager({
         sdk: sdk as unknown as RelayerSDK,
@@ -363,7 +363,7 @@ describe("CredentialsManager", () => {
     });
 
     it("returns false when stored data is corrupted", async () => {
-      await store.setItem(storeKey, "corrupted-json{{{");
+      await store.set(storeKey, "corrupted-json{{{");
       expect(await manager.isExpired()).toBe(false);
     });
 
@@ -383,8 +383,8 @@ describe("CredentialsManager", () => {
     await manager.clear();
     expect(await manager.isAllowed()).toBe(false);
 
-    // Storage should be empty
-    const stored = await store.getItem(storeKey);
+    // Storage should also be empty
+    const stored = await store.get(storeKey);
     expect(stored).toBeNull();
   });
 });

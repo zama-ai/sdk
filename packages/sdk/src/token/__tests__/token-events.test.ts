@@ -652,10 +652,10 @@ describe("CredentialsManager event emissions", () => {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
     const storeKey = hex.slice(0, 32);
-    const stored = await store.getItem(storeKey);
+    const stored = await store.get(storeKey);
     const parsed = { ...(stored as Record<string, unknown>) };
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
-    await store.setItem(storeKey, parsed);
+    await store.set(storeKey, parsed);
 
     events.length = 0; // reset
 

@@ -60,7 +60,7 @@ export class IndexedDBStorage<T = unknown> implements GenericStorage<T> {
     return this.#dbPromise;
   }
 
-  async getItem(key: string): Promise<T | null> {
+  async get(key: string): Promise<T | null> {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readonly");
@@ -72,7 +72,7 @@ export class IndexedDBStorage<T = unknown> implements GenericStorage<T> {
     });
   }
 
-  async setItem(key: string, value: T): Promise<void> {
+  async set(key: string, value: T): Promise<void> {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readwrite");
@@ -84,7 +84,7 @@ export class IndexedDBStorage<T = unknown> implements GenericStorage<T> {
     });
   }
 
-  async removeItem(key: string): Promise<void> {
+  async delete(key: string): Promise<void> {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readwrite");

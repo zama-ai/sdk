@@ -84,7 +84,7 @@ export class CredentialsManager {
     const storeKey = await this.#storeKey();
     this.#emit({ type: ZamaSDKEvents.CredentialsLoading, contractAddresses });
     try {
-      const stored = await this.#storage.getItem(storeKey);
+      const stored = await this.#storage.get(storeKey);
       if (stored) {
         const encrypted = stored as unknown;
         this.#assertEncryptedCredentials(encrypted);
@@ -93,17 +93,17 @@ export class CredentialsManager {
         if (this.#hasLegacySignature(encrypted)) {
           const creds = await this.#decryptCredentials(encrypted, encrypted.signature);
           if (this.#isValid(creds, contractAddresses)) {
-            await this.#sessionStorage.setItem(storeKey, encrypted.signature);
+            await this.#sessionStorage.set(storeKey, encrypted.signature);
             // Re-persist without signature (migration)
             const migrated = await this.#encryptCredentials(creds);
-            await this.#storage.setItem(storeKey, migrated).catch(() => {});
+            await this.#storage.set(storeKey, migrated).catch(() => {});
             this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
             return creds;
           }
           this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
         } else {
           // New format: check session storage
-          const sessionSig = await this.#sessionStorage.getItem(storeKey);
+          const sessionSig = await this.#sessionStorage.get(storeKey);
           if (sessionSig) {
             const creds = await this.#decryptCredentials(encrypted, sessionSig as string);
             if (this.#isValid(creds, contractAddresses)) {
@@ -115,7 +115,7 @@ export class CredentialsManager {
             // No session signature — need to re-sign
             if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
               const signature = await this.#reSign(encrypted);
-              await this.#sessionStorage.setItem(storeKey, signature);
+              await this.#sessionStorage.set(storeKey, signature);
               const creds = await this.#decryptCredentials(encrypted, signature);
               this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
               return creds;
@@ -126,7 +126,7 @@ export class CredentialsManager {
       }
     } catch {
       try {
-        await this.#storage.removeItem(storeKey);
+        await this.#storage.delete(storeKey);
       } catch {
         /* best effort */
       }
@@ -164,7 +164,7 @@ export class CredentialsManager {
   async isExpired(contractAddress?: Address): Promise<boolean> {
     const storeKey = await this.#storeKey();
     try {
-      const stored = await this.#storage.getItem(storeKey);
+      const stored = await this.#storage.get(storeKey);
       if (!stored) return false;
 
       const encrypted = stored as unknown;
@@ -194,7 +194,7 @@ export class CredentialsManager {
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
     const storeKey = await this.#storeKey();
-    await this.#sessionStorage.removeItem(storeKey);
+    await this.#sessionStorage.delete(storeKey);
     this.#emit({
       type: ZamaSDKEvents.CredentialsRevoked,
       ...(contractAddresses.length > 0 && { contractAddresses }),
@@ -206,7 +206,7 @@ export class CredentialsManager {
    */
   async isAllowed(): Promise<boolean> {
     const storeKey = await this.#storeKey();
-    return (await this.#sessionStorage.getItem(storeKey)) !== null;
+    return (await this.#sessionStorage.get(storeKey)) !== null;
   }
 
   /**
@@ -219,9 +219,9 @@ export class CredentialsManager {
    */
   async clear(): Promise<void> {
     const storeKey = await this.#storeKey();
-    await this.#sessionStorage.removeItem(storeKey);
+    await this.#sessionStorage.delete(storeKey);
     try {
-      await this.#storage.removeItem(storeKey);
+      await this.#storage.delete(storeKey);
     } catch {
       // Best effort
     }
@@ -304,7 +304,7 @@ export class CredentialsManager {
       );
 
       const signature = await this.#signer.signTypedData(eip712);
-      await this.#sessionStorage.setItem(await this.#storeKey(), signature);
+      await this.#sessionStorage.set(await this.#storeKey(), signature);
 
       const creds: StoredCredentials = {
         publicKey: keypair.publicKey,
@@ -318,7 +318,7 @@ export class CredentialsManager {
       const storeKey = await this.#storeKey();
       try {
         const encrypted = await this.#encryptCredentials(creds);
-        await this.#storage.setItem(storeKey, encrypted);
+        await this.#storage.set(storeKey, encrypted);
       } catch {
         // Store write failed — credentials still usable in memory
       }

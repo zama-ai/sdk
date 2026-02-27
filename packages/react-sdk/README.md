@@ -915,14 +915,14 @@ By default, wallet signatures are stored in memory and lost on page reload (or s
 import type { GenericStorage } from "@zama-fhe/react-sdk";
 
 const chromeSessionStorage: GenericStorage = {
-  async getItem(key) {
+  async get(key) {
     const result = await chrome.storage.session.get(key);
     return result[key] ?? null;
   },
-  async setItem(key, value) {
+  async set(key, value) {
     await chrome.storage.session.set({ [key]: value });
   },
-  async removeItem(key) {
+  async delete(key) {
     await chrome.storage.session.remove(key);
   },
 };

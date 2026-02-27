@@ -407,12 +407,12 @@ The `Auth` types (`ApiKeyHeader`, `ApiKeyCookie`, `BearerToken`) are exported fr
 
 FHE credentials (keypair + EIP-712 signature) need to be persisted so users don't re-sign on every page load:
 
-| Storage             | Use Case                                                                   |
-| ------------------- | -------------------------------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                   |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                                         |
-| `asyncLocalStorage` | Node.js servers — isolate credentials per request                          |
-| Custom              | Implement `GenericStorage` (3 methods: `getItem`, `setItem`, `removeItem`) |
+| Storage             | Use Case                                                       |
+| ------------------- | -------------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions       |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                             |
+| `asyncLocalStorage` | Node.js servers — isolate credentials per request              |
+| Custom              | Implement `GenericStorage` (3 methods: `get`, `set`, `delete`) |
 
 ### 5. Token Operations
 

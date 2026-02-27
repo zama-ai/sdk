@@ -28,15 +28,15 @@ class AsyncLocalMapStorage<T = unknown> implements GenericStorage<T> {
     return this.#als.run(new Map(), fn);
   }
 
-  async getItem(key: string): Promise<T | null> {
+  async get(key: string): Promise<T | null> {
     return this.#als.getStore()?.get(key) ?? null;
   }
 
-  async setItem(key: string, value: T): Promise<void> {
+  async set(key: string, value: T): Promise<void> {
     this.#als.getStore()?.set(key, value);
   }
 
-  async removeItem(key: string): Promise<void> {
+  async delete(key: string): Promise<void> {
     this.#als.getStore()?.delete(key);
   }
 }

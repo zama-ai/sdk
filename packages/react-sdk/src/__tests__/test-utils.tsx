@@ -58,12 +58,12 @@ export function createMockRelayer(): RelayerSDK {
 export function createMockStorage(): GenericStorage {
   const store = new Map<string, unknown>();
   return {
-    getItem: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
-    setItem: vi.fn((key: string, value: unknown) => {
+    get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
+    set: vi.fn((key: string, value: unknown) => {
       store.set(key, value);
       return Promise.resolve();
     }),
-    removeItem: vi.fn((key: string) => {
+    delete: vi.fn((key: string) => {
       store.delete(key);
       return Promise.resolve();
     }),

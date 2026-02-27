@@ -15,7 +15,7 @@ export async function savePendingUnshield(
   wrapperAddress: Address,
   unwrapTxHash: Hex,
 ): Promise<void> {
-  await storage.setItem(storageKey(wrapperAddress), unwrapTxHash);
+  await storage.set(storageKey(wrapperAddress), unwrapTxHash);
 }
 
 /**
@@ -25,7 +25,7 @@ export async function loadPendingUnshield(
   storage: GenericStorage,
   wrapperAddress: Address,
 ): Promise<Hex | null> {
-  return (await storage.getItem(storageKey(wrapperAddress))) as Hex | null;
+  return (await storage.get(storageKey(wrapperAddress))) as Hex | null;
 }
 
 /**
@@ -35,5 +35,5 @@ export async function clearPendingUnshield(
   storage: GenericStorage,
   wrapperAddress: Address,
 ): Promise<void> {
-  await storage.removeItem(storageKey(wrapperAddress));
+  await storage.delete(storageKey(wrapperAddress));
 }

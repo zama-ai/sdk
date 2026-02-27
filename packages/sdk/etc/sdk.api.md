@@ -12470,11 +12470,11 @@ export interface GenericSigner {
 // @public
 export interface GenericStorage<T = unknown> {
     // (undocumented)
-    getItem(key: string): Promise<T | null>;
+    delete(key: string): Promise<void>;
     // (undocumented)
-    removeItem(key: string): Promise<void>;
+    get(key: string): Promise<T | null>;
     // (undocumented)
-    setItem(key: string, value: T): Promise<void>;
+    set(key: string, value: T): Promise<void>;
 }
 
 // @public
@@ -14673,11 +14673,11 @@ export class IndexedDBStorage<T = unknown> implements GenericStorage<T> {
     // (undocumented)
     clear(): Promise<void>;
     // (undocumented)
-    getItem(key: string): Promise<T | null>;
+    delete(key: string): Promise<void>;
     // (undocumented)
-    removeItem(key: string): Promise<void>;
+    get(key: string): Promise<T | null>;
     // (undocumented)
-    setItem(key: string, value: T): Promise<void>;
+    set(key: string, value: T): Promise<void>;
 }
 
 // @public
@@ -17692,11 +17692,11 @@ export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaE
 // @public
 export class MemoryStorage<T = unknown> implements GenericStorage<T> {
     // (undocumented)
-    getItem(key: string): Promise<T | null>;
+    delete(key: string): Promise<void>;
     // (undocumented)
-    removeItem(key: string): Promise<void>;
+    get(key: string): Promise<T | null>;
     // (undocumented)
-    setItem(key: string, value: T): Promise<void>;
+    set(key: string, value: T): Promise<void>;
 }
 
 // @public
