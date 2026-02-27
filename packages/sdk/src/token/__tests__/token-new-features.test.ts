@@ -77,6 +77,7 @@ describe("NoCiphertextError detection (P3)", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
   });
@@ -195,6 +196,7 @@ describe("Unshield callbacks (P4)", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
   });
@@ -324,6 +326,7 @@ describe("Address normalization (P6)", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
@@ -335,6 +338,7 @@ describe("Address normalization (P6)", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
       wrapper: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
@@ -347,6 +351,7 @@ describe("Address normalization (P6)", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
@@ -360,6 +365,7 @@ describe("Address normalization (P6)", () => {
           sdk: sdk as unknown as RelayerSDK,
           signer,
           storage: new MemoryStorage(),
+          sessionStorage: new MemoryStorage(),
           address: "0xinvalid" as Address,
         }),
     ).toThrow("address must be a valid address");

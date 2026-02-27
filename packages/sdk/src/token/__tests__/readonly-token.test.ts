@@ -67,6 +67,7 @@ describe("ReadonlyToken", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
   });
@@ -214,6 +215,7 @@ describe("ReadonlyToken", () => {
         sdk: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 
@@ -243,6 +245,7 @@ describe("ReadonlyToken", () => {
         sdk: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 
@@ -264,6 +267,7 @@ describe("ReadonlyToken", () => {
         sdk: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 
@@ -359,6 +363,7 @@ describe("ZamaSDK token factory", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
 

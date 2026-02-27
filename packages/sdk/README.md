@@ -226,7 +226,9 @@ if (pending) {
 
 ### Storage
 
-FHE credentials (encrypted keypair + metadata) are persisted to storage. The wallet signature is kept in memory only — never written to disk. Three storage options:
+FHE credentials (encrypted keypair + metadata) are persisted to `storage`. The wallet signature is kept in `sessionStorage` (in-memory by default) — never written to disk. Two storage roles:
+
+**Credential storage** (`storage`) — persists encrypted keypairs:
 
 | Storage             | Use case                                                 |
 | ------------------- | -------------------------------------------------------- |
@@ -234,6 +236,14 @@ FHE credentials (encrypted keypair + metadata) are persisted to storage. The wal
 | `memoryStorage`     | Tests, scripts, throwaway sessions                       |
 | `asyncLocalStorage` | Node.js servers — isolate credentials per request        |
 | Custom              | Implement the `GenericStringStorage` interface           |
+
+**Session storage** (`sessionStorage`) — holds wallet signatures for the current session:
+
+| Storage                  | Use case                                                    |
+| ------------------------ | ----------------------------------------------------------- |
+| Default (in-memory)      | Standard web apps — signature lost on reload, user re-signs |
+| `chrome.storage.session` | MV3 web extensions — survives service worker restarts       |
+| Custom                   | Implement the `GenericStringStorage` interface              |
 
 ```ts
 interface GenericStringStorage {
@@ -243,17 +253,47 @@ interface GenericStringStorage {
 }
 ```
 
+#### Web Extension Example
+
+For MV3 extensions, wrap `chrome.storage.session` to share the wallet signature across popup, background, and content script contexts:
+
+```ts
+import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
+import type { GenericStringStorage } from "@zama-fhe/sdk";
+
+const chromeSessionStorage: GenericStringStorage = {
+  async getItem(key) {
+    const result = await chrome.storage.session.get(key);
+    return result[key] ?? null;
+  },
+  async setItem(key, value) {
+    await chrome.storage.session.set({ [key]: value });
+  },
+  async removeItem(key) {
+    await chrome.storage.session.remove(key);
+  },
+};
+
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage: indexedDBStorage, // encrypted keypairs (persistent)
+  sessionStorage: chromeSessionStorage, // wallet signatures (ephemeral)
+});
+```
+
 ## Configuration Reference
 
 ### `ZamaSDKConfig`
 
-| Field                    | Type                   | Description                                                                                                                           |
-| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                              |
-| `signer`                 | `GenericSigner`        | Wallet signer interface.                                                                                                              |
-| `storage`                | `GenericStringStorage` | Credential storage backend.                                                                                                           |
-| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. Set `0` to require a wallet signature on every decrypt (high-security mode). |
-| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                    |
+| Field                    | Type                   | Description                                                                                                                            |
+| ------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                               |
+| `signer`                 | `GenericSigner`        | Wallet signer interface.                                                                                                               |
+| `storage`                | `GenericStringStorage` | Credential storage backend.                                                                                                            |
+| `sessionStorage`         | `GenericStringStorage` | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
+| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. Set `0` to require a wallet signature on every decrypt (high-security mode).  |
+| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                     |
 
 #### Structured Event Listener
 

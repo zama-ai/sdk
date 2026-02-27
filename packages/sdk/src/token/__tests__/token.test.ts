@@ -71,6 +71,7 @@ describe("Token", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
   });
@@ -168,6 +169,7 @@ describe("Token", () => {
         sdk: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 
@@ -190,6 +192,7 @@ describe("Token", () => {
         sdk: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 

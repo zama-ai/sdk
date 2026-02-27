@@ -56,6 +56,8 @@ export interface ReadonlyTokenConfig {
   signer: GenericSigner;
   /** Credential storage backend. */
   storage: GenericStringStorage;
+  /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
+  sessionStorage: GenericStringStorage;
   /** Address of the confidential token contract. */
   address: Address;
   /** Number of days FHE credentials remain valid. Default: `1`. */
@@ -83,6 +85,7 @@ export class ReadonlyToken {
       sdk: config.sdk,
       signer: config.signer,
       storage: config.storage,
+      sessionStorage: config.sessionStorage,
       durationDays: config.durationDays ?? 1,
       onEvent: config.onEvent,
     });

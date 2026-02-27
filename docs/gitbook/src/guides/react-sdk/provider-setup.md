@@ -7,12 +7,15 @@ Every React app using the SDK needs a `ZamaProvider` in the component tree. It w
   relayer={relayer}
   signer={signer}
   storage={storage}
+  sessionStorage={sessionStorage} // optional — wallet signature storage (default: in-memory)
   credentialDurationDays={1} // optional, default: 1 day
   onEvent={(e) => console.debug(e)} // optional, for debugging
 >
   {children}
 </ZamaProvider>
 ```
+
+For web extensions, pass a `chrome.storage.session`-backed `sessionStorage` so wallet signatures survive service worker restarts. See the [SDK configuration guide](../sdk/configuration.md#web-extensions) for a complete example.
 
 Below are complete setup examples for each Web3 library.
 

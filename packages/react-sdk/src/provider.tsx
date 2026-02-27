@@ -17,6 +17,11 @@ interface ZamaProviderProps extends PropsWithChildren {
   signer: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
   storage: GenericStringStorage;
+  /**
+   * Session storage for wallet signatures. Defaults to in-memory (lost on reload).
+   * Pass a `chrome.storage.session`-backed store for web extensions.
+   */
+  sessionStorage?: GenericStringStorage;
   /** Number of days credentials remain valid (default: relayer default). */
   credentialDurationDays?: number;
   /** Callback invoked on SDK lifecycle events. */
@@ -41,6 +46,7 @@ export function ZamaProvider({
   relayer,
   signer,
   storage,
+  sessionStorage,
   credentialDurationDays,
   onEvent,
 }: ZamaProviderProps) {
@@ -50,10 +56,11 @@ export function ZamaProvider({
         relayer,
         signer,
         storage,
+        sessionStorage,
         credentialDurationDays,
         onEvent,
       }),
-    [relayer, signer, storage, credentialDurationDays, onEvent],
+    [relayer, signer, storage, sessionStorage, credentialDurationDays, onEvent],
   );
 
   // Note: we do NOT terminate the SDK on unmount because the relayer is

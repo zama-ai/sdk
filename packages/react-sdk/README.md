@@ -149,6 +149,7 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
   signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
   storage={storage} // GenericStringStorage
+  sessionStorage={sessionStorage} // Optional. Session storage for wallet signatures. Default: in-memory (lost on reload).
   credentialDurationDays={1} // Optional. Days FHE credentials remain valid. Default: 1. Set 0 for sign-every-time.
   onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
@@ -905,6 +906,42 @@ FHE decrypt credentials are generated once per wallet + token set and cached in 
 5. **Pre-authorization** — Call `useTokenAllow(tokenAddresses)` early to batch-authorize all tokens in one wallet prompt, avoiding repeated popups.
 6. **Check status** — Use `useIsTokenAllowed(tokenAddress)` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
 7. **Disconnect** — Call `useTokenRevoke(tokenAddresses)` or `await credentials.revoke()` to clear the session signature from memory.
+
+### Web Extension Support
+
+By default, wallet signatures are stored in memory and lost on page reload (or service worker restart). For MV3 web extensions, pass a `sessionStorage` backed by `chrome.storage.session` so signatures survive service worker restarts and are shared across popup, background, and content script contexts:
+
+```ts
+import type { GenericStringStorage } from "@zama-fhe/react-sdk";
+
+const chromeSessionStorage: GenericStringStorage = {
+  async getItem(key) {
+    const result = await chrome.storage.session.get(key);
+    return result[key] ?? null;
+  },
+  async setItem(key, value) {
+    await chrome.storage.session.set({ [key]: value });
+  },
+  async removeItem(key) {
+    await chrome.storage.session.remove(key);
+  },
+};
+```
+
+Then pass it to the provider:
+
+```tsx
+<ZamaProvider
+  relayer={relayer}
+  signer={signer}
+  storage={indexedDBStorage}
+  sessionStorage={chromeSessionStorage}
+>
+  <App />
+</ZamaProvider>
+```
+
+This keeps the encrypted credentials in IndexedDB (persistent) while the unlock signature lives in `chrome.storage.session` (ephemeral, cleared when the browser closes).
 
 ### Error-to-User-Message Mapping
 

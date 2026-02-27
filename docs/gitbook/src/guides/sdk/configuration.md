@@ -6,7 +6,8 @@ Every SDK setup has three required pieces and two optional ones:
 const sdk = new ZamaSDK({
   relayer,                       // required — handles encryption & decryption
   signer,                        // required — wallet interface
-  storage,                       // required — credential persistence
+  storage,                       // required — encrypted credential persistence
+  sessionStorage,                // optional — wallet signature storage (default: in-memory)
   credentialDurationDays: 1,     // optional (default: 1 day)
   onEvent: (event) => { ... },   // optional — lifecycle events for debugging
 });
@@ -159,6 +160,16 @@ FHE credentials (a keypair + EIP-712 signature) and decrypted balances are cache
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 ```
 
+### Session storage (`sessionStorage`)
+
+By default, wallet signatures live in an in-memory store that's lost on page reload (the user re-signs once per session). You can override this for environments where in-memory isn't sufficient:
+
+| Storage                  | When to use                                                                   |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| Default (in-memory)      | Standard web apps — user re-signs once per page load                          |
+| `chrome.storage.session` | MV3 web extensions — survives service worker restarts, shared across contexts |
+| Custom                   | Implement `GenericStringStorage`                                              |
+
 ### Per-request storage (Node.js servers)
 
 For servers where each request has its own user context, use `asyncLocalStorage` from the `/node` sub-path. It uses Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to isolate credentials per request:
@@ -271,11 +282,12 @@ const sdk = new ZamaSDK({
 
 ## Session management
 
-FHE credentials are stored encrypted at rest. The wallet signature that unlocks them is kept **in memory only** — it's never written to disk. This means:
+FHE credentials are stored encrypted at rest. The wallet signature that unlocks them lives in `sessionStorage` (in-memory by default). This means:
 
 - On page load, the user must re-sign once to authorize their credentials for the session
 - Closing the tab (or calling `await token.revoke()`) clears the signature from memory
-- The encrypted credentials survive across sessions in storage; only the allow step repeats
+- The encrypted credentials survive across sessions in `storage`; only the allow step repeats
+- In web extensions, you can use `chrome.storage.session` so the signature survives service worker restarts ([see below](#web-extensions))
 
 ### Allow (pre-authorize for the session)
 
@@ -320,6 +332,44 @@ const balance = await token.decryptBalance(handle);
 // 4. User disconnects
 await token.revoke();
 ```
+
+## Web extensions
+
+MV3 extensions run background logic in a service worker that Chrome can terminate at any time. The default in-memory session storage is lost when this happens, forcing the user to re-sign.
+
+To fix this, wrap `chrome.storage.session` as a `GenericStringStorage` and pass it as `sessionStorage`:
+
+```ts
+import { ZamaSDK, indexedDBStorage } from "@zama-fhe/sdk";
+import type { GenericStringStorage } from "@zama-fhe/sdk";
+
+// Adapter for chrome.storage.session
+const chromeSessionStorage: GenericStringStorage = {
+  async getItem(key) {
+    const result = await chrome.storage.session.get(key);
+    return result[key] ?? null;
+  },
+  async setItem(key, value) {
+    await chrome.storage.session.set({ [key]: value });
+  },
+  async removeItem(key) {
+    await chrome.storage.session.remove(key);
+  },
+};
+
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage: indexedDBStorage, // encrypted keypairs (persistent)
+  sessionStorage: chromeSessionStorage, // wallet signatures (ephemeral, shared across contexts)
+});
+```
+
+This gives you:
+
+- **Popup ↔ Background ↔ Content script** — all contexts share the same session signature
+- **Service worker restart** — signature survives because `chrome.storage.session` is not in-memory JS
+- **Browser close** — signature is cleared automatically (Chrome purges session storage on close)
 
 ## Event listener
 

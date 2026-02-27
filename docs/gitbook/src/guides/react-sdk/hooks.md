@@ -169,6 +169,29 @@ await tokenAllow(["0xTokenA", "0xTokenB", "0xTokenC"]);
 // All subsequent balance reads reuse the cached credential
 ```
 
+### `useIsTokenAllowed`
+
+Check whether a session signature is cached for a given token. Use this to conditionally enable UI elements.
+
+```tsx
+const { data: allowed } = useIsTokenAllowed("0xTokenAddress");
+
+<button disabled={!allowed}>Reveal Balance</button>;
+```
+
+Automatically invalidated when `useTokenAllow` or `useTokenRevoke` succeed.
+
+### `useTokenRevoke`
+
+Revoke the session signature for the connected wallet. Stored credentials remain intact, but the next decrypt will require a fresh wallet signature.
+
+```tsx
+const { mutate: tokenRevoke } = useTokenRevoke();
+
+// Revoke session for specific tokens
+tokenRevoke(["0xTokenA", "0xTokenB"]);
+```
+
 ### Session management
 
 FHE credentials require a wallet signature once per page session. Use `useToken` to control the session lifecycle:
@@ -320,6 +343,7 @@ For manual cache control (prefetching, invalidation, removal):
 | `confidentialBalancesQueryKeys` | `.all`, `.tokens(addrs, owner)`                                                        | Multi-token batch balances     |
 | `confidentialHandleQueryKeys`   | `.all`, `.token(addr)`, `.owner(addr, owner)`                                          | Single-token encrypted handle  |
 | `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addrs, owner)`                                                        | Multi-token batch handles      |
+| `isAllowedQueryKeys`            | `.all`, `.token(addr)`                                                                 | Session signature status       |
 | `underlyingAllowanceQueryKeys`  | `.all`, `.token(addr, wrapper)`                                                        | ERC-20 allowance               |
 | `activityFeedQueryKeys`         | `.all`, `.token(addr)`                                                                 | Activity feed                  |
 | `feeQueryKeys`                  | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(...)`, `.feeRecipient(...)` | Fee queries                    |

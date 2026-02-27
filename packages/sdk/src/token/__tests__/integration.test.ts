@@ -74,6 +74,7 @@ describe("Integration: multi-step workflows", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
   });
@@ -145,6 +146,7 @@ describe("Integration: multi-step workflows", () => {
         sdk: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN,
       });
       vi.mocked(signer.readContract).mockResolvedValueOnce(VALID_HANDLE);

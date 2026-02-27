@@ -63,7 +63,6 @@ describe("CredentialsManager", () => {
   let storeKey: string;
 
   beforeEach(async () => {
-    CredentialsManager.clearSessionSignatures();
     sdk = createMockSdk();
     signer = createMockSigner();
     store = new MemoryStorage();
@@ -71,6 +70,7 @@ describe("CredentialsManager", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
     });
     storeKey = await computeStoreKey(await signer.getAddress());
@@ -125,11 +125,11 @@ describe("CredentialsManager", () => {
     await manager.allow("0xtoken" as Address);
 
     // Simulate page reload: session signatures are lost
-    CredentialsManager.clearSessionSignatures();
     const manager2 = new CredentialsManager({
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 7,
     });
     await manager2.allow("0xtoken" as Address);
@@ -151,12 +151,12 @@ describe("CredentialsManager", () => {
     await store.setItem(storeKey, JSON.stringify(parsed));
 
     // Simulate page reload: session signatures are lost
-    CredentialsManager.clearSessionSignatures();
     // New manager instance should re-sign and return valid credentials
     const manager2 = new CredentialsManager({
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
     });
     const creds2 = await manager2.allow("0xtoken" as Address);
@@ -183,6 +183,7 @@ describe("CredentialsManager", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 7,
     });
     const creds = await manager2.allow("0xtoken" as Address);
@@ -311,6 +312,7 @@ describe("CredentialsManager", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
     });
     await manager2.allow("0xtoken" as Address);
@@ -341,6 +343,7 @@ describe("CredentialsManager", () => {
         sdk: sdk as unknown as RelayerSDK,
         signer,
         storage: store,
+        sessionStorage: new MemoryStorage(),
         durationDays: 1,
       });
       expect(await manager2.isExpired()).toBe(true);
@@ -353,6 +356,7 @@ describe("CredentialsManager", () => {
         sdk: sdk as unknown as RelayerSDK,
         signer,
         storage: store,
+        sessionStorage: new MemoryStorage(),
         durationDays: 1,
       });
       expect(await manager2.isExpired("0xother" as Address)).toBe(true);
@@ -392,7 +396,6 @@ describe("session allow/revoke", () => {
   let manager: CredentialsManager;
 
   beforeEach(async () => {
-    CredentialsManager.clearSessionSignatures();
     sdk = createMockSdk();
     signer = createMockSigner();
     store = new MemoryStorage();
@@ -400,6 +403,7 @@ describe("session allow/revoke", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
     });
   });
@@ -441,6 +445,7 @@ describe("session allow/revoke", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent: (e) => events.push(e.type),
     });

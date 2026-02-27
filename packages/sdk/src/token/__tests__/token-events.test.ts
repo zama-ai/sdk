@@ -119,6 +119,7 @@ describe("ReadonlyToken event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
       onEvent,
     });
@@ -218,6 +219,7 @@ describe("ReadonlyToken event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
 
@@ -244,6 +246,7 @@ describe("Token event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
       onEvent,
     });
@@ -593,6 +596,7 @@ describe("CredentialsManager event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
@@ -611,6 +615,7 @@ describe("CredentialsManager event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
@@ -633,6 +638,7 @@ describe("CredentialsManager event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
@@ -658,6 +664,7 @@ describe("CredentialsManager event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
@@ -674,6 +681,7 @@ describe("CredentialsManager event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
@@ -697,6 +705,7 @@ describe("CredentialsManager event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
@@ -713,6 +722,7 @@ describe("CredentialsManager event emissions", () => {
       sdk: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
     });
 
