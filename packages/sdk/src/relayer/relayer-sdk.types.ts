@@ -50,6 +50,9 @@ export interface RelayerWebConfig {
    * - `Cross-Origin-Opener-Policy: same-origin`
    * - `Cross-Origin-Embedder-Policy: require-corp`
    *
+   * 4–8 threads is the practical sweet spot; beyond that, diminishing returns
+   * and higher memory usage on low-end devices.
+   *
    * When omitted, the relayer SDK uses its default (single-threaded).
    */
   threads?: number;
