@@ -274,7 +274,7 @@ export class CredentialsManager {
       encrypted.publicKey,
       encrypted.contractAddresses,
       encrypted.startTimestamp,
-      this.#durationDays,
+      encrypted.durationDays,
     );
     return this.#signer.signTypedData(eip712);
   }
