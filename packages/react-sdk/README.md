@@ -909,28 +909,11 @@ FHE decrypt credentials are generated once per wallet + token set and cached in 
 
 ### Web Extension Support
 
-By default, wallet signatures are stored in memory and lost on page reload (or service worker restart). For MV3 web extensions, pass a `sessionStorage` backed by `chrome.storage.session` so signatures survive service worker restarts and are shared across popup, background, and content script contexts:
-
-```ts
-import type { GenericStorage } from "@zama-fhe/react-sdk";
-
-const chromeSessionStorage: GenericStorage = {
-  async get(key) {
-    const result = await chrome.storage.session.get(key);
-    return result[key] ?? null;
-  },
-  async set(key, value) {
-    await chrome.storage.session.set({ [key]: value });
-  },
-  async delete(key) {
-    await chrome.storage.session.remove(key);
-  },
-};
-```
-
-Then pass it to the provider:
+By default, wallet signatures are stored in memory and lost on page reload (or service worker restart). For MV3 web extensions, use the built-in `chromeSessionStorage` singleton so signatures survive service worker restarts and are shared across popup, background, and content script contexts:
 
 ```tsx
+import { chromeSessionStorage } from "@zama-fhe/react-sdk";
+
 <ZamaProvider
   relayer={relayer}
   signer={signer}

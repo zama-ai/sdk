@@ -242,7 +242,7 @@ FHE credentials (encrypted keypair + metadata) are persisted to `storage`. The w
 | Storage                  | Use case                                                    |
 | ------------------------ | ----------------------------------------------------------- |
 | Default (in-memory)      | Standard web apps — signature lost on reload, user re-signs |
-| `chrome.storage.session` | MV3 web extensions — survives service worker restarts       |
+| `chromeSessionStorage`   | MV3 web extensions — survives service worker restarts       |
 | Custom                   | Implement the `GenericStorage` interface                    |
 
 ```ts
@@ -255,30 +255,16 @@ interface GenericStorage<T = unknown> {
 
 #### Web Extension Example
 
-For MV3 extensions, wrap `chrome.storage.session` to share the wallet signature across popup, background, and content script contexts:
+For MV3 extensions, use the built-in `chromeSessionStorage` singleton to share the wallet signature across popup, background, and content script contexts:
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import type { GenericStorage } from "@zama-fhe/sdk";
-
-const chromeSessionStorage: GenericStorage = {
-  async get(key) {
-    const result = await chrome.storage.session.get(key);
-    return result[key] ?? null;
-  },
-  async set(key, value) {
-    await chrome.storage.session.set({ [key]: value });
-  },
-  async delete(key) {
-    await chrome.storage.session.remove(key);
-  },
-};
+import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK({
   relayer,
   signer,
   storage: indexedDBStorage, // encrypted keypairs (persistent)
-  sessionStorage: chromeSessionStorage, // wallet signatures (ephemeral)
+  sessionStorage: chromeSessionStorage, // wallet signatures (ephemeral, shared across contexts)
 });
 ```
 

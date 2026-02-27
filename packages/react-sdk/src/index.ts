@@ -50,6 +50,7 @@ export {
   indexedDBStorage,
   CredentialsManager,
   ChromeSessionStorage,
+  chromeSessionStorage,
 } from "@zama-fhe/sdk";
 
 // Re-export core types

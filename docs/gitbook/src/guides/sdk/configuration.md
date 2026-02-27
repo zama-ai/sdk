@@ -164,11 +164,11 @@ import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 
 By default, wallet signatures live in an in-memory store that's lost on page reload (the user re-signs once per session). You can override this for environments where in-memory isn't sufficient:
 
-| Storage                  | When to use                                                                   |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| Default (in-memory)      | Standard web apps — user re-signs once per page load                          |
-| `chrome.storage.session` | MV3 web extensions — survives service worker restarts, shared across contexts |
-| Custom                   | Implement `GenericStorage`                                                    |
+| Storage                | When to use                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| Default (in-memory)    | Standard web apps — user re-signs once per page load                          |
+| `chromeSessionStorage` | MV3 web extensions — survives service worker restarts, shared across contexts |
+| Custom                 | Implement `GenericStorage`                                                    |
 
 ### Per-request storage (Node.js servers)
 
@@ -287,7 +287,7 @@ FHE credentials are stored encrypted at rest. The wallet signature that unlocks 
 - On page load, the user must re-sign once to authorize their credentials for the session
 - Closing the tab (or calling `await token.revoke()`) clears the signature from memory
 - The encrypted credentials survive across sessions in `storage`; only the allow step repeats
-- In web extensions, you can use `chrome.storage.session` so the signature survives service worker restarts ([see below](#web-extensions))
+- In web extensions, you can use `chromeSessionStorage` so the signature survives service worker restarts ([see below](#web-extensions))
 
 ### Allow (pre-authorize for the session)
 
@@ -337,25 +337,10 @@ await token.revoke();
 
 MV3 extensions run background logic in a service worker that Chrome can terminate at any time. The default in-memory session storage is lost when this happens, forcing the user to re-sign.
 
-To fix this, wrap `chrome.storage.session` as a `GenericStorage` and pass it as `sessionStorage`:
+To fix this, use the built-in `chromeSessionStorage` singleton and pass it as `sessionStorage`:
 
 ```ts
-import { ZamaSDK, indexedDBStorage } from "@zama-fhe/sdk";
-import type { GenericStorage } from "@zama-fhe/sdk";
-
-// Adapter for chrome.storage.session
-const chromeSessionStorage: GenericStorage = {
-  async get(key) {
-    const result = await chrome.storage.session.get(key);
-    return result[key] ?? null;
-  },
-  async set(key, value) {
-    await chrome.storage.session.set({ [key]: value });
-  },
-  async delete(key) {
-    await chrome.storage.session.remove(key);
-  },
-};
+import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK({
   relayer,

@@ -26,7 +26,7 @@ declare const chrome: {
  *   relayer,
  *   signer,
  *   storage: indexedDBStorage,
- *   sessionStorage: new ChromeSessionStorage(),
+ *   sessionStorage: chromeSessionStorage,
  * });
  * ```
  */
@@ -44,3 +44,6 @@ export class ChromeSessionStorage<T = unknown> implements GenericStorage<T> {
     await chrome.storage.session.remove(key);
   }
 }
+
+/** Default singleton for application-wide use. */
+export const chromeSessionStorage = new ChromeSessionStorage();

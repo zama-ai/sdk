@@ -68,11 +68,11 @@ sequenceDiagram
     CM->>Crypto: deriveKey(PBKDF2 → AES-GCM-256)
     CM->>Crypto: getRandomValues(12 bytes) → IV
     CM->>Crypto: encrypt(AES-GCM, key, privateKey)
-    CM->>Store: setItem(storeKey, { publicKey, encryptedPrivateKey: { iv, ciphertext }, contractAddresses, startTimestamp, durationDays })
+    CM->>Store: set(storeKey, { publicKey, encryptedPrivateKey: { iv, ciphertext }, contractAddresses, startTimestamp, durationDays })
     Note over Store: signature NOT stored
 
     Note over CM: Decrypt (on load)
-    CM->>Store: getItem(storeKey)
+    CM->>Store: get(storeKey)
     Store-->>CM: { encryptedPrivateKey, ... }
     CM->>Crypto: importKey(sessionSignature, "PBKDF2")
     CM->>Crypto: deriveKey(PBKDF2 → AES-GCM-256)
@@ -138,16 +138,16 @@ sequenceDiagram
     participant Wallet as Wallet Signer
     participant SDK as Relayer SDK
 
-    App->>CM: get(contractAddress)
-    CM->>Store: getItem(storeKey)
+    App->>CM: allow(contractAddress)
+    CM->>Store: get(storeKey)
     Store-->>CM: EncryptedCredentials (no signature)
-    CM->>CM: Check #sessionSignatures → empty
+    CM->>CM: Check sessionStorage → empty
     CM->>CM: #isValidWithoutDecrypt → timestamps OK
     CM->>SDK: createEIP712(publicKey, contracts, timestamp, days)
     SDK-->>CM: EIP-712 typed data
     CM->>Wallet: signTypedData(eip712) — wallet popup
     Wallet-->>CM: signature
-    CM->>CM: Cache in #sessionSignatures
+    CM->>CM: Cache in sessionStorage
     CM->>CM: #decryptCredentials(encrypted, signature)
     CM-->>App: StoredCredentials { publicKey, privateKey, signature, ... }
 ```
@@ -159,13 +159,13 @@ sequenceDiagram
     participant CM as CredentialsManager
     participant Store as Storage
 
-    CM->>Store: getItem(storeKey)
+    CM->>Store: get(storeKey)
     Store-->>CM: LegacyEncryptedCredentials (has signature field)
     CM->>CM: #hasLegacySignature → true
     CM->>CM: Decrypt privateKey using stored signature
-    CM->>CM: Cache signature in #sessionSignatures
+    CM->>CM: Cache signature in sessionStorage
     CM->>CM: #encryptCredentials (excludes signature)
-    CM->>Store: setItem(storeKey, migrated data)
+    CM->>Store: set(storeKey, migrated data)
     Note over Store: Signature removed from storage
 ```
 

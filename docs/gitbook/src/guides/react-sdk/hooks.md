@@ -160,7 +160,7 @@ If you need to control each step separately:
 
 ### `useTokenAllow`
 
-Pre-authorize FHE credentials for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually.
+Pre-authorize FHE credentials for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually. Automatically invalidates `isAllowed` queries on success.
 
 ```tsx
 const { mutateAsync: tokenAllow } = useTokenAllow();
@@ -171,30 +171,31 @@ await tokenAllow(["0xTokenA", "0xTokenB", "0xTokenC"]);
 
 ### `useIsTokenAllowed`
 
-Check whether a session signature is cached for a given token. Use this to conditionally enable UI elements.
+Check whether a session signature is cached for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt.
 
 ```tsx
-const { data: allowed } = useIsTokenAllowed("0xTokenAddress");
+import { useIsTokenAllowed } from "@zama-fhe/react-sdk";
 
-<button disabled={!allowed}>Reveal Balance</button>;
+const { data: allowed } = useIsTokenAllowed("0xToken");
+// allowed === true → decrypts won't prompt the wallet
 ```
-
-Automatically invalidated when `useTokenAllow` or `useTokenRevoke` succeed.
 
 ### `useTokenRevoke`
 
-Revoke the session signature for the connected wallet. Stored credentials remain intact, but the next decrypt will require a fresh wallet signature.
+Revoke the session signature for the connected wallet. Stored credentials remain intact, but the next decrypt will require a fresh wallet signature. Automatically invalidates `isAllowed` queries on success.
 
 ```tsx
+import { useTokenRevoke } from "@zama-fhe/react-sdk";
+
 const { mutate: tokenRevoke } = useTokenRevoke();
 
-// Revoke session for specific tokens
+// Call on wallet disconnect
 tokenRevoke(["0xTokenA", "0xTokenB"]);
 ```
 
 ### Session management
 
-FHE credentials require a wallet signature once per page session. Use `useToken` to control the session lifecycle:
+FHE credentials require a wallet signature once per page session. Use the hooks above or `useToken` for direct control:
 
 ```tsx
 const tokenA = useToken({ tokenAddress: "0xTokenA" });
