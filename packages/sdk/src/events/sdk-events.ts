@@ -85,6 +85,8 @@ export interface CredentialsRevokedEvent extends BaseEvent {
 
 export interface CredentialsAllowedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.CredentialsAllowed;
+  /** Contract addresses covered by the authorized credentials. */
+  contractAddresses?: Address[];
 }
 
 export interface EncryptStartEvent extends BaseEvent {

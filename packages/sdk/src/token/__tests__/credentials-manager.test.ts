@@ -44,10 +44,10 @@ function createMockSigner(address: Address = "0xuser" as Address): GenericSigner
 }
 
 /** Compute the truncated SHA-256 store key used by CredentialManager. */
-async function computeStoreKey(address: string): Promise<string> {
+async function computeStoreKey(address: string, chainId: number = 31337): Promise<string> {
   const hash = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(address.toLowerCase()),
+    new TextEncoder().encode(`${address.toLowerCase()}:${chainId}`),
   );
   const hex = Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, "0"))

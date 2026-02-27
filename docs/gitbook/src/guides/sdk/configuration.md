@@ -317,6 +317,29 @@ await token.revoke();
 // Next decrypt will require a fresh wallet signature
 ```
 
+### Batch allow (minimize re-signing)
+
+If your app works with multiple token contracts, pass them all upfront to avoid re-signing when new contracts appear:
+
+```ts
+// One signature covers all three tokens
+await token.credentials.allow("0xTokenA", "0xTokenB", "0xTokenC");
+```
+
+If you later call `allow()` with a contract not in the original set, the SDK must generate a fresh keypair and request a new wallet signature. Batching upfront avoids this.
+
+### Wallet lifecycle integration
+
+Wire `revoke()` to wallet events so credentials don't outlive the user's session:
+
+```ts
+// Clear session signature on wallet disconnect or account switch
+wallet.on("disconnect", () => token.credentials.revoke());
+wallet.on("accountsChanged", () => token.credentials.revoke());
+```
+
+Without this, a cached session signature remains valid until expiry — even if the user switches accounts or disconnects. This isn't a security hole (signatures are time-bounded and chain-scoped), but it creates confusing UX.
+
 ### Typical flow
 
 ```ts

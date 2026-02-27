@@ -647,7 +647,11 @@ describe("CredentialsManager event emissions", () => {
 
     // Tamper stored data to simulate expiration
     const address = (await signer.getAddress()).toLowerCase();
-    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address));
+    const chainId = await signer.getChainId();
+    const hash = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(`${address}:${chainId}`),
+    );
     const hex = Array.from(new Uint8Array(hash))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");

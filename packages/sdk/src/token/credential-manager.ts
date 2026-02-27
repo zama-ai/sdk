@@ -62,6 +62,18 @@ export class CredentialsManager {
     this.#sessionStorage = config.sessionStorage;
     this.#durationDays = config.durationDays;
     this.#onEvent = config.onEvent ?? Boolean;
+
+    // Warn when using in-memory session storage inside a Chrome extension context
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const chrome = typeof globalThis !== "undefined" ? (globalThis as any).chrome : undefined;
+    if (chrome?.runtime?.id && config.sessionStorage.constructor.name === "MemoryStorage") {
+      console.warn(
+        "[zama-sdk] Detected Chrome extension context with in-memory session storage. " +
+          "Session signatures will be lost on service worker restart and won't be shared across contexts. " +
+          "Consider using chromeSessionStorage instead. ",
+      );
+    }
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
   #emit(partial: ZamaSDKEventInput): void {
@@ -98,6 +110,7 @@ export class CredentialsManager {
             const migrated = await this.#encryptCredentials(creds);
             await this.#storage.set(storeKey, migrated).catch(() => {});
             this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+            this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
             return creds;
           }
           this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
@@ -108,6 +121,7 @@ export class CredentialsManager {
             const creds = await this.#decryptCredentials(encrypted, sessionSig as string);
             if (this.#isValid(creds, contractAddresses)) {
               this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+              this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
               return creds;
             }
             this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
@@ -118,6 +132,7 @@ export class CredentialsManager {
               await this.#sessionStorage.set(storeKey, signature);
               const creds = await this.#decryptCredentials(encrypted, signature);
               this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+              this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
               return creds;
             }
             this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
@@ -135,10 +150,15 @@ export class CredentialsManager {
     const key = contractAddresses.slice().sort().join(",");
     if (!this.#createPromise || this.#createPromiseKey !== key) {
       this.#createPromiseKey = key;
-      this.#createPromise = this.create(contractAddresses).finally(() => {
-        this.#createPromise = null;
-        this.#createPromiseKey = null;
-      });
+      this.#createPromise = this.create(contractAddresses)
+        .then((creds) => {
+          this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
+          return creds;
+        })
+        .finally(() => {
+          this.#createPromise = null;
+          this.#createPromiseKey = null;
+        });
     }
     return this.#createPromise;
   }
@@ -227,10 +247,14 @@ export class CredentialsManager {
     }
   }
 
-  /** Returns a truncated SHA-256 hash of the address to avoid leaking it in storage. */
+  /** Returns a truncated SHA-256 hash of the address and chainId to avoid leaking it in storage. */
   async #storeKey(): Promise<string> {
     const address = (await this.#signer.getAddress()).toLowerCase();
-    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address));
+    const chainId = await this.#signer.getChainId();
+    const hash = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(`${address}:${chainId}`),
+    );
     const hex = Array.from(new Uint8Array(hash))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
