@@ -11,6 +11,8 @@ import {
 } from "./balance-query-keys";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
 import { useToken, type UseZamaConfig } from "./use-token";
+import { useZamaSDK } from "../provider";
+import { wrapUnshieldCallbacks } from "./unshield-storage";
 
 /** Parameters passed to the `mutate` function of {@link useUnshield}. */
 export interface UnshieldParams {
@@ -37,6 +39,10 @@ export function unshieldMutationOptions(token: Token) {
  * Unshield a specific amount and finalize in one call.
  * Orchestrates: unwrap → wait for receipt → parse event → finalize.
  *
+ * Automatically persists the unwrap tx hash to storage so the unshield can
+ * be resumed after interruptions (e.g. page reload). The pending state is
+ * cleared on successful finalization.
+ *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link EncryptionFailedError} — FHE encryption failed during unwrap
@@ -57,10 +63,13 @@ export function useUnshield(
   options?: UseMutationOptions<TransactionResult, Error, UnshieldParams, Address>,
 ) {
   const token = useToken(config);
+  const sdk = useZamaSDK();
+  const wrapperAddress = config.wrapperAddress ?? config.tokenAddress;
 
   return useMutation<TransactionResult, Error, UnshieldParams, Address>({
     mutationKey: ["unshield", config.tokenAddress],
-    mutationFn: ({ amount, callbacks }) => token.unshield(amount, callbacks),
+    mutationFn: ({ amount, callbacks }) =>
+      token.unshield(amount, wrapUnshieldCallbacks(sdk.storage, wrapperAddress, callbacks)),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({

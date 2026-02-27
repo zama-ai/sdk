@@ -11,6 +11,8 @@ import {
 } from "./balance-query-keys";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
 import { useToken, type UseZamaConfig } from "./use-token";
+import { useZamaSDK } from "../provider";
+import { wrapUnshieldCallbacks } from "./unshield-storage";
 
 /**
  * TanStack Query mutation options factory for unshield-all.
@@ -35,6 +37,10 @@ export function unshieldAllMutationOptions(token: Token) {
  * Unshield the entire balance and finalize in one call.
  * Orchestrates: unwrapAll → wait for receipt → parse event → finalize.
  *
+ * Automatically persists the unwrap tx hash to storage so the unshield can
+ * be resumed after interruptions (e.g. page reload). The pending state is
+ * cleared on successful finalization.
+ *
  * @param config - Token and wrapper addresses.
  * @param options - React Query mutation options.
  *
@@ -49,10 +55,13 @@ export function useUnshieldAll(
   options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>,
 ) {
   const token = useToken(config);
+  const sdk = useZamaSDK();
+  const wrapperAddress = config.wrapperAddress ?? config.tokenAddress;
 
   return useMutation<TransactionResult, Error, UnshieldAllParams | void, Address>({
     mutationKey: ["unshieldAll", config.tokenAddress],
-    mutationFn: (params) => token.unshieldAll(params?.callbacks),
+    mutationFn: (params) =>
+      token.unshieldAll(wrapUnshieldCallbacks(sdk.storage, wrapperAddress, params?.callbacks)),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({
