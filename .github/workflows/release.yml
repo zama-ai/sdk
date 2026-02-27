@@ -61,7 +61,8 @@ jobs:
         run: pnpm release:ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+          # Re-enable (set to true) after repository visibility is public.
+          NPM_CONFIG_PROVENANCE: false
 
   release-dry-run:
     if: github.event_name == 'workflow_dispatch'
