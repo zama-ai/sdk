@@ -1,16 +1,6 @@
-## PR Title
+# Summary
 
-Use a Conventional Commit title, for example:
-
-- `fix: handle relayer timeout in worker`
-- `feat(sdk): add encrypted balance helper`
-- `chore(ci): pin GitHub Actions by SHA`
-
-Allowed types: `feat`, `fix`, `perf`, `refactor`, `docs`, `chore`, `test`, `build`, `ci`, `revert`, `style`.
-
-## Summary
-
-Describe what changed and why.
+<!-- What changed? Keep it short and concrete. -->
 
 ## Scope
 
@@ -20,26 +10,16 @@ Describe what changed and why.
 - [ ] CI/workflows
 - [ ] Docs
 
-## Testing
+## Validation
 
-List what you ran and the result.
+<!-- What did you run/check before opening this PR? -->
+<!-- Example: pnpm typecheck, pnpm lint, pnpm test:coverage, pnpm e2e:test -->
 
-```bash
-pnpm typecheck
-pnpm lint
-pnpm format:check
-pnpm test:coverage
-```
+## Related
 
-Add any extra commands used (for example E2E commands) and relevant output notes.
+<!-- Link issue(s) / related PR(s), if any. -->
+<!-- Example: Closes #123 -->
 
-## Breaking Changes
+## Demo (if possible)
 
-- [ ] No breaking changes
-- [ ] Breaking change (describe below)
-
-If breaking, include migration notes.
-
-## Linked Issues
-
-Closes #
+<!-- Screenshot or short video/GIF for UI/UX changes. -->
