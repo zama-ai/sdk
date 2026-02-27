@@ -20,7 +20,7 @@ declare const chrome: {
  *
  * @example
  * ```ts
- * import { ZamaSDK, indexedDBStorage, ChromeSessionStorage } from "@zama-fhe/sdk";
+ * import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
  *
  * const sdk = new ZamaSDK({
  *   relayer,
