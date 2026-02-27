@@ -41,6 +41,18 @@ pnpm add @zama-fhe/sdk
 pnpm add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
+### Read extended documentation
+
+Temporary solution for reading extended documentation that will eventually be published to on docs.zama.org (Gitbook):
+
+```bash
+# Install dependencies
+pnpm install
+
+# Serve docs
+pnpm docs:preview
+```
+
 ### React with wagmi
 
 ```tsx
@@ -626,7 +638,7 @@ The token is refreshed before each encrypt/decrypt call.
 
 ### Prerequisites
 
-- Node.js >= 24
+- Node.js >= 22
 - pnpm >= 10
 
 ### Setup
