@@ -53,6 +53,7 @@ export type { ReadonlyTokenConfig, BatchDecryptOptions } from "./token/readonly-
 export { ZERO_HANDLE } from "./token/readonly-token";
 export { MemoryStorage, memoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
+export { ChromeSessionStorage } from "./token/chrome-session-storage";
 export { CredentialsManager } from "./token/credential-manager";
 export {
   savePendingUnshield,
