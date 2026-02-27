@@ -1,6 +1,7 @@
 import { TRANSFER_BATCHER_ABI } from "../abi/transfer-batch.abi";
 import type { Address } from "../relayer/relayer-sdk.types";
 import { assertAddress } from "../utils";
+import { FHE_GAS_LIMIT } from "./gas";
 
 /** Batch transfer data for confidentialBatchTransfer. */
 export interface BatchTransferData {
@@ -36,5 +37,6 @@ export function confidentialBatchTransferContract(
     functionName: "confidentialBatchTransfer",
     args: [tokenAddress, fromAddress, batchTransferData],
     value: fees,
+    gas: FHE_GAS_LIMIT,
   } as const;
 }

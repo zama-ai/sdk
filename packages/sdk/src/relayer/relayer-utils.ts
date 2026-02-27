@@ -82,7 +82,7 @@ export const MainnetConfig: FhevmInstanceConfig = {
 export const SepoliaConfig: FhevmInstanceConfig = {
   chainId: 11155111,
   gatewayChainId: 10901,
-  relayerUrl: "https://relayer.testnet.zama.org",
+  relayerUrl: "https://relayer.testnet.zama.org/v2",
   network: "https://ethereum-sepolia-rpc.publicnode.com",
   aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D",
   kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
