@@ -74,6 +74,7 @@ export class RelayerWeb implements RelayerSDK {
       csrfToken: security?.getCsrfToken?.() ?? "",
       integrity: security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
       logger: this.#config.logger,
+      thread: this.#config.threads,
     };
   }
 

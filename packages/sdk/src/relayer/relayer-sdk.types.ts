@@ -42,6 +42,17 @@ export interface RelayerWebConfig {
   security?: RelayerWebSecurityConfig;
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
+  /**
+   * Number of WASM threads for parallel FHE operations inside the Web Worker.
+   * Uses `wasm-bindgen-rayon` under the hood via `SharedArrayBuffer`.
+   *
+   * **Requirements:** The page must be served with COOP/COEP headers:
+   * - `Cross-Origin-Opener-Policy: same-origin`
+   * - `Cross-Origin-Embedder-Policy: require-corp`
+   *
+   * When omitted, the relayer SDK uses its default (single-threaded).
+   */
+  threads?: number;
 }
 
 /** Result from encryption operation */
