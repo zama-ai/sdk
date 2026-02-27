@@ -277,7 +277,7 @@ async function handleInit(request: InitRequest): Promise<void> {
     sdkGlobal = self.relayerSDK;
 
     // Initialize WASM (optionally with a rayon thread pool for parallel FHE ops)
-    await sdkGlobal.initSDK(thread != null ? { thread } : undefined);
+    await sdkGlobal.initSDK(thread ? { thread } : undefined);
 
     // Create SDK instance with caller-provided config
     const config: FhevmInstanceConfig = {
