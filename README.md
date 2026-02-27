@@ -3,7 +3,8 @@
 ![Latest dev release](https://img.shields.io/npm/v/%40zama-fhe%2Fsdk/alpha?label=dev%20release)
 ![Latest dev release last updated](https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/alpha)
 ![NPM License](https://img.shields.io/npm/l/%40zama-fhe%2Fsdk)
-![GitHub Actions Workflow Status - Tests](https://img.shields.io/github/actions/workflow/status/zama-ai/sdk/test.yml?branch=main&label=tests)
+[![Unit tests](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml/badge.svg)](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml)
+[![E2E tests](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml/badge.svg)](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml)
 
 TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homomorphic Encryption on Zama Protocol](https://docs.zama.org/protocol/protocol/overview). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
 
