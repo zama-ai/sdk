@@ -19341,6 +19341,7 @@ export interface RelayerWebConfig {
     logger?: GenericLogger;
     // Warning: (ae-forgotten-export) The symbol "RelayerWebSecurityConfig" needs to be exported by the entry point index.d.ts
     security?: RelayerWebSecurityConfig;
+    threads?: number;
     // (undocumented)
     transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
 }
