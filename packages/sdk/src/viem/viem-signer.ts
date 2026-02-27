@@ -1,12 +1,12 @@
-import type {
-  GenericSigner,
-  ContractCallConfig,
-  TransactionReceipt,
-  Hex,
-} from "../token/token.types";
 import type { PublicClient, WalletClient } from "viem";
-import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { writeContract } from "viem/actions";
+import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type {
+  ContractCallConfig,
+  GenericSigner,
+  Hex,
+  TransactionReceipt,
+} from "../token/token.types";
 
 /** Configuration for {@link ViemSigner}. */
 export interface ViemSignerConfig {

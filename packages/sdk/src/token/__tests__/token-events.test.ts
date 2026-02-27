@@ -7,7 +7,7 @@ import { ReadonlyToken } from "../readonly-token";
 import { MemoryStorage } from "../memory-storage";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { ZamaSDKEvent, ZamaSDKEventListener } from "../../events/sdk-events";
-import { CredentialsManager } from "../credential-manager";
+import { CredentialsManager } from "../credentials-manager";
 import type { GenericSigner } from "../token.types";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;

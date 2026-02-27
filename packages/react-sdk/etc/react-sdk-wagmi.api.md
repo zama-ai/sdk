@@ -24,6 +24,8 @@ export class WagmiSigner implements GenericSigner {
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     // (undocumented)
+    subscribe(input: SignerLifecycleCallbacks): () => void;
+    // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     // (undocumented)
     writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;

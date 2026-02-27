@@ -16,7 +16,7 @@ import type { Address } from "../relayer/relayer-sdk.types";
 import { normalizeAddress, pLimit } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
-import { CredentialsManager } from "./credential-manager";
+import { CredentialsManager } from "./credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";

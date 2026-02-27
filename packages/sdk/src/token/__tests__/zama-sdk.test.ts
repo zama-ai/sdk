@@ -75,4 +75,91 @@ describe("ZamaSDK", () => {
     sdk.terminate();
     expect(relayer.terminate).toHaveBeenCalledOnce();
   });
+
+  it("calls signer.subscribe when available", () => {
+    const unsubscribe = vi.fn();
+    const subscribeSigner = {
+      ...createMockSigner(),
+      subscribe: vi.fn().mockReturnValue(unsubscribe),
+    };
+
+    const sdkWithSubscribe = new ZamaSDK({
+      relayer: createMockRelayer(),
+      signer: subscribeSigner,
+      storage: new MemoryStorage(),
+    });
+
+    expect(subscribeSigner.subscribe).toHaveBeenCalledOnce();
+    expect(subscribeSigner.subscribe).toHaveBeenCalledWith({
+      onDisconnect: expect.any(Function),
+      onAccountChange: expect.any(Function),
+    });
+
+    // Cleanup
+    sdkWithSubscribe.terminate();
+  });
+
+  it("terminate calls unsubscribe from signer.subscribe", () => {
+    const unsubscribe = vi.fn();
+    const subscribeSigner = {
+      ...createMockSigner(),
+      subscribe: vi.fn().mockReturnValue(unsubscribe),
+    };
+
+    const sdkWithSubscribe = new ZamaSDK({
+      relayer: createMockRelayer(),
+      signer: subscribeSigner,
+      storage: new MemoryStorage(),
+    });
+
+    sdkWithSubscribe.terminate();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it("does not fail when signer.subscribe is undefined", () => {
+    const plainSigner = createMockSigner();
+    expect(plainSigner.subscribe).toBeUndefined();
+
+    const sdkNoSubscribe = new ZamaSDK({
+      relayer: createMockRelayer(),
+      signer: plainSigner,
+      storage: new MemoryStorage(),
+    });
+
+    // Should not throw
+    sdkNoSubscribe.terminate();
+  });
+
+  it("revokeSession clears session storage", async () => {
+    const sessionStorage = new MemoryStorage();
+    const localSigner = createMockSigner();
+    const localRelayer = createMockRelayer();
+
+    const localSdk = new ZamaSDK({
+      relayer: localRelayer,
+      signer: localSigner,
+      storage: new MemoryStorage(),
+      sessionStorage,
+    });
+
+    // Simulate a cached session signature by computing the same store key
+    // the CredentialsManager uses (SHA-256 of "address:chainId", first 32 hex chars).
+    const address = (await localSigner.getAddress()).toLowerCase();
+    const chainId = await localSigner.getChainId();
+    const hash = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(`${address}:${chainId}`),
+    );
+    const hex = Array.from(new Uint8Array(hash))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    const storeKey = hex.slice(0, 32);
+
+    await sessionStorage.set(storeKey, "0xsomeSignature");
+    expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
+
+    await localSdk.revokeSession();
+
+    expect(await sessionStorage.get(storeKey)).toBeNull();
+  });
 });

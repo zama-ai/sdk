@@ -330,12 +330,20 @@ If you later call `allow()` with a contract not in the original set, the SDK mus
 
 ### Wallet lifecycle integration
 
-Wire `revoke()` to wallet events so credentials don't outlive the user's session:
+When the wallet disconnects or the user switches accounts, the session signature should be cleared so stale credentials don't persist.
+
+#### wagmi users: automatic
+
+If you use `WagmiSigner`, auto-revoke is built in — the SDK subscribes to wagmi's `watchConnection` and calls `revokeSession()` on disconnect or account change. No manual wiring needed.
+
+#### viem / ethers users: manual wiring
+
+Wire `revokeSession()` to wallet events directly:
 
 ```ts
 // Clear session signature on wallet disconnect or account switch
-wallet.on("disconnect", () => token.credentials.revoke());
-wallet.on("accountsChanged", () => token.credentials.revoke());
+wallet.on("disconnect", () => sdk.revokeSession());
+wallet.on("accountsChanged", () => sdk.revokeSession());
 ```
 
 Without this, a cached session signature remains valid until expiry — even if the user switches accounts or disconnects. This isn't a security hole (signatures are time-bounded and chain-scoped), but it creates confusing UX.

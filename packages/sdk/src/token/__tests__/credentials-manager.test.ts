@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { CredentialsManager } from "../credential-manager";
+import { CredentialsManager } from "../credentials-manager";
 import { MemoryStorage } from "../memory-storage";
 import type { GenericSigner } from "../token.types";
 import { ZamaError, ZamaErrorCode } from "../token.types";

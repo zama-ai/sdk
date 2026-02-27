@@ -4,6 +4,7 @@ import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
+import { CredentialsManager } from "./credentials-manager";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 
@@ -38,6 +39,7 @@ export class ZamaSDK {
   readonly sessionStorage: GenericStorage;
   readonly #credentialDurationDays: number | undefined;
   readonly #onEvent: ZamaSDKEventListener | undefined;
+  #unsubscribeSigner?: () => void;
 
   constructor(config: ZamaSDKConfig) {
     this.relayer = config.relayer;
@@ -46,6 +48,13 @@ export class ZamaSDK {
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.#credentialDurationDays = config.credentialDurationDays;
     this.#onEvent = config.onEvent;
+
+    if (this.signer.subscribe) {
+      this.#unsubscribeSigner = this.signer.subscribe({
+        onDisconnect: () => this.revokeSession(),
+        onAccountChange: () => this.revokeSession(),
+      });
+    }
   }
 
   /**
@@ -89,10 +98,35 @@ export class ZamaSDK {
   }
 
   /**
+   * Revoke the session signature for the current signer.
+   * The next decrypt operation will require a fresh wallet signature.
+   *
+   * Unlike `token.credentials.revoke()`, this does not require a token address —
+   * useful for wallet disconnect/account-change handlers.
+   *
+   * @example
+   * ```ts
+   * wallet.on("disconnect", () => sdk.revokeSession());
+   * ```
+   */
+  async revokeSession(): Promise<void> {
+    const cm = new CredentialsManager({
+      sdk: this.relayer,
+      signer: this.signer,
+      storage: this.storage,
+      sessionStorage: this.sessionStorage,
+      durationDays: 1, // irrelevant for revoke
+      onEvent: this.#onEvent,
+    });
+    await cm.revoke();
+  }
+
+  /**
    * Terminate the relayer backend and clean up resources.
    * Call this when the SDK is no longer needed (e.g. on unmount or shutdown).
    */
   terminate(): void {
+    this.#unsubscribeSigner?.();
     this.relayer.terminate();
   }
 }

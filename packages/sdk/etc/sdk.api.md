@@ -12476,6 +12476,7 @@ export interface GenericSigner {
     getChainId(): Promise<number>;
     readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    subscribe?(callbacks: SignerLifecycleCallbacks): () => void;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
 }
@@ -22319,6 +22320,12 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.ShieldSubmitted;
+}
+
+// @public
+export interface SignerLifecycleCallbacks {
+    onAccountChange?: (newAddress: Address) => void;
+    onDisconnect?: () => void;
 }
 
 // @public
@@ -32933,6 +32940,7 @@ export class ZamaSDK {
     createToken(address: Address, wrapper?: Address): Token;
     // (undocumented)
     readonly relayer: RelayerSDK;
+    revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
     // (undocumented)

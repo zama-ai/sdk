@@ -128,7 +128,7 @@ export class CredentialsManager {
           } else {
             // No session signature — need to re-sign
             if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
-              const signature = await this.#reSign(encrypted);
+              const signature = await this.#sign(encrypted);
               await this.#sessionStorage.set(storeKey, signature);
               const creds = await this.#decryptCredentials(encrypted, signature);
               this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
@@ -293,7 +293,7 @@ export class CredentialsManager {
     return requiredContracts.every((addr) => signedSet.has(addr.toLowerCase()));
   }
 
-  async #reSign(encrypted: EncryptedCredentials): Promise<string> {
+  async #sign(encrypted: EncryptedCredentials): Promise<string> {
     const eip712 = await this.#sdk.createEIP712(
       encrypted.publicKey,
       encrypted.contractAddresses,

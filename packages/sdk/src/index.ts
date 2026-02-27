@@ -54,7 +54,7 @@ export { ZERO_HANDLE } from "./token/readonly-token";
 export { MemoryStorage, memoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { ChromeSessionStorage, chromeSessionStorage } from "./token/chrome-session-storage";
-export { CredentialsManager } from "./token/credential-manager";
+export { CredentialsManager } from "./token/credentials-manager";
 export {
   savePendingUnshield,
   loadPendingUnshield,
@@ -65,6 +65,7 @@ export type {
   Hex,
   GenericSigner,
   GenericStorage,
+  SignerLifecycleCallbacks,
   StoredCredentials,
   ContractCallConfig,
   TransactionReceipt,

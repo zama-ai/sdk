@@ -36,6 +36,14 @@ export interface ContractCallConfig {
   readonly gas?: bigint;
 }
 
+/** Callbacks for signer lifecycle events (wallet disconnect, account switch). */
+export interface SignerLifecycleCallbacks {
+  /** Called when the wallet disconnects. */
+  onDisconnect?: () => void;
+  /** Called when the active account changes. */
+  onAccountChange?: (newAddress: Address) => void;
+}
+
 /**
  * Framework-agnostic signer interface.
  * Wallet devs implement this with their library of choice.
@@ -56,6 +64,12 @@ export interface GenericSigner {
   ): Promise<T>;
   /** Wait for a transaction to be mined and return its receipt. */
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+  /**
+   * Subscribe to wallet lifecycle events (disconnect, account change).
+   * Returns an unsubscribe function. Optional — only signers with first-class
+   * event support (e.g. `WagmiSigner`) implement this.
+   */
+  subscribe?(callbacks: SignerLifecycleCallbacks): () => void;
 }
 
 /** Pluggable key-value store for persisting FHE credentials. */
