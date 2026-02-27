@@ -26,7 +26,7 @@ The SDK handles all the FHE complexity for you: key generation, encryption, decr
 - **Shield (wrap)** — Deposit public ERC-20 tokens into their confidential counterpart. Your balance becomes encrypted.
 - **Confidential transfer** — Send tokens to another address. The amount is encrypted — only sender and recipient can see it.
 - **Unshield (unwrap + finalize)** — Withdraw confidential tokens back to public ERC-20. Orchestrates the two on-chain steps (unwrap request, then finalize with a decryption proof) in a single call.
-- **Balance decryption** — Decrypt your own balance using FHE credentials stored locally.
+- **Balance decryption** — Decrypt your own balance using FHE credentials stored locally. Decrypted values are cached in storage, so page reloads are instant.
 
 ## Quick Start
 
@@ -622,18 +622,19 @@ The token is refreshed before each encrypt/decrypt call.
 
 ## Troubleshooting
 
-| Symptom                                         | Root Cause                                  | Fix                                                                                                                            |
-| ----------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `SigningRejectedError` on every decrypt         | Wallet rejected the EIP-712 signature       | Ensure the wallet supports `eth_signTypedData_v4`. Some hardware wallets require a firmware update.                            |
-| Balance stuck at `undefined`                    | Encrypted handle is `0x000...` (no balance) | Check that the user has shielded tokens first. A zero handle means nothing to decrypt.                                         |
-| `EncryptionFailedError`                         | Web Worker failed to load WASM bundle       | Check CSP headers — the worker loads WASM from a CDN. Ensure `wasm-unsafe-eval` is allowed.                                    |
-| `DecryptionFailedError` after page reload       | Unshield interrupted mid-flow               | Use `loadPendingUnshield()` on mount to detect and `resumeUnshield()` to complete the finalize step.                           |
-| Duplicate wallet popups                         | Credentials not cached or expired           | Call `useAuthorizeAll(tokenAddresses)` once on load to batch-authorize all tokens in a single signature.                       |
-| `TransactionRevertedError` on unshield finalize | Unwrap event not found or already finalized | Check the unwrap tx hash — if the tx was already finalized, clear the pending state with `clearPendingUnshield()`.             |
-| Balance not updating after transfer             | Handle polling interval too long            | Mutation hooks auto-invalidate caches, but if using direct contract calls, manually invalidate `confidentialBalanceQueryKeys`. |
-| `"Cannot find module @zama-fhe/sdk"`            | Missing or unbuilt dependency               | Run `pnpm build` from the monorepo root — `react-sdk` depends on built `sdk` output.                                           |
-| React hydration mismatch                        | Server tried to render FHE hooks            | Add `"use client"` directive to any component using SDK hooks. FHE operations require browser APIs.                            |
-| `RelayerRequestFailedError`                     | Relayer URL unreachable or auth missing     | Verify `relayerUrl` in transport config. If using API key auth, check the `auth` option is set correctly.                      |
+| Symptom                                         | Root Cause                                  | Fix                                                                                                                                               |
+| ----------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` on every decrypt         | Wallet rejected the EIP-712 signature       | Ensure the wallet supports `eth_signTypedData_v4`. Some hardware wallets require a firmware update.                                               |
+| Balance stuck at `undefined`                    | Encrypted handle is `0x000...` (no balance) | Check that the user has shielded tokens first. A zero handle means nothing to decrypt.                                                            |
+| `EncryptionFailedError`                         | Web Worker failed to load WASM bundle       | Check CSP headers — the worker loads WASM from a CDN. Ensure `wasm-unsafe-eval` is allowed.                                                       |
+| `DecryptionFailedError` after page reload       | Unshield interrupted mid-flow               | Use `loadPendingUnshield()` on mount to detect and `resumeUnshield()` to complete the finalize step.                                              |
+| Duplicate wallet popups                         | Credentials not cached or expired           | Call `useAuthorizeAll(tokenAddresses)` once on load to batch-authorize all tokens in a single signature.                                          |
+| `TransactionRevertedError` on unshield finalize | Unwrap event not found or already finalized | Check the unwrap tx hash — if the tx was already finalized, clear the pending state with `clearPendingUnshield()`.                                |
+| Balance not updating after transfer             | Handle polling interval too long            | Mutation hooks auto-invalidate caches, but if using direct contract calls, manually invalidate `confidentialBalanceQueryKeys`.                    |
+| "Decrypting..." spinner on every page reload    | Storage backend not persisting              | Decrypted balances are cached in storage. Ensure you're using `indexedDBStorage` (browser) or `asyncLocalStorage` (Node.js), not `memoryStorage`. |
+| `"Cannot find module @zama-fhe/sdk"`            | Missing or unbuilt dependency               | Run `pnpm build` from the monorepo root — `react-sdk` depends on built `sdk` output.                                                              |
+| React hydration mismatch                        | Server tried to render FHE hooks            | Add `"use client"` directive to any component using SDK hooks. FHE operations require browser APIs.                                               |
+| `RelayerRequestFailedError`                     | Relayer URL unreachable or auth missing     | Verify `relayerUrl` in transport config. If using API key auth, check the `auth` option is set correctly.                                         |
 
 ## Development
 

@@ -55,6 +55,16 @@ const balance = await token.balanceOf();
 const balance = await token.balanceOf("0xOwnerAddress");
 ```
 
+### Balance caching
+
+Decrypted balances are automatically cached in your storage backend (IndexedDB, async local storage, etc.). This means:
+
+- **No spinner on page reload** — if a balance was previously decrypted, it's returned instantly from cache instead of re-running the 2–5 second FHE decryption.
+- **Automatic invalidation** — the cache key includes the on-chain encrypted handle, so when a transfer, shield, or unshield changes the balance, the old cache entry is naturally bypassed (no TTL needed).
+- **Best-effort** — cache reads and writes never throw. If storage is unavailable, the SDK falls back to a fresh decryption silently.
+
+The cache is keyed by `token address + owner address + encrypted handle`. This applies to `balanceOf()`, `decryptBalance()`, and `batchDecryptBalances()`.
+
 ### Working with raw handles
 
 If you need the encrypted handle without decrypting:
