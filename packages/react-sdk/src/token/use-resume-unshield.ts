@@ -67,13 +67,10 @@ export function useResumeUnshield(
 
   return useMutation<TransactionResult, Error, ResumeUnshieldParams, Address>({
     mutationKey: ["resumeUnshield", config.tokenAddress],
-    mutationFn: async ({ unwrapTxHash, callbacks }) => {
-      const result = await token.resumeUnshield(unwrapTxHash, callbacks);
-      await clearPendingUnshield(sdk.storage, wrapperAddress);
-      return result;
-    },
+    mutationFn: ({ unwrapTxHash, callbacks }) => token.resumeUnshield(unwrapTxHash, callbacks),
     ...options,
-    onSuccess: (data, variables, onMutateResult, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
+      await clearPendingUnshield(sdk.storage, wrapperAddress);
       context.client.invalidateQueries({
         queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
       });
