@@ -7209,6 +7209,9 @@ export class CredentialsManager {
     get(contractAddress: Address): Promise<StoredCredentials>;
     getAll(contractAddresses: Address[]): Promise<StoredCredentials>;
     isExpired(contractAddress?: Address): Promise<boolean>;
+    isUnlocked(): Promise<boolean>;
+    lock(): void;
+    unlock(contractAddresses?: Address[]): Promise<void>;
 }
 
 // @public
@@ -19341,6 +19344,7 @@ export interface RelayerWebConfig {
     logger?: GenericLogger;
     // Warning: (ae-forgotten-export) The symbol "RelayerWebSecurityConfig" needs to be exported by the entry point index.d.ts
     security?: RelayerWebSecurityConfig;
+    threads?: number;
     // (undocumented)
     transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
 }
@@ -32931,8 +32935,11 @@ export interface ZamaSDKConfig {
     storage: GenericStringStorage;
 }
 
+// Warning: (ae-forgotten-export) The symbol "CredentialsLockedEvent" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "CredentialsUnlockedEvent" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsLockedEvent | CredentialsUnlockedEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -32947,6 +32954,8 @@ export const ZamaSDKEvents: {
     readonly CredentialsExpired: "credentials:expired";
     readonly CredentialsCreating: "credentials:creating";
     readonly CredentialsCreated: "credentials:created";
+    readonly CredentialsLocked: "credentials:locked";
+    readonly CredentialsUnlocked: "credentials:unlocked";
     readonly EncryptStart: "encrypt:start";
     readonly EncryptEnd: "encrypt:end";
     readonly EncryptError: "encrypt:error";
