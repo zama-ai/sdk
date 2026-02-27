@@ -225,10 +225,9 @@ describe("ReadonlyToken", () => {
         }),
       ).rejects.toThrow(DecryptionFailedError);
 
-      // Reset mocks for second assertion
-      vi.mocked(sdk.userDecrypt)
-        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
-        .mockRejectedValueOnce(new Error("decrypt failed"));
+      // Reset mocks for second assertion — token's result is now cached,
+      // so only token2 will call userDecrypt.
+      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(
         ReadonlyToken.batchDecryptBalances([token, token2], {
