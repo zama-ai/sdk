@@ -40,6 +40,24 @@ const relayer = new RelayerWeb({
 
 `getChainId` is called lazily — the relayer initializes (or re-initializes) its worker when the chain changes.
 
+**Multi-threaded FHE (optional):**
+
+By default, WASM FHE runs single-threaded inside the Web Worker. Pass `threads` to enable parallel FHE operations via `wasm-bindgen-rayon` and `SharedArrayBuffer`:
+
+```ts
+const relayer = new RelayerWeb({
+  // ...transports
+  threads: navigator.hardwareConcurrency, // or a fixed number like 4
+});
+```
+
+> **Requirement:** The page must be served with [COOP/COEP headers](https://web.dev/articles/coop-coep) for `SharedArrayBuffer` to be available:
+>
+> ```
+> Cross-Origin-Opener-Policy: same-origin
+> Cross-Origin-Embedder-Policy: require-corp
+> ```
+
 **Security options:**
 
 ```ts

@@ -314,12 +314,13 @@ const sdk = new ZamaSDK({
 
 ### `RelayerWebConfig` (browser)
 
-| Field        | Type                                  | Description                                                                                  |
-| ------------ | ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `getChainId` | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.   |
-| `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses). |
-| `security`   | `RelayerWebSecurityConfig`            | Optional. Security options (see below).                                                      |
-| `logger`     | `GenericLogger`                       | Optional. Logger for worker lifecycle and request timing.                                    |
+| Field        | Type                                  | Description                                                                                           |
+| ------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `getChainId` | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.            |
+| `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses).          |
+| `security`   | `RelayerWebSecurityConfig`            | Optional. Security options (see below).                                                               |
+| `logger`     | `GenericLogger`                       | Optional. Logger for worker lifecycle and request timing.                                             |
+| `threads`    | `number`                              | Optional. WASM thread count for parallel FHE ops via `SharedArrayBuffer`. Requires COOP/COEP headers. |
 
 #### `RelayerWebSecurityConfig`
 
