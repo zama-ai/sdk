@@ -1,6 +1,7 @@
 import { WRAPPER_ABI } from "../abi/wrapper.abi";
 import type { Address } from "../relayer/relayer-sdk.types";
 import { assertAddress } from "../utils";
+import { FHE_GAS_LIMIT } from "./gas";
 
 /**
  * Returns the contract config for finalizing an unwrap.
@@ -24,6 +25,7 @@ export function finalizeUnwrapContract(
     abi: WRAPPER_ABI,
     functionName: "finalizeUnwrap",
     args: [burntAmount, burntAmountCleartext, decryptionProof],
+    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -63,6 +65,7 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
     abi: WRAPPER_ABI,
     functionName: "wrap",
     args: [to, amount],
+    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -90,5 +93,6 @@ export function wrapETHContract(
     functionName: "wrapETH",
     args: [to, amount],
     value,
+    gas: FHE_GAS_LIMIT,
   } as const;
 }

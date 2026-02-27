@@ -93,8 +93,13 @@ export class RelayerWeb implements RelayerSDK {
   }
 
   async #ensureWorkerInner(): Promise<RelayerWorkerClient> {
+    // Auto-restart after terminate() — supports React StrictMode's
+    // unmount→remount cycle and HMR without permanently killing the worker.
     if (this.#terminated) {
-      throw new EncryptionFailedError("RelayerWeb has been terminated");
+      this.#terminated = false;
+      this.#workerClient = null;
+      this.#initPromise = null;
+      this.#resolvedChainId = null;
     }
 
     const chainId = await this.#config.getChainId();
