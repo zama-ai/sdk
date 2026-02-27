@@ -37,6 +37,7 @@ const relayer = new RelayerWeb({
     },
   },
   security: { integrityCheck: !isHardhat },
+  threads: Math.min(navigator.hardwareConcurrency, 8),
 });
 
 const storage = new MemoryStorage();
