@@ -120,7 +120,7 @@ Maintainer requirements:
 - Configure branch protection on `main` to require both `Vitest` and `Playwright` checks before merge.
 - Configure branch protection on `prerelease` with the same required checks.
 - Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` workflow.
-- Keep npm provenance enabled in CI (`NPM_CONFIG_PROVENANCE=true`).
+- Trusted publishing is active; npm provenance is intentionally disabled while the repository visibility is internal (`NPM_CONFIG_PROVENANCE=false`). Re-enable provenance when the repository is public.
 
 ## Architecture Guidelines
 
