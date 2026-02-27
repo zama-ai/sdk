@@ -48,3 +48,5 @@ export {
 } from "./fee-manager";
 
 export { confidentialBatchTransferContract, type BatchTransferData } from "./transfer-batcher";
+
+export { FHE_GAS_LIMIT } from "./gas";
