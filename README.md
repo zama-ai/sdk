@@ -1,11 +1,11 @@
 # Zama SDK
 
-[![npm](https://img.shields.io/npm/v/@zama-fhe/sdk)](https://www.npmjs.com/package/@zama-fhe/sdk)
-[![Vitest](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml/badge.svg?branch=main)](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml)
-[![Playwright](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml/badge.svg?branch=main)](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml)
-[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+![Latest dev release](https://img.shields.io/npm/v/%40zama-fhe%2Fsdk/alpha?label=dev%20release)
+![Latest dev release last updated](https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/alpha)
+![NPM License](https://img.shields.io/npm/l/%40zama-fhe%2Fsdk)
+![GitHub Actions Workflow Status - Tests](https://img.shields.io/github/actions/workflow/status/zama-ai/sdk/test.yml?branch=main&label=tests)
 
-TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homomorphic Encryption](https://www.zama.ai/fhevm) (Zama fhEVM). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
+TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homomorphic Encryption on Zama Protocol](https://docs.zama.org/protocol/protocol/overview). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
 
 ## Packages
 
@@ -39,6 +39,18 @@ pnpm add @zama-fhe/sdk
 
 # React hooks
 pnpm add @zama-fhe/react-sdk @tanstack/react-query
+```
+
+### Read extended documentation
+
+Temporary solution for reading extended documentation that will eventually be published to on docs.zama.org (Gitbook):
+
+```bash
+# Install dependencies
+pnpm install
+
+# Serve docs
+pnpm docs:preview
 ```
 
 ### React with wagmi
@@ -626,7 +638,7 @@ The token is refreshed before each encrypt/decrypt call.
 
 ### Prerequisites
 
-- Node.js >= 20
+- Node.js >= 22
 - pnpm >= 10
 
 ### Setup
@@ -664,6 +676,29 @@ pnpm e2e:test          # Run E2E tests (auto-starts hardhat + next dev)
 pnpm e2e:test:ui       # Playwright UI mode
 ```
 
+## Release Process
+
+This repository uses [semantic-release](https://semantic-release.gitbook.io/semantic-release/) as the release mechanism.
+
+- `@zama-fhe/sdk` and `@zama-fhe/react-sdk` release in lockstep and always share the same version.
+- `main` publishes stable releases to npm `latest` (for example `1.4.0`).
+- `prerelease` publishes prereleases to npm `alpha` (for example `1.5.0-alpha.2`).
+- Versions are auto-calculated from Conventional Commit messages on both release branches.
+- PR titles must follow Conventional Commits because squash merges use PR titles as commit messages.
+- On pushes to either release branch, the workflow publishes to npm and creates GitHub releases/tags automatically.
+- Publishing uses npm trusted publishing (OIDC) from GitHub Actions (no npm token-based auth).
+
+Install examples:
+
+- Stable: `npm i @zama-fhe/sdk`
+- Prerelease: `npm i @zama-fhe/sdk@alpha`
+
+Release prerequisites:
+
+- Branch protection on `main` should require both `Vitest` and `Playwright`.
+- Branch protection on `prerelease` should require the same checks as `main`.
+- Maintainers must configure npm trusted publishers for both `@zama-fhe/sdk` and `@zama-fhe/react-sdk` using this repository and `release.yml`.
+
 ## License
 
-[BSD-3-Clause](./LICENSE)
+[BSD-3-Clause-Clear](./LICENSE)
