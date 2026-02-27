@@ -11,6 +11,8 @@ jobs:
   delete-caches:
     name: "Delete Actions caches"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: "Wipe Github Actions cache"
