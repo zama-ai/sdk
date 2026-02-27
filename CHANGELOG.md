@@ -8,7 +8,6 @@
 
 - add API key auth and mainnet support to examples ([189f6c1](https://github.com/zama-ai/sdk/commit/189f6c1b06d3dcbe82d38b4575cf0c27b24999fc))
 - add CDN URL validation and simplify worker global scope typing ([b1f8362](https://github.com/zama-ai/sdk/commit/b1f8362a770f1628d589722522f55fe7604230d7))
-- add CredentialsLocked/Unlocked events ([dd14c06](https://github.com/zama-ai/sdk/commit/dd14c0654bffb33aa8d116d2f65aa33cb58562e1))
 - add E2E test app with Playwright tests and CI pipeline ([e0b316f](https://github.com/zama-ai/sdk/commit/e0b316f4f4b2b09a6451230828bf95675446dd36))
 - add E2E tests for approve, transfer-from, unshield-all, unwrap, FHE relayer, and wrapper discovery hooks ([a242d7a](https://github.com/zama-ai/sdk/commit/a242d7ac64b3ba14d379df14d0d73271301e0fd0))
 - add example projects and make EthersSigner accept BrowserProvider ([2690388](https://github.com/zama-ai/sdk/commit/26903888b8cfca5f32d8ae0c8c71e91a271bc7c3))
@@ -16,7 +15,6 @@
 - add Hex type, missing hooks, DX improvements, and bug fixes ([9db28b1](https://github.com/zama-ai/sdk/commit/9db28b18bddec8648f3f02fabd692fa03e1d3015))
 - add Hex type, wagmi suspense hooks, error tests, and community docs ([3c68206](https://github.com/zama-ai/sdk/commit/3c682064497d1f5bc535fd50bfac617488e741b2))
 - add lazy chain ID resolution and auto re-init on chain switch ([0dca351](https://github.com/zama-ai/sdk/commit/0dca351b1168afb1d1cca6f225e7b58ad0b16392))
-- add lock/unlock/isUnlocked API for session signature management ([bde2896](https://github.com/zama-ai/sdk/commit/bde289655ae93ae12703f2405e118e4f376efa4d))
 - add maxConcurrency option to batch decrypt and event emission tests ([c4cfc29](https://github.com/zama-ai/sdk/commit/c4cfc29552111d158eaf870257b8bdaa22ec7b07))
 - add NodeWorkerPool with least-connections scheduling ([2e9ec8c](https://github.com/zama-ai/sdk/commit/2e9ec8c4fca3f76f05965f5516bbd9ff1c8d0f1f))
 - add PR coverage reporting and bump thresholds to 80% ([fd8833b](https://github.com/zama-ai/sdk/commit/fd8833b17ff6fc57a3b672ec8dd48ab6819a61a5))
