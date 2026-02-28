@@ -4,6 +4,7 @@ import {
   ZamaErrorCode,
   InvalidCredentialsError,
   NoCiphertextError,
+  SignerRequiredError,
   RelayerRequestFailedError,
   SigningRejectedError,
   EncryptionFailedError,
@@ -42,6 +43,16 @@ describe("NoCiphertextError", () => {
     const err = new NoCiphertextError("no ciphertext");
     expect(err.code).toBe(ZamaErrorCode.NoCiphertext);
     expect(err.name).toBe("NoCiphertextError");
+  });
+});
+
+describe("SignerRequiredError", () => {
+  it("has correct code and name", () => {
+    const error = new SignerRequiredError("No signer connected");
+    expect(error).toBeInstanceOf(ZamaError);
+    expect(error.code).toBe("SIGNER_REQUIRED");
+    expect(error.name).toBe("SignerRequiredError");
+    expect(error.message).toBe("No signer connected");
   });
 });
 

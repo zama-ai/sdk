@@ -104,5 +104,6 @@ export {
   TransactionRevertedError,
   InvalidCredentialsError,
   NoCiphertextError,
+  SignerRequiredError,
   RelayerRequestFailedError,
 } from "./errors";

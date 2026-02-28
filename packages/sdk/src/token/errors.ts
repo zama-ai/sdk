@@ -34,6 +34,8 @@ export const ZamaErrorCode = {
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
   RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
+  /** No wallet signer connected. */
+  SignerRequired: "SIGNER_REQUIRED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -124,6 +126,14 @@ export class NoCiphertextError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
     super(ZamaErrorCode.NoCiphertext, message, options);
     this.name = "NoCiphertextError";
+  }
+}
+
+/** No wallet signer connected. Connect a wallet before calling write operations. */
+export class SignerRequiredError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.SignerRequired, message, options);
+    this.name = "SignerRequiredError";
   }
 }
 

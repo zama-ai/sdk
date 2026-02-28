@@ -13,8 +13,8 @@ import { createContext, type PropsWithChildren, useContext, useEffect, useMemo }
 interface ZamaProviderProps extends PropsWithChildren {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
   relayer: RelayerSDK;
-  /** Wallet signer (ViemSigner, EthersSigner, or custom GenericSigner). */
-  signer: GenericSigner;
+  /** Wallet signer (ViemSigner, EthersSigner, or custom GenericSigner). Optional — can connect later. */
+  signer?: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
   storage: GenericStringStorage;
   /** Number of days credentials remain valid (default: relayer default). */
@@ -53,8 +53,14 @@ export function ZamaProvider({
         credentialDurationDays,
         onEvent,
       }),
-    [relayer, signer, storage, credentialDurationDays, onEvent],
+    [relayer, storage, credentialDurationDays, onEvent],
   );
+
+  useEffect(() => {
+    if (signer) {
+      sdk.setSigner(signer);
+    }
+  }, [sdk, signer]);
 
   useEffect(() => {
     return () => sdk.terminate();

@@ -5,13 +5,14 @@ import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
+import { SignerRequiredError } from "./errors";
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
   relayer: RelayerSDK;
-  /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
-  signer: GenericSigner;
+  /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). Optional — can be set later via {@link ZamaSDK.setSigner}. */
+  signer?: GenericSigner;
   /** Credential storage backend (`IndexedDBStorage` for browser, `MemoryStorage` for tests). */
   storage: GenericStringStorage;
   /** Number of days FHE credentials remain valid. Default: `1`. Set `0` to require a wallet signature on every decrypt (high-security mode). */
@@ -26,17 +27,44 @@ export interface ZamaSDKConfig {
  */
 export class ZamaSDK {
   readonly relayer: RelayerSDK;
-  readonly signer: GenericSigner;
   readonly storage: GenericStringStorage;
   readonly #credentialDurationDays: number | undefined;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
+  #signer: GenericSigner | undefined;
+
+  /** The currently connected wallet signer, if any. */
+  get signer(): GenericSigner | undefined {
+    return this.#signer;
+  }
+
   constructor(config: ZamaSDKConfig) {
     this.relayer = config.relayer;
-    this.signer = config.signer;
+    this.#signer = config.signer;
     this.storage = config.storage;
     this.#credentialDurationDays = config.credentialDurationDays;
     this.#onEvent = config.onEvent;
+  }
+
+  /**
+   * Set or replace the wallet signer after construction.
+   * Useful in React when the wallet connects after the SDK is created.
+   */
+  setSigner(signer: GenericSigner): void {
+    this.#signer = signer;
+  }
+
+  /**
+   * Return the current signer or throw {@link SignerRequiredError}.
+   * Call this before any operation that requires a wallet.
+   */
+  requireSigner(): GenericSigner {
+    if (!this.#signer) {
+      throw new SignerRequiredError(
+        "No wallet signer connected. Connect a wallet before calling write operations.",
+      );
+    }
+    return this.#signer;
   }
 
   /**
@@ -49,7 +77,7 @@ export class ZamaSDK {
   createReadonlyToken(address: Address): ReadonlyToken {
     return new ReadonlyToken({
       sdk: this.relayer,
-      signer: this.signer,
+      signer: this.requireSigner(),
       storage: this.storage,
       address: normalizeAddress(address, "address"),
       durationDays: this.#credentialDurationDays,
@@ -68,7 +96,7 @@ export class ZamaSDK {
   createToken(address: Address, wrapper?: Address): Token {
     return new Token({
       sdk: this.relayer,
-      signer: this.signer,
+      signer: this.requireSigner(),
       storage: this.storage,
       address: normalizeAddress(address, "address"),
       wrapper: wrapper ? normalizeAddress(wrapper, "wrapper") : undefined,
