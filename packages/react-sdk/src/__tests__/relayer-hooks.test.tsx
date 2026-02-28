@@ -1,14 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { waitFor } from "@testing-library/react";
+import type { Address, RelayerSDKStatus } from "@zama-fhe/sdk";
 import { useGenerateKeypair } from "../relayer/use-generate-keypair";
 import { useCreateEIP712 } from "../relayer/use-create-eip712";
 import { useCreateDelegatedUserDecryptEIP712 } from "../relayer/use-create-delegated-user-decrypt-eip712";
 import { useUserDecryptRaw } from "../relayer/use-user-decrypt-raw";
+import { useUserDecrypt } from "../relayer/use-user-decrypt";
 import { usePublicDecrypt } from "../relayer/use-public-decrypt";
 import { useDelegatedUserDecrypt } from "../relayer/use-delegated-user-decrypt";
 import { useRequestZKProofVerification } from "../relayer/use-request-zk-proof-verification";
 import { useUserDecryptedValue } from "../relayer/use-user-decrypted-value";
 import { useUserDecryptedValues } from "../relayer/use-user-decrypted-values";
+import { useFHEvmStatus } from "../relayer/use-fhevm-status";
 import { decryptionKeys } from "../relayer/decryption-cache";
 import { renderWithProviders, createMockRelayer } from "./test-utils";
 
@@ -236,5 +239,93 @@ describe("useUserDecryptedValues", () => {
     const { result } = renderWithProviders(() => useUserDecryptedValues([]));
     expect(result.current.data).toEqual({});
     expect(result.current.results).toHaveLength(0);
+  });
+});
+
+describe("useUserDecrypt (orchestrated)", () => {
+  it("auto-manages credentials and populates cache", async () => {
+    const relayer = createMockRelayer();
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({
+      "0xhandle1": 100n,
+      "0xhandle2": 200n,
+    });
+
+    const { result, queryClient } = renderWithProviders(() => useUserDecrypt(), { relayer });
+
+    result.current.mutate({
+      handles: [
+        { handle: "0xhandle1", contractAddress: "0xtoken" as Address },
+        { handle: "0xhandle2", contractAddress: "0xtoken" as Address },
+      ],
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // Credential flow: generateKeypair + createEIP712 + signTypedData
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    expect(relayer.createEIP712).toHaveBeenCalledOnce();
+
+    // Decrypt was called with resolved credentials
+    expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        handles: ["0xhandle1", "0xhandle2"],
+        contractAddress: "0xtoken",
+      }),
+    );
+
+    // Check decryption cache was populated
+    expect(queryClient.getQueryData(decryptionKeys.value("0xhandle1"))).toBe(100n);
+    expect(queryClient.getQueryData(decryptionKeys.value("0xhandle2"))).toBe(200n);
+  });
+
+  it("deduplicates contract addresses for credential batching", async () => {
+    const relayer = createMockRelayer();
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({
+      "0xhandle1": 10n,
+      "0xhandle2": 20n,
+    });
+
+    const { result } = renderWithProviders(() => useUserDecrypt(), { relayer });
+
+    result.current.mutate({
+      handles: [
+        { handle: "0xhandle1", contractAddress: "0xtokenA" as Address },
+        { handle: "0xhandle2", contractAddress: "0xtokenA" as Address },
+      ],
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // createEIP712 should receive both contract addresses (deduplicated)
+    expect(relayer.createEIP712).toHaveBeenCalledWith(
+      expect.any(String),
+      ["0xtokenA"],
+      expect.any(Number),
+      expect.any(Number),
+    );
+  });
+});
+
+describe("useFHEvmStatus", () => {
+  it("returns 'ready' for relayers without status tracking", () => {
+    const relayer = createMockRelayer();
+    const { result } = renderWithProviders(() => useFHEvmStatus(), { relayer });
+
+    // Mock relayer doesn't implement getStatus/onStatusChange
+    expect(result.current).toBe("ready");
+  });
+
+  it("returns status from relayer with getStatus", () => {
+    const relayer = createMockRelayer();
+    (relayer as unknown as Record<string, unknown>).getStatus = vi
+      .fn()
+      .mockReturnValue("initializing");
+    (relayer as unknown as Record<string, unknown>).onStatusChange = vi
+      .fn()
+      .mockReturnValue(() => {});
+
+    const { result } = renderWithProviders(() => useFHEvmStatus(), { relayer });
+    expect(result.current).toBe("initializing" as RelayerSDKStatus);
   });
 });

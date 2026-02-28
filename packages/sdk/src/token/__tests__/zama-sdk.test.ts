@@ -3,6 +3,8 @@ import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
+import { CredentialsManager } from "../credential-manager";
+import { SignerRequiredError } from "../errors";
 import type { GenericSigner } from "../token.types";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
@@ -74,5 +76,20 @@ describe("ZamaSDK", () => {
   it("terminate delegates to relayer.terminate", () => {
     sdk.terminate();
     expect(relayer.terminate).toHaveBeenCalledOnce();
+  });
+
+  describe("credentialsManager", () => {
+    it("returns a CredentialsManager instance", () => {
+      const cm = sdk.credentialsManager;
+      expect(cm).toBeInstanceOf(CredentialsManager);
+    });
+
+    it("throws SignerRequiredError when no signer is set", () => {
+      const noSignerSdk = new ZamaSDK({
+        relayer: createMockRelayer(),
+        storage: new MemoryStorage(),
+      });
+      expect(() => noSignerSdk.credentialsManager).toThrow(SignerRequiredError);
+    });
   });
 });
