@@ -7,6 +7,7 @@
 import { ActivityItem } from '@zama-fhe/sdk';
 import { ActivityLogMetadata } from '@zama-fhe/sdk';
 import { Address } from '@zama-fhe/sdk';
+import { BalanceResult } from '@zama-fhe/sdk';
 import { BatchTransferData } from '@zama-fhe/sdk';
 import { EthersSigner } from '@zama-fhe/sdk/ethers';
 import { Hex } from '@zama-fhe/sdk';
@@ -359,7 +360,7 @@ export interface UseConfidentialBalanceOfSuspenseConfig {
 // @public
 export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
-    data: Map<`0x${string}`, bigint>;
+    data: Map<`0x${string}`, BalanceResult>;
     error: Error;
     isError: true;
     isPending: false;
@@ -382,12 +383,12 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, bigint>, Error>>;
+    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, BalanceResult>, Error>>;
     fetchStatus: _tanstack_react_query.FetchStatus;
-    promise: Promise<Map<`0x${string}`, bigint>>;
+    promise: Promise<Map<`0x${string}`, BalanceResult>>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
-    data: Map<`0x${string}`, bigint>;
+    data: Map<`0x${string}`, BalanceResult>;
     error: null;
     isError: false;
     isPending: false;
@@ -410,9 +411,9 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, bigint>, Error>>;
+    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, BalanceResult>, Error>>;
     fetchStatus: _tanstack_react_query.FetchStatus;
-    promise: Promise<Map<`0x${string}`, bigint>>;
+    promise: Promise<Map<`0x${string}`, BalanceResult>>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
     data: undefined;
@@ -438,9 +439,9 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, bigint>, Error>>;
+    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, BalanceResult>, Error>>;
     fetchStatus: _tanstack_react_query.FetchStatus;
-    promise: Promise<Map<`0x${string}`, bigint>>;
+    promise: Promise<Map<`0x${string}`, BalanceResult>>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
     data: undefined;
@@ -466,9 +467,9 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, bigint>, Error>>;
+    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, BalanceResult>, Error>>;
     fetchStatus: _tanstack_react_query.FetchStatus;
-    promise: Promise<Map<`0x${string}`, bigint>>;
+    promise: Promise<Map<`0x${string}`, BalanceResult>>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
     data: undefined;
@@ -494,12 +495,12 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, bigint>, Error>>;
+    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, BalanceResult>, Error>>;
     fetchStatus: _tanstack_react_query.FetchStatus;
-    promise: Promise<Map<`0x${string}`, bigint>>;
+    promise: Promise<Map<`0x${string}`, BalanceResult>>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
-    data: Map<`0x${string}`, bigint>;
+    data: Map<`0x${string}`, BalanceResult>;
     isError: false;
     error: null;
     isPending: false;
@@ -522,9 +523,9 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, bigint>, Error>>;
+    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<Map<`0x${string}`, BalanceResult>, Error>>;
     fetchStatus: _tanstack_react_query.FetchStatus;
-    promise: Promise<Map<`0x${string}`, bigint>>;
+    promise: Promise<Map<`0x${string}`, BalanceResult>>;
 };
 
 // @public (undocumented)

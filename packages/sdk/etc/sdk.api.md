@@ -225,6 +225,15 @@ export function balanceOfContract(tokenAddress: Address, account: Address): {
     readonly args: readonly [`0x${string}`];
 };
 
+// @public
+export type BalanceResult = {
+    status: "success";
+    value: bigint;
+} | {
+    status: "error";
+    error: Error;
+};
+
 // @public (undocumented)
 export const BATCH_SWAP_ABI: readonly [{
     readonly inputs: readonly [{
@@ -7247,6 +7256,15 @@ export function decimalsContract(tokenAddress: Address): {
 export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEvent | null;
 
 // @public
+export function decodeDecryptedValue(value: bigint, type: "bool"): boolean;
+
+// @public (undocumented)
+export function decodeDecryptedValue(value: bigint, type: "address"): Address;
+
+// @public (undocumented)
+export function decodeDecryptedValue(value: bigint, type: FheType): bigint | boolean | Address;
+
+// @public
 export function decodeOnChainEvent(log: RawLog): OnChainEvent | null;
 
 // @public
@@ -8844,6 +8862,18 @@ export interface EIP712TypedData {
     };
 }
 
+// @public
+export type EncryptableValue = {
+    type: "bool";
+    value: boolean;
+} | {
+    type: "address";
+    value: Address;
+} | {
+    type: "uint8" | "uint16" | "uint32" | "uint64" | "uint128" | "uint256";
+    value: bigint;
+};
+
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -10339,7 +10369,7 @@ export interface EncryptParams {
     // (undocumented)
     userAddress: Address;
     // (undocumented)
-    values: bigint[];
+    values: EncryptableValue[];
 }
 
 // @public
@@ -10996,6 +11026,9 @@ export interface FHEKeypair {
     // (undocumented)
     publicKey: string;
 }
+
+// @public
+export type FheType = "bool" | "uint8" | "uint16" | "uint32" | "uint64" | "uint128" | "uint256" | "address";
 
 export { FhevmInstanceConfig }
 
@@ -19239,7 +19272,7 @@ export class ReadonlyToken {
     authorize(): Promise<void>;
     static authorizeAll(tokens: ReadonlyToken[]): Promise<void>;
     balanceOf(owner?: Address): Promise<bigint>;
-    static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
+    static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, BalanceResult>>;
     confidentialBalanceOf(owner?: Address): Promise<Address>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
@@ -19296,6 +19329,8 @@ export interface RelayerSDK {
         publicParams: Uint8Array;
         publicParamsId: string;
     } | null>;
+    getStatus?(): RelayerSDKStatus;
+    onStatusChange?(listener: (status: RelayerSDKStatus) => void): () => void;
     publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
@@ -19321,6 +19356,10 @@ export class RelayerWeb implements RelayerSDK {
         publicParams: Uint8Array;
         publicParamsId: string;
     } | null>;
+    // (undocumented)
+    getStatus(): RelayerSDKStatus;
+    // (undocumented)
+    onStatusChange(listener: (status: RelayerSDKStatus) => void): () => void;
     publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
@@ -22285,12 +22324,23 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
     readonly args: readonly [`0x${string}`, number];
 };
 
+// @public
+export interface ShieldCallbacks {
+    onApprovalSubmitted?: (txHash: Hex) => void;
+    onShieldSubmitted?: (txHash: Hex) => void;
+}
+
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
     // (undocumented)
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.ShieldSubmitted;
+}
+
+// @public
+export class SignerRequiredError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
 }
 
 // @public
@@ -22381,11 +22431,13 @@ export class Token extends ReadonlyToken {
     confidentialTransfer(to: Address, amount: bigint): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint): Promise<TransactionResult>;
     finalizeUnwrap(burnAmountHandle: Address): Promise<TransactionResult>;
-    isApproved(spender: Address): Promise<boolean>;
+    isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint;
+        to?: Address;
+        callbacks?: ShieldCallbacks;
     }): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
     unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
@@ -32889,6 +32941,7 @@ export const ZamaErrorCode: {
     readonly InvalidCredentials: "INVALID_CREDENTIALS";
     readonly NoCiphertext: "NO_CIPHERTEXT";
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
+    readonly SignerRequired: "SIGNER_REQUIRED";
 };
 
 // @public
@@ -32899,10 +32952,12 @@ export class ZamaSDK {
     constructor(config: ZamaSDKConfig);
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
+    get credentialsManager(): CredentialsManager;
     // (undocumented)
     readonly relayer: RelayerSDK;
-    // (undocumented)
-    readonly signer: GenericSigner;
+    requireSigner(): GenericSigner;
+    setSigner(signer: GenericSigner): void;
+    get signer(): GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStringStorage;
     terminate(): void;
@@ -32913,7 +32968,7 @@ export interface ZamaSDKConfig {
     credentialDurationDays?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
-    signer: GenericSigner;
+    signer?: GenericSigner;
     storage: GenericStringStorage;
 }
 
