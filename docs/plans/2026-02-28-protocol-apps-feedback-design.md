@@ -24,6 +24,7 @@ mutate({
 **Strategy**: Try cached credentials first, prompt for new ones only if missing/expired.
 
 **Internal flow**:
+
 1. Check `CredentialsManager` for cached credentials matching the contract addresses
 2. If valid credentials exist → skip to step 5
 3. If missing/expired → generate keypair via `sdk.relayer.generateKeypair()`
@@ -34,6 +35,7 @@ mutate({
 **Breaking change**: Rename current low-level hook to `useUserDecryptRaw` for advanced users who need manual credential control.
 
 **Files**:
+
 - `packages/react-sdk/src/relayer/use-user-decrypt.ts` — rewrite with orchestration
 - `packages/react-sdk/src/relayer/use-user-decrypt-raw.ts` — move current implementation here
 - `packages/sdk/src/token/credentials-manager.ts` — ensure `getCredentials()` / `hasValidCredentials()` are exposed
@@ -51,11 +53,13 @@ const status = useFHEvmStatus(); // "idle" | "initializing" | "ready" | "error"
 ```
 
 **Implementation**:
+
 - Add `getStatus(): RelayerSDKStatus` method to `RelayerWeb`
 - Add `onStatusChange(listener): () => void` subscription to `RelayerWeb` for reactive updates
 - Hook uses `useSyncExternalStore(subscribe, getSnapshot)` for tear-safe rendering
 
 **Files**:
+
 - `packages/sdk/src/relayer/relayer-web.ts` — add status getter + subscription
 - `packages/react-sdk/src/relayer/use-fhevm-status.ts` — new hook
 - `packages/react-sdk/src/index.ts` — export the hook
@@ -69,6 +73,7 @@ const status = useFHEvmStatus(); // "idle" | "initializing" | "ready" | "error"
 **Design**: Make `signer` optional. Read-only hooks work without signer. Mutation hooks throw `SignerRequiredError` if called without one.
 
 **Changes**:
+
 - `ZamaProviderProps.signer` becomes `signer?: GenericSigner`
 - `ZamaSDKConfig.signer` becomes optional
 - Add `ZamaSDK.setSigner(signer: GenericSigner)` for late binding when wallet connects
@@ -78,6 +83,7 @@ const status = useFHEvmStatus(); // "idle" | "initializing" | "ready" | "error"
 - `Token` constructor accepts optional signer; `ReadonlyToken` paths work without it
 
 **Files**:
+
 - `packages/sdk/src/token/zama-sdk.ts` — optional signer, `setSigner()` method
 - `packages/sdk/src/token/token.ts` — `#requireSigner()` guard on mutations
 - `packages/sdk/src/token/token.types.ts` — update `ZamaSDKConfig`
@@ -102,6 +108,7 @@ interface ShieldCallbacks {
 Add `callbacks?: ShieldCallbacks` to `ShieldParams`. The `Token.shield()` method invokes them at each step.
 
 **Files**:
+
 - `packages/sdk/src/token/token.types.ts` — define `ShieldCallbacks`
 - `packages/sdk/src/token/token.ts` — invoke callbacks in `shield()` and `#ensureAllowance()`
 - `packages/react-sdk/src/token/use-shield.ts` — pass through callbacks
@@ -115,13 +122,27 @@ Add `callbacks?: ShieldCallbacks` to `ShieldParams`. The `Token.shield()` method
 **Design**: Replace `bigint[]` with typed value entries:
 
 ```typescript
-type FheType = "bool" | "uint4" | "uint8" | "uint16" | "uint32" | "uint64"
-             | "uint128" | "uint256" | "address" | "bytes64" | "bytes128" | "bytes256";
+type FheType =
+  | "bool"
+  | "uint4"
+  | "uint8"
+  | "uint16"
+  | "uint32"
+  | "uint64"
+  | "uint128"
+  | "uint256"
+  | "address"
+  | "bytes64"
+  | "bytes128"
+  | "bytes256";
 
 type EncryptableValue =
   | { type: "bool"; value: boolean }
   | { type: "address"; value: Address }
-  | { type: "uint4" | "uint8" | "uint16" | "uint32" | "uint64" | "uint128" | "uint256"; value: bigint }
+  | {
+      type: "uint4" | "uint8" | "uint16" | "uint32" | "uint64" | "uint128" | "uint256";
+      value: bigint;
+    }
   | { type: "bytes64" | "bytes128" | "bytes256"; value: Uint8Array };
 ```
 
@@ -130,6 +151,7 @@ type EncryptableValue =
 **Worker change**: Replace the `add64` loop with a type dispatcher that calls the appropriate `input.addX()` method per entry.
 
 **Files**:
+
 - `packages/sdk/src/relayer/relayer-sdk.types.ts` — define `FheType`, `EncryptableValue`, update `EncryptParams`
 - `packages/sdk/src/worker/relayer-sdk.worker.ts` — type dispatcher replacing `add64` loop
 - `packages/react-sdk/src/relayer/use-encrypt.ts` — updated types flow through
@@ -155,6 +177,7 @@ function decodeDecryptedValue(value: bigint, type: FheType): bigint | boolean | 
 Export from `@zama-fhe/sdk` and re-export from `@zama-fhe/react-sdk`.
 
 **Files**:
+
 - `packages/sdk/src/relayer/decode-decrypted-value.ts` — new utility
 - `packages/sdk/src/index.ts` — export it
 - `packages/react-sdk/src/index.ts` — re-export it
@@ -170,6 +193,7 @@ Export from `@zama-fhe/sdk` and re-export from `@zama-fhe/react-sdk`.
 Pass through to `Token.shield()` → `wrapContract()` call.
 
 **Files**:
+
 - `packages/sdk/src/token/token.types.ts` — add `to?: Address` to `ShieldParams`
 - `packages/sdk/src/token/token.ts` — pass `to` to wrap contract call
 - `packages/sdk/src/contracts/wrapper.ts` — update `wrapContract()` to accept `to`
@@ -204,6 +228,7 @@ In `ReadonlyToken.batchDecryptBalances()`: always use an internal `onError` hand
 The hook-level `data` becomes `Map<Address, BalanceResult>`. Consumers check `result.status` per token.
 
 **Files**:
+
 - `packages/sdk/src/token/readonly-token.ts` — update `batchDecryptBalances` return type
 - `packages/sdk/src/token/token.types.ts` — define `BalanceResult`
 - `packages/react-sdk/src/token/use-confidential-balances.ts` — update types
@@ -224,5 +249,6 @@ interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
 ```
 
 **Files**:
+
 - `packages/react-sdk/src/token/use-confidential-is-approved.ts` — add holder param, pass to `token.isApproved()`
 - `packages/sdk/src/token/token.ts` — ensure `isApproved()` accepts a holder override

@@ -13,6 +13,7 @@
 ### Task 1: Add `SignerRequiredError` to error system
 
 **Files:**
+
 - Modify: `packages/sdk/src/token/errors.ts:36-37` (add error code)
 - Modify: `packages/sdk/src/token/errors.ts:140` (add error class after last error)
 - Modify: `packages/sdk/src/token/token.types.ts:95-108` (re-export new error)
@@ -82,6 +83,7 @@ git commit -m "feat: add SignerRequiredError for optional signer support"
 ### Task 2: Make signer optional in ZamaSDK
 
 **Files:**
+
 - Modify: `packages/sdk/src/token/zama-sdk.ts:10-14` (ZamaSDKConfig), `28-40` (constructor), add `setSigner`
 - Modify: `packages/sdk/src/token/readonly-token.ts:51-64` (ReadonlyTokenConfig), `78-91` (constructor)
 - Test: `packages/sdk/src/token/__tests__/zama-sdk.test.ts`
@@ -134,7 +136,7 @@ In `packages/sdk/src/token/zama-sdk.ts`:
 ```typescript
 export interface ZamaSDKConfig {
   relayer: RelayerSDK;
-  signer?: GenericSigner;   // <-- make optional
+  signer?: GenericSigner; // <-- make optional
   storage: GenericStringStorage;
   credentialDurationDays?: number;
   onEvent?: ZamaSDKEventListener;
@@ -142,7 +144,7 @@ export interface ZamaSDKConfig {
 
 export class ZamaSDK {
   readonly relayer: RelayerSDK;
-  #signer: GenericSigner | undefined;   // <-- mutable
+  #signer: GenericSigner | undefined; // <-- mutable
   readonly storage: GenericStringStorage;
   readonly #credentialDurationDays: number | undefined;
   readonly #onEvent: ZamaSDKEventListener | undefined;
@@ -167,7 +169,9 @@ export class ZamaSDK {
   /** Require a signer, throwing SignerRequiredError if none is set. */
   requireSigner(): GenericSigner {
     if (!this.#signer) {
-      throw new SignerRequiredError("No wallet signer connected. Call setSigner() or pass signer to ZamaSDK.");
+      throw new SignerRequiredError(
+        "No wallet signer connected. Call setSigner() or pass signer to ZamaSDK.",
+      );
     }
     return this.#signer;
   }
@@ -220,6 +224,7 @@ git commit -m "feat: make signer optional in ZamaSDK with setSigner() for late b
 ### Task 3: Update ZamaProvider for optional signer
 
 **Files:**
+
 - Modify: `packages/react-sdk/src/provider.tsx:13-24` (props), `39-64` (component)
 
 **Step 1: Implement optional signer in provider**
@@ -229,7 +234,7 @@ In `packages/react-sdk/src/provider.tsx`:
 ```typescript
 interface ZamaProviderProps extends PropsWithChildren {
   relayer: RelayerSDK;
-  signer?: GenericSigner;   // <-- optional
+  signer?: GenericSigner; // <-- optional
   storage: GenericStringStorage;
   credentialDurationDays?: number;
   onEvent?: ZamaSDKEventListener;
@@ -293,6 +298,7 @@ git commit -m "feat: make signer optional in ZamaProvider"
 ### Task 4: Define FHE types and EncryptableValue
 
 **Files:**
+
 - Modify: `packages/sdk/src/relayer/relayer-sdk.types.ts:53-58` (EncryptParams)
 - Test: `packages/sdk/src/relayer/__tests__/encrypt-types.test.ts` (new)
 
@@ -312,7 +318,10 @@ describe("EncryptableValue type system", () => {
   });
 
   it("accepts address values", () => {
-    const val: EncryptableValue = { type: "address", value: "0x1111111111111111111111111111111111111111" };
+    const val: EncryptableValue = {
+      type: "address",
+      value: "0x1111111111111111111111111111111111111111",
+    };
     expect(val.type).toBe("address");
   });
 
@@ -342,16 +351,26 @@ In `packages/sdk/src/relayer/relayer-sdk.types.ts`, add before `EncryptParams` (
 /** All FHE encrypted types supported by the relayer SDK. */
 export type FheType =
   | "bool"
-  | "uint4" | "uint8" | "uint16" | "uint32" | "uint64"
-  | "uint128" | "uint256"
+  | "uint4"
+  | "uint8"
+  | "uint16"
+  | "uint32"
+  | "uint64"
+  | "uint128"
+  | "uint256"
   | "address"
-  | "bytes64" | "bytes128" | "bytes256";
+  | "bytes64"
+  | "bytes128"
+  | "bytes256";
 
 /** A typed value for FHE encryption. */
 export type EncryptableValue =
   | { type: "bool"; value: boolean }
   | { type: "address"; value: Address }
-  | { type: "uint4" | "uint8" | "uint16" | "uint32" | "uint64" | "uint128" | "uint256"; value: bigint }
+  | {
+      type: "uint4" | "uint8" | "uint16" | "uint32" | "uint64" | "uint128" | "uint256";
+      value: bigint;
+    }
   | { type: "bytes64" | "bytes128" | "bytes256"; value: Uint8Array };
 ```
 
@@ -394,6 +413,7 @@ git commit -m "feat: define FheType and EncryptableValue for typed encryption"
 ### Task 5: Update worker to dispatch typed encryption
 
 **Files:**
+
 - Modify: `packages/sdk/src/worker/relayer-sdk.worker.ts:301-314` (handleEncrypt)
 
 **Step 1: Update the worker encrypt handler**
@@ -480,6 +500,7 @@ git commit -m "feat: support all FHE types in encrypt (bool, address, uint4-256,
 ### Task 6: Add decodeDecryptedValue utility
 
 **Files:**
+
 - Create: `packages/sdk/src/relayer/decode-decrypted-value.ts`
 - Test: `packages/sdk/src/relayer/__tests__/decode-decrypted-value.test.ts` (new)
 
@@ -588,6 +609,7 @@ git commit -m "feat: add decodeDecryptedValue utility for bool/address type cast
 ### Task 7: Add ShieldCallbacks and `to` parameter to shield
 
 **Files:**
+
 - Modify: `packages/sdk/src/token/token.types.ts:84-92` (add ShieldCallbacks after UnshieldCallbacks)
 - Modify: `packages/sdk/src/token/token.ts:296-331` (Token.shield)
 - Modify: `packages/sdk/src/token/token.ts:687-714` (#ensureAllowance)
@@ -604,10 +626,10 @@ describe("shield callbacks and recipient", () => {
     const underlying = "0x3333333333333333333333333333333333333333";
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(underlying) // underlying()
-      .mockResolvedValueOnce(0n);        // allowance()
+      .mockResolvedValueOnce(0n); // allowance()
     vi.mocked(signer.writeContract)
-      .mockResolvedValueOnce("0xapprove-hash")  // approve
-      .mockResolvedValueOnce("0xshield-hash");  // wrap
+      .mockResolvedValueOnce("0xapprove-hash") // approve
+      .mockResolvedValueOnce("0xshield-hash"); // wrap
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
     const onApprovalSubmitted = vi.fn();
@@ -767,6 +789,7 @@ git commit -m "feat: add ShieldCallbacks and recipient parameter to useShield"
 ### Task 8: Add holder parameter to useConfidentialIsApproved
 
 **Files:**
+
 - Modify: `packages/sdk/src/token/token.ts:270-276` (Token.isApproved)
 - Modify: `packages/react-sdk/src/token/use-confidential-is-approved.ts:22-25` (config), `40-46` (query options), `63-79` (hook)
 - Test: `packages/sdk/src/token/__tests__/token.test.ts`
@@ -825,9 +848,16 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
   holder?: Address;
 }
 
-export function confidentialIsApprovedQueryOptions(token: Token, spender: Address, holder?: Address) {
+export function confidentialIsApprovedQueryOptions(
+  token: Token,
+  spender: Address,
+  holder?: Address,
+) {
   return {
-    queryKey: [...confidentialIsApprovedQueryKeys.spender(token.address, spender), holder ?? "self"],
+    queryKey: [
+      ...confidentialIsApprovedQueryKeys.spender(token.address, spender),
+      holder ?? "self",
+    ],
     queryFn: () => token.isApproved(spender, holder),
     staleTime: 30_000,
   } as const;
@@ -875,6 +905,7 @@ git commit -m "feat: add holder parameter to isApproved and useConfidentialIsApp
 ### Task 9: Return partial results from useConfidentialBalances
 
 **Files:**
+
 - Modify: `packages/sdk/src/token/token.types.ts` (add BalanceResult type)
 - Modify: `packages/sdk/src/token/readonly-token.ts:230-304` (batchDecryptBalances)
 - Modify: `packages/react-sdk/src/token/use-confidential-balances.ts:20-23` (types), `76-95` (queryFn)
@@ -1057,6 +1088,7 @@ git commit -m "feat: return partial results from batchDecryptBalances and useCon
 ### Task 10: Add useFHEvmStatus hook
 
 **Files:**
+
 - Modify: `packages/sdk/src/relayer/relayer-web.ts` (add status tracking)
 - Modify: `packages/sdk/src/relayer/relayer-sdk.ts` (add optional status methods to interface)
 - Create: `packages/react-sdk/src/relayer/use-fhevm-status.ts`
@@ -1127,7 +1159,7 @@ Import `RelayerSDKStatus` from `./relayer-sdk.types`.
 
 Create `packages/react-sdk/src/relayer/use-fhevm-status.ts`:
 
-```typescript
+````typescript
 "use client";
 
 import { useSyncExternalStore } from "react";
@@ -1165,7 +1197,7 @@ export function useFHEvmStatus(): RelayerSDKStatus {
     },
   );
 }
-```
+````
 
 Export from `packages/react-sdk/src/index.ts`:
 
@@ -1191,6 +1223,7 @@ git commit -m "feat: add useFHEvmStatus hook exposing WASM loading state"
 ### Task 11: Orchestrate useUserDecrypt with credential auto-management
 
 **Files:**
+
 - Rename: `packages/react-sdk/src/relayer/use-user-decrypt.ts` → `use-user-decrypt-raw.ts`
 - Create: `packages/react-sdk/src/relayer/use-user-decrypt.ts` (new orchestrated version)
 - Modify: `packages/react-sdk/src/index.ts` (export both)
@@ -1203,7 +1236,7 @@ Copy `packages/react-sdk/src/relayer/use-user-decrypt.ts` to `use-user-decrypt-r
 
 Create `packages/react-sdk/src/relayer/use-user-decrypt.ts`:
 
-```typescript
+````typescript
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1283,7 +1316,7 @@ export function useUserDecrypt() {
     },
   });
 }
-```
+````
 
 Note: Accessing `credentials` via `(token as any)` is a pragmatic shortcut. A cleaner approach is to add a `getCredentials(contractAddresses: Address[])` method to `ZamaSDK`. Let's do that:
 
@@ -1343,6 +1376,7 @@ git commit -m "feat: orchestrated useUserDecrypt with auto credential management
 ### Task 12: Verify approval reset-to-zero logic (item #8)
 
 **Files:**
+
 - Test: `packages/sdk/src/token/__tests__/token.test.ts`
 
 **Step 1: Write test verifying USDT-style approval flow**
@@ -1355,9 +1389,9 @@ describe("shield approval strategy (USDT compatibility)", () => {
     const underlying = "0x3333333333333333333333333333333333333333";
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(underlying) // underlying()
-      .mockResolvedValueOnce(50n);       // allowance() — non-zero, less than amount
+      .mockResolvedValueOnce(50n); // allowance() — non-zero, less than amount
     vi.mocked(signer.writeContract)
-      .mockResolvedValueOnce("0xreset-hash")   // approve(0)
+      .mockResolvedValueOnce("0xreset-hash") // approve(0)
       .mockResolvedValueOnce("0xapprove-hash") // approve(amount)
       .mockResolvedValueOnce("0xshield-hash"); // wrap
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
@@ -1366,22 +1400,26 @@ describe("shield approval strategy (USDT compatibility)", () => {
 
     const writeCalls = vi.mocked(signer.writeContract).mock.calls;
     // First call: reset to 0
-    expect(writeCalls[0]![0]).toEqual(expect.objectContaining({
-      functionName: "approve",
-      args: expect.arrayContaining([0n]),
-    }));
+    expect(writeCalls[0]![0]).toEqual(
+      expect.objectContaining({
+        functionName: "approve",
+        args: expect.arrayContaining([0n]),
+      }),
+    );
     // Second call: approve exact amount
-    expect(writeCalls[1]![0]).toEqual(expect.objectContaining({
-      functionName: "approve",
-      args: expect.arrayContaining([100n]),
-    }));
+    expect(writeCalls[1]![0]).toEqual(
+      expect.objectContaining({
+        functionName: "approve",
+        args: expect.arrayContaining([100n]),
+      }),
+    );
   });
 
   it("skips reset when existing allowance is zero", async () => {
     const underlying = "0x3333333333333333333333333333333333333333";
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(underlying) // underlying()
-      .mockResolvedValueOnce(0n);        // allowance() — zero
+      .mockResolvedValueOnce(0n); // allowance() — zero
     vi.mocked(signer.writeContract)
       .mockResolvedValueOnce("0xapprove-hash") // approve(amount)
       .mockResolvedValueOnce("0xshield-hash"); // wrap
@@ -1392,17 +1430,19 @@ describe("shield approval strategy (USDT compatibility)", () => {
     const writeCalls = vi.mocked(signer.writeContract).mock.calls;
     // Only approve + wrap, no reset
     expect(writeCalls).toHaveLength(2);
-    expect(writeCalls[0]![0]).toEqual(expect.objectContaining({
-      functionName: "approve",
-      args: expect.arrayContaining([100n]),
-    }));
+    expect(writeCalls[0]![0]).toEqual(
+      expect.objectContaining({
+        functionName: "approve",
+        args: expect.arrayContaining([100n]),
+      }),
+    );
   });
 
   it("skips approval entirely when existing allowance is sufficient", async () => {
     const underlying = "0x3333333333333333333333333333333333333333";
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(underlying) // underlying()
-      .mockResolvedValueOnce(200n);      // allowance() — already enough
+      .mockResolvedValueOnce(200n); // allowance() — already enough
     vi.mocked(signer.writeContract).mockResolvedValueOnce("0xshield-hash");
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
