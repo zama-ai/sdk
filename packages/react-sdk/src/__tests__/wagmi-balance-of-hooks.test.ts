@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Address } from "@zama-fhe/sdk";
 
 // ---------------------------------------------------------------------------
-// Mock wagmi – useBalanceOf uses useReadContracts + useConnection
+// Mock wagmi – useBalanceOf uses useReadContracts + useConnection (compat)
 // ---------------------------------------------------------------------------
 const mockUseReadContracts = vi.fn(() => ({
   data: undefined as never,
@@ -18,6 +18,9 @@ const mockUseConnection = vi.fn(() => ({
 
 vi.mock("wagmi", () => ({
   useReadContracts: (...args: unknown[]) => mockUseReadContracts(...(args as [])),
+}));
+
+vi.mock("../wagmi/compat", () => ({
   useConnection: (...args: unknown[]) => mockUseConnection(...(args as [])),
 }));
 

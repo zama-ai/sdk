@@ -10,12 +10,12 @@ import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 import {
   getChainId,
-  getConnection,
   readContract,
   signTypedData,
   waitForTransactionReceipt,
   writeContract,
 } from "wagmi/actions";
+import { getConnection } from "./compat";
 
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
