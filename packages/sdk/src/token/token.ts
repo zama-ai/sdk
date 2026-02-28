@@ -100,7 +100,7 @@ export class Token extends ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
       ({ handles, inputProof } = await this.sdk.encrypt({
-        values: [amount],
+        values: [{ type: "uint64", value: amount }],
         contractAddress: this.address,
         userAddress: await this.signer.getAddress(),
       }));
@@ -171,7 +171,7 @@ export class Token extends ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
       ({ handles, inputProof } = await this.sdk.encrypt({
-        values: [amount],
+        values: [{ type: "uint64", value: amount }],
         contractAddress: this.address,
         userAddress: normalizedFrom,
       }));
@@ -388,7 +388,7 @@ export class Token extends ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
       ({ handles, inputProof } = await this.sdk.encrypt({
-        values: [amount],
+        values: [{ type: "uint64", value: amount }],
         contractAddress: this.wrapper,
         userAddress,
       }));

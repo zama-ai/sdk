@@ -309,8 +309,35 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
 
     const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
 
-    for (const value of values) {
-      input.add64(value);
+    for (const entry of values) {
+      switch (entry.type) {
+        case "bool":
+          input.addBool(entry.value);
+          break;
+        case "uint8":
+          input.add8(entry.value);
+          break;
+        case "uint16":
+          input.add16(entry.value);
+          break;
+        case "uint32":
+          input.add32(entry.value);
+          break;
+        case "uint64":
+          input.add64(entry.value);
+          break;
+        case "uint128":
+          input.add128(entry.value);
+          break;
+        case "uint256":
+          input.add256(entry.value);
+          break;
+        case "address":
+          input.addAddress(entry.value);
+          break;
+        default:
+          throw new Error(`Unsupported FHE type: ${(entry as { type: string }).type}`);
+      }
     }
 
     const encrypted = await input.encrypt();

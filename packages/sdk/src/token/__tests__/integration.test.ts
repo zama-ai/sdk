@@ -122,7 +122,7 @@ describe("Integration: multi-step workflows", () => {
 
       // Verify encrypt was called with correct params
       expect(sdk.encrypt).toHaveBeenCalledWith({
-        values: [250n],
+        values: [{ type: "uint64", value: 250n }],
         contractAddress: TOKEN,
         userAddress: USER,
       });
@@ -161,7 +161,7 @@ describe("Integration: multi-step workflows", () => {
 
       // Verify encryption happened
       expect(sdk.encrypt).toHaveBeenCalledWith({
-        values: [500n],
+        values: [{ type: "uint64", value: 500n }],
         contractAddress: WRAPPER,
         userAddress: USER,
       });

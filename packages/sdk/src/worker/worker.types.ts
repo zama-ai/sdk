@@ -1,5 +1,6 @@
 import type {
   Address,
+  EncryptableValue,
   FhevmInstanceConfig,
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
@@ -74,7 +75,7 @@ export interface UpdateCsrfRequest extends BaseRequest {
 export interface EncryptRequest extends BaseRequest {
   type: "ENCRYPT";
   payload: {
-    values: bigint[];
+    values: EncryptableValue[];
     contractAddress: Address;
     userAddress: Address;
   };

@@ -50,9 +50,26 @@ export interface EncryptResult {
   inputProof: Uint8Array;
 }
 
+/** All FHE encrypted types supported by the relayer SDK. */
+export type FheType =
+  | "bool"
+  | "uint8"
+  | "uint16"
+  | "uint32"
+  | "uint64"
+  | "uint128"
+  | "uint256"
+  | "address";
+
+/** A typed value for FHE encryption. */
+export type EncryptableValue =
+  | { type: "bool"; value: boolean }
+  | { type: "address"; value: Address }
+  | { type: "uint8" | "uint16" | "uint32" | "uint64" | "uint128" | "uint256"; value: bigint };
+
 /** Parameters for encryption */
 export interface EncryptParams {
-  values: bigint[];
+  values: EncryptableValue[];
   contractAddress: Address;
   userAddress: Address;
 }
