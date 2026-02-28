@@ -50,7 +50,7 @@ export function useConfidentialBalances(
 
   const addressQuery = useQuery<Address, Error>({
     queryKey: ["zama", "signer-address"],
-    queryFn: () => sdk.signer.getAddress(),
+    queryFn: () => sdk.requireSigner().getAddress(),
   });
 
   const signerAddress = addressQuery.data;

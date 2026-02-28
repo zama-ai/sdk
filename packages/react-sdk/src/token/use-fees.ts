@@ -132,7 +132,7 @@ export function useShieldFee(
   const sdk = useZamaSDK();
 
   return useQuery<bigint, Error>({
-    ...shieldFeeQueryOptions(sdk.signer, config),
+    ...shieldFeeQueryOptions(sdk.requireSigner(), config),
     ...options,
   });
 }
@@ -161,7 +161,7 @@ export function useUnshieldFee(
   const sdk = useZamaSDK();
 
   return useQuery<bigint, Error>({
-    ...unshieldFeeQueryOptions(sdk.signer, config),
+    ...unshieldFeeQueryOptions(sdk.requireSigner(), config),
     ...options,
   });
 }
@@ -185,7 +185,7 @@ export function useBatchTransferFee(
   const sdk = useZamaSDK();
 
   return useQuery<bigint, Error>({
-    ...batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress),
+    ...batchTransferFeeQueryOptions(sdk.requireSigner(), feeManagerAddress),
     ...options,
   });
 }
@@ -209,7 +209,7 @@ export function useFeeRecipient(
   const sdk = useZamaSDK();
 
   return useQuery<Address, Error>({
-    ...feeRecipientQueryOptions(sdk.signer, feeManagerAddress),
+    ...feeRecipientQueryOptions(sdk.requireSigner(), feeManagerAddress),
     ...options,
   });
 }
