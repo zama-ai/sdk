@@ -21,15 +21,21 @@ const {
 
 ### `useConfidentialBalances`
 
-Same thing, but for multiple tokens at once. Returns a `Map<Address, bigint>`.
+Same thing, but for multiple tokens at once. Returns a `Map<Address, BalanceResult>`.
 
 ```tsx
 const { data: balances } = useConfidentialBalances({
   tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
 });
 
-const tokenABalance = balances?.get("0xTokenA");
+// BalanceResult is a discriminated union — check status before reading
+const result = balances?.get("0xTokenA");
+if (result?.status === "success") {
+  console.log(result.value); // bigint
+}
 ```
+
+`BalanceResult` is `{ status: "success"; value: bigint } | { status: "error"; error: Error }`. This lets you handle partial failures gracefully — if one token's decrypt fails, the rest still work.
 
 ### Forcing a refresh
 
@@ -89,6 +95,18 @@ await shield({ amount: 1000n });
 
 // Skip repeated approvals
 await shield({ amount: 1000n, approvalStrategy: "max" });
+
+// Shield to a different address
+await shield({ amount: 1000n, to: "0xRecipient" });
+
+// Track progress (approval + wrap are separate txs)
+await shield({
+  amount: 1000n,
+  callbacks: {
+    onApprovalSubmitted: (txHash) => console.log("Approval:", txHash),
+    onShieldSubmitted: (txHash) => console.log("Shield:", txHash),
+  },
+});
 ```
 
 ### `useShieldETH`
@@ -184,12 +202,19 @@ await approve({ spender: "0xDEX", until: futureTimestamp });
 
 ### `useConfidentialIsApproved`
 
-Check if a spender is approved.
+Check if a spender is approved. Defaults to checking the connected wallet as the holder.
 
 ```tsx
 const { data: isApproved } = useConfidentialIsApproved({
   tokenAddress: "0xToken",
   spender: "0xDEX",
+});
+
+// Check approval for a specific holder
+const { data: otherApproved } = useConfidentialIsApproved({
+  tokenAddress: "0xToken",
+  spender: "0xDEX",
+  holder: "0xOtherUser",
 });
 ```
 
@@ -265,6 +290,26 @@ Get a memoized `ReadonlyToken` instance (no write access).
 ```ts
 const readonlyToken = useReadonlyToken("0xToken");
 ```
+
+## FHE status
+
+### `useFHEvmStatus`
+
+Subscribe to the FHE relayer lifecycle status (WASM loading state). Returns a `RelayerSDKStatus`: `"idle"` | `"initializing"` | `"ready"` | `"error"`.
+
+```tsx
+import { useFHEvmStatus } from "@zama-fhe/react-sdk";
+
+function FHEGuard({ children }: { children: React.ReactNode }) {
+  const status = useFHEvmStatus();
+
+  if (status === "initializing") return <Spinner />;
+  if (status === "error") return <p>FHE initialization failed</p>;
+  return <>{children}</>;
+}
+```
+
+This is useful for showing loading states while the WASM worker initializes, or disabling UI until the FHE engine is ready.
 
 ## Error handling in components
 

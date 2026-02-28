@@ -99,12 +99,48 @@ These require `ZamaProvider` and expose raw relayer operations as React Query mu
 
 ### Encryption and decryption
 
-| Hook                        | What it does                            |
-| --------------------------- | --------------------------------------- |
-| `useEncrypt()`              | Encrypt values for smart contract calls |
-| `useUserDecrypt()`          | Decrypt with user's FHE private key     |
-| `usePublicDecrypt()`        | Public decryption                       |
-| `useDelegatedUserDecrypt()` | Decrypt via delegation                  |
+| Hook                        | What it does                                                              |
+| --------------------------- | ------------------------------------------------------------------------- |
+| `useEncrypt()`              | Encrypt values for smart contract calls                                   |
+| `useUserDecrypt()`          | Orchestrated decrypt — manages credentials automatically, populates cache |
+| `useUserDecryptRaw()`       | Thin wrapper — pass all credential params yourself                        |
+| `usePublicDecrypt()`        | Public decryption                                                         |
+| `useDelegatedUserDecrypt()` | Decrypt via delegation                                                    |
+
+#### `useUserDecrypt` vs `useUserDecryptRaw`
+
+**`useUserDecrypt`** (recommended) handles the full credential lifecycle — it generates a keypair, creates an EIP-712 authorization, prompts the wallet, and caches credentials. You just pass handles:
+
+```tsx
+const decrypt = useUserDecrypt();
+
+decrypt.mutate({
+  handles: [
+    { handle: "0xHandle1", contractAddress: "0xToken" },
+    { handle: "0xHandle2", contractAddress: "0xToken" },
+  ],
+});
+```
+
+**`useUserDecryptRaw`** is the thin wrapper for when you manage credentials yourself (e.g. you've already called `useGenerateKeypair` and `useCreateEIP712` manually):
+
+```tsx
+const decryptRaw = useUserDecryptRaw();
+
+decryptRaw.mutate({
+  handles: ["0xHandle1", "0xHandle2"],
+  contractAddress: "0xToken",
+  signedContractAddresses: ["0xToken"],
+  privateKey: "0xPriv",
+  publicKey: "0xPub",
+  signature: "0xSig",
+  signerAddress: "0xUser",
+  startTimestamp: 1000,
+  durationDays: 1,
+});
+```
+
+Both populate the same decryption cache.
 
 ### Key management
 
@@ -117,7 +153,7 @@ These require `ZamaProvider` and expose raw relayer operations as React Query mu
 
 ### Reading from the decryption cache
 
-`useUserDecrypt` and `usePublicDecrypt` populate a shared cache. Read from it without triggering new decryptions:
+`useUserDecrypt`, `useUserDecryptRaw`, and `usePublicDecrypt` populate a shared cache. Read from it without triggering new decryptions:
 
 ```tsx
 // Single handle

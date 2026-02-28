@@ -1,15 +1,40 @@
 # Configuration
 
-Every SDK setup has three required pieces and two optional ones:
+Every SDK setup has one required piece (relayer + storage) and optional ones:
 
 ```ts
 const sdk = new ZamaSDK({
   relayer,                       // required — handles encryption & decryption
-  signer,                        // required — wallet interface
   storage,                       // required — credential persistence
+  signer,                        // optional — wallet interface (can be set later)
   credentialDurationDays: 1,     // optional (default: 1 day)
   onEvent: (event) => { ... },   // optional — lifecycle events for debugging
 });
+```
+
+### Optional signer
+
+The signer is optional at construction time. This is useful in React apps where the wallet may connect after the SDK is created:
+
+```ts
+// Create SDK without a signer
+const sdk = new ZamaSDK({ relayer, storage });
+
+// Later, when the wallet connects
+sdk.setSigner(signer);
+```
+
+Read-only operations (like `createReadonlyToken`) work without a signer. Write operations throw `SignerRequiredError` if no signer is set. You can check programmatically:
+
+```ts
+if (sdk.signer) {
+  // Wallet is connected, safe to call write operations
+} else {
+  // Prompt user to connect wallet
+}
+
+// Or use requireSigner() which throws if no signer is set
+const signer = sdk.requireSigner(); // throws SignerRequiredError if undefined
 ```
 
 ## Relayer

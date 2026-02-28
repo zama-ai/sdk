@@ -26,16 +26,19 @@ For Node.js, you'll additionally need `@zama-fhe/relayer-sdk`:
 pnpm add @zama-fhe/relayer-sdk
 ```
 
-## Three things to set up
+## Setting up
 
-Every SDK setup needs three pieces:
+Every SDK setup needs a relayer and storage. The signer is optional at construction time — useful in React apps where the wallet may connect later:
 
 ```ts
 const sdk = new ZamaSDK({
   relayer, // handles encryption & decryption (RelayerWeb or RelayerNode)
-  signer, // signs transactions and typed data (ViemSigner, EthersSigner, or your own)
   storage, // persists FHE credentials so users don't re-sign on every page load
+  signer, // optional — signs transactions and typed data (ViemSigner, EthersSigner, or your own)
 });
+
+// Set or replace the signer later
+sdk.setSigner(signer);
 ```
 
 See the [Configuration](configuration.md) page for all the details on each piece.

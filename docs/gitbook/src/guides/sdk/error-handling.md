@@ -52,6 +52,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. If the error is
 | `InvalidCredentialsError`   | `INVALID_CREDENTIALS`    | Relayer rejected FHE credentials (stale or malformed)                                 |
 | `CredentialExpiredError`    | `CREDENTIAL_EXPIRED`     | FHE credentials expired — user needs to re-sign                                       |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No encrypted balance exists for this account (never shielded)                         |
+| `SignerRequiredError`       | `SIGNER_REQUIRED`        | No wallet signer connected — call `setSigner()` or connect a wallet first             |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP request failed (check `.statusCode`)                                     |
 
 ## "No balance" vs "zero balance"
@@ -83,4 +84,5 @@ try {
 | `EncryptionFailedError`                   | Web Worker can't load WASM                  | Check your CSP headers — the worker needs `wasm-unsafe-eval`.                                       |
 | `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `loadPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.               |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or tx hash invalid | Check the unwrap tx — if already finalized, clear the pending state with `clearPendingUnshield()`.  |
+| `SignerRequiredError`                     | No wallet connected                         | Call `sdk.setSigner(signer)` after the wallet connects, or check `sdk.signer` before write ops.     |
 | `RelayerRequestFailedError`               | Relayer URL wrong or auth missing           | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.       |

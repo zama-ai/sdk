@@ -33,6 +33,22 @@ await token.shield(1000n, { approvalStrategy: "max" });
 
 // Skip approval — use when the wrapper is already approved
 await token.shield(1000n, { approvalStrategy: "skip" });
+
+// Shield to a different address
+await token.shield(1000n, { to: "0xRecipient" });
+```
+
+### Tracking shield progress
+
+Shield may involve two transactions (approval + wrap). Track both:
+
+```ts
+await token.shield(1000n, {
+  callbacks: {
+    onApprovalSubmitted: (txHash) => updateUI("Approval submitted..."),
+    onShieldSubmitted: (txHash) => updateUI("Shield submitted!"),
+  },
+});
 ```
 
 For ETH wrapper contracts (where the underlying token is native ETH):
@@ -84,11 +100,25 @@ await ReadonlyToken.authorizeAll(tokens);
 
 // Then decrypt all balances in parallel — no more wallet prompts
 const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });
-// Returns Map<Address, bigint>
+// Returns Map<Address, BalanceResult>
 
 // If you already have the handles, pass them to skip the RPC reads
 const balances = await ReadonlyToken.batchDecryptBalances(tokens, { handles, owner });
 ```
+
+Each entry is a `BalanceResult` — a discriminated union that tells you whether decryption succeeded or failed per token:
+
+```ts
+for (const [address, result] of balances) {
+  if (result.status === "success") {
+    console.log(`${address}: ${result.value}`);
+  } else {
+    console.error(`${address}: ${result.error.message}`);
+  }
+}
+```
+
+This lets your UI gracefully handle partial failures (e.g. one token never shielded) without aborting the entire batch.
 
 ## Confidential transfers
 
@@ -156,8 +186,11 @@ await token.approve("0xSpender");
 // Approve until a specific timestamp
 await token.approve("0xSpender", futureTimestamp);
 
-// Check approval status
+// Check approval status (defaults to the connected wallet)
 const approved = await token.isApproved("0xSpender");
+
+// Check if a specific holder has approved a spender
+const otherApproved = await token.isApproved("0xSpender", "0xHolder");
 ```
 
 ## Token metadata and discovery
@@ -237,3 +270,40 @@ import { findWrapped, findUnwrapRequested } from "@zama-fhe/sdk";
 const wrappedEvent = findWrapped(receipt.logs);
 const unwrapEvent = findUnwrapRequested(receipt.logs);
 ```
+
+## Typed encryption values
+
+When encrypting values for contract calls at the low level, use `EncryptableValue` — a discriminated union that pairs a value with its FHE type:
+
+```ts
+import type { EncryptableValue } from "@zama-fhe/sdk";
+
+const values: EncryptableValue[] = [
+  { type: "uint64", value: 1000n },
+  { type: "bool", value: true },
+  { type: "address", value: "0x1234..." },
+];
+
+const result = await relayer.encrypt({
+  values,
+  contractAddress: "0xToken",
+  userAddress: "0xUser",
+});
+```
+
+Supported `FheType` values: `"bool"`, `"uint8"`, `"uint16"`, `"uint32"`, `"uint64"`, `"uint128"`, `"uint256"`, `"address"`.
+
+## Decoding decrypted values
+
+Raw decryption always returns `bigint`. Use `decodeDecryptedValue` to convert back to the appropriate JavaScript type based on the original FHE type:
+
+```ts
+import { decodeDecryptedValue } from "@zama-fhe/sdk";
+
+decodeDecryptedValue(1n, "bool"); // true
+decodeDecryptedValue(0n, "bool"); // false
+decodeDecryptedValue(addr, "address"); // "0x1111...1111"
+decodeDecryptedValue(42n, "uint64"); // 42n (unchanged)
+```
+
+This is useful when you know the encrypted type and want to display or process the value correctly — for example, showing a boolean flag or formatting an address.
