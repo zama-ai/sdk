@@ -3,7 +3,8 @@
 import type { Address } from "@zama-fhe/sdk";
 import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/sdk";
 import { formatUnits } from "viem";
-import { useConnection, useReadContracts } from "wagmi";
+import { useReadContracts } from "wagmi";
+import { useConnection } from "./compat";
 
 export interface UseBalanceOfConfig {
   tokenAddress: Address;
