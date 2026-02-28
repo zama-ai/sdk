@@ -78,6 +78,7 @@ export type {
   BatchTransferData,
   StoredCredentials,
   UnshieldCallbacks,
+  ShieldCallbacks,
   ZamaSDKEventType,
   ZamaSDKEvent,
   ZamaSDKEventInput,
@@ -351,6 +352,7 @@ export type {
   ContractCallConfig,
   TransactionReceipt,
   TransactionResult,
+  BalanceResult,
 } from "@zama-fhe/sdk";
 export {
   ZamaError,

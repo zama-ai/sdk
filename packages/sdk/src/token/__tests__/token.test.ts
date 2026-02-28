@@ -179,8 +179,8 @@ describe("Token", () => {
         handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
       });
 
-      expect(result.get(TOKEN)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(2000n);
+      expect(result.get(TOKEN)).toEqual({ status: "success", value: 1000n });
+      expect(result.get(TOKEN2)).toEqual({ status: "success", value: 2000n });
       expect(signer.readContract).not.toHaveBeenCalled();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
     });
@@ -197,8 +197,8 @@ describe("Token", () => {
         handles: [VALID_HANDLE as Address, ZERO_HANDLE as Address],
       });
 
-      expect(result.get(TOKEN)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(0n);
+      expect(result.get(TOKEN)).toEqual({ status: "success", value: 1000n });
+      expect(result.get(TOKEN2)).toEqual({ status: "success", value: 0n });
       expect(sdk.userDecrypt).toHaveBeenCalledOnce();
     });
 
@@ -210,17 +210,20 @@ describe("Token", () => {
         onError: () => 0n,
       });
 
-      expect(result.get(TOKEN)).toBe(0n);
+      expect(result.get(TOKEN)).toEqual({ status: "success", value: 0n });
     });
 
-    it("throws DecryptionFailedError by default when decryption fails", async () => {
+    it("returns error result by default when decryption fails", async () => {
       vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-      await expect(
-        Token.batchDecryptBalances([token], {
-          handles: [VALID_HANDLE as Address],
-        }),
-      ).rejects.toThrow("Batch decryption failed for 1 token(s)");
+      const result = await Token.batchDecryptBalances([token], {
+        handles: [VALID_HANDLE as Address],
+      });
+
+      expect(result.get(TOKEN)).toEqual({
+        status: "error",
+        error: expect.objectContaining({ message: "decrypt failed" }),
+      });
     });
   });
 
@@ -470,6 +473,81 @@ describe("Token", () => {
       // Only readContract for #getUnderlying, no allowance check
       expect(signer.readContract).toHaveBeenCalledOnce();
       expect(signer.writeContract).toHaveBeenCalledOnce();
+    });
+
+    it("uses custom recipient address in wrap call", async () => {
+      const RECIPIENT = "0x7777777777777777777777777777777777777777" as Address;
+      vi.mocked(signer.readContract).mockResolvedValueOnce(
+        "0x9999999999999999999999999999999999999999",
+      ); // #getUnderlying
+
+      await token.shield(100n, { approvalStrategy: "skip", to: RECIPIENT });
+
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "wrap",
+          args: expect.arrayContaining([RECIPIENT]),
+        }),
+      );
+    });
+
+    it("defaults recipient to signer address when to is omitted", async () => {
+      vi.mocked(signer.readContract).mockResolvedValueOnce(
+        "0x9999999999999999999999999999999999999999",
+      ); // #getUnderlying
+
+      await token.shield(100n, { approvalStrategy: "skip" });
+
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "wrap",
+          args: expect.arrayContaining([USER]),
+        }),
+      );
+    });
+
+    it("fires onShieldSubmitted callback after shield tx", async () => {
+      vi.mocked(signer.readContract).mockResolvedValueOnce(
+        "0x9999999999999999999999999999999999999999",
+      ); // #getUnderlying
+
+      const onShieldSubmitted = vi.fn();
+      await token.shield(100n, {
+        approvalStrategy: "skip",
+        callbacks: { onShieldSubmitted },
+      });
+
+      expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
+    });
+
+    it("fires onApprovalSubmitted callback after approval tx", async () => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying
+        .mockResolvedValueOnce(0n); // allowance
+
+      const onApprovalSubmitted = vi.fn();
+      await token.shield(100n, {
+        callbacks: { onApprovalSubmitted },
+      });
+
+      expect(onApprovalSubmitted).toHaveBeenCalledWith("0xtxhash");
+    });
+
+    it("does not break when callback throws", async () => {
+      vi.mocked(signer.readContract).mockResolvedValueOnce(
+        "0x9999999999999999999999999999999999999999",
+      ); // #getUnderlying
+
+      const result = await token.shield(100n, {
+        approvalStrategy: "skip",
+        callbacks: {
+          onShieldSubmitted: () => {
+            throw new Error("callback error");
+          },
+        },
+      });
+
+      expect(result.txHash).toBe("0xtxhash");
     });
   });
 

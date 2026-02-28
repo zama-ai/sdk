@@ -91,6 +91,19 @@ export interface UnshieldCallbacks {
   onFinalizeSubmitted?: (txHash: Hex) => void;
 }
 
+/** Progress callbacks for multi-step shield operations. */
+export interface ShieldCallbacks {
+  /** Fired after the ERC-20 approval transaction is submitted. */
+  onApprovalSubmitted?: (txHash: Hex) => void;
+  /** Fired after the shield (wrap) transaction is submitted. */
+  onShieldSubmitted?: (txHash: Hex) => void;
+}
+
+/** Result of a single token balance decryption within a batch. */
+export type BalanceResult =
+  | { status: "success"; value: bigint }
+  | { status: "error"; error: Error };
+
 // Re-export errors for backward compatibility
 export {
   ZamaErrorCode,

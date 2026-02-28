@@ -72,6 +72,8 @@ export type {
   TransactionReceipt,
   TransactionResult,
   UnshieldCallbacks,
+  ShieldCallbacks,
+  BalanceResult,
 } from "./token/token.types";
 export { ZamaSDKEvents } from "./events/sdk-events";
 export type {
