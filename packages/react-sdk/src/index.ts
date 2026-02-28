@@ -42,6 +42,7 @@ export { decryptionKeys } from "./relayer/decryption-cache";
 // Re-export core classes
 export {
   RelayerWeb,
+  decodeDecryptedValue,
   ZamaSDK,
   Token,
   ReadonlyToken,
@@ -64,6 +65,8 @@ export type {
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
+  FheType,
+  EncryptableValue,
   UserDecryptParams,
   PublicDecryptResult,
   FHEKeypair,

@@ -8,12 +8,15 @@
 
 // Core SDK
 export { RelayerWeb } from "./relayer/relayer-web";
+export { decodeDecryptedValue } from "./relayer/decode-decrypted-value";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
   RelayerWebConfig,
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
+  FheType,
+  EncryptableValue,
   UserDecryptParams,
   PublicDecryptResult,
   FHEKeypair,
