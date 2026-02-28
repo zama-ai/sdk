@@ -142,8 +142,11 @@ interface GenericSigner {
   writeContract(config: ContractCallConfig): Promise<Hex>;
   readContract(config: ContractCallConfig): Promise<unknown>;
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+  subscribe?(callbacks: SignerLifecycleCallbacks): () => void; // optional — auto-revoke on disconnect/account change
 }
 ```
+
+If your signer has access to wallet lifecycle events, implement `subscribe` so the SDK can automatically revoke the session on disconnect or account change. See [`WagmiSigner`](https://github.com/zama-ai/token-sdk/blob/main/packages/react-sdk/src/wagmi/wagmi-signer.ts) for a reference implementation.
 
 ## Storage
 

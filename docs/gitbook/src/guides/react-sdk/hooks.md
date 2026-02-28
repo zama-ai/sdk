@@ -189,9 +189,10 @@ import { useTokenRevoke } from "@zama-fhe/react-sdk";
 
 const { mutate: tokenRevoke } = useTokenRevoke();
 
-// Call on wallet disconnect
 tokenRevoke(["0xTokenA", "0xTokenB"]);
 ```
+
+> **Note:** If you use `WagmiSigner`, the SDK automatically revokes the session on wallet disconnect or account change — you don't need to call `useTokenRevoke` manually for that case.
 
 ### Session management
 

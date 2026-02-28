@@ -180,7 +180,7 @@ The wallet signature is never written to disk — only the encrypted credential 
 First visit:  generate keypair → wallet signs → encrypt & store → cache signature
 Page reload:  load encrypted creds → wallet re-signs → cache signature
 Same session: reuse cached signature — no wallet popup
-Disconnect:   await revoke() clears signature from memory
+Disconnect:   WagmiSigner auto-revokes; viem/ethers call sdk.revokeSession()
 ```
 
 ### Pre-authorize to avoid popups
