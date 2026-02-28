@@ -3,6 +3,7 @@ import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
+import { CredentialsManager } from "./credential-manager";
 import type { GenericSigner, GenericStringStorage } from "./token.types";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 import { SignerRequiredError } from "./errors";
@@ -65,6 +66,17 @@ export class ZamaSDK {
       );
     }
     return this.#signer;
+  }
+
+  /** Get a CredentialsManager for the current signer. Requires a connected signer. */
+  get credentialsManager(): CredentialsManager {
+    return new CredentialsManager({
+      sdk: this.relayer,
+      signer: this.requireSigner(),
+      storage: this.storage,
+      durationDays: this.#credentialDurationDays ?? 1,
+      onEvent: this.#onEvent,
+    });
   }
 
   /**
