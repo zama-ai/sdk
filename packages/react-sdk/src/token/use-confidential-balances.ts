@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { ReadonlyToken, type Address } from "@zama-fhe/sdk";
+import { ReadonlyToken, type Address, type BalanceResult } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
 import { confidentialBalancesQueryKeys, confidentialHandlesQueryKeys } from "./balance-query-keys";
 
@@ -18,7 +18,7 @@ export interface UseConfidentialBalancesConfig {
 
 /** Query options for the decrypt phase of {@link useConfidentialBalances}. */
 export type UseConfidentialBalancesOptions = Omit<
-  UseQueryOptions<Map<Address, bigint>, Error>,
+  UseQueryOptions<Map<Address, BalanceResult>, Error>,
   "queryKey" | "queryFn"
 >;
 
@@ -73,7 +73,7 @@ export function useConfidentialBalances(
   const handlesKey = handles?.join(",") ?? "";
 
   // Phase 2: Batch decrypt only when any handle changes
-  const balancesQuery = useQuery<Map<Address, bigint>, Error>({
+  const balancesQuery = useQuery<Map<Address, BalanceResult>, Error>({
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, ownerKey), handlesKey],
     queryFn: async () => {
       const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
@@ -82,10 +82,10 @@ export function useConfidentialBalances(
       });
       // Re-key the Map with the caller's original addresses so lookups
       // work regardless of address casing (tokens normalize to lowercase).
-      const remapped = new Map<Address, bigint>();
+      const remapped = new Map<Address, BalanceResult>();
       for (let i = 0; i < tokens.length; i++) {
-        const balance = raw.get(tokens[i]!.address);
-        if (balance !== undefined) remapped.set(tokenAddresses[i]!, balance);
+        const result = raw.get(tokens[i]!.address);
+        if (result !== undefined) remapped.set(tokenAddresses[i]!, result);
       }
       return remapped;
     },

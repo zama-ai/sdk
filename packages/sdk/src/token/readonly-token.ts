@@ -14,7 +14,7 @@ import {
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
 import { normalizeAddress, pLimit } from "../utils";
-import type { GenericSigner, GenericStringStorage } from "./token.types";
+import type { BalanceResult, GenericSigner, GenericStringStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credential-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -230,7 +230,7 @@ export class ReadonlyToken {
   static async batchDecryptBalances(
     tokens: ReadonlyToken[],
     options?: BatchDecryptOptions,
-  ): Promise<Map<Address, bigint>> {
+  ): Promise<Map<Address, BalanceResult>> {
     if (tokens.length === 0) return new Map();
 
     const { handles, owner, onError, maxConcurrency } = options ?? {};
@@ -251,8 +251,7 @@ export class ReadonlyToken {
     const allAddresses = tokens.map((t) => t.address);
     const creds = await tokens[0]!.credentials.getAll(allAddresses);
 
-    const results = new Map<Address, bigint>();
-    const errors: Array<{ address: Address; error: Error }> = [];
+    const results = new Map<Address, BalanceResult>();
     const decryptFns: Array<() => Promise<void>> = [];
 
     for (let i = 0; i < tokens.length; i++) {
@@ -260,7 +259,7 @@ export class ReadonlyToken {
       const handle = resolvedHandles[i]!;
 
       if (token.isZeroHandle(handle)) {
-        results.set(token.address, BigInt(0));
+        results.set(token.address, { status: "success", value: BigInt(0) });
         continue;
       }
 
@@ -278,27 +277,20 @@ export class ReadonlyToken {
             durationDays: creds.durationDays,
           })
           .then((result) => {
-            results.set(token.address, result[handle] ?? BigInt(0));
+            results.set(token.address, { status: "success", value: result[handle] ?? BigInt(0) });
           })
           .catch((error) => {
             const err = error instanceof Error ? error : new Error(String(error));
             if (onError) {
-              results.set(token.address, onError(err, token.address));
+              results.set(token.address, { status: "success", value: onError(err, token.address) });
             } else {
-              errors.push({ address: token.address, error: err });
+              results.set(token.address, { status: "error", error: err });
             }
           }),
       );
     }
 
     await pLimit(decryptFns, maxConcurrency);
-
-    if (errors.length > 0) {
-      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
-      throw new DecryptionFailedError(
-        `Batch decryption failed for ${errors.length} token(s): ${message}`,
-      );
-    }
 
     return results;
   }

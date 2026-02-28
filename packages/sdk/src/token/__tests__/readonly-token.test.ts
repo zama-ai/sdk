@@ -207,7 +207,7 @@ describe("ReadonlyToken", () => {
   describe("batchDecryptBalances error paths", () => {
     const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
 
-    it("throws DecryptionFailedError by default when decryption fails", async () => {
+    it("returns error result by default when decryption fails", async () => {
       const token2 = new ReadonlyToken({
         sdk: sdk as unknown as RelayerSDK,
         signer,
@@ -219,25 +219,18 @@ describe("ReadonlyToken", () => {
         .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
-      await expect(
-        ReadonlyToken.batchDecryptBalances([token, token2], {
-          handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
-        }),
-      ).rejects.toThrow(DecryptionFailedError);
+      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+        handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+      });
 
-      // Reset mocks for second assertion
-      vi.mocked(sdk.userDecrypt)
-        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
-        .mockRejectedValueOnce(new Error("decrypt failed"));
-
-      await expect(
-        ReadonlyToken.batchDecryptBalances([token, token2], {
-          handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
-        }),
-      ).rejects.toThrow(/Batch decryption failed for 1 token\(s\)/);
+      expect(result.get(TOKEN)).toEqual({ status: "success", value: 1000n });
+      expect(result.get(TOKEN2)).toEqual({
+        status: "error",
+        error: expect.objectContaining({ message: "decrypt failed" }),
+      });
     });
 
-    it("returns fallback from onError callback instead of throwing", async () => {
+    it("returns fallback from onError callback as success", async () => {
       const token2 = new ReadonlyToken({
         sdk: sdk as unknown as RelayerSDK,
         signer,
@@ -254,8 +247,8 @@ describe("ReadonlyToken", () => {
         onError: () => 0n,
       });
 
-      expect(result.get(TOKEN)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(0n);
+      expect(result.get(TOKEN)).toEqual({ status: "success", value: 1000n });
+      expect(result.get(TOKEN2)).toEqual({ status: "success", value: 0n });
     });
 
     it("onError receives correct error and address", async () => {
@@ -279,8 +272,8 @@ describe("ReadonlyToken", () => {
         },
       });
 
-      expect(result.get(TOKEN)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(42n);
+      expect(result.get(TOKEN)).toEqual({ status: "success", value: 1000n });
+      expect(result.get(TOKEN2)).toEqual({ status: "success", value: 42n });
       expect(captured).toHaveLength(1);
       expect(captured[0]!.address).toBe(TOKEN2);
       expect(captured[0]!.error.message).toBe("decrypt failed");
