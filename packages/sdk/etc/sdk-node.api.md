@@ -184,6 +184,8 @@ export interface RelayerNodeConfig {
     logger?: GenericLogger;
     // (undocumented)
     poolSize?: number;
+    // Warning: (ae-forgotten-export) The symbol "GenericStringStorage" needs to be exported by the entry point index.d.ts
+    storage?: GenericStringStorage;
     // (undocumented)
     transports: Record<number, Partial<FhevmInstanceConfig_2>>;
 }
@@ -193,7 +195,7 @@ export const SepoliaConfig: FhevmInstanceConfig;
 
 // Warnings were encountered during analysis:
 //
-// dist/node/index.d.ts:110:9 - (ae-forgotten-export) The symbol "WorkerRequestType" needs to be exported by the entry point index.d.ts
+// dist/node/index.d.ts:112:9 - (ae-forgotten-export) The symbol "WorkerRequestType" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
