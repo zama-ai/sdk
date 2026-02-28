@@ -1,6 +1,7 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
 import type { Address } from "@zama-fhe/relayer-sdk/bundle";
 import type { GenericLogger } from "../worker/worker.types";
+import type { GenericStringStorage } from "../token/token.types";
 
 // ============================================================================
 // SDK Types (local definitions to avoid importing from @zama-fhe/relayer-sdk/web)
@@ -42,6 +43,8 @@ export interface RelayerWebConfig {
   security?: RelayerWebSecurityConfig;
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
+  /** Optional persistent storage for caching FHE public key and params across sessions. */
+  storage?: GenericStringStorage;
 }
 
 /** Result from encryption operation */

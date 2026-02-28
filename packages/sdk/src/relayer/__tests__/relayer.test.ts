@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EncryptionFailedError } from "../../token/errors";
+import { MemoryStorage } from "../../token/memory-storage";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks (available inside vi.mock factories)
@@ -489,6 +490,91 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.getPublicParams).toHaveBeenCalledWith(2048);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Persistent caching
+  // -------------------------------------------------------------------------
+
+  describe("persistent caching with storage", () => {
+    it("caches getPublicKey in storage and avoids re-fetching", async () => {
+      const storage = new MemoryStorage();
+      const relayer = createWebRelayer({ storage });
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5, 6]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      const result1 = await relayer.getPublicKey();
+      expect(result1).toEqual(pk);
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
+
+      // Second call should not hit worker
+      const result2 = await relayer.getPublicKey();
+      expect(result2).toEqual(pk);
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
+    });
+
+    it("caches getPublicParams in storage and avoids re-fetching", async () => {
+      const storage = new MemoryStorage();
+      const relayer = createWebRelayer({ storage });
+      const pp = { publicParams: new Uint8Array([7, 8]), publicParamsId: "pp1" };
+      mockWorkerClient.getPublicParams.mockResolvedValue({ result: pp });
+
+      const result1 = await relayer.getPublicParams(2048);
+      expect(result1).toEqual(pp);
+      expect(mockWorkerClient.getPublicParams).toHaveBeenCalledOnce();
+
+      const result2 = await relayer.getPublicParams(2048);
+      expect(result2).toEqual(pp);
+      expect(mockWorkerClient.getPublicParams).toHaveBeenCalledOnce();
+    });
+
+    it("restores public key from storage across relayer instances", async () => {
+      const storage = new MemoryStorage();
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([10, 20]) };
+
+      // First instance — fetches and stores
+      const relayer1 = createWebRelayer({ storage });
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+      await relayer1.getPublicKey();
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
+
+      // Second instance — restores from storage
+      resetMocks();
+      const relayer2 = createWebRelayer({ storage });
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: null });
+      const result = await relayer2.getPublicKey();
+      expect(result).toEqual(pk);
+      expect(mockWorkerClient.getPublicKey).not.toHaveBeenCalled();
+    });
+
+    it("works without storage (backward compatible)", async () => {
+      const relayer = createWebRelayer(); // no storage
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      const result = await relayer.getPublicKey();
+      expect(result).toEqual(pk);
+    });
+
+    it("invalidates cache on chain switch", async () => {
+      const storage = new MemoryStorage();
+      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
+      const relayer = createWebRelayer({ storage, getChainId });
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      await relayer.getPublicKey();
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
+
+      // Chain switch — cache should be rebuilt for new chain
+      getChainId.mockResolvedValue(1);
+      const pk2 = { publicKeyId: "id2", publicKey: new Uint8Array([2]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk2 });
+
+      const result = await relayer.getPublicKey();
+      expect(result).toEqual(pk2);
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledTimes(2);
+    });
+  });
 });
 
 // ===========================================================================
@@ -796,6 +882,68 @@ describe("RelayerNode", () => {
 
       expect(result).toEqual(pp);
       expect(mockPool.getPublicParams).toHaveBeenCalledWith(2048);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Persistent caching
+  // -------------------------------------------------------------------------
+
+  describe("persistent caching with storage", () => {
+    it("caches getPublicKey in storage and avoids re-fetching", async () => {
+      const storage = new MemoryStorage();
+      const relayer = createNodeRelayer({ storage });
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5, 6]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+      const result1 = await relayer.getPublicKey();
+      expect(result1).toEqual(pk);
+      expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
+
+      const result2 = await relayer.getPublicKey();
+      expect(result2).toEqual(pk);
+      expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
+    });
+
+    it("caches getPublicParams in storage and avoids re-fetching", async () => {
+      const storage = new MemoryStorage();
+      const relayer = createNodeRelayer({ storage });
+      const pp = { publicParams: new Uint8Array([7, 8]), publicParamsId: "pp1" };
+      mockPool.getPublicParams.mockResolvedValue({ result: pp });
+
+      const result1 = await relayer.getPublicParams(2048);
+      expect(result1).toEqual(pp);
+      expect(mockPool.getPublicParams).toHaveBeenCalledOnce();
+
+      const result2 = await relayer.getPublicParams(2048);
+      expect(result2).toEqual(pp);
+      expect(mockPool.getPublicParams).toHaveBeenCalledOnce();
+    });
+
+    it("restores public key from storage across relayer instances", async () => {
+      const storage = new MemoryStorage();
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([10, 20]) };
+
+      const relayer1 = createNodeRelayer({ storage });
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+      await relayer1.getPublicKey();
+      expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
+
+      resetMocks();
+      const relayer2 = createNodeRelayer({ storage });
+      mockPool.getPublicKey.mockResolvedValue({ result: null });
+      const result = await relayer2.getPublicKey();
+      expect(result).toEqual(pk);
+      expect(mockPool.getPublicKey).not.toHaveBeenCalled();
+    });
+
+    it("works without storage (backward compatible)", async () => {
+      const relayer = createNodeRelayer(); // no storage
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+      const result = await relayer.getPublicKey();
+      expect(result).toEqual(pk);
     });
   });
 });
