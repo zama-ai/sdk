@@ -8,6 +8,7 @@ import type {
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
   PublicDecryptResult,
+  RelayerSDKStatus,
   UserDecryptParams,
   ZKProofLike,
 } from "./relayer-sdk.types";
@@ -65,4 +66,9 @@ export interface RelayerSDK {
 
   /** Terminate the relayer backend and release resources. */
   terminate(): void;
+
+  /** Get the current lifecycle status. Only implemented by RelayerWeb. */
+  getStatus?(): RelayerSDKStatus;
+  /** Subscribe to status changes. Only implemented by RelayerWeb. */
+  onStatusChange?(listener: (status: RelayerSDKStatus) => void): () => void;
 }

@@ -314,6 +314,69 @@ describe("RelayerWeb", () => {
   });
 
   // -------------------------------------------------------------------------
+  // Status tracking
+  // -------------------------------------------------------------------------
+
+  describe("status tracking", () => {
+    it("starts as idle", () => {
+      const relayer = createWebRelayer();
+      expect(relayer.getStatus()).toBe("idle");
+    });
+
+    it("transitions to initializing then ready on first use", async () => {
+      const relayer = createWebRelayer();
+      const statuses: string[] = [];
+      relayer.onStatusChange((s) => statuses.push(s));
+
+      mockWorkerClient.generateKeypair.mockResolvedValue({
+        publicKey: "pk",
+        privateKey: "sk",
+      });
+      await relayer.generateKeypair();
+
+      expect(statuses).toEqual(["initializing", "ready"]);
+      expect(relayer.getStatus()).toBe("ready");
+    });
+
+    it("transitions to error on init failure", async () => {
+      mockWorkerClient.initWorker.mockRejectedValue(new Error("boom"));
+      const relayer = createWebRelayer();
+      const statuses: string[] = [];
+      relayer.onStatusChange((s) => statuses.push(s));
+
+      await expect(relayer.generateKeypair()).rejects.toThrow();
+
+      expect(statuses).toContain("initializing");
+      expect(statuses).toContain("error");
+      expect(relayer.getStatus()).toBe("error");
+    });
+
+    it("transitions to idle on terminate", async () => {
+      const relayer = createWebRelayer();
+      mockWorkerClient.generateKeypair.mockResolvedValue({
+        publicKey: "pk",
+        privateKey: "sk",
+      });
+      await relayer.generateKeypair();
+
+      const statuses: string[] = [];
+      relayer.onStatusChange((s) => statuses.push(s));
+      relayer.terminate();
+
+      expect(statuses).toEqual(["idle"]);
+      expect(relayer.getStatus()).toBe("idle");
+    });
+
+    it("returns unsubscribe function", () => {
+      const relayer = createWebRelayer();
+      const listener = vi.fn();
+      const unsubscribe = relayer.onStatusChange(listener);
+      expect(typeof unsubscribe).toBe("function");
+      unsubscribe();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Method delegation
   // -------------------------------------------------------------------------
 

@@ -8,6 +8,7 @@ import type {
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
   PublicDecryptResult,
+  RelayerSDKStatus,
   RelayerWebConfig,
   UserDecryptParams,
   ZKProofLike,
@@ -59,6 +60,32 @@ export class RelayerWeb implements RelayerSDK {
   #terminated = false;
   #resolvedChainId: number | null = null;
   readonly #config: RelayerWebConfig;
+  #status: RelayerSDKStatus = "idle";
+  #statusListeners: Set<(status: RelayerSDKStatus) => void> = new Set();
+
+  #setStatus(status: RelayerSDKStatus): void {
+    if (this.#status !== status) {
+      this.#status = status;
+      for (const listener of this.#statusListeners) {
+        try {
+          listener(status);
+        } catch {
+          /* swallow */
+        }
+      }
+    }
+  }
+
+  getStatus(): RelayerSDKStatus {
+    return this.#status;
+  }
+
+  onStatusChange(listener: (status: RelayerSDKStatus) => void): () => void {
+    this.#statusListeners.add(listener);
+    return () => {
+      this.#statusListeners.delete(listener);
+    };
+  }
 
   constructor(config: RelayerWebConfig) {
     this.#config = config;
@@ -111,6 +138,7 @@ export class RelayerWeb implements RelayerSDK {
     if (!this.#initPromise) {
       this.#initPromise = this.#initWorker().catch((error) => {
         this.#initPromise = null;
+        this.#setStatus("error");
         throw error instanceof ZamaError
           ? error
           : new EncryptionFailedError("Failed to initialize FHE worker", {
@@ -125,6 +153,7 @@ export class RelayerWeb implements RelayerSDK {
    * Initialize the worker (called once via promise lock).
    */
   async #initWorker(): Promise<RelayerWorkerClient> {
+    this.#setStatus("initializing");
     const workerConfig = await this.#getWorkerConfig();
     const client = new RelayerWorkerClient(workerConfig);
     await client.initWorker();
@@ -134,6 +163,7 @@ export class RelayerWeb implements RelayerSDK {
       throw new Error("RelayerWeb was terminated during initialization");
     }
     this.#workerClient = client;
+    this.#setStatus("ready");
     return client;
   }
 
@@ -143,6 +173,7 @@ export class RelayerWeb implements RelayerSDK {
    */
   terminate(): void {
     this.#terminated = true;
+    this.#setStatus("idle");
     if (this.#workerClient) {
       this.#workerClient.terminate();
       this.#workerClient = null;
