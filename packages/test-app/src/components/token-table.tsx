@@ -98,7 +98,10 @@ export function TokenTable({
             <TokenRow
               key={addr}
               address={addr}
-              balance={balances?.get(addr)}
+              balance={(() => {
+                const r = balances?.get(addr);
+                return r?.status === "success" ? r.value : undefined;
+              })()}
               revealed={revealed}
               isDecrypting={revealed && isFetching}
             />
