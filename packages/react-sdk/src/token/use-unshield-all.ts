@@ -60,8 +60,14 @@ export function useUnshieldAll(
 
   return useMutation<TransactionResult, Error, UnshieldAllParams | void, Address>({
     mutationKey: ["unshieldAll", config.tokenAddress],
-    mutationFn: (params) =>
-      token.unshieldAll(wrapUnshieldCallbacks(sdk.storage, wrapperAddress, params?.callbacks)),
+    mutationFn: async (params) => {
+      const [accountAddress, chainId] = await Promise.all([
+        sdk.signer.getAddress(),
+        sdk.signer.getChainId(),
+      ]);
+      const scope = { accountAddress, chainId, wrapperAddress };
+      return token.unshieldAll(wrapUnshieldCallbacks(sdk.storage, scope, params?.callbacks));
+    },
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       context.client.invalidateQueries({

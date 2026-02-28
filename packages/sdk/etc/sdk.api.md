@@ -1075,7 +1075,7 @@ export interface BatchTransferData {
 }
 
 // @public
-export function clearPendingUnshield(storage: GenericStringStorage, wrapperAddress: Address): Promise<void>;
+export function clearPendingUnshield(storage: GenericStringStorage, scope: PendingUnshieldScope): Promise<void>;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -17678,7 +17678,7 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 export { KmsDelegatedUserDecryptEIP712Type }
 
 // @public
-export function loadPendingUnshield(storage: GenericStringStorage, wrapperAddress: Address): Promise<Hex | null>;
+export function loadPendingUnshield(storage: GenericStringStorage, scope: PendingUnshieldScope): Promise<Hex | null>;
 
 // @public
 export const MainnetConfig: FhevmInstanceConfig;
@@ -17749,6 +17749,13 @@ export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequ
 
 // @public
 export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMetadata>)[], userAddress: string): ActivityItem[];
+
+// @public
+export interface PendingUnshieldScope {
+    accountAddress: Address;
+    chainId: number;
+    wrapperAddress: Address;
+}
 
 // @public
 export interface PublicDecryptResult {
@@ -19346,7 +19353,7 @@ export interface RelayerWebConfig {
 }
 
 // @public
-export function savePendingUnshield(storage: GenericStringStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
+export function savePendingUnshield(storage: GenericStringStorage, scope: PendingUnshieldScope, unwrapTxHash: Hex): Promise<void>;
 
 // @public
 export const SepoliaConfig: FhevmInstanceConfig;

@@ -98,6 +98,7 @@ import { NetworkType } from '@zama-fhe/sdk';
 import { NoCiphertextError } from '@zama-fhe/sdk';
 import { OnChainEvent } from '@zama-fhe/sdk';
 import { parseActivityFeed } from '@zama-fhe/sdk';
+import { PendingUnshieldScope } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { PublicDecryptResult } from '@zama-fhe/sdk';
 import { rateContract } from '@zama-fhe/sdk';
@@ -543,6 +544,8 @@ export { NoCiphertextError }
 export { OnChainEvent }
 
 export { parseActivityFeed }
+
+export { PendingUnshieldScope }
 
 export { PublicDecryptResult }
 
