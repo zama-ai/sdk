@@ -1069,4 +1069,76 @@ describe("Token", () => {
       });
     });
   });
+
+  describe("shield approval strategy (USDT compatibility)", () => {
+    const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
+
+    it("resets allowance to zero before approving when existing allowance is non-zero", async () => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
+        .mockResolvedValueOnce(50n); // allowance: non-zero but less than shield amount
+
+      await token.shield(100n);
+
+      // 3 writeContract calls: reset-to-zero, approve, wrap
+      expect(signer.writeContract).toHaveBeenCalledTimes(3);
+      // First call: reset allowance to 0
+      expect(signer.writeContract).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          functionName: "approve",
+          args: expect.arrayContaining([0n]),
+        }),
+      );
+      // Second call: approve the exact shield amount
+      expect(signer.writeContract).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          functionName: "approve",
+          args: expect.arrayContaining([100n]),
+        }),
+      );
+      // Third call: wrap
+      expect(signer.writeContract).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({ functionName: "wrap" }),
+      );
+    });
+
+    it("skips reset when existing allowance is zero", async () => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
+        .mockResolvedValueOnce(0n); // allowance: zero
+
+      await token.shield(100n);
+
+      // 2 writeContract calls: approve and wrap (no reset-to-zero)
+      expect(signer.writeContract).toHaveBeenCalledTimes(2);
+      expect(signer.writeContract).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          functionName: "approve",
+          args: expect.arrayContaining([100n]),
+        }),
+      );
+      expect(signer.writeContract).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ functionName: "wrap" }),
+      );
+    });
+
+    it("skips approval entirely when existing allowance is sufficient", async () => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
+        .mockResolvedValueOnce(200n); // allowance: >= shield amount
+
+      await token.shield(100n);
+
+      // 1 writeContract call: just wrap (no reset, no approve)
+      expect(signer.writeContract).toHaveBeenCalledTimes(1);
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "wrap" }),
+      );
+    });
+  });
 });
