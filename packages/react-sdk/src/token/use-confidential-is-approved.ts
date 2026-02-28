@@ -22,12 +22,16 @@ export const confidentialIsApprovedQueryKeys = {
 export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
   /** Address to check approval for. Pass `undefined` to disable the query. */
   spender: Address | undefined;
+  /** Address to check approval for. Defaults to connected wallet. */
+  holder?: Address;
 }
 
 /** Configuration for {@link useConfidentialIsApprovedSuspense}. */
 export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
   /** Address to check approval for. */
   spender: Address;
+  /** Address to check approval for. Defaults to connected wallet. */
+  holder?: Address;
 }
 
 /**
@@ -35,12 +39,20 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
  *
  * @param token - A `Token` instance.
  * @param spender - Address to check approval for.
+ * @param holder - Optional holder address. Defaults to connected wallet.
  * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
  */
-export function confidentialIsApprovedQueryOptions(token: Token, spender: Address) {
+export function confidentialIsApprovedQueryOptions(
+  token: Token,
+  spender: Address,
+  holder?: Address,
+) {
   return {
-    queryKey: confidentialIsApprovedQueryKeys.spender(token.address, spender),
-    queryFn: () => token.isApproved(spender),
+    queryKey: [
+      ...confidentialIsApprovedQueryKeys.spender(token.address, spender),
+      holder ?? "self",
+    ],
+    queryFn: () => token.isApproved(spender, holder),
     staleTime: 30_000,
   } as const;
 }
@@ -64,12 +76,12 @@ export function useConfidentialIsApproved(
   config: UseConfidentialIsApprovedConfig,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ) {
-  const { spender, ...tokenConfig } = config;
+  const { spender, holder, ...tokenConfig } = config;
   const token = useToken(tokenConfig);
 
   return useQuery<boolean, Error>({
     ...(spender
-      ? confidentialIsApprovedQueryOptions(token, spender)
+      ? confidentialIsApprovedQueryOptions(token, spender, holder)
       : {
           queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, ""),
           queryFn: skipToken,
@@ -94,8 +106,10 @@ export function useConfidentialIsApproved(
  * ```
  */
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
-  const { spender, ...tokenConfig } = config;
+  const { spender, holder, ...tokenConfig } = config;
   const token = useToken(tokenConfig);
 
-  return useSuspenseQuery<boolean, Error>(confidentialIsApprovedQueryOptions(token, spender));
+  return useSuspenseQuery<boolean, Error>(
+    confidentialIsApprovedQueryOptions(token, spender, holder),
+  );
 }

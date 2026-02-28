@@ -127,11 +127,19 @@ describe("query options factories", () => {
   });
 
   describe("confidentialIsApprovedQueryOptions", () => {
-    it("queryKey includes spender", () => {
+    it("queryKey includes spender and defaults holder to self", () => {
       const token = createMockToken();
       const opts = confidentialIsApprovedQueryOptions(token as unknown as Token, SPENDER);
 
-      expect(opts.queryKey).toEqual(["confidentialIsApproved", TOKEN_ADDR, SPENDER]);
+      expect(opts.queryKey).toEqual(["confidentialIsApproved", TOKEN_ADDR, SPENDER, "self"]);
+    });
+
+    it("queryKey includes explicit holder", () => {
+      const token = createMockToken();
+      const holder = "0x4444444444444444444444444444444444444444" as Address;
+      const opts = confidentialIsApprovedQueryOptions(token as unknown as Token, SPENDER, holder);
+
+      expect(opts.queryKey).toEqual(["confidentialIsApproved", TOKEN_ADDR, SPENDER, holder]);
     });
 
     it("queryFn calls token.isApproved", async () => {
@@ -139,7 +147,17 @@ describe("query options factories", () => {
       const opts = confidentialIsApprovedQueryOptions(token as unknown as Token, SPENDER);
       const result = await opts.queryFn();
 
-      expect(token.isApproved).toHaveBeenCalledWith(SPENDER);
+      expect(token.isApproved).toHaveBeenCalledWith(SPENDER, undefined);
+      expect(result).toBe(true);
+    });
+
+    it("queryFn passes holder to token.isApproved", async () => {
+      const token = createMockToken();
+      const holder = "0x4444444444444444444444444444444444444444" as Address;
+      const opts = confidentialIsApprovedQueryOptions(token as unknown as Token, SPENDER, holder);
+      const result = await opts.queryFn();
+
+      expect(token.isApproved).toHaveBeenCalledWith(SPENDER, holder);
       expect(result).toBe(true);
     });
   });

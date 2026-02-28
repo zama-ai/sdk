@@ -24,7 +24,7 @@ import {
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { TransactionResult, UnshieldCallbacks } from "./token.types";
+import type { ShieldCallbacks, TransactionResult, UnshieldCallbacks } from "./token.types";
 
 /** Coerce an unknown caught value to an Error instance. */
 function toError(error: unknown): Error {
@@ -255,23 +255,30 @@ export class Token extends ReadonlyToken {
   }
 
   /**
-   * Check if a spender is an approved operator for the connected wallet.
+   * Check if a spender is an approved operator for a given holder.
    *
    * @param spender - The address to check operator approval for.
-   * @returns `true` if the spender is an approved operator for the connected wallet.
+   * @param holder - The holder address to check. Defaults to the connected wallet.
+   * @returns `true` if the spender is an approved operator for the holder.
    *
    * @example
    * ```ts
    * if (await token.isApproved("0xSpender")) {
-   *   // spender can call transferFrom
+   *   // spender can call transferFrom on behalf of connected wallet
+   * }
+   * // or check for a specific holder:
+   * if (await token.isApproved("0xSpender", "0xHolder")) {
+   *   // spender can call transferFrom on behalf of holder
    * }
    * ```
    */
-  async isApproved(spender: Address): Promise<boolean> {
+  async isApproved(spender: Address, holder?: Address): Promise<boolean> {
     const normalizedSpender = normalizeAddress(spender, "spender");
-    const holder = await this.signer.getAddress();
+    const holderAddress = holder
+      ? normalizeAddress(holder, "holder")
+      : await this.signer.getAddress();
     return this.signer.readContract<boolean>(
-      isOperatorContract(this.address, holder, normalizedSpender),
+      isOperatorContract(this.address, holderAddress, normalizedSpender),
     );
   }
 
@@ -298,6 +305,8 @@ export class Token extends ReadonlyToken {
     options?: {
       approvalStrategy?: "max" | "exact" | "skip";
       fees?: bigint;
+      to?: Address;
+      callbacks?: ShieldCallbacks;
     },
   ): Promise<TransactionResult> {
     const underlying = await this.#getUnderlying();
@@ -308,13 +317,14 @@ export class Token extends ReadonlyToken {
 
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
-      await this.#ensureAllowance(amount, strategy === "max");
+      await this.#ensureAllowance(amount, strategy === "max", options?.callbacks);
     }
 
     try {
-      const address = await this.signer.getAddress();
-      const txHash = await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
+      const to = options?.to ? normalizeAddress(options.to, "to") : await this.signer.getAddress();
+      const txHash = await this.signer.writeContract(wrapContract(this.wrapper, to, amount));
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
+      safeCallback(() => options?.callbacks?.onShieldSubmitted?.(txHash));
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
@@ -684,7 +694,11 @@ export class Token extends ReadonlyToken {
     return finalizeResult;
   }
 
-  async #ensureAllowance(amount: bigint, maxApproval: boolean): Promise<void> {
+  async #ensureAllowance(
+    amount: bigint,
+    maxApproval: boolean,
+    callbacks?: ShieldCallbacks,
+  ): Promise<void> {
     const underlying = await this.#getUnderlying();
 
     const userAddress = await this.signer.getAddress();
@@ -704,7 +718,10 @@ export class Token extends ReadonlyToken {
 
       const approvalAmount = maxApproval ? 2n ** 256n - 1n : amount;
 
-      await this.signer.writeContract(approveContract(underlying, this.wrapper, approvalAmount));
+      const txHash = await this.signer.writeContract(
+        approveContract(underlying, this.wrapper, approvalAmount),
+      );
+      safeCallback(() => callbacks?.onApprovalSubmitted?.(txHash));
     } catch (error) {
       if (error instanceof ZamaError) throw error;
       throw new ApprovalFailedError("ERC-20 approval failed", {
