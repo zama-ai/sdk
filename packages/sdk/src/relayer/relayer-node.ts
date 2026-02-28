@@ -15,6 +15,8 @@ import type {
   UserDecryptParams,
   ZKProofLike,
 } from "./relayer-sdk.types";
+import type { GenericLogger } from "../worker/worker.types";
+import type { GenericStringStorage } from "../token/token.types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 import { PublicParamsCache } from "./public-params-cache";
 
@@ -24,9 +26,9 @@ export interface RelayerNodeConfig {
   getChainId: () => Promise<number>;
   poolSize?: number;
   /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: import("../worker/worker.types").GenericLogger;
+  logger?: GenericLogger;
   /** Optional persistent storage for caching FHE public key and params across sessions. */
-  storage?: import("../token/token.types").GenericStringStorage;
+  storage?: GenericStringStorage;
 }
 
 /**
