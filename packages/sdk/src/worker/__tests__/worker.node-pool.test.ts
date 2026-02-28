@@ -136,9 +136,13 @@ describe("NodeWorkerPool", () => {
       durationDays: 7,
     });
 
-    await pool.encrypt({ values: [1n], contractAddress: "0xC", userAddress: "0xU" });
+    await pool.encrypt({
+      values: [{ type: "uint64" as const, value: 1n }],
+      contractAddress: "0xC",
+      userAddress: "0xU",
+    });
     expect(instance.encrypt).toHaveBeenCalledWith({
-      values: [1n],
+      values: [{ type: "uint64", value: 1n }],
       contractAddress: "0xC",
       userAddress: "0xU",
     });

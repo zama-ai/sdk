@@ -76,7 +76,7 @@ describe("useEncrypt", () => {
 
     await act(async () => {
       result.current.mutate({
-        values: [1000n],
+        values: [{ type: "uint64" as const, value: 1000n }],
         contractAddress: "0x1111111111111111111111111111111111111111" as Address,
         userAddress: "0x2222222222222222222222222222222222222222" as Address,
       });

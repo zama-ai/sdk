@@ -27,7 +27,7 @@ describe("decodeDecryptedValue", () => {
     expect(decodeDecryptedValue(0n, "uint256")).toBe(0n);
   });
 
-  it("returns bigint as-is for bytes types", () => {
-    expect(decodeDecryptedValue(42n, "bytes64")).toBe(42n);
+  it("returns bigint as-is for uint128", () => {
+    expect(decodeDecryptedValue(42n, "uint128")).toBe(42n);
   });
 });

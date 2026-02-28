@@ -175,7 +175,7 @@ it("encryptMutationOptions", async () => {
 
   expect(opts.mutationKey).toEqual(["encrypt"]);
   const params = {
-    values: [1000n],
+    values: [{ type: "uint64" as const, value: 1000n }],
     contractAddress: "0xtoken" as Address,
     userAddress: "0xuser" as Address,
   };

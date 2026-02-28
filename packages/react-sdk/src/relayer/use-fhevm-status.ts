@@ -16,8 +16,7 @@ import { useZamaSDK } from "../provider";
  * ```
  */
 export function useFHEvmStatus(): RelayerSDKStatus {
-  const sdk = useZamaSDK();
-  const relayer = sdk.relayer;
+  const { relayer } = useZamaSDK();
 
   return useSyncExternalStore(
     (callback) => {

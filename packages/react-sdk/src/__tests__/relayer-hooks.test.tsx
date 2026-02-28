@@ -3,7 +3,7 @@ import { waitFor } from "@testing-library/react";
 import { useGenerateKeypair } from "../relayer/use-generate-keypair";
 import { useCreateEIP712 } from "../relayer/use-create-eip712";
 import { useCreateDelegatedUserDecryptEIP712 } from "../relayer/use-create-delegated-user-decrypt-eip712";
-import { useUserDecrypt } from "../relayer/use-user-decrypt";
+import { useUserDecryptRaw } from "../relayer/use-user-decrypt-raw";
 import { usePublicDecrypt } from "../relayer/use-public-decrypt";
 import { useDelegatedUserDecrypt } from "../relayer/use-delegated-user-decrypt";
 import { useRequestZKProofVerification } from "../relayer/use-request-zk-proof-verification";
@@ -121,7 +121,7 @@ describe("useUserDecrypt", () => {
       "0xhandle2": 200n,
     });
 
-    const { result, queryClient } = renderWithProviders(() => useUserDecrypt(), { relayer });
+    const { result, queryClient } = renderWithProviders(() => useUserDecryptRaw(), { relayer });
 
     result.current.mutate({
       handles: ["0xhandle1", "0xhandle2"],

@@ -271,7 +271,7 @@ describe("RelayerWeb", () => {
       });
 
       await relayer.encrypt({
-        values: [100n],
+        values: [{ type: "uint64" as const, value: 100n }],
         contractAddress: "0xContract" as `0x${string}`,
         userAddress: "0xUser" as `0x${string}`,
       });
@@ -287,7 +287,7 @@ describe("RelayerWeb", () => {
       });
 
       await relayer.encrypt({
-        values: [100n],
+        values: [{ type: "uint64" as const, value: 100n }],
         contractAddress: "0xContract" as `0x${string}`,
         userAddress: "0xUser" as `0x${string}`,
       });
@@ -304,7 +304,7 @@ describe("RelayerWeb", () => {
       });
 
       await relayer.encrypt({
-        values: [100n],
+        values: [{ type: "uint64" as const, value: 100n }],
         contractAddress: "0xContract" as `0x${string}`,
         userAddress: "0xUser" as `0x${string}`,
       });
@@ -417,7 +417,7 @@ describe("RelayerWeb", () => {
       mockWorkerClient.encrypt.mockResolvedValue({ handles, inputProof });
 
       const result = await relayer.encrypt({
-        values: [42n],
+        values: [{ type: "uint64" as const, value: 42n }],
         contractAddress: "0xC" as `0x${string}`,
         userAddress: "0xU" as `0x${string}`,
       });
@@ -726,7 +726,7 @@ describe("RelayerNode", () => {
       mockPool.encrypt.mockResolvedValue({ handles, inputProof });
 
       const result = await relayer.encrypt({
-        values: [42n],
+        values: [{ type: "uint64" as const, value: 42n }],
         contractAddress: "0xC" as `0x${string}`,
         userAddress: "0xU" as `0x${string}`,
       });
