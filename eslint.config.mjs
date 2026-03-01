@@ -12,7 +12,7 @@ export default defineConfig([
     "packages/test-nextjs/.next/**",
     "packages/test-nextjs/playwright/**",
     "packages/test-vite/playwright/**",
-    "packages/playwright-fixtures/**",
+    "packages/playwright/**",
     "docs/api/**",
     "tools/**",
   ]),
