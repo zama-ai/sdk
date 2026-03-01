@@ -10,7 +10,7 @@
 
 SDK A (`confidential-defi/react-sdk`, score 79/100) has superior architecture: state machine provider lifecycle, error hierarchy, mutation dedup, optimistic updates, chain validation, wallet lifecycle handling, and comprehensive React tests. Its signer abstraction (3-field interface) achieves zero adapter duplication.
 
-SDK B (`sdk`, score 67/100) has better foundational architecture (core/react split, worker threads, encrypted credentials, `ContractCallConfig` builders) and dramatically better DX (READMEs, CLAUDE.md, test-app, single import). But it suffers from severe adapter duplication (39 near-identical hook files), zero React unit tests, no mutation dedup, no chain validation, no wallet lifecycle handling, and no optimistic updates.
+SDK B (`sdk`, score 67/100) has better foundational architecture (core/react split, worker threads, encrypted credentials, `ContractCallConfig` builders) and dramatically better DX (READMEs, CLAUDE.md, test-nextjs, single import). But it suffers from severe adapter duplication (39 near-identical hook files), zero React unit tests, no mutation dedup, no chain validation, no wallet lifecycle handling, and no optimistic updates.
 
 **Goal:** Refactor SDK B to adopt SDK A's best patterns while preserving SDK B's architecture and DX advantages.
 
@@ -269,7 +269,7 @@ Phases 3-5 are sequential.
 - Worker pool (RelayerWeb, RelayerNode, NodeWorkerPool)
 - Encrypted credential storage (AES-GCM)
 - Two-phase balance polling
-- All DX: READMEs, CLAUDE.md, test-app, single import pattern
+- All DX: READMEs, CLAUDE.md, test-nextjs, single import pattern
 - Activity feed, batch operations, fees
 - E2E test suite (Playwright + Hardhat)
 

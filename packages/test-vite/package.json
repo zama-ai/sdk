@@ -1,0 +1,37 @@
+{
+  "name": "@zama-fhe/test-vite",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3200",
+    "dev:e2e": "VITE_NETWORK=hardhat vite --port 3200",
+    "build": "vite build",
+    "preview": "vite preview --port 3200",
+    "e2e:test": "playwright test",
+    "e2e:test:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.21",
+    "@zama-fhe/react-sdk": "workspace:*",
+    "@zama-fhe/sdk": "workspace:*",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router": "^7",
+    "tailwindcss": "^4.2.1",
+    "viem": "^2.46.3",
+    "wagmi": "^3.5.0"
+  },
+  "devDependencies": {
+    "@fhevm/mock-utils": "0.4.2",
+    "@zama-fhe/playwright-fixtures": "workspace:*",
+    "@playwright/test": "^1.58.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@tailwindcss/vite": "^4.2.1",
+    "@vitejs/plugin-react": "^4.5.2",
+    "@zama-fhe/relayer-sdk": "0.4.1",
+    "ethers": "^6.16.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.0"
+  }
+}

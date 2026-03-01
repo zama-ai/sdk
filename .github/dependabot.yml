@@ -6,7 +6,7 @@ updates:
       - /
       - /packages/sdk
       - /packages/react-sdk
-      - /packages/test-app
+      - /packages/test-nextjs
     schedule:
       interval: weekly
     ignore:
