@@ -40,6 +40,15 @@ function Layout() {
           <Link to="/unwrap-manual" className="font-medium hover:text-blue-600">
             Manual Unwrap
           </Link>
+          <Link to="/resume-unshield" className="font-medium hover:text-blue-600">
+            Resume Unshield
+          </Link>
+          <Link to="/batch-transfer" className="font-medium hover:text-blue-600">
+            Batch Transfer
+          </Link>
+          <Link to="/activity-feed" className="font-medium hover:text-blue-600">
+            Activity Feed
+          </Link>
         </nav>
         <ConnectWallet />
       </header>
@@ -72,6 +81,9 @@ export default function App() {
             path="wrapper-discovery"
             Component={lazy(() => import("./pages/wrapper-discovery"))}
           />
+          <Route path="resume-unshield" Component={lazy(() => import("./pages/resume-unshield"))} />
+          <Route path="batch-transfer" Component={lazy(() => import("./pages/batch-transfer"))} />
+          <Route path="activity-feed" Component={lazy(() => import("./pages/activity-feed"))} />
           <Route path="*" element={<Navigate to="/wallet" replace />} />
         </Route>
       </Routes>

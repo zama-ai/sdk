@@ -14,6 +14,8 @@ const contracts = {
   cUSDT: "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762",
   USDC: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
   cUSDC: "0x3B02fF1e626Ed7a8fd6eC5299e2C54e1421B626B",
+  transferBatcher: "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+  feeManager: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
 } as const;
 
 /** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */
