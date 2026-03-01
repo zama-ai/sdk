@@ -1,7 +1,8 @@
 {
-  "name": "@zama-fhe/test-app",
+  "name": "@zama-fhe/test-nextjs",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
   "scripts": {
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@fhevm/mock-utils": "0.4.2",
+    "@zama-fhe/playwright-fixtures": "workspace:*",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/react": "^19.2.14",

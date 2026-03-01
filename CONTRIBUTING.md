@@ -32,7 +32,7 @@ pnpm test:run
 packages/
   sdk/          # Core SDK
   react-sdk/    # React hooks
-  test-app/           # E2E test app (Playwright + Hardhat)
+  test-nextjs/           # E2E test app (Playwright + Hardhat)
 ```
 
 ## Development Workflow

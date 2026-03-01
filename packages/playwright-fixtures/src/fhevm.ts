@@ -1,10 +1,12 @@
 import { MockFhevmInstance } from "@fhevm/mock-utils";
 import { Page } from "@playwright/test";
-import type { FhevmInstance } from "@zama-fhe/relayer-sdk/node";
 import { JsonRpcProvider } from "ethers";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { hardhat } from "viem/chains";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function createMockFhevmInstance(chainId: number, rpcUrl: string) {
   const provider = new JsonRpcProvider(rpcUrl);
@@ -26,7 +28,7 @@ async function createMockFhevmInstance(chainId: number, rpcUrl: string) {
     },
   );
 
-  return fhevm as unknown as FhevmInstance;
+  return fhevm;
 }
 
 export async function mockRelayerSdk(page: Page, baseURL: string) {
@@ -77,7 +79,7 @@ export async function mockRelayerSdk(page: Page, baseURL: string) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        handles: encrypted.handles.map((h) => Array.from(h)),
+        handles: encrypted.handles.map((h: Uint8Array) => Array.from(h)),
         inputProof: Array.from(encrypted.inputProof),
       }),
     });

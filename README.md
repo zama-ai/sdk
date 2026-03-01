@@ -669,7 +669,7 @@ pnpm format:check      # Formatting check
 
 ### E2E Tests
 
-The test app in `packages/test-app` runs Playwright tests against a local Hardhat node with FHE mock contracts:
+The test app in `packages/test-nextjs` runs Playwright tests against a local Hardhat node with FHE mock contracts:
 
 ```bash
 pnpm submodule:init    # Initialize hardhat submodule (first time)
