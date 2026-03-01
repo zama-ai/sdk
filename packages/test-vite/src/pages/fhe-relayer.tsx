@@ -1,6 +1,6 @@
 import type { Address } from "@zama-fhe/react-sdk";
 import { useSearchParams } from "react-router";
-import { FheRelayerPanel } from "../components/fhe-relayer-panel";
+import { FheRelayerPanel } from "@zama-fhe/test-components";
 import { DEFAULTS } from "../constants";
 
 export function FheRelayerPage() {

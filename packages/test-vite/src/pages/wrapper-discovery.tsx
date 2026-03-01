@@ -1,6 +1,6 @@
 import type { Address } from "@zama-fhe/react-sdk";
 import { useSearchParams } from "react-router";
-import { WrapperDiscoveryPanel } from "../components/wrapper-discovery-panel";
+import { WrapperDiscoveryPanel } from "@zama-fhe/test-components";
 
 export function WrapperDiscoveryPage() {
   const [searchParams] = useSearchParams();

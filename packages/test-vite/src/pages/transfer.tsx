@@ -1,6 +1,6 @@
 import type { Address } from "@zama-fhe/react-sdk";
 import { useSearchParams } from "react-router";
-import { TransferForm } from "../components/transfer-form";
+import { TransferForm } from "@zama-fhe/test-components";
 import { DEFAULTS } from "../constants";
 
 export function TransferPage() {
