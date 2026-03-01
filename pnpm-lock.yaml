@@ -261,6 +261,9 @@ importers:
       '@zama-fhe/sdk':
         specifier: workspace:*
         version: link:../sdk
+      '@zama-fhe/test-components':
+        specifier: workspace:*
+        version: link:../test-components
       react:
         specifier: ^19.2.4
         version: 19.2.4

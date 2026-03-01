@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Link, Outlet } from "react-router";
-import { ConnectWallet } from "./components/connect-wallet";
+import { ConnectWallet } from "@zama-fhe/test-components";
 import { ApprovePage } from "./pages/approve";
 import { AuthorizeAllPage } from "./pages/authorize-all";
 import { FheRelayerPage } from "./pages/fhe-relayer";
