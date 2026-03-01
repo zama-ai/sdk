@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/test";
+import { test, expect } from "../fixtures";
 
 test("should authorize all tokens", async ({ page, contracts }) => {
   await page.goto(`/authorize-all?tokens=${contracts.cUSDT},${contracts.cUSDC}`);

@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/test";
+import { test, expect } from "../fixtures";
 
 test("should generate keypair", async ({ page, contracts }) => {
   await page.goto(`/fhe-relayer?tokens=${contracts.cUSDT}`);

@@ -27,8 +27,6 @@
     "**/node_modules",
     "packages/test-nextjs",
     "packages/test-vite",
-    "packages/test-nextjs",
-    "packages/test-vite",
-    "packages/playwright-fixtures"
+    "packages/playwright"
   ]
 }
