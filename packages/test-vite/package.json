@@ -11,7 +11,6 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
     "@zama-fhe/react-sdk": "workspace:*",
-    "@zama-fhe/sdk": "workspace:*",
     "@zama-fhe/test-components": "workspace:*",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -24,7 +23,7 @@
     "@tailwindcss/vite": "^4.2.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.5.2",
+    "@vitejs/plugin-react": "^5.1.4",
     "typescript": "^5.9.3",
     "vite": "npm:rolldown-vite@latest"
   }
