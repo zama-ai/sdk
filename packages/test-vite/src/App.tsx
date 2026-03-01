@@ -2,18 +2,6 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link, Outlet } from "react-router";
 import { ConnectWallet } from "@zama-fhe/test-components";
 
-const WalletPage = lazy(() => import("./pages/wallet"));
-const ShieldPage = lazy(() => import("./pages/shield"));
-const TransferPage = lazy(() => import("./pages/transfer"));
-const TransferFromPage = lazy(() => import("./pages/transfer-from"));
-const UnshieldPage = lazy(() => import("./pages/unshield"));
-const UnshieldAllPage = lazy(() => import("./pages/unshield-all"));
-const UnwrapManualPage = lazy(() => import("./pages/unwrap-manual"));
-const ApprovePage = lazy(() => import("./pages/approve"));
-const AuthorizeAllPage = lazy(() => import("./pages/authorize-all"));
-const FheRelayerPage = lazy(() => import("./pages/fhe-relayer"));
-const WrapperDiscoveryPage = lazy(() => import("./pages/wrapper-discovery"));
-
 function Layout() {
   return (
     <div className="bg-gray-50 text-gray-900 min-h-screen">
@@ -70,17 +58,20 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Navigate to="/wallet" replace />} />
-          <Route path="wallet" element={<WalletPage />} />
-          <Route path="shield" element={<ShieldPage />} />
-          <Route path="transfer" element={<TransferPage />} />
-          <Route path="transfer-from" element={<TransferFromPage />} />
-          <Route path="unshield" element={<UnshieldPage />} />
-          <Route path="unshield-all" element={<UnshieldAllPage />} />
-          <Route path="unwrap-manual" element={<UnwrapManualPage />} />
-          <Route path="approve" element={<ApprovePage />} />
-          <Route path="authorize-all" element={<AuthorizeAllPage />} />
-          <Route path="fhe-relayer" element={<FheRelayerPage />} />
-          <Route path="wrapper-discovery" element={<WrapperDiscoveryPage />} />
+          <Route path="wallet" Component={lazy(() => import("./pages/wallet"))} />
+          <Route path="shield" Component={lazy(() => import("./pages/shield"))} />
+          <Route path="transfer" Component={lazy(() => import("./pages/transfer"))} />
+          <Route path="transfer-from" Component={lazy(() => import("./pages/transfer-from"))} />
+          <Route path="unshield" Component={lazy(() => import("./pages/unshield"))} />
+          <Route path="unshield-all" Component={lazy(() => import("./pages/unshield-all"))} />
+          <Route path="unwrap-manual" Component={lazy(() => import("./pages/unwrap-manual"))} />
+          <Route path="approve" Component={lazy(() => import("./pages/approve"))} />
+          <Route path="authorize-all" Component={lazy(() => import("./pages/authorize-all"))} />
+          <Route path="fhe-relayer" Component={lazy(() => import("./pages/fhe-relayer"))} />
+          <Route
+            path="wrapper-discovery"
+            Component={lazy(() => import("./pages/wrapper-discovery"))}
+          />
           <Route path="*" element={<Navigate to="/wallet" replace />} />
         </Route>
       </Routes>
