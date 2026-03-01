@@ -1,4 +1,4 @@
-import { ShieldForm } from "@/components/shield-form";
+import { ShieldForm } from "@zama-fhe/test-components";
 import type { Address } from "@zama-fhe/react-sdk";
 
 const DEFAULTS = {

@@ -14,6 +14,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
     "@zama-fhe/react-sdk": "workspace:*",
+    "@zama-fhe/test-components": "workspace:*",
     "@zama-fhe/sdk": "workspace:*",
     "next": "^16.1.6",
     "react": "^19.2.4",

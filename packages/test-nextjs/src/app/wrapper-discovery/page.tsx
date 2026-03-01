@@ -1,4 +1,4 @@
-import { WrapperDiscoveryPanel } from "@/components/wrapper-discovery-panel";
+import { WrapperDiscoveryPanel } from "@zama-fhe/test-components";
 import type { Address } from "@zama-fhe/react-sdk";
 
 export default async function WrapperDiscoveryPage({

@@ -1,3 +1,5 @@
+"use client";
+
 import { useConfidentialBalances, useTokenMetadata, type Address } from "@zama-fhe/react-sdk";
 import { useBalanceOf } from "@zama-fhe/react-sdk/wagmi";
 import { useState } from "react";
