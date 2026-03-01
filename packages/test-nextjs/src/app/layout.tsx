@@ -48,6 +48,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/unwrap-manual" className="font-medium hover:text-blue-600">
                 Manual Unwrap
               </Link>
+              <Link href="/resume-unshield" className="font-medium hover:text-blue-600">
+                Resume Unshield
+              </Link>
+              <Link href="/batch-transfer" className="font-medium hover:text-blue-600">
+                Batch Transfer
+              </Link>
+              <Link href="/activity-feed" className="font-medium hover:text-blue-600">
+                Activity Feed
+              </Link>
             </nav>
             <ConnectWallet />
           </header>
