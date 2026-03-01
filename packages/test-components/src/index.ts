@@ -10,3 +10,6 @@ export { UnshieldAllForm } from "./unshield-all-form";
 export { UnwrapManualForm } from "./unwrap-manual-form";
 export { WrapperDiscoveryPanel } from "./wrapper-discovery-panel";
 export { TokenTable } from "./token-table";
+export { ResumeUnshieldForm } from "./resume-unshield-form";
+export { BatchTransferForm } from "./batch-transfer-form";
+export { ActivityFeedPanel } from "./activity-feed-panel";
