@@ -10,13 +10,13 @@ export function ConnectWallet() {
 
   if (isConnected) {
     return (
-      <div className="flex items-center gap-3">
-        <span data-testid="wallet-address" className="font-mono text-sm">
+      <div className="flex items-center gap-2">
+        <span data-testid="wallet-address" className="font-mono text-xs text-zama-gray">
           {address?.slice(0, 6)}...{address?.slice(-4)}
         </span>
         <button
           onClick={() => disconnect()}
-          className="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
+          className="px-2.5 py-1 text-xs bg-zama-surface text-zama-gray rounded border border-zama-border hover:text-white hover:border-zama-gray transition-colors"
         >
           Disconnect
         </button>
@@ -27,7 +27,7 @@ export function ConnectWallet() {
   return (
     <button
       onClick={() => connect({ connector: connectors[0]! })}
-      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+      className="px-3 py-1.5 text-sm font-medium bg-zama-yellow text-zama-black rounded hover:bg-zama-yellow-hover transition-colors"
     >
       Connect Wallet
     </button>

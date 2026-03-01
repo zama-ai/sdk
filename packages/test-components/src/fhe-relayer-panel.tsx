@@ -31,7 +31,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
             })
           }
           disabled={generateKeypair.isPending}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
           data-testid="generate-keypair-button"
         >
           {generateKeypair.isPending ? "Generating..." : "Generate Keypair"}
@@ -62,7 +62,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
             });
           }}
           disabled={createEIP712.isPending || !keypairPublicKey}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
           data-testid="create-eip712-button"
         >
           {createEIP712.isPending ? "Creating..." : "Create EIP-712"}
@@ -123,7 +123,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
             })
           }
           disabled={encrypt.isPending}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
           data-testid="encrypt-button"
         >
           {encrypt.isPending ? "Encrypting..." : "Encrypt Value"}
