@@ -138,6 +138,11 @@ jobs:
         env:
           NEXT_PUBLIC_NETWORK: hardhat
 
+      - name: Build Vite test-vite
+        run: pnpm build:test-vite
+        env:
+          VITE_NETWORK: hardhat
+
       - name: Run Vite Playwright tests
         run: pnpm e2e:test:vite
         env:
