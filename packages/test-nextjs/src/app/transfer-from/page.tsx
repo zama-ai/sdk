@@ -8,7 +8,7 @@ export default async function TransferFromPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const token = (params.token as Address) ?? CONTRACTS.confidentialToken;
+  const token = (params.token as Address) ?? CONTRACTS.cUSDT;
   const from = params.from as Address | undefined;
   const wrapper = params.wrapper as Address | undefined;
 

@@ -8,7 +8,7 @@ export default async function UnshieldAllPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const token = (params.token as Address) ?? CONTRACTS.confidentialToken;
+  const token = (params.token as Address) ?? CONTRACTS.cUSDT;
   const wrapper = params.wrapper as Address | undefined;
 
   return (
