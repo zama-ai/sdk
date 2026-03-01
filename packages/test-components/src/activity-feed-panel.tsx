@@ -89,7 +89,7 @@ export function ActivityFeedPanel({ tokenAddress }: { tokenAddress: Address }) {
             {activity.map((item, index) => (
               <div
                 key={`${item.metadata.transactionHash}-${item.metadata.logIndex}`}
-                className="p-3 border rounded bg-white"
+                className="p-3 border border-gray-200 rounded bg-white shadow-sm"
                 data-testid={`activity-item-${index}`}
               >
                 <span data-testid={`activity-type-${index}`}>{item.type}</span>

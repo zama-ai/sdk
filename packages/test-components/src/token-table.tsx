@@ -33,7 +33,10 @@ function TokenRow({
               : "..."}
       </td>
       <td className="px-4 py-2 text-right">
-        <LinkComponent to={`/unshield?token=${address}`} className="text-blue-600 hover:underline">
+        <LinkComponent
+          to={`/unshield?token=${address}`}
+          className="text-zama-yellow hover:underline"
+        >
           Unshield
         </LinkComponent>
       </td>
@@ -61,7 +64,7 @@ function ERC20TokenRow({
       <td className="px-4 py-2 text-right">
         <LinkComponent
           to={`/shield?token=${address}&wrapper=${wrapper}`}
-          className="text-blue-600 hover:underline"
+          className="text-zama-yellow hover:underline"
         >
           Shield
         </LinkComponent>
@@ -88,7 +91,7 @@ export function TokenTable({
     <div className="space-y-4">
       <button
         onClick={() => setRevealed(!revealed)}
-        className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+        className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover transition-colors"
         data-testid="reveal-button"
       >
         {revealed ? "Hide Balances" : "Reveal Balances"}

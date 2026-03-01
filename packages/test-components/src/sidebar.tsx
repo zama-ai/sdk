@@ -30,7 +30,7 @@ function NavLinks({ LinkComponent }: { LinkComponent: LinkComponent }) {
     <LinkComponent
       key={item.to}
       to={item.to}
-      className="text-sm font-medium text-gray-700 hover:text-blue-600 py-1.5 px-2 rounded hover:bg-gray-50"
+      className="text-sm font-medium text-zama-gray hover:text-white py-1.5 px-3 rounded hover:bg-zama-dark-hover transition-colors"
     >
       {item.label}
     </LinkComponent>
@@ -49,10 +49,10 @@ export function Sidebar({
   return (
     <>
       {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
+      <div className="md:hidden flex items-center justify-between bg-zama-black border-b border-zama-border px-4 py-3">
         <button
           type="button"
-          className="p-1 -ml-1 text-gray-600"
+          className="p-1 -ml-1 text-zama-gray hover:text-white transition-colors"
           onClick={() => setOpen((v) => !v)}
           aria-label="Toggle navigation"
           data-testid="nav-toggle"
@@ -79,14 +79,17 @@ export function Sidebar({
 
       {/* Mobile slide-out nav */}
       {open && (
-        <nav className="md:hidden bg-white border-b border-gray-200 px-4 pb-3 flex flex-col gap-1">
+        <nav className="md:hidden bg-zama-black border-b border-zama-border px-4 pb-3 flex flex-col gap-1">
           <NavLinks LinkComponent={LinkComponent} />
         </nav>
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200">
-        <div className="px-4 py-4 border-b border-gray-200">{children}</div>
+      <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-64 bg-zama-black border-r border-zama-border">
+        <div className="px-4 py-5 border-b border-zama-border">
+          <div className="text-zama-yellow font-bold text-lg tracking-tight mb-3">Zama SDK</div>
+          {children}
+        </div>
         <nav className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-0.5">
           <NavLinks LinkComponent={LinkComponent} />
         </nav>

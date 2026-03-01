@@ -39,14 +39,14 @@ export function UnshieldForm({
         name="amount"
         placeholder="Amount"
         required
-        className="w-full px-3 py-2 border rounded"
+        className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="amount-input"
       />
 
       <button
         type="submit"
         disabled={unshield.isPending}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
         data-testid="unshield-button"
       >
         {unshield.isPending ? "Unshielding..." : "Unshield"}
