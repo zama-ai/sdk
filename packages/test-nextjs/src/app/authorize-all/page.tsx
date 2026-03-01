@@ -1,12 +1,6 @@
 import { AuthorizeAllPanel } from "@zama-fhe/test-components";
 import type { Address } from "@zama-fhe/react-sdk";
-
-const DEFAULTS = {
-  tokens: [
-    "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762", // cUSDT
-    "0x3B02fF1e626Ed7a8fd6eC5299e2C54e1421B626B", // cUSDC
-  ] as Address[],
-};
+import { CONFIDENTIAL_TOKEN_ADDRESSES } from "@/constants";
 
 export default async function AuthorizeAllPage({
   searchParams,
@@ -15,7 +9,7 @@ export default async function AuthorizeAllPage({
 }) {
   const params = await searchParams;
   const tokensParam = params.tokens;
-  const tokens = tokensParam ? (tokensParam.split(",") as Address[]) : DEFAULTS.tokens;
+  const tokens = tokensParam ? (tokensParam.split(",") as Address[]) : CONFIDENTIAL_TOKEN_ADDRESSES;
 
   return (
     <div className="space-y-6">

@@ -1,10 +1,6 @@
 import { ShieldForm } from "@zama-fhe/test-components";
 import type { Address } from "@zama-fhe/react-sdk";
-
-const DEFAULTS = {
-  token: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788" as Address, // USDT
-  wrapper: "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762" as Address, // cUSDT
-};
+import { CONTRACTS } from "@/constants";
 
 export default async function ShieldPage({
   searchParams,
@@ -12,8 +8,8 @@ export default async function ShieldPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const token = (params.token as Address) ?? DEFAULTS.token;
-  const wrapper = (params.wrapper as Address) ?? DEFAULTS.wrapper;
+  const token = (params.token as Address) ?? CONTRACTS.USDT;
+  const wrapper = (params.wrapper as Address) ?? CONTRACTS.cUSDT;
 
   return (
     <div className="space-y-6">
