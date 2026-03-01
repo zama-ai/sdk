@@ -26,10 +26,10 @@ export function ApproveForm({
       className="space-y-4"
       data-testid="approve-form"
     >
-      <h2 className="text-xl font-semibold">Approve {metadata?.symbol ?? "..."}</h2>
+      <h2 className="text-xl font-semibold text-white">Approve {metadata?.symbol ?? "..."}</h2>
 
       {isApproved !== undefined && (
-        <p className="text-sm text-gray-600" data-testid="approval-status">
+        <p className="text-sm text-zama-gray" data-testid="approval-status">
           Approved: {isApproved ? "true" : "false"}
         </p>
       )}
@@ -40,7 +40,7 @@ export function ApproveForm({
         placeholder="Spender address (0x...)"
         defaultValue={defaultSpender ?? ""}
         required
-        className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+        className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="spender-input"
       />
 
@@ -54,13 +54,13 @@ export function ApproveForm({
       </button>
 
       {approve.isSuccess && (
-        <p className="text-green-600" data-testid="approve-success">
+        <p className="text-zama-success" data-testid="approve-success">
           Approved successfully! Tx: {approve.data?.txHash}
         </p>
       )}
 
       {approve.isError && (
-        <p className="text-red-600" data-testid="approve-error">
+        <p className="text-zama-error" data-testid="approve-error">
           Error: {approve.error.message}
         </p>
       )}

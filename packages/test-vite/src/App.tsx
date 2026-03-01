@@ -4,7 +4,7 @@ import { ConnectWallet, Sidebar } from "@zama-fhe/test-components";
 
 function Layout() {
   return (
-    <div className="bg-gray-50 text-gray-900 min-h-screen">
+    <div className="bg-zama-dark text-zama-light min-h-screen">
       <Sidebar LinkComponent={Link}>
         <ConnectWallet />
       </Sidebar>

@@ -64,28 +64,30 @@ export function BatchTransferForm({
       className="space-y-4"
       data-testid="batch-transfer-form"
     >
-      <h2 className="text-xl font-semibold">Batch Transfer {metadata?.symbol ?? "..."}</h2>
+      <h2 className="text-xl font-semibold text-white">
+        Batch Transfer {metadata?.symbol ?? "..."}
+      </h2>
 
       {balance !== undefined && (
-        <p className="text-sm text-gray-600" data-testid="current-balance">
+        <p className="text-sm text-zama-gray" data-testid="current-balance">
           Balance: {balance.toString()}
         </p>
       )}
 
       {batchFee !== undefined && (
-        <p className="text-sm text-gray-600" data-testid="batch-fee">
+        <p className="text-sm text-zama-gray" data-testid="batch-fee">
           Batch fee: {batchFee.toString()}
         </p>
       )}
 
       <div className="space-y-2">
-        <h3 className="font-medium">Transfer 1</h3>
+        <h3 className="font-medium text-white">Transfer 1</h3>
         <input
           type="text"
           name="recipient1"
           placeholder="Recipient 1 (0x...)"
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+          className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="recipient1-input"
         />
         <input
@@ -93,19 +95,19 @@ export function BatchTransferForm({
           name="amount1"
           placeholder="Amount 1"
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+          className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="amount1-input"
         />
       </div>
 
       <div className="space-y-2">
-        <h3 className="font-medium">Transfer 2</h3>
+        <h3 className="font-medium text-white">Transfer 2</h3>
         <input
           type="text"
           name="recipient2"
           placeholder="Recipient 2 (0x...)"
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+          className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="recipient2-input"
         />
         <input
@@ -113,7 +115,7 @@ export function BatchTransferForm({
           name="amount2"
           placeholder="Amount 2"
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+          className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="amount2-input"
         />
       </div>
@@ -132,13 +134,13 @@ export function BatchTransferForm({
       </button>
 
       {batchTransfer.isSuccess && (
-        <p className="text-green-600" data-testid="batch-transfer-success">
+        <p className="text-zama-success" data-testid="batch-transfer-success">
           Batch transfer successful! Tx: {batchTransfer.data}
         </p>
       )}
 
       {batchTransfer.isError && (
-        <p className="text-red-600" data-testid="batch-transfer-error">
+        <p className="text-zama-error" data-testid="batch-transfer-error">
           Error: {batchTransfer.error.message}
         </p>
       )}

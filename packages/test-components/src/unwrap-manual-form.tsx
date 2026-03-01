@@ -39,10 +39,12 @@ export function UnwrapManualForm({
         className="space-y-4"
         data-testid="unwrap-form"
       >
-        <h2 className="text-xl font-semibold">Step 1: Unwrap {metadata?.symbol ?? "..."}</h2>
+        <h2 className="text-xl font-semibold text-white">
+          Step 1: Unwrap {metadata?.symbol ?? "..."}
+        </h2>
 
         {balance !== undefined && (
-          <p className="text-sm text-gray-600" data-testid="current-balance">
+          <p className="text-sm text-zama-gray" data-testid="current-balance">
             Balance: {balance.toString()}
           </p>
         )}
@@ -52,7 +54,7 @@ export function UnwrapManualForm({
           name="amount"
           placeholder="Amount"
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+          className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="amount-input"
         />
 
@@ -66,19 +68,19 @@ export function UnwrapManualForm({
         </button>
 
         {unwrap.isSuccess && (
-          <p className="text-green-600" data-testid="unwrap-success">
+          <p className="text-zama-success" data-testid="unwrap-success">
             Unwrap requested! Tx: {unwrap.data?.txHash}
           </p>
         )}
 
         {burnAmountHandle && (
-          <p className="text-sm text-gray-600" data-testid="burn-handle">
+          <p className="text-sm text-zama-gray" data-testid="burn-handle">
             Burn handle: {burnAmountHandle}
           </p>
         )}
 
         {unwrap.isError && (
-          <p className="text-red-600" data-testid="unwrap-error">
+          <p className="text-zama-error" data-testid="unwrap-error">
             Error: {unwrap.error.message}
           </p>
         )}
@@ -93,7 +95,7 @@ export function UnwrapManualForm({
         className="space-y-4"
         data-testid="finalize-form"
       >
-        <h2 className="text-xl font-semibold">Step 2: Finalize Unwrap</h2>
+        <h2 className="text-xl font-semibold text-white">Step 2: Finalize Unwrap</h2>
 
         <button
           type="submit"
@@ -105,13 +107,13 @@ export function UnwrapManualForm({
         </button>
 
         {finalizeUnwrap.isSuccess && (
-          <p className="text-green-600" data-testid="finalize-success">
+          <p className="text-zama-success" data-testid="finalize-success">
             Finalized successfully! Tx: {finalizeUnwrap.data?.txHash}
           </p>
         )}
 
         {finalizeUnwrap.isError && (
-          <p className="text-red-600" data-testid="finalize-error">
+          <p className="text-zama-error" data-testid="finalize-error">
             Error: {finalizeUnwrap.error.message}
           </p>
         )}

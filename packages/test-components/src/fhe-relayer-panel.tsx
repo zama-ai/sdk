@@ -23,7 +23,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
     <div className="space-y-8" data-testid="fhe-relayer-panel">
       {/* useGenerateKeypair */}
       <section className="space-y-2">
-        <h2 className="text-xl font-semibold">useGenerateKeypair</h2>
+        <h2 className="text-xl font-semibold text-white">useGenerateKeypair</h2>
         <button
           onClick={() =>
             generateKeypair.mutate(undefined, {
@@ -37,12 +37,12 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
           {generateKeypair.isPending ? "Generating..." : "Generate Keypair"}
         </button>
         {generateKeypair.isSuccess && (
-          <p className="text-green-600" data-testid="generate-keypair-result">
+          <p className="text-zama-success" data-testid="generate-keypair-result">
             Public key length: {generateKeypair.data.publicKey.length}
           </p>
         )}
         {generateKeypair.isError && (
-          <p className="text-red-600" data-testid="generate-keypair-error">
+          <p className="text-zama-error" data-testid="generate-keypair-error">
             Error: {generateKeypair.error.message}
           </p>
         )}
@@ -50,7 +50,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
 
       {/* useCreateEIP712 */}
       <section className="space-y-2">
-        <h2 className="text-xl font-semibold">useCreateEIP712</h2>
+        <h2 className="text-xl font-semibold text-white">useCreateEIP712</h2>
         <button
           onClick={() => {
             if (!keypairPublicKey) return;
@@ -68,12 +68,12 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
           {createEIP712.isPending ? "Creating..." : "Create EIP-712"}
         </button>
         {createEIP712.isSuccess && (
-          <p className="text-green-600" data-testid="create-eip712-result">
+          <p className="text-zama-success" data-testid="create-eip712-result">
             EIP-712 created: {JSON.stringify(Object.keys(createEIP712.data))}
           </p>
         )}
         {createEIP712.isError && (
-          <p className="text-red-600" data-testid="create-eip712-error">
+          <p className="text-zama-error" data-testid="create-eip712-error">
             Error: {createEIP712.error.message}
           </p>
         )}
@@ -81,15 +81,15 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
 
       {/* usePublicKey */}
       <section className="space-y-2">
-        <h2 className="text-xl font-semibold">usePublicKey</h2>
+        <h2 className="text-xl font-semibold text-white">usePublicKey</h2>
         {publicKey.isLoading && <p>Fetching...</p>}
         {publicKey.isSuccess && publicKey.data && (
-          <p className="text-green-600" data-testid="public-key-result">
+          <p className="text-zama-success" data-testid="public-key-result">
             Public key ID: {publicKey.data.publicKeyId}
           </p>
         )}
         {publicKey.isError && (
-          <p className="text-red-600" data-testid="public-key-error">
+          <p className="text-zama-error" data-testid="public-key-error">
             Error: {publicKey.error.message}
           </p>
         )}
@@ -97,15 +97,15 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
 
       {/* usePublicParams */}
       <section className="space-y-2">
-        <h2 className="text-xl font-semibold">usePublicParams</h2>
+        <h2 className="text-xl font-semibold text-white">usePublicParams</h2>
         {publicParams.isLoading && <p>Fetching...</p>}
         {publicParams.isSuccess && publicParams.data && (
-          <p className="text-green-600" data-testid="public-params-result">
+          <p className="text-zama-success" data-testid="public-params-result">
             Public params ID: {publicParams.data.publicParamsId}
           </p>
         )}
         {publicParams.isError && (
-          <p className="text-red-600" data-testid="public-params-error">
+          <p className="text-zama-error" data-testid="public-params-error">
             Error: {publicParams.error.message}
           </p>
         )}
@@ -113,7 +113,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
 
       {/* useEncrypt */}
       <section className="space-y-2">
-        <h2 className="text-xl font-semibold">useEncrypt</h2>
+        <h2 className="text-xl font-semibold text-white">useEncrypt</h2>
         <button
           onClick={() =>
             encrypt.mutate({
@@ -129,12 +129,12 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
           {encrypt.isPending ? "Encrypting..." : "Encrypt Value"}
         </button>
         {encrypt.isSuccess && (
-          <p className="text-green-600" data-testid="encrypt-result">
+          <p className="text-zama-success" data-testid="encrypt-result">
             Handles count: {encrypt.data.handles.length}
           </p>
         )}
         {encrypt.isError && (
-          <p className="text-red-600" data-testid="encrypt-error">
+          <p className="text-zama-error" data-testid="encrypt-error">
             Error: {encrypt.error.message}
           </p>
         )}

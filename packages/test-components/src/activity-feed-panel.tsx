@@ -74,7 +74,9 @@ export function ActivityFeedPanel({ tokenAddress }: { tokenAddress: Address }) {
 
   return (
     <div className="space-y-4" data-testid="activity-feed-panel">
-      <h2 className="text-xl font-semibold">Activity Feed — {metadata?.symbol ?? "..."}</h2>
+      <h2 className="text-xl font-semibold text-white">
+        Activity Feed — {metadata?.symbol ?? "..."}
+      </h2>
 
       {isLoading && <p>Loading activity...</p>}
 
@@ -89,7 +91,7 @@ export function ActivityFeedPanel({ tokenAddress }: { tokenAddress: Address }) {
             {activity.map((item, index) => (
               <div
                 key={`${item.metadata.transactionHash}-${item.metadata.logIndex}`}
-                className="p-3 border border-gray-200 rounded bg-white shadow-sm"
+                className="p-3 border border-zama-border rounded bg-zama-surface"
                 data-testid={`activity-item-${index}`}
               >
                 <span data-testid={`activity-type-${index}`}>{item.type}</span>
