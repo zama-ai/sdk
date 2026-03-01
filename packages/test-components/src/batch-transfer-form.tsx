@@ -85,7 +85,7 @@ export function BatchTransferForm({
           name="recipient1"
           placeholder="Recipient 1 (0x...)"
           required
-          className="w-full px-3 py-2 border rounded"
+          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="recipient1-input"
         />
         <input
@@ -93,7 +93,7 @@ export function BatchTransferForm({
           name="amount1"
           placeholder="Amount 1"
           required
-          className="w-full px-3 py-2 border rounded"
+          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="amount1-input"
         />
       </div>
@@ -105,7 +105,7 @@ export function BatchTransferForm({
           name="recipient2"
           placeholder="Recipient 2 (0x...)"
           required
-          className="w-full px-3 py-2 border rounded"
+          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="recipient2-input"
         />
         <input
@@ -113,7 +113,7 @@ export function BatchTransferForm({
           name="amount2"
           placeholder="Amount 2"
           required
-          className="w-full px-3 py-2 border rounded"
+          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="amount2-input"
         />
       </div>
@@ -121,7 +121,7 @@ export function BatchTransferForm({
       <button
         type="submit"
         disabled={encrypt.isPending || batchTransfer.isPending}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
         data-testid="batch-transfer-button"
       >
         {encrypt.isPending
