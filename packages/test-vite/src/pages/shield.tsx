@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import { ShieldForm } from "@zama-fhe/test-components";
 import { DEFAULTS } from "../constants";
 
-export function ShieldPage() {
+export default function ShieldPage() {
   const [searchParams] = useSearchParams();
   const token = (searchParams.get("token") as Address) ?? DEFAULTS.token;
   const wrapper = (searchParams.get("wrapper") as Address) ?? DEFAULTS.wrapper;
