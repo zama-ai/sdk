@@ -80,8 +80,9 @@ export function ActivityFeedPanel({ tokenAddress }: { tokenAddress: Address }) {
 
       {activity && (
         <>
-          <p data-testid="activity-count">
-            {activity.length} event{activity.length !== 1 ? "s" : ""}
+          <p>
+            <span data-testid="activity-count">{activity.length}</span> event
+            {activity.length !== 1 ? "s" : ""}
           </p>
 
           <div className="space-y-2">

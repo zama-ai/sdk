@@ -30,9 +30,8 @@ test("should show shield and transfer events with decrypted amounts", async ({
 
   // Should have at least 2 events (shield + transfer from this test,
   // plus possibly events from the initial deployment setup)
-  const count = await page.getByTestId("activity-count").textContent();
-  const eventCount = parseInt(count ?? "0");
-  expect(eventCount).toBeGreaterThanOrEqual(2);
+  const count = Number(await page.getByTestId("activity-count").textContent());
+  expect(count).toBeGreaterThanOrEqual(2);
 
   // Find the most recent events (activity is sorted by blockNumber descending)
   // Event 0 should be the transfer (most recent)
