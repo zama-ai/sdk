@@ -1,16 +1,18 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link, Outlet } from "react-router";
 import { ConnectWallet } from "@zama-fhe/test-components";
-import { ApprovePage } from "./pages/approve";
-import { AuthorizeAllPage } from "./pages/authorize-all";
-import { FheRelayerPage } from "./pages/fhe-relayer";
-import { ShieldPage } from "./pages/shield";
-import { TransferPage } from "./pages/transfer";
-import { TransferFromPage } from "./pages/transfer-from";
-import { UnshieldPage } from "./pages/unshield";
-import { UnshieldAllPage } from "./pages/unshield-all";
-import { UnwrapManualPage } from "./pages/unwrap-manual";
-import { WalletPage } from "./pages/wallet";
-import { WrapperDiscoveryPage } from "./pages/wrapper-discovery";
+
+const WalletPage = lazy(() => import("./pages/wallet"));
+const ShieldPage = lazy(() => import("./pages/shield"));
+const TransferPage = lazy(() => import("./pages/transfer"));
+const TransferFromPage = lazy(() => import("./pages/transfer-from"));
+const UnshieldPage = lazy(() => import("./pages/unshield"));
+const UnshieldAllPage = lazy(() => import("./pages/unshield-all"));
+const UnwrapManualPage = lazy(() => import("./pages/unwrap-manual"));
+const ApprovePage = lazy(() => import("./pages/approve"));
+const AuthorizeAllPage = lazy(() => import("./pages/authorize-all"));
+const FheRelayerPage = lazy(() => import("./pages/fhe-relayer"));
+const WrapperDiscoveryPage = lazy(() => import("./pages/wrapper-discovery"));
 
 function Layout() {
   return (
@@ -54,7 +56,9 @@ function Layout() {
         <ConnectWallet />
       </header>
       <main className="max-w-2xl mx-auto p-6">
-        <Outlet />
+        <Suspense>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

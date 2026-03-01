@@ -2,7 +2,7 @@ import type { Address } from "@zama-fhe/react-sdk";
 import { useSearchParams } from "react-router";
 import { WrapperDiscoveryPanel } from "@zama-fhe/test-components";
 
-export function WrapperDiscoveryPage() {
+export default function WrapperDiscoveryPage() {
   const [searchParams] = useSearchParams();
   const token = (searchParams.get("token") as Address | undefined) ?? undefined;
   const coordinator = (searchParams.get("coordinator") as Address | undefined) ?? undefined;
