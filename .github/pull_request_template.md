@@ -7,6 +7,7 @@
 - [ ] `@zama-fhe/sdk`
 - [ ] `@zama-fhe/react-sdk`
 - [ ] `@zama-fhe/test-nextjs`
+- [ ] `@zama-fhe/test-vite`
 - [ ] CI/workflows
 - [ ] Docs
 
