@@ -98,7 +98,7 @@ export function TokenTable({
       </button>
       <table className="w-full" data-testid="token-table">
         <thead>
-          <tr className="text-left border-b">
+          <tr className="text-left border-b border-zama-border text-zama-gray">
             <th className="px-4 py-2">Symbol</th>
             <th className="px-4 py-2 text-right">Balance</th>
             <th className="px-4 py-2 text-right">Actions</th>

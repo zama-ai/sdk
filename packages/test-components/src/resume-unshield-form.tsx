@@ -35,10 +35,12 @@ export function ResumeUnshieldForm({
         className="space-y-4"
         data-testid="unwrap-form"
       >
-        <h2 className="text-xl font-semibold">Step 1: Unwrap {metadata?.symbol ?? "..."}</h2>
+        <h2 className="text-xl font-semibold text-white">
+          Step 1: Unwrap {metadata?.symbol ?? "..."}
+        </h2>
 
         {balance !== undefined && (
-          <p className="text-sm text-gray-600" data-testid="current-balance">
+          <p className="text-sm text-zama-gray" data-testid="current-balance">
             Balance: {balance.toString()}
           </p>
         )}
@@ -48,7 +50,7 @@ export function ResumeUnshieldForm({
           name="amount"
           placeholder="Amount"
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+          className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
           data-testid="amount-input"
         />
 
@@ -62,19 +64,19 @@ export function ResumeUnshieldForm({
         </button>
 
         {unwrap.isSuccess && (
-          <p className="text-green-600" data-testid="unwrap-success">
+          <p className="text-zama-success" data-testid="unwrap-success">
             Unwrap requested! Tx: {unwrap.data?.txHash}
           </p>
         )}
 
         {unwrapTxHash && (
-          <p className="text-sm text-gray-600" data-testid="unwrap-tx-hash">
+          <p className="text-sm text-zama-gray" data-testid="unwrap-tx-hash">
             {unwrapTxHash}
           </p>
         )}
 
         {unwrap.isError && (
-          <p className="text-red-600" data-testid="unwrap-error">
+          <p className="text-zama-error" data-testid="unwrap-error">
             Error: {unwrap.error.message}
           </p>
         )}
@@ -89,7 +91,7 @@ export function ResumeUnshieldForm({
         className="space-y-4"
         data-testid="resume-form"
       >
-        <h2 className="text-xl font-semibold">Step 2: Resume Unshield</h2>
+        <h2 className="text-xl font-semibold text-white">Step 2: Resume Unshield</h2>
 
         <button
           type="submit"
@@ -101,13 +103,13 @@ export function ResumeUnshieldForm({
         </button>
 
         {resumeUnshield.isSuccess && (
-          <p className="text-green-600" data-testid="resume-success">
+          <p className="text-zama-success" data-testid="resume-success">
             Unshield resumed! Tx: {resumeUnshield.data?.txHash}
           </p>
         )}
 
         {resumeUnshield.isError && (
-          <p className="text-red-600" data-testid="resume-error">
+          <p className="text-zama-error" data-testid="resume-error">
             Error: {resumeUnshield.error.message}
           </p>
         )}
