@@ -17,7 +17,7 @@ export function WrapperDiscoveryPanel({
         <p data-testid="wrapper-discovery-result">Wrapper: {wrapperDiscovery.data ?? "none"}</p>
       )}
       {wrapperDiscovery.isError && (
-        <p className="text-red-600" data-testid="wrapper-discovery-error">
+        <p className="text-zama-error" data-testid="wrapper-discovery-error">
           Error: {wrapperDiscovery.error.message}
         </p>
       )}

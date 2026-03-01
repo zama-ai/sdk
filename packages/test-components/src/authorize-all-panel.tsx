@@ -16,12 +16,12 @@ export function AuthorizeAllPanel({ tokenAddresses }: { tokenAddresses: Address[
         {authorizeAll.isPending ? "Authorizing..." : "Authorize All"}
       </button>
       {authorizeAll.isSuccess && (
-        <p className="text-green-600" data-testid="authorize-all-success">
+        <p className="text-zama-success" data-testid="authorize-all-success">
           Authorized successfully!
         </p>
       )}
       {authorizeAll.isError && (
-        <p className="text-red-600" data-testid="authorize-all-error">
+        <p className="text-zama-error" data-testid="authorize-all-error">
           Error: {authorizeAll.error.message}
         </p>
       )}

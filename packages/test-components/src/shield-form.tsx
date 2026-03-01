@@ -26,10 +26,10 @@ export function ShieldForm({
       className="space-y-4"
       data-testid="shield-form"
     >
-      <h2 className="text-xl font-semibold">Shield {metadata?.symbol ?? "..."}</h2>
+      <h2 className="text-xl font-semibold text-white">Shield {metadata?.symbol ?? "..."}</h2>
 
       {allowance !== undefined && (
-        <p className="text-sm text-gray-600" data-testid="allowance">
+        <p className="text-sm text-zama-gray" data-testid="allowance">
           Current allowance: {allowance.toString()}
         </p>
       )}
@@ -39,7 +39,7 @@ export function ShieldForm({
         name="amount"
         placeholder="Amount"
         required
-        className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+        className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="amount-input"
       />
 
@@ -53,13 +53,13 @@ export function ShieldForm({
       </button>
 
       {shield.isSuccess && (
-        <p className="text-green-600" data-testid="shield-success">
+        <p className="text-zama-success" data-testid="shield-success">
           Shielded successfully! Tx: {shield.data?.txHash}
         </p>
       )}
 
       {shield.isError && (
-        <p className="text-red-600" data-testid="shield-error">
+        <p className="text-zama-error" data-testid="shield-error">
           Error: {shield.error.message}
         </p>
       )}

@@ -29,10 +29,10 @@ export function TransferForm({
       className="space-y-4"
       data-testid="transfer-form"
     >
-      <h2 className="text-xl font-semibold">Transfer {metadata?.symbol ?? "..."}</h2>
+      <h2 className="text-xl font-semibold text-white">Transfer {metadata?.symbol ?? "..."}</h2>
 
       {balance !== undefined && (
-        <p className="text-sm text-gray-600" data-testid="current-balance">
+        <p className="text-sm text-zama-gray" data-testid="current-balance">
           Balance: {balance.toString()}
         </p>
       )}
@@ -42,7 +42,7 @@ export function TransferForm({
         name="recipient"
         placeholder="Recipient address (0x...)"
         required
-        className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+        className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="recipient-input"
       />
 
@@ -51,7 +51,7 @@ export function TransferForm({
         name="amount"
         placeholder="Amount"
         required
-        className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+        className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="amount-input"
       />
 
@@ -65,13 +65,13 @@ export function TransferForm({
       </button>
 
       {transfer.isSuccess && (
-        <p className="text-green-600" data-testid="transfer-success">
+        <p className="text-zama-success" data-testid="transfer-success">
           Transfer successful! Tx: {transfer.data?.txHash}
         </p>
       )}
 
       {transfer.isError && (
-        <p className="text-red-600" data-testid="transfer-error">
+        <p className="text-zama-error" data-testid="transfer-error">
           Error: {transfer.error.message}
         </p>
       )}

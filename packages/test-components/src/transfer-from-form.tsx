@@ -32,10 +32,12 @@ export function TransferFromForm({
       className="space-y-4"
       data-testid="transfer-from-form"
     >
-      <h2 className="text-xl font-semibold">Transfer From {metadata?.symbol ?? "..."}</h2>
+      <h2 className="text-xl font-semibold text-white">
+        Transfer From {metadata?.symbol ?? "..."}
+      </h2>
 
       {balance !== undefined && (
-        <p className="text-sm text-gray-600" data-testid="current-balance">
+        <p className="text-sm text-zama-gray" data-testid="current-balance">
           Balance: {balance.toString()}
         </p>
       )}
@@ -46,7 +48,7 @@ export function TransferFromForm({
         placeholder="From address (0x...)"
         defaultValue={defaultFrom ?? ""}
         required
-        className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+        className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="from-input"
       />
 
@@ -55,7 +57,7 @@ export function TransferFromForm({
         name="to"
         placeholder="To address (0x...)"
         required
-        className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+        className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="to-input"
       />
 
@@ -64,7 +66,7 @@ export function TransferFromForm({
         name="amount"
         placeholder="Amount"
         required
-        className="w-full px-3 py-2 border border-gray-300 rounded outline-none focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+        className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="amount-input"
       />
 
@@ -78,13 +80,13 @@ export function TransferFromForm({
       </button>
 
       {transferFrom.isSuccess && (
-        <p className="text-green-600" data-testid="transfer-from-success">
+        <p className="text-zama-success" data-testid="transfer-from-success">
           Transfer successful! Tx: {transferFrom.data?.txHash}
         </p>
       )}
 
       {transferFrom.isError && (
-        <p className="text-red-600" data-testid="transfer-from-error">
+        <p className="text-zama-error" data-testid="transfer-from-error">
           Error: {transferFrom.error.message}
         </p>
       )}

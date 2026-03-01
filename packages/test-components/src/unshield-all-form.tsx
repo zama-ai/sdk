@@ -26,10 +26,10 @@ export function UnshieldAllForm({
       className="space-y-4"
       data-testid="unshield-all-form"
     >
-      <h2 className="text-xl font-semibold">Unshield All {metadata?.symbol ?? "..."}</h2>
+      <h2 className="text-xl font-semibold text-white">Unshield All {metadata?.symbol ?? "..."}</h2>
 
       {balance !== undefined && (
-        <p className="text-sm text-gray-600" data-testid="current-balance">
+        <p className="text-sm text-zama-gray" data-testid="current-balance">
           Balance: {balance.toString()}
         </p>
       )}
@@ -44,13 +44,13 @@ export function UnshieldAllForm({
       </button>
 
       {unshieldAll.isSuccess && (
-        <p className="text-green-600" data-testid="unshield-all-success">
+        <p className="text-zama-success" data-testid="unshield-all-success">
           Unshielded all successfully! Tx: {unshieldAll.data?.txHash}
         </p>
       )}
 
       {unshieldAll.isError && (
-        <p className="text-red-600" data-testid="unshield-all-error">
+        <p className="text-zama-error" data-testid="unshield-all-error">
           Error: {unshieldAll.error.message}
         </p>
       )}
