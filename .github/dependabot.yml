@@ -7,6 +7,7 @@ updates:
       - /packages/sdk
       - /packages/react-sdk
       - /packages/test-nextjs
+      - /packages/test-vite
     schedule:
       interval: weekly
     ignore:
