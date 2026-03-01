@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Providers } from "@/providers";
-import { ConnectWallet } from "@/components/connect-wallet";
+import { ConnectWallet } from "@zama-fhe/test-components";
 import "./globals.css";
 
 export const metadata: Metadata = {
