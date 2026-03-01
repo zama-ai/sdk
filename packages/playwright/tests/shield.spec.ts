@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/test";
+import { test, expect } from "../fixtures";
 
 test("should shield USDT and show confidential balance", async ({
   page,

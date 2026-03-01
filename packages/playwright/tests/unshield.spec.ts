@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/test";
+import { test, expect } from "../fixtures";
 
 test("should shield USDT then unshield back to ERC20", async ({
   page,

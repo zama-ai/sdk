@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/test";
+import { test, expect } from "../fixtures";
 
 test("should show masked balances until reveal is clicked", async ({
   page,

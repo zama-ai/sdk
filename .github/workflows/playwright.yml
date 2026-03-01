@@ -50,7 +50,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter @zama-fhe/test-nextjs exec playwright install --with-deps chromium
+        run: pnpm --filter @zama-fhe/playwright exec playwright install --with-deps chromium
 
       - name: Save Playwright browsers cache
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -133,33 +133,21 @@ jobs:
           path: packages/test-nextjs/.next/cache
           key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-nextjs/src/**/*.ts', 'packages/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
 
-      - name: Run Next.js Playwright tests
-        run: pnpm e2e:test:nextjs
-        env:
-          NEXT_PUBLIC_NETWORK: hardhat
-
       - name: Build Vite test-vite
         run: pnpm build:test-vite
         env:
           VITE_NETWORK: hardhat
 
-      - name: Run Vite Playwright tests
-        run: pnpm e2e:test:vite
+      - name: Run Playwright tests
+        run: pnpm e2e:test
         env:
+          NEXT_PUBLIC_NETWORK: hardhat
           VITE_NETWORK: hardhat
 
       - name: Upload test results
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report-nextjs
-          path: packages/test-nextjs/playwright/test-results/
-          retention-days: 7
-
-      - name: Upload Vite test results
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-report-vite
-          path: packages/test-vite/playwright/test-results/
+          name: playwright-report
+          path: packages/playwright/test-results/
           retention-days: 7

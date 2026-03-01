@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/test";
+import { test, expect } from "../fixtures";
 
 test("should discover wrapper via coordinator", async ({ page, contracts, viemClient }) => {
   const coordAbi = [

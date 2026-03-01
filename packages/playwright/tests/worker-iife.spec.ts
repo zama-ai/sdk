@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/test";
+import { test, expect } from "../fixtures";
 
 test("worker loads without SyntaxError in Vite ESM environment", async ({ page, contracts }) => {
   const errors: string[] = [];
