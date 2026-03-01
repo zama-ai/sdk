@@ -1,3 +1,5 @@
+"use client";
+
 import { useAccount, useConnect, useDisconnect, useConnectors } from "wagmi";
 
 export function ConnectWallet() {

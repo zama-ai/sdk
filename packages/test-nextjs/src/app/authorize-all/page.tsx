@@ -1,4 +1,4 @@
-import { AuthorizeAllPanel } from "@/components/authorize-all-panel";
+import { AuthorizeAllPanel } from "@zama-fhe/test-components";
 import type { Address } from "@zama-fhe/react-sdk";
 
 const DEFAULTS = {

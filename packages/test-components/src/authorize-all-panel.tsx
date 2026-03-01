@@ -1,3 +1,5 @@
+"use client";
+
 import { useAuthorizeAll, type Address } from "@zama-fhe/react-sdk";
 
 export function AuthorizeAllPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {

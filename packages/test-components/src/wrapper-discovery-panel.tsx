@@ -1,3 +1,5 @@
+"use client";
+
 import { useWrapperDiscovery, type Address } from "@zama-fhe/react-sdk";
 
 export function WrapperDiscoveryPanel({
