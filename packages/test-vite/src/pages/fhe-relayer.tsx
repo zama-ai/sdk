@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import { FheRelayerPanel } from "@zama-fhe/test-components";
 import { DEFAULTS } from "../constants";
 
-export function FheRelayerPage() {
+export default function FheRelayerPage() {
   const [searchParams] = useSearchParams();
   const tokensParam = searchParams.get("tokens");
   const tokens = tokensParam ? (tokensParam.split(",") as Address[]) : [DEFAULTS.confidentialToken];

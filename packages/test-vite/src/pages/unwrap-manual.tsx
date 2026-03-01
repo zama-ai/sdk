@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import { UnwrapManualForm } from "@zama-fhe/test-components";
 import { DEFAULTS } from "../constants";
 
-export function UnwrapManualPage() {
+export default function UnwrapManualPage() {
   const [searchParams] = useSearchParams();
   const token = (searchParams.get("token") as Address) ?? DEFAULTS.confidentialToken;
   const wrapper = (searchParams.get("wrapper") as Address | undefined) ?? undefined;

@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import { ApproveForm } from "@zama-fhe/test-components";
 import { DEFAULTS } from "../constants";
 
-export function ApprovePage() {
+export default function ApprovePage() {
   const [searchParams] = useSearchParams();
   const token = (searchParams.get("token") as Address) ?? DEFAULTS.confidentialToken;
   const spender = (searchParams.get("spender") as Address | undefined) ?? undefined;
