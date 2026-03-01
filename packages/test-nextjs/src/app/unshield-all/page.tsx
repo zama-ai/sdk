@@ -1,4 +1,4 @@
-import { UnshieldAllForm } from "@/components/unshield-all-form";
+import { UnshieldAllForm } from "@zama-fhe/test-components";
 import type { Address } from "@zama-fhe/react-sdk";
 
 const DEFAULT_TOKEN = "0xBA12646CC07ADBe43F8bD25D83FB628D29C8A762" as Address; // cUSDT

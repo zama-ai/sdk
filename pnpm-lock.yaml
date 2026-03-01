@@ -215,6 +215,9 @@ importers:
       '@zama-fhe/sdk':
         specifier: workspace:*
         version: link:../sdk
+      '@zama-fhe/test-components':
+        specifier: workspace:*
+        version: link:../test-components
       next:
         specifier: ^16.1.6
         version: 16.1.6(@playwright/test@1.58.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
