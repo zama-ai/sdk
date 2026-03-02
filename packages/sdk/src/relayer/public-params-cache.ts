@@ -5,6 +5,10 @@ interface CachedPublicKey {
   publicKeyId: string;
   /** Base64-encoded Uint8Array. */
   publicKey: string;
+  artifactUrl?: string;
+  etag?: string;
+  lastModified?: string;
+  lastValidatedAt?: number;
 }
 
 /** Cached shape for FHE public params. */
@@ -12,6 +16,10 @@ interface CachedPublicParams {
   publicParamsId: string;
   /** Base64-encoded Uint8Array. */
   publicParams: string;
+  artifactUrl?: string;
+  etag?: string;
+  lastModified?: string;
+  lastValidatedAt?: number;
 }
 
 /** Return type of the public key fetcher. */
@@ -37,6 +45,14 @@ function fromBase64(b64: string): Uint8Array {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
+}
+
+function pubkeyStorageKey(chainId: number): string {
+  return `fhe:pubkey:${chainId}`;
+}
+
+function paramsStorageKey(chainId: number, bits: number): string {
+  return `fhe:params:${chainId}:${bits}`;
 }
 
 /**
@@ -75,7 +91,7 @@ export class PublicParamsCache {
   }
 
   async #loadPublicKey(fetcher: () => Promise<PublicKeyResult>): Promise<PublicKeyResult> {
-    const key = `fhe:pubkey:${this.#chainId}`;
+    const key = pubkeyStorageKey(this.#chainId);
 
     // Try persistent storage
     try {
@@ -139,7 +155,7 @@ export class PublicParamsCache {
     bits: number,
     fetcher: () => Promise<PublicParamsResult>,
   ): Promise<PublicParamsResult> {
-    const key = `fhe:params:${this.#chainId}:${bits}`;
+    const key = paramsStorageKey(this.#chainId, bits);
 
     // Try persistent storage
     try {
