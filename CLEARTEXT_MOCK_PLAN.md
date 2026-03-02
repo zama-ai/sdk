@@ -59,10 +59,10 @@ Browser (Web Worker)
 on-chain cleartext storage. Every FHE operation computes the result in the clear
 and stores it in a `mapping(bytes32 => uint256)`.
 
-**Where**: New minimal Foundry project that imports `forge-fhevm` (https://github.com/zama-ai/forge-fhevm) as a dependency.
+**Where**: New minimal Foundry project that copies the contracts to deploy from `forge-fhevm` (https://github.com/zama-ai/forge-fhevm)
 We deploy the entire set of contracts (InputVerifier, KMSVerifier, ACL) from `forge-fhevm` and then replace the implementation of the FHEVMExecutor except that we use our own, CleartextFHEVMExecutor.
 
-GUIDELINE: copy the Executor contract file implementation from `forge-fhevm`, and then simply add the cleartext storage mapping inside it.
+GUIDELINE: copy the contract files implementation from `forge-fhevm`, and then simply add the cleartext storage mapping inside it.
 
 **Storage**:
 ```solidity
