@@ -43,6 +43,9 @@ jobs:
       - name: Check API reports are up to date
         run: pnpm api-report:check
 
+      - name: Check bundle size
+        run: pnpm size
+
       - run: pnpm test:coverage
 
       - name: Coverage report
