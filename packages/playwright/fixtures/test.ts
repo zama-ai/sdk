@@ -96,6 +96,11 @@ export const test = base.extend<TestFixtures>({
 
     await use(page);
 
+    // Wait for in-flight route handlers (userDecrypt/publicDecrypt) to finish
+    // before reverting — they mine blocks on the Hardhat node, and concurrent
+    // mining + revert causes chain state to leak between tests.
+    await page.unrouteAll({ behavior: "wait" });
+
     await viemClient.revert({ id });
     // Mine blocks so the chain advances past the Hardhat coprocessor's stale
     // BlockLogCursor — evm_revert doesn't reset the coprocessor cursor, so
