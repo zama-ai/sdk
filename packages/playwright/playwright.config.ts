@@ -12,7 +12,7 @@ export default defineConfig({
   retries: CI ? 2 : 0,
   workers: 1,
   reporter: CI ? "github" : "list",
-  timeout: 60000,
+  timeout: 30000,
   expect: {
     timeout: CI ? 20000 : 5000,
   },
