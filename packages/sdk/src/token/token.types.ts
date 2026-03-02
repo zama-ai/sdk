@@ -73,9 +73,9 @@ export interface GenericSigner {
 }
 
 /** Pluggable key-value store for persisting FHE credentials. */
-export interface GenericStorage<T = unknown> {
-  get(key: string): Promise<T | null>;
-  set(key: string, value: T): Promise<void>;
+export interface GenericStorage {
+  get<T = unknown>(key: string): Promise<T | null>;
+  set<T = unknown>(key: string, value: T): Promise<void>;
   delete(key: string): Promise<void>;
 }
 

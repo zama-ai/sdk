@@ -30,13 +30,13 @@ declare const chrome: {
  * });
  * ```
  */
-export class ChromeSessionStorage<T = unknown> implements GenericStorage<T> {
-  async get(key: string): Promise<T | null> {
+export class ChromeSessionStorage implements GenericStorage {
+  async get<T = unknown>(key: string): Promise<T | null> {
     const result = await chrome.storage.session.get(key);
     return (result[key] as T) ?? null;
   }
 
-  async set(key: string, value: T): Promise<void> {
+  async set(key: string, value: unknown): Promise<void> {
     await chrome.storage.session.set({ [key]: value });
   }
 

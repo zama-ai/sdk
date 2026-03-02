@@ -28,8 +28,8 @@ export async function loadCachedBalance({
   handle,
 }: BalanceCachePayload): Promise<bigint | null> {
   try {
-    const raw = await storage.get(storageKey(tokenAddress, owner, handle));
-    return raw !== null ? BigInt(raw as string) : null;
+    const raw = await storage.get<string>(storageKey(tokenAddress, owner, handle));
+    return raw !== null ? BigInt(raw) : null;
   } catch {
     return null;
   }
@@ -52,8 +52,8 @@ export async function saveCachedBalance(
 }
 
 async function trackKey(storage: GenericStorage, key: string): Promise<void> {
-  const raw = await storage.get(BALANCES_KEY);
-  const keys: string[] = raw ? JSON.parse(raw as string) : [];
+  const raw = await storage.get<string>(BALANCES_KEY);
+  const keys: string[] = raw ? JSON.parse(raw) : [];
   if (!keys.includes(key)) {
     keys.push(key);
     await storage.set(BALANCES_KEY, JSON.stringify(keys));
@@ -66,9 +66,9 @@ async function trackKey(storage: GenericStorage, key: string): Promise<void> {
  */
 export async function clearAllCachedBalances(storage: GenericStorage): Promise<void> {
   try {
-    const raw = await storage.get(BALANCES_KEY);
+    const raw = await storage.get<string>(BALANCES_KEY);
     if (!raw) return;
-    const keys: string[] = JSON.parse(raw as string);
+    const keys: string[] = JSON.parse(raw);
     await Promise.all(keys.map((key) => storage.delete(key)));
     await storage.delete(BALANCES_KEY);
   } catch {

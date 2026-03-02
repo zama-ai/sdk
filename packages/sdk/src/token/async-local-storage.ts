@@ -20,19 +20,19 @@ import type { GenericStorage } from "./token.types";
  * });
  * ```
  */
-class AsyncLocalMapStorage<T = unknown> implements GenericStorage<T> {
-  readonly #als = new AsyncLocalStorage<Map<string, T>>();
+class AsyncLocalMapStorage implements GenericStorage {
+  readonly #als = new AsyncLocalStorage<Map<string, unknown>>();
 
   /** Execute `fn` within an isolated storage context. */
   run<R>(fn: () => R | Promise<R>): R | Promise<R> {
     return this.#als.run(new Map(), fn);
   }
 
-  async get(key: string): Promise<T | null> {
-    return this.#als.getStore()?.get(key) ?? null;
+  async get<T = unknown>(key: string): Promise<T | null> {
+    return (this.#als.getStore()?.get(key) as T) ?? null;
   }
 
-  async set(key: string, value: T): Promise<void> {
+  async set<T = unknown>(key: string, value: T): Promise<void> {
     this.#als.getStore()?.set(key, value);
   }
 

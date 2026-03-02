@@ -9,7 +9,7 @@ import type { GenericStorage } from "./token.types";
  * Encryption is handled by {@link CredentialsManager} — this store only
  * persists opaque values.
  */
-export class IndexedDBStorage<T = unknown> implements GenericStorage<T> {
+export class IndexedDBStorage implements GenericStorage {
   #db: IDBDatabase | null = null;
   #dbPromise: Promise<IDBDatabase> | null = null;
   #dbName: string;
@@ -60,7 +60,7 @@ export class IndexedDBStorage<T = unknown> implements GenericStorage<T> {
     return this.#dbPromise;
   }
 
-  async get(key: string): Promise<T | null> {
+  async get<T = unknown>(key: string): Promise<T | null> {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readonly");
@@ -72,7 +72,7 @@ export class IndexedDBStorage<T = unknown> implements GenericStorage<T> {
     });
   }
 
-  async set(key: string, value: T): Promise<void> {
+  async set<T = unknown>(key: string, value: T): Promise<void> {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readwrite");

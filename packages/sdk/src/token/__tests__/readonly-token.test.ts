@@ -321,6 +321,7 @@ describe("ReadonlyToken", () => {
         sdk: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 

@@ -1,14 +1,14 @@
 import type { GenericStorage } from "./token.types";
 
 /** In-memory credential store. Credentials are lost on page reload. */
-export class MemoryStorage<T = unknown> implements GenericStorage<T> {
-  #map = new Map<string, T>();
+export class MemoryStorage implements GenericStorage {
+  #map = new Map<string, unknown>();
 
-  async get(key: string): Promise<T | null> {
-    return this.#map.get(key) ?? null;
+  async get<T = unknown>(key: string): Promise<T | null> {
+    return (this.#map.get(key) as T) ?? null;
   }
 
-  async set(key: string, value: T): Promise<void> {
+  async set<T = unknown>(key: string, value: T): Promise<void> {
     this.#map.set(key, value);
   }
 
