@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import {Test} from "forge-std/Test.sol";
 
 import {CleartextFHEVMExecutor} from "../src/CleartextFHEVMExecutor.sol";
+import {FHEVMExecutor} from "../src/fhevm-host/contracts/FHEVMExecutor.sol";
 import {FheType} from "../src/fhevm-host/contracts/shared/FheType.sol";
 import {aclAdd, hcuLimitAdd, inputVerifierAdd} from "../src/fhevm-host/addresses/FHEVMHostAddresses.sol";
 import {MockACL} from "./mocks/MockACL.sol";
@@ -23,6 +24,10 @@ contract CleartextFHEVMExecutorTest is Test {
         vm.etch(inputVerifierAdd, address(inputVerifier).code);
 
         executor = new CleartextFHEVMExecutor();
+    }
+
+    function _encryptU8(uint256 value) internal returns (bytes32) {
+        return executor.trivialEncrypt(value, FheType.Uint8);
     }
 
     function test_trivialEncrypt_storesPlaintext() public {
@@ -50,6 +55,93 @@ contract CleartextFHEVMExecutorTest is Test {
         assertEq(executor.plaintexts(result), 251);
     }
 
+    function test_fheMul_wrapsOnOverflow() public {
+        bytes32 a = _encryptU8(20);
+        bytes32 b = _encryptU8(15);
+        bytes32 result = executor.fheMul(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 44);
+    }
+
+    function test_fheDiv_scalar() public {
+        bytes32 a = _encryptU8(201);
+        bytes32 result = executor.fheDiv(a, bytes32(uint256(10)), 0x01);
+        assertEq(executor.plaintexts(result), 20);
+    }
+
+    function test_fheDiv_revertsWhenRhsIsCiphertext() public {
+        bytes32 a = _encryptU8(201);
+        bytes32 b = _encryptU8(10);
+        vm.expectRevert(FHEVMExecutor.IsNotScalar.selector);
+        executor.fheDiv(a, b, 0x00);
+    }
+
+    function test_fheDiv_revertsOnDivisionByZero() public {
+        bytes32 a = _encryptU8(201);
+        vm.expectRevert(FHEVMExecutor.DivisionByZero.selector);
+        executor.fheDiv(a, bytes32(uint256(0)), 0x01);
+    }
+
+    function test_fheRem_scalar() public {
+        bytes32 a = _encryptU8(201);
+        bytes32 result = executor.fheRem(a, bytes32(uint256(10)), 0x01);
+        assertEq(executor.plaintexts(result), 1);
+    }
+
+    function test_fheRem_revertsOnDivisionByZero() public {
+        bytes32 a = _encryptU8(201);
+        vm.expectRevert(FHEVMExecutor.DivisionByZero.selector);
+        executor.fheRem(a, bytes32(uint256(0)), 0x01);
+    }
+
+    function test_fheBitAnd_masksResult() public {
+        bytes32 a = _encryptU8(0xF0);
+        bytes32 b = _encryptU8(0xCC);
+        bytes32 result = executor.fheBitAnd(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 0xC0);
+    }
+
+    function test_fheBitOr_masksResult() public {
+        bytes32 a = _encryptU8(0xF0);
+        bytes32 b = _encryptU8(0x0C);
+        bytes32 result = executor.fheBitOr(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 0xFC);
+    }
+
+    function test_fheBitXor_masksResult() public {
+        bytes32 a = _encryptU8(0xAA);
+        bytes32 b = _encryptU8(0x0F);
+        bytes32 result = executor.fheBitXor(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 0xA5);
+    }
+
+    function test_fheShl_usesModuloShiftWidth() public {
+        bytes32 a = _encryptU8(0x03);
+        bytes32 b = _encryptU8(10);
+        bytes32 result = executor.fheShl(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 0x0C);
+    }
+
+    function test_fheShr_usesModuloShiftWidth() public {
+        bytes32 a = _encryptU8(0x80);
+        bytes32 b = _encryptU8(9);
+        bytes32 result = executor.fheShr(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 0x40);
+    }
+
+    function test_fheRotl_rotatesBits() public {
+        bytes32 a = _encryptU8(0x81);
+        bytes32 b = _encryptU8(1);
+        bytes32 result = executor.fheRotl(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 0x03);
+    }
+
+    function test_fheRotr_rotatesBits() public {
+        bytes32 a = _encryptU8(0x81);
+        bytes32 b = _encryptU8(2);
+        bytes32 result = executor.fheRotr(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 0x60);
+    }
+
     function test_fheEq_storesBoolean() public {
         bytes32 a = executor.trivialEncrypt(42, FheType.Uint8);
         bytes32 b = executor.trivialEncrypt(42, FheType.Uint8);
@@ -59,6 +151,77 @@ contract CleartextFHEVMExecutorTest is Test {
         bytes32 c = executor.trivialEncrypt(99, FheType.Uint8);
         bytes32 notEqual = executor.fheEq(a, c, 0x00);
         assertEq(executor.plaintexts(notEqual), 0);
+    }
+
+    function test_fheNe_storesBoolean() public {
+        bytes32 a = _encryptU8(42);
+        bytes32 b = _encryptU8(99);
+        bytes32 ne = executor.fheNe(a, b, 0x00);
+        assertEq(executor.plaintexts(ne), 1);
+    }
+
+    function test_fheGe_storesBoolean() public {
+        bytes32 a = _encryptU8(42);
+        bytes32 b = _encryptU8(20);
+        bytes32 result = executor.fheGe(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 1);
+    }
+
+    function test_fheGt_storesBoolean() public {
+        bytes32 a = _encryptU8(42);
+        bytes32 b = _encryptU8(42);
+        bytes32 result = executor.fheGt(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 0);
+    }
+
+    function test_fheLe_storesBoolean() public {
+        bytes32 a = _encryptU8(11);
+        bytes32 b = _encryptU8(42);
+        bytes32 result = executor.fheLe(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 1);
+    }
+
+    function test_fheLt_storesBoolean() public {
+        bytes32 a = _encryptU8(42);
+        bytes32 b = _encryptU8(11);
+        bytes32 result = executor.fheLt(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 0);
+    }
+
+    function test_fheMin_returnsSmallerOperand() public {
+        bytes32 a = _encryptU8(42);
+        bytes32 b = _encryptU8(11);
+        bytes32 result = executor.fheMin(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 11);
+    }
+
+    function test_fheMax_returnsLargerOperand() public {
+        bytes32 a = _encryptU8(42);
+        bytes32 b = _encryptU8(11);
+        bytes32 result = executor.fheMax(a, b, 0x00);
+        assertEq(executor.plaintexts(result), 42);
+    }
+
+    function test_fheNeg_twosComplementWithinBitWidth() public {
+        bytes32 a = _encryptU8(5);
+        bytes32 result = executor.fheNeg(a);
+        assertEq(executor.plaintexts(result), 251);
+    }
+
+    function test_fheIfThenElse_returnsTrueBranch() public {
+        bytes32 control = executor.trivialEncrypt(1, FheType.Bool);
+        bytes32 ifTrue = _encryptU8(7);
+        bytes32 ifFalse = _encryptU8(9);
+        bytes32 result = executor.fheIfThenElse(control, ifTrue, ifFalse);
+        assertEq(executor.plaintexts(result), 7);
+    }
+
+    function test_fheIfThenElse_returnsFalseBranch() public {
+        bytes32 control = executor.trivialEncrypt(0, FheType.Bool);
+        bytes32 ifTrue = _encryptU8(7);
+        bytes32 ifFalse = _encryptU8(9);
+        bytes32 result = executor.fheIfThenElse(control, ifTrue, ifFalse);
+        assertEq(executor.plaintexts(result), 9);
     }
 
     function test_cast_clampsToNewType() public {
@@ -73,6 +236,19 @@ contract CleartextFHEVMExecutorTest is Test {
 
         bytes32 result = executor.fheRand(FheType.Uint8);
         assertLe(executor.plaintexts(result), 255);
+    }
+
+    function test_fheRandBounded_storesValueBelowUpperBound() public {
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        bytes32 result = executor.fheRandBounded(16, FheType.Uint8);
+        assertLt(executor.plaintexts(result), 16);
+    }
+
+    function test_fheRandBounded_revertsWhenUpperBoundNotPowerOfTwo() public {
+        vm.expectRevert(FHEVMExecutor.NotPowerOfTwo.selector);
+        executor.fheRandBounded(15, FheType.Uint8);
     }
 
     function test_verifyInput_extractsCleartext() public {
