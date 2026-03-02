@@ -125,7 +125,12 @@ export class ReadonlyToken {
     if (this.isZeroHandle(handle)) return BigInt(0);
 
     // Check persistent cache first.
-    const cached = await loadCachedBalance(this.#storage, this.address, ownerAddress, handle);
+    const cached = await loadCachedBalance({
+      storage: this.#storage,
+      tokenAddress: this.address,
+      owner: ownerAddress,
+      handle,
+    });
     if (cached !== null) return cached;
 
     const creds = await this.credentials.get(this.address);
@@ -147,7 +152,13 @@ export class ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
       const value = result[handle] ?? BigInt(0);
-      await saveCachedBalance(this.#storage, this.address, ownerAddress, handle, value);
+      await saveCachedBalance({
+        storage: this.#storage,
+        tokenAddress: this.address,
+        owner: ownerAddress,
+        handle,
+        value,
+      });
       return value;
     } catch (error) {
       this.emit({
@@ -280,7 +291,12 @@ export class ReadonlyToken {
       }
 
       // Check persistent cache — avoids re-decryption after page reload.
-      const cached = await loadCachedBalance(tokenStorage, token.address, signerAddress, handle);
+      const cached = await loadCachedBalance({
+        storage: tokenStorage,
+        tokenAddress: token.address,
+        owner: signerAddress,
+        handle,
+      });
       if (cached !== null) {
         results.set(token.address, cached);
         continue;
@@ -302,7 +318,13 @@ export class ReadonlyToken {
           .then(async (result) => {
             const value = result[handle] ?? BigInt(0);
             results.set(token.address, value);
-            await saveCachedBalance(tokenStorage, token.address, signerAddress, handle, value);
+            await saveCachedBalance({
+              storage: tokenStorage,
+              tokenAddress: token.address,
+              owner: signerAddress,
+              handle,
+              value,
+            });
           })
           .catch((error) => {
             const err = error instanceof Error ? error : new Error(String(error));
@@ -511,7 +533,12 @@ export class ReadonlyToken {
     const signerAddress = owner ?? (await this.signer.getAddress());
 
     // Check persistent cache — avoids the 2–5 s decrypt spinner on reload.
-    const cached = await loadCachedBalance(this.#storage, this.address, signerAddress, handle);
+    const cached = await loadCachedBalance({
+      storage: this.#storage,
+      tokenAddress: this.address,
+      owner: signerAddress,
+      handle,
+    });
     if (cached !== null) return cached;
 
     const creds = await this.credentials.get(this.address);
@@ -533,7 +560,13 @@ export class ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
       const value = result[handle] ?? BigInt(0);
-      await saveCachedBalance(this.#storage, this.address, signerAddress, handle, value);
+      await saveCachedBalance({
+        storage: this.#storage,
+        tokenAddress: this.address,
+        owner: signerAddress,
+        handle,
+        value,
+      });
       return value;
     } catch (error) {
       this.emit({
