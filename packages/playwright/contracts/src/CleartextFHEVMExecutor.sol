@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {FHEVMExecutor} from "./fhevm-host/contracts/FHEVMExecutor.sol";
 import {FheType} from "./fhevm-host/contracts/shared/FheType.sol";
+import {CleartextArithmetic} from "token-sdk/contracts/CleartextArithmetic.sol";
 
 contract CleartextFHEVMExecutor is FHEVMExecutor {
     /// @dev Handle to cleartext value mapping for local testing.
@@ -11,98 +12,73 @@ contract CleartextFHEVMExecutor is FHEVMExecutor {
     function fheAdd(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheAdd(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        unchecked {
-            plaintexts[result] = _clamp(a + b, t);
-        }
+        plaintexts[result] = CleartextArithmetic.add(a, b, _bitWidthForType(t));
     }
 
     function fheSub(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheSub(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        uint256 bitWidth = _bitWidthForType(t);
-        unchecked {
-            if (bitWidth == 256) {
-                plaintexts[result] = a - b;
-            } else {
-                plaintexts[result] = _clamp(a - b + (1 << bitWidth), t);
-            }
-        }
+        plaintexts[result] = CleartextArithmetic.sub(a, b, _bitWidthForType(t));
     }
 
     function fheMul(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheMul(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        unchecked {
-            plaintexts[result] = _clamp(a * b, t);
-        }
+        plaintexts[result] = CleartextArithmetic.mul(a, b, _bitWidthForType(t));
     }
 
     function fheDiv(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheDiv(lhs, rhs, scalarByte);
-        (FheType t, uint256 a,) = _loadBinaryOperands(lhs, rhs, scalarByte);
+        (, uint256 a,) = _loadBinaryOperands(lhs, rhs, scalarByte);
         plaintexts[result] = a / uint256(rhs);
     }
 
     function fheRem(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheRem(lhs, rhs, scalarByte);
-        (FheType t, uint256 a,) = _loadBinaryOperands(lhs, rhs, scalarByte);
+        (, uint256 a,) = _loadBinaryOperands(lhs, rhs, scalarByte);
         plaintexts[result] = a % uint256(rhs);
     }
 
     function fheBitAnd(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheBitAnd(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        plaintexts[result] = _clamp(a & b, t);
+        plaintexts[result] = CleartextArithmetic.bitAnd(a, b, _bitWidthForType(t));
     }
 
     function fheBitOr(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheBitOr(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        plaintexts[result] = _clamp(a | b, t);
+        plaintexts[result] = CleartextArithmetic.bitOr(a, b, _bitWidthForType(t));
     }
 
     function fheBitXor(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheBitXor(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        plaintexts[result] = _clamp(a ^ b, t);
+        plaintexts[result] = CleartextArithmetic.bitXor(a, b, _bitWidthForType(t));
     }
 
     function fheShl(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheShl(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        uint256 bitWidth = _bitWidthForType(t);
-        plaintexts[result] = _clamp(a << (b % bitWidth), t);
+        plaintexts[result] = CleartextArithmetic.shl(a, b, _bitWidthForType(t));
     }
 
     function fheShr(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheShr(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        uint256 bitWidth = _bitWidthForType(t);
-        plaintexts[result] = _clamp(a >> (b % bitWidth), t);
+        plaintexts[result] = CleartextArithmetic.shr(a, b, _bitWidthForType(t));
     }
 
     function fheRotl(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheRotl(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        uint256 bitWidth = _bitWidthForType(t);
-        uint256 shift = b % bitWidth;
-        if (shift == 0) {
-            plaintexts[result] = a;
-            return result;
-        }
-        plaintexts[result] = _clamp((a << shift) | (a >> (bitWidth - shift)), t);
+        plaintexts[result] = CleartextArithmetic.rotl(a, b, _bitWidthForType(t));
     }
 
     function fheRotr(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
         result = super.fheRotr(lhs, rhs, scalarByte);
         (FheType t, uint256 a, uint256 b) = _loadBinaryOperands(lhs, rhs, scalarByte);
-        uint256 bitWidth = _bitWidthForType(t);
-        uint256 shift = b % bitWidth;
-        if (shift == 0) {
-            plaintexts[result] = a;
-            return result;
-        }
-        plaintexts[result] = _clamp((a >> shift) | (a << (bitWidth - shift)), t);
+        plaintexts[result] = CleartextArithmetic.rotr(a, b, _bitWidthForType(t));
     }
 
     function fheEq(bytes32 lhs, bytes32 rhs, bytes1 scalarByte) public override returns (bytes32 result) {
@@ -157,18 +133,14 @@ contract CleartextFHEVMExecutor is FHEVMExecutor {
         result = super.fheNeg(ct);
         FheType t = _typeOf(ct);
         uint256 value = _clamp(plaintexts[ct], t);
-        unchecked {
-            plaintexts[result] = _clamp(~value + 1, t);
-        }
+        plaintexts[result] = CleartextArithmetic.neg(value, _bitWidthForType(t));
     }
 
     function fheNot(bytes32 ct) public override returns (bytes32 result) {
         result = super.fheNot(ct);
         FheType t = _typeOf(ct);
         uint256 value = _clamp(plaintexts[ct], t);
-        uint256 bitWidth = _bitWidthForType(t);
-        uint256 mask = (bitWidth == 256) ? type(uint256).max : (1 << bitWidth) - 1;
-        plaintexts[result] = ~value & mask;
+        plaintexts[result] = CleartextArithmetic.bitNot(value, _bitWidthForType(t));
     }
 
     function fheIfThenElse(bytes32 control, bytes32 ifTrue, bytes32 ifFalse)
@@ -244,8 +216,7 @@ contract CleartextFHEVMExecutor is FHEVMExecutor {
 
     function _generateRand(FheType randType, bytes16 seed) internal override returns (bytes32 result) {
         result = super._generateRand(randType, seed);
-        uint256 randomValue = uint256(keccak256(abi.encodePacked(seed, "randValue")));
-        plaintexts[result] = _clamp(randomValue, randType);
+        plaintexts[result] = CleartextArithmetic.rand(seed, _bitWidthForType(randType));
     }
 
     function _generateRandBounded(uint256 upperBound, FheType randType, bytes16 seed)
@@ -254,8 +225,7 @@ contract CleartextFHEVMExecutor is FHEVMExecutor {
         returns (bytes32 result)
     {
         result = super._generateRandBounded(upperBound, randType, seed);
-        uint256 randomValue = uint256(keccak256(abi.encodePacked(seed, "randBoundedValue")));
-        plaintexts[result] = randomValue % upperBound;
+        plaintexts[result] = CleartextArithmetic.randBounded(seed, upperBound);
     }
 
     function _loadBinaryOperands(bytes32 lhs, bytes32 rhs, bytes1 scalarByte)
@@ -358,11 +328,6 @@ contract CleartextFHEVMExecutor is FHEVMExecutor {
     }
 
     function _clamp(uint256 value, FheType fheType) internal pure returns (uint256) {
-        uint256 bitWidth = _bitWidthForType(fheType);
-        if (bitWidth >= 256) {
-            return value;
-        }
-
-        return value & ((uint256(1) << bitWidth) - 1);
+        return CleartextArithmetic.clamp(value, _bitWidthForType(fheType));
     }
 }

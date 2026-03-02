@@ -6,6 +6,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {FHEEvents} from "@fhevm/host-contracts/contracts/FHEEvents.sol";
 import {fhevmExecutorAdd} from "@fhevm/host-contracts/addresses/FHEVMHostAddresses.sol";
 import {FheType} from "@fhevm/host-contracts/contracts/shared/FheType.sol";
+import {CleartextArithmetic} from "./CleartextArithmetic.sol";
 
 abstract contract PlaintextDBMixin is Test, FHEEvents {
     mapping(bytes32 => uint256) internal _plaintexts;
@@ -95,24 +96,17 @@ abstract contract PlaintextDBMixin is Test, FHEEvents {
 
     function _handleAdd(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        unchecked {
-            _plaintexts[result] = _clamp(a + b, t);
-        }
+        _plaintexts[result] = CleartextArithmetic.add(a, b, _bitWidthForType(t));
     }
 
     function _handleSub(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        uint256 bitWidth = _bitWidthForType(t);
-        unchecked {
-            _plaintexts[result] = _clamp(a - b + (1 << bitWidth), t);
-        }
+        _plaintexts[result] = CleartextArithmetic.sub(a, b, _bitWidthForType(t));
     }
 
     function _handleMul(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        unchecked {
-            _plaintexts[result] = _clamp(a * b, t);
-        }
+        _plaintexts[result] = CleartextArithmetic.mul(a, b, _bitWidthForType(t));
     }
 
     function _handleDiv(bytes memory data) private {
@@ -127,51 +121,37 @@ abstract contract PlaintextDBMixin is Test, FHEEvents {
 
     function _handleBitAnd(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        _plaintexts[result] = _clamp(a & b, t);
+        _plaintexts[result] = CleartextArithmetic.bitAnd(a, b, _bitWidthForType(t));
     }
 
     function _handleBitOr(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        _plaintexts[result] = _clamp(a | b, t);
+        _plaintexts[result] = CleartextArithmetic.bitOr(a, b, _bitWidthForType(t));
     }
 
     function _handleBitXor(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        _plaintexts[result] = _clamp(a ^ b, t);
+        _plaintexts[result] = CleartextArithmetic.bitXor(a, b, _bitWidthForType(t));
     }
 
     function _handleShl(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        uint256 bitWidth = _bitWidthForType(t);
-        _plaintexts[result] = _clamp(a << (b % bitWidth), t);
+        _plaintexts[result] = CleartextArithmetic.shl(a, b, _bitWidthForType(t));
     }
 
     function _handleShr(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        uint256 bitWidth = _bitWidthForType(t);
-        _plaintexts[result] = _clamp(a >> (b % bitWidth), t);
+        _plaintexts[result] = CleartextArithmetic.shr(a, b, _bitWidthForType(t));
     }
 
     function _handleRotl(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        uint256 bitWidth = _bitWidthForType(t);
-        uint256 shift = b % bitWidth;
-        if (shift == 0) {
-            _plaintexts[result] = a;
-            return;
-        }
-        _plaintexts[result] = _clamp((a << shift) | (a >> (bitWidth - shift)), t);
+        _plaintexts[result] = CleartextArithmetic.rotl(a, b, _bitWidthForType(t));
     }
 
     function _handleRotr(bytes memory data) private {
         (,,, bytes32 result, FheType t, uint256 a, uint256 b) = _loadBinaryOperands(data);
-        uint256 bitWidth = _bitWidthForType(t);
-        uint256 shift = b % bitWidth;
-        if (shift == 0) {
-            _plaintexts[result] = a;
-            return;
-        }
-        _plaintexts[result] = _clamp((a >> shift) | (a << (bitWidth - shift)), t);
+        _plaintexts[result] = CleartextArithmetic.rotr(a, b, _bitWidthForType(t));
     }
 
     function _handleEq(bytes memory data) private {
@@ -218,18 +198,14 @@ abstract contract PlaintextDBMixin is Test, FHEEvents {
         (bytes32 ct, bytes32 result) = abi.decode(data, (bytes32, bytes32));
         FheType t = _typeOf(ct);
         uint256 value = _clamp(_plaintexts[ct], t);
-        unchecked {
-            _plaintexts[result] = _clamp(~value + 1, t);
-        }
+        _plaintexts[result] = CleartextArithmetic.neg(value, _bitWidthForType(t));
     }
 
     function _handleNot(bytes memory data) private {
         (bytes32 ct, bytes32 result) = abi.decode(data, (bytes32, bytes32));
         FheType t = _typeOf(ct);
         uint256 value = _clamp(_plaintexts[ct], t);
-        uint256 bitWidth = _bitWidthForType(t);
-        uint256 mask = (bitWidth == 256) ? type(uint256).max : (1 << bitWidth) - 1;
-        _plaintexts[result] = ~value & mask;
+        _plaintexts[result] = CleartextArithmetic.bitNot(value, _bitWidthForType(t));
     }
 
     function _handleTrivialEncrypt(bytes memory data) private {
@@ -250,14 +226,12 @@ abstract contract PlaintextDBMixin is Test, FHEEvents {
 
     function _handleRand(bytes memory data) private {
         (uint8 randTypeRaw, bytes16 seed, bytes32 result) = abi.decode(data, (uint8, bytes16, bytes32));
-        uint256 randomValue = uint256(keccak256(abi.encodePacked(seed, "randValue")));
-        _plaintexts[result] = _clamp(randomValue, FheType(randTypeRaw));
+        _plaintexts[result] = CleartextArithmetic.rand(seed, _bitWidthForType(FheType(randTypeRaw)));
     }
 
     function _handleRandBounded(bytes memory data) private {
         (uint256 upperBound,, bytes16 seed, bytes32 result) = abi.decode(data, (uint256, uint8, bytes16, bytes32));
-        uint256 randomValue = uint256(keccak256(abi.encodePacked(seed, "randBoundedValue")));
-        _plaintexts[result] = randomValue % upperBound;
+        _plaintexts[result] = CleartextArithmetic.randBounded(seed, upperBound);
     }
 
     function _handleVerifyInput(bytes memory data) private pure {
@@ -283,9 +257,7 @@ abstract contract PlaintextDBMixin is Test, FHEEvents {
     }
 
     function _clamp(uint256 value, FheType fheType) internal pure returns (uint256) {
-        uint256 bitWidth = _bitWidthForType(fheType);
-        if (bitWidth == 256) return value;
-        return value & ((1 << bitWidth) - 1);
+        return CleartextArithmetic.clamp(value, _bitWidthForType(fheType));
     }
 
     function _seedPlaintext(bytes32 handle, uint256 value) internal {

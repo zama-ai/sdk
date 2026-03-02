@@ -5,6 +5,7 @@ libs = ["dependencies"]
 test = "test"
 solc = "0.8.27"
 evm_version = "cancun"
+allow_paths = ["../../.."]
 
 [dependencies]
 "@openzeppelin-contracts" = "5.1.0"
