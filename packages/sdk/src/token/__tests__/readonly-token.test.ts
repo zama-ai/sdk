@@ -225,10 +225,9 @@ describe("ReadonlyToken", () => {
         }),
       ).rejects.toThrow(DecryptionFailedError);
 
-      // Reset mocks for second assertion
-      vi.mocked(sdk.userDecrypt)
-        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
-        .mockRejectedValueOnce(new Error("decrypt failed"));
+      // Reset mocks for second assertion — token's result is now cached,
+      // so only token2 will call userDecrypt.
+      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(
         ReadonlyToken.batchDecryptBalances([token, token2], {
@@ -284,6 +283,40 @@ describe("ReadonlyToken", () => {
       expect(captured).toHaveLength(1);
       expect(captured[0]!.address).toBe(TOKEN2);
       expect(captured[0]!.error.message).toBe("decrypt failed");
+    });
+  });
+
+  describe("batchDecryptBalances (length mismatch)", () => {
+    it("throws DecryptionFailedError when tokens and handles have different lengths", async () => {
+      await expect(
+        ReadonlyToken.batchDecryptBalances([token], {
+          handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+        }),
+      ).rejects.toThrow(/tokens\.length.*must equal.*handles\.length/);
+    });
+  });
+
+  describe("authorizeAll", () => {
+    it("returns immediately for empty token array", async () => {
+      await ReadonlyToken.authorizeAll([]);
+
+      expect(sdk.generateKeypair).not.toHaveBeenCalled();
+      expect(signer.signTypedData).not.toHaveBeenCalled();
+    });
+
+    it("authorizes credentials for all tokens in a single signature", async () => {
+      const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+      const token2 = new ReadonlyToken({
+        sdk: sdk as unknown as RelayerSDK,
+        signer,
+        storage: new MemoryStorage(),
+        address: TOKEN2,
+      });
+
+      await ReadonlyToken.authorizeAll([token, token2]);
+
+      expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
     });
   });
 });

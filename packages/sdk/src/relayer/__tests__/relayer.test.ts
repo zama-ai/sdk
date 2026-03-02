@@ -195,7 +195,7 @@ describe("RelayerWeb", () => {
   // -------------------------------------------------------------------------
 
   describe("terminate", () => {
-    it("terminates the worker and rejects subsequent calls", async () => {
+    it("terminates the worker and auto-restarts on next call", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.generateKeypair.mockResolvedValue({
         publicKey: "pk",
@@ -207,8 +207,9 @@ describe("RelayerWeb", () => {
 
       expect(mockWorkerClient.terminate).toHaveBeenCalledOnce();
 
-      await expect(relayer.generateKeypair()).rejects.toThrow(EncryptionFailedError);
-      await expect(relayer.generateKeypair()).rejects.toThrow("RelayerWeb has been terminated");
+      // After terminate, subsequent calls auto-restart the worker
+      const result = await relayer.generateKeypair();
+      expect(result).toEqual({ publicKey: "pk", privateKey: "sk" });
     });
 
     it("is safe to call terminate before any initialization", () => {

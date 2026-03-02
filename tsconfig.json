@@ -22,5 +22,11 @@
     }
   },
   "include": ["packages/**/*.ts", "packages/**/*.tsx"],
-  "exclude": ["node_modules", "**/node_modules", "packages/test-app"]
+  "exclude": [
+    "node_modules",
+    "**/node_modules",
+    "packages/test-nextjs",
+    "packages/test-vite",
+    "packages/playwright"
+  ]
 }

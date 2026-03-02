@@ -162,19 +162,19 @@ Library sub-paths now only export their signer adapter.
 All hooks are available from the main entry point via provider context."
 ```
 
-### Task 5: Update test-app imports (if needed)
+### Task 5: Update test-nextjs imports (if needed)
 
 **Files:**
 
-- Check: `packages/test-app/src/**/*.{ts,tsx}`
+- Check: `packages/test-nextjs/src/**/*.{ts,tsx}`
 
 **Step 1: Search for imports from deleted sub-paths**
 
 ```bash
-grep -r "react-sdk/viem\|react-sdk/ethers\|react-sdk/wagmi" packages/test-app/src/ --include="*.ts" --include="*.tsx"
+grep -r "react-sdk/viem\|react-sdk/ethers\|react-sdk/wagmi" packages/test-nextjs/src/ --include="*.ts" --include="*.tsx"
 ```
 
-The test-app currently imports `WagmiSigner` from `@zama-fhe/react-sdk/wagmi` (in `src/providers.tsx`). This still works since `WagmiSigner` is still exported. If any hook imports from sub-paths are found, update them to import from `@zama-fhe/react-sdk` instead.
+The test-nextjs currently imports `WagmiSigner` from `@zama-fhe/react-sdk/wagmi` (in `src/providers.tsx`). This still works since `WagmiSigner` is still exported. If any hook imports from sub-paths are found, update them to import from `@zama-fhe/react-sdk` instead.
 
 **Step 2: Run E2E smoke test (optional)**
 
@@ -1392,7 +1392,7 @@ Test provider lifecycle phases, chain validation, and reducer transitions."
 | Task  | Description                                              | Phase   |
 | ----- | -------------------------------------------------------- | ------- |
 | 1-3   | Delete 39 duplicated hook files across viem/ethers/wagmi | Phase 1 |
-| 4-5   | Verify build, typecheck, update test-app                 | Phase 1 |
+| 4-5   | Verify build, typecheck, update test-nextjs              | Phase 1 |
 | 6-9   | Extend error codes, add subclasses, add error tests      | Phase 2 |
 | 10-14 | Create reducer, config factory, update provider          | Phase 3 |
 | 15-17 | Add mutation dedup and phase tracking                    | Phase 4 |

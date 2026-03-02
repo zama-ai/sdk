@@ -50,7 +50,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter @zama-fhe/test-app exec playwright install --with-deps chromium
+        run: pnpm --filter @zama-fhe/playwright exec playwright install --with-deps chromium
 
       - name: Save Playwright browsers cache
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -113,16 +113,16 @@ jobs:
         id: nextjs-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
-          path: packages/test-app/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-app/src/**/*.ts', 'packages/test-app/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
+          path: packages/test-nextjs/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-nextjs/src/**/*.ts', 'packages/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
           restore-keys: |
             nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Build SDK packages
         run: pnpm build
 
-      - name: Build Next.js test-app
-        run: pnpm build:test-app
+      - name: Build Next.js test-nextjs
+        run: pnpm build:test-nextjs
         env:
           NEXT_PUBLIC_NETWORK: hardhat
 
@@ -130,18 +130,24 @@ jobs:
         if: steps.nextjs-build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
-          path: packages/test-app/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-app/src/**/*.ts', 'packages/test-app/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
+          path: packages/test-nextjs/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-nextjs/src/**/*.ts', 'packages/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
+
+      - name: Build Vite test-vite
+        run: pnpm build:test-vite
+        env:
+          VITE_NETWORK: hardhat
 
       - name: Run Playwright tests
         run: pnpm e2e:test
         env:
           NEXT_PUBLIC_NETWORK: hardhat
+          VITE_NETWORK: hardhat
 
       - name: Upload test results
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
-          path: packages/test-app/playwright/test-results/
+          path: packages/playwright/test-results/
           retention-days: 7

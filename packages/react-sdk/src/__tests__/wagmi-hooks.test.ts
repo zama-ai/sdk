@@ -13,11 +13,14 @@ const mockWaitForTransactionReceipt = vi.fn();
 
 vi.mock("wagmi/actions", () => ({
   getChainId: (...args: unknown[]) => mockGetChainId(...args),
-  getConnection: (...args: unknown[]) => mockGetConnection(...args),
   signTypedData: (...args: unknown[]) => mockSignTypedData(...args),
   writeContract: (...args: unknown[]) => mockWriteContract(...args),
   readContract: (...args: unknown[]) => mockReadContract(...args),
   waitForTransactionReceipt: (...args: unknown[]) => mockWaitForTransactionReceipt(...args),
+}));
+
+vi.mock("../wagmi/compat", () => ({
+  getConnection: (...args: unknown[]) => mockGetConnection(...args),
 }));
 
 // ---------------------------------------------------------------------------

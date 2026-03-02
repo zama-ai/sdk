@@ -1,0 +1,13 @@
+@theme {
+  --color-zama-yellow: #ffd100;
+  --color-zama-yellow-hover: #e6bc00;
+  --color-zama-black: #0a0a0a;
+  --color-zama-dark: #141414;
+  --color-zama-dark-hover: #1f1f1f;
+  --color-zama-gray: #8a8a8a;
+  --color-zama-light: #d1d1d1;
+  --color-zama-border: #2a2a2a;
+  --color-zama-surface: #1a1a1a;
+  --color-zama-success: #4ade80;
+  --color-zama-error: #f87171;
+}

@@ -323,7 +323,7 @@ Export `WagmiSignerConfig` from `packages/react-sdk/src/wagmi/index.ts`.
 
 Grep for `new ViemSigner(`, `new EthersSigner(`, `new WagmiSigner(` across the entire repo and update call sites:
 
-- `packages/test-app/src/providers.tsx`: `new WagmiSigner(wagmiConfig)` → `new WagmiSigner({ config: wagmiConfig })`
+- `packages/test-nextjs/src/providers.tsx`: `new WagmiSigner(wagmiConfig)` → `new WagmiSigner({ config: wagmiConfig })`
 - All test files in `packages/react-sdk/src/__tests__/` and `packages/sdk/src/`
 - Sub-path re-exports (react-sdk viem/ethers signer files) — these just re-export, no code change needed
 
@@ -340,7 +340,7 @@ Expected: No errors.
 **Step 7: Commit**
 
 ```bash
-git add packages/sdk/src/viem/ packages/sdk/src/ethers/ packages/react-sdk/src/wagmi/ packages/test-app/src/providers.tsx packages/react-sdk/src/__tests__/ packages/sdk/src/token/__tests__/
+git add packages/sdk/src/viem/ packages/sdk/src/ethers/ packages/react-sdk/src/wagmi/ packages/test-nextjs/src/providers.tsx packages/react-sdk/src/__tests__/ packages/sdk/src/token/__tests__/
 git commit -m "feat: use options bags for ViemSigner, EthersSigner, WagmiSigner constructors"
 ```
 
@@ -916,15 +916,15 @@ git commit -m "feat: export TransactionResult, matchTokenError, BatchDecryptErro
 
 ---
 
-### Task 13: Update test-app components and E2E tests
+### Task 13: Update test-nextjs components and E2E tests
 
 **Files:**
 
-- Modify: `packages/test-app/src/components/shield-form.tsx`
-- Modify: `packages/test-app/src/components/token-table.tsx`
-- Modify: `packages/test-app/src/components/wrapper-discovery-panel.tsx`
-- Modify: `packages/test-app/src/providers.tsx`
-- Modify: `packages/test-app/src/components/unwrap-manual-form.tsx`
+- Modify: `packages/test-nextjs/src/components/shield-form.tsx`
+- Modify: `packages/test-nextjs/src/components/token-table.tsx`
+- Modify: `packages/test-nextjs/src/components/wrapper-discovery-panel.tsx`
+- Modify: `packages/test-nextjs/src/providers.tsx`
+- Modify: `packages/test-nextjs/src/components/unwrap-manual-form.tsx`
 - Modify: E2E test files as needed
 
 **Step 1: Update shield-form.tsx**
@@ -951,8 +951,8 @@ Expected: All pass.
 **Step 6: Commit**
 
 ```bash
-git add packages/test-app/
-git commit -m "feat: update test-app to use new SDK API names"
+git add packages/test-nextjs/
+git commit -m "feat: update test-nextjs to use new SDK API names"
 ```
 
 ---
