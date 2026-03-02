@@ -4,6 +4,9 @@ on:
     - cron: "0 0 * * 0"
   workflow_dispatch:
 
+permissions:
+  actions: write
+
 jobs:
   delete-caches:
     name: "Delete Actions caches"
