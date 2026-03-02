@@ -1,0 +1,95 @@
+{
+  "source": "/Users/msaug/zama/token-sdk/CLEARTEXT_MOCK_PLAN.md",
+  "generatedAt": "2026-03-02T18:34:47.269Z",
+  "repo": {
+    "projectName": "token-sdk",
+    "buildCmds": {
+      "typecheck": "pnpm run typecheck",
+      "build": "pnpm run build",
+      "lint": "pnpm run lint"
+    },
+    "testCmds": {
+      "test": "pnpm run test"
+    }
+  },
+  "units": [
+    {
+      "id": "cleartext-executor-contract",
+      "name": "CleartextFHEVMExecutor Solidity Contract",
+      "rfcSections": [
+        "§1"
+      ],
+      "description": "Create a Foundry project at packages/playwright/contracts/ that imports forge-fhevm as a dependency. Implement CleartextFHEVMExecutor.sol by copying FHEVMExecutor from forge-fhevm and adding a public `mapping(bytes32 => uint256) public plaintexts` mapping. Override all 28 FHE operations (fheAdd, fheSub, fheMul, fheDiv, fheRem, fheBitAnd, fheBitOr, fheBitXor, fheShl, fheShr, fheRotl, fheRotr, fheEq, fheNe, fheGe, fheGt, fheLe, fheLt, fheMin, fheMax, fheNeg, fheNot, fheIfThenElse, fheRand, fheRandBounded, cast, trivialEncrypt, verifyInput): each calls super then stores the result cleartext in plaintexts[result] via the appropriate cleartext computation. verifyInput extracts appended cleartext bytes from the extended proof format (standard portion + N*32 cleartext bytes) and stores them for the matching handle. Add _clamp and _bitWidthForType helpers ported from PlaintextDBMixin. Run forge build to produce the deployedBytecode artifact. Write Forge unit tests covering: trivialEncrypt stores correct value, fheAdd computes correct sum, fheSub wraps on underflow, fheEq stores 0 or 1, verifyInput extracts cleartext from extended proof, cast clamps value to new type, fheRand stores block.prevrandao mod bound.",
+      "deps": [],
+      "acceptance": [
+        "Foundry project exists at packages/playwright/contracts/ with forge.toml and remappings configured for forge-fhevm",
+        "CleartextFHEVMExecutor.sol compiles with no errors",
+        "`forge build` succeeds and produces a deployedBytecode field in the JSON artifact under out/",
+        "All 28 FHE operation overrides are present and each calls super then stores result in plaintexts[result]",
+        "verifyInput correctly parses the extended proof (numHandles + numSigners + handles + sigs + cleartexts) and stores plaintext for the matching handle only",
+        "_clamp correctly masks values to their FheType bit width (e.g. Uint8 masks to 0xFF)",
+        "`forge inspect CleartextFHEVMExecutor storage-layout` confirms plaintexts mapping does not collide with any parent storage slot",
+        "All Forge unit tests pass via `forge test`"
+      ],
+      "tier": "large"
+    },
+    {
+      "id": "cleartext-mock-ts-module",
+      "name": "CleartextMockFhevm TypeScript Module",
+      "rfcSections": [
+        "§2",
+        "§2.1",
+        "§2.2",
+        "§2.3",
+        "§2.4",
+        "§2.5"
+      ],
+      "description": "Create all files under packages/playwright/fixtures/cleartext-mock/. bytecode.ts: extract deployedBytecode hex from the forge artifact produced by cleartext-executor-contract and export as CLEARTEXT_EXECUTOR_BYTECODE. constants.ts: FHEVM_ADDRESSES (acl, executor, inputVerifier, kmsVerifier), VERIFYING_CONTRACTS (inputVerification, decryption), GATEWAY_CHAIN_ID, mock signer private keys, FheType enum, FHE_BIT_WIDTHS, HANDLE_VERSION. types.ts: CleartextMockConfig and shared types. handle.ts: computeInputHandle and computeMockCiphertext ported exactly from forge-fhevm InputProofHelper — must preserve ZK-w_rct/ZK-w_hdl byte prefixes, PREHANDLE_MASK, and metadata bit layout (index at byte 21, chainId at bytes 22-29, fheType at byte 30, version at byte 31). eip712.ts: INPUT_VERIFICATION_EIP712 (domain name 'InputVerification', type 'CiphertextVerification'), KMS_DECRYPTION_EIP712 (domain name 'Decryption', type 'PublicDecryptVerification'), USER_DECRYPT_EIP712 (domain name 'Decryption', type 'UserDecryptRequestVerification'). encrypted-input.ts: CleartextEncryptedInput builder with all type-specific add methods (addBool, add4..add256, addAddress); encrypt() builds extended proof: [numHandles(1)][numSigners(1)][handles(N*32)][signature(65)][cleartexts(N*32)], signs CiphertextVerification EIP-712 with input signer wallet. index.ts: CleartextMockFhevm with static create() that reads EIP-1967 impl slot and calls hardhat_setCode; generateKeypair() returning random bytes; createEIP712() constructing USER_DECRYPT_EIP712 typed data; createEncryptedInput(); userDecrypt() with ACL.persistAllowed check then plaintexts read; publicDecrypt() with ACL.isAllowedForDecryption check, plaintexts read, KMS EIP-712 signature, and proof format [numSigners(1)][signature(65)]. Write unit tests for: computeInputHandle with known vectors, EIP-712 domain/type structure, CleartextEncryptedInput.encrypt() proof byte layout, userDecrypt rejects when ACL returns false.",
+      "deps": [
+        "cleartext-executor-contract"
+      ],
+      "acceptance": [
+        "All files exist: bytecode.ts, constants.ts, types.ts, handle.ts, eip712.ts, encrypted-input.ts, index.ts",
+        "CLEARTEXT_EXECUTOR_BYTECODE in bytecode.ts exactly matches the deployedBytecode string from the forge artifact",
+        "computeInputHandle produces handles with correct metadata bits: index at byte 21, chainId (8 bytes) at bytes 22-29, fheType at byte 30, version at byte 31",
+        "computeMockCiphertext uses ZK-w_rct prefix and keccak256 over [fheType || clearBytes || random32]",
+        "CleartextEncryptedInput.encrypt() proof has layout [numHandles(1)][numSigners(1)][handles(N*32)][signature(65)][cleartexts(N*32)]",
+        "INPUT_VERIFICATION_EIP712.domain.name is 'InputVerification' and type key is 'CiphertextVerification' with fields blobHash, handlesList, userAddress, contractAddress",
+        "Both KMS_DECRYPTION_EIP712 and USER_DECRYPT_EIP712 use domain name 'Decryption'",
+        "CleartextMockFhevm.create() sends hardhat_setCode with the address extracted from EIP-1967 slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+        "userDecrypt() throws if ACL.persistAllowed returns false for any handle/user pair",
+        "publicDecrypt() throws if ACL.isAllowedForDecryption returns false for any handle",
+        "publicDecrypt() decryptionProof byte layout is [numSigners=1 (1 byte)][KMS signature (65 bytes)]",
+        "generateKeypair() returns two distinct 32-byte hex strings",
+        "Unit tests pass via pnpm run test"
+      ],
+      "tier": "large"
+    },
+    {
+      "id": "fixture-integration-cleanup",
+      "name": "Playwright Fixture Integration and Dependency Cleanup",
+      "rfcSections": [
+        "§3",
+        "§4"
+      ],
+      "description": "Modify packages/playwright/fixtures/fhevm.ts: replace the MockFhevmInstance import with CleartextMockFhevm from ./cleartext-mock, replace createMockFhevmInstance with CleartextMockFhevm.create() (simpler two-argument factory), remove the decryptLock mutex entirely, remove all block-mining retry loops (the two poll/retry blocks around lines 124-163 and 198-237), simplify all five route handlers (/generateKeypair, /createEIP712, /encrypt, /userDecrypt, /publicDecrypt) to direct awaited calls with no retry. Modify packages/playwright/fixtures/test.ts: remove the post-revert block mining call (~lines 130-132). Remove @fhevm/mock-utils from packages/playwright/package.json dependencies. Remove @fhevm/mock-utils and @zama-fhe/relayer-sdk from root package.json devDependencies (verify relayer-sdk is not imported by any non-test source file before removing). Run pnpm install to update lockfile.",
+      "deps": [
+        "cleartext-mock-ts-module"
+      ],
+      "acceptance": [
+        "fhevm.ts contains no import referencing @fhevm/mock-utils or @zama-fhe/relayer-sdk",
+        "fhevm.ts imports CleartextMockFhevm from ./cleartext-mock",
+        "decryptLock, all retry loops, and all block-mining workaround calls are absent from fhevm.ts",
+        "All five route handlers call CleartextMockFhevm methods directly with a single await and no surrounding retry logic",
+        "test.ts contains no post-revert block mining call",
+        "@fhevm/mock-utils is absent from packages/playwright/package.json",
+        "@fhevm/mock-utils and @zama-fhe/relayer-sdk are absent from root package.json devDependencies",
+        "pnpm install completes without errors and lockfile is updated",
+        "pnpm run typecheck passes with zero errors",
+        "pnpm run build succeeds",
+        "Existing Playwright end-to-end tests pass"
+      ],
+      "tier": "medium"
+    }
+  ]
+}

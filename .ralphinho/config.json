@@ -1,0 +1,13 @@
+{
+  "mode": "scheduled-work",
+  "repoRoot": "/Users/msaug/zama/token-sdk",
+  "rfcPath": "/Users/msaug/zama/token-sdk/CLEARTEXT_MOCK_PLAN.md",
+  "agents": {
+    "claude": true,
+    "codex": true,
+    "gh": true
+  },
+  "maxConcurrency": 6,
+  "baseBranch": "cleartext-mocks",
+  "createdAt": "2026-03-02T18:34:47.291Z"
+}

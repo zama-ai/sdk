@@ -1,3 +1,6 @@
+workflow.db*
+.smithers/executions/
+
 # dependencies
 node_modules
 
