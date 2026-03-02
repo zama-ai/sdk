@@ -4,6 +4,9 @@ test("should show shield and transfer events with decrypted amounts", async ({
   page,
   contracts,
   formatUnits,
+  readErc20Balance,
+  initialBalances,
+  computeFee,
 }) => {
   const shieldAmount = 200n;
   const transferAmount = 50n;
@@ -45,4 +48,17 @@ test("should show shield and transfer events with decrypted amounts", async ({
   await expect(page.getByTestId("activity-direction-1")).toHaveText("incoming");
   // Shield amount is clear (not encrypted)
   await expect(page.getByTestId("activity-amount-1")).toHaveText(formatUnits(shieldAmount, 6));
+
+  // Cross-check: on-chain ERC-20 balance should match shield deduction
+  const onChainUsdt = await readErc20Balance(contracts.USDT);
+  expect(onChainUsdt).toBe(initialBalances.USDT - shieldAmount);
+
+  // Cross-check: navigate to wallet and verify revealed balance accounts for shield + transfer
+  await page.goto("/wallet");
+  await page.getByTestId("reveal-button").click();
+  const expectedBalance =
+    initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount) - transferAmount;
+  await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
+    formatUnits(expectedBalance, 6),
+  );
 });

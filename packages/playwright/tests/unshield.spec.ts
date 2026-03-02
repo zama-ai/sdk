@@ -6,6 +6,7 @@ test("should shield USDT then unshield back to ERC20", async ({
   initialBalances,
   formatUnits,
   computeFee,
+  readErc20Balance,
 }) => {
   const shieldAmount = 1000n;
   const unshieldAmount = 500n;
@@ -36,6 +37,12 @@ test("should shield USDT then unshield back to ERC20", async ({
   await expect(page.getByTestId("token-row-USDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedErc20, 6),
   );
+
+  // On-chain: ERC-20 balance should reflect shield then unshield
+  const onChainUsdt = await readErc20Balance(contracts.USDT);
+  expect(onChainUsdt).toBe(
+    initialBalances.USDT - shieldAmount + unshieldAmount - computeFee(unshieldAmount),
+  );
 });
 
 test("should shield USDC then unshield back to ERC20", async ({
@@ -44,6 +51,7 @@ test("should shield USDC then unshield back to ERC20", async ({
   initialBalances,
   formatUnits,
   computeFee,
+  readErc20Balance,
 }) => {
   const shieldAmount = 1000n;
   const unshieldAmount = 500n;
@@ -73,5 +81,11 @@ test("should shield USDC then unshield back to ERC20", async ({
     initialBalances.USDC - shieldAmount + unshieldAmount - computeFee(unshieldAmount);
   await expect(page.getByTestId("token-row-ERC20").getByTestId("balance")).toHaveText(
     formatUnits(expectedErc20, 6),
+  );
+
+  // On-chain: ERC-20 balance should reflect shield then unshield
+  const onChainUsdc = await readErc20Balance(contracts.USDC);
+  expect(onChainUsdc).toBe(
+    initialBalances.USDC - shieldAmount + unshieldAmount - computeFee(unshieldAmount),
   );
 });
