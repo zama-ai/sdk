@@ -1,12 +1,6 @@
-"use client";
-
-import NextLink from "next/link";
 import { TokenTable } from "@zama-fhe/test-components";
 import { CONFIDENTIAL_TOKEN_ADDRESSES, ERC20_TOKENS } from "@/constants";
-
-function Link({ to, ...props }: { to: string; className?: string; children: React.ReactNode }) {
-  return <NextLink href={to} {...props} />;
-}
+import { Link } from "./link";
 
 export default function WalletPage() {
   return (
