@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.0.0-alpha.4](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2026-03-02)
+
+### Features
+
+- add activity feed, batch transfer, and resume unshield e2e tests ([70efc7e](https://github.com/zama-ai/sdk/commit/70efc7ecd35e3efa08edd4d150559dc93d56aa57))
+- add wagmi v2 compatibility shim for useConnection/getConnection ([c480ac4](https://github.com/zama-ai/sdk/commit/c480ac43415b2fb97fb5e5ef50645abc4f959b7b))
+- cache decrypted balances in storage to eliminate spinner on reload ([63df398](https://github.com/zama-ai/sdk/commit/63df39897495a0547306070ec6f22cee23746226))
+- **test-components:** add 11 shared form/panel components ([71aea3d](https://github.com/zama-ai/sdk/commit/71aea3dad0b61e328f2a4e221b4c58f7f656e63c))
+- **test-components:** add shared responsive sidebar nav ([2cbdab0](https://github.com/zama-ai/sdk/commit/2cbdab05c7962068c7965ba4c8ec4368e8bbf074))
+- **test-components:** add token-table with framework-agnostic LinkComponent prop ([62a89d0](https://github.com/zama-ai/sdk/commit/62a89d01604b31cb757296e389803aa8797b1acd))
+- **test-components:** scaffold shared test components package ([2ed32fa](https://github.com/zama-ai/sdk/commit/2ed32fa4d1a3178786d0da9acd5d01102e7aeab8))
+- **test-vite:** add React Router, Tailwind CSS, and extract pages ([e70f4ad](https://github.com/zama-ai/sdk/commit/e70f4ad60e89de429fe3f798897e30a15a737370))
+- **test-vite:** migrate to rolldown-vite ([ab80bfc](https://github.com/zama-ai/sdk/commit/ab80bfcd4abf47adff5196686efb14d42cabfd39))
+
+### Bug Fixes
+
+- address integrator friction — gas limits, worker IIFE, CDN localhost, StrictMode restart, Sepolia /v2 ([a42d583](https://github.com/zama-ai/sdk/commit/a42d583ef745ca23af94481a83ff9347156f3df1))
+- **ci:** add Vite build step before running e2e tests ([689e1d5](https://github.com/zama-ai/sdk/commit/689e1d565c2471fd26ca7521c67e42d49d930b86))
+- **playwright:** drain in-flight route handlers before reverting chain state ([23cfec9](https://github.com/zama-ai/sdk/commit/23cfec996adc70083b21f870260544921e1b4f89))
+- **playwright:** use uniform 30s timeout for nextjs project ([bfe96af](https://github.com/zama-ai/sdk/commit/bfe96af56d7b024a8145bc9edec52fc69359aa87))
+- replace `< 2M` with prose in JSDoc to silence tsdoc-malformed-html-name ([cf4264e](https://github.com/zama-ai/sdk/commit/cf4264e35c4b6ad4a8af1800a0966fac1106b20d))
+- **sdk:** add /v2 path to mainnet relayer URL ([0310d01](https://github.com/zama-ai/sdk/commit/0310d01428300f488119dc689c165a2c023e50b8))
+- **test-components:** add non-null assertion for array index access ([6b9a1ff](https://github.com/zama-ai/sdk/commit/6b9a1ffe568a8956404ac14b4c182936661517c0))
+- **test-nextjs:** correct theme.css import path in globals.css ([f4b8564](https://github.com/zama-ai/sdk/commit/f4b85641766e974f30f590d13c88732f8b380eb0))
+- **test-nextjs:** correct USDT contract address to match hardhat deployment ([6cd96f5](https://github.com/zama-ai/sdk/commit/6cd96f5b94486e520740b0d73a64c478d6fe163a))
+- **test-nextjs:** replace CONTRACTS.confidentialToken with CONTRACTS.cUSDT ([b0ab373](https://github.com/zama-ai/sdk/commit/b0ab373a30e845729d85329704c00d6cb0211b7c))
+
+### Reverts
+
+- remove premature localhost CDN validation & document balance cache ([2a3664c](https://github.com/zama-ai/sdk/commit/2a3664cf7879b0352cfe4b4e2852b3e14d73e227))
+
 ## [1.0.0-alpha.3](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2026-02-27)
 
 ## [1.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2026-02-27)
