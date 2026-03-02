@@ -8,14 +8,6 @@
 
 TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homomorphic Encryption on Zama Protocol](https://docs.zama.org/protocol/protocol/overview). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
 
-## Architecture
-
-<picture>
-  <img alt="Zama SDK Architecture Layers" src="docs/diagrams/layers.svg">
-</picture>
-
-> See [docs/architecture.md](docs/architecture.md) for full documentation including module maps and design patterns.
-
 ## Packages
 
 | Package                                        | Description                                                                                                              |
@@ -235,26 +227,11 @@ const sdk = new ZamaSDK({
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Your Application                 │
-├──────────────────────┬──────────────────────────────┤
-│  react-sdk           │  sdk (vanilla TS)            │
-│  React hooks +       │  ZamaSDK                     │
-│  React Query cache   │  Token                       │
-│                      │  ReadonlyToken               │
-├──────────────────────┴──────────────────────────────┤
-│                   Signer Adapters                   │
-│       ViemSigner · EthersSigner · WagmiSigner       │
-├─────────────────────────────────────────────────────┤
-│                  Relayer Backend                    │
-│       RelayerWeb (browser, Web Worker + WASM)       │
-│       RelayerNode (Node.js, worker threads)         │
-├─────────────────────────────────────────────────────┤
-│              fhEVM Smart Contracts                  │
-│       Encrypted ERC-20 · Wrapper · Coordinator      │
-└─────────────────────────────────────────────────────┘
-```
+<picture>
+  <img alt="Zama SDK Architecture Layers" src="docs/diagrams/layers.svg">
+</picture>
+
+> See [docs/architecture.md](docs/architecture.md) for full documentation including module maps and design patterns.
 
 ### Entry Points
 
