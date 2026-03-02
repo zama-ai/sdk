@@ -224,17 +224,20 @@ async function fetchScript(cdnUrl: string): Promise<string> {
 }
 
 async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
+  // Validate CDN URL immediately before any script loading (defense-in-depth).
+  const validatedUrl = validateCdnUrl(cdnUrl);
+
   if (isBrowserExtension()) {
     // Extensions: blob: URLs are forbidden. Use importScripts directly —
     // the CDN origin must be allowed in the extension's CSP manifest.
     if (integrity) {
-      await verifyIntegrity(await fetchScript(cdnUrl), integrity);
+      await verifyIntegrity(await fetchScript(validatedUrl), integrity);
     }
-    return self.importScripts(cdnUrl);
+    return self.importScripts(validatedUrl);
   }
 
   // Web apps: fetch + blob URL avoids MIME-type and eval CSP issues.
-  const scriptContent = await fetchScript(cdnUrl);
+  const scriptContent = await fetchScript(validatedUrl);
 
   if (integrity) {
     await verifyIntegrity(scriptContent, integrity);
@@ -257,9 +260,6 @@ async function handleInit(request: InitRequest): Promise<void> {
   const { cdnUrl, fhevmConfig, csrfToken, integrity } = payload;
 
   try {
-    // Validate CDN URL before any script loading
-    validateCdnUrl(cdnUrl);
-
     // Extract relayerUrl from config for fetch interception
     relayerUrlBase = fhevmConfig.relayerUrl ?? "";
     csrfTokenBase = csrfToken;
