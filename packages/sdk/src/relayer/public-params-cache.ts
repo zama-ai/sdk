@@ -121,6 +121,7 @@ export class PublicParamsCache {
       const cached: CachedPublicKey = {
         publicKeyId: result.publicKeyId,
         publicKey: toBase64(result.publicKey),
+        lastValidatedAt: Date.now(),
       };
       await this.#storage.setItem(key, JSON.stringify(cached));
     } catch {
@@ -185,6 +186,7 @@ export class PublicParamsCache {
       const cached: CachedPublicParams = {
         publicParamsId: result.publicParamsId,
         publicParams: toBase64(result.publicParams),
+        lastValidatedAt: Date.now(),
       };
       await this.#storage.setItem(key, JSON.stringify(cached));
     } catch {
@@ -192,5 +194,184 @@ export class PublicParamsCache {
     }
 
     return result;
+  }
+
+  // ── Artifact-level revalidation ──────────────────────────────
+
+  /**
+   * Check whether cached FHE artifacts are still fresh by consulting the
+   * relayer manifest and issuing conditional HEAD requests against the
+   * artifact URLs.
+   *
+   * @returns `true` if the cache was invalidated (caller should tear down
+   *   the worker), `false` otherwise.
+   */
+  async revalidateIfDue(relayerUrl: string, intervalMs: number): Promise<boolean> {
+    const pkKey = pubkeyStorageKey(this.#chainId);
+
+    try {
+      // 1. Read PK cache entry
+      const storedPkRaw = await this.#storage.getItem(pkKey);
+      if (!storedPkRaw) return false;
+      const storedPk = JSON.parse(storedPkRaw) as CachedPublicKey;
+
+      // 2. Collect params entries
+      const paramEntries: Array<{
+        key: string;
+        data: CachedPublicParams;
+      }> = [];
+      for (const bits of this.#publicParamsMem.keys()) {
+        const pKey = paramsStorageKey(this.#chainId, bits);
+        const raw = await this.#storage.getItem(pKey);
+        if (raw) {
+          paramEntries.push({ key: pKey, data: JSON.parse(raw) as CachedPublicParams });
+        }
+      }
+
+      // 3. Check if all entries are within intervalMs
+      const now = Date.now();
+      const allEntries: Array<{ lastValidatedAt?: number }> = [
+        storedPk,
+        ...paramEntries.map((e) => e.data),
+      ];
+      const allFresh = allEntries.every(
+        (e) => e.lastValidatedAt != null && now - e.lastValidatedAt < intervalMs,
+      );
+      if (allFresh) return false;
+
+      // 4. Fetch manifest
+      const manifestRes = await globalThis.fetch(`${relayerUrl}/keyurl`);
+      const manifest = (await manifestRes.json()) as Record<string, unknown>;
+
+      // 5-6. Check public key freshness
+      const manifestPkUrl = manifest.publicKeyUrl as string | undefined;
+      const manifestPkId = manifest.publicKeyId as string | undefined;
+
+      if (manifestPkUrl && storedPk.artifactUrl && manifestPkUrl !== storedPk.artifactUrl) {
+        await this.#clearAll(pkKey, paramEntries);
+        return true;
+      }
+
+      if (manifestPkId && manifestPkId !== storedPk.publicKeyId) {
+        await this.#clearAll(pkKey, paramEntries);
+        return true;
+      }
+
+      if (storedPk.artifactUrl) {
+        const stale = await this.#checkArtifactFreshness(storedPk.artifactUrl, {
+          etag: storedPk.etag,
+          lastModified: storedPk.lastModified,
+        });
+        if (stale) {
+          await this.#clearAll(pkKey, paramEntries);
+          return true;
+        }
+      }
+
+      // 7. Check each CRS entry
+      for (const entry of paramEntries) {
+        const manifestParamsUrl = manifest[`crs${entry.key}`] as string | undefined;
+        if (
+          manifestParamsUrl &&
+          entry.data.artifactUrl &&
+          manifestParamsUrl !== entry.data.artifactUrl
+        ) {
+          await this.#clearAll(pkKey, paramEntries);
+          return true;
+        }
+
+        if (entry.data.artifactUrl) {
+          const stale = await this.#checkArtifactFreshness(entry.data.artifactUrl, {
+            etag: entry.data.etag,
+            lastModified: entry.data.lastModified,
+          });
+          if (stale) {
+            await this.#clearAll(pkKey, paramEntries);
+            return true;
+          }
+        }
+      }
+
+      // 9. All fresh — update timestamps
+      await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, now);
+      return false;
+    } catch {
+      // 10. Fail-open: try to update timestamps to prevent retry storm
+      try {
+        const pkRaw = await this.#storage.getItem(pkKey);
+        if (pkRaw) {
+          const storedPk = JSON.parse(pkRaw) as CachedPublicKey;
+          const paramEntries: Array<{
+            key: string;
+            data: CachedPublicParams;
+          }> = [];
+          for (const bits of this.#publicParamsMem.keys()) {
+            const pKey = paramsStorageKey(this.#chainId, bits);
+            const raw = await this.#storage.getItem(pKey);
+            if (raw) {
+              paramEntries.push({ key: pKey, data: JSON.parse(raw) as CachedPublicParams });
+            }
+          }
+          await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, Date.now());
+        }
+      } catch {
+        // Best-effort — ignore
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Issue a conditional HEAD request against an artifact URL.
+   * @returns `true` if the artifact is STALE (needs re-fetch).
+   */
+  async #checkArtifactFreshness(
+    artifactUrl: string,
+    cached: { etag?: string; lastModified?: string },
+  ): Promise<boolean> {
+    const headers: Record<string, string> = {};
+    if (cached.etag) headers["If-None-Match"] = cached.etag;
+    if (cached.lastModified) headers["If-Modified-Since"] = cached.lastModified;
+
+    const res = await globalThis.fetch(artifactUrl, {
+      method: "HEAD",
+      headers,
+    });
+
+    if (res.status === 304) return false; // still fresh
+
+    // Compare validators from the response
+    const newEtag = res.headers.get("etag");
+    const newLastModified = res.headers.get("last-modified");
+
+    if (cached.etag && newEtag && cached.etag !== newEtag) return true;
+    if (cached.lastModified && newLastModified && cached.lastModified !== newLastModified)
+      return true;
+
+    return false;
+  }
+
+  async #clearAll(pkKey: string, paramEntries: Array<{ key: string }>): Promise<void> {
+    this.#publicKeyMem = undefined;
+    this.#publicParamsMem.clear();
+    await this.#storage.removeItem(pkKey);
+    for (const entry of paramEntries) {
+      await this.#storage.removeItem(entry.key);
+    }
+  }
+
+  async #updateValidationTimestamps(
+    pkKey: string,
+    storedPk: CachedPublicKey,
+    paramEntries: Array<{ key: string; data: CachedPublicParams }>,
+    now: number,
+  ): Promise<void> {
+    storedPk.lastValidatedAt = now;
+    await this.#storage.setItem(pkKey, JSON.stringify(storedPk));
+
+    for (const entry of paramEntries) {
+      entry.data.lastValidatedAt = now;
+      await this.#storage.setItem(entry.key, JSON.stringify(entry.data));
+    }
   }
 }
