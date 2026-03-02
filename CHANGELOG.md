@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.0-alpha.7](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.6...v1.0.0-alpha.7) (2026-03-02)
+
+### Bug Fixes
+
+- **security:** resolve CodeQL code scanning alerts ([#42](https://github.com/zama-ai/sdk/issues/42)) ([96ae63f](https://github.com/zama-ai/sdk/commit/96ae63ff4b44cfa44b52acbf7fc6be31f5ef452f))
+
 ## [1.0.0-alpha.6](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2026-03-02)
 
 ### Bug Fixes
