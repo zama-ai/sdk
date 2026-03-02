@@ -42,6 +42,10 @@ docs/gitbook/book
 tools/mdbook/mdbook
 tools/mdbook/.tmp-mdbook
 
+# d2 binary (downloaded on install)
+tools/d2/d2
+tools/d2/.tmp-d2
+
 # api-extractor temp files
 packages/sdk/temp/
 packages/react-sdk/temp/

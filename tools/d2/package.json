@@ -1,0 +1,12 @@
+{
+  "name": "d2",
+  "version": "0.7.1",
+  "private": true,
+  "description": "Downloads the d2 diagram binary from GitHub releases",
+  "bin": {
+    "d2": "./d2"
+  },
+  "scripts": {
+    "postinstall": "node install.mjs"
+  }
+}

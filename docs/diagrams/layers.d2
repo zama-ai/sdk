@@ -1,0 +1,87 @@
+direction: down
+
+title: {
+  label: "Zama SDK Architecture Layers"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- UI Layer ---
+react-hooks: "@zama-fhe/react-sdk\nZamaProvider, useShield, useConfidentialBalance, ..." {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+}
+
+react-query: "React Query\n@tanstack/react-query" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+}
+
+# --- Abstraction Layer ---
+token: "Token Abstraction\nZamaSDK · Token · ReadonlyToken" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+contracts: "Contract Call Builders\nshieldContract · confidentialTransferContract · ..." {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+# --- Integration Layer ---
+signers: "Signer Adapters\nViemSigner · EthersSigner · WagmiSigner" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+# --- Crypto Layer ---
+relayer: "Relayer\nRelayerWeb (browser) · RelayerNode (server)" {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.font-size: 14
+}
+
+worker: "Worker Layer\nWeb Worker + WASM (browser) · Worker Pool (Node.js)" {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.font-size: 14
+}
+
+# --- Storage Layer ---
+storage: "Storage & Credentials\nCredentialsManager · IndexedDB · Memory · AsyncLocalStorage" {
+  style.fill: "#FBE9E7"
+  style.stroke: "#BF360C"
+  style.font-size: 14
+}
+
+# --- External ---
+blockchain: "Blockchain\nviem / ethers.js RPC · Smart Contracts" {
+  style.fill: "#ECEFF1"
+  style.stroke: "#37474F"
+  style.font-size: 14
+}
+
+events: "Event System\nZamaSDKEvents · On-chain Event Decoders" {
+  style.fill: "#FFFDE7"
+  style.stroke: "#F57F17"
+  style.font-size: 14
+}
+
+# --- Connections ---
+react-hooks -> react-query: "query/mutation"
+react-query -> token: "SDK calls"
+token -> contracts: "builds tx payloads"
+token -> signers: "signs & sends"
+token -> relayer: "encrypt/decrypt"
+token -> events: "emits lifecycle events"
+contracts -> blockchain: "ABI-encoded calls"
+signers -> blockchain: "RPC + signing"
+relayer -> worker: "delegates FHE ops"
+token -> storage: "credential persistence"
