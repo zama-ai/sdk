@@ -5,7 +5,12 @@
  * @packageDocumentation
  */
 
-export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
+export {
+  ViemSigner,
+  type ViemSignerConfig,
+  type ViemStaticSignerConfig,
+  type ViemEIP1193SignerConfig,
+} from "./viem-signer";
 export {
   readConfidentialBalanceOfContract,
   readWrapperForTokenContract,

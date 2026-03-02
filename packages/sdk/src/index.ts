@@ -70,7 +70,11 @@ export type {
   TransactionReceipt,
   TransactionResult,
   UnshieldCallbacks,
+  SignerChangeEvent,
+  ReactiveSignerMixin,
+  ReactiveSigner,
 } from "./token/token.types";
+export { isReactiveSigner } from "./token/token.types";
 export { ZamaSDKEvents } from "./events/sdk-events";
 export type {
   ZamaSDKEventType,

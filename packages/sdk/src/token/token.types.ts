@@ -58,6 +58,26 @@ export interface GenericSigner {
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 
+/** Wallet lifecycle event fired by a reactive signer. */
+export type SignerChangeEvent =
+  | { type: "accountsChanged"; accounts: string[] }
+  | { type: "chainChanged"; chainId: string }
+  | { type: "disconnect" };
+
+/** Mixin that makes a signer reactive to wallet lifecycle events. */
+export interface ReactiveSignerMixin {
+  /** Register a listener for wallet change events. Returns an unsubscribe function. */
+  subscribe(listener: (event: SignerChangeEvent) => void): () => void;
+}
+
+/** A signer that reacts to wallet lifecycle events. */
+export type ReactiveSigner = GenericSigner & ReactiveSignerMixin;
+
+/** Runtime type guard for reactive signers. */
+export function isReactiveSigner(signer: GenericSigner): signer is ReactiveSigner {
+  return typeof (signer as ReactiveSigner).subscribe === "function";
+}
+
 /** Pluggable key-value store for persisting FHE credentials. */
 export interface GenericStringStorage {
   getItem(key: string): Promise<string | null>;

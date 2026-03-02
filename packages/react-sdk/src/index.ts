@@ -9,6 +9,7 @@
 
 // Provider
 export { ZamaProvider, useZamaSDK } from "./provider";
+export type { ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt, encryptMutationOptions } from "./relayer/use-encrypt";
@@ -349,7 +350,11 @@ export type {
   ContractCallConfig,
   TransactionReceipt,
   TransactionResult,
+  SignerChangeEvent,
+  ReactiveSignerMixin,
+  ReactiveSigner,
 } from "@zama-fhe/sdk";
+export { isReactiveSigner } from "@zama-fhe/sdk";
 export {
   ZamaError,
   ZamaErrorCode,

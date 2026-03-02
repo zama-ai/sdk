@@ -5,7 +5,12 @@
  * @packageDocumentation
  */
 
-export { EthersSigner, type EthersSignerConfig } from "./ethers-signer";
+export {
+  EthersSigner,
+  type EthersSignerConfig,
+  type EthersStaticSignerConfig,
+  type EthersEIP1193SignerConfig,
+} from "./ethers-signer";
 export {
   readConfidentialBalanceOfContract,
   readWrapperForTokenContract,
