@@ -19339,6 +19339,7 @@ export class RelayerWeb implements RelayerSDK {
 export interface RelayerWebConfig {
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
+    revalidateIntervalMs?: number;
     // Warning: (ae-forgotten-export) The symbol "RelayerWebSecurityConfig" needs to be exported by the entry point index.d.ts
     security?: RelayerWebSecurityConfig;
     storage?: GenericStringStorage;
