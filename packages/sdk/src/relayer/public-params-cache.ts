@@ -217,6 +217,7 @@ export class PublicParamsCache {
 
       // 2. Collect params entries
       const paramEntries: Array<{
+        bits: number;
         key: string;
         data: CachedPublicParams;
       }> = [];
@@ -224,7 +225,7 @@ export class PublicParamsCache {
         const pKey = paramsStorageKey(this.#chainId, bits);
         const raw = await this.#storage.getItem(pKey);
         if (raw) {
-          paramEntries.push({ key: pKey, data: JSON.parse(raw) as CachedPublicParams });
+          paramEntries.push({ bits, key: pKey, data: JSON.parse(raw) as CachedPublicParams });
         }
       }
 
@@ -239,13 +240,20 @@ export class PublicParamsCache {
       );
       if (allFresh) return false;
 
-      // 4. Fetch manifest
+      // 4. Fetch manifest — shape: { fhePublicKey: { dataId, urls[] }, crs: { [bits]: { dataId, urls[] } } }
       const manifestRes = await globalThis.fetch(`${relayerUrl}/keyurl`);
-      const manifest = (await manifestRes.json()) as Record<string, unknown>;
+      if (!manifestRes.ok) {
+        await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, now);
+        return false;
+      }
+      const manifest = (await manifestRes.json()) as {
+        fhePublicKey?: { dataId?: string; urls?: string[] };
+        crs?: Record<string, { dataId?: string; urls?: string[] }>;
+      };
 
       // 5-6. Check public key freshness
-      const manifestPkUrl = manifest.publicKeyUrl as string | undefined;
-      const manifestPkId = manifest.publicKeyId as string | undefined;
+      const manifestPkUrl = manifest.fhePublicKey?.urls?.[0];
+      const manifestPkId = manifest.fhePublicKey?.dataId;
 
       if (manifestPkUrl && storedPk.artifactUrl && manifestPkUrl !== storedPk.artifactUrl) {
         await this.#clearAll(pkKey, paramEntries);
@@ -270,12 +278,16 @@ export class PublicParamsCache {
 
       // 7. Check each CRS entry
       for (const entry of paramEntries) {
-        const manifestParamsUrl = manifest[`crs${entry.key}`] as string | undefined;
-        if (
-          manifestParamsUrl &&
-          entry.data.artifactUrl &&
-          manifestParamsUrl !== entry.data.artifactUrl
-        ) {
+        const manifestCrs = manifest.crs?.[String(entry.bits)];
+        const manifestCrsUrl = manifestCrs?.urls?.[0];
+        const manifestCrsId = manifestCrs?.dataId;
+
+        if (manifestCrsUrl && entry.data.artifactUrl && manifestCrsUrl !== entry.data.artifactUrl) {
+          await this.#clearAll(pkKey, paramEntries);
+          return true;
+        }
+
+        if (manifestCrsId && manifestCrsId !== entry.data.publicParamsId) {
           await this.#clearAll(pkKey, paramEntries);
           return true;
         }
@@ -302,6 +314,7 @@ export class PublicParamsCache {
         if (pkRaw) {
           const storedPk = JSON.parse(pkRaw) as CachedPublicKey;
           const paramEntries: Array<{
+            bits: number;
             key: string;
             data: CachedPublicParams;
           }> = [];
@@ -309,7 +322,7 @@ export class PublicParamsCache {
             const pKey = paramsStorageKey(this.#chainId, bits);
             const raw = await this.#storage.getItem(pKey);
             if (raw) {
-              paramEntries.push({ key: pKey, data: JSON.parse(raw) as CachedPublicParams });
+              paramEntries.push({ bits, key: pKey, data: JSON.parse(raw) as CachedPublicParams });
             }
           }
           await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, Date.now());

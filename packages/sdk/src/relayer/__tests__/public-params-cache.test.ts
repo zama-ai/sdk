@@ -219,8 +219,16 @@ describe("PublicParamsCache", () => {
     }
 
     const MANIFEST = {
-      publicKeyUrl: "https://cdn.example.com/pk.bin",
-      publicKeyId: "pk-id-1",
+      fhePublicKey: {
+        dataId: "pk-id-1",
+        urls: ["https://cdn.example.com/pk.bin"],
+      },
+      crs: {
+        2048: {
+          dataId: "pp-id-1",
+          urls: ["https://cdn.example.com/params-2048.bin"],
+        },
+      },
     };
 
     beforeEach(() => {
@@ -373,8 +381,11 @@ describe("PublicParamsCache", () => {
       );
 
       const changedManifest = {
-        publicKeyUrl: "https://cdn.example.com/pk-v2.bin",
-        publicKeyId: "pk-id-1",
+        fhePublicKey: {
+          dataId: "pk-id-1",
+          urls: ["https://cdn.example.com/pk-v2.bin"],
+        },
+        crs: MANIFEST.crs,
       };
 
       const fetchSpy = vi.fn().mockImplementation((url: string) => {
