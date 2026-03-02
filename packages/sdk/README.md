@@ -239,11 +239,11 @@ FHE credentials (encrypted keypair + metadata) are persisted to `storage`. The w
 
 **Session storage** (`sessionStorage`) — holds wallet signatures for the current session:
 
-| Storage                  | Use case                                                    |
-| ------------------------ | ----------------------------------------------------------- |
-| Default (in-memory)      | Standard web apps — signature lost on reload, user re-signs |
-| `chromeSessionStorage`   | MV3 web extensions — survives service worker restarts       |
-| Custom                   | Implement the `GenericStorage` interface                    |
+| Storage                | Use case                                                    |
+| ---------------------- | ----------------------------------------------------------- |
+| Default (in-memory)    | Standard web apps — signature lost on reload, user re-signs |
+| `chromeSessionStorage` | MV3 web extensions — survives service worker restarts       |
+| Custom                 | Implement the `GenericStorage` interface                    |
 
 ```ts
 interface GenericStorage<T = unknown> {

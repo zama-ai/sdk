@@ -921,7 +921,7 @@ import { chromeSessionStorage } from "@zama-fhe/react-sdk";
   sessionStorage={chromeSessionStorage}
 >
   <App />
-</ZamaProvider>
+</ZamaProvider>;
 ```
 
 This keeps the encrypted credentials in IndexedDB (persistent) while the unlock signature lives in `chrome.storage.session` (ephemeral, cleared when the browser closes).
