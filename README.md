@@ -8,6 +8,14 @@
 
 TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homomorphic Encryption on Zama Protocol](https://docs.zama.org/protocol/protocol/overview). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
 
+## Architecture
+
+<picture>
+  <img alt="Zama SDK Architecture Layers" src="docs/diagrams/layers.svg">
+</picture>
+
+> See [docs/architecture.md](docs/architecture.md) for full documentation including module maps and design patterns.
+
 ## Packages
 
 | Package                                        | Description                                                                                                              |
