@@ -69,7 +69,7 @@ export function convertToBigIntRecord(result: Record<string, unknown>): Record<s
 export const MainnetConfig: FhevmInstanceConfig = {
   chainId: 1,
   gatewayChainId: 261131,
-  relayerUrl: "https://relayer.mainnet.zama.org",
+  relayerUrl: "https://relayer.mainnet.zama.org/v2",
   network: "https://ethereum-rpc.publicnode.com",
   aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6",
   kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03",
