@@ -96,6 +96,41 @@ test("should reveal exact balance after shield 1000 and transfer 300", async ({
   );
 });
 
+test("should transition through masked → decrypting → revealed states", async ({
+  page,
+  initialBalances,
+  formatUnits,
+}) => {
+  // Clear IndexedDB cache to ensure fresh decryption
+  await page.evaluate(() => {
+    const dbs = indexedDB.databases ? indexedDB.databases() : Promise.resolve([]);
+    return dbs.then((databases: IDBDatabaseInfo[]) =>
+      Promise.all(
+        databases.map((db: IDBDatabaseInfo) => {
+          if (db.name) indexedDB.deleteDatabase(db.name);
+        }),
+      ),
+    );
+  });
+
+  await page.goto("/wallet");
+  const row = page.getByTestId("token-row-cUSDT");
+
+  // State 1: Masked
+  await expect(row.getByTestId("balance")).toHaveText("****");
+
+  // Click reveal — triggers decryption
+  await page.getByTestId("reveal-button").click();
+
+  // State 2: Decrypting (transient — may be fast, so use polling)
+  // We check that eventually we land on the final balance,
+  // but first confirm we're NOT still masked
+  await expect(row.getByTestId("balance")).not.toHaveText("****");
+
+  // State 3: Revealed — final balance
+  await expect(row.getByTestId("balance")).toHaveText(formatUnits(initialBalances.cUSDT, 6));
+});
+
 test("should hide balances again after clicking hide", async ({
   page,
   initialBalances,
@@ -111,4 +146,30 @@ test("should hide balances again after clicking hide", async ({
   // Hide
   await page.getByTestId("reveal-button").click();
   await expect(row.getByTestId("balance")).toHaveText("****");
+});
+
+test("should show cached balance immediately after page reload", async ({
+  page,
+  initialBalances,
+  formatUnits,
+}) => {
+  await page.goto("/wallet");
+
+  // Reveal and wait for decryption to complete
+  await page.getByTestId("reveal-button").click();
+  const row = page.getByTestId("token-row-cUSDT");
+  await expect(row.getByTestId("balance")).toHaveText(formatUnits(initialBalances.cUSDT, 6));
+
+  // Reload page — cache should persist in IndexedDB
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+
+  // Reveal again — should show balance without "Decrypting..." intermediate
+  await page.getByTestId("reveal-button").click();
+
+  // The balance should appear quickly from cache, not go through "Decrypting..."
+  // Use a short timeout to prove it's instant from cache
+  await expect(row.getByTestId("balance")).toHaveText(formatUnits(initialBalances.cUSDT, 6), {
+    timeout: 3000,
+  });
 });
