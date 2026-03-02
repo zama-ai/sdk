@@ -19,5 +19,8 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "typescript": "^5.8.0"
+  },
+  "overrides": {
+    "hono": ">=4.12.2"
   }
 }
