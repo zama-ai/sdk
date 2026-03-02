@@ -121,6 +121,19 @@ export class RelayerWeb implements RelayerSDK {
       this.#cache = new PublicParamsCache(this.#config.storage, chainId);
     }
 
+    // Revalidate cached artifacts if due
+    if (this.#cache && this.#initPromise) {
+      const relayerUrl = mergeFhevmConfig(chainId, this.#config.transports[chainId]).relayerUrl;
+      const interval = this.#config.revalidateIntervalMs ?? 86_400_000;
+      const stale = await this.#cache.revalidateIfDue(relayerUrl, interval);
+      if (stale) {
+        this.#workerClient?.terminate();
+        this.#workerClient = null;
+        this.#initPromise = null;
+        this.#cache = null;
+      }
+    }
+
     if (!this.#initPromise) {
       this.#initPromise = this.#initWorker().catch((error) => {
         this.#initPromise = null;

@@ -45,6 +45,8 @@ export interface RelayerWebConfig {
   logger?: GenericLogger;
   /** Optional persistent storage for caching FHE public key and params across sessions. */
   storage?: GenericStringStorage;
+  /** Revalidation interval in ms for cached FHE public material. Default: 86_400_000 (24h). Set to 0 to revalidate on every startup. Ignored when storage is not set. */
+  revalidateIntervalMs?: number;
 }
 
 /** Result from encryption operation */
