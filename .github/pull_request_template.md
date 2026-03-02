@@ -19,7 +19,7 @@
 ## Related
 
 <!-- Link issue(s) / related PR(s), if any. -->
-<!-- Example: Closes #123 -->
+<!-- Example: Closes issue-number> -->
 
 ## Demo (if possible)
 
