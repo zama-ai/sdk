@@ -152,16 +152,6 @@ contract CleartextFHEVMExecutor is FHEVMExecutor {
         plaintexts[result] = (plaintexts[control] == 1) ? plaintexts[ifTrue] : plaintexts[ifFalse];
     }
 
-    function fheRand(FheType randType) public override returns (bytes32 result) {
-        result = super.fheRand(randType);
-        plaintexts[result] = _clamp(plaintexts[result], randType);
-    }
-
-    function fheRandBounded(uint256 upperBound, FheType randType) public override returns (bytes32 result) {
-        result = super.fheRandBounded(upperBound, randType);
-        plaintexts[result] = plaintexts[result] % upperBound;
-    }
-
     function cast(bytes32 ct, FheType toType) public override returns (bytes32 result) {
         result = super.cast(ct, toType);
         plaintexts[result] = _clamp(plaintexts[ct], toType);
