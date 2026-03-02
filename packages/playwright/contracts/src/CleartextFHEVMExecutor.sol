@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import {FHEVMExecutor} from "./fhevm-host/contracts/FHEVMExecutor.sol";
 import {FheType} from "./fhevm-host/contracts/shared/FheType.sol";
 import {CleartextArithmetic} from "token-sdk/contracts/CleartextArithmetic.sol";
+import {FheTypeBitWidth} from "token-sdk/contracts/FheTypeBitWidth.sol";
 
 contract CleartextFHEVMExecutor is FHEVMExecutor {
     /// @dev Handle to cleartext value mapping for local testing.
@@ -229,92 +230,7 @@ contract CleartextFHEVMExecutor is FHEVMExecutor {
     }
 
     function _bitWidthForType(FheType fheType) internal pure returns (uint256) {
-        if (fheType == FheType.Bool) return 1;
-        if (fheType == FheType.Uint2) return 2;
-        if (fheType == FheType.Uint4) return 4;
-        if (fheType == FheType.Uint6) return 6;
-        if (fheType == FheType.Uint8) return 8;
-        if (fheType == FheType.Uint10) return 10;
-        if (fheType == FheType.Uint12) return 12;
-        if (fheType == FheType.Uint14) return 14;
-        if (fheType == FheType.Uint16) return 16;
-        if (fheType == FheType.Uint24) return 24;
-        if (fheType == FheType.Uint32) return 32;
-        if (fheType == FheType.Uint40) return 40;
-        if (fheType == FheType.Uint48) return 48;
-        if (fheType == FheType.Uint56) return 56;
-        if (fheType == FheType.Uint64) return 64;
-        if (fheType == FheType.Uint72) return 72;
-        if (fheType == FheType.Uint80) return 80;
-        if (fheType == FheType.Uint88) return 88;
-        if (fheType == FheType.Uint96) return 96;
-        if (fheType == FheType.Uint104) return 104;
-        if (fheType == FheType.Uint112) return 112;
-        if (fheType == FheType.Uint120) return 120;
-        if (fheType == FheType.Uint128) return 128;
-        if (fheType == FheType.Uint136) return 136;
-        if (fheType == FheType.Uint144) return 144;
-        if (fheType == FheType.Uint152) return 152;
-        if (fheType == FheType.Uint160) return 160;
-        if (fheType == FheType.Uint168) return 168;
-        if (fheType == FheType.Uint176) return 176;
-        if (fheType == FheType.Uint184) return 184;
-        if (fheType == FheType.Uint192) return 192;
-        if (fheType == FheType.Uint200) return 200;
-        if (fheType == FheType.Uint208) return 208;
-        if (fheType == FheType.Uint216) return 216;
-        if (fheType == FheType.Uint224) return 224;
-        if (fheType == FheType.Uint232) return 232;
-        if (fheType == FheType.Uint240) return 240;
-        if (fheType == FheType.Uint248) return 248;
-        if (fheType == FheType.Uint256) return 256;
-        if (fheType == FheType.Uint512) return 512;
-        if (fheType == FheType.Uint1024) return 1024;
-        if (fheType == FheType.Uint2048) return 2048;
-
-        if (fheType == FheType.Int2) return 2;
-        if (fheType == FheType.Int4) return 4;
-        if (fheType == FheType.Int6) return 6;
-        if (fheType == FheType.Int8) return 8;
-        if (fheType == FheType.Int10) return 10;
-        if (fheType == FheType.Int12) return 12;
-        if (fheType == FheType.Int14) return 14;
-        if (fheType == FheType.Int16) return 16;
-        if (fheType == FheType.Int24) return 24;
-        if (fheType == FheType.Int32) return 32;
-        if (fheType == FheType.Int40) return 40;
-        if (fheType == FheType.Int48) return 48;
-        if (fheType == FheType.Int56) return 56;
-        if (fheType == FheType.Int64) return 64;
-        if (fheType == FheType.Int72) return 72;
-        if (fheType == FheType.Int80) return 80;
-        if (fheType == FheType.Int88) return 88;
-        if (fheType == FheType.Int96) return 96;
-        if (fheType == FheType.Int104) return 104;
-        if (fheType == FheType.Int112) return 112;
-        if (fheType == FheType.Int120) return 120;
-        if (fheType == FheType.Int128) return 128;
-        if (fheType == FheType.Int136) return 136;
-        if (fheType == FheType.Int144) return 144;
-        if (fheType == FheType.Int152) return 152;
-        if (fheType == FheType.Int160) return 160;
-        if (fheType == FheType.Int168) return 168;
-        if (fheType == FheType.Int176) return 176;
-        if (fheType == FheType.Int184) return 184;
-        if (fheType == FheType.Int192) return 192;
-        if (fheType == FheType.Int200) return 200;
-        if (fheType == FheType.Int208) return 208;
-        if (fheType == FheType.Int216) return 216;
-        if (fheType == FheType.Int224) return 224;
-        if (fheType == FheType.Int232) return 232;
-        if (fheType == FheType.Int240) return 240;
-        if (fheType == FheType.Int248) return 248;
-        if (fheType == FheType.Int256) return 256;
-        if (fheType == FheType.Int512) return 512;
-        if (fheType == FheType.Int1024) return 1024;
-        if (fheType == FheType.Int2048) return 2048;
-
-        revert UnsupportedType();
+        return FheTypeBitWidth.bitWidthForType(uint8(fheType));
     }
 
     function _clamp(uint256 value, FheType fheType) internal pure returns (uint256) {

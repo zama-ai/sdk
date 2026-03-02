@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.27;
 
+/**
+ * @title CleartextArithmetic
+ * @notice Pure arithmetic helpers used by cleartext execution mocks to mirror FHE bit-width semantics.
+ */
 library CleartextArithmetic {
+    /**
+     * @notice Clamps a value to the provided bit width using a low-bit mask.
+     * @param value Value to clamp.
+     * @param bitWidth Number of low bits to keep. Values >= 256 leave the value unchanged.
+     * @return The masked value constrained to `bitWidth`.
+     */
     function clamp(uint256 value, uint256 bitWidth) internal pure returns (uint256) {
         if (bitWidth >= 256) {
             return value;
@@ -16,6 +26,13 @@ library CleartextArithmetic {
         }
     }
 
+    /**
+     * @notice Subtracts `b` from `a` using wrap-around semantics at the provided bit width.
+     * @param a Minuend value.
+     * @param b Subtrahend value.
+     * @param bitWidth Bit width of the simulated ciphertext type.
+     * @return Wrapped subtraction result constrained to `bitWidth`.
+     */
     function sub(uint256 a, uint256 b, uint256 bitWidth) internal pure returns (uint256) {
         unchecked {
             if (bitWidth >= 256) {

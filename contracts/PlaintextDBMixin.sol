@@ -7,6 +7,7 @@ import {FHEEvents} from "@fhevm/host-contracts/contracts/FHEEvents.sol";
 import {fhevmExecutorAdd} from "@fhevm/host-contracts/addresses/FHEVMHostAddresses.sol";
 import {FheType} from "@fhevm/host-contracts/contracts/shared/FheType.sol";
 import {CleartextArithmetic} from "./CleartextArithmetic.sol";
+import {FheTypeBitWidth} from "./FheTypeBitWidth.sol";
 
 abstract contract PlaintextDBMixin is Test, FHEEvents {
     mapping(bytes32 => uint256) internal _plaintexts;
@@ -244,16 +245,7 @@ abstract contract PlaintextDBMixin is Test, FHEEvents {
     }
 
     function _bitWidthForType(FheType fheType) internal pure returns (uint256) {
-        if (fheType == FheType.Bool) return 1;
-        if (fheType == FheType.Uint4) return 4;
-        if (fheType == FheType.Uint8) return 8;
-        if (fheType == FheType.Uint16) return 16;
-        if (fheType == FheType.Uint32) return 32;
-        if (fheType == FheType.Uint64) return 64;
-        if (fheType == FheType.Uint128) return 128;
-        if (fheType == FheType.Uint160) return 160;
-        if (fheType == FheType.Uint256) return 256;
-        revert();
+        return FheTypeBitWidth.bitWidthForType(uint8(fheType));
     }
 
     function _clamp(uint256 value, FheType fheType) internal pure returns (uint256) {
