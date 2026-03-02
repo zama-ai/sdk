@@ -12,7 +12,6 @@ export default defineConfig({
   retries: CI ? 2 : 0,
   workers: 1,
   reporter: CI ? "github" : "list",
-  timeout: 30000,
   expect: {
     timeout: CI ? 20000 : 5000,
   },
@@ -28,6 +27,7 @@ export default defineConfig({
         baseURL: `http://localhost:${NEXTJS_PORT}`,
         ...devices["Desktop Chrome"],
       },
+      timeout: CI ? 30000 : 60000,
     },
     {
       name: "vite",
@@ -36,6 +36,7 @@ export default defineConfig({
         baseURL: `http://localhost:${VITE_PORT}`,
         ...devices["Desktop Chrome"],
       },
+      timeout: 30000,
     },
   ],
   webServer: [
