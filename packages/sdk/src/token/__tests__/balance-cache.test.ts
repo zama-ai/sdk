@@ -86,7 +86,7 @@ describe("balance-cache", () => {
 
   it("does not throw when storage.getItem fails", async () => {
     const storage = new MemoryStorage();
-    storage.getItem = () => Promise.reject(new Error("storage unavailable"));
+    storage.get = () => Promise.reject(new Error("storage unavailable"));
     expect(
       await loadCachedBalance({ storage, tokenAddress: TOKEN, owner: OWNER, handle: HANDLE }),
     ).toBeNull();
@@ -94,7 +94,7 @@ describe("balance-cache", () => {
 
   it("does not throw when storage.setItem fails", async () => {
     const storage = new MemoryStorage();
-    storage.setItem = () => Promise.reject(new Error("storage unavailable"));
+    storage.set = () => Promise.reject(new Error("storage unavailable"));
     await expect(
       saveCachedBalance({ storage, tokenAddress: TOKEN, owner: OWNER, handle: HANDLE, value: 42n }),
     ).resolves.toBeUndefined();
@@ -134,7 +134,7 @@ describe("balance-cache", () => {
 
   it("clearAllCachedBalances does not throw when storage fails", async () => {
     const storage = new MemoryStorage();
-    storage.getItem = () => Promise.reject(new Error("storage unavailable"));
+    storage.get = () => Promise.reject(new Error("storage unavailable"));
     await expect(clearAllCachedBalances(storage)).resolves.toBeUndefined();
   });
 });

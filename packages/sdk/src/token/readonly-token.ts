@@ -76,7 +76,7 @@ export class ReadonlyToken {
   protected readonly sdk: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
-  readonly #storage: GenericStringStorage;
+  readonly #storage: GenericStorage;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
@@ -97,7 +97,7 @@ export class ReadonlyToken {
   }
 
   /** Access the storage backend (used by static batch methods). */
-  protected get storage(): GenericStringStorage {
+  protected get storage(): GenericStorage {
     return this.#storage;
   }
 
