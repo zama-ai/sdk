@@ -166,38 +166,21 @@ graph LR
 ```mermaid
 graph TD
     subgraph react-sdk["@zama-fhe/react-sdk"]
-        ZP[ZamaProvider] --> CTX[ZamaContext]
+        ZP["ZamaProvider"]
+        CTX["ZamaContext"]
+        Q["Query Hooks<br/><i>useConfidentialBalance · useTokenMetadata<br/>useTotalSupply · useIsConfidential</i>"]
+        M["Mutation Hooks<br/><i>useShield · useConfidentialTransfer<br/>useUnshield · useConfidentialApprove</i>"]
+        A["Signer Sub-paths<br/><i>/viem · /ethers · /wagmi</i>"]
 
-        subgraph queries["Query Hooks"]
-            UCB[useConfidentialBalance]
-            UCBS[useConfidentialBalances]
-            UTM[useTokenMetadata]
-            UTS[useTotalSupply]
-            UIC[useIsConfidential]
-        end
-
-        subgraph mutations["Mutation Hooks"]
-            US[useShield]
-            USE[useShieldETH]
-            UCT[useConfidentialTransfer]
-            UU[useUnshield]
-            UUA[useUnshieldAll]
-            UCA[useConfidentialApprove]
-        end
-
-        subgraph adapters["Signer Sub-paths"]
-            VIEM["/viem"]
-            ETHERS["/ethers"]
-            WAGMI["/wagmi"]
-        end
+        ZP --> CTX
     end
 
     SDK["@zama-fhe/sdk<br/>ZamaSDK · Token · ReadonlyToken"]
 
     ZP -->|"initializes"| SDK
-    queries -->|"ReadonlyToken"| SDK
-    mutations -->|"Token"| SDK
-    adapters -->|"GenericSigner"| SDK
+    Q -->|"ReadonlyToken"| SDK
+    M -->|"Token"| SDK
+    A -->|"GenericSigner"| SDK
 ```
 
 `ZamaProvider` creates and holds the `ZamaSDK` instance. Query hooks call `ReadonlyToken` methods. Mutation hooks call `Token` methods. Each signer sub-path (`/viem`, `/ethers`, `/wagmi`) re-exports hooks pre-bound to the appropriate signer adapter.
