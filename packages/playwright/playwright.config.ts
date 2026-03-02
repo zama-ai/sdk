@@ -27,7 +27,7 @@ export default defineConfig({
         baseURL: `http://localhost:${NEXTJS_PORT}`,
         ...devices["Desktop Chrome"],
       },
-      timeout: CI ? 30000 : 60000,
+      timeout: 30000,
     },
     {
       name: "vite",
