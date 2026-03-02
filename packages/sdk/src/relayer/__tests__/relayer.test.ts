@@ -575,6 +575,90 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledTimes(2);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Cache revalidation
+  // -------------------------------------------------------------------------
+
+  describe("cache revalidation", () => {
+    it("tears down worker when revalidation detects stale artifacts", async () => {
+      const storage = new MemoryStorage();
+      const relayer = createWebRelayer({ storage, revalidateIntervalMs: 0 });
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5, 6]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      // First call: init worker, cache public key
+      await relayer.getPublicKey();
+      expect(RelayerWorkerClient).toHaveBeenCalledOnce();
+
+      // Seed storage with expired metadata + artifactUrl + etag
+      const pkCacheKey = `fhe:pubkey:${CHAIN_ID}`;
+      await storage.setItem(
+        pkCacheKey,
+        JSON.stringify({
+          publicKeyId: "id1",
+          publicKey: btoa(String.fromCharCode(5, 6)),
+          artifactUrl: "https://cdn.example.com/pk.bin",
+          etag: '"old-etag"',
+          lastValidatedAt: 0, // expired
+        }),
+      );
+
+      // Mock globalThis.fetch for manifest + HEAD
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+        if (url === "https://relayer.example.com/keyurl") {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                fhePublicKey: { dataId: "id1", urls: ["https://cdn.example.com/pk.bin"] },
+                crs: {},
+              }),
+          });
+        }
+        if (url === "https://cdn.example.com/pk.bin" && opts?.method === "HEAD") {
+          return Promise.resolve({
+            status: 200,
+            headers: new Headers({ etag: '"new-etag"' }),
+          });
+        }
+        return Promise.resolve({ ok: false, status: 404 });
+      });
+
+      try {
+        // Reset mock counts so we can verify re-creation
+        resetMocks();
+        mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+        // Second call triggers revalidation -> stale -> worker torn down -> re-init
+        await relayer.getPublicKey();
+
+        expect(mockWorkerClient.terminate).toHaveBeenCalledOnce();
+        expect(RelayerWorkerClient).toHaveBeenCalledOnce(); // re-created
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("does not tear down worker when artifacts are fresh", async () => {
+      const storage = new MemoryStorage();
+      const relayer = createWebRelayer({ storage }); // default 24h interval
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5, 6]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      // First call: init worker, cache public key (lastValidatedAt = now)
+      await relayer.getPublicKey();
+      expect(RelayerWorkerClient).toHaveBeenCalledOnce();
+
+      // Second call: interval not elapsed, no revalidation
+      await relayer.getPublicKey();
+
+      // Worker should not have been re-created
+      expect(RelayerWorkerClient).toHaveBeenCalledOnce();
+      expect(mockWorkerClient.terminate).not.toHaveBeenCalled();
+    });
+  });
 });
 
 // ===========================================================================
@@ -944,6 +1028,90 @@ describe("RelayerNode", () => {
 
       const result = await relayer.getPublicKey();
       expect(result).toEqual(pk);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Cache revalidation
+  // -------------------------------------------------------------------------
+
+  describe("cache revalidation", () => {
+    it("tears down pool when revalidation detects stale artifacts", async () => {
+      const storage = new MemoryStorage();
+      const relayer = createNodeRelayer({ storage, revalidateIntervalMs: 0 });
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5, 6]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+      // First call: init pool, cache public key
+      await relayer.getPublicKey();
+      expect(NodeWorkerPool).toHaveBeenCalledOnce();
+
+      // Seed storage with expired metadata + artifactUrl + etag
+      const pkCacheKey = `fhe:pubkey:${CHAIN_ID}`;
+      await storage.setItem(
+        pkCacheKey,
+        JSON.stringify({
+          publicKeyId: "id1",
+          publicKey: btoa(String.fromCharCode(5, 6)),
+          artifactUrl: "https://cdn.example.com/pk.bin",
+          etag: '"old-etag"',
+          lastValidatedAt: 0, // expired
+        }),
+      );
+
+      // Mock globalThis.fetch for manifest + HEAD
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+        if (url === "https://relayer.example.com/keyurl") {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                fhePublicKey: { dataId: "id1", urls: ["https://cdn.example.com/pk.bin"] },
+                crs: {},
+              }),
+          });
+        }
+        if (url === "https://cdn.example.com/pk.bin" && opts?.method === "HEAD") {
+          return Promise.resolve({
+            status: 200,
+            headers: new Headers({ etag: '"new-etag"' }),
+          });
+        }
+        return Promise.resolve({ ok: false, status: 404 });
+      });
+
+      try {
+        // Reset mock counts so we can verify re-creation
+        resetMocks();
+        mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+        // Second call triggers revalidation -> stale -> pool torn down -> re-init
+        await relayer.getPublicKey();
+
+        expect(mockPool.terminate).toHaveBeenCalledOnce();
+        expect(NodeWorkerPool).toHaveBeenCalledOnce(); // re-created
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("does not tear down pool when artifacts are fresh", async () => {
+      const storage = new MemoryStorage();
+      const relayer = createNodeRelayer({ storage }); // default 24h interval
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5, 6]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+      // First call: init pool, cache public key (lastValidatedAt = now)
+      await relayer.getPublicKey();
+      expect(NodeWorkerPool).toHaveBeenCalledOnce();
+
+      // Second call: interval not elapsed, no revalidation
+      await relayer.getPublicKey();
+
+      // Pool should not have been re-created
+      expect(NodeWorkerPool).toHaveBeenCalledOnce();
+      expect(mockPool.terminate).not.toHaveBeenCalled();
     });
   });
 });
