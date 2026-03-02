@@ -230,20 +230,37 @@ contract CleartextFHEVMExecutorTest is Test {
         assertEq(executor.plaintexts(result), 44);
     }
 
+    function test_cast_clampsUint256ToUint128() public {
+        bytes32 a = executor.trivialEncrypt(type(uint256).max, FheType.Uint256);
+        bytes32 result = executor.cast(a, FheType.Uint128);
+        assertEq(executor.plaintexts(result), type(uint128).max);
+    }
+
     function test_fheRand_storesDeterministicValue() public {
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + 1);
 
+        bytes16 expectedSeed = bytes16(
+            keccak256(abi.encodePacked(uint256(0), aclAdd, block.chainid, blockhash(block.number - 1), block.timestamp))
+        );
+        uint256 expected = uint256(keccak256(abi.encodePacked(expectedSeed, "randValue"))) & 0xFF;
+
         bytes32 result = executor.fheRand(FheType.Uint8);
-        assertLe(executor.plaintexts(result), 255);
+        assertEq(executor.plaintexts(result), expected);
     }
 
     function test_fheRandBounded_storesValueBelowUpperBound() public {
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + 1);
 
-        bytes32 result = executor.fheRandBounded(16, FheType.Uint8);
-        assertLt(executor.plaintexts(result), 16);
+        uint256 upperBound = 16;
+        bytes16 expectedSeed = bytes16(
+            keccak256(abi.encodePacked(uint256(0), aclAdd, block.chainid, blockhash(block.number - 1), block.timestamp))
+        );
+        uint256 expected = uint256(keccak256(abi.encodePacked(expectedSeed, "randBoundedValue"))) % upperBound;
+
+        bytes32 result = executor.fheRandBounded(upperBound, FheType.Uint8);
+        assertEq(executor.plaintexts(result), expected);
     }
 
     function test_fheRandBounded_revertsWhenUpperBoundNotPowerOfTwo() public {
@@ -270,6 +287,29 @@ contract CleartextFHEVMExecutorTest is Test {
 
         assertEq(result, handle1);
         assertEq(executor.plaintexts(result), 222);
+    }
+
+    function test_verifyInput_ignoresCleartextsWhenHandleIsNotPresent() public {
+        bytes32 handle0 = executor.trivialEncrypt(1, FheType.Uint8);
+        bytes32 handle1 = executor.trivialEncrypt(2, FheType.Uint8);
+        bytes32 missingHandle = executor.trivialEncrypt(3, FheType.Uint8);
+        bytes32 queryHandle = missingHandle ^ bytes32(uint256(1) << 248);
+
+        bytes memory signatures = new bytes(65);
+        bytes memory proof = abi.encodePacked(
+            uint8(2),
+            uint8(1),
+            handle0,
+            handle1,
+            signatures,
+            bytes32(uint256(111)),
+            bytes32(uint256(222))
+        );
+
+        bytes32 result = executor.verifyInput(queryHandle, address(this), proof, FheType.Uint8);
+
+        assertEq(result, queryHandle);
+        assertEq(executor.plaintexts(result), 0);
     }
 
     function test_fheNot_masksCorrectly() public {
