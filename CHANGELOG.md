@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.0-alpha.6](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2026-03-02)
+
+### Bug Fixes
+
+- **security:** resolve 3 high-severity Dependabot alerts ([#41](https://github.com/zama-ai/sdk/issues/41)) ([9f29783](https://github.com/zama-ai/sdk/commit/9f29783314bfd74b4ed99f446e97d268d3cd9d00)), closes [#3](https://github.com/zama-ai/sdk/issues/3) [#4](https://github.com/zama-ai/sdk/issues/4) [#2](https://github.com/zama-ai/sdk/issues/2)
+
 ## [1.0.0-alpha.5](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2026-03-02)
 
 ## [1.0.0-alpha.4](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2026-03-02)
