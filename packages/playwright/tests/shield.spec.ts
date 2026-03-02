@@ -6,6 +6,7 @@ test("should shield USDT and show confidential balance", async ({
   initialBalances,
   formatUnits,
   computeFee,
+  readErc20Balance,
 }) => {
   await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
   await page.getByTestId("amount-input").fill("1000");
@@ -25,6 +26,10 @@ test("should shield USDT and show confidential balance", async ({
   await expect(page.getByTestId("token-row-USDT").getByTestId("balance")).toHaveText(
     formatUnits(initialBalances.USDT - shieldAmount, 6),
   );
+
+  // On-chain: ERC-20 balance should have decreased by shield amount
+  const onChainUsdt = await readErc20Balance(contracts.USDT);
+  expect(onChainUsdt).toBe(initialBalances.USDT - shieldAmount);
 });
 
 test("should shield USDC and show confidential balance", async ({
@@ -33,6 +38,7 @@ test("should shield USDC and show confidential balance", async ({
   initialBalances,
   formatUnits,
   computeFee,
+  readErc20Balance,
 }) => {
   await page.goto(`/shield?token=${contracts.USDC}&wrapper=${contracts.cUSDC}`);
   await page.getByTestId("amount-input").fill("1000");
@@ -52,4 +58,8 @@ test("should shield USDC and show confidential balance", async ({
   await expect(page.getByTestId("token-row-ERC20").getByTestId("balance")).toHaveText(
     formatUnits(initialBalances.USDC - shieldAmount, 6),
   );
+
+  // On-chain: ERC-20 balance should have decreased by shield amount
+  const onChainUsdc = await readErc20Balance(contracts.USDC);
+  expect(onChainUsdc).toBe(initialBalances.USDC - shieldAmount);
 });

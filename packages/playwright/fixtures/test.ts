@@ -46,6 +46,28 @@ const viemClient = createTestClient({
   .extend(walletActions)
   .extend(publicActions);
 
+const erc20BalanceOfAbi = [
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
+async function readErc20Balance(
+  tokenAddress: `0x${string}`,
+  owner: `0x${string}` = account.address,
+): Promise<bigint> {
+  return viemClient.readContract({
+    address: tokenAddress,
+    abi: erc20BalanceOfAbi,
+    functionName: "balanceOf",
+    args: [owner],
+  });
+}
+
 export interface TestFixtures {
   context: BrowserContext;
   baseURL: `http://${string}` | `https://${string}`;
@@ -56,6 +78,7 @@ export interface TestFixtures {
   initialBalances: typeof initialBalances;
   formatUnits: typeof formatUnits;
   computeFee: typeof computeFee;
+  readErc20Balance: typeof readErc20Balance;
 }
 
 export const test = base.extend<TestFixtures>({
@@ -66,6 +89,7 @@ export const test = base.extend<TestFixtures>({
   initialBalances,
   formatUnits: async ({}, use) => use(formatUnits),
   computeFee: async ({}, use) => use(computeFee),
+  readErc20Balance: async ({}, use) => use(readErc20Balance),
   page: async ({ page, baseURL, privateKey, viemClient }, use) => {
     const id = await viemClient.snapshot();
 
