@@ -6,6 +6,7 @@
 
 import { Address } from '@zama-fhe/relayer-sdk/bundle';
 import { BrowserProvider } from 'ethers';
+import { Eip1193Provider } from 'ethers';
 import { Provider } from 'ethers';
 import { Signer } from 'ethers';
 
@@ -25,6 +26,10 @@ export class EthersSigner implements GenericSigner {
     //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    subscribe(input: SignerLifecycleCallbacks): () => void;
     // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -37,6 +42,10 @@ export class EthersSigner implements GenericSigner {
 
 // @public
 export interface EthersSignerConfig {
+    // Warning: (ae-forgotten-export) The symbol "EIP1193Provider" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    provider?: EIP1193Provider;
     // (undocumented)
     signer: BrowserProvider | Signer;
 }

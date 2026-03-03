@@ -5,6 +5,7 @@
 ```ts
 
 import { Address } from '@zama-fhe/relayer-sdk/bundle';
+import { EIP1193Provider } from 'viem';
 import { PublicClient } from 'viem';
 import { WalletClient } from 'viem';
 
@@ -39,6 +40,10 @@ export class ViemSigner implements GenericSigner {
     //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    subscribe(input: SignerLifecycleCallbacks): () => void;
     // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -51,6 +56,8 @@ export class ViemSigner implements GenericSigner {
 
 // @public
 export interface ViemSignerConfig {
+    // (undocumented)
+    provider?: EIP1193Provider;
     // (undocumented)
     publicClient: PublicClient;
     // (undocumented)

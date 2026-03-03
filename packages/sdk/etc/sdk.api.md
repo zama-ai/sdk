@@ -12476,7 +12476,7 @@ export interface GenericSigner {
     getChainId(): Promise<number>;
     readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?(callbacks: SignerLifecycleCallbacks): () => void;
+    subscribe(callbacks: SignerLifecycleCallbacks): () => void;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
 }
