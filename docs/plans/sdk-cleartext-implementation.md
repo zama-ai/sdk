@@ -97,9 +97,6 @@ Tests run before the main class is implemented.
      verifyingContractAddressInputVerification: VERIFYING_CONTRACTS.inputVerification,
      verifyingContractAddressDecryption: VERIFYING_CONTRACTS.decryption,
    };
-
-   // Re-export for backward compat
-   export { TEST_FHEVM_ADDRESSES };
    ```
 
 2. **`packages/sdk/src/relayer/cleartext/__tests__/handle.test.ts`** — port with fixture change:
