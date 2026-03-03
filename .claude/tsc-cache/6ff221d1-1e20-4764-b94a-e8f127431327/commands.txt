@@ -1,0 +1,3 @@
+packages/playwright:tsc:cd /Users/msaug/zama/token-sdk-main/packages/playwright && npx tsc --noEmit
+packages/sdk:build:cd /Users/msaug/zama/token-sdk-main/packages/sdk && npm run build
+packages/sdk:tsc:cd /Users/msaug/zama/token-sdk-main/packages/sdk && npx tsc --noEmit
