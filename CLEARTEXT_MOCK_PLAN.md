@@ -280,8 +280,7 @@ export const INPUT_VERIFICATION_EIP712 = {
     }),
     types: {
         CiphertextVerification: [
-            { name: "blobHash", type: "bytes32" },
-            { name: "handlesList", type: "bytes32[]" },
+            { name: "ctHandles", type: "bytes32" },
             { name: "userAddress", type: "address" },
             { name: "contractAddress", type: "address" },
         ],

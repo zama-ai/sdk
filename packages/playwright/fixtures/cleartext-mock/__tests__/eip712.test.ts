@@ -9,7 +9,7 @@ import {
 describe("eip712", () => {
   it("INPUT_VERIFICATION_EIP712 typehash matches on-chain definition", () => {
     const expected = ethers.id(
-      "CiphertextVerification(bytes32[] ctHandles,address userAddress,address contractAddress,uint256 contractChainId,bytes extraData)",
+      "CiphertextVerification(bytes32 blobHash,bytes32[] handlesList,address userAddress,address contractAddress)",
     );
     const encoded = ethers.TypedDataEncoder.from(
       INPUT_VERIFICATION_EIP712.types,
@@ -20,11 +20,10 @@ describe("eip712", () => {
       "InputVerification",
     );
     expect(INPUT_VERIFICATION_EIP712.types.CiphertextVerification.map((field) => field.name)).toEqual([
-      "ctHandles",
+      "blobHash",
+      "handlesList",
       "userAddress",
       "contractAddress",
-      "contractChainId",
-      "extraData",
     ]);
   });
 

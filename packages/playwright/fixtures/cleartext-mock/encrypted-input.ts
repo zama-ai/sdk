@@ -109,11 +109,10 @@ export class CleartextEncryptedInput {
       ),
       INPUT_VERIFICATION_EIP712.types,
       {
-        ctHandles: handles,
+        blobHash: ciphertextBlob,
+        handlesList: handles,
         userAddress: this.#userAddress,
         contractAddress: this.#contractAddress,
-        contractChainId: this.#config.chainId,
-        extraData: ethers.hexlify(cleartextBytes),
       },
     );
 
