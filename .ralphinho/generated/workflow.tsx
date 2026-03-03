@@ -92,11 +92,20 @@ const { smithers, outputs, Workflow, db } = createSmithers(
   { dbPath: DB_PATH }
 );
 
+type SqliteClient = {
+  exec: (sql: string) => void;
+};
+
+type SmithersDb = {
+  $client: SqliteClient;
+};
+
 // Workaround for macOS SQLITE_IOERR_VNODE (6922): Apple's SQLite monitors
 // WAL files via GCD vnode sources. Disabling mmap prevents the invalidation
 // that rapid concurrent writes trigger.
-(db as any).$client.exec("PRAGMA mmap_size = 0");
-(db as any).$client.exec("PRAGMA synchronous = NORMAL");
+const sqliteDb = db as unknown as SmithersDb;
+sqliteDb.$client.exec("PRAGMA mmap_size = 0");
+sqliteDb.$client.exec("PRAGMA synchronous = NORMAL");
 
 // ── Workflow ──────────────────────────────────────────────────────────
 

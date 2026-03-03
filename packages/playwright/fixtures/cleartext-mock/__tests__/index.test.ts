@@ -1,6 +1,5 @@
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
-import { CLEARTEXT_EXECUTOR_BYTECODE } from "../bytecode";
 import { FHEVM_ADDRESSES } from "../constants";
 import { CleartextEncryptedInput } from "../encrypted-input";
 import { ACL_ABI, CleartextMockFhevm, EXECUTOR_ABI } from "../index";
@@ -10,14 +9,10 @@ import {
   USER_ADDRESS,
 } from "./fixtures";
 
-const EIP1967_IMPLEMENTATION_SLOT =
-  "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-
 const ACL_INTERFACE = new ethers.Interface(ACL_ABI);
 const EXECUTOR_INTERFACE = new ethers.Interface(EXECUTOR_ABI);
 
 type MockProviderOptions = {
-  implementationAddress?: string;
   persistAllowed?: (handle: string, account: string) => boolean;
   isAllowedForDecryption?: (handle: string) => boolean;
   plaintexts?: Record<string, bigint>;
@@ -25,21 +20,10 @@ type MockProviderOptions = {
 
 function createMockProvider(options: MockProviderOptions = {}) {
   const calls: Array<{ method: string; params: unknown[] }> = [];
-  const implementationAddress =
-    options.implementationAddress ?? "0x9000000000000000000000000000000000000009";
 
   const provider = {
     async send(method: string, params: unknown[] = []) {
       calls.push({ method, params });
-
-      if (method === "eth_getStorageAt") {
-        const normalized = implementationAddress.toLowerCase().replace("0x", "");
-        return `0x${"00".repeat(12)}${normalized}`;
-      }
-
-      if (method === "hardhat_setCode") {
-        return true;
-      }
 
       if (method === "eth_call") {
         const tx = params[0] as { to: string; data: string };
@@ -87,22 +71,6 @@ function createMockProvider(options: MockProviderOptions = {}) {
 }
 
 describe("CleartextMockFhevm", () => {
-  it("create patches the implementation code extracted from EIP-1967 slot", async () => {
-    const implementationAddress = "0x7000000000000000000000000000000000000007";
-    const { provider, calls } = createMockProvider({ implementationAddress });
-
-    await CleartextMockFhevm.create(provider, CLEAR_TEXT_MOCK_CONFIG);
-
-    expect(calls[0]).toEqual({
-      method: "eth_getStorageAt",
-      params: [FHEVM_ADDRESSES.executor, EIP1967_IMPLEMENTATION_SLOT, "latest"],
-    });
-    expect(calls[1]).toEqual({
-      method: "hardhat_setCode",
-      params: [implementationAddress, CLEARTEXT_EXECUTOR_BYTECODE],
-    });
-  });
-
   it("userDecrypt throws when ACL.persistAllowed returns false", async () => {
     const handle = "0x" + "12".repeat(32);
     const { provider } = createMockProvider({
@@ -155,11 +123,13 @@ describe("CleartextMockFhevm", () => {
     expect(result.clearValues[handleA]).toBe(42n);
     expect(result.clearValues[handleB]).toBe(99n);
 
-    const abiValues = ethers.AbiCoder.defaultAbiCoder().decode(
-      ["uint256[]"],
-      result.abiEncodedClearValues,
-    )[0] as bigint[];
-    expect(abiValues).toEqual([42n, 99n]);
+    const expectedAbiEncodedClearValues = ethers.hexlify(
+      ethers.concat([
+        ethers.zeroPadValue(ethers.toBeHex(42n), 32),
+        ethers.zeroPadValue(ethers.toBeHex(99n), 32),
+      ]),
+    );
+    expect(result.abiEncodedClearValues).toBe(expectedAbiEncodedClearValues);
   });
 
   it("generateKeypair returns distinct 32-byte hex strings", async () => {
