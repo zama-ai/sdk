@@ -199,8 +199,8 @@ export function computeCleartextHandles(
   const blobHash = computeBlobHash(fakeCiphertext);
 
   const handles: string[] = values.map((_, i) => {
-    const bits = encryptionBits[i];
-    const fheTypeId = bits ? BITS_TO_FHE_TYPE[bits] : undefined;
+    const bits = encryptionBits[i]!;
+    const fheTypeId = BITS_TO_FHE_TYPE[bits];
     if (fheTypeId === undefined) {
       throw new Error(`Unsupported encryption bit-width: ${bits}`);
     }
@@ -224,19 +224,19 @@ export function parseHandle(handleHex: string): ParsedHandle {
   const hash21 = hexlify(bytes.slice(0, 21));
 
   // byte 21: index
-  const index = bytes[21];
+  const index = bytes[21]!;
 
   // bytes 22-29: chainId (uint64 big-endian)
   let chainId = 0n;
   for (let i = 22; i < 30; i++) {
-    chainId = (chainId << 8n) | BigInt(bytes[i]);
+    chainId = (chainId << 8n) | BigInt(bytes[i]!);
   }
 
   // byte 30: fheTypeId
-  const fheTypeId = bytes[30];
+  const fheTypeId = bytes[30]!;
 
   // byte 31: version
-  const version = bytes[31];
+  const version = bytes[31]!;
 
   return { hash21, index, chainId, fheTypeId, version };
 }

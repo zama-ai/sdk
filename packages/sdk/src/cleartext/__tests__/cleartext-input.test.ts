@@ -19,7 +19,7 @@ describe("createCleartextEncryptedInput", () => {
 
     expect(result.handles).toHaveLength(2);
     expect(result.handles[0]).toBeInstanceOf(Uint8Array);
-    expect(result.handles[0].length).toBe(32);
+    expect(result.handles[0]!.length).toBe(32);
     expect(result.inputProof).toBeInstanceOf(Uint8Array);
     expect(result.inputProof.length).toBeGreaterThan(0);
   });

@@ -5,7 +5,12 @@ import { cleartextPublicDecrypt, cleartextUserDecrypt } from "../cleartext-decry
 function makeHandle(fheTypeId: number): string {
   const bytes = new Uint8Array(32);
   bytes[30] = fheTypeId;
-  return "0x" + Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return (
+    "0x" +
+    Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+  );
 }
 
 const HANDLE_EUINT32 = makeHandle(4);
@@ -31,7 +36,7 @@ describe("cleartextPublicDecrypt", () => {
     const executor = mockExecutor(new Map([[HANDLE_EUINT32, 42n]]));
     const acl = mockAcl();
 
-    const result = await cleartextPublicDecrypt([HANDLE_EUINT32], executor as any, acl as any);
+    const result = await cleartextPublicDecrypt([HANDLE_EUINT32], executor as never, acl as never);
     expect(result.clearValues[HANDLE_EUINT32]).toBe(42n);
     expect(result.decryptionProof).toBe("0x00");
   });
@@ -40,7 +45,7 @@ describe("cleartextPublicDecrypt", () => {
     const executor = mockExecutor(new Map([[HANDLE_EBOOL, 1n]]));
     const acl = mockAcl();
 
-    const result = await cleartextPublicDecrypt([HANDLE_EBOOL], executor as any, acl as any);
+    const result = await cleartextPublicDecrypt([HANDLE_EBOOL], executor as never, acl as never);
     expect(result.clearValues[HANDLE_EBOOL]).toBe(true);
   });
 
@@ -49,7 +54,7 @@ describe("cleartextPublicDecrypt", () => {
     const acl = mockAcl({ publicAllowed: false });
 
     await expect(
-      cleartextPublicDecrypt([HANDLE_EUINT32], executor as any, acl as any),
+      cleartextPublicDecrypt([HANDLE_EUINT32], executor as never, acl as never),
     ).rejects.toThrow("not allowed for decryption");
   });
 });
@@ -62,8 +67,8 @@ describe("cleartextUserDecrypt", () => {
     const result = await cleartextUserDecrypt(
       [{ handle: HANDLE_EUINT32, contractAddress: CONTRACT }],
       USER,
-      executor as any,
-      acl as any,
+      executor as never,
+      acl as never,
     );
     expect(result[HANDLE_EUINT32]).toBe(100n);
   });
@@ -76,8 +81,8 @@ describe("cleartextUserDecrypt", () => {
       cleartextUserDecrypt(
         [{ handle: HANDLE_EUINT32, contractAddress: CONTRACT }],
         USER,
-        executor as any,
-        acl as any,
+        executor as never,
+        acl as never,
       ),
     ).rejects.toThrow("not authorized");
   });

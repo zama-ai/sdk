@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  computeCleartextHandles,
-  parseHandle,
-  BITS_TO_FHE_TYPE,
-} from "../cleartext-handles";
+import { computeCleartextHandles, parseHandle, BITS_TO_FHE_TYPE } from "../cleartext-handles";
 
 const ACL_ADDRESS = "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D";
 const CHAIN_ID = 31337;
@@ -23,8 +19,8 @@ describe("computeCleartextHandles", () => {
     expect(handles).toHaveLength(bitWidths.length);
 
     for (let i = 0; i < bitWidths.length; i++) {
-      const parsed = parseHandle(handles[i]);
-      expect(parsed.fheTypeId).toBe(BITS_TO_FHE_TYPE[bitWidths[i]]);
+      const parsed = parseHandle(handles[i]!);
+      expect(parsed.fheTypeId).toBe(BITS_TO_FHE_TYPE[bitWidths[i]!]);
     }
   });
 
@@ -65,7 +61,7 @@ describe("computeCleartextHandles", () => {
     });
 
     for (let i = 0; i < handles.length; i++) {
-      const parsed = parseHandle(handles[i]);
+      const parsed = parseHandle(handles[i]!);
       expect(parsed.index).toBe(i);
     }
   });
@@ -102,7 +98,7 @@ describe("parseHandle", () => {
       chainId: CHAIN_ID,
     });
 
-    const parsed = parseHandle(handles[0]);
+    const parsed = parseHandle(handles[0]!);
 
     expect(parsed.index).toBe(0);
     expect(parsed.chainId).toBe(BigInt(CHAIN_ID));

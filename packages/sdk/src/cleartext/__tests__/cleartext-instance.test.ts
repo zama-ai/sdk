@@ -78,7 +78,7 @@ describe("createCleartextInstance", () => {
 
   it("requestZKProofVerification throws", async () => {
     const instance = await createCleartextInstance(CONFIG);
-    await expect(instance.requestZKProofVerification({} as never)).rejects.toThrow(
+    await expect(instance.requestZKProofVerification()).rejects.toThrow(
       "not supported in cleartext mode",
     );
   });
