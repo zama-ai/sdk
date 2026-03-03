@@ -7,3 +7,6 @@
 
 export { RelayerCleartext } from "../relayer/relayer-cleartext";
 export type { RelayerCleartextConfig } from "../relayer/relayer-cleartext";
+export { createCleartextInstance } from "./cleartext-instance";
+export { CleartextExecutor } from "./cleartext-executor";
+export type { CleartextInstanceConfig } from "./types";

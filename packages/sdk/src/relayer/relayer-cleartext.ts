@@ -1,3 +1,4 @@
+import { createCleartextInstance } from "../cleartext/cleartext-instance";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   Address,
@@ -6,7 +7,6 @@ import type {
   EncryptParams,
   EncryptResult,
   FHEKeypair,
-  FhevmInstance,
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
   PublicDecryptResult,
@@ -17,7 +17,10 @@ import {
   buildEIP712DomainType,
   CleartextInstanceConfig,
   convertToBigIntRecord,
+  DefaultConfigs,
 } from "./relayer-utils";
+
+type CleartextInstance = Awaited<ReturnType<typeof createCleartextInstance>>;
 
 export interface RelayerCleartextConfig {
   /** Per-chain cleartext transport configs, keyed by chain ID. */
@@ -34,8 +37,8 @@ export interface RelayerCleartextConfig {
  */
 export class RelayerCleartext implements RelayerSDK {
   readonly #config: RelayerCleartextConfig;
-  #initPromise: Promise<FhevmInstance> | null = null;
-  #ensureLock: Promise<FhevmInstance> | null = null;
+  #initPromise: Promise<CleartextInstance> | null = null;
+  #ensureLock: Promise<CleartextInstance> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
 
@@ -43,7 +46,7 @@ export class RelayerCleartext implements RelayerSDK {
     this.#config = config;
   }
 
-  async #ensureInstance(): Promise<FhevmInstance> {
+  async #ensureInstance(): Promise<CleartextInstance> {
     if (this.#ensureLock) return this.#ensureLock;
     this.#ensureLock = this.#ensureInstanceInner();
     try {
@@ -53,7 +56,7 @@ export class RelayerCleartext implements RelayerSDK {
     }
   }
 
-  async #ensureInstanceInner(): Promise<FhevmInstance> {
+  async #ensureInstanceInner(): Promise<CleartextInstance> {
     if (this.#terminated) {
       throw new Error("RelayerCleartext has been terminated");
     }
@@ -76,13 +79,17 @@ export class RelayerCleartext implements RelayerSDK {
     return this.#initPromise;
   }
 
-  async #initInstance(chainId: number): Promise<FhevmInstance> {
-    const config = this.#config.transports[chainId];
-    if (!config) {
+  async #initInstance(chainId: number): Promise<CleartextInstance> {
+    const overrides = this.#config.transports[chainId];
+    if (!overrides) {
       throw new Error(`No cleartext transport config for chainId: ${chainId}`);
     }
 
-    const { createCleartextInstance } = await import("@zama-fhe/relayer-sdk/cleartext");
+    const base = DefaultConfigs[chainId];
+    const config = { ...base, ...overrides } as CleartextInstanceConfig;
+    if (!config.network || !config.cleartextExecutorAddress) {
+      throw new Error(`Incomplete cleartext config for chainId: ${chainId}`);
+    }
 
     const instance = await createCleartextInstance(config);
 
@@ -176,8 +183,8 @@ export class RelayerCleartext implements RelayerSDK {
     const result = await instance.publicDecrypt(handles);
     return {
       clearValues: convertToBigIntRecord(result.clearValues),
-      abiEncodedClearValues: result.abiEncodedClearValues,
-      decryptionProof: result.decryptionProof,
+      abiEncodedClearValues: result.abiEncodedClearValues as `0x${string}`,
+      decryptionProof: result.decryptionProof as `0x${string}`,
     };
   }
 
@@ -195,7 +202,7 @@ export class RelayerCleartext implements RelayerSDK {
       delegatorAddress,
       startTimestamp,
       durationDays,
-    );
+    ) as unknown as KmsDelegatedUserDecryptEIP712Type;
   }
 
   async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {

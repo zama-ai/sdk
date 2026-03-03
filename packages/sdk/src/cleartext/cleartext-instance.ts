@@ -36,9 +36,11 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
     provider,
   });
   const aclContract = new Contract(aclContractAddress, ACL_ABI, provider);
+  const isAllowedForDecryption = aclContract.getFunction("isAllowedForDecryption");
+  const persistAllowed = aclContract.getFunction("persistAllowed");
   const acl: CleartextACL = {
-    isAllowedForDecryption: (handle) => aclContract.isAllowedForDecryption(handle),
-    persistAllowed: (handle, account) => aclContract.persistAllowed(handle, account),
+    isAllowedForDecryption: (handle) => isAllowedForDecryption(handle),
+    persistAllowed: (handle, account) => persistAllowed(handle, account),
   };
 
   return {

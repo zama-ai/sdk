@@ -37,13 +37,13 @@ function buildInputProof(handleHexes: string[], values: bigint[]): Uint8Array {
   const header = new Uint8Array([numHandles, 0]); // numHandles, numSigners=0
   const handlesBytes = new Uint8Array(numHandles * 32);
   for (let i = 0; i < numHandles; i++) {
-    handlesBytes.set(getBytes(handleHexes[i]), i * 32);
+    handlesBytes.set(getBytes(handleHexes[i]!), i * 32);
   }
   // extraData: version byte + 32-byte padded value per handle
   const extraData = new Uint8Array(1 + values.length * 32);
   extraData[0] = 0x00; // version
   for (let i = 0; i < values.length; i++) {
-    const hex = values[i].toString(16).padStart(64, "0");
+    const hex = values[i]!.toString(16).padStart(64, "0");
     const bytes = getBytes("0x" + hex);
     extraData.set(bytes, 1 + i * 32);
   }
