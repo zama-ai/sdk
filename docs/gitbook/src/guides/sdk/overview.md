@@ -145,14 +145,16 @@ const isConfidential = await readonlyToken.isConfidential();
 
 ## Supported networks
 
-| Network          | Chain ID | Preset          |
-| ---------------- | -------- | --------------- |
-| Ethereum Mainnet | 1        | `MainnetConfig` |
-| Sepolia Testnet  | 11155111 | `SepoliaConfig` |
-| Local Hardhat    | 31337    | `HardhatConfig` |
+| Network          | Chain ID | Preset          | Relayer |
+| ---------------- | -------- | --------------- | ------- |
+| Ethereum Mainnet | 1        | `MainnetConfig` | `RelayerWeb` / `RelayerNode` |
+| Sepolia Testnet  | 11155111 | `SepoliaConfig` | `RelayerWeb` / `RelayerNode` |
+| Hoodi Testnet    | 560048   | `HoodiConfig`   | `RelayerCleartext` |
+| Local Hardhat    | 31337    | `HardhatConfig` | `RelayerCleartext` |
 
 ## Next steps
 
 - [Configuration](configuration.md) — relayer, signer, storage, and authentication setup
+- [Cleartext Mode](cleartext-mode.md) — develop and test without FHE infrastructure
 - [Error Handling](error-handling.md) — catch and handle specific failure types
 - [Contract Call Builders](contract-builders.md) — low-level contract calls for advanced use cases

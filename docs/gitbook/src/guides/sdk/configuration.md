@@ -74,6 +74,23 @@ const relayer = new RelayerNode({
 });
 ```
 
+### Development: `RelayerCleartext`
+
+No WASM, no workers, no API key. Reads plaintext values directly from on-chain contracts. Use this for local Hardhat development and testing.
+
+```ts
+import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+
+const relayer = new RelayerCleartext({
+  getChainId: async () => 31337,
+  transports: {
+    31337: { network: "http://127.0.0.1:8545" },
+  },
+});
+```
+
+See [Cleartext Mode](cleartext-mode.md) for the full guide.
+
 ### Network presets
 
 You don't need to figure out contract addresses or relayer URLs. Use the built-in presets and just add your RPC URL. For browser apps, override `relayerUrl` with your proxy; for server-side apps, add `auth` instead:
