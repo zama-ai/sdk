@@ -5,8 +5,5 @@
  * @packageDocumentation
  */
 
-export { RelayerCleartext, HoodiCleartextConfig } from "../relayer/relayer-cleartext";
-export type {
-  RelayerCleartextConfig,
-  CleartextTransportConfig,
-} from "../relayer/relayer-cleartext";
+export { RelayerCleartext } from "../relayer/relayer-cleartext";
+export type { RelayerCleartextConfig } from "../relayer/relayer-cleartext";

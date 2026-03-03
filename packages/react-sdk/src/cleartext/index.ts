@@ -7,5 +7,5 @@
  * @packageDocumentation
  */
 
-export { RelayerCleartext, HoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-export type { RelayerCleartextConfig, CleartextTransportConfig } from "@zama-fhe/sdk/cleartext";
+export { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+export type { RelayerCleartextConfig } from "@zama-fhe/sdk/cleartext";

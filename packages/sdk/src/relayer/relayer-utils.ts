@@ -91,19 +91,6 @@ export const SepoliaConfig = {
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
 } as const satisfies FhevmInstanceConfig;
 
-/** Hardhat local network configuration (chainId 31337). */
-export const HardhatConfig = {
-  chainId: 31337,
-  gatewayChainId: 10901,
-  relayerUrl: "",
-  network: "http://127.0.0.1:8545",
-  aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
-  inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
-  kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
-  verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
-  verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-} as const satisfies FhevmInstanceConfig;
-
 /**
  * Per-chain configuration for cleartext mode.
  * All contract addresses should be checksummed (EIP-55).
@@ -111,6 +98,23 @@ export const HardhatConfig = {
 export interface CleartextInstanceConfig extends FhevmInstanceConfig {
   cleartextExecutorAddress: string;
 }
+
+/**
+ * Hardhat local network configuration (chainId 31337).
+ * Deterministic addresses from @fhevm/solidity ZamaConfig._getLocalConfig().
+ */
+export const HardhatConfig = {
+  chainId: 31337,
+  gatewayChainId: 10901,
+  relayerUrl: "",
+  network: "http://127.0.0.1:8545",
+  aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
+  inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
+  kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
+  verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
+  verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
+  cleartextExecutorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
+} as const satisfies CleartextInstanceConfig;
 
 /** Hoodi testnet cleartext configuration (chainId 560048). */
 export const HoodiConfig = {
