@@ -20,6 +20,10 @@
     "./wagmi": {
       "types": "./dist/wagmi/index.d.ts",
       "import": "./dist/wagmi/index.js"
+    },
+    "./cleartext": {
+      "types": "./dist/cleartext/index.d.ts",
+      "import": "./dist/cleartext/index.js"
     }
   },
   "files": [

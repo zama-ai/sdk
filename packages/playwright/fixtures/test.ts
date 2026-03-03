@@ -1,11 +1,10 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, type BrowserContext } from "@playwright/test";
+import type { Address } from "viem";
 import { createTestClient, formatUnits, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
-import { mockRelayerSdk } from "./fhevm";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
-import type { Address } from "viem";
 
 const privateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
 
@@ -92,10 +91,8 @@ export const test = base.extend<TestFixtures>({
   formatUnits: async ({}, use) => use(formatUnits),
   computeFee: async ({}, use) => use(computeFee),
   readErc20Balance: async ({}, use) => use(readErc20Balance),
-  page: async ({ page, baseURL, privateKey, viemClient }, use) => {
+  page: async ({ page, privateKey, viemClient }, use) => {
     const id = await viemClient.snapshot();
-
-    await mockRelayerSdk(page, baseURL);
 
     // Inject wallet private key for the burner-connector
     await page.addInitScript((pk) => {

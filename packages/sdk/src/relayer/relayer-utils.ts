@@ -66,7 +66,7 @@ export function convertToBigIntRecord(result: Record<string, unknown>): Record<s
 }
 
 /** Mainnet network configuration (chainId 1). */
-export const MainnetConfig: FhevmInstanceConfig = {
+export const MainnetConfig = {
   chainId: 1,
   gatewayChainId: 261131,
   relayerUrl: "https://relayer.mainnet.zama.org/v2",
@@ -76,10 +76,10 @@ export const MainnetConfig: FhevmInstanceConfig = {
   inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2",
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
-} as const;
+} as const satisfies FhevmInstanceConfig;
 
 /** Sepolia testnet network configuration (chainId 11155111). */
-export const SepoliaConfig: FhevmInstanceConfig = {
+export const SepoliaConfig = {
   chainId: 11155111,
   gatewayChainId: 10901,
   relayerUrl: "https://relayer.testnet.zama.org/v2",
@@ -89,10 +89,10 @@ export const SepoliaConfig: FhevmInstanceConfig = {
   inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0",
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-} as const;
+} as const satisfies FhevmInstanceConfig;
 
 /** Hardhat local network configuration (chainId 31337). */
-export const HardhatConfig: FhevmInstanceConfig = {
+export const HardhatConfig = {
   chainId: 31337,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -102,12 +102,35 @@ export const HardhatConfig: FhevmInstanceConfig = {
   kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-} as const;
+} as const satisfies FhevmInstanceConfig;
 
-export const DefaultConfigs: Record<number, FhevmInstanceConfig> = {
+/**
+ * Per-chain configuration for cleartext mode.
+ * All contract addresses should be checksummed (EIP-55).
+ */
+export interface CleartextInstanceConfig extends FhevmInstanceConfig {
+  cleartextExecutorAddress: string;
+}
+
+/** Hoodi testnet cleartext configuration (chainId 560048). */
+export const HoodiConfig = {
+  chainId: 560048,
+  gatewayChainId: 10901,
+  relayerUrl: "",
+  network: "https://rpc.hoodi.ethpandaops.io",
+  aclContractAddress: "0xe56F2576BF3f4E2C929064CBd11C0f806EEfA4A3",
+  kmsContractAddress: "0xd30087aE7F79c72eb78f458130369879cbf7b3fC",
+  inputVerifierContractAddress: "0x963928f4a3861239ae4E3b1C53691eaf8065Bf28",
+  verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
+  verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
+  cleartextExecutorAddress: "0x5Be76f3C86886827047430884a5a295348967682",
+} as const satisfies CleartextInstanceConfig;
+
+export const DefaultConfigs: Record<number, FhevmInstanceConfig | CleartextInstanceConfig> = {
   [1]: MainnetConfig,
   [11155111]: SepoliaConfig,
   [31337]: HardhatConfig,
+  [560048]: HoodiConfig,
 } as const;
 
 /** EIP-712 domain field → Solidity type. Order follows the EIP-712 spec. */

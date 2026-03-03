@@ -7,6 +7,7 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     "wagmi/index": "src/wagmi/index.ts",
+    "cleartext/index": "src/cleartext/index.ts",
   },
   format: ["esm"],
   dts: true,

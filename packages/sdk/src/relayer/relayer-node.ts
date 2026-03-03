@@ -1,7 +1,8 @@
 import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
+import { EncryptionFailedError, ZamaError } from "../token/errors";
+import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import type { GenericLogger } from "../worker/worker.types";
 import type { RelayerSDK } from "./relayer-sdk";
-import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { ZamaError, EncryptionFailedError } from "../token/errors";
 import type {
   Address,
   DelegatedUserDecryptParams,
@@ -15,7 +16,7 @@ import type {
   UserDecryptParams,
   ZKProofLike,
 } from "./relayer-sdk.types";
-import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
 
 export interface RelayerNodeConfig {
   transports: Record<number, Partial<FhevmInstanceConfig>>;
@@ -23,7 +24,7 @@ export interface RelayerNodeConfig {
   getChainId: () => Promise<number>;
   poolSize?: number;
   /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: import("../worker/worker.types").GenericLogger;
+  logger?: GenericLogger;
 }
 
 /**

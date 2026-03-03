@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage, RelayerWeb, ZamaProvider } from "@zama-fhe/react-sdk";
+import { MemoryStorage, ZamaProvider } from "@zama-fhe/react-sdk";
+import { RelayerCleartext } from "@zama-fhe/react-sdk/cleartext";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import { type ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
@@ -27,14 +28,13 @@ const wagmiConfig = createConfig({
 
 const signer = new WagmiSigner({ config: wagmiConfig });
 
-const relayer = new RelayerWeb({
+const relayer = new RelayerCleartext({
   getChainId: async () => signer.getChainId(),
   transports: {
     [hardhat.id]: {
       network: hardhat.rpcUrls.default.http[0],
     },
   },
-  security: { integrityCheck: !isHardhat },
 });
 
 const storage = new MemoryStorage();
