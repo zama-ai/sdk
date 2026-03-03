@@ -1,7 +1,36 @@
+/**
+ * Fluent builder for constructing encrypted inputs in cleartext mode.
+ *
+ * Accumulates typed values (bool, uint8–uint256, address) then produces
+ * deterministic handles and an `InputProof` blob that the on-chain
+ * `InputVerifier` contract can validate.
+ *
+ * @example
+ * ```ts
+ * const input = createCleartextEncryptedInput({
+ *   aclContractAddress: "0x50157C…",
+ *   chainId: 31337,
+ *   contractAddress: "0xe3a910…",
+ *   userAddress: "0xf39Fd6…",
+ * });
+ * input.addBool(true).add64(42n);
+ * const { handles, inputProof } = await input.encrypt();
+ * ```
+ *
+ * @module
+ */
+
 import { getAddress, getBytes } from "ethers";
 import { computeCleartextHandles } from "./cleartext-handles";
 
-/** Fluent builder for cleartext encrypted inputs. */
+/**
+ * Fluent builder interface for cleartext encrypted inputs.
+ *
+ * Each `add*` method appends a typed value and returns `this` for chaining.
+ * Call {@link encrypt} when done to produce the handles and input proof.
+ *
+ * Limits: max 2048 bits total, max 256 variables per input.
+ */
 export interface CleartextEncryptedInput {
   addBool(value: boolean | number | bigint): CleartextEncryptedInput;
   add8(value: number | bigint): CleartextEncryptedInput;
@@ -54,6 +83,24 @@ function buildInputProof(handleHexes: string[], values: bigint[]): Uint8Array {
   return result;
 }
 
+/**
+ * Create a new cleartext encrypted input builder.
+ *
+ * The builder accumulates values via `add*` methods, then {@link CleartextEncryptedInput.encrypt | encrypt()}
+ * produces deterministic bytes32 handles and an `InputProof` that encodes:
+ *
+ * ```
+ * [byte 0]     numHandles
+ * [byte 1]     numSigners (always 0 — no KMS signers in cleartext)
+ * [32*n bytes] concatenated handles
+ * [remaining]  extraData: 0x00 version + 32-byte padded plaintext per value
+ * ```
+ *
+ * @param params.aclContractAddress - ACL contract address (used for handle derivation)
+ * @param params.chainId - Target chain ID (embedded in handle bytes 22-29)
+ * @param params.contractAddress - Contract that will consume the encrypted input
+ * @param params.userAddress - User address submitting the transaction
+ */
 export function createCleartextEncryptedInput(params: {
   aclContractAddress: string;
   chainId: number;

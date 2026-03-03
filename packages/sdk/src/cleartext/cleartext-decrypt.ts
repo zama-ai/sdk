@@ -1,9 +1,28 @@
+/**
+ * Cleartext decryption functions — public and user-scoped.
+ *
+ * These functions read plaintext values from the {@link CleartextExecutor}
+ * after verifying on-chain ACL permissions, then format the raw `bigint`
+ * results into typed values (`boolean` for ebool, checksummed address string
+ * for eaddress, `bigint` for euint*).
+ *
+ * @module
+ */
+
 import { getAddress, getBytes, hexlify, AbiCoder } from "ethers";
 import type { CleartextExecutor } from "./cleartext-executor";
 
+/** Decrypted value — type depends on the FHE type of the handle. */
 type ClearValue = bigint | boolean | string;
 
-/** ACL contract interface (subset needed for decrypt checks). */
+/**
+ * Minimal ACL contract interface needed for decrypt permission checks.
+ *
+ * - `isAllowedForDecryption` — used by public decrypt to verify the handle
+ *   has been marked for public decryption.
+ * - `persistAllowed` — used by user decrypt to verify both the user and the
+ *   originating contract have permission on the handle.
+ */
 export interface CleartextACL {
   isAllowedForDecryption(handle: string): Promise<boolean>;
   persistAllowed(handle: string, account: string): Promise<boolean>;
@@ -28,6 +47,17 @@ function formatPlaintext(value: bigint, fheTypeId: number): ClearValue {
   return value; // euint*
 }
 
+/**
+ * Decrypt handles that have been marked for public decryption.
+ *
+ * Verifies each handle via `acl.isAllowedForDecryption`, then reads raw
+ * plaintext values from the executor and returns:
+ * - `clearValues` — formatted per FHE type (bool / address / bigint)
+ * - `abiEncodedClearValues` — Solidity ABI encoding of the values
+ * - `decryptionProof` — always `"0x00"` in cleartext mode (no real proof)
+ *
+ * @throws {Error} If any handle is not allowed for public decryption.
+ */
 export async function cleartextPublicDecrypt(
   handles: (Uint8Array | string)[],
   executor: CleartextExecutor,
@@ -66,6 +96,15 @@ export async function cleartextPublicDecrypt(
   return { clearValues, abiEncodedClearValues, decryptionProof: "0x00" };
 }
 
+/**
+ * Decrypt handles scoped to a specific user.
+ *
+ * Verifies that both the user and the originating contract have
+ * `persistAllowed` permission for each handle, then reads and formats
+ * the plaintext values.
+ *
+ * @throws {Error} If the user or contract is not authorized for any handle.
+ */
 export async function cleartextUserDecrypt(
   handleContractPairs: { handle: Uint8Array | string; contractAddress: string }[],
   userAddress: string,
