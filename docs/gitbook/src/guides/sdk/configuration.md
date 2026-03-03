@@ -119,7 +119,11 @@ const signer = new ViemSigner({ walletClient, publicClient });
 ```ts
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-const signer = new EthersSigner({ signer: ethersSigner });
+// Browser — pass the raw EIP-1193 provider; subscribe() works automatically
+const signer = new EthersSigner({ ethereum: window.ethereum! });
+
+// Node.js — pass an ethers Signer directly (no subscribe support)
+// const signer = new EthersSigner({ signer: wallet });
 ```
 
 ### wagmi (React only)

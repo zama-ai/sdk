@@ -57,7 +57,7 @@ export class ViemSigner implements GenericSigner {
 // @public
 export interface ViemSignerConfig {
     // (undocumented)
-    provider?: EIP1193Provider;
+    ethereum?: EIP1193Provider;
     // (undocumented)
     publicClient: PublicClient;
     // (undocumented)

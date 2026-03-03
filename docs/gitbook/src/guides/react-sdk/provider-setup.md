@@ -104,8 +104,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-// ethersSigner from BrowserProvider.getSigner() or similar
-const signer = new EthersSigner({ signer: ethersSigner });
+// Pass the raw EIP-1193 provider — BrowserProvider is created internally
+// and subscribe() works automatically for wallet lifecycle events
+const signer = new EthersSigner({ ethereum: window.ethereum! });
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {

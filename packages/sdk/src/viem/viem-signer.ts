@@ -9,11 +9,22 @@ import type {
   TransactionReceipt,
 } from "../token/token.types";
 
-/** Configuration for {@link ViemSigner}. */
+/**
+ * Configuration for {@link ViemSigner}.
+ *
+ * The optional `ethereum` field is needed for `subscribe()` (EIP-1193
+ * `accountsChanged` / `disconnect` events). It cannot be auto-extracted from
+ * `walletClient` because viem's `custom(ethereum)` transport captures the
+ * provider in a closure and does **not** expose `on` / `removeListener` on
+ * `walletClient.transport`.
+ *
+ * If you omit `ethereum`, `subscribe()` returns a no-op. For automatic
+ * wallet lifecycle handling, consider using `WagmiSigner` instead.
+ */
 export interface ViemSignerConfig {
   walletClient: WalletClient;
   publicClient: PublicClient;
-  provider?: EIP1193Provider;
+  ethereum?: EIP1193Provider;
 }
 
 /**
@@ -24,12 +35,12 @@ export interface ViemSignerConfig {
 export class ViemSigner implements GenericSigner {
   private readonly walletClient: WalletClient;
   private readonly publicClient: PublicClient;
-  private readonly provider?: EIP1193Provider;
+  private readonly ethereum?: EIP1193Provider;
 
   constructor(config: ViemSignerConfig) {
     this.walletClient = config.walletClient;
     this.publicClient = config.publicClient;
-    this.provider = config.provider;
+    this.ethereum = config.ethereum;
   }
 
   async getChainId(): Promise<number> {
@@ -79,7 +90,7 @@ export class ViemSigner implements GenericSigner {
     onDisconnect = () => {},
     onAccountChange = () => {},
   }: SignerLifecycleCallbacks): () => void {
-    const provider = this.provider;
+    const provider = this.ethereum;
     if (!provider) return () => {};
 
     let currentAddress: string | undefined;

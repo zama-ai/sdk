@@ -5,7 +5,6 @@
 ```ts
 
 import { Address } from '@zama-fhe/relayer-sdk/bundle';
-import { BrowserProvider } from 'ethers';
 import { Eip1193Provider } from 'ethers';
 import { Provider } from 'ethers';
 import { Signer } from 'ethers';
@@ -41,14 +40,11 @@ export class EthersSigner implements GenericSigner {
 }
 
 // @public
-export interface EthersSignerConfig {
-    // Warning: (ae-forgotten-export) The symbol "EIP1193Provider" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    provider?: EIP1193Provider;
-    // (undocumented)
-    signer: BrowserProvider | Signer;
-}
+export type EthersSignerConfig = {
+    ethereum: EIP1193Provider;
+} | {
+    signer: Signer;
+};
 
 // @public (undocumented)
 export function readConfidentialBalanceOfContract(provider: Provider | Signer, tokenAddress: Address, userAddress: Address): Promise<any>;
@@ -90,6 +86,10 @@ export function writeWrapContract(signer: Signer, wrapperAddress: Address, to: A
 
 // @public (undocumented)
 export function writeWrapETHContract(signer: Signer, wrapperAddress: Address, to: Address, amount: bigint, value: bigint): Promise<`0x${string}`>;
+
+// Warnings were encountered during analysis:
+//
+// dist/ethers/index.d.ts:44:5 - (ae-forgotten-export) The symbol "EIP1193Provider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

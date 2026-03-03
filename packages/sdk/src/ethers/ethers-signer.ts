@@ -1,4 +1,4 @@
-import { ethers, type BrowserProvider, type Signer } from "ethers";
+import { ethers, BrowserProvider, type Signer } from "ethers";
 import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   ContractCallConfig,
@@ -15,32 +15,39 @@ function toHex(s: string): Hex {
   return s as Hex;
 }
 
-/** Configuration for {@link EthersSigner}. */
-export interface EthersSignerConfig {
-  signer: BrowserProvider | Signer;
-  provider?: EIP1193Provider;
-}
+/**
+ * Configuration for {@link EthersSigner}.
+ *
+ * Two variants:
+ *
+ * - **Browser** — `{ ethereum }`: pass the raw EIP-1193 provider (e.g. `window.ethereum`).
+ *   A `BrowserProvider` is created internally and `subscribe()` works automatically.
+ *
+ * - **Node / direct signer** — `{ signer }`: pass an ethers `Signer` (e.g. `Wallet`).
+ *   `subscribe()` is not available since there is no EIP-1193 provider.
+ */
+export type EthersSignerConfig = { ethereum: EIP1193Provider } | { signer: Signer };
 
 /**
  * GenericSigner backed by ethers.
  *
- * Accepts either a `BrowserProvider` (signer resolved lazily via `getSigner()`)
- * or a `Signer` directly (e.g. `Wallet` for Node.js scripts).
+ * Accepts either a raw EIP-1193 provider (`{ ethereum }`) which creates a
+ * `BrowserProvider` internally, or a `Signer` directly (`{ signer }`)
+ * for Node.js scripts.
  *
- * @param config - {@link EthersSignerConfig} with signer or provider
+ * @param config - {@link EthersSignerConfig}
  */
 export class EthersSigner implements GenericSigner {
   private signerPromise: Promise<Signer>;
   private readonly provider?: EIP1193Provider;
 
   constructor(config: EthersSignerConfig) {
-    const providerOrSigner = config.signer;
-    if ("getSigner" in providerOrSigner) {
-      this.signerPromise = providerOrSigner.getSigner();
+    if ("ethereum" in config) {
+      this.signerPromise = new BrowserProvider(config.ethereum).getSigner();
+      this.provider = config.ethereum;
     } else {
-      this.signerPromise = Promise.resolve(providerOrSigner);
+      this.signerPromise = Promise.resolve(config.signer);
     }
-    this.provider = config.provider;
   }
 
   async getChainId(): Promise<number> {
