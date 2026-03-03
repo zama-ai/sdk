@@ -14707,13 +14707,36 @@ export function getWrapperContract(coordinator: Address, tokenAddress: Address):
 };
 
 // @public
-export const HardhatConfig: FhevmInstanceConfig;
+export const HardhatConfig: {
+    readonly chainId: 31337;
+    readonly gatewayChainId: 10901;
+    readonly network: "http://127.0.0.1:8545";
+    readonly aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D";
+    readonly inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f";
+    readonly kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030";
+    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
+    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+    readonly cleartextExecutorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
+};
 
 // @public
 export type Hex = `0x${string}`;
 
 // @public
-export class IndexedDBStorage implements GenericStorage {
+export const HoodiConfig: {
+    readonly chainId: 560048;
+    readonly gatewayChainId: 10901;
+    readonly network: "https://rpc.hoodi.ethpandaops.io";
+    readonly aclContractAddress: "0xe56F2576BF3f4E2C929064CBd11C0f806EEfA4A3";
+    readonly kmsContractAddress: "0xd30087aE7F79c72eb78f458130369879cbf7b3fC";
+    readonly inputVerifierContractAddress: "0x963928f4a3861239ae4E3b1C53691eaf8065Bf28";
+    readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+    readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+    readonly cleartextExecutorAddress: "0x5Be76f3C86886827047430884a5a295348967682";
+};
+
+// @public
+export class IndexedDBStorage implements GenericStringStorage {
     constructor(dbName?: string, dbVersion?: number);
     // (undocumented)
     clear(): Promise<void>;
@@ -17727,7 +17750,17 @@ export { KmsDelegatedUserDecryptEIP712Type }
 export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
 
 // @public
-export const MainnetConfig: FhevmInstanceConfig;
+export const MainnetConfig: {
+    readonly chainId: 1;
+    readonly gatewayChainId: 261131;
+    readonly relayerUrl: "https://relayer.mainnet.zama.org/v2";
+    readonly network: "https://ethereum-rpc.publicnode.com";
+    readonly aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6";
+    readonly kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03";
+    readonly inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2";
+    readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
+    readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
+};
 
 // @public
 export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
@@ -19404,7 +19437,17 @@ export interface RelayerWebSecurityConfig {
 export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
 
 // @public
-export const SepoliaConfig: FhevmInstanceConfig;
+export const SepoliaConfig: {
+    readonly chainId: 11155111;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "https://relayer.testnet.zama.org/v2";
+    readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
+    readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
+    readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
+    readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
+    readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+    readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+};
 
 // @public
 export function setFinalizeUnwrapOperatorContract(tokenAddress: Address, operator: Address, timestamp?: number): {
