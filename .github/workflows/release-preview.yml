@@ -1,31 +1,27 @@
-name: Release
+name: Release Preview
 
 on:
-  push:
-    branches: [main, prerelease]
+  workflow_dispatch:
 
 concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+  group: release-preview-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  vitest:
-    uses: ./.github/workflows/vitest.yml
-
-  playwright:
-    uses: ./.github/workflows/playwright.yml
-    secrets:
-      SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
-
-  release:
-    needs: [vitest, playwright]
+  preview:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       issues: write
       pull-requests: write
-      id-token: write
     steps:
+      - name: Validate target branch
+        run: |
+          if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "prerelease" ]]; then
+            echo "Release preview is only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -41,7 +37,7 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
 
-      - name: Ensure npm 11 for trusted publishing
+      - name: Ensure npm 11 for release parity
         run: |
           npm i -g npm@11
           npm --version
@@ -52,8 +48,7 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Semantic release
-        run: pnpm release:ci
+      - name: Semantic release (dry-run)
+        run: pnpm release:dry-run
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public

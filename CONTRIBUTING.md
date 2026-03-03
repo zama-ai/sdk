@@ -110,6 +110,12 @@ Release behavior:
 5. `main` publishes stable versions to npm `latest`, while `prerelease` publishes prerelease versions to npm `alpha`.
 6. GitHub release notes and tags are generated automatically.
 
+Release workflows:
+
+- `Release` (`.github/workflows/release.yml`): automatic publish on push to `main` and `prerelease`, gated by `Vitest` and `Playwright`.
+- `Release (Manual)` (`.github/workflows/release-manual.yml`): manual publish path with the same `Vitest` + `Playwright` gates before publishing.
+- `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run only (`pnpm release:dry-run`), no publish side effects.
+
 Install channels:
 
 - Stable: `npm i @zama-fhe/sdk`

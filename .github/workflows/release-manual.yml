@@ -1,18 +1,29 @@
-name: Release
+name: Release (Manual)
 
 on:
-  push:
-    branches: [main, prerelease]
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  validate-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate target branch
+        run: |
+          if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "prerelease" ]]; then
+            echo "Manual releases are only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
+            exit 1
+          fi
+
   vitest:
+    needs: [validate-branch]
     uses: ./.github/workflows/vitest.yml
 
   playwright:
+    needs: [validate-branch]
     uses: ./.github/workflows/playwright.yml
     secrets:
       SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
