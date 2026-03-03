@@ -107,7 +107,7 @@ export class EthersSigner implements GenericSigner {
       })
       .catch(() => {});
 
-    const handleAccountsChanged = async (accounts: Address[]) => {
+    const handleAccountsChanged = (accounts: Address[]) => {
       if (accounts.length === 0) {
         return onDisconnect();
       }
