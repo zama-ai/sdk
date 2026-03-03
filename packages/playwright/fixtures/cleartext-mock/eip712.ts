@@ -1,6 +1,9 @@
 import type { ethers } from "ethers";
 
-type DomainFactory = (chainId: number | bigint, verifyingContract: string) => ethers.TypedDataDomain;
+type DomainFactory = (
+  chainId: number | bigint,
+  verifyingContract: string,
+) => ethers.TypedDataDomain;
 
 const inputDomain: DomainFactory = (chainId, verifyingContract) => ({
   name: "InputVerification",
@@ -20,10 +23,11 @@ export const INPUT_VERIFICATION_EIP712 = {
   domain: inputDomain,
   types: {
     CiphertextVerification: [
-      { name: "blobHash", type: "bytes32" },
-      { name: "handlesList", type: "bytes32[]" },
+      { name: "ctHandles", type: "bytes32[]" },
       { name: "userAddress", type: "address" },
       { name: "contractAddress", type: "address" },
+      { name: "contractChainId", type: "uint256" },
+      { name: "extraData", type: "bytes" },
     ],
   },
 } as const;

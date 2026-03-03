@@ -152,9 +152,11 @@ export class CleartextMockFhevm {
       normalizedHandles.map((handle, index) => [handle, orderedValues[index]!]),
     ) as Record<string, bigint>;
 
-    const abiEncodedClearValues = ethers.AbiCoder.defaultAbiCoder().encode(
-      ["uint256[]"],
-      [orderedValues],
+    // Each value is zero-padded to 32 bytes and concatenated — matches the format
+    // expected by token.ts (BigInt(abiEncodedClearValues)) and Impl.sol's
+    // abiEncodedCleartexts convention ("concatenation of clear values appended to 32 bytes").
+    const abiEncodedClearValues = ethers.hexlify(
+      ethers.concat(orderedValues.map((v) => ethers.zeroPadValue(ethers.toBeHex(v), 32))),
     );
 
     const kmsSigner = new ethers.Wallet(MOCK_KMS_SIGNER_PK);

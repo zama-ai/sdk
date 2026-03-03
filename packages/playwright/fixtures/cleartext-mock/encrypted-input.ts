@@ -98,7 +98,9 @@ export class CleartextEncryptedInput {
     );
 
     const cleartextBytes = ethers.concat(
-      this.#values.map(({ value }) => ethers.getBytes(ethers.zeroPadValue(ethers.toBeHex(value), 32))),
+      this.#values.map(({ value }) =>
+        ethers.getBytes(ethers.zeroPadValue(ethers.toBeHex(value), 32)),
+      ),
     );
 
     const inputSigner = new ethers.Wallet(MOCK_INPUT_SIGNER_PK);
@@ -109,10 +111,11 @@ export class CleartextEncryptedInput {
       ),
       INPUT_VERIFICATION_EIP712.types,
       {
-        blobHash: ciphertextBlob,
-        handlesList: handles,
+        ctHandles: handles,
         userAddress: this.#userAddress,
         contractAddress: this.#contractAddress,
+        contractChainId: this.#config.chainId,
+        extraData: cleartextBytes,
       },
     );
 
