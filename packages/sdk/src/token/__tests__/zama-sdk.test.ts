@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, type Mock } from "vitest";
 import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
+import { computeStoreKey } from "../credentials-manager";
 import type { GenericSigner } from "../token.types";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
@@ -161,5 +162,129 @@ describe("ZamaSDK", () => {
     await localSdk.revokeSession();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
+  });
+
+  describe("lifecycle auto-revoke", () => {
+    it("onAccountChange revokes the PREVIOUS account session, not the new one", async () => {
+      const sessionStorage = new MemoryStorage();
+      let subscribeCbs: { onDisconnect: () => void; onAccountChange: (addr: string) => void };
+
+      const mockSigner = createMockSigner();
+      const signer = {
+        ...mockSigner,
+        subscribe: vi.fn((cbs: Record<string, unknown>) => {
+          subscribeCbs = cbs as unknown as typeof subscribeCbs;
+          return () => {};
+        }),
+      };
+
+      const sdk = new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage: new MemoryStorage(),
+        sessionStorage,
+      });
+
+      // Seed account A's session
+      const keyA = await computeStoreKey("0xuser", 31337);
+      await sessionStorage.set(keyA, "0xsigA");
+
+      // Simulate account change: signer now reports account B
+      (signer.getAddress as Mock).mockResolvedValue("0xnewuser");
+
+      // Trigger the lifecycle callback with the NEW address
+      subscribeCbs!.onAccountChange("0xnewuser");
+
+      // Wait for async revoke to complete
+      await vi.waitFor(async () => {
+        expect(await sessionStorage.get(keyA)).toBeNull();
+      });
+
+      // Account B's key should be untouched (it was never seeded)
+      const keyB = await computeStoreKey("0xnewuser", 31337);
+      expect(await sessionStorage.get(keyB)).toBeNull();
+
+      sdk.terminate();
+    });
+
+    it("A→B→A: both account sessions are revoked on their respective switches", async () => {
+      const sessionStorage = new MemoryStorage();
+      let subscribeCbs: { onDisconnect: () => void; onAccountChange: (addr: string) => void };
+
+      const mockSigner = createMockSigner();
+      const signer = {
+        ...mockSigner,
+        subscribe: vi.fn((cbs: Record<string, unknown>) => {
+          subscribeCbs = cbs as unknown as typeof subscribeCbs;
+          return () => {};
+        }),
+      };
+
+      const sdk = new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage: new MemoryStorage(),
+        sessionStorage,
+      });
+
+      const keyA = await computeStoreKey("0xuser", 31337);
+      const keyB = await computeStoreKey("0xnewuser", 31337);
+
+      // A has a session
+      await sessionStorage.set(keyA, "0xsigA");
+
+      // Switch A → B
+      (signer.getAddress as Mock).mockResolvedValue("0xnewuser");
+      subscribeCbs!.onAccountChange("0xnewuser");
+      await vi.waitFor(async () => {
+        expect(await sessionStorage.get(keyA)).toBeNull();
+      });
+
+      // B gets a session
+      await sessionStorage.set(keyB, "0xsigB");
+
+      // Switch B → A
+      (signer.getAddress as Mock).mockResolvedValue("0xuser");
+      subscribeCbs!.onAccountChange("0xuser");
+      await vi.waitFor(async () => {
+        expect(await sessionStorage.get(keyB)).toBeNull();
+      });
+
+      sdk.terminate();
+    });
+
+    it("onDisconnect revokes the current account session", async () => {
+      const sessionStorage = new MemoryStorage();
+      let subscribeCbs: { onDisconnect: () => void; onAccountChange: (addr: string) => void };
+
+      const mockSigner = createMockSigner();
+      const signer = {
+        ...mockSigner,
+        subscribe: vi.fn((cbs: Record<string, unknown>) => {
+          subscribeCbs = cbs as unknown as typeof subscribeCbs;
+          return () => {};
+        }),
+      };
+
+      const sdk = new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage: new MemoryStorage(),
+        sessionStorage,
+      });
+
+      const keyA = await computeStoreKey("0xuser", 31337);
+      await sessionStorage.set(keyA, "0xsigA");
+
+      // Signer may throw on getAddress after disconnect
+      (signer.getAddress as Mock).mockRejectedValue(new Error("disconnected"));
+
+      subscribeCbs!.onDisconnect();
+      await vi.waitFor(async () => {
+        expect(await sessionStorage.get(keyA)).toBeNull();
+      });
+
+      sdk.terminate();
+    });
   });
 });

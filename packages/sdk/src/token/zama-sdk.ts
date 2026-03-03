@@ -4,8 +4,9 @@ import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
-import { CredentialsManager } from "./credentials-manager";
+import { CredentialsManager, computeStoreKey } from "./credentials-manager";
 import type { GenericSigner, GenericStorage } from "./token.types";
+import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 
 /** Configuration for {@link ZamaSDK}. */
@@ -40,6 +41,9 @@ export class ZamaSDK {
   readonly #credentialDurationDays: number | undefined;
   readonly #onEvent: ZamaSDKEventListener | undefined;
   #unsubscribeSigner?: () => void;
+  #identityReady: Promise<void>;
+  #lastAddress: string | null = null;
+  #lastChainId: number | null = null;
 
   constructor(config: ZamaSDKConfig) {
     this.relayer = config.relayer;
@@ -49,12 +53,43 @@ export class ZamaSDK {
     this.#credentialDurationDays = config.credentialDurationDays;
     this.#onEvent = config.onEvent;
 
+    this.#identityReady = this.#initIdentity();
+
     if (this.signer.subscribe) {
       this.#unsubscribeSigner = this.signer.subscribe({
-        onDisconnect: () => this.revokeSession(),
-        onAccountChange: () => this.revokeSession(),
+        onDisconnect: () => {
+          void this.#revokeByTrackedIdentity().then(() => {
+            this.#lastAddress = null;
+            this.#lastChainId = null;
+          });
+        },
+        onAccountChange: (newAddress: Address) => {
+          void this.#revokeByTrackedIdentity().then(() => {
+            this.#lastAddress = newAddress.toLowerCase();
+          });
+        },
       });
     }
+  }
+
+  async #initIdentity(): Promise<void> {
+    try {
+      this.#lastAddress = (await this.signer.getAddress()).toLowerCase();
+      this.#lastChainId = await this.signer.getChainId();
+    } catch {
+      // Signer not ready yet — identity will be set on first lifecycle event
+    }
+  }
+
+  async #revokeByTrackedIdentity(): Promise<void> {
+    await this.#identityReady;
+    if (this.#lastAddress == null || this.#lastChainId == null) return;
+    const storeKey = await computeStoreKey(this.#lastAddress, this.#lastChainId);
+    await this.sessionStorage.delete(storeKey);
+    this.#onEvent?.({
+      type: ZamaSDKEvents.CredentialsRevoked,
+      timestamp: Date.now(),
+    } as never);
   }
 
   /**
