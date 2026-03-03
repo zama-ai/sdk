@@ -1,19 +1,25 @@
 import React from "react";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createSmithers, ClaudeCodeAgent, CodexAgent } from "smithers-orchestrator";
 import { scheduledOutputSchemas } from "/private/tmp/bunx-501-ralphinho@github@17165385997729292787/node_modules/ralphinho/src/scheduled/schemas";
 import { ScheduledWorkflow } from "/private/tmp/bunx-501-ralphinho@github@17165385997729292787/node_modules/ralphinho/src/components";
 
+// ── Load config ────────────────────────────────────────────────────────
+
+const _ralphDir = join(import.meta.dir, "..");
+const _config = JSON.parse(readFileSync(join(_ralphDir, "config.json"), "utf8"));
+
 // ── Constants ─────────────────────────────────────────────────────────
 
-const REPO_ROOT = "/Users/msaug/zama/token-sdk";
-const DB_PATH = "/Users/msaug/zama/token-sdk/.ralphinho/workflow.db";
-const PLAN_PATH = "/Users/msaug/zama/token-sdk/.ralphinho/work-plan.json";
-const HAS_CLAUDE = true;
-const HAS_CODEX = true;
-const MAX_CONCURRENCY = 6;
+const REPO_ROOT = _config.repoRoot as string;
+const DB_PATH = join(_ralphDir, "workflow.db");
+const PLAN_PATH = join(_ralphDir, "work-plan.json");
+const HAS_CLAUDE = _config.agents.claude as boolean;
+const HAS_CODEX = _config.agents.codex as boolean;
+const MAX_CONCURRENCY = _config.maxConcurrency as number;
 const MAX_PASSES = 9;
-const BASE_BRANCH = "cleartext-mocks";
+const BASE_BRANCH = _config.baseBranch as string;
 
 // ── Load work plan ────────────────────────────────────────────────────
 

@@ -1,0 +1,72 @@
+{
+  "source": "/Users/msaug/zama/token-sdk/CLEARTEXT_MOCK_PLAN.md",
+  "generatedAt": "2026-03-03T16:37:32.164Z",
+  "repo": {
+    "projectName": "token-sdk",
+    "buildCmds": {
+      "typecheck": "pnpm run typecheck",
+      "build": "pnpm run build",
+      "lint": "pnpm run lint"
+    },
+    "testCmds": {
+      "test": "pnpm run test"
+    }
+  },
+  "units": [
+    {
+      "id": "sdk-cleartext-implementation",
+      "name": "CleartextFhevmInstance SDK Core",
+      "rfcSections": [
+        "§2",
+        "§2.1",
+        "§2.2",
+        "§2.3",
+        "§2.4",
+        "§2.5",
+        "§2.6",
+        "§2.7",
+        "§3",
+        "§5",
+        "§6"
+      ],
+      "description": "Create packages/sdk/src/relayer/cleartext/ and populate it with all source files. Move handle.ts, encrypted-input.ts, eip712.ts, and types.ts verbatim from packages/playwright/fixtures/cleartext-mock/. Port constants.ts but remove the hardhat/deployments.json import — all addresses now come from CleartextFhevmConfig. Create cleartext-fhevm-instance.ts with the CleartextFhevmInstance class that implements RelayerSDK: generateKeypair and createEIP712 are async wrappers of the current sync impls; encrypt builds a CleartextEncryptedInput and calls add64 for each value (noting the Uint64 assumption TODO); userDecrypt adapts from positional args to single-object UserDecryptParams by mapping params.handles + params.contractAddress into handleContractPairs then running ACL permission checks and executor.plaintexts reads in parallel; publicDecrypt is unchanged; createDelegatedUserDecryptEIP712/delegatedUserDecrypt/requestZKProofVerification each throw 'Not implemented in cleartext mode'; getPublicKey/getPublicParams return null; terminate is a no-op. Create index.ts barrel exporting CleartextFhevmInstance, CleartextEncryptedInput, CleartextFhevmConfig, FheType, and FHE_BIT_WIDTHS. Update tsup.config.ts to add the 'cleartext/index' entry point. Update packages/sdk/package.json exports to add the './cleartext' condition with types and import fields. Move all unit tests from packages/playwright/fixtures/cleartext-mock/__tests__/ to packages/sdk/src/relayer/cleartext/__tests__/, updating import paths and renaming CleartextMockFhevm to CleartextFhevmInstance throughout.",
+      "deps": [],
+      "acceptance": [
+        "packages/sdk/src/relayer/cleartext/cleartext-fhevm-instance.ts compiles without TypeScript errors and satisfies the RelayerSDK interface structurally",
+        "pnpm --filter @zama-fhe/sdk run build succeeds and emits dist/cleartext/index.js and dist/cleartext/index.d.ts",
+        "packages/sdk/package.json exports map contains a './cleartext' entry with 'types' pointing to ./dist/cleartext/index.d.ts and 'import' pointing to ./dist/cleartext/index.js",
+        "constants.ts contains no import referencing hardhat/deployments.json or any network-specific address literal",
+        "CleartextFhevmInstance constructor is synchronous — no static factory method",
+        "generateKeypair(), createEIP712(), encrypt(), userDecrypt(), and publicDecrypt() are all implemented and do not throw unconditionally",
+        "createDelegatedUserDecryptEIP712(), delegatedUserDecrypt(), and requestZKProofVerification() each throw new Error('Not implemented in cleartext mode')",
+        "getPublicKey() returns null, getPublicParams() returns null, terminate() is a no-op",
+        "All unit tests in packages/sdk/src/relayer/cleartext/__tests__/ pass (handle computation, encrypted-input builder, EIP-712 types, and CleartextFhevmInstance method tests)",
+        "pnpm --filter @zama-fhe/sdk run typecheck passes with zero errors"
+      ],
+      "tier": "large"
+    },
+    {
+      "id": "playwright-fixture-migration",
+      "name": "Playwright Fixture Migration to SDK Cleartext",
+      "rfcSections": [
+        "§4",
+        "§5",
+        "§7"
+      ],
+      "description": "Update packages/playwright/fixtures/fhevm.ts to import CleartextFhevmInstance from @zama-fhe/sdk/cleartext instead of CleartextMockFhevm from ./cleartext-mock. Replace the factory/static create call with the synchronous new CleartextFhevmInstance(provider, config) constructor, reading addresses from the existing deployments.json and passing them as CleartextFhevmConfig. Replace the builder-pattern encrypt calls (createEncryptedInput then add64) with the RelayerSDK encrypt({ values, contractAddress, userAddress }) interface. Replace the positional-arg userDecrypt calls with the single-object UserDecryptParams interface. All five route handlers (/generateKeypair, /createEIP712, /encrypt, /userDecrypt, /publicDecrypt) and the CDN intercept for relayer-sdk.js remain. After updating the fixture, delete the packages/playwright/fixtures/cleartext-mock/ directory entirely.",
+      "deps": [
+        "sdk-cleartext-implementation"
+      ],
+      "acceptance": [
+        "packages/playwright/fixtures/fhevm.ts contains no import from './cleartext-mock' or any subpath thereof",
+        "packages/playwright/fixtures/cleartext-mock/ directory does not exist",
+        "fhevm.ts instantiates CleartextFhevmInstance via synchronous new constructor passing a CleartextFhevmConfig object",
+        "All five route handlers (/generateKeypair, /createEIP712, /encrypt, /userDecrypt, /publicDecrypt) are present in the updated fhevm.ts",
+        "The CDN route intercept for relayer-sdk.js remains present and unchanged",
+        "pnpm --filter @zama-fhe/playwright run typecheck passes with zero errors",
+        "Playwright E2E tests pass end-to-end against a running Hardhat node"
+      ],
+      "tier": "medium"
+    }
+  ]
+}
