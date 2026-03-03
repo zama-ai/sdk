@@ -51,12 +51,13 @@ export async function saveCachedBalance(
   }
 }
 
-let trackKeyPromise: Promise<void> = Promise.resolve();
+const trackKeyChains = new WeakMap<GenericStorage, Promise<void>>();
 
 async function trackKey(storage: GenericStorage, key: string): Promise<void> {
-  // Serialize read-modify-write to prevent concurrent saveCachedBalance
-  // calls from overwriting each other's key additions.
-  trackKeyPromise = trackKeyPromise.then(async () => {
+  // Serialize read-modify-write per storage instance to prevent concurrent
+  // saveCachedBalance calls from overwriting each other's key additions.
+  const prev = trackKeyChains.get(storage) ?? Promise.resolve();
+  const next = prev.then(async () => {
     const raw = await storage.get<string>(BALANCES_KEY);
     const keys: string[] = raw ? JSON.parse(raw) : [];
     if (!keys.includes(key)) {
@@ -64,7 +65,11 @@ async function trackKey(storage: GenericStorage, key: string): Promise<void> {
       await storage.set(BALANCES_KEY, JSON.stringify(keys));
     }
   });
-  return trackKeyPromise;
+  trackKeyChains.set(
+    storage,
+    next.catch(() => {}),
+  ); // prevent chain poisoning
+  return next;
 }
 
 /**

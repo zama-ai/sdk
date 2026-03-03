@@ -7,7 +7,14 @@ import type {
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
-import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
+import {
+  createContext,
+  type PropsWithChildren,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 
 /** Props for {@link ZamaProvider}. */
 export interface ZamaProviderProps extends PropsWithChildren {
@@ -49,6 +56,12 @@ export function ZamaProvider({
   credentialDurationDays,
   onEvent,
 }: ZamaProviderProps) {
+  // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
+  const onEventRef = useRef(onEvent);
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  });
+
   const sdk = useMemo(
     () =>
       new ZamaSDK({
@@ -57,9 +70,9 @@ export function ZamaProvider({
         storage,
         sessionStorage,
         credentialDurationDays,
-        onEvent,
+        onEvent: onEventRef.current,
       }),
-    [relayer, signer, storage, sessionStorage, credentialDurationDays, onEvent],
+    [relayer, signer, storage, sessionStorage, credentialDurationDays],
   );
 
   // Clean up signer subscriptions on unmount without terminating the
