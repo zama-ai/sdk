@@ -1,8 +1,7 @@
-name: Release
+name: Release (Manual)
 
 on:
-  push:
-    branches: [main, prerelease]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,10 +18,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate target branch
+        run: |
+          if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "prerelease" ]]; then
+            echo "Manual releases are only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
+            exit 1
+          fi
+
   vitest:
+    needs: [validate-branch]
     uses: ./.github/workflows/vitest.yml
 
   playwright:
+    needs: [validate-branch]
     uses: ./.github/workflows/playwright.yml
     secrets:
       SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
@@ -58,7 +69,15 @@ jobs:
         run: pnpm build
 
       - name: Semantic release
-        run: pnpm release:ci
+        run: pnpm release:ci 2>&1 | tee /tmp/release-output.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public
+
+      - name: Verify release was published
+        run: |
+          if ! grep -q "Published release" /tmp/release-output.txt; then
+            echo "::error::semantic-release completed but no release was published."
+            echo "Common causes: no releasable commits, branch not configured, or authentication issue."
+            exit 1
+          fi

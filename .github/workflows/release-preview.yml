@@ -1,0 +1,74 @@
+name: Release Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+concurrency:
+  group: release-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate target branch
+        run: |
+          if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "prerelease" ]]; then
+            echo "Release preview is only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
+            exit 1
+          fi
+
+  preview:
+    needs: [validate-branch]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure npm 11
+        run: |
+          npm i -g npm@^11
+          npm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Semantic release (dry-run)
+        run: pnpm release:dry-run 2>&1 | tee /tmp/dry-run-output.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write preview summary
+        if: always()
+        run: |
+          echo "## Release Preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if grep -q "next release version" /tmp/dry-run-output.txt; then
+            echo "A release **would** be published:" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            grep "next release version" /tmp/dry-run-output.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No release would be published from this branch." >> "$GITHUB_STEP_SUMMARY"
+          fi
