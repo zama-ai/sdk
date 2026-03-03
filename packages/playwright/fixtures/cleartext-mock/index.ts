@@ -8,14 +8,17 @@ import type { CleartextMockConfig } from "./types";
 const EIP1967_IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
-const ACL_INTERFACE = new ethers.Interface([
+export const ACL_ABI = [
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
-]);
+] as const;
 
-const EXECUTOR_INTERFACE = new ethers.Interface([
+export const EXECUTOR_ABI = [
   "function plaintexts(bytes32 handle) view returns (uint256)",
-]);
+] as const;
+
+const ACL_INTERFACE = new ethers.Interface(ACL_ABI);
+const EXECUTOR_INTERFACE = new ethers.Interface(EXECUTOR_ABI);
 
 type HandleContractPair = {
   handle: string;
@@ -34,7 +37,7 @@ export class CleartextMockFhevm {
   }
 
   static async create(
-    provider: ethers.JsonRpcProvider,
+    provider: RpcLike,
     config: CleartextMockConfig,
   ): Promise<CleartextMockFhevm> {
     const rawSlot = (await provider.send("eth_getStorageAt", [
@@ -107,19 +110,29 @@ export class CleartextMockFhevm {
     _durationDays: number,
   ): Promise<Record<string, bigint>> {
     const normalizedSignerAddress = ethers.getAddress(signerAddress);
-    const clearValues: Record<string, bigint> = {};
+    const normalizedHandles = handleContractPairs.map((pair) =>
+      ethers.toBeHex(ethers.toBigInt(pair.handle), 32),
+    );
 
-    for (const pair of handleContractPairs) {
-      const handle = ethers.toBeHex(ethers.toBigInt(pair.handle), 32);
-      const isAllowed = await this.#persistAllowed(handle, normalizedSignerAddress);
-      if (!isAllowed) {
-        throw new Error(`Handle ${handle} is not authorized for user decrypt`);
-      }
-
-      clearValues[handle] = await this.#readPlaintext(handle);
+    const allowedResults = await Promise.all(
+      normalizedHandles.map((handle) =>
+        this.#persistAllowed(handle, normalizedSignerAddress),
+      ),
+    );
+    const unauthorizedIndex = allowedResults.findIndex((isAllowed) => !isAllowed);
+    if (unauthorizedIndex !== -1) {
+      throw new Error(
+        `Handle ${normalizedHandles[unauthorizedIndex]!} is not authorized for user decrypt`,
+      );
     }
 
-    return clearValues;
+    const values = await Promise.all(
+      normalizedHandles.map((handle) => this.#readPlaintext(handle)),
+    );
+
+    return Object.fromEntries(
+      normalizedHandles.map((handle, index) => [handle, values[index]!]),
+    ) as Record<string, bigint>;
   }
 
   async publicDecrypt(handles: string[]): Promise<{
@@ -127,21 +140,27 @@ export class CleartextMockFhevm {
     abiEncodedClearValues: string;
     decryptionProof: string;
   }> {
-    const clearValues: Record<string, bigint> = {};
     const normalizedHandles = handles.map((handle) =>
       ethers.toBeHex(ethers.toBigInt(handle), 32),
     );
 
-    for (const handle of normalizedHandles) {
-      const allowed = await this.#isAllowedForDecryption(handle);
-      if (!allowed) {
-        throw new Error(`Handle ${handle} is not allowed for public decryption`);
-      }
-
-      clearValues[handle] = await this.#readPlaintext(handle);
+    const allowedResults = await Promise.all(
+      normalizedHandles.map((handle) => this.#isAllowedForDecryption(handle)),
+    );
+    const unauthorizedIndex = allowedResults.findIndex((isAllowed) => !isAllowed);
+    if (unauthorizedIndex !== -1) {
+      throw new Error(
+        `Handle ${normalizedHandles[unauthorizedIndex]!} is not allowed for public decryption`,
+      );
     }
 
-    const orderedValues = normalizedHandles.map((handle) => clearValues[handle]!);
+    const orderedValues = await Promise.all(
+      normalizedHandles.map((handle) => this.#readPlaintext(handle)),
+    );
+    const clearValues = Object.fromEntries(
+      normalizedHandles.map((handle, index) => [handle, orderedValues[index]!]),
+    ) as Record<string, bigint>;
+
     const abiEncodedClearValues = ethers.AbiCoder.defaultAbiCoder().encode(
       ["uint256[]"],
       [orderedValues],
