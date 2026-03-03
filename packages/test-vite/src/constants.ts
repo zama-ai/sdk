@@ -1,36 +1,27 @@
 import type { Address } from "@zama-fhe/react-sdk";
 import deployments from "../../../hardhat/deployments.json";
 
-const DEPLOYMENTS = {
-  USDT: deployments.USDT as Address,
-  cUSDT: deployments.cUSDT as Address,
-  erc20: deployments.erc20 as Address,
-  cToken: deployments.cToken as Address,
-  feeManager: deployments.feeManager as Address,
-  transferBatcher: deployments.transferBatcher as Address,
-} as const;
-
 export const CONFIDENTIAL_TOKEN_ADDRESSES: Address[] = [
-  DEPLOYMENTS.cUSDT, // cUSDT
-  DEPLOYMENTS.cToken, // cUSDC
+  deployments.cUSDT as Address, // cUSDT
+  deployments.cToken as Address, // cUSDC
 ];
 
 export const ERC20_TOKENS: { address: Address; wrapper: Address }[] = [
   {
-    address: DEPLOYMENTS.USDT, // USDT
-    wrapper: DEPLOYMENTS.cUSDT, // cUSDT
+    address: deployments.USDT as Address, // USDT
+    wrapper: deployments.cUSDT as Address, // cUSDT
   },
   {
-    address: DEPLOYMENTS.erc20, // USDC
-    wrapper: DEPLOYMENTS.cToken, // cUSDC
+    address: deployments.erc20 as Address, // USDC
+    wrapper: deployments.cToken as Address, // cUSDC
   },
 ];
 
 export const DEFAULTS = {
-  token: DEPLOYMENTS.USDT, // USDT (ERC-20)
-  wrapper: DEPLOYMENTS.cUSDT, // cUSDT
-  confidentialToken: DEPLOYMENTS.cUSDT, // cUSDT
-  feeManager: DEPLOYMENTS.feeManager,
+  token: deployments.USDT, // USDT (ERC-20)
+  wrapper: deployments.cUSDT, // cUSDT
+  confidentialToken: deployments.cUSDT, // cUSDT
+  feeManager: deployments.feeManager,
 };
 
-export const TRANSFER_BATCHER_ADDRESS = DEPLOYMENTS.transferBatcher;
+export const TRANSFER_BATCHER_ADDRESS = deployments.transferBatcher;

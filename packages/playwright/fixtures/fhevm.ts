@@ -13,22 +13,15 @@ import deployments from "../../../hardhat/deployments.json" with { type: "json" 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const FHEVM_ADDRESSES = {
-  acl: deployments.fhevm.acl,
-  executor: deployments.fhevm.executor,
-  inputVerifier: deployments.fhevm.inputVerifier,
-  kmsVerifier: deployments.fhevm.kmsVerifier,
-} as const;
-
 function createMockFhevmInstance(rpcUrl: string) {
   const provider = new JsonRpcProvider(rpcUrl);
   return new CleartextFhevmInstance(provider, {
     chainId: BigInt(hardhat.id),
     gatewayChainId: GATEWAY_CHAIN_ID,
-    aclAddress: FHEVM_ADDRESSES.acl,
-    executorProxyAddress: FHEVM_ADDRESSES.executor,
-    inputVerifierContractAddress: FHEVM_ADDRESSES.inputVerifier,
-    kmsContractAddress: FHEVM_ADDRESSES.kmsVerifier,
+    aclAddress: deployments.fhevm.acl,
+    executorProxyAddress: deployments.fhevm.executor,
+    inputVerifierContractAddress: deployments.fhevm.inputVerifier,
+    kmsContractAddress: deployments.fhevm.kmsVerifier,
     verifyingContractAddressInputVerification: VERIFYING_CONTRACTS.inputVerification,
     verifyingContractAddressDecryption: VERIFYING_CONTRACTS.decryption,
   });

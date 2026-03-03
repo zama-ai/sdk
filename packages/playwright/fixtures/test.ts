@@ -5,27 +5,19 @@ import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import { mockRelayerSdk } from "./fhevm";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
-
-const CONTRACT_DEPLOYMENTS = {
-  USDT: deployments.USDT,
-  cUSDT: deployments.cUSDT,
-  erc20: deployments.erc20,
-  cToken: deployments.cToken,
-  feeManager: deployments.feeManager,
-  transferBatcher: deployments.transferBatcher,
-} as const;
+import type { Address } from "viem";
 
 const privateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
 
 const account = privateKeyToAccount(privateKey);
 
 const contracts = {
-  USDT: CONTRACT_DEPLOYMENTS.USDT,
-  cUSDT: CONTRACT_DEPLOYMENTS.cUSDT,
-  USDC: CONTRACT_DEPLOYMENTS.erc20,
-  cUSDC: CONTRACT_DEPLOYMENTS.cToken,
-  transferBatcher: CONTRACT_DEPLOYMENTS.transferBatcher,
-  feeManager: CONTRACT_DEPLOYMENTS.feeManager,
+  USDT: deployments.USDT as Address,
+  cUSDT: deployments.cUSDT as Address,
+  USDC: deployments.erc20 as Address,
+  cUSDC: deployments.cToken as Address,
+  transferBatcher: deployments.transferBatcher as Address,
+  feeManager: deployments.feeManager as Address,
 } as const;
 
 /** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */
