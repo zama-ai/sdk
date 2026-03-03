@@ -7,7 +7,7 @@ import {
 } from "../eip712";
 
 describe("eip712", () => {
-  it("INPUT_VERIFICATION_EIP712 typehash matches on-chain definition", () => {
+  it("INPUT_VERIFICATION_EIP712 typehash matches spec definition", () => {
     const expected = ethers.id(
       "CiphertextVerification(bytes32 blobHash,bytes32[] handlesList,address userAddress,address contractAddress)",
     );
