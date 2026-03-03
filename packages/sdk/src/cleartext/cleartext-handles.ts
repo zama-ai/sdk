@@ -132,7 +132,7 @@ function computeBlobHash(fakeCiphertext: Uint8Array): string {
  *
  * ```
  * [bytes 0-20]   hash21  = keccak256("ZK-w_hdl" + blobHash + index + aclAddr + chainId)[0:21]
- * [byte 21]      index   (0xff for computed results)
+ * [byte 21]      index   (position within the encrypted input: 0, 1, 2, …)
  * [bytes 22-29]  chainId (uint64 big-endian)
  * [byte 30]      fheTypeId
  * [byte 31]      version (0)

@@ -93,6 +93,18 @@ describe("createCleartextEncryptedInput", () => {
     expect(() => input.addBool(2)).toThrow("must be 0 or 1");
   });
 
+  it("rejects negative values", () => {
+    const input = createCleartextEncryptedInput({
+      aclContractAddress: ACL,
+      chainId: CHAIN_ID,
+      contractAddress: CONTRACT,
+      userAddress: USER,
+    });
+    expect(() => input.add8(-1)).toThrow("non-negative");
+    expect(() => input.add64(-1n)).toThrow("non-negative");
+    expect(() => input.add256(-1n)).toThrow("non-negative");
+  });
+
   it("getBits returns accumulated types", () => {
     const input = createCleartextEncryptedInput({
       aclContractAddress: ACL,

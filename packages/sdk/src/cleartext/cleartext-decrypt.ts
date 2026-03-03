@@ -3,17 +3,17 @@
  *
  * These functions read plaintext values from the {@link CleartextExecutor}
  * after verifying on-chain ACL permissions, then format the raw `bigint`
- * results into typed values (`boolean` for ebool, checksummed address string
- * for eaddress, `bigint` for euint*).
+ * results into typed values (`boolean` for ebool, `bigint` for euint* and
+ * eaddress).
  *
  * @module
  */
 
-import { getAddress, getBytes, hexlify, AbiCoder } from "ethers";
+import { getBytes, hexlify, AbiCoder } from "ethers";
 import type { CleartextExecutor } from "./cleartext-executor";
 
-/** Decrypted value — type depends on the FHE type of the handle. */
-type ClearValue = bigint | boolean | string;
+/** Decrypted value — `boolean` for ebool, `bigint` for all other FHE types. */
+type ClearValue = bigint | boolean;
 
 /**
  * Minimal ACL contract interface needed for decrypt permission checks.
@@ -43,7 +43,8 @@ function fheTypeToSolidity(fheTypeId: number) {
 /** Format a raw bigint plaintext based on the handle's FHE type. */
 function formatPlaintext(value: bigint, fheTypeId: number): ClearValue {
   if (fheTypeId === 0) return value === 1n; // ebool
-  if (fheTypeId === 7) return getAddress("0x" + value.toString(16).padStart(40, "0")); // eaddress
+  // eaddress: return as bigint (matching the RelayerSDK interface which types clearValues as Record<string, bigint>)
+  if (fheTypeId === 7) return value;
   return value; // euint*
 }
 

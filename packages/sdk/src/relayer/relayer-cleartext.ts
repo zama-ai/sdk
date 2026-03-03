@@ -48,12 +48,10 @@ export class RelayerCleartext implements RelayerSDK {
 
   async #ensureInstance(): Promise<CleartextInstance> {
     if (this.#ensureLock) return this.#ensureLock;
-    this.#ensureLock = this.#ensureInstanceInner();
-    try {
-      return await this.#ensureLock;
-    } finally {
+    this.#ensureLock = this.#ensureInstanceInner().finally(() => {
       this.#ensureLock = null;
-    }
+    });
+    return this.#ensureLock;
   }
 
   async #ensureInstanceInner(): Promise<CleartextInstance> {
@@ -153,7 +151,14 @@ export class RelayerCleartext implements RelayerSDK {
     const instance = await this.#ensureInstance();
     const input = instance.createEncryptedInput(params.contractAddress, params.userAddress);
     for (const value of params.values) {
-      input.add64(value);
+      try {
+        input.add64(value);
+      } catch {
+        throw new Error(
+          `RelayerCleartext.encrypt() only supports values up to uint64 (2^64 - 1). ` +
+            `For larger types (uint128, uint256, address), use createCleartextInstance() and the low-level add* methods.`,
+        );
+      }
     }
     const encrypted = await input.encrypt();
     return { handles: encrypted.handles, inputProof: encrypted.inputProof };

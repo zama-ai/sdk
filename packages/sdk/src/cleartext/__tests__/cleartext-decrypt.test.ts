@@ -49,14 +49,14 @@ describe("cleartextPublicDecrypt", () => {
     expect(result.clearValues[HANDLE_EBOOL]).toBe(true);
   });
 
-  it("converts eaddress to checksummed address string", async () => {
+  it("returns eaddress as bigint (matching RelayerSDK interface)", async () => {
     const handleAddress = makeHandle(7); // fheTypeId 7 = eaddress
     const addressValue = BigInt("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
     const executor = mockExecutor(new Map([[handleAddress, addressValue]]));
     const acl = mockAcl();
 
     const result = await cleartextPublicDecrypt([handleAddress], executor as never, acl as never);
-    expect(typeof result.clearValues[handleAddress]).toBe("string");
+    expect(result.clearValues[handleAddress]).toBe(addressValue);
     expect(result.abiEncodedClearValues).toBeDefined();
     expect(result.abiEncodedClearValues.length).toBeGreaterThan(2);
   });
@@ -81,7 +81,7 @@ describe("cleartextPublicDecrypt", () => {
     );
     expect(result.clearValues[handleBool]).toBe(true);
     expect(result.clearValues[handleUint]).toBe(999n);
-    expect(typeof result.clearValues[handleAddr]).toBe("string");
+    expect(result.clearValues[handleAddr]).toBe(BigInt("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"));
     expect(result.abiEncodedClearValues.startsWith("0x")).toBe(true);
   });
 

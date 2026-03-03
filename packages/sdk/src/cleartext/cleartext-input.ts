@@ -46,8 +46,12 @@ export interface CleartextEncryptedInput {
 
 function checkValue(value: number | bigint, bits: number): void {
   if (value == null) throw new Error("Missing value");
+  const v = BigInt(value);
+  if (v < 0n) {
+    throw new Error(`The value must be non-negative for ${bits}bits integer.`);
+  }
   const limit = bits >= 8 ? BigInt(`0x${"ff".repeat(bits / 8)}`) : BigInt(2 ** bits - 1);
-  if (BigInt(value) > limit) {
+  if (v > limit) {
     throw new Error(`The value exceeds the limit for ${bits}bits integer (${limit}).`);
   }
 }
