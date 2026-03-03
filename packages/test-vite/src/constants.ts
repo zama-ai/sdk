@@ -1,5 +1,5 @@
 import type { Address } from "@zama-fhe/react-sdk";
-import deployments from "../../../hardhat/deployments.json" with { type: "json" };
+import deployments from "../../../hardhat/deployments.json";
 
 const DEPLOYMENTS = {
   USDT: deployments.USDT as Address,
