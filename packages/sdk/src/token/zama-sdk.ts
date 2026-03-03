@@ -177,7 +177,8 @@ export class ZamaSDK {
 
   /**
    * Revoke the session signature for the current signer without requiring
-   * contract addresses. Useful for wallet disconnect / account-change handlers.
+   * contract addresses. Uses the tracked identity when available (safe during
+   * account switches), falling back to querying the signer directly.
    *
    * @example
    * ```ts
@@ -185,8 +186,9 @@ export class ZamaSDK {
    * ```
    */
   async revokeSession(): Promise<void> {
-    const address = (await this.signer.getAddress()).toLowerCase();
-    const chainId = await this.signer.getChainId();
+    await this.#identityReady;
+    const address = this.#lastAddress ?? (await this.signer.getAddress()).toLowerCase();
+    const chainId = this.#lastChainId ?? (await this.signer.getChainId());
     const storeKey = await computeStoreKey(address, chainId);
     await this.sessionStorage.delete(storeKey);
     this.#onEvent?.({
@@ -204,11 +206,20 @@ export class ZamaSDK {
   }
 
   /**
+   * Unsubscribe from signer lifecycle events without terminating the relayer.
+   * Call this when the SDK instance is being replaced but the relayer is shared
+   * (e.g. React provider remount in Strict Mode).
+   */
+  dispose(): void {
+    this.#unsubscribeSigner?.();
+  }
+
+  /**
    * Terminate the relayer backend and clean up resources.
    * Call this when the SDK is no longer needed (e.g. on unmount or shutdown).
    */
   terminate(): void {
-    this.#unsubscribeSigner?.();
+    this.dispose();
     this.relayer.terminate();
   }
 }

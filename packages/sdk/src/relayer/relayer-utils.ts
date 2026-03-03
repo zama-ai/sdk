@@ -95,7 +95,7 @@ export const SepoliaConfig: FhevmInstanceConfig = {
 export const HardhatConfig: FhevmInstanceConfig = {
   chainId: 31337,
   gatewayChainId: 10901,
-  relayerUrl: "https://relayer.testnet.zama.org/v2",
+  relayerUrl: "",
   network: "http://127.0.0.1:8545",
   aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
   inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",

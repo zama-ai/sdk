@@ -32941,6 +32941,7 @@ export class ZamaSDK {
     createToken(address: Address, wrapper?: Address): Token;
     // (undocumented)
     readonly credentials: CredentialsManager;
+    dispose(): void;
     isAllowed(): Promise<boolean>;
     // (undocumented)
     readonly relayer: RelayerSDK;

@@ -1,6 +1,7 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
+import { MemoryStorage } from "./memory-storage";
 import { SigningRejectedError, SigningFailedError } from "./errors";
 import { assertObject, assertString, assertArray } from "../utils";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -81,7 +82,7 @@ export class CredentialsManager {
     // Warn when using in-memory session storage inside a Chrome extension context
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const chrome = typeof globalThis !== "undefined" ? (globalThis as any).chrome : undefined;
-    if (chrome?.runtime?.id && config.sessionStorage.constructor.name === "MemoryStorage") {
+    if (chrome?.runtime?.id && config.sessionStorage instanceof MemoryStorage) {
       console.warn(
         "[zama-sdk] Detected Chrome extension context with in-memory session storage. " +
           "Session signatures will be lost on service worker restart and won't be shared across contexts. " +

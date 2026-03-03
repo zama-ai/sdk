@@ -75,7 +75,15 @@ export interface GenericSigner {
   subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
 }
 
-/** Pluggable key-value store for persisting FHE credentials. */
+/**
+ * Pluggable key-value store for persisting FHE credentials.
+ *
+ * The SDK stores objects directly (not JSON strings). Implementations must
+ * preserve value types through round-trips — e.g. `IndexedDBStorage` uses
+ * structured clone, `MemoryStorage` stores values as-is. If your custom
+ * backend serializes to JSON internally, it must handle `JSON.parse` /
+ * `JSON.stringify` transparently so callers always receive the original type.
+ */
 export interface GenericStorage {
   get<T = unknown>(key: string): Promise<T | null>;
   set<T = unknown>(key: string, value: T): Promise<void>;
