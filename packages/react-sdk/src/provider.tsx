@@ -32,7 +32,6 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
 /**
  * Provides a {@link ZamaSDK} instance to all descendant hooks.
- * Terminates the relayer on unmount.
  *
  * @example
  * ```tsx
@@ -64,7 +63,8 @@ export function ZamaProvider({
   );
 
   // Clean up signer subscriptions on unmount without terminating the
-  // caller-owned relayer. dispose() only unsubscribes from wallet events.
+  // caller-owned relayer. dispose() only unsubscribes from wallet events
+  // and is idempotent.
   useEffect(() => () => sdk.dispose(), [sdk]);
 
   return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;

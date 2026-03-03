@@ -163,7 +163,10 @@ export class CredentialsManager {
       }
     }
 
-    const key = contractAddresses.slice().sort().join(",");
+    const key = contractAddresses
+      .map((a) => a.toLowerCase())
+      .sort()
+      .join(",");
     if (!this.#createPromise || this.#createPromiseKey !== key) {
       this.#createPromiseKey = key;
       this.#createPromise = this.create(contractAddresses)
@@ -326,6 +329,7 @@ export class CredentialsManager {
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
     this.#emit({ type: ZamaSDKEvents.CredentialsCreating, contractAddresses });
     try {
+      const storeKey = await this.#storeKey();
       const keypair = await this.#relayer.generateKeypair();
       const startTimestamp = Math.floor(Date.now() / 1000);
 
@@ -337,7 +341,7 @@ export class CredentialsManager {
       );
 
       const signature = await this.#signer.signTypedData(eip712);
-      await this.#sessionStorage.set(await this.#storeKey(), signature);
+      await this.#sessionStorage.set(storeKey, signature);
 
       const creds: StoredCredentials = {
         publicKey: keypair.publicKey,
@@ -348,7 +352,6 @@ export class CredentialsManager {
         durationDays: this.#durationDays,
       };
 
-      const storeKey = await this.#storeKey();
       try {
         const encrypted = await this.#encryptCredentials(creds);
         await this.#storage.set(storeKey, encrypted);

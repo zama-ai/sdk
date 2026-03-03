@@ -51,13 +51,20 @@ export async function saveCachedBalance(
   }
 }
 
+let trackKeyPromise: Promise<void> = Promise.resolve();
+
 async function trackKey(storage: GenericStorage, key: string): Promise<void> {
-  const raw = await storage.get<string>(BALANCES_KEY);
-  const keys: string[] = raw ? JSON.parse(raw) : [];
-  if (!keys.includes(key)) {
-    keys.push(key);
-    await storage.set(BALANCES_KEY, JSON.stringify(keys));
-  }
+  // Serialize read-modify-write to prevent concurrent saveCachedBalance
+  // calls from overwriting each other's key additions.
+  trackKeyPromise = trackKeyPromise.then(async () => {
+    const raw = await storage.get<string>(BALANCES_KEY);
+    const keys: string[] = raw ? JSON.parse(raw) : [];
+    if (!keys.includes(key)) {
+      keys.push(key);
+      await storage.set(BALANCES_KEY, JSON.stringify(keys));
+    }
+  });
+  return trackKeyPromise;
 }
 
 /**

@@ -70,8 +70,13 @@ export class ZamaSDK {
           });
         },
         onAccountChange: (newAddress: Address) => {
-          void this.#revokeByTrackedIdentity().then(() => {
+          void this.#revokeByTrackedIdentity().then(async () => {
             this.#lastAddress = newAddress.toLowerCase();
+            try {
+              this.#lastChainId = await this.signer.getChainId();
+            } catch {
+              // Signer may not be ready — keep previous chainId
+            }
           });
         },
       });
@@ -212,6 +217,7 @@ export class ZamaSDK {
    */
   dispose(): void {
     this.#unsubscribeSigner?.();
+    this.#unsubscribeSigner = undefined;
   }
 
   /**
