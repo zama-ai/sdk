@@ -68,8 +68,11 @@ export interface GenericSigner {
    * Subscribe to wallet lifecycle events (disconnect, account change).
    * Returns an unsubscribe function. When no EIP-1193 provider is available,
    * returns a no-op unsubscribe.
+   *
+   * Optional — server-side signers or custom implementations that don't
+   * support lifecycle events can omit this method entirely.
    */
-  subscribe(callbacks: SignerLifecycleCallbacks): () => void;
+  subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
 }
 
 /** Pluggable key-value store for persisting FHE credentials. */

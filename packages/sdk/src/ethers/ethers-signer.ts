@@ -7,6 +7,7 @@ import type {
   SignerLifecycleCallbacks,
   TransactionReceipt,
 } from "../token/token.types";
+import { eip1193Subscribe } from "../token/eip1193-subscribe";
 import { EIP1193Provider } from "./ethers.types";
 
 /** Validate and narrow a string to the `Hex` branded type. */
@@ -100,40 +101,7 @@ export class EthersSigner implements GenericSigner {
     };
   }
 
-  subscribe({
-    onDisconnect = () => {},
-    onAccountChange = () => {},
-  }: SignerLifecycleCallbacks): () => void {
-    const provider = this.provider;
-    if (!provider) return () => {};
-
-    let currentAddress: string | undefined;
-    this.getAddress()
-      .then((addr) => {
-        currentAddress = addr;
-      })
-      .catch(() => {});
-
-    const handleAccountsChanged = (accounts: Address[]) => {
-      if (accounts.length === 0) {
-        return onDisconnect();
-      }
-      if (
-        currentAddress &&
-        accounts[0] &&
-        accounts[0].toLowerCase() !== currentAddress.toLowerCase()
-      ) {
-        onAccountChange(accounts[0]);
-      }
-      currentAddress = accounts[0];
-    };
-
-    provider.on("accountsChanged", handleAccountsChanged);
-    provider.on("disconnect", onDisconnect);
-
-    return () => {
-      provider.removeListener("accountsChanged", handleAccountsChanged);
-      provider.removeListener("disconnect", onDisconnect);
-    };
+  subscribe(callbacks: SignerLifecycleCallbacks): () => void {
+    return eip1193Subscribe(this.provider, () => this.getAddress(), callbacks);
   }
 }

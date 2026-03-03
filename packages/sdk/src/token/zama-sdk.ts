@@ -4,7 +4,7 @@ import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
-import { CredentialsManager, computeStoreKey } from "./credentials-manager";
+import { computeStoreKey } from "./credentials-manager";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
@@ -74,8 +74,12 @@ export class ZamaSDK {
 
   async #initIdentity(): Promise<void> {
     try {
-      this.#lastAddress = (await this.signer.getAddress()).toLowerCase();
-      this.#lastChainId = await this.signer.getChainId();
+      const address = (await this.signer.getAddress()).toLowerCase();
+      const chainId = await this.signer.getChainId();
+      // Only commit both values atomically so revokeByTrackedIdentity
+      // never sees a partial (address-only) state.
+      this.#lastAddress = address;
+      this.#lastChainId = chainId;
     } catch {
       // Signer not ready yet — identity will be set on first lifecycle event
     }
@@ -89,7 +93,7 @@ export class ZamaSDK {
     this.#onEvent?.({
       type: ZamaSDKEvents.CredentialsRevoked,
       timestamp: Date.now(),
-    } as never);
+    });
   }
 
   /**
@@ -145,15 +149,14 @@ export class ZamaSDK {
    * ```
    */
   async revokeSession(): Promise<void> {
-    const cm = new CredentialsManager({
-      sdk: this.relayer,
-      signer: this.signer,
-      storage: this.storage,
-      sessionStorage: this.sessionStorage,
-      durationDays: 1, // irrelevant for revoke
-      onEvent: this.#onEvent,
+    const address = (await this.signer.getAddress()).toLowerCase();
+    const chainId = await this.signer.getChainId();
+    const storeKey = await computeStoreKey(address, chainId);
+    await this.sessionStorage.delete(storeKey);
+    this.#onEvent?.({
+      type: ZamaSDKEvents.CredentialsRevoked,
+      timestamp: Date.now(),
     });
-    await cm.revoke();
   }
 
   /**

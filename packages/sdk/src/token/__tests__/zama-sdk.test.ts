@@ -4,7 +4,7 @@ import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
 import { computeStoreKey } from "../credentials-manager";
-import type { GenericSigner } from "../token.types";
+import type { GenericSigner, SignerLifecycleCallbacks } from "../token.types";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 
@@ -167,13 +167,13 @@ describe("ZamaSDK", () => {
   describe("lifecycle auto-revoke", () => {
     it("onAccountChange revokes the PREVIOUS account session, not the new one", async () => {
       const sessionStorage = new MemoryStorage();
-      let subscribeCbs: { onDisconnect: () => void; onAccountChange: (addr: string) => void };
+      let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
       const mockSigner = createMockSigner();
       const signer = {
         ...mockSigner,
-        subscribe: vi.fn((cbs: Record<string, unknown>) => {
-          subscribeCbs = cbs as unknown as typeof subscribeCbs;
+        subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+          subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
           return () => {};
         }),
       };
@@ -209,13 +209,13 @@ describe("ZamaSDK", () => {
 
     it("A→B→A: both account sessions are revoked on their respective switches", async () => {
       const sessionStorage = new MemoryStorage();
-      let subscribeCbs: { onDisconnect: () => void; onAccountChange: (addr: string) => void };
+      let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
       const mockSigner = createMockSigner();
       const signer = {
         ...mockSigner,
-        subscribe: vi.fn((cbs: Record<string, unknown>) => {
-          subscribeCbs = cbs as unknown as typeof subscribeCbs;
+        subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+          subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
           return () => {};
         }),
       };
@@ -255,13 +255,13 @@ describe("ZamaSDK", () => {
 
     it("onDisconnect revokes the current account session", async () => {
       const sessionStorage = new MemoryStorage();
-      let subscribeCbs: { onDisconnect: () => void; onAccountChange: (addr: string) => void };
+      let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
       const mockSigner = createMockSigner();
       const signer = {
         ...mockSigner,
-        subscribe: vi.fn((cbs: Record<string, unknown>) => {
-          subscribeCbs = cbs as unknown as typeof subscribeCbs;
+        subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+          subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
           return () => {};
         }),
       };

@@ -315,7 +315,7 @@ function useTokenRevoke(): UseMutationResult<void, Error, Address[]>;
 ```tsx
 const { mutate: tokenRevoke } = useTokenRevoke();
 
-// Revoke session for specific tokens
+// Revoke session — addresses are included in the credentials:revoked event
 tokenRevoke(["0xTokenA", "0xTokenB"]);
 ```
 

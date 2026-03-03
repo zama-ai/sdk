@@ -16,7 +16,7 @@ export function tokenRevokeMutationOptions(sdk: ZamaSDK) {
     mutationKey: ["tokenRevoke"] as const,
     mutationFn: async (tokenAddresses: Address[]) => {
       const token = sdk.createReadonlyToken(tokenAddresses[0]!);
-      await token.revoke();
+      await token.revoke(...tokenAddresses);
     },
   };
 }
@@ -25,6 +25,9 @@ export function tokenRevokeMutationOptions(sdk: ZamaSDK) {
  * Revoke the session signature for the connected wallet.
  * Stored credentials remain intact, but the next decrypt operation
  * will require a fresh wallet signature.
+ *
+ * The addresses are passed through to the `credentials:revoked` event
+ * for observability.
  *
  * @example
  * ```tsx
