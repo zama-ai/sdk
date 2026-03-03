@@ -89,9 +89,9 @@ export function createCleartextEncryptedInput(params: {
     add128(value) { checkValue(value, 128); checkLimit(128); values.push(BigInt(value)); bits.push(128); return self; },
     add256(value) { checkValue(value, 256); checkLimit(256); values.push(BigInt(value)); bits.push(256); return self; },
     addAddress(value) {
-      getAddress(value); // throws if not valid checksummed address
+      const checksummed = getAddress(value); // throws if not valid address
       checkLimit(160);
-      values.push(BigInt(value));
+      values.push(BigInt(checksummed.toLowerCase()));
       bits.push(160);
       return self;
     },

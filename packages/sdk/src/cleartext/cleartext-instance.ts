@@ -1,4 +1,5 @@
 import {
+  BrowserProvider,
   Contract,
   JsonRpcProvider,
   randomBytes,
@@ -24,7 +25,7 @@ function resolveProvider(network: Eip1193Provider | string): Provider {
   if (typeof network === "string") {
     return new JsonRpcProvider(network);
   }
-  return new JsonRpcProvider(network as unknown as string);
+  return new BrowserProvider(network);
 }
 
 export async function createCleartextInstance(config: CleartextInstanceConfig) {

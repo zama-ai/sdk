@@ -86,4 +86,24 @@ describe("cleartextUserDecrypt", () => {
       ),
     ).rejects.toThrow("not authorized");
   });
+
+  it("throws when contract lacks permission", async () => {
+    const executor = mockExecutor(new Map([[HANDLE_EUINT32, 100n]]));
+    const acl = {
+      isAllowedForDecryption: vi.fn().mockResolvedValue(true),
+      persistAllowed: vi
+        .fn()
+        .mockResolvedValueOnce(true) // user allowed
+        .mockResolvedValueOnce(false), // contract rejected
+    };
+
+    await expect(
+      cleartextUserDecrypt(
+        [{ handle: HANDLE_EUINT32, contractAddress: CONTRACT }],
+        USER,
+        executor as never,
+        acl as never,
+      ),
+    ).rejects.toThrow("not authorized");
+  });
 });

@@ -14,6 +14,13 @@ function getFheTypeId(handleHex: string): number {
   return getBytes(handleHex)[30]!;
 }
 
+/** Map fheTypeId to the Solidity ABI type for encoding. */
+function fheTypeToSolidity(fheTypeId: number) {
+  if (fheTypeId === 0) return "bool";
+  if (fheTypeId === 7) return "address";
+  return "uint256";
+}
+
 /** Format a raw bigint plaintext based on the handle's FHE type. */
 function formatPlaintext(value: bigint, fheTypeId: number): ClearValue {
   if (fheTypeId === 0) return value === 1n; // ebool
@@ -47,10 +54,14 @@ export async function cleartextPublicDecrypt(
   });
 
   const abiCoder = AbiCoder.defaultAbiCoder();
-  const abiEncodedClearValues = abiCoder.encode(
-    handlesHex.map(() => "uint256"),
-    rawValues,
-  );
+  const abiTypes = handlesHex.map((h) => fheTypeToSolidity(getFheTypeId(h)));
+  const abiValues = handlesHex.map((h, i) => {
+    const fheType = getFheTypeId(h);
+    if (fheType === 0) return rawValues[i]! === 1n; // bool
+    if (fheType === 7) return "0x" + rawValues[i]!.toString(16).padStart(40, "0"); // address
+    return rawValues[i]!;
+  });
+  const abiEncodedClearValues = abiCoder.encode(abiTypes, abiValues);
 
   return { clearValues, abiEncodedClearValues, decryptionProof: "0x00" };
 }

@@ -84,6 +84,30 @@ describe("createCleartextEncryptedInput", () => {
     expect(input.getBits()).toEqual([2, 8, 64]);
   });
 
+  it("addAddress accepts checksummed addresses", async () => {
+    const input = createCleartextEncryptedInput({
+      aclContractAddress: ACL,
+      chainId: CHAIN_ID,
+      contractAddress: CONTRACT,
+      userAddress: USER,
+    });
+    input.addAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    const result = await input.encrypt();
+    expect(result.handles).toHaveLength(1);
+    expect(result.handles[0]!.length).toBe(32);
+    expect(input.getBits()).toEqual([160]);
+  });
+
+  it("addAddress rejects invalid addresses", () => {
+    const input = createCleartextEncryptedInput({
+      aclContractAddress: ACL,
+      chainId: CHAIN_ID,
+      contractAddress: CONTRACT,
+      userAddress: USER,
+    });
+    expect(() => input.addAddress("0xinvalid")).toThrow();
+  });
+
   it("supports method chaining", () => {
     const input = createCleartextEncryptedInput({
       aclContractAddress: ACL,
