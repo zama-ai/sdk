@@ -36,15 +36,6 @@ export interface ContractCallConfig {
   readonly gas?: bigint;
 }
 
-/**
- * Minimal EIP-1193 provider interface for subscribing to wallet events.
- * Pass this to ViemSigner/EthersSigner to enable automatic session revocation.
- */
-export interface EIP1193Provider {
-  on(event: string, listener: (...args: unknown[]) => void): void;
-  removeListener(event: string, listener: (...args: unknown[]) => void): void;
-}
-
 /** Callbacks for signer lifecycle events (wallet disconnect, account switch). */
 export interface SignerLifecycleCallbacks {
   /** Called when the wallet disconnects. */

@@ -80,10 +80,7 @@ export class ViemSigner implements GenericSigner {
     onAccountChange = () => {},
   }: SignerLifecycleCallbacks): () => void {
     const provider = this.provider;
-
-    if (!provider) {
-      return () => {};
-    }
+    if (!provider) return () => {};
 
     let currentAddress: string | undefined;
     this.getAddress()
@@ -92,19 +89,19 @@ export class ViemSigner implements GenericSigner {
       })
       .catch(() => {});
 
-    function handleAccountsChanged(accounts: Address[]) {
-      const addrs = accounts as string[];
-      if (addrs.length === 0) {
-        onDisconnect();
-      } else if (
-        currentAddress &&
-        addrs[0] &&
-        addrs[0].toLowerCase() !== currentAddress.toLowerCase()
-      ) {
-        currentAddress = addrs[0];
-        onAccountChange(addrs[0] as Address);
+    const handleAccountsChanged = async (accounts: Address[]) => {
+      if (accounts.length === 0) {
+        return onDisconnect();
       }
-    }
+      if (
+        currentAddress &&
+        accounts[0] &&
+        accounts[0].toLowerCase() !== currentAddress.toLowerCase()
+      ) {
+        onAccountChange(accounts[0]);
+      }
+      currentAddress = accounts[0];
+    };
 
     provider.on("accountsChanged", handleAccountsChanged);
     provider.on("disconnect", onDisconnect);

@@ -2,12 +2,12 @@ import { ethers, type BrowserProvider, type Signer } from "ethers";
 import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   ContractCallConfig,
-  EIP1193Provider,
   GenericSigner,
   Hex,
   SignerLifecycleCallbacks,
   TransactionReceipt,
 } from "../token/token.types";
+import { EIP1193Provider } from "./ethers.types";
 
 /** Validate and narrow a string to the `Hex` branded type. */
 function toHex(s: string): Hex {
@@ -98,10 +98,7 @@ export class EthersSigner implements GenericSigner {
     onAccountChange = () => {},
   }: SignerLifecycleCallbacks): () => void {
     const provider = this.provider;
-
-    if (!provider) {
-      return () => {};
-    }
+    if (!provider) return () => {};
 
     let currentAddress: string | undefined;
     this.getAddress()
@@ -110,19 +107,19 @@ export class EthersSigner implements GenericSigner {
       })
       .catch(() => {});
 
-    function handleAccountsChanged(accounts: unknown) {
-      const addrs = accounts as string[];
-      if (addrs.length === 0) {
-        onDisconnect();
-      } else if (
-        currentAddress &&
-        addrs[0] &&
-        addrs[0].toLowerCase() !== currentAddress.toLowerCase()
-      ) {
-        currentAddress = addrs[0];
-        onAccountChange(addrs[0] as Address);
+    const handleAccountsChanged = async (accounts: Address[]) => {
+      if (accounts.length === 0) {
+        return onDisconnect();
       }
-    }
+      if (
+        currentAddress &&
+        accounts[0] &&
+        accounts[0].toLowerCase() !== currentAddress.toLowerCase()
+      ) {
+        onAccountChange(accounts[0]);
+      }
+      currentAddress = accounts[0];
+    };
 
     provider.on("accountsChanged", handleAccountsChanged);
     provider.on("disconnect", onDisconnect);
