@@ -1,4 +1,7 @@
 import type { EIP712TypedData, FhevmInstanceConfig } from "./relayer-sdk.types";
+import type { CleartextInstanceConfig } from "../cleartext/types";
+
+export type { CleartextInstanceConfig };
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
@@ -92,21 +95,12 @@ export const SepoliaConfig = {
 } as const satisfies FhevmInstanceConfig;
 
 /**
- * Per-chain configuration for cleartext mode.
- * All contract addresses should be checksummed (EIP-55).
- */
-export interface CleartextInstanceConfig extends FhevmInstanceConfig {
-  cleartextExecutorAddress: string;
-}
-
-/**
  * Hardhat local network configuration (chainId 31337).
  * Deterministic addresses from @fhevm/solidity ZamaConfig._getLocalConfig().
  */
 export const HardhatConfig = {
   chainId: 31337,
   gatewayChainId: 10901,
-  relayerUrl: "",
   network: "http://127.0.0.1:8545",
   aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
   inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
@@ -120,7 +114,6 @@ export const HardhatConfig = {
 export const HoodiConfig = {
   chainId: 560048,
   gatewayChainId: 10901,
-  relayerUrl: "",
   network: "https://rpc.hoodi.ethpandaops.io",
   aclContractAddress: "0xe56F2576BF3f4E2C929064CBd11C0f806EEfA4A3",
   kmsContractAddress: "0xd30087aE7F79c72eb78f458130369879cbf7b3fC",
