@@ -27,24 +27,22 @@ const wagmiConfig = createConfig({
   },
 });
 
-const signer = new WagmiSigner({ config: wagmiConfig });
-
-const relayer = new RelayerWeb({
-  getChainId: async () => signer.getChainId(),
-  transports: {
-    [hardhat.id]: {
-      network: hardhat.rpcUrls.default.http[0],
-    },
-  },
-  security: { integrityCheck: !isHardhat },
-  threads: Math.min(navigator.hardwareConcurrency, 8),
-});
-
-const storage = new MemoryStorage();
-
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
+  const signer = new WagmiSigner({ config: wagmiConfig });
+  const relayer = new RelayerWeb({
+    getChainId: () => signer.getChainId(),
+    transports: {
+      [hardhat.id]: {
+        network: hardhat.rpcUrls.default.http[0],
+      },
+    },
+    threads: Math.min(navigator.hardwareConcurrency ?? 4, 8),
+    security: { integrityCheck: !isHardhat },
+  });
+  const storage = new MemoryStorage();
+
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
