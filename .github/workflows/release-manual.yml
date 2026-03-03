@@ -3,6 +3,16 @@ name: Release (Manual)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -31,11 +41,6 @@ jobs:
   release:
     needs: [vitest, playwright]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -52,9 +57,9 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
 
-      - name: Ensure npm 11 for trusted publishing
+      - name: Ensure npm 11
         run: |
-          npm i -g npm@11
+          npm i -g npm@^11
           npm --version
 
       - name: Install dependencies
@@ -64,7 +69,15 @@ jobs:
         run: pnpm build
 
       - name: Semantic release
-        run: pnpm release:ci
+        run: pnpm release:ci 2>&1 | tee /tmp/release-output.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public
+
+      - name: Verify release was published
+        run: |
+          if ! grep -q "Published release" /tmp/release-output.txt; then
+            echo "::error::semantic-release completed but no release was published."
+            echo "Common causes: no releasable commits, branch not configured, or authentication issue."
+            exit 1
+          fi

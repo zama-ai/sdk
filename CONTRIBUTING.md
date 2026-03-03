@@ -113,8 +113,8 @@ Release behavior:
 Release workflows:
 
 - `Release` (`.github/workflows/release.yml`): automatic publish on push to `main` and `prerelease`, gated by `Vitest` and `Playwright`.
-- `Release (Manual)` (`.github/workflows/release-manual.yml`): manual publish path with the same `Vitest` + `Playwright` gates before publishing.
-- `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run only (`pnpm release:dry-run`), no publish side effects.
+- `Release (Manual)` (`.github/workflows/release-manual.yml`): manual publish restricted to `main` and `prerelease`, with the same `Vitest` + `Playwright` gates before publishing. Shares a concurrency group with `Release` to prevent simultaneous publishes on the same ref.
+- `Release Preview` (`.github/workflows/release-preview.yml`): manual dry-run restricted to `main` and `prerelease` (`pnpm release:dry-run`), no publish side effects.
 
 Install channels:
 
@@ -125,8 +125,8 @@ Maintainer requirements:
 
 - Configure branch protection on `main` to require both `Vitest` and `Playwright` checks before merge.
 - Configure branch protection on `prerelease` with the same required checks.
-- Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` workflow.
-- Trusted publishing is active; npm provenance is intentionally disabled while the repository visibility is internal (`NPM_CONFIG_PROVENANCE=false`). Re-enable provenance when the repository is public.
+- Configure npm trusted publishers for `@zama-fhe/sdk` and `@zama-fhe/react-sdk` pointing to this repository's `release.yml` and `release-manual.yml` workflows.
+- npm provenance is intentionally disabled while the repository is private (`NPM_CONFIG_PROVENANCE=false`). Re-enable provenance when the repository is public.
 
 ## Architecture Guidelines
 

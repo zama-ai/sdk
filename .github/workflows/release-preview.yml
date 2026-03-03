@@ -3,17 +3,20 @@ name: Release Preview
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
 concurrency:
   group: release-preview-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  preview:
+  validate-branch:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
     steps:
       - name: Validate target branch
         run: |
@@ -22,6 +25,10 @@ jobs:
             exit 1
           fi
 
+  preview:
+    needs: [validate-branch]
+    runs-on: ubuntu-latest
+    steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -37,9 +44,9 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
 
-      - name: Ensure npm 11 for release parity
+      - name: Ensure npm 11
         run: |
-          npm i -g npm@11
+          npm i -g npm@^11
           npm --version
 
       - name: Install dependencies
@@ -49,6 +56,19 @@ jobs:
         run: pnpm build
 
       - name: Semantic release (dry-run)
-        run: pnpm release:dry-run
+        run: pnpm release:dry-run 2>&1 | tee /tmp/dry-run-output.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write preview summary
+        if: always()
+        run: |
+          echo "## Release Preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if grep -q "next release version" /tmp/dry-run-output.txt; then
+            echo "A release **would** be published:" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            grep "next release version" /tmp/dry-run-output.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No release would be published from this branch." >> "$GITHUB_STEP_SUMMARY"
+          fi

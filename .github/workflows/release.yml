@@ -4,6 +4,16 @@ on:
   push:
     branches: [main, prerelease]
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -20,11 +30,6 @@ jobs:
   release:
     needs: [vitest, playwright]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -41,9 +46,9 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
 
-      - name: Ensure npm 11 for trusted publishing
+      - name: Ensure npm 11
         run: |
-          npm i -g npm@11
+          npm i -g npm@^11
           npm --version
 
       - name: Install dependencies
