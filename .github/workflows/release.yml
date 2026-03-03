@@ -28,12 +28,10 @@ jobs:
       SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
   api-report:
-    if: github.event_name == 'push'
     uses: ./.github/workflows/api-report.yml
 
   release:
     needs: [vitest, playwright, api-report]
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
