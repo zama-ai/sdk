@@ -1,11 +1,17 @@
 "use client";
 
-import { useConfidentialBalances, useTokenMetadata, type Address } from "@zama-fhe/react-sdk";
+import {
+  balanceOfContract,
+  decimalsContract,
+  symbolContract,
+  useAllow,
+  useConfidentialBalances,
+  useMetadata,
+  type Address,
+} from "@zama-fhe/react-sdk";
 import { useState } from "react";
 import { formatUnits } from "viem";
 import { useConnection, useReadContracts } from "wagmi";
-import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/react-sdk";
-import { useTokenAllow } from "@zama-fhe/react-sdk";
 
 function TokenRow({
   address,
@@ -20,7 +26,7 @@ function TokenRow({
   isDecrypting: boolean;
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
-  const { data: metadata } = useTokenMetadata(address);
+  const { data: metadata } = useMetadata(address);
 
   return (
     <tr data-testid={`token-row-${metadata?.symbol ?? address}`}>
@@ -99,7 +105,7 @@ export function TokenTable({
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const [revealed, setRevealed] = useState(false);
-  const { mutate: allowTokens } = useTokenAllow();
+  const { mutate: allowTokens } = useAllow();
   const {
     data: balances,
     isFetching,

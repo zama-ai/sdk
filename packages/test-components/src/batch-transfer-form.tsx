@@ -3,7 +3,7 @@
 import {
   useEncrypt,
   useConfidentialBalance,
-  useTokenMetadata,
+  useMetadata,
   useBatchTransferFee,
   confidentialBatchTransferContract,
   type Address,
@@ -22,7 +22,7 @@ export function BatchTransferForm({
   feeManagerAddress: Address;
 }) {
   const { address: userAddress } = useAccount();
-  const { data: metadata } = useTokenMetadata(tokenAddress);
+  const { data: metadata } = useMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ tokenAddress });
   const { data: batchFee } = useBatchTransferFee(feeManagerAddress);
   const encrypt = useEncrypt();

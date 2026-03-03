@@ -3,7 +3,7 @@
 import {
   useConfidentialTransfer,
   useConfidentialBalance,
-  useTokenMetadata,
+  useMetadata,
   type Address,
 } from "@zama-fhe/react-sdk";
 
@@ -14,7 +14,7 @@ export function TransferForm({
   tokenAddress: Address;
   wrapperAddress?: Address;
 }) {
-  const { data: metadata } = useTokenMetadata(tokenAddress);
+  const { data: metadata } = useMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ tokenAddress });
   const transfer = useConfidentialTransfer({ tokenAddress, wrapperAddress });
 

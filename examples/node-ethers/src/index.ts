@@ -1,5 +1,5 @@
 import { Wallet, JsonRpcProvider } from "ethers";
-import { MemoryStorage, TokenSDK } from "@zama-fhe/sdk";
+import { MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
 import { EthersSigner, readWrapperForTokenContract } from "@zama-fhe/sdk/ethers";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
@@ -39,7 +39,7 @@ async function main() {
     TOKEN_ADDRESS,
   );
 
-  const sdk = new TokenSDK({ relayer, signer, storage });
+  const sdk = new ZamaSDK({ relayer, signer, storage });
   const token = sdk.createToken(TOKEN_ADDRESS, wrapperAddress as Address);
 
   try {

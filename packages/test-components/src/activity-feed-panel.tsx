@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   useActivityFeed,
-  useTokenMetadata,
+  useMetadata,
   TOKEN_TOPICS,
   type Address,
   type ActivityItem,
@@ -23,7 +23,7 @@ function formatAmount(item: ActivityItem, decimals: number): string {
 
 export function ActivityFeedPanel({ tokenAddress }: { tokenAddress: Address }) {
   const { address: userAddress } = useAccount();
-  const { data: metadata } = useTokenMetadata(tokenAddress);
+  const { data: metadata } = useMetadata(tokenAddress);
   const publicClient = usePublicClient();
   const [logs, setLogs] = useState<
     | {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useTokenAllow, type Address } from "@zama-fhe/react-sdk";
+import { useAllow, type Address } from "@zama-fhe/react-sdk";
 
 export function AllowAllPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {
-  const tokenAllow = useTokenAllow();
+  const tokenAllow = useAllow();
 
   return (
     <section className="space-y-2">
