@@ -62,6 +62,26 @@ describe("createCleartextEncryptedInput", () => {
     expect(() => input.add256(9n)).toThrow("2048 bits");
   });
 
+  it("throws on null/undefined value for addBool", () => {
+    const input = createCleartextEncryptedInput({
+      aclContractAddress: ACL,
+      chainId: CHAIN_ID,
+      contractAddress: CONTRACT,
+      userAddress: USER,
+    });
+    expect(() => input.addBool(null as never)).toThrow("Missing value");
+  });
+
+  it("throws on null/undefined value for add8", () => {
+    const input = createCleartextEncryptedInput({
+      aclContractAddress: ACL,
+      chainId: CHAIN_ID,
+      contractAddress: CONTRACT,
+      userAddress: USER,
+    });
+    expect(() => input.add8(null as never)).toThrow("Missing value");
+  });
+
   it("validates value bounds", () => {
     const input = createCleartextEncryptedInput({
       aclContractAddress: ACL,
@@ -106,6 +126,30 @@ describe("createCleartextEncryptedInput", () => {
       userAddress: USER,
     });
     expect(() => input.addAddress("0xinvalid")).toThrow();
+  });
+
+  it("add128 stores 128-bit values", async () => {
+    const input = createCleartextEncryptedInput({
+      aclContractAddress: ACL,
+      chainId: CHAIN_ID,
+      contractAddress: CONTRACT,
+      userAddress: USER,
+    });
+    input.add128(BigInt("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"));
+    const result = await input.encrypt();
+    expect(result.handles).toHaveLength(1);
+    expect(input.getBits()).toEqual([128]);
+  });
+
+  it("enforces 256 variable limit", () => {
+    const input = createCleartextEncryptedInput({
+      aclContractAddress: ACL,
+      chainId: CHAIN_ID,
+      contractAddress: CONTRACT,
+      userAddress: USER,
+    });
+    for (let i = 0; i < 256; i++) input.addBool(0);
+    expect(() => input.addBool(0)).toThrow("256 variables");
   });
 
   it("supports method chaining", () => {

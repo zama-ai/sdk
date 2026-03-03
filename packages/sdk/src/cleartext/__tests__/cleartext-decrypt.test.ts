@@ -49,6 +49,53 @@ describe("cleartextPublicDecrypt", () => {
     expect(result.clearValues[HANDLE_EBOOL]).toBe(true);
   });
 
+  it("converts eaddress to checksummed address string", async () => {
+    const handleAddress = makeHandle(7); // fheTypeId 7 = eaddress
+    const addressValue = BigInt("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    const executor = mockExecutor(new Map([[handleAddress, addressValue]]));
+    const acl = mockAcl();
+
+    const result = await cleartextPublicDecrypt([handleAddress], executor as never, acl as never);
+    expect(typeof result.clearValues[handleAddress]).toBe("string");
+    expect(result.abiEncodedClearValues).toBeDefined();
+    expect(result.abiEncodedClearValues.length).toBeGreaterThan(2);
+  });
+
+  it("ABI-encodes mixed types correctly", async () => {
+    const handleBool = makeHandle(0);
+    const handleUint = makeHandle(4);
+    const handleAddr = makeHandle(7);
+    const executor = mockExecutor(
+      new Map([
+        [handleBool, 1n],
+        [handleUint, 999n],
+        [handleAddr, BigInt("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")],
+      ]),
+    );
+    const acl = mockAcl();
+
+    const result = await cleartextPublicDecrypt(
+      [handleBool, handleUint, handleAddr],
+      executor as never,
+      acl as never,
+    );
+    expect(result.clearValues[handleBool]).toBe(true);
+    expect(result.clearValues[handleUint]).toBe(999n);
+    expect(typeof result.clearValues[handleAddr]).toBe("string");
+    expect(result.abiEncodedClearValues.startsWith("0x")).toBe(true);
+  });
+
+  it("accepts Uint8Array handles", async () => {
+    const handleBytes = new Uint8Array(32);
+    handleBytes[30] = 4; // euint32
+    const handleHex = "0x" + Array.from(handleBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const executor = mockExecutor(new Map([[handleHex, 77n]]));
+    const acl = mockAcl();
+
+    const result = await cleartextPublicDecrypt([handleBytes], executor as never, acl as never);
+    expect(result.clearValues[handleHex]).toBe(77n);
+  });
+
   it("throws when handle is not allowed for decryption", async () => {
     const executor = mockExecutor(new Map([[HANDLE_EUINT32, 42n]]));
     const acl = mockAcl({ publicAllowed: false });
@@ -71,6 +118,22 @@ describe("cleartextUserDecrypt", () => {
       acl as never,
     );
     expect(result[HANDLE_EUINT32]).toBe(100n);
+  });
+
+  it("accepts Uint8Array handles", async () => {
+    const handleBytes = new Uint8Array(32);
+    handleBytes[30] = 4; // euint32
+    const handleHex = "0x" + Array.from(handleBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const executor = mockExecutor(new Map([[handleHex, 55n]]));
+    const acl = mockAcl();
+
+    const result = await cleartextUserDecrypt(
+      [{ handle: handleBytes, contractAddress: CONTRACT }],
+      USER,
+      executor as never,
+      acl as never,
+    );
+    expect(result[handleHex]).toBe(55n);
   });
 
   it("throws when user lacks permission", async () => {

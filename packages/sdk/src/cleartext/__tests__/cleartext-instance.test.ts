@@ -1,10 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Mock ethers Contract and JsonRpcProvider
+// Mock ethers Contract and providers
 vi.mock("ethers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("ethers")>();
 
   class MockJsonRpcProvider {
+    getNetwork = vi.fn().mockResolvedValue({ chainId: 31337n });
+  }
+  class MockBrowserProvider {
     getNetwork = vi.fn().mockResolvedValue({ chainId: 31337n });
   }
   class MockContract {
@@ -21,6 +24,7 @@ vi.mock("ethers", async (importOriginal) => {
   return {
     ...actual,
     JsonRpcProvider: MockJsonRpcProvider,
+    BrowserProvider: MockBrowserProvider,
     Contract: MockContract,
   };
 });
@@ -81,5 +85,103 @@ describe("createCleartextInstance", () => {
     await expect(instance.requestZKProofVerification()).rejects.toThrow(
       "not supported in cleartext mode",
     );
+  });
+
+  it("getPublicParams returns null", async () => {
+    const instance = await createCleartextInstance(CONFIG);
+    expect(instance.getPublicParams()).toBeNull();
+  });
+
+  it("createEIP712 returns correct EIP712 structure", async () => {
+    const instance = await createCleartextInstance(CONFIG);
+    const pubKey = "0xabcd";
+    const contracts = ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"];
+    const result = instance.createEIP712(pubKey, contracts, 1000, 30);
+
+    expect(result.domain.name).toBe("KMSVerifier");
+    expect(result.domain.version).toBe("1");
+    expect(result.domain.chainId).toBe(BigInt(CONFIG.gatewayChainId));
+    expect(result.domain.verifyingContract).toBe(CONFIG.verifyingContractAddressDecryption);
+    expect(result.types.UserDecryptRequestVerification).toBeDefined();
+    expect(result.message.publicKey).toBe(pubKey);
+    expect(result.message.contractAddresses).toBe(contracts);
+    expect(result.message.startTimestamp).toBe(1000n);
+    expect(result.message.durationDays).toBe(30n);
+    expect(result.message.extraData).toBe("0x00");
+  });
+
+  it("createDelegatedUserDecryptEIP712 returns correct structure", async () => {
+    const instance = await createCleartextInstance(CONFIG);
+    const pubKey = "0xabcd";
+    const contracts = ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"];
+    const delegator = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
+    const result = instance.createDelegatedUserDecryptEIP712(pubKey, contracts, delegator, 2000, 7);
+
+    expect(result.domain.name).toBe("KMSVerifier");
+    expect(result.domain.chainId).toBe(BigInt(CONFIG.gatewayChainId));
+    expect(result.types.DelegatedUserDecryptRequestVerification).toBeDefined();
+    expect(result.message.publicKey).toBe(pubKey);
+    expect(result.message.delegatorAddress).toBe(delegator);
+    expect(result.message.startTimestamp).toBe(2000n);
+    expect(result.message.durationDays).toBe(7n);
+  });
+
+  it("publicDecrypt delegates to cleartextPublicDecrypt", async () => {
+    const instance = await createCleartextInstance(CONFIG);
+    // The mock Contract returns 42n for plaintexts and true for ACL checks
+    const handle = "0x" + "00".repeat(32);
+    const result = await instance.publicDecrypt([handle]);
+    expect(result.clearValues).toBeDefined();
+    expect(result.decryptionProof).toBe("0x00");
+  });
+
+  it("userDecrypt delegates to cleartextUserDecrypt", async () => {
+    const instance = await createCleartextInstance(CONFIG);
+    const handle = "0x" + "00".repeat(32);
+    const contract = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
+    const user = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    const result = await instance.userDecrypt(
+      [{ handle, contractAddress: contract }],
+      "0xprivkey",
+      "0xpubkey",
+      "0xsig",
+      [contract],
+      user,
+      1000,
+      30,
+    );
+    expect(result).toBeDefined();
+    expect(result[handle]).toBeDefined();
+  });
+
+  it("resolves BrowserProvider when network is an object (Eip1193Provider)", async () => {
+    const eip1193Mock = { request: vi.fn() }; // mimics Eip1193Provider
+    const instance = await createCleartextInstance({
+      ...CONFIG,
+      network: eip1193Mock as never,
+    });
+    // If it didn't throw, BrowserProvider path was taken
+    expect(instance.createEncryptedInput).toBeTypeOf("function");
+  });
+
+  it("delegatedUserDecrypt delegates to cleartextUserDecrypt", async () => {
+    const instance = await createCleartextInstance(CONFIG);
+    const handle = "0x" + "00".repeat(32);
+    const contract = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
+    const delegator = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    const delegate = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+    const result = await instance.delegatedUserDecrypt(
+      [{ handle, contractAddress: contract }],
+      "0xprivkey",
+      "0xpubkey",
+      "0xsig",
+      [contract],
+      delegator,
+      delegate,
+      1000,
+      30,
+    );
+    expect(result).toBeDefined();
+    expect(result[handle]).toBeDefined();
   });
 });

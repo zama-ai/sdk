@@ -1,20 +1,20 @@
 import {
   BrowserProvider,
   Contract,
+  hexlify,
   JsonRpcProvider,
   randomBytes,
-  hexlify,
-  type Provider,
   type Eip1193Provider,
+  type Provider,
 } from "ethers";
-import type { CleartextInstanceConfig } from "./types";
-import { CleartextExecutor } from "./cleartext-executor";
-import { createCleartextEncryptedInput } from "./cleartext-input";
 import {
   cleartextPublicDecrypt,
   cleartextUserDecrypt,
   type CleartextACL,
 } from "./cleartext-decrypt";
+import { CleartextExecutor } from "./cleartext-executor";
+import { createCleartextEncryptedInput } from "./cleartext-input";
+import type { CleartextInstanceConfig } from "./types";
 
 const ACL_ABI = [
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
