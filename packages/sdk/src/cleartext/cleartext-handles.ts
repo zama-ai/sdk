@@ -6,15 +6,7 @@
  * expected by the CleartextFHEVM executor.
  */
 
-import {
-  keccak256,
-  AbiCoder,
-  concat,
-  toBeHex,
-  zeroPadValue,
-  getBytes,
-  hexlify,
-} from "ethers";
+import { keccak256, AbiCoder, concat, toBeHex, zeroPadValue, getBytes, hexlify } from "ethers";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -113,7 +105,6 @@ function chainIdHex(chainId: number): string {
   return zeroPadValue(toBeHex(chainId), 8);
 }
 
-
 // ---------------------------------------------------------------------------
 // Core implementation
 // ---------------------------------------------------------------------------
@@ -209,7 +200,7 @@ export function computeCleartextHandles(
 
   const handles: string[] = values.map((_, i) => {
     const bits = encryptionBits[i];
-    const fheTypeId = BITS_TO_FHE_TYPE[bits];
+    const fheTypeId = bits ? BITS_TO_FHE_TYPE[bits] : undefined;
     if (fheTypeId === undefined) {
       throw new Error(`Unsupported encryption bit-width: ${bits}`);
     }

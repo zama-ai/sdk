@@ -11,6 +11,11 @@ vi.mock("ethers", async (importOriginal) => {
     plaintexts = vi.fn().mockResolvedValue(42n);
     isAllowedForDecryption = vi.fn().mockResolvedValue(true);
     persistAllowed = vi.fn().mockResolvedValue(true);
+    getFunction = vi.fn().mockImplementation((name: string) => {
+      if (name === "isAllowedForDecryption") return this.isAllowedForDecryption;
+      if (name === "persistAllowed") return this.persistAllowed;
+      return vi.fn();
+    });
   }
 
   return {

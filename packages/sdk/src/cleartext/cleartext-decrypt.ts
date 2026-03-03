@@ -11,7 +11,7 @@ export interface CleartextACL {
 
 /** Extract fheTypeId from byte 30 of a bytes32 handle. */
 function getFheTypeId(handleHex: string): number {
-  return getBytes(handleHex)[30];
+  return getBytes(handleHex)[30]!;
 }
 
 /** Format a raw bigint plaintext based on the handle's FHE type. */
@@ -25,7 +25,11 @@ export async function cleartextPublicDecrypt(
   handles: (Uint8Array | string)[],
   executor: CleartextExecutor,
   acl: CleartextACL,
-): Promise<{ clearValues: Record<string, ClearValue>; abiEncodedClearValues: string; decryptionProof: string }> {
+): Promise<{
+  clearValues: Record<string, ClearValue>;
+  abiEncodedClearValues: string;
+  decryptionProof: string;
+}> {
   const handlesHex = handles.map((h) => (typeof h === "string" ? h : hexlify(h)));
 
   // Check ACL permissions
@@ -39,7 +43,7 @@ export async function cleartextPublicDecrypt(
 
   const clearValues: Record<string, ClearValue> = {};
   handlesHex.forEach((h, i) => {
-    clearValues[h] = formatPlaintext(rawValues[i], getFheTypeId(h));
+    clearValues[h] = formatPlaintext(rawValues[i]!, getFheTypeId(h));
   });
 
   const abiCoder = AbiCoder.defaultAbiCoder();
@@ -63,8 +67,8 @@ export async function cleartextUserDecrypt(
 
   // Check ACL: both user and contract must have persistAllowed
   for (let i = 0; i < handlesHex.length; i++) {
-    const h = handlesHex[i];
-    const contract = handleContractPairs[i].contractAddress;
+    const h = handlesHex[i]!;
+    const contract = handleContractPairs[i]!.contractAddress;
     if (!(await acl.persistAllowed(h, userAddress))) {
       throw new Error(`User ${userAddress} is not authorized to decrypt handle ${h}`);
     }
@@ -77,7 +81,7 @@ export async function cleartextUserDecrypt(
 
   const results: Record<string, ClearValue> = {};
   handlesHex.forEach((h, i) => {
-    results[h] = formatPlaintext(rawValues[i], getFheTypeId(h));
+    results[h] = formatPlaintext(rawValues[i]!, getFheTypeId(h));
   });
 
   return results;
