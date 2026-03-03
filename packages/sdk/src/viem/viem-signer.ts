@@ -29,11 +29,7 @@ export class ViemSigner implements GenericSigner {
   constructor(config: ViemSignerConfig) {
     this.walletClient = config.walletClient;
     this.publicClient = config.publicClient;
-    this.provider =
-      config.provider ??
-      (typeof window !== "undefined"
-        ? ((window as unknown as Record<string, unknown>).ethereum as EIP1193Provider | undefined)
-        : undefined);
+    this.provider = config.provider;
   }
 
   async getChainId(): Promise<number> {
@@ -83,10 +79,11 @@ export class ViemSigner implements GenericSigner {
     onDisconnect = () => {},
     onAccountChange = () => {},
   }: SignerLifecycleCallbacks): () => void {
-    if (!this.provider) {
+    const provider = this.provider;
+
+    if (!provider) {
       return () => {};
     }
-    const provider = this.provider;
 
     let currentAddress: string | undefined;
     this.getAddress()
@@ -109,16 +106,12 @@ export class ViemSigner implements GenericSigner {
       }
     }
 
-    function handleDisconnect() {
-      onDisconnect();
-    }
-
     provider.on("accountsChanged", handleAccountsChanged);
-    provider.on("disconnect", handleDisconnect);
+    provider.on("disconnect", onDisconnect);
 
     return () => {
       provider.removeListener("accountsChanged", handleAccountsChanged);
-      provider.removeListener("disconnect", handleDisconnect);
+      provider.removeListener("disconnect", onDisconnect);
     };
   }
 }

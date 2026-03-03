@@ -40,11 +40,7 @@ export class EthersSigner implements GenericSigner {
     } else {
       this.signerPromise = Promise.resolve(providerOrSigner);
     }
-    this.provider =
-      config.provider ??
-      (typeof window !== "undefined"
-        ? ((window as unknown as Record<string, unknown>).ethereum as EIP1193Provider | undefined)
-        : undefined);
+    this.provider = config.provider;
   }
 
   async getChainId(): Promise<number> {
@@ -101,10 +97,11 @@ export class EthersSigner implements GenericSigner {
     onDisconnect = () => {},
     onAccountChange = () => {},
   }: SignerLifecycleCallbacks): () => void {
-    if (!this.provider) {
+    const provider = this.provider;
+
+    if (!provider) {
       return () => {};
     }
-    const provider = this.provider;
 
     let currentAddress: string | undefined;
     this.getAddress()
@@ -113,7 +110,7 @@ export class EthersSigner implements GenericSigner {
       })
       .catch(() => {});
 
-    const handleAccountsChanged = (accounts: unknown) => {
+    function handleAccountsChanged(accounts: unknown) {
       const addrs = accounts as string[];
       if (addrs.length === 0) {
         onDisconnect();
@@ -125,18 +122,14 @@ export class EthersSigner implements GenericSigner {
         currentAddress = addrs[0];
         onAccountChange(addrs[0] as Address);
       }
-    };
-
-    const handleDisconnect = () => {
-      onDisconnect();
-    };
+    }
 
     provider.on("accountsChanged", handleAccountsChanged);
-    provider.on("disconnect", handleDisconnect);
+    provider.on("disconnect", onDisconnect);
 
     return () => {
       provider.removeListener("accountsChanged", handleAccountsChanged);
-      provider.removeListener("disconnect", handleDisconnect);
+      provider.removeListener("disconnect", onDisconnect);
     };
   }
 }
