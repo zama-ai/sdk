@@ -1,0 +1,5 @@
+packages/playwright:tsc:cd /Users/msaug/zama/token-sdk/packages/playwright && npx tsc --noEmit
+packages/test-nextjs:build:cd /Users/msaug/zama/token-sdk/packages/test-nextjs && npm run build
+packages/test-nextjs:tsc:cd /Users/msaug/zama/token-sdk/packages/test-nextjs && npx tsc --noEmit
+packages/test-vite:build:cd /Users/msaug/zama/token-sdk/packages/test-vite && npm run build
+packages/test-vite:tsc:cd /Users/msaug/zama/token-sdk/packages/test-vite && npx tsc --noEmit

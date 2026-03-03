@@ -1,0 +1,3 @@
+packages/playwright
+packages/test-nextjs
+packages/test-vite

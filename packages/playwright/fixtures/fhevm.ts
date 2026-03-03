@@ -9,14 +9,15 @@ import {
   GATEWAY_CHAIN_ID,
   VERIFYING_CONTRACTS,
 } from "@zama-fhe/sdk/cleartext";
+import deployments from "../../../hardhat/deployments.json" with { type: "json" };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const FHEVM_ADDRESSES = {
-  acl: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
-  executor: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
-  inputVerifier: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
-  kmsVerifier: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
+  acl: deployments.fhevm.acl,
+  executor: deployments.fhevm.executor,
+  inputVerifier: deployments.fhevm.inputVerifier,
+  kmsVerifier: deployments.fhevm.kmsVerifier,
 } as const;
 
 function createMockFhevmInstance(rpcUrl: string) {
