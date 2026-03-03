@@ -36,6 +36,15 @@ export interface ContractCallConfig {
   readonly gas?: bigint;
 }
 
+/**
+ * Minimal EIP-1193 provider interface for subscribing to wallet events.
+ * Pass this to ViemSigner/EthersSigner to enable automatic session revocation.
+ */
+export interface EIP1193Provider {
+  on(event: string, listener: (...args: unknown[]) => void): void;
+  removeListener(event: string, listener: (...args: unknown[]) => void): void;
+}
+
 /** Callbacks for signer lifecycle events (wallet disconnect, account switch). */
 export interface SignerLifecycleCallbacks {
   /** Called when the wallet disconnects. */
@@ -66,10 +75,10 @@ export interface GenericSigner {
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   /**
    * Subscribe to wallet lifecycle events (disconnect, account change).
-   * Returns an unsubscribe function. Optional — only signers with first-class
-   * event support (e.g. `WagmiSigner`) implement this.
+   * Returns an unsubscribe function. When no EIP-1193 provider is available,
+   * returns a no-op unsubscribe.
    */
-  subscribe?(callbacks: SignerLifecycleCallbacks): () => void;
+  subscribe(callbacks: SignerLifecycleCallbacks): () => void;
 }
 
 /** Pluggable key-value store for persisting FHE credentials. */

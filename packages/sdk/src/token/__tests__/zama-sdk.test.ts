@@ -16,6 +16,7 @@ function createMockSigner(): GenericSigner {
     readContract: vi.fn(),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getChainId: vi.fn().mockResolvedValue(31337),
+    subscribe: vi.fn().mockReturnValue(() => {}),
   };
 }
 
@@ -117,9 +118,8 @@ describe("ZamaSDK", () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
-  it("does not fail when signer.subscribe is undefined", () => {
+  it("does not fail when subscribe returns a no-op unsubscribe", () => {
     const plainSigner = createMockSigner();
-    expect(plainSigner.subscribe).toBeUndefined();
 
     const sdkNoSubscribe = new ZamaSDK({
       relayer: createMockRelayer(),

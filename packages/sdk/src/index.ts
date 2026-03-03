@@ -65,6 +65,7 @@ export type {
   Hex,
   GenericSigner,
   GenericStorage,
+  EIP1193Provider,
   SignerLifecycleCallbacks,
   StoredCredentials,
   ContractCallConfig,

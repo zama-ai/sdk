@@ -1,11 +1,13 @@
-import type {
-  GenericSigner,
-  ContractCallConfig,
-  TransactionReceipt,
-  Hex,
-} from "../token/token.types";
-import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import { ethers, type BrowserProvider, type Signer } from "ethers";
+import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type {
+  ContractCallConfig,
+  EIP1193Provider,
+  GenericSigner,
+  Hex,
+  SignerLifecycleCallbacks,
+  TransactionReceipt,
+} from "../token/token.types";
 
 /** Validate and narrow a string to the `Hex` branded type. */
 function toHex(s: string): Hex {
@@ -16,6 +18,7 @@ function toHex(s: string): Hex {
 /** Configuration for {@link EthersSigner}. */
 export interface EthersSignerConfig {
   signer: BrowserProvider | Signer;
+  provider?: EIP1193Provider;
 }
 
 /**
@@ -28,6 +31,7 @@ export interface EthersSignerConfig {
  */
 export class EthersSigner implements GenericSigner {
   private signerPromise: Promise<Signer>;
+  private readonly provider?: EIP1193Provider;
 
   constructor(config: EthersSignerConfig) {
     const providerOrSigner = config.signer;
@@ -36,6 +40,11 @@ export class EthersSigner implements GenericSigner {
     } else {
       this.signerPromise = Promise.resolve(providerOrSigner);
     }
+    this.provider =
+      config.provider ??
+      (typeof window !== "undefined"
+        ? ((window as unknown as Record<string, unknown>).ethereum as EIP1193Provider | undefined)
+        : undefined);
   }
 
   async getChainId(): Promise<number> {
@@ -85,6 +94,49 @@ export class EthersSigner implements GenericSigner {
         topics: log.topics.filter((t): t is string => t !== null),
         data: log.data,
       })),
+    };
+  }
+
+  subscribe({
+    onDisconnect = () => {},
+    onAccountChange = () => {},
+  }: SignerLifecycleCallbacks): () => void {
+    if (!this.provider) {
+      return () => {};
+    }
+    const provider = this.provider;
+
+    let currentAddress: string | undefined;
+    this.getAddress()
+      .then((addr) => {
+        currentAddress = addr;
+      })
+      .catch(() => {});
+
+    const handleAccountsChanged = (accounts: unknown) => {
+      const addrs = accounts as string[];
+      if (addrs.length === 0) {
+        onDisconnect();
+      } else if (
+        currentAddress &&
+        addrs[0] &&
+        addrs[0].toLowerCase() !== currentAddress.toLowerCase()
+      ) {
+        currentAddress = addrs[0];
+        onAccountChange(addrs[0] as Address);
+      }
+    };
+
+    const handleDisconnect = () => {
+      onDisconnect();
+    };
+
+    provider.on("accountsChanged", handleAccountsChanged);
+    provider.on("disconnect", handleDisconnect);
+
+    return () => {
+      provider.removeListener("accountsChanged", handleAccountsChanged);
+      provider.removeListener("disconnect", handleDisconnect);
     };
   }
 }

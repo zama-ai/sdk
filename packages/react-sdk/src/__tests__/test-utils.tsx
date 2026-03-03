@@ -15,6 +15,7 @@ export function createMockSigner(): GenericSigner {
     readContract: vi.fn().mockResolvedValue("0x0"),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getChainId: vi.fn().mockResolvedValue(31337),
+    subscribe: vi.fn().mockReturnValue(() => {}),
   };
 }
 
