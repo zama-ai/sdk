@@ -17,6 +17,7 @@ import { approveContract } from '@zama-fhe/sdk';
 import { ApproveSubmittedEvent } from '@zama-fhe/sdk';
 import { ApproveUnderlyingSubmittedEvent } from '@zama-fhe/sdk';
 import { balanceOfContract } from '@zama-fhe/sdk';
+import { BaseEvent } from '@zama-fhe/sdk';
 import { BATCH_SWAP_ABI } from '@zama-fhe/sdk';
 import { BatchDecryptOptions } from '@zama-fhe/sdk';
 import { BatchTransferData } from '@zama-fhe/sdk';
@@ -31,12 +32,15 @@ import { ConfidentialTransferEvent } from '@zama-fhe/sdk';
 import { confidentialTransferFromContract } from '@zama-fhe/sdk';
 import { ContractCallConfig } from '@zama-fhe/sdk';
 import { CredentialExpiredError } from '@zama-fhe/sdk';
+import { CredentialsAllowedEvent } from '@zama-fhe/sdk';
 import { CredentialsCachedEvent } from '@zama-fhe/sdk';
 import { CredentialsCreatedEvent } from '@zama-fhe/sdk';
 import { CredentialsCreatingEvent } from '@zama-fhe/sdk';
 import { CredentialsExpiredEvent } from '@zama-fhe/sdk';
 import { CredentialsLoadingEvent } from '@zama-fhe/sdk';
 import { CredentialsManager } from '@zama-fhe/sdk';
+import { CredentialsManagerConfig } from '@zama-fhe/sdk';
+import { CredentialsRevokedEvent } from '@zama-fhe/sdk';
 import { decimalsContract } from '@zama-fhe/sdk';
 import { decodeConfidentialTransfer } from '@zama-fhe/sdk';
 import { decodeOnChainEvent } from '@zama-fhe/sdk';
@@ -112,6 +116,7 @@ import { RelayerSDK } from '@zama-fhe/sdk';
 import { RelayerSDKStatus } from '@zama-fhe/sdk';
 import { RelayerWeb } from '@zama-fhe/sdk';
 import { RelayerWebConfig } from '@zama-fhe/sdk';
+import { RelayerWebSecurityConfig } from '@zama-fhe/sdk';
 import { savePendingUnshield } from '@zama-fhe/sdk';
 import { SepoliaConfig } from '@zama-fhe/sdk';
 import { setFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
@@ -219,6 +224,8 @@ export interface ApproveUnderlyingParams {
 export { ApproveUnderlyingSubmittedEvent }
 
 export { balanceOfContract }
+
+export { BaseEvent }
 
 export { BATCH_SWAP_ABI }
 
@@ -349,6 +356,8 @@ export interface CreateEIP712Params {
 
 export { CredentialExpiredError }
 
+export { CredentialsAllowedEvent }
+
 export { CredentialsCachedEvent }
 
 export { CredentialsCreatedEvent }
@@ -360,6 +369,10 @@ export { CredentialsExpiredEvent }
 export { CredentialsLoadingEvent }
 
 export { CredentialsManager }
+
+export { CredentialsManagerConfig }
+
+export { CredentialsRevokedEvent }
 
 export { decimalsContract }
 
@@ -594,6 +607,9 @@ export function publicKeyQueryOptions(sdk: ZamaSDK): {
     readonly staleTime: number;
 };
 
+// @public (undocumented)
+export type PublicKeyResult = PublicKeyData | null;
+
 // @public
 export interface PublicParamsData {
     publicParams: Uint8Array;
@@ -613,6 +629,9 @@ export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number): {
     readonly staleTime: number;
 };
 
+// @public (undocumented)
+export type PublicParamsResult = PublicParamsData | null;
+
 export { rateContract }
 
 export { RawLog }
@@ -630,6 +649,8 @@ export { RelayerSDKStatus }
 export { RelayerWeb }
 
 export { RelayerWebConfig }
+
+export { RelayerWebSecurityConfig }
 
 // @public
 export function resumeUnshieldMutationOptions(token: Token): {
@@ -1447,10 +1468,18 @@ export { ZamaError }
 
 export { ZamaErrorCode }
 
-// Warning: (ae-forgotten-export) The symbol "ZamaProviderProps" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function ZamaProvider(input: ZamaProviderProps): react_jsx_runtime.JSX.Element;
+
+// @public
+export interface ZamaProviderProps extends PropsWithChildren {
+    credentialDurationDays?: number;
+    onEvent?: ZamaSDKEventListener;
+    relayer: RelayerSDK;
+    sessionStorage?: GenericStorage;
+    signer: GenericSigner;
+    storage: GenericStorage;
+}
 
 export { ZamaSDK }
 

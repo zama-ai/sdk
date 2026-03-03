@@ -13,6 +13,12 @@ import { Hex } from '@zama-fhe/sdk';
 import { TransactionReceipt } from '@zama-fhe/sdk';
 
 // @public
+export interface UseZamaConfig {
+    tokenAddress: Address;
+    wrapperAddress?: Address;
+}
+
+// @public
 export class WagmiSigner implements GenericSigner {
     constructor(signerConfig: WagmiSignerConfig);
     // (undocumented)

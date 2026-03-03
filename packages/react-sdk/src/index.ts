@@ -8,7 +8,7 @@
  */
 
 // Provider
-export { ZamaProvider, useZamaSDK } from "./provider";
+export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt, encryptMutationOptions } from "./relayer/use-encrypt";
@@ -26,12 +26,14 @@ export {
   publicKeyQueryKeys,
   publicKeyQueryOptions,
   type PublicKeyData,
+  type PublicKeyResult,
 } from "./relayer/use-public-key";
 export {
   usePublicParams,
   publicParamsQueryKeys,
   publicParamsQueryOptions,
   type PublicParamsData,
+  type PublicParamsResult,
 } from "./relayer/use-public-params";
 
 // Read hooks (cached lookups)
@@ -57,6 +59,7 @@ export {
 export type {
   RelayerSDK,
   RelayerWebConfig,
+  RelayerWebSecurityConfig,
   ZamaSDKConfig,
   TokenConfig,
   ReadonlyTokenConfig,
@@ -77,10 +80,12 @@ export type {
   BatchTransferData,
   StoredCredentials,
   UnshieldCallbacks,
+  CredentialsManagerConfig,
   ZamaSDKEventType,
   ZamaSDKEvent,
   ZamaSDKEventInput,
   ZamaSDKEventListener,
+  BaseEvent,
   ShieldSubmittedEvent,
   TransferSubmittedEvent,
   TransferFromSubmittedEvent,
@@ -103,6 +108,8 @@ export type {
   CredentialsExpiredEvent,
   CredentialsCreatingEvent,
   CredentialsCreatedEvent,
+  CredentialsRevokedEvent,
+  CredentialsAllowedEvent,
 } from "@zama-fhe/sdk";
 
 // Re-export pending-unshield persistence utilities

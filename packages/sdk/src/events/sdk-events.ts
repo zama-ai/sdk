@@ -39,7 +39,7 @@ export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents
 
 // -- Base fields present on every event --
 
-interface BaseEvent {
+export interface BaseEvent {
   tokenAddress?: Address;
   timestamp: number;
   /** Shared identifier linking related events in multi-phase operations (e.g. unshield). */

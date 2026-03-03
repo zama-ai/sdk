@@ -1,16 +1,16 @@
 import { Eip1193Provider } from "ethers";
 import { Address } from "../relayer/relayer-sdk.types";
 
-interface ProviderConnectInfo {
+export interface ProviderConnectInfo {
   chainId: string;
 }
 
-interface ProviderMessage {
+export interface ProviderMessage {
   type: string;
   data: unknown;
 }
 
-class ProviderRpcError extends Error {
+export class ProviderRpcError extends Error {
   code: number;
   details: string;
 
@@ -21,7 +21,7 @@ class ProviderRpcError extends Error {
   }
 }
 
-interface EIP1193EventMap {
+export interface EIP1193EventMap {
   accountsChanged(accounts: Address[]): void;
   chainChanged(chainId: string): void;
   connect(connectInfo: ProviderConnectInfo): void;
@@ -29,7 +29,7 @@ interface EIP1193EventMap {
   message(message: ProviderMessage): void;
 }
 
-interface EIP1193Events {
+export interface EIP1193Events {
   on<event extends keyof EIP1193EventMap>(event: event, listener: EIP1193EventMap[event]): void;
   removeListener<event extends keyof EIP1193EventMap>(
     event: event,

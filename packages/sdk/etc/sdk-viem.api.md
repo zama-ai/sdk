@@ -9,6 +9,74 @@ import { EIP1193Provider } from 'viem';
 import { PublicClient } from 'viem';
 import { WalletClient } from 'viem';
 
+// @public
+export interface BatchTransferData {
+    // (undocumented)
+    encryptedAmount: Address;
+    // (undocumented)
+    inputProof: Address;
+    // (undocumented)
+    retryFor: bigint;
+    // (undocumented)
+    to: Address;
+}
+
+// @public
+export interface ContractCallConfig {
+    readonly abi: readonly unknown[];
+    readonly address: Address;
+    readonly args: readonly unknown[];
+    readonly functionName: string;
+    readonly gas?: bigint;
+    readonly value?: bigint;
+}
+
+// @public
+export interface EIP712TypedData {
+    // (undocumented)
+    domain: {
+        name: string;
+        version: string;
+        chainId: number;
+        verifyingContract: Address;
+    };
+    // (undocumented)
+    message: {
+        publicKey: string;
+        contractAddresses: string[];
+        startTimestamp: bigint;
+        durationDays: bigint;
+        extraData: string;
+    };
+    // (undocumented)
+    types: {
+        [key: string]: Array<{
+            name: string;
+            type: string;
+        }>;
+    };
+}
+
+// @public
+export interface GenericSigner {
+    getAddress: () => Promise<Address>;
+    getChainId(): Promise<number>;
+    readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
+    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
+    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+    writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
+}
+
+// @public
+export type Hex = `0x${string}`;
+
+// @public
+export interface RawLog {
+    readonly data: string;
+    readonly topics: readonly string[];
+}
+
 // @public (undocumented)
 export function readConfidentialBalanceOfContract(client: PublicClient, tokenAddress: Address, userAddress: Address): Promise<`0x${string}`>;
 
@@ -24,8 +92,17 @@ export function readWrapperExistsContract(client: PublicClient, coordinator: Add
 // @public (undocumented)
 export function readWrapperForTokenContract(client: PublicClient, coordinator: Address, tokenAddress: Address): Promise<`0x${string}`>;
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
-//
+// @public
+export interface SignerLifecycleCallbacks {
+    onAccountChange?: (newAddress: Address) => void;
+    onDisconnect?: () => void;
+}
+
+// @public
+export interface TransactionReceipt {
+    readonly logs: readonly RawLog[];
+}
+
 // @public
 export class ViemSigner implements GenericSigner {
     constructor(config: ViemSignerConfig);
@@ -35,21 +112,12 @@ export class ViemSigner implements GenericSigner {
     getChainId(): Promise<number>;
     // (undocumented)
     readContract<T, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
-    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "Hex" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     subscribe(callbacks: SignerLifecycleCallbacks): () => void;
-    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    // Warning: (ae-forgotten-export) The symbol "ContractCallConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     writeContract<C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<Hex>;
 }
@@ -64,8 +132,6 @@ export interface ViemSignerConfig {
     walletClient: WalletClient;
 }
 
-// Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function writeConfidentialBatchTransferContract(client: WalletClient, batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[], fees: bigint): Promise<`0x${string}`>;
 

@@ -20,7 +20,7 @@ import type { GenericStorage } from "./token.types";
  * });
  * ```
  */
-class AsyncLocalMapStorage implements GenericStorage {
+export class AsyncLocalMapStorage implements GenericStorage {
   readonly #als = new AsyncLocalStorage<Map<string, unknown>>();
 
   /** Execute `fn` within an isolated storage context. */

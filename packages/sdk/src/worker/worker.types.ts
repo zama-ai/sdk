@@ -41,7 +41,7 @@ export type WorkerRequestType =
   | "GET_PUBLIC_KEY"
   | "GET_PUBLIC_PARAMS";
 
-interface BaseRequest {
+export interface BaseRequest {
   id: string;
   type: WorkerRequestType;
 }

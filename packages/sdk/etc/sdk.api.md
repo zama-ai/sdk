@@ -157,8 +157,6 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
     readonly args: readonly [`0x${string}`, bigint];
 };
 
-// Warning: (ae-forgotten-export) The symbol "BaseEvent" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export interface ApproveSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -224,6 +222,15 @@ export function balanceOfContract(tokenAddress: Address, account: Address): {
     readonly functionName: "balanceOf";
     readonly args: readonly [`0x${string}`];
 };
+
+// @public (undocumented)
+export interface BaseEvent {
+    operationId?: string;
+    // (undocumented)
+    timestamp: number;
+    // (undocumented)
+    tokenAddress?: Address;
+}
 
 // @public (undocumented)
 export const BATCH_SWAP_ABI: readonly [{
@@ -7179,6 +7186,13 @@ export class CredentialExpiredError extends ZamaError {
 }
 
 // @public (undocumented)
+export interface CredentialsAllowedEvent extends BaseEvent {
+    contractAddresses?: Address[];
+    // (undocumented)
+    type: typeof ZamaSDKEvents.CredentialsAllowed;
+}
+
+// @public (undocumented)
 export interface CredentialsCachedEvent extends BaseEvent {
     contractAddresses?: Address[];
     // (undocumented)
@@ -7215,7 +7229,6 @@ export interface CredentialsLoadingEvent extends BaseEvent {
 
 // @public (undocumented)
 export class CredentialsManager {
-    // Warning: (ae-forgotten-export) The symbol "CredentialsManagerConfig" needs to be exported by the entry point index.d.ts
     constructor(config: CredentialsManagerConfig);
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
     clear(): Promise<void>;
@@ -7223,6 +7236,24 @@ export class CredentialsManager {
     isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
+}
+
+// @public
+export interface CredentialsManagerConfig {
+    durationDays: number;
+    onEvent?: ZamaSDKEventListener;
+    relayer: RelayerSDK;
+    sessionStorage: GenericStorage;
+    signer: GenericSigner;
+    storage: GenericStorage;
+}
+
+// @public (undocumented)
+export interface CredentialsRevokedEvent extends BaseEvent {
+    // (undocumented)
+    contractAddresses?: Address[];
+    // (undocumented)
+    type: typeof ZamaSDKEvents.CredentialsRevoked;
 }
 
 // @public
@@ -19358,10 +19389,15 @@ export class RelayerWeb implements RelayerSDK {
 export interface RelayerWebConfig {
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
-    // Warning: (ae-forgotten-export) The symbol "RelayerWebSecurityConfig" needs to be exported by the entry point index.d.ts
     security?: RelayerWebSecurityConfig;
     // (undocumented)
     transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
+}
+
+// @public
+export interface RelayerWebSecurityConfig {
+    getCsrfToken?: () => string;
+    integrityCheck?: boolean;
 }
 
 // @public
@@ -32966,9 +33002,6 @@ export interface ZamaSDKConfig {
     storage: GenericStorage;
 }
 
-// Warning: (ae-forgotten-export) The symbol "CredentialsRevokedEvent" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "CredentialsAllowedEvent" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 

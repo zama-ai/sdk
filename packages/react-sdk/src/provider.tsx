@@ -10,7 +10,7 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
 
 /** Props for {@link ZamaProvider}. */
-interface ZamaProviderProps extends PropsWithChildren {
+export interface ZamaProviderProps extends PropsWithChildren {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
   relayer: RelayerSDK;
   /** Wallet signer (ViemSigner, EthersSigner, or custom GenericSigner). */
