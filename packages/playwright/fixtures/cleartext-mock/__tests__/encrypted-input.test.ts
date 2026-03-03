@@ -1,31 +1,20 @@
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
-import {
-  FHEVM_ADDRESSES,
-  GATEWAY_CHAIN_ID,
-  FheType,
-  VERIFYING_CONTRACTS,
-} from "../constants";
+import { FheType } from "../constants";
 import { CleartextEncryptedInput } from "../encrypted-input";
-import type { CleartextMockConfig } from "../types";
-
-const USER_ADDRESS = "0x1000000000000000000000000000000000000001";
-const CONTRACT_ADDRESS = "0x2000000000000000000000000000000000000002";
-
-const config: CleartextMockConfig = {
-  chainId: 31_337n,
-  gatewayChainId: GATEWAY_CHAIN_ID,
-  aclAddress: FHEVM_ADDRESSES.acl,
-  executorProxyAddress: FHEVM_ADDRESSES.executor,
-  inputVerifierContractAddress: FHEVM_ADDRESSES.inputVerifier,
-  kmsContractAddress: FHEVM_ADDRESSES.kmsVerifier,
-  verifyingContractAddressInputVerification: VERIFYING_CONTRACTS.inputVerification,
-  verifyingContractAddressDecryption: VERIFYING_CONTRACTS.decryption,
-};
+import {
+  CLEAR_TEXT_MOCK_CONFIG,
+  CONTRACT_ADDRESS,
+  USER_ADDRESS,
+} from "./fixtures";
 
 describe("CleartextEncryptedInput", () => {
   it("encrypt produces proof bytes with expected layout", async () => {
-    const input = new CleartextEncryptedInput(CONTRACT_ADDRESS, USER_ADDRESS, config)
+    const input = new CleartextEncryptedInput(
+      CONTRACT_ADDRESS,
+      USER_ADDRESS,
+      CLEAR_TEXT_MOCK_CONFIG,
+    )
       .add8(42n)
       .add8(99n);
 
@@ -48,7 +37,11 @@ describe("CleartextEncryptedInput", () => {
   });
 
   it("add methods map to expected FheType metadata", async () => {
-    const input = new CleartextEncryptedInput(CONTRACT_ADDRESS, USER_ADDRESS, config)
+    const input = new CleartextEncryptedInput(
+      CONTRACT_ADDRESS,
+      USER_ADDRESS,
+      CLEAR_TEXT_MOCK_CONFIG,
+    )
       .addBool(true)
       .add4(4n)
       .add8(8n)
@@ -74,7 +67,11 @@ describe("CleartextEncryptedInput", () => {
   });
 
   it("returned handles match handles embedded in proof", async () => {
-    const input = new CleartextEncryptedInput(CONTRACT_ADDRESS, USER_ADDRESS, config)
+    const input = new CleartextEncryptedInput(
+      CONTRACT_ADDRESS,
+      USER_ADDRESS,
+      CLEAR_TEXT_MOCK_CONFIG,
+    )
       .add8(7n)
       .add16(11n)
       .add32(13n);
@@ -86,5 +83,25 @@ describe("CleartextEncryptedInput", () => {
     );
 
     expect(embedded.map(ethers.hexlify)).toEqual(handles.map(ethers.hexlify));
+  });
+
+  it("throws when adding negative cleartext values", () => {
+    const input = new CleartextEncryptedInput(
+      CONTRACT_ADDRESS,
+      USER_ADDRESS,
+      CLEAR_TEXT_MOCK_CONFIG,
+    );
+
+    expect(() => input.add8(-1n)).toThrow(/non-negative/i);
+  });
+
+  it("throws when adding value above FheType max bit width", () => {
+    const input = new CleartextEncryptedInput(
+      CONTRACT_ADDRESS,
+      USER_ADDRESS,
+      CLEAR_TEXT_MOCK_CONFIG,
+    );
+
+    expect(() => input.add8(256n)).toThrow(/exceeds max/i);
   });
 });

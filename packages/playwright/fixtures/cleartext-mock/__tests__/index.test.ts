@@ -1,25 +1,20 @@
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
 import { CLEARTEXT_EXECUTOR_BYTECODE } from "../bytecode";
+import { FHEVM_ADDRESSES } from "../constants";
+import { CleartextEncryptedInput } from "../encrypted-input";
+import { ACL_ABI, CleartextMockFhevm, EXECUTOR_ABI } from "../index";
 import {
-  FHEVM_ADDRESSES,
-  GATEWAY_CHAIN_ID,
-  VERIFYING_CONTRACTS,
-} from "../constants";
-import { CleartextMockFhevm } from "../index";
-import type { CleartextMockConfig } from "../types";
+  CLEAR_TEXT_MOCK_CONFIG,
+  CONTRACT_ADDRESS,
+  USER_ADDRESS,
+} from "./fixtures";
 
 const EIP1967_IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
-const ACL_INTERFACE = new ethers.Interface([
-  "function persistAllowed(bytes32 handle, address account) view returns (bool)",
-  "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
-]);
-
-const EXECUTOR_INTERFACE = new ethers.Interface([
-  "function plaintexts(bytes32 handle) view returns (uint256)",
-]);
+const ACL_INTERFACE = new ethers.Interface(ACL_ABI);
+const EXECUTOR_INTERFACE = new ethers.Interface(EXECUTOR_ABI);
 
 type MockProviderOptions = {
   implementationAddress?: string;
@@ -91,23 +86,12 @@ function createMockProvider(options: MockProviderOptions = {}) {
   return { provider, calls };
 }
 
-const config: CleartextMockConfig = {
-  chainId: 31_337n,
-  gatewayChainId: GATEWAY_CHAIN_ID,
-  aclAddress: FHEVM_ADDRESSES.acl,
-  executorProxyAddress: FHEVM_ADDRESSES.executor,
-  inputVerifierContractAddress: FHEVM_ADDRESSES.inputVerifier,
-  kmsContractAddress: FHEVM_ADDRESSES.kmsVerifier,
-  verifyingContractAddressInputVerification: VERIFYING_CONTRACTS.inputVerification,
-  verifyingContractAddressDecryption: VERIFYING_CONTRACTS.decryption,
-};
-
 describe("CleartextMockFhevm", () => {
   it("create patches the implementation code extracted from EIP-1967 slot", async () => {
     const implementationAddress = "0x7000000000000000000000000000000000000007";
     const { provider, calls } = createMockProvider({ implementationAddress });
 
-    await CleartextMockFhevm.create(provider as unknown as ethers.JsonRpcProvider, config);
+    await CleartextMockFhevm.create(provider, CLEAR_TEXT_MOCK_CONFIG);
 
     expect(calls[0]).toEqual({
       method: "eth_getStorageAt",
@@ -124,10 +108,7 @@ describe("CleartextMockFhevm", () => {
     const { provider } = createMockProvider({
       persistAllowed: () => false,
     });
-    const fhevm = await CleartextMockFhevm.create(
-      provider as unknown as ethers.JsonRpcProvider,
-      config,
-    );
+    const fhevm = await CleartextMockFhevm.create(provider, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(
       fhevm.userDecrypt(
@@ -148,10 +129,7 @@ describe("CleartextMockFhevm", () => {
     const { provider } = createMockProvider({
       isAllowedForDecryption: () => false,
     });
-    const fhevm = await CleartextMockFhevm.create(
-      provider as unknown as ethers.JsonRpcProvider,
-      config,
-    );
+    const fhevm = await CleartextMockFhevm.create(provider, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(fhevm.publicDecrypt([handle])).rejects.toThrow(/not allowed/i);
   });
@@ -167,10 +145,7 @@ describe("CleartextMockFhevm", () => {
         [handleB.toLowerCase()]: 99n,
       },
     });
-    const fhevm = await CleartextMockFhevm.create(
-      provider as unknown as ethers.JsonRpcProvider,
-      config,
-    );
+    const fhevm = await CleartextMockFhevm.create(provider, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.publicDecrypt([handleA, handleB]);
     const proofBytes = ethers.getBytes(result.decryptionProof);
@@ -189,10 +164,7 @@ describe("CleartextMockFhevm", () => {
 
   it("generateKeypair returns distinct 32-byte hex strings", async () => {
     const { provider } = createMockProvider();
-    const fhevm = await CleartextMockFhevm.create(
-      provider as unknown as ethers.JsonRpcProvider,
-      config,
-    );
+    const fhevm = await CleartextMockFhevm.create(provider, CLEAR_TEXT_MOCK_CONFIG);
 
     const first = fhevm.generateKeypair();
     const second = fhevm.generateKeypair();
@@ -206,5 +178,87 @@ describe("CleartextMockFhevm", () => {
     expect(second.publicKey).not.toBe(second.privateKey);
     expect(first.publicKey).not.toBe(second.publicKey);
     expect(first.privateKey).not.toBe(second.privateKey);
+  });
+
+  it("userDecrypt returns cleartext values when ACL allows access", async () => {
+    const handleA = "0x" + "01".repeat(32);
+    const handleB = "0x" + "02".repeat(32);
+    const { provider, calls } = createMockProvider({
+      persistAllowed: () => true,
+      plaintexts: {
+        [handleA.toLowerCase()]: 7n,
+        [handleB.toLowerCase()]: 11n,
+      },
+    });
+    const fhevm = await CleartextMockFhevm.create(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    const result = await fhevm.userDecrypt(
+      [
+        { handle: handleA, contractAddress: CONTRACT_ADDRESS },
+        { handle: handleB, contractAddress: CONTRACT_ADDRESS },
+      ],
+      "0x" + "11".repeat(32),
+      "0x" + "22".repeat(32),
+      "0x" + "33".repeat(65),
+      [CONTRACT_ADDRESS],
+      USER_ADDRESS,
+      1,
+      1,
+    );
+
+    expect(result[handleA]).toBe(7n);
+    expect(result[handleB]).toBe(11n);
+
+    const persistAllowedCalls = calls.filter(
+      (call) =>
+        call.method === "eth_call" &&
+        (call.params[0] as { to: string }).to.toLowerCase() === FHEVM_ADDRESSES.acl.toLowerCase(),
+    );
+    const plaintextCalls = calls.filter(
+      (call) =>
+        call.method === "eth_call" &&
+        (call.params[0] as { to: string }).to.toLowerCase() === FHEVM_ADDRESSES.executor.toLowerCase(),
+    );
+
+    expect(persistAllowedCalls).toHaveLength(2);
+    expect(plaintextCalls).toHaveLength(2);
+  });
+
+  it("createEIP712 returns a typed data payload for user decrypt requests", async () => {
+    const { provider } = createMockProvider();
+    const fhevm = await CleartextMockFhevm.create(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    const typedData = fhevm.createEIP712(
+      "0x" + "ab".repeat(32),
+      [CONTRACT_ADDRESS],
+      1710000000,
+      7,
+    );
+
+    expect(typedData.primaryType).toBe("UserDecryptRequestVerification");
+    expect(typedData.domain).toEqual({
+      name: "Decryption",
+      version: "1",
+      chainId: CLEAR_TEXT_MOCK_CONFIG.chainId,
+      verifyingContract: CLEAR_TEXT_MOCK_CONFIG.verifyingContractAddressDecryption,
+    });
+    expect(typedData.message).toEqual({
+      publicKey: "0x" + "ab".repeat(32),
+      contractAddresses: [CONTRACT_ADDRESS],
+      startTimestamp: 1710000000n,
+      durationDays: 7n,
+      extraData: "0x00",
+    });
+  });
+
+  it("createEncryptedInput returns a working CleartextEncryptedInput instance", async () => {
+    const { provider } = createMockProvider();
+    const fhevm = await CleartextMockFhevm.create(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    const encryptedInput = fhevm.createEncryptedInput(CONTRACT_ADDRESS, USER_ADDRESS);
+
+    expect(encryptedInput).toBeInstanceOf(CleartextEncryptedInput);
+    const encrypted = await encryptedInput.add8(1n).encrypt();
+    expect(encrypted.handles).toHaveLength(1);
   });
 });
