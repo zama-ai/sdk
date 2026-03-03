@@ -1,12 +1,8 @@
 import { ethers } from "ethers";
-import { CLEARTEXT_EXECUTOR_BYTECODE } from "./bytecode";
 import { MOCK_KMS_SIGNER_PK } from "./constants";
 import { KMS_DECRYPTION_EIP712, USER_DECRYPT_EIP712 } from "./eip712";
 import { CleartextEncryptedInput } from "./encrypted-input";
 import type { CleartextMockConfig } from "./types";
-
-const EIP1967_IMPLEMENTATION_SLOT =
-  "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
 export const ACL_ABI = [
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -35,24 +31,6 @@ export class CleartextMockFhevm {
   }
 
   static async create(provider: RpcLike, config: CleartextMockConfig): Promise<CleartextMockFhevm> {
-    const rawSlot = (await provider.send("eth_getStorageAt", [
-      config.executorProxyAddress,
-      EIP1967_IMPLEMENTATION_SLOT,
-      "latest",
-    ])) as string;
-
-    const implementationAddress = ethers.getAddress(ethers.dataSlice(rawSlot, 12));
-
-    // If the EIP-1967 slot is empty (e.g. bytecode injected directly at the
-    // deterministic address via hardhat_setCode rather than a UUPS proxy),
-    // patch the executor address itself.
-    const target =
-      implementationAddress === ethers.ZeroAddress
-        ? config.executorProxyAddress
-        : implementationAddress;
-
-    await provider.send("hardhat_setCode", [target, CLEARTEXT_EXECUTOR_BYTECODE]);
-
     return new CleartextMockFhevm(provider, config);
   }
 

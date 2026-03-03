@@ -14,8 +14,8 @@ const contracts = {
   cUSDT: deployments.cUSDT,
   USDC: deployments.erc20,
   cUSDC: deployments.cToken,
-  transferBatcher: "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
-  feeManager: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  transferBatcher: deployments.transferBatcher,
+  feeManager: deployments.feeManager,
 } as const;
 
 /** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */
