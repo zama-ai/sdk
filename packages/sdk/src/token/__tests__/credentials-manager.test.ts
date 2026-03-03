@@ -68,7 +68,7 @@ describe("CredentialsManager", () => {
     signer = createMockSigner();
     store = new MemoryStorage();
     manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -127,7 +127,7 @@ describe("CredentialsManager", () => {
 
     // Simulate page reload: session signatures are lost
     const manager2 = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -154,7 +154,7 @@ describe("CredentialsManager", () => {
     // Simulate page reload: session signatures are lost
     // New manager instance should re-sign and return valid credentials
     const manager2 = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -181,7 +181,7 @@ describe("CredentialsManager", () => {
 
     // New manager (no cache) reads expired data from store → re-generates
     const manager2 = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -310,7 +310,7 @@ describe("CredentialsManager", () => {
 
     // New manager should see expired credentials (nowSeconds >= expiresAt)
     const manager2 = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -341,7 +341,7 @@ describe("CredentialsManager", () => {
       await store.set(storeKey, parsed);
 
       const manager2 = new CredentialsManager({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: store,
         sessionStorage: new MemoryStorage(),
@@ -354,7 +354,7 @@ describe("CredentialsManager", () => {
       await manager.allow("0xtoken" as Address);
 
       const manager2 = new CredentialsManager({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: store,
         sessionStorage: new MemoryStorage(),
@@ -401,7 +401,7 @@ describe("session allow/revoke", () => {
     signer = createMockSigner();
     store = new MemoryStorage();
     manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -443,7 +443,7 @@ describe("session allow/revoke", () => {
   it("revoke() emits CredentialsRevoked event", async () => {
     const events: string[] = [];
     const manager2 = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),

@@ -131,7 +131,7 @@ describe("ZamaSDK", () => {
     sdkNoSubscribe.terminate();
   });
 
-  it("revokeSession clears session storage", async () => {
+  it("revoke clears session storage", async () => {
     const sessionStorage = new MemoryStorage();
     const localSigner = createMockSigner();
     const localRelayer = createMockRelayer();
@@ -159,9 +159,47 @@ describe("ZamaSDK", () => {
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
 
+    await localSdk.revoke();
+
+    expect(await sessionStorage.get(storeKey)).toBeNull();
+  });
+
+  it("revokeSession clears session storage", async () => {
+    const sessionStorage = new MemoryStorage();
+    const localSigner = createMockSigner();
+    const localRelayer = createMockRelayer();
+
+    const localSdk = new ZamaSDK({
+      relayer: localRelayer,
+      signer: localSigner,
+      storage: new MemoryStorage(),
+      sessionStorage,
+    });
+
+    const address = (await localSigner.getAddress()).toLowerCase();
+    const chainId = await localSigner.getChainId();
+    const storeKey = await computeStoreKey(address, chainId);
+
+    await sessionStorage.set(storeKey, "0xsomeSignature");
+    expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
+
     await localSdk.revokeSession();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
+  });
+
+  it("revokeSession emits CredentialsRevoked event", async () => {
+    const events: { type: string }[] = [];
+    const localSdk = new ZamaSDK({
+      relayer: createMockRelayer(),
+      signer: createMockSigner(),
+      storage: new MemoryStorage(),
+      onEvent: (e) => events.push(e),
+    });
+
+    await localSdk.revokeSession();
+
+    expect(events).toContainEqual(expect.objectContaining({ type: "credentials:revoked" }));
   });
 
   describe("lifecycle auto-revoke", () => {

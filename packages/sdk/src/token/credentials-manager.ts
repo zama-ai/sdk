@@ -32,7 +32,7 @@ interface LegacyEncryptedCredentials extends EncryptedCredentials {
 /** Configuration for constructing a {@link CredentialsManager}. */
 export interface CredentialsManagerConfig {
   /** FHE relayer backend for keypair generation and EIP-712 creation. */
-  sdk: RelayerSDK;
+  relayer: RelayerSDK;
   /** Wallet signer for signing EIP-712 typed data. */
   signer: GenericSigner;
   /** Credential storage backend for persisting encrypted credentials. */
@@ -61,7 +61,7 @@ export async function computeStoreKey(address: string, chainId: number): Promise
 }
 
 export class CredentialsManager {
-  #sdk: RelayerSDK;
+  #relayer: RelayerSDK;
   #signer: GenericSigner;
   #storage: GenericStorage;
   #sessionStorage: GenericStorage;
@@ -71,7 +71,7 @@ export class CredentialsManager {
   #createPromiseKey: string | null = null;
 
   constructor(config: CredentialsManagerConfig) {
-    this.#sdk = config.sdk;
+    this.#relayer = config.relayer;
     this.#signer = config.signer;
     this.#storage = config.storage;
     this.#sessionStorage = config.sessionStorage;
@@ -302,7 +302,7 @@ export class CredentialsManager {
   }
 
   async #sign(encrypted: EncryptedCredentials): Promise<string> {
-    const eip712 = await this.#sdk.createEIP712(
+    const eip712 = await this.#relayer.createEIP712(
       encrypted.publicKey,
       encrypted.contractAddresses,
       encrypted.startTimestamp,
@@ -325,10 +325,10 @@ export class CredentialsManager {
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
     this.#emit({ type: ZamaSDKEvents.CredentialsCreating, contractAddresses });
     try {
-      const keypair = await this.#sdk.generateKeypair();
+      const keypair = await this.#relayer.generateKeypair();
       const startTimestamp = Math.floor(Date.now() / 1000);
 
-      const eip712 = await this.#sdk.createEIP712(
+      const eip712 = await this.#relayer.createEIP712(
         keypair.publicKey,
         contractAddresses,
         startTimestamp,

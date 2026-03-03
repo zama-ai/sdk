@@ -117,7 +117,7 @@ describe("ReadonlyToken event emissions", () => {
 
   function createReadonlyToken() {
     return new ReadonlyToken({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -217,7 +217,7 @@ describe("ReadonlyToken event emissions", () => {
 
   it("works without onEvent (no-op, does not throw)", async () => {
     const token = new ReadonlyToken({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -244,7 +244,7 @@ describe("Token event emissions", () => {
 
   function createToken() {
     return new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -594,7 +594,7 @@ describe("CredentialsManager event emissions", () => {
 
   it("emits CredentialsLoading and CredentialsCreating/Created on first call", async () => {
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -613,7 +613,7 @@ describe("CredentialsManager event emissions", () => {
   it("emits CredentialsCached on cache hit", async () => {
     const store = new MemoryStorage();
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -636,7 +636,7 @@ describe("CredentialsManager event emissions", () => {
   it("emits CredentialsExpired when credentials are expired", async () => {
     const store = new MemoryStorage();
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -666,7 +666,7 @@ describe("CredentialsManager event emissions", () => {
 
     // New manager reads expired data
     const manager2 = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -683,7 +683,7 @@ describe("CredentialsManager event emissions", () => {
 
   it("includes contractAddresses on credential events", async () => {
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -707,7 +707,7 @@ describe("CredentialsManager event emissions", () => {
 
   it("adds timestamp to all emitted events", async () => {
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -724,7 +724,7 @@ describe("CredentialsManager event emissions", () => {
 
   it("works without onEvent (no-op, does not throw)", async () => {
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),

@@ -5,7 +5,7 @@ import { useConfidentialTransfer } from "../token/use-confidential-transfer";
 import { useConfidentialApprove } from "../token/use-confidential-approve";
 import { useApproveUnderlying } from "../token/use-approve-underlying";
 import { useShield } from "../token/use-shield";
-import { useTokenAllow } from "../token/use-token-allow";
+import { useAllow } from "../token/use-allow";
 import { useEncrypt } from "../relayer/use-encrypt";
 import { confidentialBalanceQueryKeys } from "../token/balance-query-keys";
 import { renderWithProviders, createMockSigner, createMockRelayer } from "./test-utils";
@@ -60,9 +60,9 @@ describe("useShield", () => {
   });
 });
 
-describe("useTokenAllow", () => {
+describe("useAllow", () => {
   it("provides mutate function", () => {
-    const { result } = renderWithProviders(() => useTokenAllow());
+    const { result } = renderWithProviders(() => useAllow());
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);

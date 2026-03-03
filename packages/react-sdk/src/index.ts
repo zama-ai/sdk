@@ -180,13 +180,10 @@ export {
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
-export { useTokenAllow, tokenAllowMutationOptions } from "./token/use-token-allow";
-export {
-  useIsTokenAllowed,
-  isAllowedQueryKeys,
-  isAllowedQueryOptions,
-} from "./token/use-is-allowed";
-export { useTokenRevoke, tokenRevokeMutationOptions } from "./token/use-token-revoke";
+export { useAllow, allowMutationOptions } from "./token/use-allow";
+export { useIsAllowed, isAllowedQueryKeys, isAllowedQueryOptions } from "./token/use-is-allowed";
+export { useRevoke, revokeMutationOptions } from "./token/use-revoke";
+export { useRevokeSession, revokeSessionMutationOptions } from "./token/use-revoke-session";
 export {
   useConfidentialTransfer,
   confidentialTransferMutationOptions,
@@ -262,12 +259,12 @@ export {
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
 export {
-  useTokenMetadata,
-  useTokenMetadataSuspense,
-  tokenMetadataQueryKeys,
-  tokenMetadataQueryOptions,
+  useMetadata,
+  useMetadataSuspense,
+  metadataQueryKeys,
+  metadataQueryOptions,
   type TokenMetadata,
-} from "./token/use-token-metadata";
+} from "./token/use-metadata";
 export {
   useActivityFeed,
   activityFeedQueryKeys,

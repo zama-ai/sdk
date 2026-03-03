@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ReadonlyToken, type Address, type ZamaSDK } from "@zama-fhe/sdk";
+import type { Address, ZamaSDK } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
 import { isAllowedQueryKeys } from "./use-is-allowed";
 
@@ -11,12 +11,11 @@ import { isAllowedQueryKeys } from "./use-is-allowed";
  * @param sdk - A `ZamaSDK` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */
-export function tokenAllowMutationOptions(sdk: ZamaSDK) {
+export function allowMutationOptions(sdk: ZamaSDK) {
   return {
-    mutationKey: ["tokenAllow"] as const,
+    mutationKey: ["allow"] as const,
     mutationFn: async (tokenAddresses: Address[]) => {
-      const tokens = tokenAddresses.map((addr) => sdk.createReadonlyToken(addr));
-      return ReadonlyToken.allow(...tokens);
+      await sdk.allow(...tokenAddresses);
     },
   };
 }
@@ -28,16 +27,16 @@ export function tokenAllowMutationOptions(sdk: ZamaSDK) {
  *
  * @example
  * ```tsx
- * const { mutateAsync: tokenAllow, isPending } = useTokenAllow();
- * // Call tokenAllow(allTokenAddresses) before any individual reveal
+ * const { mutateAsync: allow, isPending } = useAllow();
+ * // Call allow(allTokenAddresses) before any individual reveal
  * ```
  */
-export function useTokenAllow() {
+export function useAllow() {
   const sdk = useZamaSDK();
   const queryClient = useQueryClient();
 
   return useMutation<void, Error, Address[]>({
-    ...tokenAllowMutationOptions(sdk),
+    ...allowMutationOptions(sdk),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: isAllowedQueryKeys.all });
     },

@@ -72,7 +72,7 @@ describe("Integration: multi-step workflows", () => {
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -144,7 +144,7 @@ describe("Integration: multi-step workflows", () => {
 
       // Step 3: Check receiver balance (different token instance for same contract)
       const receiverToken = new Token({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),

@@ -75,7 +75,7 @@ describe("NoCiphertextError detection (P3)", () => {
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -194,7 +194,7 @@ describe("Unshield callbacks (P4)", () => {
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -324,7 +324,7 @@ describe("Address normalization (P6)", () => {
 
   it("preserves token address case in constructor", () => {
     const token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -336,7 +336,7 @@ describe("Address normalization (P6)", () => {
 
   it("preserves wrapper address case in constructor", () => {
     const token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -349,7 +349,7 @@ describe("Address normalization (P6)", () => {
 
   it("defaults wrapper to normalized address when not provided", () => {
     const token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -363,7 +363,7 @@ describe("Address normalization (P6)", () => {
     expect(
       () =>
         new Token({
-          sdk: sdk as unknown as RelayerSDK,
+          relayer: sdk as unknown as RelayerSDK,
           signer,
           storage: new MemoryStorage(),
           sessionStorage: new MemoryStorage(),

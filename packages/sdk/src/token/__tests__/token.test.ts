@@ -69,7 +69,7 @@ describe("Token", () => {
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -167,7 +167,7 @@ describe("Token", () => {
 
     it("decrypts pre-read handles without calling readContract", async () => {
       const token2 = new Token({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),
@@ -190,7 +190,7 @@ describe("Token", () => {
 
     it("skips decryption for zero handles", async () => {
       const token2 = new Token({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),

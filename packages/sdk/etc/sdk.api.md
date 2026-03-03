@@ -12476,7 +12476,7 @@ export interface GenericSigner {
     getChainId(): Promise<number>;
     readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe(callbacks: SignerLifecycleCallbacks): () => void;
+    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
 }
@@ -19280,7 +19280,7 @@ export class ReadonlyToken {
     protected normalizeHandle(value: unknown): Address;
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Address>;
-    revoke(): Promise<void>;
+    revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     protected readonly sdk: RelayerSDK;
     // (undocumented)
@@ -19293,9 +19293,10 @@ export class ReadonlyToken {
 // @public
 export interface ReadonlyTokenConfig {
     address: Address;
+    credentials?: CredentialsManager;
     durationDays?: number;
     onEvent?: ZamaSDKEventListener;
-    sdk: RelayerSDK;
+    relayer: RelayerSDK;
     sessionStorage: GenericStorage;
     signer: GenericSigner;
     storage: GenericStorage;
@@ -32935,10 +32936,15 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     constructor(config: ZamaSDKConfig);
+    allow(...contractAddresses: Address[]): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     // (undocumented)
+    readonly credentials: CredentialsManager;
+    isAllowed(): Promise<boolean>;
+    // (undocumented)
     readonly relayer: RelayerSDK;
+    revoke(...contractAddresses: Address[]): Promise<void>;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;

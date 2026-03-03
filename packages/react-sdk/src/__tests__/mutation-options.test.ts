@@ -12,7 +12,7 @@ import { finalizeUnwrapMutationOptions } from "../token/use-finalize-unwrap";
 import { unshieldMutationOptions } from "../token/use-unshield";
 import { unshieldAllMutationOptions } from "../token/use-unshield-all";
 import { resumeUnshieldMutationOptions } from "../token/use-resume-unshield";
-import { tokenAllowMutationOptions } from "../token/use-token-allow";
+import { allowMutationOptions } from "../token/use-allow";
 import { encryptMutationOptions } from "../relayer/use-encrypt";
 import { createMockSigner, createMockRelayer, createMockStorage } from "./test-utils";
 
@@ -151,16 +151,16 @@ it("resumeUnshieldMutationOptions", async () => {
   expect(token.resumeUnshield).toHaveBeenCalledWith(txHash, undefined);
 });
 
-it("tokenAllowMutationOptions", async () => {
+it("allowMutationOptions", async () => {
   const relayer = createMockRelayer();
   const signer = createMockSigner();
   const storage = createMockStorage();
   // We need a real-ish ZamaSDK to test this
   const { ZamaSDK: ZamaSDKClass } = await import("@zama-fhe/sdk");
   const sdk = new ZamaSDKClass({ relayer, signer, storage });
-  const opts = tokenAllowMutationOptions(sdk);
+  const opts = allowMutationOptions(sdk);
 
-  expect(opts.mutationKey).toEqual(["tokenAllow"]);
+  expect(opts.mutationKey).toEqual(["allow"]);
   // mutationFn creates ReadonlyToken instances and calls ReadonlyToken.allow — just verify it doesn't throw on empty
   // We can't fully test without mocking static methods, so just verify the key
 });

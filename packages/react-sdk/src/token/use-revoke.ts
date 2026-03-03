@@ -11,12 +11,11 @@ import { isAllowedQueryKeys } from "./use-is-allowed";
  * @param sdk - A `ZamaSDK` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */
-export function tokenRevokeMutationOptions(sdk: ZamaSDK) {
+export function revokeMutationOptions(sdk: ZamaSDK) {
   return {
-    mutationKey: ["tokenRevoke"] as const,
+    mutationKey: ["revoke"] as const,
     mutationFn: async (tokenAddresses: Address[]) => {
-      const token = sdk.createReadonlyToken(tokenAddresses[0]!);
-      await token.revoke(...tokenAddresses);
+      await sdk.revoke(...tokenAddresses);
     },
   };
 }
@@ -31,16 +30,16 @@ export function tokenRevokeMutationOptions(sdk: ZamaSDK) {
  *
  * @example
  * ```tsx
- * const { mutate: tokenRevoke } = useTokenRevoke();
- * tokenRevoke(["0xTokenA", "0xTokenB"]);
+ * const { mutate: revoke } = useRevoke();
+ * revoke(["0xTokenA", "0xTokenB"]);
  * ```
  */
-export function useTokenRevoke() {
+export function useRevoke() {
   const sdk = useZamaSDK();
   const queryClient = useQueryClient();
 
   return useMutation<void, Error, Address[]>({
-    ...tokenRevokeMutationOptions(sdk),
+    ...revokeMutationOptions(sdk),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: isAllowedQueryKeys.all });
     },

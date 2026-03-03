@@ -1,34 +1,31 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { Address, ZamaSDK } from "@zama-fhe/sdk";
+import type { ZamaSDK } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
 
 export const isAllowedQueryKeys = {
   all: ["zama", "isAllowed"] as const,
-  token: (tokenAddress: Address) => [...isAllowedQueryKeys.all, tokenAddress] as const,
 };
 
-export function isAllowedQueryOptions(sdk: ZamaSDK, tokenAddress: Address) {
+export function isAllowedQueryOptions(sdk: ZamaSDK) {
   return {
-    queryKey: isAllowedQueryKeys.token(tokenAddress),
-    queryFn: () => sdk.createReadonlyToken(tokenAddress).isAllowed(),
+    queryKey: isAllowedQueryKeys.all,
+    queryFn: () => sdk.isAllowed(),
   };
 }
 
 /**
- * Check whether a session signature is cached for the given token.
+ * Check whether a session signature is cached for the connected wallet.
  * Returns `true` if decrypt operations can proceed without a wallet prompt.
- *
- * @param tokenAddress - The confidential token contract address.
  *
  * @example
  * ```tsx
- * const { data: allowed } = useIsTokenAllowed("0x...");
+ * const { data: allowed } = useIsAllowed();
  * ```
  */
-export function useIsTokenAllowed(tokenAddress: Address) {
+export function useIsAllowed() {
   const sdk = useZamaSDK();
 
-  return useQuery<boolean, Error>(isAllowedQueryOptions(sdk, tokenAddress));
+  return useQuery<boolean, Error>(isAllowedQueryOptions(sdk));
 }

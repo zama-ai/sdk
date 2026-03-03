@@ -63,7 +63,7 @@ describe("ReadonlyToken", () => {
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new ReadonlyToken({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -211,7 +211,7 @@ describe("ReadonlyToken", () => {
 
     it("throws DecryptionFailedError by default when decryption fails", async () => {
       const token2 = new ReadonlyToken({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),
@@ -241,7 +241,7 @@ describe("ReadonlyToken", () => {
 
     it("returns fallback from onError callback instead of throwing", async () => {
       const token2 = new ReadonlyToken({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),
@@ -263,7 +263,7 @@ describe("ReadonlyToken", () => {
 
     it("onError receives correct error and address", async () => {
       const token2 = new ReadonlyToken({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),
@@ -319,7 +319,7 @@ describe("ReadonlyToken", () => {
     it("allows credentials for all tokens in a single signature", async () => {
       const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
       const token2 = new ReadonlyToken({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),
@@ -360,7 +360,7 @@ describe("ZamaSDK token factory", () => {
     const sdk = createMockSdk();
     const signer = createMockSigner();
     const token = new ReadonlyToken({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),

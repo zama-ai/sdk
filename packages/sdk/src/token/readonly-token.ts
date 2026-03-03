@@ -51,13 +51,15 @@ export interface BatchDecryptOptions {
 /** Configuration for constructing a {@link ReadonlyToken}. */
 export interface ReadonlyTokenConfig {
   /** FHE relayer backend. */
-  sdk: RelayerSDK;
+  relayer: RelayerSDK;
   /** Wallet signer for read calls and credential signing. */
   signer: GenericSigner;
   /** Credential storage backend. */
   storage: GenericStorage;
   /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
   sessionStorage: GenericStorage;
+  /** Shared CredentialsManager instance. When provided, storage/sessionStorage/durationDays/onEvent are ignored for credential creation. */
+  credentials?: CredentialsManager;
   /** Address of the confidential token contract. */
   address: Address;
   /** Number of days FHE credentials remain valid. Default: `1`. */
@@ -81,15 +83,17 @@ export class ReadonlyToken {
 
   constructor(config: ReadonlyTokenConfig) {
     const address = normalizeAddress(config.address, "address");
-    this.credentials = new CredentialsManager({
-      sdk: config.sdk,
-      signer: config.signer,
-      storage: config.storage,
-      sessionStorage: config.sessionStorage,
-      durationDays: config.durationDays ?? 1,
-      onEvent: config.onEvent,
-    });
-    this.sdk = config.sdk;
+    this.credentials =
+      config.credentials ??
+      new CredentialsManager({
+        relayer: config.relayer,
+        signer: config.signer,
+        storage: config.storage,
+        sessionStorage: config.sessionStorage,
+        durationDays: config.durationDays ?? 1,
+        onEvent: config.onEvent,
+      });
+    this.sdk = config.relayer;
     this.signer = config.signer;
     this.address = address;
     this.#storage = config.storage;

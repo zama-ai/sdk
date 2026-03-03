@@ -4,7 +4,7 @@ import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
-import { computeStoreKey } from "./credentials-manager";
+import { CredentialsManager, computeStoreKey } from "./credentials-manager";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
@@ -38,8 +38,8 @@ export class ZamaSDK {
   readonly signer: GenericSigner;
   readonly storage: GenericStorage;
   readonly sessionStorage: GenericStorage;
-  readonly #credentialDurationDays: number | undefined;
-  readonly #onEvent: ZamaSDKEventListener | undefined;
+  readonly credentials: CredentialsManager;
+  readonly #onEvent: ZamaSDKEventListener;
   #unsubscribeSigner?: () => void;
   #identityReady: Promise<void>;
   #lastAddress: string | null = null;
@@ -50,9 +50,15 @@ export class ZamaSDK {
     this.signer = config.signer;
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
-    this.#credentialDurationDays = config.credentialDurationDays;
-    this.#onEvent = config.onEvent;
-
+    this.#onEvent = config.onEvent ?? function () {};
+    this.credentials = new CredentialsManager({
+      relayer: this.relayer,
+      signer: this.signer,
+      storage: this.storage,
+      sessionStorage: this.sessionStorage,
+      durationDays: config.credentialDurationDays ?? 1,
+      onEvent: this.#onEvent,
+    });
     this.#identityReady = this.#initIdentity();
 
     if (this.signer.subscribe) {
@@ -105,12 +111,12 @@ export class ZamaSDK {
    */
   createReadonlyToken(address: Address): ReadonlyToken {
     return new ReadonlyToken({
-      sdk: this.relayer,
+      relayer: this.relayer,
       signer: this.signer,
       storage: this.storage,
       sessionStorage: this.sessionStorage,
+      credentials: this.credentials,
       address: normalizeAddress(address, "address"),
-      durationDays: this.#credentialDurationDays,
       onEvent: this.#onEvent,
     });
   }
@@ -125,23 +131,53 @@ export class ZamaSDK {
    */
   createToken(address: Address, wrapper?: Address): Token {
     return new Token({
-      sdk: this.relayer,
+      relayer: this.relayer,
       signer: this.signer,
       storage: this.storage,
       sessionStorage: this.sessionStorage,
+      credentials: this.credentials,
       address: normalizeAddress(address, "address"),
       wrapper: wrapper ? normalizeAddress(wrapper, "wrapper") : undefined,
-      durationDays: this.#credentialDurationDays,
       onEvent: this.#onEvent,
     });
+  }
+
+  /**
+   * Pre-authorize FHE credentials for one or more contract addresses.
+   * A single wallet signature covers all addresses, so subsequent decrypt
+   * operations on any of these tokens reuse cached credentials.
+   *
+   * @param contractAddresses - Token contract addresses to authorize.
+   *
+   * @example
+   * ```ts
+   * await sdk.allow("0xTokenA", "0xTokenB");
+   * ```
+   */
+  async allow(...contractAddresses: Address[]): Promise<void> {
+    await this.credentials.allow(...contractAddresses);
   }
 
   /**
    * Revoke the session signature for the current signer.
    * The next decrypt operation will require a fresh wallet signature.
    *
-   * Unlike `token.credentials.revoke()`, this does not require a token address —
-   * useful for wallet disconnect/account-change handlers.
+   * @param contractAddresses - Optional addresses included in the
+   *   `credentials:revoked` event for observability.
+   *
+   * @example
+   * ```ts
+   * wallet.on("disconnect", () => sdk.revoke());
+   * await sdk.revoke("0xTokenA", "0xTokenB");
+   * ```
+   */
+  async revoke(...contractAddresses: Address[]): Promise<void> {
+    await this.credentials.revoke(...contractAddresses);
+  }
+
+  /**
+   * Revoke the session signature for the current signer without requiring
+   * contract addresses. Useful for wallet disconnect / account-change handlers.
    *
    * @example
    * ```ts
@@ -157,6 +193,14 @@ export class ZamaSDK {
       type: ZamaSDKEvents.CredentialsRevoked,
       timestamp: Date.now(),
     });
+  }
+
+  /**
+   * Whether a session signature is currently cached for the connected wallet.
+   * Use this to check if decrypt operations can proceed without a wallet prompt.
+   */
+  async isAllowed(): Promise<boolean> {
+    return this.credentials.isAllowed();
   }
 
   /**

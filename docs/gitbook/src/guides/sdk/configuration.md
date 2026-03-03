@@ -292,7 +292,7 @@ const sdk = new ZamaSDK({
 FHE credentials are stored encrypted at rest. The wallet signature that unlocks them lives in `sessionStorage` (in-memory by default). This means:
 
 - On page load, the user must re-sign once to authorize their credentials for the session
-- Closing the tab (or calling `await token.revoke()`) clears the signature from memory
+- Closing the tab (or calling `await sdk.revokeSession()`) clears the signature from memory
 - The encrypted credentials survive across sessions in `storage`; only the allow step repeats
 - In web extensions, you can use `chromeSessionStorage` so the signature survives service worker restarts ([see below](#web-extensions))
 
@@ -306,34 +306,30 @@ const token = sdk.createToken("0xTokenAddress");
 // Allow a single token
 await token.allow();
 
-// Or allow multiple tokens with a single wallet signature
-const tokenA = sdk.createToken("0xTokenA");
-const tokenB = sdk.createToken("0xTokenB");
-await ReadonlyToken.allow(tokenA, tokenB);
+// Or allow multiple tokens at the SDK level with a single wallet signature
+await sdk.allow("0xTokenA", "0xTokenB");
 
 // Check if session is active
-const allowed = await token.isAllowed();
+const allowed = await sdk.isAllowed();
 ```
+
+A single signature covers all addresses passed to `allow()`. If you later call `allow()` with a contract not in the original set, the SDK must generate a fresh keypair and request a new wallet signature. Batching upfront avoids this.
 
 ### Revoke (clear session)
 
 Clear the session signature when the user disconnects or locks their wallet:
 
 ```ts
+// Revoke from a token instance
 await token.revoke();
+
+// Or revoke at the SDK level with addresses (included in the credentials:revoked event)
+await sdk.revoke("0xTokenA", "0xTokenB");
+
+// Or revoke the session without specifying addresses
+await sdk.revokeSession();
 // Next decrypt will require a fresh wallet signature
 ```
-
-### Batch allow (minimize re-signing)
-
-If your app works with multiple token contracts, pass them all upfront to avoid re-signing when new contracts appear:
-
-```ts
-// One signature covers all three tokens
-await token.credentials.allow("0xTokenA", "0xTokenB", "0xTokenC");
-```
-
-If you later call `allow()` with a contract not in the original set, the SDK must generate a fresh keypair and request a new wallet signature. Batching upfront avoids this.
 
 ### Wallet lifecycle integration
 
@@ -362,13 +358,13 @@ Without this, a cached session signature remains valid until expiry — even if 
 const token = sdk.createToken("0xTokenAddress");
 
 // 2. Allow once for the session
-await token.allow();
+await sdk.allow("0xTokenAddress");
 
 // 3. All decrypts reuse the cached session signature — no popups
 const balance = await token.decryptBalance(handle);
 
 // 4. User disconnects
-await token.revoke();
+await sdk.revokeSession();
 ```
 
 ## Web extensions

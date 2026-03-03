@@ -43,7 +43,7 @@ export class ViemSigner implements GenericSigner {
     // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
-    subscribe(input: SignerLifecycleCallbacks): () => void;
+    subscribe(callbacks: SignerLifecycleCallbacks): () => void;
     // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
