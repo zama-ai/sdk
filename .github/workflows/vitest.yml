@@ -43,6 +43,7 @@ jobs:
       - name: Check API reports are up to date
         run: pnpm api-report:check
 
+      # dist/ is already built by api-report:check above (pnpm build && ...)
       - name: Check bundle size
         run: pnpm size
 
