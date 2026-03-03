@@ -1,6 +1,0 @@
-Command:
-forge inspect CleartextFHEVMExecutor storage-layout
-
-Output:
-Name       | Type                        | Slot | Offset | Bytes | Contract
-plaintexts | mapping(bytes32 => uint256) | 0    | 0      | 32    | src/CleartextFHEVMExecutor.sol:CleartextFHEVMExecutor
