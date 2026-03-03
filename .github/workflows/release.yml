@@ -85,11 +85,14 @@ jobs:
 
       - name: Ensure npm 11 for trusted publishing
         run: |
-          npm i -g npm@^11
+          npm i -g npm@11
           npm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
 
       - name: Semantic release (dry-run)
         run: pnpm release:dry-run
