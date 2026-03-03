@@ -1,0 +1,1 @@
+packages/playwright:tsc:cd /Users/msaug/zama/token-sdk/packages/playwright && npx tsc --noEmit

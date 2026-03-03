@@ -13,9 +13,7 @@ export const ACL_ABI = [
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
 ] as const;
 
-export const EXECUTOR_ABI = [
-  "function plaintexts(bytes32 handle) view returns (uint256)",
-] as const;
+export const EXECUTOR_ABI = ["function plaintexts(bytes32 handle) view returns (uint256)"] as const;
 
 const ACL_INTERFACE = new ethers.Interface(ACL_ABI);
 const EXECUTOR_INTERFACE = new ethers.Interface(EXECUTOR_ABI);
@@ -36,24 +34,24 @@ export class CleartextMockFhevm {
     this.#config = config;
   }
 
-  static async create(
-    provider: RpcLike,
-    config: CleartextMockConfig,
-  ): Promise<CleartextMockFhevm> {
+  static async create(provider: RpcLike, config: CleartextMockConfig): Promise<CleartextMockFhevm> {
     const rawSlot = (await provider.send("eth_getStorageAt", [
       config.executorProxyAddress,
       EIP1967_IMPLEMENTATION_SLOT,
       "latest",
     ])) as string;
 
-    const implementationAddress = ethers.getAddress(
-      ethers.dataSlice(rawSlot, 12),
-    );
+    const implementationAddress = ethers.getAddress(ethers.dataSlice(rawSlot, 12));
 
-    await provider.send("hardhat_setCode", [
-      implementationAddress,
-      CLEARTEXT_EXECUTOR_BYTECODE,
-    ]);
+    // If the EIP-1967 slot is empty (e.g. bytecode injected directly at the
+    // deterministic address via hardhat_setCode rather than a UUPS proxy),
+    // patch the executor address itself.
+    const target =
+      implementationAddress === ethers.ZeroAddress
+        ? config.executorProxyAddress
+        : implementationAddress;
+
+    await provider.send("hardhat_setCode", [target, CLEARTEXT_EXECUTOR_BYTECODE]);
 
     return new CleartextMockFhevm(provider, config);
   }
@@ -92,10 +90,7 @@ export class CleartextMockFhevm {
     };
   }
 
-  createEncryptedInput(
-    contractAddress: string,
-    userAddress: string,
-  ): CleartextEncryptedInput {
+  createEncryptedInput(contractAddress: string, userAddress: string): CleartextEncryptedInput {
     return new CleartextEncryptedInput(contractAddress, userAddress, this.#config);
   }
 
@@ -115,9 +110,7 @@ export class CleartextMockFhevm {
     );
 
     const allowedResults = await Promise.all(
-      normalizedHandles.map((handle) =>
-        this.#persistAllowed(handle, normalizedSignerAddress),
-      ),
+      normalizedHandles.map((handle) => this.#persistAllowed(handle, normalizedSignerAddress)),
     );
     const unauthorizedIndex = allowedResults.findIndex((isAllowed) => !isAllowed);
     if (unauthorizedIndex !== -1) {
@@ -140,9 +133,7 @@ export class CleartextMockFhevm {
     abiEncodedClearValues: string;
     decryptionProof: string;
   }> {
-    const normalizedHandles = handles.map((handle) =>
-      ethers.toBeHex(ethers.toBigInt(handle), 32),
-    );
+    const normalizedHandles = handles.map((handle) => ethers.toBeHex(ethers.toBigInt(handle), 32));
 
     const allowedResults = await Promise.all(
       normalizedHandles.map((handle) => this.#isAllowedForDecryption(handle)),
