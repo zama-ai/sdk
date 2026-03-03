@@ -1075,17 +1075,17 @@ export interface BatchTransferData {
 }
 
 // @public
-export class ChromeSessionStorage<T = unknown> implements GenericStorage<T> {
+export class ChromeSessionStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
     // (undocumented)
-    get(key: string): Promise<T | null>;
+    get<T = unknown>(key: string): Promise<T | null>;
     // (undocumented)
-    set(key: string, value: T): Promise<void>;
+    set(key: string, value: unknown): Promise<void>;
 }
 
 // @public
-export const chromeSessionStorage: ChromeSessionStorage<unknown>;
+export const chromeSessionStorage: ChromeSessionStorage;
 
 // @public
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
@@ -12482,13 +12482,13 @@ export interface GenericSigner {
 }
 
 // @public
-export interface GenericStorage<T = unknown> {
+export interface GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
     // (undocumented)
-    get(key: string): Promise<T | null>;
+    get<T = unknown>(key: string): Promise<T | null>;
     // (undocumented)
-    set(key: string, value: T): Promise<void>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
 // @public
@@ -14682,20 +14682,20 @@ export const HardhatConfig: FhevmInstanceConfig;
 export type Hex = `0x${string}`;
 
 // @public
-export class IndexedDBStorage<T = unknown> implements GenericStorage<T> {
+export class IndexedDBStorage implements GenericStorage {
     constructor(dbName?: string, dbVersion?: number);
     // (undocumented)
     clear(): Promise<void>;
     // (undocumented)
     delete(key: string): Promise<void>;
     // (undocumented)
-    get(key: string): Promise<T | null>;
+    get<T = unknown>(key: string): Promise<T | null>;
     // (undocumented)
-    set(key: string, value: T): Promise<void>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
 // @public
-export const indexedDBStorage: IndexedDBStorage<unknown>;
+export const indexedDBStorage: IndexedDBStorage;
 
 export { InputProofBytesType }
 
@@ -17704,17 +17704,17 @@ export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaE
 }): R | undefined;
 
 // @public
-export class MemoryStorage<T = unknown> implements GenericStorage<T> {
+export class MemoryStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
     // (undocumented)
-    get(key: string): Promise<T | null>;
+    get<T = unknown>(key: string): Promise<T | null>;
     // (undocumented)
-    set(key: string, value: T): Promise<void>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
 // @public
-export const memoryStorage: MemoryStorage<unknown>;
+export const memoryStorage: MemoryStorage;
 
 // @public
 export function nameContract(tokenAddress: Address): {
@@ -19258,7 +19258,6 @@ export class ReadonlyToken {
     // (undocumented)
     readonly address: Address;
     allow(): Promise<void>;
-    // (undocumented)
     static allow(...tokens: ReadonlyToken[]): Promise<void>;
     allowance(wrapper: Address, owner?: Address): Promise<bigint>;
     balanceOf(owner?: Address): Promise<bigint>;
@@ -19286,7 +19285,7 @@ export class ReadonlyToken {
     protected readonly sdk: RelayerSDK;
     // (undocumented)
     readonly signer: GenericSigner;
-    protected get storage(): GenericStringStorage;
+    protected get storage(): GenericStorage;
     symbol(): Promise<string>;
     underlyingToken(): Promise<Address>;
 }
