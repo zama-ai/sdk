@@ -13,7 +13,7 @@ const HAS_CLAUDE = true;
 const HAS_CODEX = true;
 const MAX_CONCURRENCY = 6;
 const MAX_PASSES = 9;
-const BASE_BRANCH = "prerelease";
+const BASE_BRANCH = "cleartext-mocks";
 
 // ── Load work plan ────────────────────────────────────────────────────
 
