@@ -37,8 +37,8 @@ describe("eip1193Subscribe", () => {
   it("fires onAccountChange after disconnect+reconnect with same account", async () => {
     // Subscribe with initial address A
     eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
-      onDisconnect,
-      onAccountChange,
+      onDisconnect: onDisconnect as () => void,
+      onAccountChange: onAccountChange as (a: Address) => void,
     });
     // Let the getAddress() promise resolve so currentAddress is set
     await vi.waitFor(() => {});
@@ -58,8 +58,8 @@ describe("eip1193Subscribe", () => {
 
   it("revokes on repeated lock/unlock cycles with same account", async () => {
     eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
-      onDisconnect,
-      onAccountChange,
+      onDisconnect: onDisconnect as () => void,
+      onAccountChange: onAccountChange as (a: Address) => void,
     });
     await vi.waitFor(() => {});
 
