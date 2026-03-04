@@ -81,4 +81,17 @@ describe("confidentialHandlesQueryOptions", () => {
       args: ["0x4444444444444444444444444444444444444444"],
     });
   });
+
+  test("normalizes bigint readContract results to 0x-prefixed hex", async () => {
+    const signer = createMockSigner();
+    vi.mocked(signer.readContract).mockResolvedValueOnce(1n).mockResolvedValueOnce(2n);
+
+    const options = confidentialHandlesQueryOptions(signer, [tokenA, tokenB], { owner });
+    const result = await options.queryFn({ queryKey: options.queryKey });
+
+    expect(result).toEqual([
+      "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "0x0000000000000000000000000000000000000000000000000000000000000002",
+    ]);
+  });
 });

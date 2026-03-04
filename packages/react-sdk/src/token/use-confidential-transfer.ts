@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, TransactionResult } from "@zama-fhe/sdk";
+import type { TransactionResult } from "@zama-fhe/sdk";
 import {
   confidentialTransferMutationOptions,
   invalidateBalanceQueries,
@@ -66,7 +66,12 @@ export function useConfidentialTransfer(
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<TransactionResult, Error, ConfidentialTransferParams, Address>({
+  return useMutation<
+    TransactionResult,
+    Error,
+    ConfidentialTransferParams,
+    OptimisticBalanceSnapshot
+  >({
     ...confidentialTransferMutationOptions(token),
     ...options,
     onMutate: config.optimistic

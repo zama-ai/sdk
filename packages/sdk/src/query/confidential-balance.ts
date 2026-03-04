@@ -19,6 +19,7 @@ export function confidentialBalanceQueryOptions(
   const queryKey = zamaQueryKeys.confidentialBalance.owner(token.address, ownerKey, handleKey);
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
@@ -26,6 +27,5 @@ export function confidentialBalanceQueryOptions(
     },
     enabled: Boolean(ownerKey && handleKey) && config?.query?.enabled !== false,
     staleTime: Infinity,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

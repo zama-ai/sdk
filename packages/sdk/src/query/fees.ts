@@ -44,6 +44,7 @@ export function shieldFeeQueryOptions(
   );
 
   return {
+    ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, params] = context.queryKey;
@@ -60,7 +61,6 @@ export function shieldFeeQueryOptions(
     },
     staleTime: 30_000,
     enabled: config.query?.enabled !== false,
-    ...filterQueryOptions(config.query ?? {}),
   };
 }
 
@@ -77,6 +77,7 @@ export function unshieldFeeQueryOptions(
   );
 
   return {
+    ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, params] = context.queryKey;
@@ -93,7 +94,6 @@ export function unshieldFeeQueryOptions(
     },
     staleTime: 30_000,
     enabled: config.query?.enabled !== false,
-    ...filterQueryOptions(config.query ?? {}),
   };
 }
 
@@ -105,6 +105,7 @@ export function batchTransferFeeQueryOptions(
   const queryKey = zamaQueryKeys.fees.batchTransferFee(feeManagerAddress);
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
@@ -114,7 +115,6 @@ export function batchTransferFeeQueryOptions(
     },
     staleTime: 30_000,
     enabled: config?.query?.enabled !== false,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }
 
@@ -126,6 +126,7 @@ export function feeRecipientQueryOptions(
   const queryKey = zamaQueryKeys.fees.feeRecipient(feeManagerAddress);
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
@@ -133,6 +134,5 @@ export function feeRecipientQueryOptions(
     },
     staleTime: 30_000,
     enabled: config?.query?.enabled !== false,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

@@ -125,7 +125,7 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.tokenMetadata.token("0xtoken"),
       zamaQueryKeys.isConfidential.token("0xtoken"),
       zamaQueryKeys.isWrapper.token("0xtoken"),
-      zamaQueryKeys.wrapperDiscovery.token("0xtoken"),
+      zamaQueryKeys.wrapperDiscovery.token("0xtoken", "0xcoordinator"),
       zamaQueryKeys.underlyingAllowance.token("0xtoken"),
       zamaQueryKeys.underlyingAllowance.scope("0xtoken", "0xowner", "0xwrapper"),
       zamaQueryKeys.confidentialIsApproved.token("0xtoken"),

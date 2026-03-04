@@ -1,4 +1,4 @@
-export { filterQueryOptions, hashFn } from "./utils";
+export { filterQueryOptions, hashFn, normalizeHandle, ZERO_HANDLE } from "./utils";
 export { zamaQueryKeys } from "./query-keys";
 
 export {

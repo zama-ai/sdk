@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { filterQueryOptions, hashFn } from "../utils";
+import { filterQueryOptions, hashFn, normalizeHandle, ZERO_HANDLE } from "../utils";
 
 describe("filterQueryOptions", () => {
   test("strips TanStack behavioral options and sdk query internals", () => {
@@ -90,5 +90,25 @@ describe("hashFn", () => {
   test("handles null and undefined", () => {
     expect(() => hashFn(["test", null])).not.toThrow();
     expect(() => hashFn(["test", undefined])).not.toThrow();
+  });
+});
+
+describe("normalizeHandle", () => {
+  test("converts bigint to a 0x-prefixed 64-char hex string", () => {
+    expect(normalizeHandle(42n)).toBe(
+      "0x000000000000000000000000000000000000000000000000000000000000002a",
+    );
+  });
+
+  test("passes through valid 0x-prefixed hex strings unchanged", () => {
+    const handle = "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
+    expect(normalizeHandle(handle)).toBe(handle);
+  });
+
+  test("returns ZERO_HANDLE for non-bigint non-hex inputs", () => {
+    expect(normalizeHandle(null)).toBe(ZERO_HANDLE);
+    expect(normalizeHandle(undefined)).toBe(ZERO_HANDLE);
+    expect(normalizeHandle(42)).toBe(ZERO_HANDLE);
+    expect(normalizeHandle("not-hex")).toBe(ZERO_HANDLE);
   });
 });

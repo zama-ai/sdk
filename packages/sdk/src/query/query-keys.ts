@@ -71,7 +71,8 @@ export const zamaQueryKeys = {
 
   wrapperDiscovery: {
     all: ["zama.wrapperDiscovery"] as const,
-    token: (tokenAddress: string) => ["zama.wrapperDiscovery", { tokenAddress }] as const,
+    token: (tokenAddress: string, coordinatorAddress: string) =>
+      ["zama.wrapperDiscovery", { tokenAddress, coordinatorAddress }] as const,
   },
 
   underlyingAllowance: {

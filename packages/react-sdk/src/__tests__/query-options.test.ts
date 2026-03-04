@@ -186,7 +186,10 @@ describe("query options factories", () => {
         coordinatorAddress: COORDINATOR,
       });
 
-      expect(opts.queryKey).toEqual(["zama.wrapperDiscovery", { tokenAddress: TOKEN_ADDR }]);
+      expect(opts.queryKey).toEqual([
+        "zama.wrapperDiscovery",
+        { tokenAddress: TOKEN_ADDR, coordinatorAddress: COORDINATOR },
+      ]);
       expect(opts.staleTime).toBe(Infinity);
     });
 

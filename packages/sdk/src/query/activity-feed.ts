@@ -36,6 +36,7 @@ export function activityFeedQueryOptions(
   const queryKey = zamaQueryKeys.activityFeed.scope(token.address, userAddress, logsKey, decrypt);
 
   return {
+    ...filterQueryOptions(queryConfig?.query ?? {}),
     queryKey,
     queryFn: async () => {
       if (!config.logs || !config.userAddress) return [];
@@ -51,6 +52,5 @@ export function activityFeedQueryOptions(
     },
     staleTime: Infinity,
     enabled: Boolean(config.userAddress && config.logs) && queryConfig?.query?.enabled !== false,
-    ...filterQueryOptions(queryConfig?.query ?? {}),
   };
 }

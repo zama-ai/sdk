@@ -14,22 +14,23 @@ export function wrapperDiscoveryQueryOptions(
   tokenAddress: Address,
   config: WrapperDiscoveryQueryConfig,
 ): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>, Address | null> {
-  const queryKey = zamaQueryKeys.wrapperDiscovery.token(tokenAddress);
+  const queryKey = zamaQueryKeys.wrapperDiscovery.token(tokenAddress, config.coordinatorAddress);
 
   return {
+    ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
+      const [, { tokenAddress: keyTokenAddress, coordinatorAddress: keyCoordinatorAddress }] =
+        context.queryKey;
       const exists = await signer.readContract<boolean>(
-        wrapperExistsContract(config.coordinatorAddress, keyTokenAddress as Address),
+        wrapperExistsContract(keyCoordinatorAddress as Address, keyTokenAddress as Address),
       );
       if (!exists) return null;
       return signer.readContract<Address>(
-        getWrapperContract(config.coordinatorAddress, keyTokenAddress as Address),
+        getWrapperContract(keyCoordinatorAddress as Address, keyTokenAddress as Address),
       );
     },
     staleTime: Infinity,
     enabled: config.query?.enabled !== false,
-    ...filterQueryOptions(config.query ?? {}),
   };
 }

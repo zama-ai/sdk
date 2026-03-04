@@ -28,6 +28,9 @@ type StrippedQueryOptionKeys =
   | "query"
   | "pollingInterval";
 
+export const ZERO_HANDLE =
+  "0x0000000000000000000000000000000000000000000000000000000000000000";
+
 /**
  * Remove TanStack behavioral options from a query config object so only domain
  * parameters remain for the lower-level factory.
@@ -98,4 +101,10 @@ export function hashFn(queryKey: readonly unknown[]): string {
 
     return value;
   });
+}
+
+export function normalizeHandle(value: unknown): string {
+  if (typeof value === "string" && value.startsWith("0x")) return value;
+  if (typeof value === "bigint") return `0x${value.toString(16).padStart(64, "0")}`;
+  return ZERO_HANDLE;
 }

@@ -52,7 +52,7 @@ export function useWrapperDiscovery(
     ...(coordinatorAddress
       ? wrapperDiscoveryQueryOptions(token.signer, tokenAddress, { coordinatorAddress })
       : {
-          queryKey: wrapperDiscoveryQueryKeys.token(tokenAddress),
+          queryKey: wrapperDiscoveryQueryKeys.all,
           queryFn: skipToken,
         }),
     ...options,

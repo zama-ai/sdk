@@ -23,6 +23,7 @@ export function confidentialIsApprovedQueryOptions(
   );
 
   return {
+    ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, owner: keyOwner, spender: keySpender }] =
@@ -33,6 +34,5 @@ export function confidentialIsApprovedQueryOptions(
     },
     staleTime: 30_000,
     enabled: Boolean(ownerKey) && config.query?.enabled !== false,
-    ...filterQueryOptions(config.query ?? {}),
   };
 }

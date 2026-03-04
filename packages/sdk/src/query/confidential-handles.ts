@@ -1,7 +1,7 @@
 import { confidentialBalanceOfContract } from "../contracts";
 import type { Address, GenericSigner } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions } from "./utils";
+import { filterQueryOptions, normalizeHandle } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 
 const DEFAULT_POLLING_INTERVAL = 10_000;
@@ -21,19 +21,20 @@ export function confidentialHandlesQueryOptions(
   const queryKey = zamaQueryKeys.confidentialHandles.tokens(tokenAddresses, ownerKey);
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddresses: keyTokenAddresses, owner: keyOwner }] = context.queryKey;
       return Promise.all(
-        keyTokenAddresses.map((tokenAddress) =>
-          signer.readContract<Address>(
+        keyTokenAddresses.map(async (tokenAddress) => {
+          const handle = await signer.readContract<Address>(
             confidentialBalanceOfContract(tokenAddress as Address, keyOwner as Address),
-          ),
-        ),
+          );
+          return normalizeHandle(handle) as Address;
+        }),
       );
     },
     enabled: Boolean(ownerKey) && tokenAddresses.length > 0 && config?.query?.enabled !== false,
     refetchInterval: config?.pollingInterval ?? DEFAULT_POLLING_INTERVAL,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

@@ -28,6 +28,7 @@ export function confidentialBalancesQueryOptions(
   );
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handles: keyHandles }] = context.queryKey;
@@ -44,6 +45,5 @@ export function confidentialBalancesQueryOptions(
       Boolean(handlesKey || config?.handles === undefined) &&
       config?.query?.enabled !== false,
     staleTime: Infinity,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

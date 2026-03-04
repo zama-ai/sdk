@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, TransactionResult } from "@zama-fhe/sdk";
+import type { TransactionResult } from "@zama-fhe/sdk";
 import {
   invalidateAfterShield,
   shieldMutationOptions,
