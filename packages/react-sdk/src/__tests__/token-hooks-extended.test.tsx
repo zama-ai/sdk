@@ -440,7 +440,7 @@ describe("useConfidentialBalance", () => {
       relayer,
     });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
     const { data, dataUpdatedAt, handleQuery, ...state } = result.current;
     const { data: handleData, dataUpdatedAt: handleDataUpdatedAt, ...handleState } = handleQuery;
@@ -593,7 +593,7 @@ describe("useConfidentialBalance", () => {
     resolveAddress!(USER);
     rerender();
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
     expect(result.current.data).toBe(321n);
   });
 

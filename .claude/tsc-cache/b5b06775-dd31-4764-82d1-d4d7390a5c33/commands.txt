@@ -1,0 +1,2 @@
+packages/react-sdk:build:cd /Users/msaug/zama/token-sdk/packages/react-sdk && npm run build
+packages/react-sdk:tsc:cd /Users/msaug/zama/token-sdk/packages/react-sdk && npx tsc --noEmit
