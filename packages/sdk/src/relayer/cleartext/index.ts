@@ -1,4 +1,4 @@
 export { createCleartextRelayer } from "./factory";
-export { hardhat } from "./presets";
+export { hardhat, hoodi } from "./presets";
 export { FheType } from "./constants";
 export type { CleartextChainConfig } from "./types";
