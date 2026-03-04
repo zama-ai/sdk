@@ -15,6 +15,7 @@ export function isConfidentialQueryOptions(
 ): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isConfidential.token>, boolean> {
   const queryKey = zamaQueryKeys.isConfidential.token(tokenAddress);
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
@@ -22,7 +23,6 @@ export function isConfidentialQueryOptions(
     },
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }
 
@@ -33,6 +33,7 @@ export function isWrapperQueryOptions(
 ): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isWrapper.token>, boolean> {
   const queryKey = zamaQueryKeys.isWrapper.token(tokenAddress);
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
@@ -42,6 +43,5 @@ export function isWrapperQueryOptions(
     },
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

@@ -16,6 +16,7 @@ export function totalSupplyQueryOptions(
   const queryKey = zamaQueryKeys.totalSupply.token(tokenAddress);
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
@@ -23,6 +24,5 @@ export function totalSupplyQueryOptions(
     },
     staleTime: 30_000,
     enabled: config?.query?.enabled !== false,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

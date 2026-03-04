@@ -24,6 +24,7 @@ export function tokenMetadataQueryOptions(
   const queryKey = zamaQueryKeys.tokenMetadata.token(tokenAddress);
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
@@ -36,6 +37,5 @@ export function tokenMetadataQueryOptions(
     },
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

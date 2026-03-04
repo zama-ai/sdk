@@ -18,6 +18,7 @@ export function publicParamsQueryOptions(
   const queryKey = zamaQueryKeys.publicParams.bits(bits);
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [, { bits: keyBits }] = context.queryKey;
@@ -25,6 +26,5 @@ export function publicParamsQueryOptions(
     },
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

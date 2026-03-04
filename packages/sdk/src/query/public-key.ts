@@ -17,10 +17,10 @@ export function publicKeyQueryOptions(
   const queryKey = zamaQueryKeys.publicKey.all;
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async () => sdk.relayer.getPublicKey(),
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

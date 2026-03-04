@@ -23,6 +23,7 @@ export function underlyingAllowanceQueryOptions(
   );
 
   return {
+    ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
       const [
@@ -39,6 +40,5 @@ export function underlyingAllowanceQueryOptions(
     },
     staleTime: 30_000,
     enabled: Boolean(ownerKey) && config.query?.enabled !== false,
-    ...filterQueryOptions(config.query ?? {}),
   };
 }

@@ -15,10 +15,10 @@ export function signerAddressQueryOptions(
   const queryKey = zamaQueryKeys.signerAddress.token(tokenAddress);
 
   return {
+    ...filterQueryOptions(config?.query ?? {}),
     queryKey,
     queryFn: async () => signer.getAddress(),
     staleTime: 30_000,
     enabled: config?.query?.enabled !== false,
-    ...filterQueryOptions(config?.query ?? {}),
   };
 }

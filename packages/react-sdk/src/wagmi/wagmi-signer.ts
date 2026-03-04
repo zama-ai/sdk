@@ -10,12 +10,12 @@ import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 import {
   getChainId,
+  getAccount,
   readContract,
   signTypedData,
   waitForTransactionReceipt,
   writeContract,
 } from "wagmi/actions";
-import { getConnection } from "./compat";
 
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
@@ -39,7 +39,7 @@ export class WagmiSigner implements GenericSigner {
   }
 
   async getAddress(): Promise<Address> {
-    const account = getConnection(this.config);
+    const account = getAccount(this.config);
     if (!account?.address) {
       throw new TypeError("Invalid address");
     }

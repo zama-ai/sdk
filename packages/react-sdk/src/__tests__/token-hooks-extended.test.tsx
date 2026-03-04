@@ -557,6 +557,22 @@ describe("useConfidentialBalances", () => {
     expect(result.current.handlesQuery.isFetching).toBe(false);
     expect(result.current.isFetching).toBe(false);
   });
+
+  it("does not run decrypt query when options.enabled=true but handles are undefined", async () => {
+    const signer = createMockSigner();
+    const relayer = createMockRelayer();
+    // Keep phase 1 unresolved so handles remain undefined
+    vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderWithProviders(
+      () => useConfidentialBalances({ tokenAddresses: [TOKEN] }, { enabled: true }),
+      { signer, relayer },
+    );
+
+    await waitFor(() => expect(result.current.handlesQuery.isFetching).toBe(true));
+    expect(result.current.isFetching).toBe(false);
+    expect(relayer.userDecrypt).not.toHaveBeenCalled();
+  });
 });
 
 describe("useActivityFeed", () => {
