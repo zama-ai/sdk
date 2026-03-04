@@ -1499,11 +1499,6 @@ export { ZERO_HANDLE }
 
 export { ZKProofLike }
 
-// Warnings were encountered during analysis:
-//
-// dist/index.d.ts:236:5 - (ae-forgotten-export) The symbol "PublicKeyResult" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:280:5 - (ae-forgotten-export) The symbol "PublicParamsResult" needs to be exported by the entry point index.d.ts
-
 // (No @packageDocumentation comment for this package)
 
 ```

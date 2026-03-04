@@ -10,13 +10,8 @@ import { ContractCallConfig } from '@zama-fhe/sdk';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { Hex } from '@zama-fhe/sdk';
+import { SignerLifecycleCallbacks } from '@zama-fhe/sdk';
 import { TransactionReceipt } from '@zama-fhe/sdk';
-
-// @public
-export interface UseZamaConfig {
-    tokenAddress: Address;
-    wrapperAddress?: Address;
-}
 
 // @public
 export class WagmiSigner implements GenericSigner {
