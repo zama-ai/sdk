@@ -41,4 +41,12 @@ describe("createCleartextRelayer", () => {
       /not allowed on chain 11155111/,
     );
   });
+
+  it("allows chain ID 0 for local development", async () => {
+    const relayer = createCleartextRelayer({ ...hoodi, chainId: 0n });
+    const { publicKey, privateKey } = await relayer.generateKeypair();
+
+    expect(publicKey).toMatch(/^0x[0-9a-f]{64}$/i);
+    expect(privateKey).toMatch(/^0x[0-9a-f]{64}$/i);
+  });
 });
