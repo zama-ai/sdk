@@ -34,4 +34,16 @@ describe("createCleartextRelayer", () => {
     const relayer = createCleartextRelayer(hardhat);
     expect(() => relayer.terminate()).not.toThrow();
   });
+
+  it("rejects mainnet chain ID", () => {
+    expect(() => createCleartextRelayer({ ...hardhat, chainId: 1n })).toThrow(
+      /not allowed on chain 1/,
+    );
+  });
+
+  it("rejects Sepolia chain ID", () => {
+    expect(() => createCleartextRelayer({ ...hardhat, chainId: 11155111n })).toThrow(
+      /not allowed on chain 11155111/,
+    );
+  });
 });
