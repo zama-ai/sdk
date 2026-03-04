@@ -34,7 +34,7 @@ Every SDK setup needs three pieces:
 const sdk = new ZamaSDK({
   relayer, // handles encryption & decryption (RelayerWeb or RelayerNode)
   signer, // signs transactions and typed data (ViemSigner, EthersSigner, or your own)
-  storage, // persists FHE credentials so users don't re-sign on every page load
+  storage, // persists decrypt keys so users don't re-sign on every page load
 });
 ```
 

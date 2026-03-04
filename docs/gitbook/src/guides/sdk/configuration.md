@@ -154,13 +154,13 @@ If your signer has access to wallet lifecycle events, implement `subscribe` so t
 
 ## Storage
 
-FHE credentials (a keypair + EIP-712 signature) and decrypted balances are cached so users don't get a wallet popup on every decrypt or a loading spinner on page reload. You choose where to store them:
+Decrypt keys (a keypair used to decrypt confidential balances) and decrypted balances are cached so users don't get a wallet popup on every decrypt or a loading spinner on page reload. You choose where to store them:
 
 | Storage             | When to use                                                                                              |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |
 | `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                 |
 | `memoryStorage`     | Tests, scripts, throwaway sessions                                                                       |
-| `asyncLocalStorage` | Node.js servers — isolate credentials per request ([example below](#per-request-storage-nodejs-servers)) |
+| `asyncLocalStorage` | Node.js servers — isolate decrypt keys per request ([example below](#per-request-storage-nodejs-servers)) |
 | Custom              | Implement `GenericStorage` (3 async methods: `get`, `set`, `delete`)                                     |
 
 ```ts
@@ -268,7 +268,7 @@ const transports = {
 
 ## Credential duration
 
-FHE decrypt credentials require a wallet signature to create. By default, they're valid for 1 day. You can change this:
+Decrypt keys require a wallet signature to create. By default, they're valid for 1 day. You can change this:
 
 ```ts
 const sdk = new ZamaSDK({
@@ -289,11 +289,11 @@ const sdk = new ZamaSDK({
 
 ## Session management
 
-FHE credentials are stored encrypted at rest. The wallet signature that unlocks them lives in `sessionStorage` (in-memory by default). This means:
+Decrypt keys are stored encrypted at rest. The wallet signature that unlocks them lives in `sessionStorage` (in-memory by default). This means:
 
-- On page load, the user must re-sign once to authorize their credentials for the session
+- On page load, the user must re-sign once to authorize their decrypt keys for the session
 - Closing the tab (or calling `await sdk.revokeSession()`) clears the signature from memory
-- The encrypted credentials survive across sessions in `storage`; only the allow step repeats
+- The encrypted keys survive across sessions in `storage`; only the allow step repeats
 - In web extensions, you can use `chromeSessionStorage` so the signature survives service worker restarts ([see below](#web-extensions))
 
 ### Allow (pre-authorize for the session)
@@ -333,7 +333,7 @@ await sdk.revokeSession();
 
 ### Wallet lifecycle integration
 
-When the wallet disconnects or the user switches accounts, the session signature should be cleared so stale credentials don't persist.
+When the wallet disconnects or the user switches accounts, the session signature should be cleared so stale decrypt keys don't persist.
 
 #### wagmi users: automatic
 

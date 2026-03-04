@@ -210,7 +210,7 @@ The `inputProof` is a ZK proof (generated inside the WASM) attesting the encrypt
 
 ## 5. FHE User Decrypt (Reading Balances)
 
-To read an encrypted balance, the SDK sends FHE credentials to the relayer KMS, which re-encrypts the on-chain ciphertext under the user's FHE public key. The WASM client then decrypts locally with the private key.
+To read an encrypted balance, the SDK sends the user's decrypt keys to the relayer KMS, which re-encrypts the on-chain ciphertext under the user's public key. The WASM client then decrypts locally with the private key.
 
 ```mermaid
 sequenceDiagram
