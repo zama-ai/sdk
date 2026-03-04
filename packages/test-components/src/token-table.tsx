@@ -1,9 +1,10 @@
 "use client";
 
 import { useConfidentialBalances, useTokenMetadata, type Address } from "@zama-fhe/react-sdk";
-import { useBalanceOf } from "@zama-fhe/react-sdk/wagmi";
 import { useState } from "react";
 import { formatUnits } from "viem";
+import { useReadContracts } from "wagmi";
+import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/react-sdk";
 
 function TokenRow({
   address,
@@ -53,13 +54,25 @@ function ERC20TokenRow({
   wrapper: Address;
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
-  const { data: balance, isLoading, error } = useBalanceOf({ tokenAddress: address });
+  const { data, isLoading, error } = useReadContracts({
+    contracts: [
+      symbolContract(address),
+      decimalsContract(address),
+      balanceOfContract(address, address),
+    ],
+  });
+
+  const symbol = data?.[0]?.result as string | undefined;
+  const decimals = data?.[1]?.result as number | undefined;
+  const value = data?.[2]?.result as bigint | undefined;
+  const formatted =
+    value !== undefined && decimals !== undefined ? formatUnits(value, decimals) : undefined;
 
   return (
-    <tr data-testid={`token-row-${balance.symbol ?? address}`}>
-      <td className="px-4 py-2">{balance.symbol ?? "..."}</td>
+    <tr data-testid={`token-row-${symbol ?? address}`}>
+      <td className="px-4 py-2">{symbol ?? "..."}</td>
       <td className="px-4 py-2 font-mono text-right" data-testid="balance">
-        {error ? "Error" : isLoading ? "..." : (balance.formatted ?? "...")}
+        {error ? "Error" : isLoading ? "..." : (formatted ?? "...")}
       </td>
       <td className="px-4 py-2 text-right">
         <LinkComponent
