@@ -4,10 +4,11 @@ import { createTestClient, formatUnits, http, publicActions, walletActions } fro
 import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import { mockRelayerSdk } from "./fhevm";
+import { TEST_PRIVATE_KEY, MINTED } from "./constants";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
 import type { Address } from "viem";
 
-const privateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
+const privateKey = TEST_PRIVATE_KEY;
 
 const account = privateKeyToAccount(privateKey);
 
@@ -25,11 +26,10 @@ function computeFee(amount: bigint): bigint {
   return (amount * 100n + 9999n) / 10000n;
 }
 
-// Hardhat deployment mints 1_000 * 10^6 ERC-20 tokens to the test account per token.
-// Shielding (done by alice) deposits 1_000 * 10^6 into each confidential token.
+// Global setup mints MINTED ERC-20 tokens to the test account per token.
+// Shielding (done by alice) deposits MINTED into each confidential token.
 // Net initial confidential balance = shielded - shieldFee(shielded).
 // ERC-20 balance is untouched because alice shields with her own tokens.
-const MINTED = 1_000n * 10n ** 6n;
 const CONFIDENTIAL = MINTED - computeFee(MINTED);
 
 const initialBalances = {

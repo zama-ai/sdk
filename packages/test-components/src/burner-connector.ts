@@ -154,12 +154,12 @@ class BurnerWalletConnector {
     }): Promise<unknown> => {
       switch (method) {
         case "eth_sendTransaction":
-          return this.handleSendTransaction(client, account, (params as TransactionParams[])[0]);
+          return this.handleSendTransaction(client, account, (params as [TransactionParams])[0]);
 
         case "personal_sign":
           return client.signMessage({
             account,
-            message: { raw: (params as Hex[])[0] },
+            message: { raw: (params as [Hex])[0] },
           });
 
         case "eth_signTypedData_v4": {
