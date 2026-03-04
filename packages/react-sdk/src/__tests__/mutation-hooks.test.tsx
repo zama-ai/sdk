@@ -114,6 +114,30 @@ describe("useConfidentialApprove", () => {
       }
     `);
   });
+
+  test("cache: invalidates approval query after confidential approve", async () => {
+    const signer = createMockSigner();
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+
+    const { result, queryClient } = renderWithProviders(
+      () => useConfidentialApprove({ tokenAddress: TOKEN }),
+      {
+        signer,
+      },
+    );
+
+    const approvalKey = zamaQueryKeys.confidentialIsApproved.token(TOKEN);
+    const otherApprovalKey = zamaQueryKeys.confidentialIsApproved.token(OTHER_TOKEN);
+    queryClient.setQueryData(approvalKey, true);
+    queryClient.setQueryData(otherApprovalKey, false);
+
+    await act(() => result.current.mutateAsync({ spender: RECIPIENT }));
+
+    expect(queryClient.getQueryData(approvalKey)).toBe(true);
+    expect(queryClient.getQueryState(approvalKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(otherApprovalKey)).toBe(false);
+    expect(queryClient.getQueryState(otherApprovalKey)?.isInvalidated).toBe(false);
+  });
 });
 
 describe("useApproveUnderlying", () => {
