@@ -97,8 +97,9 @@ function createMockProvider(options: MockProviderOptions = {}) {
 function createUserDecryptParams(
   overrides: Partial<UserDecryptParams> & Pick<UserDecryptParams, "handles">,
 ): UserDecryptParams {
+  const { handles, ...rest } = overrides;
   return {
-    handles: overrides.handles,
+    handles,
     contractAddress: CONTRACT_ADDRESS,
     signedContractAddresses: [CONTRACT_ADDRESS],
     privateKey: "0x" + "01".repeat(32),
@@ -107,7 +108,7 @@ function createUserDecryptParams(
     signerAddress: USER_ADDRESS,
     startTimestamp: 1,
     durationDays: 1,
-    ...overrides,
+    ...rest,
   };
 }
 
