@@ -1,0 +1,4 @@
+{"type":"RunStarted","runId":"sw-mmbocod7-d36912a1","timestampMs":1772606852268}
+{"type":"FrameCommitted","runId":"sw-mmbocod7-d36912a1","frameNo":1,"xmlHash":"1fc9c1fbe630dc8e42e8a0a0fbade0482c5f302d6d1d97dbd0b4cd8ebce4dc70","timestampMs":1772606852295}
+{"type":"NodeStarted","runId":"sw-mmbocod7-d36912a1","nodeId":"delegated-decrypt-methods:research","iteration":0,"attempt":1,"timestampMs":1772606852304}
+{"type":"NodeStarted","runId":"sw-mmbocod7-d36912a1","nodeId":"public-api-surface:research","iteration":0,"attempt":1,"timestampMs":1772606852304}

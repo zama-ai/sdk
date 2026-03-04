@@ -1,0 +1,84 @@
+{
+  "source": "/Users/msaug/zama/token-sdk/PR_NEXT_STEPS.md",
+  "generatedAt": "2026-03-04T06:46:57.489Z",
+  "repo": {
+    "projectName": "token-sdk",
+    "buildCmds": {
+      "typecheck": "pnpm run typecheck",
+      "build": "pnpm run build",
+      "lint": "pnpm run lint"
+    },
+    "testCmds": {
+      "test": "pnpm run test"
+    }
+  },
+  "units": [
+    {
+      "id": "public-api-surface",
+      "name": "Public API Surface: Types, Preset, Factory, and Exports",
+      "rfcSections": [
+        "§1",
+        "§2",
+        "§3",
+        "§6"
+      ],
+      "description": "Build the new public API layer for the cleartext module in four coordinated changes: (1) Replace CleartextFhevmConfig with CleartextChainConfig in types.ts — add the nested contracts object (acl, executor, inputVerifier, kmsVerifier, verifyingInputVerifier, verifyingDecryption) and change provider to rpcUrl: string | EIP1193Provider. (2) Create presets.ts with the hardhat preset (sourcing addresses from hardhat/deployments.json) and the VERIFYING_CONTRACTS constant; consolidate all hardhat-related constants currently scattered in constants.ts or elsewhere into this file. (3) Implement createCleartextRelayer(config: CleartextChainConfig): RelayerSDK in a new factory.ts that maps the public CleartextChainConfig shape to the existing internal constructor arguments. (4) Replace the contents of index.ts with minimal exports: createCleartextRelayer, hardhat, FheType, and CleartextChainConfig type — stripping all internal symbols. Add thin factory-level integration tests verifying that createCleartextRelayer(hardhatPreset) returns a valid RelayerSDK instance.",
+      "deps": [],
+      "acceptance": [
+        "CleartextChainConfig interface in types.ts has chainId: bigint, gatewayChainId: number, rpcUrl: string | EIP1193Provider, and nested contracts: { acl, executor, inputVerifier, kmsVerifier, verifyingInputVerifier, verifyingDecryption }",
+        "presets.ts exports hardhat preset that satisfies CleartextChainConfig using addresses imported from hardhat/deployments.json",
+        "presets.ts exports VERIFYING_CONTRACTS with inputVerification and decryption fixed addresses",
+        "All hardhat-specific constants previously in constants.ts are consolidated into presets.ts",
+        "createCleartextRelayer(config: CleartextChainConfig): RelayerSDK is exported from factory.ts and correctly maps config.contracts.* fields to the internal constructor argument names",
+        "index.ts exports exactly: createCleartextRelayer, hardhat, FheType, CleartextChainConfig — no other symbols",
+        "CleartextFhevmInstance class is not importable from @zama-fhe/sdk/cleartext",
+        "MOCK_INPUT_SIGNER_PK and MOCK_KMS_SIGNER_PK are not importable from @zama-fhe/sdk/cleartext",
+        "Factory-level test: createCleartextRelayer(hardhatPreset) instantiates without throwing and the returned object satisfies the RelayerSDK interface shape",
+        "pnpm run typecheck passes with zero errors"
+      ],
+      "tier": "medium"
+    },
+    {
+      "id": "delegated-decrypt-methods",
+      "name": "Implement delegatedUserDecrypt and createDelegatedUserDecryptEIP712",
+      "rfcSections": [
+        "§4",
+        "§5",
+        "§9"
+      ],
+      "description": "Add two concrete method implementations to CleartextFhevmInstance in cleartext-fhevm-instance.ts, replacing any current stubs/throws: (1) delegatedUserDecrypt — add the isHandleDelegatedForUserDecryption ABI fragment to ACL_ABI, then for each normalized handle call acl.isHandleDelegatedForUserDecryption(delegatorAddress, signerAddress, contractAddress, handle) and throw a descriptive Error if it returns false, then read plaintexts identically to userDecrypt and return Record<string, bigint>. (2) createDelegatedUserDecryptEIP712 — return EIP-712 typed data with domain using verifyingContractAddressDecryption as verifyingContract and a message that includes publicKey, contractAddresses, delegatorAddress, startTimestamp, durationDays, and extraData. Add unit tests in the existing __tests__ files covering: ACL delegation check fires per handle, throws with message containing handle/delegatorAddress/signerAddress/contractAddress on failure, success path returns correct plaintext mapping, and createDelegatedUserDecryptEIP712 returns domain and message with correct delegatorAddress field.",
+      "deps": [],
+      "acceptance": [
+        "ACL_ABI in cleartext-fhevm-instance.ts includes isHandleDelegatedForUserDecryption(address,address,address,bytes32) view returns (bool) fragment",
+        "delegatedUserDecrypt calls isHandleDelegatedForUserDecryption(delegator, delegate, contractAddress, handle) for every handle before reading any plaintext",
+        "delegatedUserDecrypt throws an Error whose message contains the handle hex, delegatorAddress, signerAddress, and contractAddress when the ACL check returns false",
+        "delegatedUserDecrypt returns Record<string, bigint> mapping each handle to its plaintext when all handles pass the ACL check",
+        "createDelegatedUserDecryptEIP712 returns an object with domain.verifyingContract equal to verifyingContractAddressDecryption and message containing a delegatorAddress field",
+        "Unit test: delegatedUserDecrypt with a mock ACL returning false for a handle throws with the handle hex in the error message",
+        "Unit test: createDelegatedUserDecryptEIP712 returned message.delegatorAddress matches the input delegatorAddress parameter",
+        "pnpm run typecheck passes with zero errors",
+        "pnpm run test passes for all tests in packages/sdk/src/relayer/cleartext/__tests__/"
+      ],
+      "tier": "medium"
+    },
+    {
+      "id": "playwright-fixture-update",
+      "name": "Update Playwright Fixture to Use Factory",
+      "rfcSections": [
+        "§7"
+      ],
+      "description": "Update packages/playwright/fixtures/fhevm.ts to replace the direct CleartextFhevmInstance constructor call and its associated imports with createCleartextRelayer(hardhatPreset). Specifically: swap the import of CleartextFhevmInstance (and any of GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS, JsonRpcProvider, deployments.json) for createCleartextRelayer and hardhat from @zama-fhe/sdk/cleartext; replace the constructor invocation with createCleartextRelayer(hardhat). Leave all CDN interception logic, route proxying, and the rest of the fixture file completely unchanged.",
+      "deps": [
+        "public-api-surface"
+      ],
+      "acceptance": [
+        "fhevm.ts imports createCleartextRelayer and hardhat from @zama-fhe/sdk/cleartext",
+        "fhevm.ts does not contain any import of CleartextFhevmInstance, GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS, JsonRpcProvider, or deployments.json",
+        "The relayer is constructed via createCleartextRelayer(hardhat) — no direct new CleartextFhevmInstance(...) call remains",
+        "All CDN interception and route proxying code in fhevm.ts is byte-for-byte identical to before this change",
+        "pnpm run typecheck passes with zero errors in the playwright package"
+      ],
+      "tier": "small"
+    }
+  ]
+}

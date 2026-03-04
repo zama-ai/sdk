@@ -1,0 +1,13 @@
+{
+  "mode": "scheduled-work",
+  "repoRoot": "/Users/msaug/zama/token-sdk",
+  "rfcPath": "/Users/msaug/zama/token-sdk/PR_NEXT_STEPS.md",
+  "agents": {
+    "claude": true,
+    "codex": true,
+    "gh": true
+  },
+  "maxConcurrency": 3,
+  "baseBranch": "cleartext-mocks",
+  "createdAt": "2026-03-04T06:46:57.497Z"
+}
