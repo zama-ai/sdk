@@ -1,6 +1,13 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, type BrowserContext } from "@playwright/test";
-import { createTestClient, formatUnits, http, publicActions, walletActions } from "viem";
+import {
+  createTestClient,
+  formatUnits,
+  parseUnits,
+  http,
+  publicActions,
+  walletActions,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import { mockRelayerSdk } from "./fhevm";
@@ -25,19 +32,6 @@ const contracts = {
 function computeFee(amount: bigint): bigint {
   return (amount * 100n + 9999n) / 10000n;
 }
-
-// The fixture mints MINTED ERC-20 tokens to the test account before each test snapshot.
-// Shielding (done by alice) deposits MINTED into each confidential token.
-// Net initial confidential balance = shielded - shieldFee(shielded).
-// ERC-20 balance is untouched because alice shields with her own tokens.
-const CONFIDENTIAL = MINTED - computeFee(MINTED);
-
-const initialBalances = {
-  USDT: MINTED,
-  cUSDT: CONFIDENTIAL,
-  USDC: MINTED,
-  cUSDC: CONFIDENTIAL,
-} as const;
 
 const mintAbi = [
   {
@@ -83,6 +77,11 @@ async function readErc20Balance(
   });
 }
 
+export interface ConfidentialBalances {
+  cUSDT: bigint;
+  cUSDC: bigint;
+}
+
 export interface TestFixtures {
   context: BrowserContext;
   baseURL: `http://${string}` | `https://${string}`;
@@ -90,10 +89,10 @@ export interface TestFixtures {
   account: typeof account;
   viemClient: typeof viemClient;
   contracts: typeof contracts;
-  initialBalances: typeof initialBalances;
   formatUnits: typeof formatUnits;
   computeFee: typeof computeFee;
   readErc20Balance: typeof readErc20Balance;
+  confidentialBalances: ConfidentialBalances;
 }
 
 export const test = base.extend<TestFixtures>({
@@ -101,10 +100,20 @@ export const test = base.extend<TestFixtures>({
   account,
   viemClient,
   contracts,
-  initialBalances,
   formatUnits: async ({}, use) => use(formatUnits),
   computeFee: async ({}, use) => use(computeFee),
   readErc20Balance: async ({}, use) => use(readErc20Balance),
+  confidentialBalances: async ({ page }, use) => {
+    await page.goto("/wallet");
+    await page.getByTestId("reveal-button").click();
+    const cUSDTRow = page.getByTestId("token-row-cUSDT");
+    await expect(cUSDTRow.getByTestId("balance")).toHaveText(/^\d/);
+    const cUSDT = parseUnits((await cUSDTRow.getByTestId("balance").textContent())!.trim(), 6);
+    const cERC20Row = page.getByTestId("token-row-cERC20");
+    await expect(cERC20Row.getByTestId("balance")).toHaveText(/^\d/);
+    const cUSDC = parseUnits((await cERC20Row.getByTestId("balance").textContent())!.trim(), 6);
+    await use({ cUSDT, cUSDC });
+  },
   page: async ({ page, baseURL, privateKey, account, viemClient, contracts }, use) => {
     // Mint ERC-20 tokens to the test account before snapshotting, so every test
     // starts from a funded state regardless of what the deploy script did.
