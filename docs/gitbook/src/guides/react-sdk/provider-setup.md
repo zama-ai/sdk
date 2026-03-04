@@ -9,6 +9,7 @@ Every React app using the SDK needs a `ZamaProvider` in the component tree. It w
   storage={storage}
   sessionStorage={sessionStorage} // optional — wallet signature storage (default: in-memory)
   credentialDurationDays={1} // optional, default: 1 day
+  sessionTTL="persistent" // optional — session signature lifetime (default: "persistent")
   onEvent={(e) => console.debug(e)} // optional, for debugging
 >
   {children}
@@ -197,3 +198,5 @@ await allow(allTokenAddresses);
 ```
 
 Decrypt keys expire after `credentialDurationDays` (default: 1). After expiry, fresh keys are generated and the wallet is prompted again.
+
+Session signatures can also be time-limited via `sessionTTL`. When a session expires, the user re-signs once to unlock their existing decrypt keys — no keypair regeneration. See [Session TTL](../sdk/configuration.md#session-ttl) for details.

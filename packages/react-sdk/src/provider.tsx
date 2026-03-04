@@ -4,6 +4,7 @@ import type {
   GenericSigner,
   GenericStorage,
   RelayerSDK,
+  SessionTTL,
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
@@ -31,6 +32,13 @@ export interface ZamaProviderProps extends PropsWithChildren {
   sessionStorage?: GenericStorage;
   /** Number of days credentials remain valid (default: relayer default). */
   credentialDurationDays?: number;
+  /**
+   * Controls how long session signatures (EIP-712 wallet signatures) remain valid.
+   * - `"persistent"` (default): no time-based expiry, sessions last until revocation or storage clear.
+   * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
+   * - Positive number: seconds until the session signature expires and requires re-authentication.
+   */
+  sessionTTL?: SessionTTL;
   /** Callback invoked on SDK lifecycle events. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -54,6 +62,7 @@ export function ZamaProvider({
   storage,
   sessionStorage,
   credentialDurationDays,
+  sessionTTL,
   onEvent,
 }: ZamaProviderProps) {
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
@@ -70,9 +79,10 @@ export function ZamaProvider({
         storage,
         sessionStorage,
         credentialDurationDays,
+        sessionTTL,
         onEvent: onEventRef.current,
       }),
-    [relayer, signer, storage, sessionStorage, credentialDurationDays],
+    [relayer, signer, storage, sessionStorage, credentialDurationDays, sessionTTL],
   );
 
   // Clean up signer subscriptions on unmount without terminating the

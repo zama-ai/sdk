@@ -9,6 +9,7 @@ const sdk = new ZamaSDK({
   storage,                       // required — persists encrypted decrypt keys
   sessionStorage,                // optional — wallet signature storage (default: in-memory)
   credentialDurationDays: 1,     // optional (default: 1 day)
+  sessionTTL: "persistent",      // optional — session signature lifetime (default: "persistent")
   onEvent: (event) => { ... },   // optional — lifecycle events for debugging
 });
 ```
@@ -287,6 +288,38 @@ const sdk = new ZamaSDK({
 });
 ```
 
+## Session TTL
+
+By default, session signatures persist until the user disconnects or the browser session ends. You can control this with `sessionTTL`:
+
+| Value               | Behavior                                                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `"persistent"`      | Default. Session signatures last until explicit revocation (disconnect/account change) or storage clear.         |
+| Duration in seconds | Session signatures expire after the specified duration. The user must re-sign once to unlock their decrypt keys. |
+| `0`                 | Never persist. Every operation triggers a signing prompt. Useful for maximum-security contexts.                  |
+
+```ts
+// Default — sessions persist until revocation
+const sdk = new ZamaSDK({ relayer, signer, storage });
+
+// 1-hour session — wallet re-signs after 60 minutes
+const sdk = new ZamaSDK({ relayer, signer, storage, sessionTTL: 3600 });
+
+// High-security — sign on every operation
+const sdk = new ZamaSDK({ relayer, signer, storage, sessionTTL: 0 });
+```
+
+**What happens on expiry:**
+
+- The session signature is cleared from session storage
+- A `session:expired` event is emitted (subscribe via `onEvent`)
+- The next decrypt operation prompts a single wallet re-sign
+- Decrypt keys in persistent storage are **not** affected — no keypair regeneration
+
+**Interaction with disconnect/account change:** TTL expiry and wallet lifecycle revocation are independent. Whichever fires first clears the session. They don't conflict.
+
+**Per-session recording:** Each session entry records the TTL at creation time. If you change the `sessionTTL` config between sessions, existing sessions use their original TTL — not the new value.
+
 ## Session management
 
 Decrypt keys are encrypted before being persisted to `storage`. The wallet signature used to unlock them lives in `sessionStorage` (in-memory by default). This means:
@@ -418,7 +451,7 @@ const sdk = new ZamaSDK({
 });
 ```
 
-Events include: credential lifecycle (`credentials:loading`, `credentials:created`, `credentials:revoked`, `credentials:allowed`, ...), encryption/decryption timing (`encrypt:start`, `decrypt:end`, ...), transaction confirmations (`transfer:submitted`, `shield:submitted`, ...), and errors.
+Events include: credential lifecycle (`credentials:loading`, `credentials:created`, `credentials:revoked`, `credentials:allowed`, ...), session expiry (`session:expired` with `reason: "ttl"`), encryption/decryption timing (`encrypt:start`, `decrypt:end`, ...), transaction confirmations (`transfer:submitted`, `shield:submitted`, ...), and errors.
 
 ## Cleanup
 

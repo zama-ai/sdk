@@ -80,6 +80,7 @@ export type {
   BatchTransferData,
   StoredCredentials,
   UnshieldCallbacks,
+  SessionTTL,
   CredentialsManagerConfig,
   ZamaSDKEventType,
   ZamaSDKEvent,
@@ -110,6 +111,7 @@ export type {
   CredentialsCreatedEvent,
   CredentialsRevokedEvent,
   CredentialsAllowedEvent,
+  SessionExpiredEvent,
 } from "@zama-fhe/sdk";
 
 // Re-export pending-unshield persistence utilities

@@ -119,6 +119,8 @@ import { RelayerWebConfig } from '@zama-fhe/sdk';
 import { RelayerWebSecurityConfig } from '@zama-fhe/sdk';
 import { savePendingUnshield } from '@zama-fhe/sdk';
 import { SepoliaConfig } from '@zama-fhe/sdk';
+import { SessionExpiredEvent } from '@zama-fhe/sdk';
+import { SessionTTL } from '@zama-fhe/sdk';
 import { setFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
 import { setOperatorContract } from '@zama-fhe/sdk';
 import { ShieldSubmittedEvent } from '@zama-fhe/sdk';
@@ -679,6 +681,10 @@ export function revokeSessionMutationOptions(sdk: ZamaSDK): {
 export { savePendingUnshield }
 
 export { SepoliaConfig }
+
+export { SessionExpiredEvent }
+
+export { SessionTTL }
 
 export { setFinalizeUnwrapOperatorContract }
 
@@ -1477,6 +1483,7 @@ export interface ZamaProviderProps extends PropsWithChildren {
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
+    sessionTTL?: SessionTTL;
     signer: GenericSigner;
     storage: GenericStorage;
 }
