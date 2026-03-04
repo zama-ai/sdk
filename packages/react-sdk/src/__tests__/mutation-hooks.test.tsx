@@ -49,6 +49,11 @@ describe("useApproveUnderlying", () => {
   });
 
   it("invalidates underlying allowance cache on success and calls user onSuccess", async () => {
+    const signer = createMockSigner();
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address)
+      .mockResolvedValueOnce(0n);
+
     const onSuccess = vi.fn();
     const { result, queryClient } = renderWithProviders(
       () =>
@@ -58,6 +63,7 @@ describe("useApproveUnderlying", () => {
             onSuccess,
           },
         ),
+      { signer },
     );
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -188,7 +194,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     });
   });
 
-  it("invalidates balance queries on error when optimistic=true", async () => {
+  it("restores cached balance on error when optimistic=true without invalidation", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
@@ -200,6 +206,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
     queryClient.setQueryData(balanceKey, 5000n);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
 
     await act(async () => {
       result.current.mutate({
@@ -210,18 +217,20 @@ describe("useConfidentialTransfer optimistic updates", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    // Verify invalidation was called for rollback
-    expect(invalidateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
-      }),
-    );
+    expect(queryClient.getQueryData(balanceKey)).toBe(5000n);
+    expect(invalidateSpy).not.toHaveBeenCalled();
+    expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3800n);
+    expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 5000n);
   });
 });
 
 describe("useShield optimistic updates", () => {
   it("adds amount to cached balance on mutate when optimistic=true", async () => {
     const signer = createMockSigner();
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address)
+      .mockResolvedValueOnce(5000n);
+
     let resolveWrap: (v: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
@@ -236,14 +245,15 @@ describe("useShield optimistic updates", () => {
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
     queryClient.setQueryData(balanceKey, 3000n);
+    const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
 
     await act(async () => {
       result.current.mutate({ amount: 500n });
     });
 
-    // Balance should be optimistically increased
+    // The optimistic value should be written before the mutation settles.
     await waitFor(() => {
-      expect(queryClient.getQueryData(balanceKey)).toBe(3500n);
+      expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3500n);
     });
 
     await act(async () => {
@@ -253,6 +263,9 @@ describe("useShield optimistic updates", () => {
 
   it("restores cached balance snapshot on shield error when optimistic=true without refetch", async () => {
     const signer = createMockSigner();
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address)
+      .mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const { result, queryClient } = renderWithProviders(

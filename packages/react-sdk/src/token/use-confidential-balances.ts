@@ -75,13 +75,18 @@ export function useConfidentialBalances(
   });
 
   // Phase 2: Batch decrypt only when any handle changes
+  const baseBalancesQueryOptions = confidentialBalancesQueryOptions(tokens, {
+    owner,
+    handles: handlesQuery.data as Address[] | undefined,
+    maxConcurrency,
+  });
+  const factoryEnabled = baseBalancesQueryOptions.enabled ?? true;
+  const userEnabled = options?.enabled;
+
   const balancesQuery = useQuery({
-    ...confidentialBalancesQueryOptions(tokens, {
-      owner,
-      handles: handlesQuery.data as Address[] | undefined,
-      maxConcurrency,
-    }),
+    ...baseBalancesQueryOptions,
     ...options,
+    enabled: factoryEnabled && (userEnabled ?? true),
     queryKeyHashFn: hashFn,
   } as unknown as UseQueryOptions<Map<Address, bigint>, Error>);
 

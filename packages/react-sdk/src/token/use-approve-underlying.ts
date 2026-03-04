@@ -1,10 +1,11 @@
 "use client";
 
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
   approveUnderlyingMutationOptions,
   type ApproveUnderlyingParams,
+  zamaQueryKeys,
 } from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
 
@@ -28,9 +29,16 @@ export function useApproveUnderlying(
   options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>,
 ) {
   const token = useToken(config);
+  const queryClient = useQueryClient();
 
   return useMutation<TransactionResult, Error, ApproveUnderlyingParams, Address>({
     ...approveUnderlyingMutationOptions(token),
     ...options,
+    onSuccess: async (data, variables, onMutateResult, context) => {
+      await queryClient.invalidateQueries({
+        queryKey: zamaQueryKeys.underlyingAllowance.all,
+      });
+      await options?.onSuccess?.(data, variables, onMutateResult, context);
+    },
   });
 }

@@ -15,7 +15,7 @@ import { renderWithProviders, createMockRelayer } from "./test-utils";
 describe("decryptionKeys", () => {
   it("produces stable query keys", () => {
     const key = decryptionKeys.value("0xhandle1");
-    expect(key[0]).toMatch(/^zama\./);
+    expect(String(key[0]).startsWith("zama.")).toBe(true);
     expect(key).toEqual(["zama.decryption", { handle: "0xhandle1" }]);
   });
 });

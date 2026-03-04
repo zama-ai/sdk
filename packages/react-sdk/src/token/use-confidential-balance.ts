@@ -64,12 +64,17 @@ export function useConfidentialBalance(
   });
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
+  const baseBalanceQueryOptions = confidentialBalanceQueryOptions(token, {
+    handle: handleQuery.data as Address | undefined,
+    owner,
+  });
+  const factoryEnabled = baseBalanceQueryOptions.enabled ?? true;
+  const userEnabled = options?.enabled;
+
   const balanceQuery = useQuery({
-    ...confidentialBalanceQueryOptions(token, {
-      handle: handleQuery.data as Address | undefined,
-      owner,
-    }),
+    ...baseBalanceQueryOptions,
     ...options,
+    enabled: factoryEnabled && (userEnabled ?? true),
     queryKeyHashFn: hashFn,
   } as unknown as UseQueryOptions<bigint, Error>);
 

@@ -9,6 +9,7 @@ import {
 } from "@zama-fhe/sdk/query";
 import {
   applyOptimisticBalanceDelta,
+  type OptimisticBalanceSnapshot,
   rollbackOptimisticBalanceDelta,
 } from "./optimistic-balance-update";
 import { useToken, type UseZamaConfig } from "./use-token";
@@ -55,7 +56,12 @@ export interface UseConfidentialTransferConfig extends UseZamaConfig {
  */
 export function useConfidentialTransfer(
   config: UseConfidentialTransferConfig,
-  options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, Address>,
+  options?: UseMutationOptions<
+    TransactionResult,
+    Error,
+    ConfidentialTransferParams,
+    OptimisticBalanceSnapshot
+  >,
 ) {
   const token = useToken(config);
   const queryClient = useQueryClient();
@@ -65,19 +71,19 @@ export function useConfidentialTransfer(
     ...options,
     onMutate: config.optimistic
       ? async (variables, mutationContext) => {
-          await applyOptimisticBalanceDelta(
+          const snapshot = await applyOptimisticBalanceDelta(
             queryClient,
             config.tokenAddress,
             variables.amount,
             "subtract",
           );
-          return (options?.onMutate?.(variables, mutationContext) ??
-            config.tokenAddress) as Address;
+          await options?.onMutate?.(variables, mutationContext);
+          return snapshot;
         }
       : options?.onMutate,
     onError: (error, variables, onMutateResult, context) => {
-      if (config.optimistic) {
-        rollbackOptimisticBalanceDelta(queryClient, config.tokenAddress);
+      if (config.optimistic && onMutateResult) {
+        rollbackOptimisticBalanceDelta(queryClient, onMutateResult);
       }
       options?.onError?.(error, variables, onMutateResult, context);
     },
