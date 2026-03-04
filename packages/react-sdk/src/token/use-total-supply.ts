@@ -1,39 +1,12 @@
 "use client";
 
-import {
-  useQuery,
-  useSuspenseQuery,
-  type UseQueryOptions,
-  type UseQueryResult,
-  type UseSuspenseQueryResult,
-} from "@tanstack/react-query";
-import { totalSupplyContract, type Address, type ReadonlyToken } from "@zama-fhe/sdk";
+import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import { hashFn, totalSupplyQueryOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
 
-/**
- * Query key factory for total supply queries.
- * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
- */
-export const totalSupplyQueryKeys = {
-  /** Match all total supply queries. */
-  all: ["totalSupply"] as const,
-  /** Match total supply query for a specific token. */
-  token: (tokenAddress: string) => ["totalSupply", tokenAddress] as const,
-} as const;
-
-/**
- * TanStack Query options factory for total supply.
- *
- * @param token - A `ReadonlyToken` instance.
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- */
-export function totalSupplyQueryOptions(token: ReadonlyToken) {
-  return {
-    queryKey: totalSupplyQueryKeys.token(token.address),
-    queryFn: () => token.signer.readContract<bigint>(totalSupplyContract(token.address)),
-    staleTime: 30_000,
-  } as const;
-}
+export const totalSupplyQueryKeys = zamaQueryKeys.totalSupply;
+export { totalSupplyQueryOptions };
 
 /**
  * Read the total supply of a token.
@@ -51,13 +24,14 @@ export function totalSupplyQueryOptions(token: ReadonlyToken) {
 export function useTotalSupply(
   tokenAddress: Address,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<bigint, Error> {
+) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useQuery<bigint, Error>({
-    ...totalSupplyQueryOptions(token),
+  return useQuery({
+    ...totalSupplyQueryOptions(token.signer, tokenAddress),
     ...options,
-  });
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<bigint, Error>);
 }
 
 /**
@@ -72,10 +46,11 @@ export function useTotalSupply(
  * const { data: totalSupply } = useTotalSupplySuspense("0xToken");
  * ```
  */
-export function useTotalSupplySuspense(
-  tokenAddress: Address,
-): UseSuspenseQueryResult<bigint, Error> {
+export function useTotalSupplySuspense(tokenAddress: Address) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<bigint, Error>(totalSupplyQueryOptions(token));
+  return useSuspenseQuery({
+    ...totalSupplyQueryOptions(token.signer, tokenAddress),
+    queryKeyHashFn: hashFn,
+  });
 }

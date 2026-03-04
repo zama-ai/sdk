@@ -1,33 +1,13 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
+import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-} from "./balance-query-keys";
+  invalidateBalanceQueries,
+  type UnwrapParams,
+  unwrapMutationOptions,
+} from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
-
-/** Parameters passed to the `mutate` function of {@link useUnwrap}. */
-export interface UnwrapParams {
-  /** Amount to unwrap (plaintext — encrypted automatically). */
-  amount: bigint;
-}
-
-/**
- * TanStack Query mutation options factory for unwrap.
- *
- * @param token - A `Token` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function unwrapMutationOptions(token: Token) {
-  return {
-    mutationKey: ["unwrap", token.address] as const,
-    mutationFn: ({ amount }: UnwrapParams) => token.unwrap(amount),
-  };
-}
 
 /**
  * Request an unwrap for a specific amount. Encrypts the amount first.
@@ -50,22 +30,10 @@ export function useUnwrap(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, UnwrapParams, Address>({
-    mutationKey: ["unwrap", config.tokenAddress],
-    mutationFn: ({ amount }) => token.unwrap(amount),
+    ...unwrapMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      context.client.invalidateQueries({
-        queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialHandlesQueryKeys.all,
-      });
-      context.client.resetQueries({
-        queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialBalancesQueryKeys.all,
-      });
+      invalidateBalanceQueries(context.client, config.tokenAddress);
       options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });

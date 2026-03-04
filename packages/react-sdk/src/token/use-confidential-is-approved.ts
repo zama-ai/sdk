@@ -1,22 +1,17 @@
 "use client";
 
 import { useQuery, useSuspenseQuery, skipToken, type UseQueryOptions } from "@tanstack/react-query";
-import type { Address, Token } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
+import {
+  confidentialIsApprovedQueryOptions,
+  hashFn,
+  signerAddressQueryOptions,
+  zamaQueryKeys,
+} from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
 
-/**
- * Query key factory for confidential approval queries.
- * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
- */
-export const confidentialIsApprovedQueryKeys = {
-  /** Match all approval queries. */
-  all: ["confidentialIsApproved"] as const,
-  /** Match approval queries for a specific token. */
-  token: (tokenAddress: string) => ["confidentialIsApproved", tokenAddress] as const,
-  /** Match approval queries for a specific token + spender pair. */
-  spender: (tokenAddress: string, spender: string) =>
-    ["confidentialIsApproved", tokenAddress, spender] as const,
-} as const;
+export const confidentialIsApprovedQueryKeys = zamaQueryKeys.confidentialIsApproved;
+export { confidentialIsApprovedQueryOptions };
 
 /** Configuration for {@link useConfidentialIsApproved}. */
 export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
@@ -28,21 +23,6 @@ export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
 export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
   /** Address to check approval for. */
   spender: Address;
-}
-
-/**
- * TanStack Query options factory for confidential approval check.
- *
- * @param token - A `Token` instance.
- * @param spender - Address to check approval for.
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- */
-export function confidentialIsApprovedQueryOptions(token: Token, spender: Address) {
-  return {
-    queryKey: confidentialIsApprovedQueryKeys.spender(token.address, spender),
-    queryFn: () => token.isApproved(spender),
-    staleTime: 30_000,
-  } as const;
 }
 
 /**
@@ -66,16 +46,22 @@ export function useConfidentialIsApproved(
 ) {
   const { spender, ...tokenConfig } = config;
   const token = useToken(tokenConfig);
+  const addressQuery = useQuery({
+    ...signerAddressQueryOptions(token.signer, token.address),
+    queryKeyHashFn: hashFn,
+  });
+  const owner = addressQuery.data as Address | undefined;
 
-  return useQuery<boolean, Error>({
+  return useQuery({
     ...(spender
-      ? confidentialIsApprovedQueryOptions(token, spender)
+      ? confidentialIsApprovedQueryOptions(token.signer, token.address, { owner, spender })
       : {
-          queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, ""),
+          queryKey: confidentialIsApprovedQueryKeys.token(config.tokenAddress),
           queryFn: skipToken,
         }),
     ...options,
-  });
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<boolean, Error>);
 }
 
 /**
@@ -96,6 +82,14 @@ export function useConfidentialIsApproved(
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
   const { spender, ...tokenConfig } = config;
   const token = useToken(tokenConfig);
+  const addressQuery = useSuspenseQuery({
+    ...signerAddressQueryOptions(token.signer, token.address),
+    queryKeyHashFn: hashFn,
+  });
+  const owner = addressQuery.data as Address;
 
-  return useSuspenseQuery<boolean, Error>(confidentialIsApprovedQueryOptions(token, spender));
+  return useSuspenseQuery({
+    ...confidentialIsApprovedQueryOptions(token.signer, token.address, { owner, spender }),
+    queryKeyHashFn: hashFn,
+  });
 }

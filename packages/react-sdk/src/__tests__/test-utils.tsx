@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import { vi } from "vitest";
 import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/sdk";
+import { hashFn } from "@zama-fhe/sdk/query";
 import { ZamaProvider } from "../provider";
 
 const USER = "0x2222222222222222222222222222222222222222" as `0x${string}`;
@@ -81,7 +82,10 @@ export function createWrapper(overrides?: WrapperOverrides) {
   const relayer = overrides?.relayer ?? createMockRelayer();
   const storage = overrides?.storage ?? createMockStorage();
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, queryKeyHashFn: hashFn },
+      mutations: { retry: false },
+    },
   });
 
   function Wrapper({ children }: { children: React.ReactNode }) {

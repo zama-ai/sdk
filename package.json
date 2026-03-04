@@ -105,5 +105,8 @@
   "engines": {
     "node": ">=22",
     "pnpm": ">=10"
+  },
+  "dependencies": {
+    "smithers-orchestrator": "^0.9.1"
   }
 }

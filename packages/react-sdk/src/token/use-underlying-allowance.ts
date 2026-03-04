@@ -1,20 +1,17 @@
 "use client";
 
 import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
-import type { Address, ReadonlyToken } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
+import {
+  hashFn,
+  signerAddressQueryOptions,
+  underlyingAllowanceQueryOptions,
+  zamaQueryKeys,
+} from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
 
-/**
- * Query key factory for underlying ERC-20 allowance queries.
- * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
- */
-export const underlyingAllowanceQueryKeys = {
-  /** Match all underlying allowance queries. */
-  all: ["underlyingAllowance"] as const,
-  /** Match allowance query for a specific token + wrapper pair. */
-  token: (tokenAddress: string, wrapper: string) =>
-    ["underlyingAllowance", tokenAddress, wrapper] as const,
-} as const;
+export const underlyingAllowanceQueryKeys = zamaQueryKeys.underlyingAllowance;
+export { underlyingAllowanceQueryOptions };
 
 /** Configuration for {@link useUnderlyingAllowance}. */
 export interface UseUnderlyingAllowanceConfig {
@@ -22,21 +19,6 @@ export interface UseUnderlyingAllowanceConfig {
   tokenAddress: Address;
   /** Address of the wrapper contract (the spender). */
   wrapperAddress: Address;
-}
-
-/**
- * TanStack Query options factory for underlying ERC-20 allowance.
- *
- * @param token - A `ReadonlyToken` instance.
- * @param wrapperAddress - Address of the wrapper contract (the spender).
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- */
-export function underlyingAllowanceQueryOptions(token: ReadonlyToken, wrapperAddress: Address) {
-  return {
-    queryKey: underlyingAllowanceQueryKeys.token(token.address, wrapperAddress),
-    queryFn: () => token.allowance(wrapperAddress),
-    staleTime: 30_000,
-  } as const;
 }
 
 /**
@@ -61,11 +43,20 @@ export function useUnderlyingAllowance(
 ) {
   const { tokenAddress, wrapperAddress } = config;
   const token = useReadonlyToken(tokenAddress);
-
-  return useQuery<bigint, Error>({
-    ...underlyingAllowanceQueryOptions(token, wrapperAddress),
-    ...options,
+  const addressQuery = useQuery({
+    ...signerAddressQueryOptions(token.signer, tokenAddress),
+    queryKeyHashFn: hashFn,
   });
+  const owner = addressQuery.data as Address | undefined;
+
+  return useQuery({
+    ...underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
+      owner,
+      wrapperAddress,
+    }),
+    ...options,
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<bigint, Error>);
 }
 
 /**
@@ -86,6 +77,17 @@ export function useUnderlyingAllowance(
 export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceConfig) {
   const { tokenAddress, wrapperAddress } = config;
   const token = useReadonlyToken(tokenAddress);
+  const addressQuery = useSuspenseQuery({
+    ...signerAddressQueryOptions(token.signer, tokenAddress),
+    queryKeyHashFn: hashFn,
+  });
+  const owner = addressQuery.data as Address;
 
-  return useSuspenseQuery<bigint, Error>(underlyingAllowanceQueryOptions(token, wrapperAddress));
+  return useSuspenseQuery({
+    ...underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
+      owner,
+      wrapperAddress,
+    }),
+    queryKeyHashFn: hashFn,
+  });
 }

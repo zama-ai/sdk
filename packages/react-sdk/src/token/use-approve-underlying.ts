@@ -1,28 +1,12 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
-import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
+import type { Address, TransactionResult } from "@zama-fhe/sdk";
+import {
+  approveUnderlyingMutationOptions,
+  type ApproveUnderlyingParams,
+} from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
-
-/** Parameters passed to the `mutate` function of {@link useApproveUnderlying}. */
-export interface ApproveUnderlyingParams {
-  /** Approval amount. Defaults to max uint256 if omitted. */
-  amount?: bigint;
-}
-
-/**
- * TanStack Query mutation options factory for approve-underlying.
- *
- * @param token - A `Token` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function approveUnderlyingMutationOptions(token: Token) {
-  return {
-    mutationKey: ["approveUnderlying", token.address] as const,
-    mutationFn: ({ amount }: ApproveUnderlyingParams) => token.approveUnderlying(amount),
-  };
-}
 
 /**
  * Approve the wrapper contract to spend the underlying ERC-20.
@@ -46,14 +30,7 @@ export function useApproveUnderlying(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, ApproveUnderlyingParams, Address>({
-    mutationKey: ["approveUnderlying", config.tokenAddress],
-    mutationFn: ({ amount }) => token.approveUnderlying(amount),
+    ...approveUnderlyingMutationOptions(token),
     ...options,
-    onSuccess: (data, variables, onMutateResult, context) => {
-      context.client.invalidateQueries({
-        queryKey: underlyingAllowanceQueryKeys.all,
-      });
-      options?.onSuccess?.(data, variables, onMutateResult, context);
-    },
   });
 }

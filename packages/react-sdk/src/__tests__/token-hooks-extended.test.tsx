@@ -7,17 +7,11 @@ import { useUnshield } from "../token/use-unshield";
 import { useUnshieldAll } from "../token/use-unshield-all";
 import { useUnwrap } from "../token/use-unwrap";
 import { useUnwrapAll } from "../token/use-unwrap-all";
-import { useShield } from "../token/use-shield";
 import { useShieldETH } from "../token/use-shield-eth";
 import { useActivityFeed } from "../token/use-activity-feed";
 import { useConfidentialBalance } from "../token/use-confidential-balance";
 import { useConfidentialBalances } from "../token/use-confidential-balances";
-import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-} from "../token/balance-query-keys";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { renderWithProviders, createMockSigner, createMockRelayer } from "./test-utils";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
@@ -97,22 +91,22 @@ describe("useConfidentialTransferFrom", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialHandle.token(TOKEN),
       }),
     );
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandlesQueryKeys.all,
+        queryKey: zamaQueryKeys.confidentialHandles.all,
       }),
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
       }),
     );
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalancesQueryKeys.all,
+        queryKey: zamaQueryKeys.confidentialBalances.all,
       }),
     );
   });
@@ -166,12 +160,12 @@ describe("useFinalizeUnwrap", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialHandle.token(TOKEN),
       }),
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
       }),
     );
   });
@@ -218,12 +212,12 @@ describe("useUnwrap", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialHandle.token(TOKEN),
       }),
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
       }),
     );
   });
@@ -271,12 +265,12 @@ describe("useUnwrapAll", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialHandle.token(TOKEN),
       }),
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
       }),
     );
   });
@@ -410,12 +404,12 @@ describe("useShieldETH", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialHandle.token(TOKEN),
       }),
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
       }),
     );
   });

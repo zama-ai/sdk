@@ -5,8 +5,7 @@ import {
   ApprovalFailedError,
   TransactionRevertedError,
 } from "@zama-fhe/sdk";
-import { confidentialTransferMutationOptions } from "../token/use-confidential-transfer";
-import { shieldMutationOptions } from "../token/use-shield";
+import { confidentialTransferMutationOptions, shieldMutationOptions } from "@zama-fhe/sdk/query";
 import { createMockSigner } from "./test-utils";
 
 const TOKEN_ADDR = "0xtoken" as Address;

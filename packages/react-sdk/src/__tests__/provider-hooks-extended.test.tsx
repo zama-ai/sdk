@@ -15,9 +15,7 @@ const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 describe("useUnderlyingAllowance", () => {
   it("returns allowance value", async () => {
     const signer = createMockSigner();
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
-      .mockResolvedValueOnce(5000n); // allowance()
+    vi.mocked(signer.readContract).mockResolvedValue(5000n);
 
     const { result } = renderWithProviders(
       () =>

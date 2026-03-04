@@ -1,22 +1,17 @@
 "use client";
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
+import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-} from "./balance-query-keys";
+  confidentialTransferMutationOptions,
+  invalidateBalanceQueries,
+  type ConfidentialTransferParams,
+} from "@zama-fhe/sdk/query";
+import {
+  applyOptimisticBalanceDelta,
+  rollbackOptimisticBalanceDelta,
+} from "./optimistic-balance-update";
 import { useToken, type UseZamaConfig } from "./use-token";
-
-/** Parameters passed to the `mutate` function of {@link useConfidentialTransfer}. */
-export interface ConfidentialTransferParams {
-  /** Recipient address. */
-  to: Address;
-  /** Amount to transfer (plaintext — encrypted automatically). */
-  amount: bigint;
-}
 
 /** Configuration for {@link useConfidentialTransfer}. */
 export interface UseConfidentialTransferConfig extends UseZamaConfig {
@@ -26,20 +21,6 @@ export interface UseConfidentialTransferConfig extends UseZamaConfig {
    * @defaultValue false
    */
   optimistic?: boolean;
-}
-
-/**
- * TanStack Query mutation options factory for confidential transfer.
- *
- * @param token - A `Token` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function confidentialTransferMutationOptions(token: Token) {
-  return {
-    mutationKey: ["confidentialTransfer", token.address] as const,
-    mutationFn: ({ to, amount }: ConfidentialTransferParams) =>
-      token.confidentialTransfer(to, amount),
-  };
 }
 
 /**
@@ -80,45 +61,28 @@ export function useConfidentialTransfer(
   const queryClient = useQueryClient();
 
   return useMutation<TransactionResult, Error, ConfidentialTransferParams, Address>({
-    mutationKey: ["confidentialTransfer", config.tokenAddress],
-    mutationFn: ({ to, amount }) => token.confidentialTransfer(to, amount),
+    ...confidentialTransferMutationOptions(token),
     ...options,
     onMutate: config.optimistic
       ? async (variables, mutationContext) => {
-          const balanceKey = confidentialBalanceQueryKeys.token(config.tokenAddress);
-          await queryClient.cancelQueries({ queryKey: balanceKey });
-          const previous = queryClient.getQueriesData<bigint>({ queryKey: balanceKey });
-          for (const [key, value] of previous) {
-            if (value !== undefined) {
-              queryClient.setQueryData(key, value - variables.amount);
-            }
-          }
+          await applyOptimisticBalanceDelta(
+            queryClient,
+            config.tokenAddress,
+            variables.amount,
+            "subtract",
+          );
           return (options?.onMutate?.(variables, mutationContext) ??
             config.tokenAddress) as Address;
         }
       : options?.onMutate,
     onError: (error, variables, onMutateResult, context) => {
       if (config.optimistic) {
-        // Rollback: invalidate to refetch actual values
-        queryClient.invalidateQueries({
-          queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-        });
+        rollbackOptimisticBalanceDelta(queryClient, config.tokenAddress);
       }
       options?.onError?.(error, variables, onMutateResult, context);
     },
     onSuccess: (data, variables, onMutateResult, context) => {
-      context.client.invalidateQueries({
-        queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialHandlesQueryKeys.all,
-      });
-      context.client.resetQueries({
-        queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialBalancesQueryKeys.all,
-      });
+      invalidateBalanceQueries(context.client, config.tokenAddress);
       options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });

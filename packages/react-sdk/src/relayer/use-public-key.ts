@@ -1,17 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { ZamaSDK } from "@zama-fhe/sdk";
+import { hashFn, publicKeyQueryOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-/**
- * Query key factory for the FHE public key query.
- * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
- */
-export const publicKeyQueryKeys = {
-  /** Match the public key query. */
-  all: ["publicKey"] as const,
-} as const;
+export const publicKeyQueryKeys = zamaQueryKeys.publicKey;
+export { publicKeyQueryOptions };
 
 /** Shape of the FHE public key data returned by the relayer. */
 export interface PublicKeyData {
@@ -19,22 +13,6 @@ export interface PublicKeyData {
   publicKeyId: string;
   /** The raw FHE public key bytes. */
   publicKey: Uint8Array;
-}
-
-type PublicKeyResult = PublicKeyData | null;
-
-/**
- * TanStack Query options factory for the FHE public key.
- *
- * @param sdk - A `ZamaSDK` instance.
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- */
-export function publicKeyQueryOptions(sdk: ZamaSDK) {
-  return {
-    queryKey: publicKeyQueryKeys.all,
-    queryFn: () => sdk.relayer.getPublicKey() as Promise<PublicKeyResult>,
-    staleTime: Infinity,
-  } as const;
 }
 
 /**
@@ -51,5 +29,8 @@ export function publicKeyQueryOptions(sdk: ZamaSDK) {
  */
 export function usePublicKey() {
   const sdk = useZamaSDK();
-  return useQuery<PublicKeyResult, Error>(publicKeyQueryOptions(sdk));
+  return useQuery({
+    ...publicKeyQueryOptions(sdk),
+    queryKeyHashFn: hashFn,
+  });
 }

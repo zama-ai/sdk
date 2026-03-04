@@ -2,8 +2,13 @@
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
+import {
+  confidentialBalanceQueryOptions,
+  confidentialHandleQueryOptions,
+  hashFn,
+  signerAddressQueryOptions,
+} from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
-import { confidentialBalanceQueryKeys, confidentialHandleQueryKeys } from "./balance-query-keys";
 
 /** Configuration for {@link useConfidentialBalance}. */
 export interface UseConfidentialBalanceConfig {
@@ -18,8 +23,6 @@ export type UseConfidentialBalanceOptions = Omit<
   UseQueryOptions<bigint, Error>,
   "queryKey" | "queryFn"
 >;
-
-const DEFAULT_HANDLE_REFETCH_INTERVAL = 10_000;
 
 /**
  * Declarative hook to read the connected wallet's confidential token balance.
@@ -44,32 +47,31 @@ export function useConfidentialBalance(
   const { tokenAddress, handleRefetchInterval } = config;
   const token = useReadonlyToken(tokenAddress);
 
-  const addressQuery = useQuery<Address, Error>({
-    queryKey: ["zama", "signer-address", tokenAddress],
-    queryFn: () => token.signer.getAddress(),
+  const addressQuery = useQuery({
+    ...signerAddressQueryOptions(token.signer, tokenAddress),
+    queryKeyHashFn: hashFn,
   });
 
-  const signerAddress = addressQuery.data;
-  const ownerKey = signerAddress ?? "";
+  const owner = addressQuery.data as Address | undefined;
 
   // Phase 1: Poll the encrypted handle (cheap RPC read, no signing)
-  const handleQuery = useQuery<Address, Error>({
-    queryKey: confidentialHandleQueryKeys.owner(tokenAddress, ownerKey),
-    queryFn: () => token.confidentialBalanceOf(),
-    enabled: !!signerAddress,
-    refetchInterval: handleRefetchInterval ?? DEFAULT_HANDLE_REFETCH_INTERVAL,
+  const handleQuery = useQuery({
+    ...confidentialHandleQueryOptions(token.signer, tokenAddress, {
+      owner,
+      pollingInterval: handleRefetchInterval,
+    }),
+    queryKeyHashFn: hashFn,
   });
-
-  const handle = handleQuery.data;
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
-  const balanceQuery = useQuery<bigint, Error>({
-    queryKey: [...confidentialBalanceQueryKeys.owner(tokenAddress, ownerKey), handle ?? ""],
-    queryFn: () => token.decryptBalance(handle!),
-    enabled: !!signerAddress && !!handle,
-    staleTime: Infinity,
+  const balanceQuery = useQuery({
+    ...confidentialBalanceQueryOptions(token, {
+      handle: handleQuery.data as Address | undefined,
+      owner,
+    }),
     ...options,
-  });
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<bigint, Error>);
 
   return { ...balanceQuery, handleQuery };
 }

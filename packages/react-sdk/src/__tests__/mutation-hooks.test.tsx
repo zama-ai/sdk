@@ -7,7 +7,7 @@ import { useApproveUnderlying } from "../token/use-approve-underlying";
 import { useShield } from "../token/use-shield";
 import { useAuthorizeAll } from "../token/use-authorize-all";
 import { useEncrypt } from "../relayer/use-encrypt";
-import { confidentialBalanceQueryKeys } from "../token/balance-query-keys";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { renderWithProviders, createMockSigner, createMockRelayer } from "./test-utils";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
@@ -108,7 +108,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
 
     // Seed the cache with a balance
-    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
@@ -143,7 +143,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       { signer },
     );
 
-    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
@@ -170,7 +170,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       { signer },
     );
 
-    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
     queryClient.setQueryData(balanceKey, 5000n);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -186,7 +186,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     // Verify invalidation was called for rollback
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
       }),
     );
   });
@@ -207,7 +207,7 @@ describe("useShield optimistic updates", () => {
       { signer },
     );
 
-    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
     queryClient.setQueryData(balanceKey, 3000n);
 
     await act(async () => {
@@ -233,7 +233,7 @@ describe("useShield optimistic updates", () => {
       { signer },
     );
 
-    const balanceKey = [...confidentialBalanceQueryKeys.owner(TOKEN, "0xuser"), "0xhandle"];
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
     queryClient.setQueryData(balanceKey, 3000n);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -245,7 +245,7 @@ describe("useShield optimistic updates", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
       }),
     );
   });

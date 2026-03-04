@@ -1,25 +1,17 @@
 "use client";
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
+import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-  wagmiBalancePredicates,
-} from "./balance-query-keys";
+  invalidateAfterShield,
+  shieldMutationOptions,
+  type ShieldParams,
+} from "@zama-fhe/sdk/query";
+import {
+  applyOptimisticBalanceDelta,
+  rollbackOptimisticBalanceDelta,
+} from "./optimistic-balance-update";
 import { useToken, type UseZamaConfig } from "./use-token";
-
-/** Parameters passed to the `mutate` function of {@link useShield}. */
-export interface ShieldParams {
-  /** Amount of underlying ERC-20 tokens to wrap. */
-  amount: bigint;
-  /** Optional fee amount (for native ETH wrapping with fees). */
-  fees?: bigint;
-  /** ERC-20 approval strategy: `"exact"` (default), `"max"`, or `"skip"`. */
-  approvalStrategy?: "max" | "exact" | "skip";
-}
 
 /** Configuration for {@link useShield}. */
 export interface UseShieldConfig extends UseZamaConfig {
@@ -29,20 +21,6 @@ export interface UseShieldConfig extends UseZamaConfig {
    * @defaultValue false
    */
   optimistic?: boolean;
-}
-
-/**
- * TanStack Query mutation options factory for shield.
- *
- * @param token - A `Token` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function shieldMutationOptions(token: Token) {
-  return {
-    mutationKey: ["shield", token.address] as const,
-    mutationFn: async ({ amount, fees, approvalStrategy }: ShieldParams) =>
-      token.shield(amount, { fees, approvalStrategy }),
-  };
 }
 
 /**
@@ -72,50 +50,28 @@ export function useShield(
   const queryClient = useQueryClient();
 
   return useMutation<TransactionResult, Error, ShieldParams, Address>({
-    mutationKey: ["shield", config.tokenAddress],
-    mutationFn: async ({ amount, fees, approvalStrategy }) =>
-      token.shield(amount, { fees, approvalStrategy }),
+    ...shieldMutationOptions(token),
     ...options,
     onMutate: config.optimistic
       ? async (variables, mutationContext) => {
-          const balanceKey = confidentialBalanceQueryKeys.token(config.tokenAddress);
-          await queryClient.cancelQueries({ queryKey: balanceKey });
-          const previous = queryClient.getQueriesData<bigint>({ queryKey: balanceKey });
-          for (const [key, value] of previous) {
-            if (value !== undefined) {
-              queryClient.setQueryData(key, value + variables.amount);
-            }
-          }
+          await applyOptimisticBalanceDelta(
+            queryClient,
+            config.tokenAddress,
+            variables.amount,
+            "add",
+          );
           return (options?.onMutate?.(variables, mutationContext) ??
             config.tokenAddress) as Address;
         }
       : options?.onMutate,
     onError: (error, variables, onMutateResult, context) => {
       if (config.optimistic) {
-        // Rollback: invalidate to refetch actual values
-        queryClient.invalidateQueries({
-          queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-        });
+        rollbackOptimisticBalanceDelta(queryClient, config.tokenAddress);
       }
       options?.onError?.(error, variables, onMutateResult, context);
     },
     onSuccess: (data, variables, onMutateResult, context) => {
-      context.client.invalidateQueries({
-        queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialHandlesQueryKeys.all,
-      });
-      context.client.resetQueries({
-        queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialBalancesQueryKeys.all,
-      });
-      // Underlying ERC-20 balance changes after shield — invalidate wagmi useBalance cache
-      context.client.invalidateQueries({
-        predicate: wagmiBalancePredicates.balanceOf,
-      });
+      invalidateAfterShield(context.client, config.tokenAddress);
       options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });

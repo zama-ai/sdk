@@ -1,19 +1,21 @@
 import { expect, it, vi } from "vitest";
 import type { Token, Address } from "@zama-fhe/sdk";
-import { confidentialTransferMutationOptions } from "../token/use-confidential-transfer";
-import { confidentialTransferFromMutationOptions } from "../token/use-confidential-transfer-from";
-import { confidentialApproveMutationOptions } from "../token/use-confidential-approve";
-import { approveUnderlyingMutationOptions } from "../token/use-approve-underlying";
-import { shieldMutationOptions } from "../token/use-shield";
-import { shieldETHMutationOptions } from "../token/use-shield-eth";
-import { unwrapMutationOptions } from "../token/use-unwrap";
-import { unwrapAllMutationOptions } from "../token/use-unwrap-all";
-import { finalizeUnwrapMutationOptions } from "../token/use-finalize-unwrap";
-import { unshieldMutationOptions } from "../token/use-unshield";
-import { unshieldAllMutationOptions } from "../token/use-unshield-all";
-import { resumeUnshieldMutationOptions } from "../token/use-resume-unshield";
-import { authorizeAllMutationOptions } from "../token/use-authorize-all";
-import { encryptMutationOptions } from "../relayer/use-encrypt";
+import {
+  approveUnderlyingMutationOptions,
+  authorizeAllMutationOptions,
+  confidentialApproveMutationOptions,
+  confidentialTransferFromMutationOptions,
+  confidentialTransferMutationOptions,
+  encryptMutationOptions,
+  finalizeUnwrapMutationOptions,
+  resumeUnshieldMutationOptions,
+  shieldETHMutationOptions,
+  shieldMutationOptions,
+  unshieldAllMutationOptions,
+  unshieldMutationOptions,
+  unwrapAllMutationOptions,
+  unwrapMutationOptions,
+} from "@zama-fhe/sdk/query";
 import { createMockSigner, createMockRelayer, createMockStorage } from "./test-utils";
 
 const TOKEN_ADDR = "0xtoken" as Address;

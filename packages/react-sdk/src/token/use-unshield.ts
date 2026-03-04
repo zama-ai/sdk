@@ -1,37 +1,13 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult, UnshieldCallbacks } from "@zama-fhe/sdk";
+import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-  wagmiBalancePredicates,
-} from "./balance-query-keys";
-import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
+  invalidateAfterUnshield,
+  type UnshieldParams,
+  unshieldMutationOptions,
+} from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
-
-/** Parameters passed to the `mutate` function of {@link useUnshield}. */
-export interface UnshieldParams {
-  /** Amount to unshield (plaintext — encrypted automatically). */
-  amount: bigint;
-  /** Optional progress callbacks for the multi-step unshield flow. */
-  callbacks?: UnshieldCallbacks;
-}
-
-/**
- * TanStack Query mutation options factory for unshield.
- *
- * @param token - A `Token` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function unshieldMutationOptions(token: Token) {
-  return {
-    mutationKey: ["unshield", token.address] as const,
-    mutationFn: ({ amount, callbacks }: UnshieldParams) => token.unshield(amount, callbacks),
-  };
-}
 
 /**
  * Unshield a specific amount and finalize in one call.
@@ -59,28 +35,10 @@ export function useUnshield(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, UnshieldParams, Address>({
-    mutationKey: ["unshield", config.tokenAddress],
-    mutationFn: ({ amount, callbacks }) => token.unshield(amount, callbacks),
+    ...unshieldMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      context.client.invalidateQueries({
-        queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialHandlesQueryKeys.all,
-      });
-      context.client.resetQueries({
-        queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialBalancesQueryKeys.all,
-      });
-      context.client.invalidateQueries({
-        queryKey: underlyingAllowanceQueryKeys.all,
-      });
-      context.client.invalidateQueries({
-        predicate: wagmiBalancePredicates.balanceOf,
-      });
+      invalidateAfterUnshield(context.client, config.tokenAddress);
       options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
