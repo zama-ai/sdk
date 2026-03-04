@@ -372,6 +372,7 @@ export interface InitRequest extends BaseRequest {
         fhevmConfig: FhevmInstanceConfig;
         csrfToken: string;
         integrity?: string;
+        thread?: number;
     };
     // (undocumented)
     type: "INIT";
