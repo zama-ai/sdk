@@ -197,8 +197,8 @@ export function computeCleartextHandles(
       `Length mismatch: ${values.length} values vs ${encryptionBits.length} encryptionBits`,
     );
   }
-  if (values.length > 256) {
-    throw new Error(`Cannot generate more than 256 handles (got ${values.length})`);
+  if (values.length > 255) {
+    throw new Error(`Cannot generate more than 255 handles (got ${values.length})`);
   }
 
   const fakeCiphertext = buildFakeCiphertext(values);

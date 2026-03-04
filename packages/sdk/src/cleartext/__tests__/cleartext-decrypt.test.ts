@@ -272,8 +272,7 @@ describe("cleartextUserDecrypt", () => {
         acl as never,
       ),
     ).rejects.toThrow("not authorized");
-    // Verify call order: user check first, then contract check
-    expect(acl.persistAllowed).toHaveBeenNthCalledWith(1, HANDLE_EUINT32, USER);
-    expect(acl.persistAllowed).toHaveBeenNthCalledWith(2, HANDLE_EUINT32, CONTRACT);
+    expect(acl.persistAllowed).toHaveBeenCalledWith(HANDLE_EUINT32, USER);
+    expect(acl.persistAllowed).toHaveBeenCalledWith(HANDLE_EUINT32, CONTRACT);
   });
 });

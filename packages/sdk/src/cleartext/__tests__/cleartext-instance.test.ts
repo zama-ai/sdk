@@ -159,8 +159,8 @@ describe("createCleartextInstance", () => {
       1000,
       30,
     );
-    expect(result).toBeDefined();
-    expect(result[handle]).toBeDefined();
+    // handle is all-zeros → fheTypeId=0 (ebool), mock returns 42n → 42n===1n → false
+    expect(result[handle]).toBe(false);
   });
 
   it("rejects production chain IDs", async () => {
@@ -199,7 +199,7 @@ describe("createCleartextInstance", () => {
       1000,
       30,
     );
-    expect(result).toBeDefined();
-    expect(result[handle]).toBeDefined();
+    // handle is all-zeros → fheTypeId=0 (ebool), mock returns 42n → 42n===1n → false
+    expect(result[handle]).toBe(false);
   });
 });

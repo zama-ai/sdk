@@ -218,7 +218,11 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
       return cleartextUserDecrypt(handles, userAddress, executor, acl);
     },
 
-    /** Decrypt handles on behalf of a delegator. Same ACL checks as userDecrypt. */
+    /**
+     * Decrypt handles on behalf of a delegator. ACL checks use the delegator's
+     * address (not the delegate's) because the on-chain ACL grants persistAllowed
+     * to the data owner, and the delegate merely executes the call on their behalf.
+     */
     async delegatedUserDecrypt(
       handleContractPairs: { handle: string | Uint8Array; contractAddress: string }[],
       _privateKey: string,

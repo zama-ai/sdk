@@ -64,6 +64,11 @@ describe("createCleartextEncryptedInput", () => {
     expect(() => input.add256(9n)).toThrow("2048 bits");
   });
 
+  it("throws on fractional value for addBool", () => {
+    const input = makeInput();
+    expect(() => input.addBool(0.5 as never)).toThrow("The value must be 0 or 1.");
+  });
+
   it("throws on null/undefined value for add8", () => {
     const input = makeInput();
     expect(() => input.add8(null as never)).toThrow("Missing value");
@@ -110,10 +115,10 @@ describe("createCleartextEncryptedInput", () => {
     expect(input.getBits()).toEqual([128]);
   });
 
-  it("enforces 256 variable limit", () => {
+  it("enforces 255 variable limit", () => {
     const input = makeInput();
-    for (let i = 0; i < 256; i++) input.addBool(0);
-    expect(() => input.addBool(0)).toThrow("256 variables");
+    for (let i = 0; i < 255; i++) input.addBool(0);
+    expect(() => input.addBool(0)).toThrow("255 variables");
   });
 
   it("supports method chaining", () => {

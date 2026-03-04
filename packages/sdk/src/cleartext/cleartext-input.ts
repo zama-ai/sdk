@@ -208,9 +208,9 @@ export function createCleartextEncryptedInput(params: {
     if (bits.reduce((acc, b) => acc + Math.max(2, b), 0) + added > 2048) {
       throw new Error("Packing more than 2048 bits in a single input ciphertext is unsupported");
     }
-    if (bits.length + 1 > 256) {
+    if (bits.length + 1 > 255) {
       throw new Error(
-        "Packing more than 256 variables in a single input ciphertext is unsupported",
+        "Packing more than 255 variables in a single input ciphertext is unsupported",
       );
     }
   };
@@ -218,9 +218,9 @@ export function createCleartextEncryptedInput(params: {
   const self: CleartextEncryptedInput = {
     addBool(value) {
       const v = Number(value);
-      if (v < 0 || v > 1) throw new Error("The value must be 0 or 1.");
+      if (!Number.isInteger(v) || v < 0 || v > 1) throw new Error("The value must be 0 or 1.");
       checkLimit(2);
-      values.push(BigInt(Number(value)));
+      values.push(BigInt(v));
       bits.push(2);
       return self;
     },

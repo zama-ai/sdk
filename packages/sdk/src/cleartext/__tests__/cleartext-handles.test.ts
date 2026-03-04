@@ -77,6 +77,28 @@ describe("computeCleartextHandles", () => {
     ).toThrow("Length mismatch");
   });
 
+  it("allows 255 handles (max valid index 254)", () => {
+    const { handles } = computeCleartextHandles({
+      values: Array.from({ length: 255 }, (_, i) => BigInt(i)),
+      encryptionBits: Array(255).fill(8),
+      aclContractAddress: ACL_ADDRESS,
+      chainId: CHAIN_ID,
+    });
+    expect(handles).toHaveLength(255);
+    expect(parseHandle(handles[254]!).index).toBe(254);
+  });
+
+  it("throws when more than 255 handles requested", () => {
+    expect(() =>
+      computeCleartextHandles({
+        values: Array.from({ length: 256 }, (_, i) => BigInt(i)),
+        encryptionBits: Array(256).fill(8),
+        aclContractAddress: ACL_ADDRESS,
+        chainId: CHAIN_ID,
+      }),
+    ).toThrow("Cannot generate more than 255 handles");
+  });
+
   it("throws on unsupported bit-width", () => {
     expect(() =>
       computeCleartextHandles({
