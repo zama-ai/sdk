@@ -1,7 +1,14 @@
 import { vi } from "vitest";
+import { Topics } from "../../events";
 import type { GenericSigner } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
+
+// ── Shared test constants ───────────────────────────────────────────────
+export const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+export const USER = "0x2222222222222222222222222222222222222222" as Address;
+export const ZERO_HANDLE = "0x" + "0".repeat(64);
+export const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 
 /**
  * Create a mock RelayerSDK with sensible defaults.
@@ -67,4 +74,22 @@ export function createMockSigner(
     subscribe: vi.fn().mockReturnValue(() => {}),
     ...overrides,
   };
+}
+
+/**
+ * Mock a transaction receipt containing an UnwrapRequested event.
+ * Reusable across unshield / unshieldAll / resumeUnshield tests.
+ */
+export function mockReceiptWithUnwrapRequested(
+  signer: ReturnType<typeof createMockSigner>,
+  user: Address = USER,
+) {
+  vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+    logs: [
+      {
+        topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + user.slice(2)],
+        data: "0x" + "ff".repeat(32),
+      },
+    ],
+  });
 }

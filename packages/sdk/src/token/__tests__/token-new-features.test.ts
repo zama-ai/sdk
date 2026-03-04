@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
@@ -10,12 +9,15 @@ import {
   TransactionRevertedError,
 } from "../errors";
 import { MemoryStorage } from "../memory-storage";
-import { createMockRelayer, createMockSigner } from "./test-helpers";
-
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
-const ZERO_HANDLE = "0x" + "0".repeat(64);
-const VALID_HANDLE = "0x" + "ab".repeat(32);
+import {
+  createMockRelayer,
+  createMockSigner,
+  mockReceiptWithUnwrapRequested,
+  TOKEN,
+  USER,
+  ZERO_HANDLE,
+  VALID_HANDLE,
+} from "./test-helpers";
 
 describe("NoCiphertextError detection (P3)", () => {
   let sdk: RelayerSDK;
@@ -139,17 +141,6 @@ describe("Unshield callbacks (P4)", () => {
   let signer: ReturnType<typeof createMockSigner>;
   let token: Token;
 
-  function mockReceiptWithUnwrapRequested() {
-    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
-      logs: [
-        {
-          topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
-          data: "0x" + "ff".repeat(32),
-        },
-      ],
-    });
-  }
-
   beforeEach(() => {
     sdk = createMockRelayer({
       userDecrypt: vi.fn().mockResolvedValue({ [VALID_HANDLE]: 1000n }),
@@ -172,7 +163,7 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("fires all callbacks during unshield", async () => {
-    mockReceiptWithUnwrapRequested();
+    mockReceiptWithUnwrapRequested(signer);
 
     const onUnwrapSubmitted = vi.fn();
     const onFinalizing = vi.fn();
@@ -187,7 +178,7 @@ describe("Unshield callbacks (P4)", () => {
 
   it("fires all callbacks during unshieldAll", async () => {
     vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    mockReceiptWithUnwrapRequested();
+    mockReceiptWithUnwrapRequested(signer);
 
     const onUnwrapSubmitted = vi.fn();
     const onFinalizing = vi.fn();
@@ -201,7 +192,7 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("fires callbacks during resumeUnshield", async () => {
-    mockReceiptWithUnwrapRequested();
+    mockReceiptWithUnwrapRequested(signer);
 
     const onFinalizing = vi.fn();
     const onFinalizeSubmitted = vi.fn();
@@ -214,7 +205,7 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("works without callbacks (backward compatible)", async () => {
-    mockReceiptWithUnwrapRequested();
+    mockReceiptWithUnwrapRequested(signer);
 
     const result = await token.unshield(50n);
     expect(result.txHash).toBe("0xtxhash");
@@ -222,7 +213,7 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("completes unshield even when callbacks throw", async () => {
-    mockReceiptWithUnwrapRequested();
+    mockReceiptWithUnwrapRequested(signer);
 
     const result = await token.unshield(50n, {
       onUnwrapSubmitted: () => {
@@ -241,7 +232,7 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("fires onFinalizing before onFinalizeSubmitted", async () => {
-    mockReceiptWithUnwrapRequested();
+    mockReceiptWithUnwrapRequested(signer);
 
     const order: string[] = [];
     await token.unshield(50n, {
@@ -266,7 +257,7 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("throws TransactionRevertedError when finalize writeContract fails", async () => {
-    mockReceiptWithUnwrapRequested();
+    mockReceiptWithUnwrapRequested(signer);
     vi.mocked(signer.writeContract)
       .mockResolvedValueOnce("0xunwraphash") // unwrap succeeds
       .mockRejectedValueOnce(new Error("finalize failed")); // finalize fails
@@ -275,7 +266,7 @@ describe("Unshield callbacks (P4)", () => {
   });
 
   it("throws DecryptionFailedError when publicDecrypt fails during finalize", async () => {
-    mockReceiptWithUnwrapRequested();
+    mockReceiptWithUnwrapRequested(signer);
     vi.mocked(sdk.publicDecrypt).mockRejectedValue(new Error("decrypt error"));
 
     await expect(token.unshield(50n)).rejects.toBeInstanceOf(DecryptionFailedError);

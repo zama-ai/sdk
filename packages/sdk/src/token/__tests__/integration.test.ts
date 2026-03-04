@@ -4,14 +4,11 @@ import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
-import { createMockRelayer, createMockSigner } from "./test-helpers";
+import { createMockRelayer, createMockSigner, TOKEN, USER, VALID_HANDLE } from "./test-helpers";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const WRAPPER = TOKEN;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
 const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address;
 const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Address;
 
 describe("Integration: multi-step workflows", () => {

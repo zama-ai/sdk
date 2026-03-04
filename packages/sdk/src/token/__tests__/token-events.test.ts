@@ -1,19 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
 import { ReadonlyToken } from "../readonly-token";
 import { MemoryStorage } from "../memory-storage";
+import { CredentialsManager, computeStoreKey } from "../credentials-manager";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { ZamaSDKEvent, ZamaSDKEventListener } from "../../events/sdk-events";
-import { CredentialsManager } from "../credentials-manager";
-import { createMockRelayer, createMockSigner } from "./test-helpers";
-
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
-const ZERO_HANDLE = "0x" + "0".repeat(64);
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
+import {
+  createMockRelayer,
+  createMockSigner,
+  mockReceiptWithUnwrapRequested,
+  TOKEN,
+  USER,
+  ZERO_HANDLE,
+  VALID_HANDLE,
+} from "./test-helpers";
 
 describe("ZamaSDKEvents constants", () => {
   it("has all expected event keys", () => {
@@ -418,20 +420,9 @@ describe("Token event emissions", () => {
   });
 
   describe("unshield event sequence", () => {
-    function mockReceiptWithUnwrapRequested() {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
-        logs: [
-          {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
-            data: "0x" + "ff".repeat(32),
-          },
-        ],
-      });
-    }
-
     it("emits full unshield event sequence in order", async () => {
       const token = createToken();
-      mockReceiptWithUnwrapRequested();
+      mockReceiptWithUnwrapRequested(signer);
 
       await token.unshield(50n);
 
@@ -460,7 +451,7 @@ describe("Token event emissions", () => {
 
     it("includes txHash on phase events", async () => {
       const token = createToken();
-      mockReceiptWithUnwrapRequested();
+      mockReceiptWithUnwrapRequested(signer);
 
       await token.unshield(50n);
 
@@ -475,7 +466,7 @@ describe("Token event emissions", () => {
 
     it("shares the same operationId across all unshield phase events", async () => {
       const token = createToken();
-      mockReceiptWithUnwrapRequested();
+      mockReceiptWithUnwrapRequested(signer);
 
       await token.unshield(50n);
 
@@ -625,16 +616,10 @@ describe("CredentialsManager event emissions", () => {
     await manager.allow("0xtoken" as Address);
 
     // Tamper stored data to simulate expiration
-    const address = (await signer.getAddress()).toLowerCase();
-    const chainId = await signer.getChainId();
-    const hash = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(`${address}:${chainId}`),
+    const storeKey = await computeStoreKey(
+      (await signer.getAddress()).toLowerCase(),
+      await signer.getChainId(),
     );
-    const hex = Array.from(new Uint8Array(hash))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    const storeKey = hex.slice(0, 32);
     const stored = await store.get(storeKey);
     const parsed = { ...(stored as Record<string, unknown>) };
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;

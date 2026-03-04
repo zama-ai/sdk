@@ -5,12 +5,15 @@ import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
 import { ZamaError, ZamaErrorCode } from "../token.types";
 import { MemoryStorage } from "../memory-storage";
-import { createMockRelayer, createMockSigner } from "./test-helpers";
-
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
-const ZERO_HANDLE = "0x" + "0".repeat(64);
-const VALID_HANDLE = "0x" + "ab".repeat(32);
+import {
+  createMockRelayer,
+  createMockSigner,
+  mockReceiptWithUnwrapRequested,
+  TOKEN,
+  USER,
+  ZERO_HANDLE,
+  VALID_HANDLE,
+} from "./test-helpers";
 
 describe("Token", () => {
   let sdk: RelayerSDK;
@@ -512,19 +515,8 @@ describe("Token", () => {
   describe("unshield", () => {
     const BURN_HANDLE = "0x" + "ff".repeat(32);
 
-    function mockReceiptWithUnwrapRequested() {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
-        logs: [
-          {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
-            data: "0x" + "ff".repeat(32),
-          },
-        ],
-      });
-    }
-
     it("orchestrates unwrap → receipt → finalizeUnwrap", async () => {
-      mockReceiptWithUnwrapRequested();
+      mockReceiptWithUnwrapRequested(signer);
 
       const result = await token.unshield(50n);
 
@@ -577,20 +569,9 @@ describe("Token", () => {
   describe("unshieldAll", () => {
     const BURN_HANDLE = "0x" + "ff".repeat(32);
 
-    function mockReceiptWithUnwrapRequested() {
-      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
-        logs: [
-          {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
-            data: "0x" + "ff".repeat(32),
-          },
-        ],
-      });
-    }
-
     it("orchestrates unwrapAll → receipt → finalizeUnwrap", async () => {
       vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-      mockReceiptWithUnwrapRequested();
+      mockReceiptWithUnwrapRequested(signer);
 
       const result = await token.unshieldAll();
 

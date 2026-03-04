@@ -3,6 +3,7 @@ import { CredentialsManager, computeStoreKey } from "../credentials-manager";
 import { MemoryStorage } from "../memory-storage";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
+import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
 import { createMockRelayer, createMockSigner } from "./test-helpers";
 
@@ -79,9 +80,9 @@ describe("Session TTL", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(2); // re-signed
 
     // SessionExpired event should have fired
-    const expiredEvents = events.filter((e) => e.type === "session:expired");
+    const expiredEvents = events.filter((e) => e.type === ZamaSDKEvents.SessionExpired);
     expect(expiredEvents).toHaveLength(1);
-    expect((expiredEvents[0] as { reason: string }).reason).toBe("ttl");
+    expect("reason" in expiredEvents[0]! && expiredEvents[0].reason).toBe("ttl");
   });
 
   it("TTL 0: every operation triggers signing prompt", async () => {

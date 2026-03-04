@@ -3,6 +3,7 @@ import { CredentialsManager, computeStoreKey } from "../credentials-manager";
 import { MemoryStorage } from "../memory-storage";
 import { ZamaError, ZamaErrorCode } from "../token.types";
 import { CredentialExpiredError } from "../errors";
+import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { createMockRelayer, createMockSigner } from "./test-helpers";
@@ -167,12 +168,6 @@ describe("CredentialsManager", () => {
         code: ZamaErrorCode.SigningRejected,
       }),
     );
-
-    try {
-      await manager.allow("0xtoken" as Address);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
-    }
   });
 
   it("throws SigningRejected when user denies signature (denied)", async () => {
@@ -183,12 +178,6 @@ describe("CredentialsManager", () => {
         code: ZamaErrorCode.SigningRejected,
       }),
     );
-
-    try {
-      await manager.allow("0xtoken" as Address);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
-    }
   });
 
   it("throws SigningFailed for other signing errors", async () => {
@@ -199,29 +188,15 @@ describe("CredentialsManager", () => {
         code: ZamaErrorCode.SigningFailed,
       }),
     );
-
-    try {
-      await manager.allow("0xtoken" as Address);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
-    }
   });
 
   it("throws SigningFailed for non-Error exceptions", async () => {
     vi.mocked(signer.signTypedData).mockRejectedValue("unexpected");
 
-    await expect(manager.allow("0xtoken" as Address)).rejects.toThrow(
-      expect.objectContaining({
-        code: ZamaErrorCode.SigningFailed,
-      }),
-    );
-
-    try {
-      await manager.allow("0xtoken" as Address);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
-      expect((e as ZamaError).cause).toBeUndefined();
-    }
+    const err = await manager.allow("0xtoken" as Address).catch((e) => e);
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err.code).toBe(ZamaErrorCode.SigningFailed);
+    expect(err.cause).toBeUndefined();
   });
 
   it("regenerates when stored JSON is corrupted", async () => {
@@ -419,7 +394,7 @@ describe("session allow/revoke", () => {
     await manager2.allow("0xtoken" as Address);
     await manager2.revoke();
 
-    expect(events).toContain("credentials:revoked");
+    expect(events).toContain(ZamaSDKEvents.CredentialsRevoked);
   });
 });
 

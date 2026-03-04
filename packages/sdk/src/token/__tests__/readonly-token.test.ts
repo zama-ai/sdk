@@ -6,11 +6,8 @@ import { ZamaErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { DecryptionFailedError } from "../errors";
-import { createMockRelayer, createMockSigner } from "./test-helpers";
+import { createMockRelayer, createMockSigner, TOKEN, USER, VALID_HANDLE } from "./test-helpers";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
 
 describe("ReadonlyToken", () => {
