@@ -3,7 +3,7 @@ import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage, StoredCredentials, SessionTTL } from "./token.types";
 import { MemoryStorage } from "./memory-storage";
 import { SigningRejectedError, SigningFailedError } from "./errors";
-import { assertObject, assertString, assertArray } from "../utils";
+import { assertObject, assertString, assertArray, assertCondition } from "../utils";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 
@@ -310,12 +310,14 @@ export class CredentialsManager {
   #assertSessionEntry(data: unknown): asserts data is SessionEntry {
     assertObject(data, "Session entry");
     assertString(data.signature, "session.signature");
-    if (typeof data.createdAt !== "number") {
-      throw new TypeError(`Expected session.createdAt to be a number`);
-    }
-    if (data.ttl !== "persistent" && typeof data.ttl !== "number") {
-      throw new TypeError(`Expected session.ttl to be "persistent" or a number`);
-    }
+    assertCondition(
+      typeof data.createdAt === "number",
+      `Expected session.createdAt to be a number`,
+    );
+    assertCondition(
+      data.ttl === "persistent" || typeof data.ttl === "number",
+      `Expected session.ttl to be "persistent" or a number`,
+    );
   }
 
   /** Create and store a session entry with current TTL config. */
