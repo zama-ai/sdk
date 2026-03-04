@@ -23,9 +23,11 @@ type MockProviderOptions = {
   plaintexts?: Record<string, bigint>;
 };
 type JsonRpcSendParams = Parameters<ethers.JsonRpcProvider["send"]>[1];
+type MockProviderCall = { method: string; params: unknown[] };
+type UserDecryptParams = Parameters<CleartextFhevmInstance["userDecrypt"]>[0];
 
 function createMockProvider(options: MockProviderOptions = {}) {
-  const calls: Array<{ method: string; params: unknown[] }> = [];
+  const calls: MockProviderCall[] = [];
 
   const provider: Pick<ethers.JsonRpcProvider, "send"> = {
     async send(method: string, params: JsonRpcSendParams = []) {
@@ -90,6 +92,32 @@ function createMockProvider(options: MockProviderOptions = {}) {
   };
 
   return { provider, calls };
+}
+
+function createUserDecryptParams(
+  overrides: Partial<UserDecryptParams> & Pick<UserDecryptParams, "handles">,
+): UserDecryptParams {
+  return {
+    handles: overrides.handles,
+    contractAddress: CONTRACT_ADDRESS,
+    signedContractAddresses: [CONTRACT_ADDRESS],
+    privateKey: "0x" + "01".repeat(32),
+    publicKey: "0x" + "02".repeat(32),
+    signature: "0x" + "03".repeat(65),
+    signerAddress: USER_ADDRESS,
+    startTimestamp: 1,
+    durationDays: 1,
+    ...overrides,
+  };
+}
+
+function filterEthCallsTo(calls: MockProviderCall[], to: string): MockProviderCall[] {
+  const normalizedTo = to.toLowerCase();
+  return calls.filter((call) => {
+    if (call.method !== "eth_call") return false;
+    const tx = call.params[0] as { to?: string };
+    return tx.to?.toLowerCase() === normalizedTo;
+  });
 }
 
 describe("CleartextFhevmInstance", () => {
@@ -191,17 +219,11 @@ describe("CleartextFhevmInstance", () => {
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(
-      fhevm.userDecrypt({
-        handles: [handle],
-        contractAddress: CONTRACT_ADDRESS,
-        signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: "0x" + "01".repeat(32),
-        publicKey: "0x" + "02".repeat(32),
-        signature: "0x" + "03".repeat(65),
-        signerAddress: USER_ADDRESS,
-        startTimestamp: 1,
-        durationDays: 1,
-      }),
+      fhevm.userDecrypt(
+        createUserDecryptParams({
+          handles: [handle],
+        }),
+      ),
     ).rejects.toThrow(/not authorized/i);
   });
 
@@ -217,33 +239,20 @@ describe("CleartextFhevmInstance", () => {
     });
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
 
-    const result = await fhevm.userDecrypt({
-      handles: [handleA, handleB],
-      contractAddress: CONTRACT_ADDRESS,
-      signedContractAddresses: [CONTRACT_ADDRESS],
-      privateKey: "0x" + "11".repeat(32),
-      publicKey: "0x" + "22".repeat(32),
-      signature: "0x" + "33".repeat(65),
-      signerAddress: USER_ADDRESS,
-      startTimestamp: 1,
-      durationDays: 1,
-    });
+    const result = await fhevm.userDecrypt(
+      createUserDecryptParams({
+        handles: [handleA, handleB],
+        privateKey: "0x" + "11".repeat(32),
+        publicKey: "0x" + "22".repeat(32),
+        signature: "0x" + "33".repeat(65),
+      }),
+    );
 
     expect(result[handleA]).toBe(7n);
     expect(result[handleB]).toBe(11n);
 
-    const persistAllowedCalls = calls.filter(
-      (call) =>
-        call.method === "eth_call" &&
-        (call.params[0] as { to: string }).to.toLowerCase() ===
-          TEST_FHEVM_ADDRESSES.acl.toLowerCase(),
-    );
-    const plaintextCalls = calls.filter(
-      (call) =>
-        call.method === "eth_call" &&
-        (call.params[0] as { to: string }).to.toLowerCase() ===
-          TEST_FHEVM_ADDRESSES.executor.toLowerCase(),
-    );
+    const persistAllowedCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.acl);
+    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
 
     expect(persistAllowedCalls).toHaveLength(2);
     expect(plaintextCalls).toHaveLength(2);
@@ -264,25 +273,14 @@ describe("CleartextFhevmInstance", () => {
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(
-      fhevm.userDecrypt({
-        handles: [handleA, handleB],
-        contractAddress: CONTRACT_ADDRESS,
-        signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: "0x" + "01".repeat(32),
-        publicKey: "0x" + "02".repeat(32),
-        signature: "0x" + "03".repeat(65),
-        signerAddress: USER_ADDRESS,
-        startTimestamp: 1,
-        durationDays: 1,
-      }),
+      fhevm.userDecrypt(
+        createUserDecryptParams({
+          handles: [handleA, handleB],
+        }),
+      ),
     ).rejects.toThrow(new RegExp(normalizedB));
 
-    const plaintextCalls = calls.filter(
-      (call) =>
-        call.method === "eth_call" &&
-        (call.params[0] as { to: string }).to.toLowerCase() ===
-          TEST_FHEVM_ADDRESSES.executor.toLowerCase(),
-    );
+    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
     expect(plaintextCalls).toHaveLength(0);
   });
 
@@ -299,17 +297,11 @@ describe("CleartextFhevmInstance", () => {
     });
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
 
-    await fhevm.userDecrypt({
-      handles: [handle],
-      contractAddress: CONTRACT_ADDRESS,
-      signedContractAddresses: [CONTRACT_ADDRESS],
-      privateKey: "0x" + "01".repeat(32),
-      publicKey: "0x" + "02".repeat(32),
-      signature: "0x" + "03".repeat(65),
-      signerAddress: USER_ADDRESS,
-      startTimestamp: 1,
-      durationDays: 1,
-    });
+    await fhevm.userDecrypt(
+      createUserDecryptParams({
+        handles: [handle],
+      }),
+    );
 
     expect(persistAllowedAccounts.length).toBeGreaterThan(0);
     for (const account of persistAllowedAccounts) {
@@ -327,22 +319,15 @@ describe("CleartextFhevmInstance", () => {
     });
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
 
-    const result = await fhevm.userDecrypt({
-      handles: [handleUpper],
-      contractAddress: CONTRACT_ADDRESS,
-      signedContractAddresses: [CONTRACT_ADDRESS],
-      privateKey: "0x" + "01".repeat(32),
-      publicKey: "0x" + "02".repeat(32),
-      signature: "0x" + "03".repeat(65),
-      signerAddress: USER_ADDRESS,
-      startTimestamp: 1,
-      durationDays: 1,
-    });
+    const result = await fhevm.userDecrypt(
+      createUserDecryptParams({
+        handles: [handleUpper],
+      }),
+    );
 
     const keys = Object.keys(result);
     expect(keys).toHaveLength(1);
     expect(keys[0]).toMatch(/^0x[0-9a-f]{64}$/);
-    expect(keys[0]).toHaveLength(66);
     expect(result[keys[0]!]).toBe(55n);
   });
 
@@ -372,12 +357,7 @@ describe("CleartextFhevmInstance", () => {
 
     await expect(fhevm.publicDecrypt([handleA, handleB])).rejects.toThrow(new RegExp(normalizedB));
 
-    const plaintextCalls = calls.filter(
-      (call) =>
-        call.method === "eth_call" &&
-        (call.params[0] as { to: string }).to.toLowerCase() ===
-          TEST_FHEVM_ADDRESSES.executor.toLowerCase(),
-    );
+    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
     expect(plaintextCalls).toHaveLength(0);
   });
 
@@ -476,12 +456,7 @@ describe("CleartextFhevmInstance", () => {
     await expect(promise).rejects.toThrow(delegateAddress);
     await expect(promise).rejects.toThrow(CONTRACT_ADDRESS);
 
-    const plaintextCalls = calls.filter(
-      (call) =>
-        call.method === "eth_call" &&
-        (call.params[0] as { to: string }).to.toLowerCase() ===
-          TEST_FHEVM_ADDRESSES.executor.toLowerCase(),
-    );
+    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
     expect(plaintextCalls).toHaveLength(0);
   });
 
@@ -595,21 +570,14 @@ describe("CleartextFhevmInstance", () => {
       }),
     ).rejects.toThrow(new RegExp(normalizedB));
 
-    const delegationCalls = calls.filter((call) => {
-      if (call.method !== "eth_call") return false;
-      const tx = call.params[0] as { to: string; data: string };
-      if (tx.to.toLowerCase() !== TEST_FHEVM_ADDRESSES.acl.toLowerCase()) return false;
+    const delegationCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.acl).filter((call) => {
+      const tx = call.params[0] as { data: string };
       const parsed = ACL_INTERFACE.parseTransaction({ data: tx.data });
       return parsed?.name === "isHandleDelegatedForUserDecryption";
     });
     expect(delegationCalls).toHaveLength(2);
 
-    const executorCalls = calls.filter(
-      (call) =>
-        call.method === "eth_call" &&
-        (call.params[0] as { to: string }).to.toLowerCase() ===
-          TEST_FHEVM_ADDRESSES.executor.toLowerCase(),
-    );
+    const executorCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
     expect(executorCalls).toHaveLength(0);
   });
 

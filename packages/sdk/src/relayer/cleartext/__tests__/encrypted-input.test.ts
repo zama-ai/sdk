@@ -131,7 +131,7 @@ describe("CleartextEncryptedInput", () => {
         CLEAR_TEXT_MOCK_CONFIG,
       );
 
-      expect(() => input.addAddress(value)).toThrow();
+      expect(() => input.addAddress(value)).toThrow(/invalid address/i);
     }
   });
 
@@ -158,6 +158,7 @@ describe("CleartextEncryptedInput", () => {
   it("enforces max value bounds for uint add methods", () => {
     const boundedAdders = [
       { bits: 4, add: (input: CleartextEncryptedInput, value: bigint) => input.add4(value) },
+      { bits: 8, add: (input: CleartextEncryptedInput, value: bigint) => input.add8(value) },
       { bits: 16, add: (input: CleartextEncryptedInput, value: bigint) => input.add16(value) },
       { bits: 32, add: (input: CleartextEncryptedInput, value: bigint) => input.add32(value) },
       { bits: 64, add: (input: CleartextEncryptedInput, value: bigint) => input.add64(value) },
@@ -174,14 +175,17 @@ describe("CleartextEncryptedInput", () => {
         USER_ADDRESS,
         CLEAR_TEXT_MOCK_CONFIG,
       );
-      expect(() => add(maxInput, max)).not.toThrow();
+      expect(() => add(maxInput, max), `add${bits} should accept max value ${max}`).not.toThrow();
 
       const overflowInput = new CleartextEncryptedInput(
         CONTRACT_ADDRESS,
         USER_ADDRESS,
         CLEAR_TEXT_MOCK_CONFIG,
       );
-      expect(() => add(overflowInput, overflow)).toThrow(/exceeds max/i);
+      expect(
+        () => add(overflowInput, overflow),
+        `add${bits} should reject overflow value ${overflow}`,
+      ).toThrow(/exceeds max/i);
     }
   });
 
