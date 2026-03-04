@@ -1,10 +1,6 @@
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
-import {
-  ACL_ABI,
-  CleartextFhevmInstance,
-  EXECUTOR_ABI,
-} from "../cleartext-fhevm-instance";
+import { ACL_ABI, CleartextFhevmInstance, EXECUTOR_ABI } from "../cleartext-fhevm-instance";
 import {
   CLEAR_TEXT_MOCK_CONFIG,
   CONTRACT_ADDRESS,
@@ -130,7 +126,7 @@ describe("CleartextFhevmInstance", () => {
       name: "Decryption",
       version: "1",
       chainId: Number(CLEAR_TEXT_MOCK_CONFIG.chainId),
-      verifyingContract: CLEAR_TEXT_MOCK_CONFIG.verifyingContractAddressDecryption,
+      verifyingContract: CLEAR_TEXT_MOCK_CONFIG.contracts.verifyingDecryption,
     });
     expect(typedData.types.UserDecryptRequestVerification!.map((field) => field.name)).toEqual([
       "publicKey",
@@ -215,7 +211,8 @@ describe("CleartextFhevmInstance", () => {
     const persistAllowedCalls = calls.filter(
       (call) =>
         call.method === "eth_call" &&
-        (call.params[0] as { to: string }).to.toLowerCase() === TEST_FHEVM_ADDRESSES.acl.toLowerCase(),
+        (call.params[0] as { to: string }).to.toLowerCase() ===
+          TEST_FHEVM_ADDRESSES.acl.toLowerCase(),
     );
     const plaintextCalls = calls.filter(
       (call) =>
@@ -296,7 +293,7 @@ describe("CleartextFhevmInstance", () => {
     );
 
     expect(typedData.domain.verifyingContract).toBe(
-      CLEAR_TEXT_MOCK_CONFIG.verifyingContractAddressDecryption,
+      CLEAR_TEXT_MOCK_CONFIG.contracts.verifyingDecryption,
     );
     expect(typedData.domain.name).toBe("Decryption");
     expect(typedData.domain.version).toBe("1");
@@ -453,8 +450,8 @@ describe("CleartextFhevmInstance", () => {
     const { provider } = createMockProvider();
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
 
-    await expect(
-      fhevm.requestZKProofVerification({} as never),
-    ).rejects.toThrow("Not implemented in cleartext mode");
+    await expect(fhevm.requestZKProofVerification({} as never)).rejects.toThrow(
+      "Not implemented in cleartext mode",
+    );
   });
 });

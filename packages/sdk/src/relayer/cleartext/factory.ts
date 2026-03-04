@@ -1,7 +1,7 @@
 import { BrowserProvider, JsonRpcProvider } from "ethers";
 import type { RelayerSDK } from "../relayer-sdk";
 import { CleartextFhevmInstance } from "./cleartext-fhevm-instance";
-import type { CleartextChainConfig, CleartextFhevmConfig } from "./types";
+import type { CleartextChainConfig } from "./types";
 
 export function createCleartextRelayer(config: CleartextChainConfig): RelayerSDK {
   const provider =
@@ -9,16 +9,7 @@ export function createCleartextRelayer(config: CleartextChainConfig): RelayerSDK
       ? new JsonRpcProvider(config.rpcUrl)
       : new BrowserProvider(config.rpcUrl);
 
-  const internalConfig: CleartextFhevmConfig = {
-    chainId: config.chainId,
-    gatewayChainId: config.gatewayChainId,
-    aclAddress: config.contracts.acl,
-    executorProxyAddress: config.contracts.executor,
-    inputVerifierContractAddress: config.contracts.inputVerifier,
-    kmsContractAddress: config.contracts.kmsVerifier,
-    verifyingContractAddressInputVerification: config.contracts.verifyingInputVerifier,
-    verifyingContractAddressDecryption: config.contracts.verifyingDecryption,
-  };
+  const { rpcUrl: _, ...internalConfig } = config;
 
   return new CleartextFhevmInstance(provider, internalConfig);
 }

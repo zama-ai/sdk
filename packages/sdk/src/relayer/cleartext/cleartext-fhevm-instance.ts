@@ -19,8 +19,8 @@ import {
   USER_DECRYPT_EIP712,
 } from "./eip712";
 import { CleartextEncryptedInput } from "./encrypted-input";
-import { MOCK_KMS_SIGNER_PK } from "./presets";
-import type { CleartextFhevmConfig } from "./types";
+import { MOCK_KMS_SIGNER_PK } from "./constants";
+import type { CleartextConfig } from "./types";
 
 export const ACL_ABI = [
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -57,9 +57,9 @@ type RpcLike = Pick<ethers.JsonRpcProvider, "send">;
 
 export class CleartextFhevmInstance implements RelayerSDK {
   readonly #provider: RpcLike;
-  readonly #config: CleartextFhevmConfig;
+  readonly #config: CleartextConfig;
 
-  constructor(provider: RpcLike, config: CleartextFhevmConfig) {
+  constructor(provider: RpcLike, config: CleartextConfig) {
     this.#provider = provider;
     this.#config = config;
   }
@@ -85,7 +85,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
       name: "Decryption",
       version: "1",
       chainId: Number(this.#config.chainId),
-      verifyingContract: this.#config.verifyingContractAddressDecryption as Address,
+      verifyingContract: this.#config.contracts.verifyingDecryption as Address,
     };
 
     return {
@@ -131,7 +131,9 @@ export class CleartextFhevmInstance implements RelayerSDK {
       );
     }
 
-    const values = await Promise.all(normalizedHandles.map((handle) => this.#readPlaintext(handle)));
+    const values = await Promise.all(
+      normalizedHandles.map((handle) => this.#readPlaintext(handle)),
+    );
 
     return Object.fromEntries(
       normalizedHandles.map((handle, index) => [handle, values[index]!]),
@@ -167,7 +169,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     const signature = await kmsSigner.signTypedData(
       KMS_DECRYPTION_EIP712.domain(
         this.#config.gatewayChainId,
-        this.#config.verifyingContractAddressDecryption,
+        this.#config.contracts.verifyingDecryption,
       ),
       KMS_DECRYPTION_TYPES,
       {
@@ -199,7 +201,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
       name: "Decryption",
       version: "1",
       chainId: this.#config.chainId,
-      verifyingContract: this.#config.verifyingContractAddressDecryption as Address,
+      verifyingContract: this.#config.contracts.verifyingDecryption as Address,
     };
     const message: KmsDelegatedUserDecryptEIP712Type["message"] = {
       publicKey: publicKey as KmsDelegatedUserDecryptEIP712Type["message"]["publicKey"],
@@ -239,7 +241,9 @@ export class CleartextFhevmInstance implements RelayerSDK {
       }
     }
 
-    const values = await Promise.all(normalizedHandles.map((handle) => this.#readPlaintext(handle)));
+    const values = await Promise.all(
+      normalizedHandles.map((handle) => this.#readPlaintext(handle)),
+    );
 
     return Object.fromEntries(
       normalizedHandles.map((handle, index) => [handle, values[index]!]),
@@ -266,13 +270,13 @@ export class CleartextFhevmInstance implements RelayerSDK {
 
   async #persistAllowed(handle: string, account: string): Promise<boolean> {
     const data = ACL_INTERFACE.encodeFunctionData("persistAllowed", [handle, account]);
-    const result = await this.#ethCall(this.#config.aclAddress, data);
+    const result = await this.#ethCall(this.#config.contracts.acl, data);
     return ACL_INTERFACE.decodeFunctionResult("persistAllowed", result)[0];
   }
 
   async #isAllowedForDecryption(handle: string): Promise<boolean> {
     const data = ACL_INTERFACE.encodeFunctionData("isAllowedForDecryption", [handle]);
-    const result = await this.#ethCall(this.#config.aclAddress, data);
+    const result = await this.#ethCall(this.#config.contracts.acl, data);
     return ACL_INTERFACE.decodeFunctionResult("isAllowedForDecryption", result)[0];
   }
 
@@ -288,13 +292,13 @@ export class CleartextFhevmInstance implements RelayerSDK {
       contractAddress,
       handle,
     ]);
-    const result = await this.#ethCall(this.#config.aclAddress, data);
+    const result = await this.#ethCall(this.#config.contracts.acl, data);
     return ACL_INTERFACE.decodeFunctionResult("isHandleDelegatedForUserDecryption", result)[0];
   }
 
   async #readPlaintext(handle: string): Promise<bigint> {
     const data = EXECUTOR_INTERFACE.encodeFunctionData("plaintexts", [handle]);
-    const result = await this.#ethCall(this.#config.executorProxyAddress, data);
+    const result = await this.#ethCall(this.#config.contracts.executor, data);
     return EXECUTOR_INTERFACE.decodeFunctionResult("plaintexts", result)[0];
   }
 

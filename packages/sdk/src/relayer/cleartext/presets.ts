@@ -1,13 +1,6 @@
 import deployments from "../../../../../hardhat/deployments.json" with { type: "json" };
-import {
-  GATEWAY_CHAIN_ID,
-  MOCK_INPUT_SIGNER_PK,
-  MOCK_KMS_SIGNER_PK,
-  VERIFYING_CONTRACTS,
-} from "./hardhat-constants";
+import { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "./constants";
 import type { CleartextChainConfig } from "./types";
-
-export { GATEWAY_CHAIN_ID, MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK, VERIFYING_CONTRACTS };
 
 export const hardhat = {
   chainId: 31_337n,

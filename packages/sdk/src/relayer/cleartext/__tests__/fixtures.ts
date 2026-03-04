@@ -1,5 +1,5 @@
-import { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "../presets";
-import type { CleartextFhevmConfig } from "../types";
+import { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "../constants";
+import type { CleartextConfig } from "../types";
 
 // Deterministic Hardhat deployment addresses (from FHEVMHostAddresses.sol).
 // Hardcoded here instead of importing from deployments.json so the SDK
@@ -14,13 +14,15 @@ export const TEST_FHEVM_ADDRESSES = {
 export const USER_ADDRESS = "0x1000000000000000000000000000000000000001";
 export const CONTRACT_ADDRESS = "0x2000000000000000000000000000000000000002";
 
-export const CLEAR_TEXT_MOCK_CONFIG: CleartextFhevmConfig = {
+export const CLEAR_TEXT_MOCK_CONFIG: CleartextConfig = {
   chainId: 31_337n,
   gatewayChainId: GATEWAY_CHAIN_ID,
-  aclAddress: TEST_FHEVM_ADDRESSES.acl,
-  executorProxyAddress: TEST_FHEVM_ADDRESSES.executor,
-  inputVerifierContractAddress: TEST_FHEVM_ADDRESSES.inputVerifier,
-  kmsContractAddress: TEST_FHEVM_ADDRESSES.kmsVerifier,
-  verifyingContractAddressInputVerification: VERIFYING_CONTRACTS.inputVerification,
-  verifyingContractAddressDecryption: VERIFYING_CONTRACTS.decryption,
+  contracts: {
+    acl: TEST_FHEVM_ADDRESSES.acl,
+    executor: TEST_FHEVM_ADDRESSES.executor,
+    inputVerifier: TEST_FHEVM_ADDRESSES.inputVerifier,
+    kmsVerifier: TEST_FHEVM_ADDRESSES.kmsVerifier,
+    verifyingInputVerifier: VERIFYING_CONTRACTS.inputVerification,
+    verifyingDecryption: VERIFYING_CONTRACTS.decryption,
+  },
 };

@@ -2,8 +2,8 @@ import { ethers } from "ethers";
 import { FHE_BIT_WIDTHS, FheType } from "./constants";
 import { INPUT_VERIFICATION_EIP712 } from "./eip712";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
-import { MOCK_INPUT_SIGNER_PK } from "./presets";
-import type { CleartextFhevmConfig } from "./types";
+import { MOCK_INPUT_SIGNER_PK } from "./constants";
+import type { CleartextConfig } from "./types";
 
 const INPUT_VERIFICATION_TYPES: Record<string, ethers.TypedDataField[]> = {
   CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification.map((field) => ({
@@ -19,10 +19,10 @@ type AddedValue = {
 export class CleartextEncryptedInput {
   readonly #contractAddress: string;
   readonly #userAddress: string;
-  readonly #config: CleartextFhevmConfig;
+  readonly #config: CleartextConfig;
   readonly #values: AddedValue[] = [];
 
-  constructor(contractAddress: string, userAddress: string, config: CleartextFhevmConfig) {
+  constructor(contractAddress: string, userAddress: string, config: CleartextConfig) {
     this.#contractAddress = ethers.getAddress(contractAddress);
     this.#userAddress = ethers.getAddress(userAddress);
     this.#config = config;
@@ -99,7 +99,7 @@ export class CleartextEncryptedInput {
         ciphertextBlob,
         index,
         fheType,
-        this.#config.aclAddress,
+        this.#config.contracts.acl,
         this.#config.chainId,
       ),
     );
@@ -114,7 +114,7 @@ export class CleartextEncryptedInput {
     const signature = await inputSigner.signTypedData(
       INPUT_VERIFICATION_EIP712.domain(
         this.#config.gatewayChainId,
-        this.#config.verifyingContractAddressInputVerification,
+        this.#config.contracts.verifyingInputVerifier,
       ),
       INPUT_VERIFICATION_TYPES,
       {
