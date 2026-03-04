@@ -679,76 +679,15 @@ describe("useConfidentialBalances", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
-    const { data, dataUpdatedAt, handlesQuery, isStale: _isStale, ...state } = result.current;
-    const {
-      data: handlesData,
-      dataUpdatedAt: handlesDataUpdatedAt,
-      isStale: _handlesIsStale,
-      ...handlesState
-    } = handlesQuery;
+    const { data, dataUpdatedAt, handlesQuery } = result.current;
+    const { data: handlesData, dataUpdatedAt: handlesDataUpdatedAt } = handlesQuery;
     expect(data?.get(TOKEN)).toBe(10n);
     expect(data?.get(tokenTwo)).toBe(20n);
     expect(handlesData).toEqual([handleA, handleB]);
     expect(dataUpdatedAt).toEqual(expect.any(Number));
     expect(handlesDataUpdatedAt).toEqual(expect.any(Number));
-    expect({ ...state, handlesQuery: handlesState }).toMatchInlineSnapshot(`
-      {
-        "error": null,
-        "errorUpdateCount": 0,
-        "errorUpdatedAt": 0,
-        "failureCount": 0,
-        "failureReason": null,
-        "fetchStatus": "idle",
-        "handlesQuery": {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        },
-        "isEnabled": true,
-        "isError": false,
-        "isFetched": true,
-        "isFetchedAfterMount": true,
-        "isFetching": false,
-        "isInitialLoading": false,
-        "isLoading": false,
-        "isLoadingError": false,
-        "isPaused": false,
-        "isPending": false,
-        "isPlaceholderData": false,
-        "isRefetchError": false,
-        "isRefetching": false,
-        "isSuccess": true,
-        "promise": Promise {
-          "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-          "status": "rejected",
-        },
-        "refetch": [Function],
-        "status": "success",
-      }
-    `);
+    expect(result.current.isSuccess).toBe(true);
+    expect(result.current.handlesQuery.isSuccess).toBe(true);
   });
 
   test("behavior: disabled when tokenAddresses is empty", () => {

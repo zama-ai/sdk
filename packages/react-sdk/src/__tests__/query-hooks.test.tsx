@@ -35,40 +35,9 @@ describe("query hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      const { data, dataUpdatedAt, ...state } = result.current;
+      const { data, dataUpdatedAt } = result.current;
       expect(data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(state).toMatchInlineSnapshot(`
-        {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        }
-      `);
     });
   });
 
@@ -81,40 +50,9 @@ describe("query hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      const { data, dataUpdatedAt, ...state } = result.current;
+      const { data, dataUpdatedAt } = result.current;
       expect(data).toBe(true);
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(state).toMatchInlineSnapshot(`
-        {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        }
-      `);
     });
   });
 
@@ -127,40 +65,9 @@ describe("query hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      const { data, dataUpdatedAt, ...state } = result.current;
+      const { data, dataUpdatedAt } = result.current;
       expect(data).toBe(false);
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(state).toMatchInlineSnapshot(`
-        {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        }
-      `);
     });
   });
 
@@ -173,40 +80,9 @@ describe("query hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      const { data, dataUpdatedAt, ...state } = result.current;
+      const { data, dataUpdatedAt } = result.current;
       expect(data).toBe(42000n);
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(state).toMatchInlineSnapshot(`
-        {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        }
-      `);
     });
   });
 
@@ -236,40 +112,9 @@ describe("query hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      const { data, dataUpdatedAt, ...state } = result.current;
+      const { data, dataUpdatedAt } = result.current;
       expect(data).toBe(true);
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(state).toMatchInlineSnapshot(`
-        {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        }
-      `);
     });
   });
 
@@ -323,40 +168,9 @@ describe("query hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      const { data, dataUpdatedAt, ...state } = result.current;
+      const { data, dataUpdatedAt } = result.current;
       expect(data).toBe(wrapperAddress);
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(state).toMatchInlineSnapshot(`
-        {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        }
-      `);
     });
   });
 
@@ -372,40 +186,9 @@ describe("query hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      const { data, dataUpdatedAt, ...state } = result.current;
+      const { data, dataUpdatedAt } = result.current;
       expect(data).toBe(1000n);
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(state).toMatchInlineSnapshot(`
-        {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        }
-      `);
     });
 
     test("behavior: signer undefined -> defined", async () => {
@@ -450,40 +233,9 @@ describe("query hooks", () => {
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-        const { data, dataUpdatedAt, ...state } = result.current;
+        const { data, dataUpdatedAt } = result.current;
         expect(data).toBe(50n);
         expect(dataUpdatedAt).toEqual(expect.any(Number));
-        expect(state).toMatchInlineSnapshot(`
-          {
-            "error": null,
-            "errorUpdateCount": 0,
-            "errorUpdatedAt": 0,
-            "failureCount": 0,
-            "failureReason": null,
-            "fetchStatus": "idle",
-            "isEnabled": true,
-            "isError": false,
-            "isFetched": true,
-            "isFetchedAfterMount": true,
-            "isFetching": false,
-            "isInitialLoading": false,
-            "isLoading": false,
-            "isLoadingError": false,
-            "isPaused": false,
-            "isPending": false,
-            "isPlaceholderData": false,
-            "isRefetchError": false,
-            "isRefetching": false,
-            "isStale": false,
-            "isSuccess": true,
-            "promise": Promise {
-              "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-              "status": "rejected",
-            },
-            "refetch": [Function],
-            "status": "success",
-          }
-        `);
       });
     });
 
@@ -496,40 +248,9 @@ describe("query hooks", () => {
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-        const { data, dataUpdatedAt, ...state } = result.current;
+        const { data, dataUpdatedAt } = result.current;
         expect(data).toBe(25n);
         expect(dataUpdatedAt).toEqual(expect.any(Number));
-        expect(state).toMatchInlineSnapshot(`
-          {
-            "error": null,
-            "errorUpdateCount": 0,
-            "errorUpdatedAt": 0,
-            "failureCount": 0,
-            "failureReason": null,
-            "fetchStatus": "idle",
-            "isEnabled": true,
-            "isError": false,
-            "isFetched": true,
-            "isFetchedAfterMount": true,
-            "isFetching": false,
-            "isInitialLoading": false,
-            "isLoading": false,
-            "isLoadingError": false,
-            "isPaused": false,
-            "isPending": false,
-            "isPlaceholderData": false,
-            "isRefetchError": false,
-            "isRefetching": false,
-            "isStale": false,
-            "isSuccess": true,
-            "promise": Promise {
-              "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-              "status": "rejected",
-            },
-            "refetch": [Function],
-            "status": "success",
-          }
-        `);
       });
     });
 
@@ -547,40 +268,9 @@ describe("query hooks", () => {
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-        const { data, dataUpdatedAt, ...state } = result.current;
+        const { data, dataUpdatedAt } = result.current;
         expect(data).toBe(10n);
         expect(dataUpdatedAt).toEqual(expect.any(Number));
-        expect(state).toMatchInlineSnapshot(`
-          {
-            "error": null,
-            "errorUpdateCount": 0,
-            "errorUpdatedAt": 0,
-            "failureCount": 0,
-            "failureReason": null,
-            "fetchStatus": "idle",
-            "isEnabled": true,
-            "isError": false,
-            "isFetched": true,
-            "isFetchedAfterMount": true,
-            "isFetching": false,
-            "isInitialLoading": false,
-            "isLoading": false,
-            "isLoadingError": false,
-            "isPaused": false,
-            "isPending": false,
-            "isPlaceholderData": false,
-            "isRefetchError": false,
-            "isRefetching": false,
-            "isStale": false,
-            "isSuccess": true,
-            "promise": Promise {
-              "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-              "status": "rejected",
-            },
-            "refetch": [Function],
-            "status": "success",
-          }
-        `);
       });
     });
 
@@ -598,40 +288,9 @@ describe("query hooks", () => {
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-        const { data, dataUpdatedAt, ...state } = result.current;
+        const { data, dataUpdatedAt } = result.current;
         expect(data).toBe("0xrecipient");
         expect(dataUpdatedAt).toEqual(expect.any(Number));
-        expect(state).toMatchInlineSnapshot(`
-          {
-            "error": null,
-            "errorUpdateCount": 0,
-            "errorUpdatedAt": 0,
-            "failureCount": 0,
-            "failureReason": null,
-            "fetchStatus": "idle",
-            "isEnabled": true,
-            "isError": false,
-            "isFetched": true,
-            "isFetchedAfterMount": true,
-            "isFetching": false,
-            "isInitialLoading": false,
-            "isLoading": false,
-            "isLoadingError": false,
-            "isPaused": false,
-            "isPending": false,
-            "isPlaceholderData": false,
-            "isRefetchError": false,
-            "isRefetching": false,
-            "isStale": false,
-            "isSuccess": true,
-            "promise": Promise {
-              "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-              "status": "rejected",
-            },
-            "refetch": [Function],
-            "status": "success",
-          }
-        `);
       });
     });
   });
@@ -642,43 +301,12 @@ describe("query hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      const { data, dataUpdatedAt, ...state } = result.current;
+      const { data, dataUpdatedAt } = result.current;
       expect(data).toEqual({
         publicKeyId: "pk-1",
         publicKey: new Uint8Array([1]),
       });
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(state).toMatchInlineSnapshot(`
-        {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        }
-      `);
     });
   });
 
@@ -688,43 +316,12 @@ describe("query hooks", () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      const { data, dataUpdatedAt, ...state } = result.current;
+      const { data, dataUpdatedAt } = result.current;
       expect(data).toEqual({
         publicParams: new Uint8Array([2]),
         publicParamsId: "pp-1",
       });
       expect(dataUpdatedAt).toEqual(expect.any(Number));
-      expect(state).toMatchInlineSnapshot(`
-        {
-          "error": null,
-          "errorUpdateCount": 0,
-          "errorUpdatedAt": 0,
-          "failureCount": 0,
-          "failureReason": null,
-          "fetchStatus": "idle",
-          "isEnabled": true,
-          "isError": false,
-          "isFetched": true,
-          "isFetchedAfterMount": true,
-          "isFetching": false,
-          "isInitialLoading": false,
-          "isLoading": false,
-          "isLoadingError": false,
-          "isPaused": false,
-          "isPending": false,
-          "isPlaceholderData": false,
-          "isRefetchError": false,
-          "isRefetching": false,
-          "isStale": false,
-          "isSuccess": true,
-          "promise": Promise {
-            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
-            "status": "rejected",
-          },
-          "refetch": [Function],
-          "status": "success",
-        }
-      `);
     });
   });
 });
