@@ -5,12 +5,15 @@ import { CleartextEncryptedInput } from "../encrypted-input";
 import { CLEAR_TEXT_MOCK_CONFIG, CONTRACT_ADDRESS, USER_ADDRESS } from "./fixtures";
 
 describe("CleartextEncryptedInput", () => {
-  it("encrypt produces proof bytes with expected layout", async () => {
-    const input = new CleartextEncryptedInput(
+  const createInput = () =>
+    new CleartextEncryptedInput(
       CONTRACT_ADDRESS,
       USER_ADDRESS,
       CLEAR_TEXT_MOCK_CONFIG,
-    )
+    );
+
+  it("encrypt produces proof bytes with expected layout", async () => {
+    const input = createInput()
       .add8(42n)
       .add8(99n);
 
@@ -33,11 +36,7 @@ describe("CleartextEncryptedInput", () => {
   });
 
   it("add methods map to expected FheType metadata", async () => {
-    const input = new CleartextEncryptedInput(
-      CONTRACT_ADDRESS,
-      USER_ADDRESS,
-      CLEAR_TEXT_MOCK_CONFIG,
-    )
+    const input = createInput()
       .addBool(true)
       .add4(4n)
       .add8(8n)
@@ -63,11 +62,7 @@ describe("CleartextEncryptedInput", () => {
   });
 
   it("returned handles match handles embedded in proof", async () => {
-    const input = new CleartextEncryptedInput(
-      CONTRACT_ADDRESS,
-      USER_ADDRESS,
-      CLEAR_TEXT_MOCK_CONFIG,
-    )
+    const input = createInput()
       .add8(7n)
       .add16(11n)
       .add32(13n);
@@ -86,11 +81,7 @@ describe("CleartextEncryptedInput", () => {
   it("addBool rejects bigint values outside 0/1", () => {
     const invalidValues = [2n, 3n, -1n] as const;
     for (const value of invalidValues) {
-      const input = new CleartextEncryptedInput(
-        CONTRACT_ADDRESS,
-        USER_ADDRESS,
-        CLEAR_TEXT_MOCK_CONFIG,
-      );
+      const input = createInput();
 
       expect(() => input.addBool(value)).toThrow(/must be 0, 1, true, or false/i);
     }
@@ -101,11 +92,7 @@ describe("CleartextEncryptedInput", () => {
     const encodedTypes: number[] = [];
 
     for (const value of validValues) {
-      const { handles } = await new CleartextEncryptedInput(
-        CONTRACT_ADDRESS,
-        USER_ADDRESS,
-        CLEAR_TEXT_MOCK_CONFIG,
-      )
+      const { handles } = await createInput()
         .addBool(value)
         .encrypt();
 
@@ -125,32 +112,20 @@ describe("CleartextEncryptedInput", () => {
     const invalidAddresses = ["0x00", "not-an-address", ""] as const;
 
     for (const value of invalidAddresses) {
-      const input = new CleartextEncryptedInput(
-        CONTRACT_ADDRESS,
-        USER_ADDRESS,
-        CLEAR_TEXT_MOCK_CONFIG,
-      );
+      const input = createInput();
 
       expect(() => input.addAddress(value)).toThrow(/invalid address/i);
     }
   });
 
   it("throws when adding negative cleartext values", () => {
-    const input = new CleartextEncryptedInput(
-      CONTRACT_ADDRESS,
-      USER_ADDRESS,
-      CLEAR_TEXT_MOCK_CONFIG,
-    );
+    const input = createInput();
 
     expect(() => input.add8(-1n)).toThrow(/non-negative/i);
   });
 
   it("throws when adding value above FheType max bit width", () => {
-    const input = new CleartextEncryptedInput(
-      CONTRACT_ADDRESS,
-      USER_ADDRESS,
-      CLEAR_TEXT_MOCK_CONFIG,
-    );
+    const input = createInput();
 
     expect(() => input.add8(256n)).toThrow(/exceeds max/i);
   });
@@ -170,18 +145,10 @@ describe("CleartextEncryptedInput", () => {
       const max = (1n << BigInt(bits)) - 1n;
       const overflow = max + 1n;
 
-      const maxInput = new CleartextEncryptedInput(
-        CONTRACT_ADDRESS,
-        USER_ADDRESS,
-        CLEAR_TEXT_MOCK_CONFIG,
-      );
+      const maxInput = createInput();
       expect(() => add(maxInput, max), `add${bits} should accept max value ${max}`).not.toThrow();
 
-      const overflowInput = new CleartextEncryptedInput(
-        CONTRACT_ADDRESS,
-        USER_ADDRESS,
-        CLEAR_TEXT_MOCK_CONFIG,
-      );
+      const overflowInput = createInput();
       expect(
         () => add(overflowInput, overflow),
         `add${bits} should reject overflow value ${overflow}`,
@@ -190,11 +157,7 @@ describe("CleartextEncryptedInput", () => {
   });
 
   it("encrypt with no added values returns empty handles and a proof header", async () => {
-    const input = new CleartextEncryptedInput(
-      CONTRACT_ADDRESS,
-      USER_ADDRESS,
-      CLEAR_TEXT_MOCK_CONFIG,
-    );
+    const input = createInput();
 
     const { handles, inputProof } = await input.encrypt();
 
