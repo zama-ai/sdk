@@ -3,7 +3,7 @@
 import { useConfidentialBalances, useTokenMetadata, type Address } from "@zama-fhe/react-sdk";
 import { useState } from "react";
 import { formatUnits } from "viem";
-import { useReadContracts } from "wagmi";
+import { useConnection, useReadContracts } from "wagmi";
 import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/react-sdk";
 
 function TokenRow({
@@ -46,19 +46,21 @@ function TokenRow({
 }
 
 function ERC20TokenRow({
-  address,
+  tokenAddress,
   wrapper,
   LinkComponent,
 }: {
-  address: Address;
+  tokenAddress: Address;
   wrapper: Address;
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
+  const { address: connectedAddress } = useConnection();
+  const enabled = !!connectedAddress;
   const { data, isLoading, error } = useReadContracts({
     contracts: [
-      symbolContract(address),
-      decimalsContract(address),
-      balanceOfContract(address, address),
+      symbolContract(tokenAddress),
+      decimalsContract(tokenAddress),
+      enabled ? balanceOfContract(tokenAddress, connectedAddress) : {},
     ],
   });
 
@@ -69,14 +71,14 @@ function ERC20TokenRow({
     value !== undefined && decimals !== undefined ? formatUnits(value, decimals) : undefined;
 
   return (
-    <tr data-testid={`token-row-${symbol ?? address}`}>
+    <tr data-testid={`token-row-${symbol ?? tokenAddress}`}>
       <td className="px-4 py-2">{symbol ?? "..."}</td>
       <td className="px-4 py-2 font-mono text-right" data-testid="balance">
         {error ? "Error" : isLoading ? "..." : (formatted ?? "...")}
       </td>
       <td className="px-4 py-2 text-right">
         <LinkComponent
-          to={`/shield?token=${address}&wrapper=${wrapper}`}
+          to={`/shield?token=${tokenAddress}&wrapper=${wrapper}`}
           className="text-zama-yellow hover:underline"
         >
           Shield
@@ -121,7 +123,7 @@ export function TokenTable({
           {erc20Tokens.map((token) => (
             <ERC20TokenRow
               key={token.address}
-              address={token.address}
+              tokenAddress={token.address}
               wrapper={token.wrapper}
               LinkComponent={LinkComponent}
             />
