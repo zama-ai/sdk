@@ -57,7 +57,17 @@ function resolveProvider(network: Eip1193Provider | string): Provider {
  * const { handles, inputProof } = await input.encrypt();
  * ```
  */
+/** Chain IDs where cleartext mode must never be used (values are stored in plaintext). */
+const PRODUCTION_CHAIN_IDS = new Set([1, 11155111]); // Mainnet, Sepolia
+
 export async function createCleartextInstance(config: CleartextInstanceConfig) {
+  if (PRODUCTION_CHAIN_IDS.has(config.chainId)) {
+    throw new Error(
+      `Cleartext mode is not allowed on chain ${config.chainId}. ` +
+        `Cleartext stores values in plaintext — use RelayerWeb or RelayerNode for production networks.`,
+    );
+  }
+
   const provider = resolveProvider(config.network);
   const { aclContractAddress, chainId, cleartextExecutorAddress } = config;
   const coprocessorSigningKey = new SigningKey(config.coprocessorSignerPrivateKey);

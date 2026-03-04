@@ -162,6 +162,15 @@ describe("createCleartextInstance", () => {
     expect(result[handle]).toBeDefined();
   });
 
+  it("rejects production chain IDs", async () => {
+    await expect(createCleartextInstance({ ...CONFIG, chainId: 1 })).rejects.toThrow(
+      "Cleartext mode is not allowed on chain 1",
+    );
+    await expect(createCleartextInstance({ ...CONFIG, chainId: 11155111 })).rejects.toThrow(
+      "Cleartext mode is not allowed on chain 11155111",
+    );
+  });
+
   it("resolves BrowserProvider when network is an object (Eip1193Provider)", async () => {
     const eip1193Mock = { request: vi.fn() }; // mimics Eip1193Provider
     const instance = await createCleartextInstance({
