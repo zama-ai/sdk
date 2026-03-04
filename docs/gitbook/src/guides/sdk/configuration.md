@@ -333,32 +333,36 @@ await sdk.revokeSession();
 
 ### Wallet lifecycle integration
 
-The SDK should revoke the session signature when the wallet state changes. There are two distinct cases:
+The SDK revokes the session signature when the wallet state changes. There are two distinct cases:
 
-**Disconnect / lock** — the user explicitly disconnects or locks their wallet. The session signature should be cleared so the next connection requires a fresh sign.
+**Disconnect / lock** — the user explicitly disconnects or locks their wallet. The session signature is cleared so the next connection requires a fresh sign.
 
-**Account switch** — the user switches from address A to address B (or switches chains). The previous account's session signature is revoked so it can't be reused if the user switches back. The EIP-712 signature is address- and chain-scoped, so leaving it around isn't a security hole, but it creates confusing UX if stale keys appear "allowed."
+**Account switch** — the user switches from address A to address B. The previous account's session signature is revoked because the EIP-712 signature is address-scoped — leaving A's session active while B is connected creates confusing UX.
+
+**Chain switch** — the user switches networks (e.g. Ethereum → Base) while keeping the same address. Session signatures are **not** revoked. Since credentials are keyed by `address + chainId`, each chain has independent sessions that persist across switches. When the user switches back to the original chain, their session is still active — no re-signing needed.
 
 #### wagmi users: automatic
 
-If you use `WagmiSigner`, auto-revoke is built in — the SDK subscribes to wagmi's `watchConnection` and calls `revokeSession()` on disconnect or account change. No manual wiring needed.
+If you use `WagmiSigner`, auto-revoke on disconnect and account change is built in — the SDK subscribes to wagmi's `watchConnection`. No manual wiring needed.
 
 #### viem / ethers users: manual wiring
 
-Wire `revokeSession()` to wallet events for both cases:
+Wire `revokeSession()` to wallet events:
 
 ```ts
 // Disconnect / lock — clear the session entirely
 wallet.on("disconnect", () => sdk.revokeSession());
 
 // Account switch — revoke the previous account's session
-// The SDK tracks the last-known address and chain internally,
+// The SDK tracks the last-known address internally,
 // so revokeSession() clears the correct key even though
 // the signer now returns the new account.
 wallet.on("accountsChanged", () => sdk.revokeSession());
 ```
 
-Without this wiring, cached session signatures remain valid until expiry. This isn't a security hole (signatures are time-bounded and chain-scoped), but it creates confusing UX — e.g. a user switches from account A to B and back, and A's old session still appears active.
+Chain switches (`chainChanged`) do **not** need wiring — credentials for each chain are stored independently and persist across switches.
+
+Without disconnect/account-change wiring, cached session signatures remain valid until expiry. This isn't a security hole (signatures are time-bounded and chain-scoped), but it creates confusing UX — e.g. a user switches from account A to B and back, and A's old session still appears active.
 
 ### Typical flow
 
