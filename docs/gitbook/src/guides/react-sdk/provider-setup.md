@@ -67,7 +67,7 @@ For React apps using viem directly.
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
-import { ViemSigner } from "@zama-fhe/react-sdk/viem";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 // walletClient and publicClient from your viem setup
 const signer = new ViemSigner({ walletClient, publicClient });
@@ -99,7 +99,7 @@ function App() {
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
-import { EthersSigner } from "@zama-fhe/react-sdk/ethers";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
 // ethersSigner from BrowserProvider.getSigner() or similar
 const signer = new EthersSigner({ signer: ethersSigner });

@@ -6,8 +6,6 @@ const USE_CLIENT_BANNER = '"use client";\n';
 export default defineConfig({
   entry: {
     index: "src/index.ts",
-    "viem/index": "src/viem/index.ts",
-    "ethers/index": "src/ethers/index.ts",
     "wagmi/index": "src/wagmi/index.ts",
   },
   format: ["esm"],
@@ -19,8 +17,6 @@ export default defineConfig({
     "react",
     "react-dom",
     "@tanstack/react-query",
-    "viem",
-    "ethers",
     "wagmi",
     "@zama-fhe/sdk",
     "@zama-fhe/relayer-sdk",

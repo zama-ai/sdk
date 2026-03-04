@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RelayerWeb, ZamaProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
-import { EthersSigner } from "@zama-fhe/react-sdk/ethers";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { BrowserProvider } from "ethers";
 import type { ReactNode } from "react";
 
