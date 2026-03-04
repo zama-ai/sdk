@@ -13,11 +13,10 @@ import { useUnshield } from "../token/use-unshield";
 import { useUnshieldAll } from "../token/use-unshield-all";
 import { useUnwrap } from "../token/use-unwrap";
 import { useUnwrapAll } from "../token/use-unwrap-all";
-import { createMockRelayer, createMockSigner, renderWithProviders } from "./test-utils";
+import { USER, createMockRelayer, createMockSigner, renderWithProviders } from "./test-utils";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const OTHER_TOKEN = "0x9999999999999999999999999999999999999999" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
 const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address;
 

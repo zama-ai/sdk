@@ -6,7 +6,7 @@ import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/
 import { hashFn } from "@zama-fhe/sdk/query";
 import { ZamaProvider } from "../provider";
 
-const USER = "0x2222222222222222222222222222222222222222" as `0x${string}`;
+export const USER = "0x2222222222222222222222222222222222222222" as `0x${string}`;
 
 export function createMockSigner(): GenericSigner {
   return {
