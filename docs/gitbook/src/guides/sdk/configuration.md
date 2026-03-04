@@ -156,12 +156,12 @@ If your signer has access to wallet lifecycle events, implement `subscribe` so t
 
 Decrypt keys (a keypair used to decrypt confidential balances) and decrypted balances are cached so users don't get a wallet popup on every decrypt or a loading spinner on page reload. You choose where to store them:
 
-| Storage             | When to use                                                                                              |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                 |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                                                                       |
+| Storage             | When to use                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                  |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                                                                        |
 | `asyncLocalStorage` | Node.js servers — isolate decrypt keys per request ([example below](#per-request-storage-nodejs-servers)) |
-| Custom              | Implement `GenericStorage` (3 async methods: `get`, `set`, `delete`)                                     |
+| Custom              | Implement `GenericStorage` (3 async methods: `get`, `set`, `delete`)                                      |
 
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
