@@ -38,8 +38,7 @@ export function eip1193Subscribe(
     }
     if (
       accounts[0] &&
-      (!currentAddress ||
-        accounts[0].toLowerCase() !== currentAddress.toLowerCase())
+      (!currentAddress || accounts[0].toLowerCase() !== currentAddress.toLowerCase())
     ) {
       onAccountChange(accounts[0]);
     }
