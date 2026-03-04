@@ -1,9 +1,17 @@
 "use client";
 
-import { useConfidentialBalances, useTokenMetadata, type Address } from "@zama-fhe/react-sdk";
-import { useBalanceOf } from "@zama-fhe/react-sdk/wagmi";
+import {
+  balanceOfContract,
+  decimalsContract,
+  symbolContract,
+  useAllow,
+  useConfidentialBalances,
+  useMetadata,
+  type Address,
+} from "@zama-fhe/react-sdk";
 import { useState } from "react";
 import { formatUnits } from "viem";
+import { useConnection, useReadContracts } from "wagmi";
 
 function TokenRow({
   address,
@@ -18,7 +26,7 @@ function TokenRow({
   isDecrypting: boolean;
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
-  const { data: metadata } = useTokenMetadata(address);
+  const { data: metadata } = useMetadata(address);
 
   return (
     <tr data-testid={`token-row-${metadata?.symbol ?? address}`}>
@@ -45,25 +53,39 @@ function TokenRow({
 }
 
 function ERC20TokenRow({
-  address,
+  tokenAddress,
   wrapper,
   LinkComponent,
 }: {
-  address: Address;
+  tokenAddress: Address;
   wrapper: Address;
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
-  const { data: balance, isLoading, error } = useBalanceOf({ tokenAddress: address });
+  const { address: connectedAddress } = useConnection();
+  const enabled = !!connectedAddress;
+  const { data, isLoading, error } = useReadContracts({
+    contracts: [
+      symbolContract(tokenAddress),
+      decimalsContract(tokenAddress),
+      enabled ? balanceOfContract(tokenAddress, connectedAddress) : {},
+    ],
+  });
+
+  const symbol = data?.[0]?.result as string | undefined;
+  const decimals = data?.[1]?.result as number | undefined;
+  const value = data?.[2]?.result as bigint | undefined;
+  const formatted =
+    value !== undefined && decimals !== undefined ? formatUnits(value, decimals) : undefined;
 
   return (
-    <tr data-testid={`token-row-${balance.symbol ?? address}`}>
-      <td className="px-4 py-2">{balance.symbol ?? "..."}</td>
+    <tr data-testid={`token-row-${symbol ?? tokenAddress}`}>
+      <td className="px-4 py-2">{symbol ?? "..."}</td>
       <td className="px-4 py-2 font-mono text-right" data-testid="balance">
-        {error ? "Error" : isLoading ? "..." : (balance.formatted ?? "...")}
+        {error ? "Error" : isLoading ? "..." : (formatted ?? "...")}
       </td>
       <td className="px-4 py-2 text-right">
         <LinkComponent
-          to={`/shield?token=${address}&wrapper=${wrapper}`}
+          to={`/shield?token=${tokenAddress}&wrapper=${wrapper}`}
           className="text-zama-yellow hover:underline"
         >
           Shield
@@ -83,15 +105,27 @@ export function TokenTable({
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const [revealed, setRevealed] = useState(false);
-  const { data: balances, isFetching } = useConfidentialBalances({
+  const { mutate: allowTokens } = useAllow();
+  const {
+    data: balances,
+    isFetching,
+    isLoading,
+  } = useConfidentialBalances({
     tokenAddresses: revealed ? tokenAddresses : [],
   });
 
   return (
     <div className="space-y-4">
       <button
-        onClick={() => setRevealed(!revealed)}
+        onClick={() =>
+          allowTokens(tokenAddresses, {
+            onSuccess() {
+              setRevealed(!revealed);
+            },
+          })
+        }
         className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover transition-colors"
+        disabled={isLoading}
         data-testid="reveal-button"
       >
         {revealed ? "Hide Balances" : "Reveal Balances"}
@@ -108,7 +142,7 @@ export function TokenTable({
           {erc20Tokens.map((token) => (
             <ERC20TokenRow
               key={token.address}
-              address={token.address}
+              tokenAddress={token.address}
               wrapper={token.wrapper}
               LinkComponent={LinkComponent}
             />

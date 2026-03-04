@@ -158,16 +158,76 @@ If you need to control each step separately:
 
 ## Authorization
 
-### `useAuthorizeAll`
+### `useAllow`
 
-Pre-authorize FHE credentials for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually.
+Pre-authorize decrypt keys for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually. Automatically invalidates `isAllowed` queries on success.
 
 ```tsx
-const { mutateAsync: authorizeAll } = useAuthorizeAll();
+const { mutateAsync: allow } = useAllow();
 
-await authorizeAll(["0xTokenA", "0xTokenB", "0xTokenC"]);
+await allow(["0xTokenA", "0xTokenB", "0xTokenC"]);
 // All subsequent balance reads reuse the cached credential
 ```
+
+### `useIsAllowed`
+
+Check whether a session signature is cached for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt.
+
+```tsx
+import { useIsAllowed } from "@zama-fhe/react-sdk";
+
+const { data: allowed } = useIsAllowed("0xToken");
+// allowed === true → decrypts won't prompt the wallet
+```
+
+### `useRevoke`
+
+Revoke the session signature for the connected wallet. Stored credentials remain intact, but the next decrypt will require a fresh wallet signature. Automatically invalidates `isAllowed` queries on success.
+
+```tsx
+import { useRevoke } from "@zama-fhe/react-sdk";
+
+const { mutate: revoke } = useRevoke();
+
+revoke(["0xTokenA", "0xTokenB"]);
+```
+
+### `useRevokeSession`
+
+Revoke the entire session for the connected wallet. Unlike `useRevoke` which targets specific tokens, this clears the session-level signature.
+
+```tsx
+import { useRevokeSession } from "@zama-fhe/react-sdk";
+
+const { mutate: revokeSession } = useRevokeSession();
+
+revokeSession();
+```
+
+> **Note:** If you use `WagmiSigner`, the SDK automatically revokes the session on wallet disconnect or account change — you don't need to call `useRevoke` or `useRevokeSession` manually for that case.
+
+### Session management
+
+Decrypt keys require a wallet signature once per page session. Use the hooks above or `useToken` for direct control:
+
+```tsx
+const tokenA = useToken({ tokenAddress: "0xTokenA" });
+const tokenB = useToken({ tokenAddress: "0xTokenB" });
+
+// Allow a single token — signs once, then caches for the session
+await tokenA.allow();
+
+// Or allow multiple tokens with a single wallet signature
+await ReadonlyToken.allow(tokenA, tokenB);
+
+// Check if session credentials are still valid
+const allowed = await tokenA.isAllowed();
+
+// Clear session credentials on disconnect
+await tokenA.revoke();
+```
+
+See [Session management](../sdk/configuration.md#session-management) for details on the security model.
 
 ## Approval
 
@@ -203,12 +263,12 @@ Read the ERC-20 allowance of the underlying token for the wrapper.
 
 Find the wrapper contract for a token via the deployment coordinator. Cached indefinitely.
 
-### `useTokenMetadata`
+### `useMetadata`
 
 Get name, symbol, and decimals in one call. Cached indefinitely.
 
 ```tsx
-const { data: meta } = useTokenMetadata("0xToken");
+const { data: meta } = useMetadata("0xToken");
 // meta?.name, meta?.symbol, meta?.decimals
 ```
 
@@ -239,6 +299,20 @@ feed?.forEach((item) => {
 | `useUnshieldFee({ feeManagerAddress, amount, from, to })` | Unshield (unwrap) fee |
 | `useBatchTransferFee("0xFeeManager")`                     | Batch transfer fee    |
 | `useFeeRecipient("0xFeeManager")`                         | Fee recipient address |
+
+## Suspense variants
+
+Most read hooks have a Suspense variant that throws a promise instead of returning `isLoading`. Use them inside a `<Suspense>` boundary:
+
+| Hook                        | Suspense variant                    |
+| --------------------------- | ----------------------------------- |
+| `useConfidentialIsApproved` | `useConfidentialIsApprovedSuspense` |
+| `useUnderlyingAllowance`    | `useUnderlyingAllowanceSuspense`    |
+| `useWrapperDiscovery`       | `useWrapperDiscoverySuspense`       |
+| `useMetadata`               | `useMetadataSuspense`               |
+| `useIsConfidential`         | `useIsConfidentialSuspense`         |
+| `useIsWrapper`              | `useIsWrapperSuspense`              |
+| `useTotalSupply`            | `useTotalSupplySuspense`            |
 
 ## SDK access
 
@@ -297,6 +371,7 @@ For manual cache control (prefetching, invalidation, removal):
 | `confidentialBalancesQueryKeys` | `.all`, `.tokens(addrs, owner)`                                                        | Multi-token batch balances     |
 | `confidentialHandleQueryKeys`   | `.all`, `.token(addr)`, `.owner(addr, owner)`                                          | Single-token encrypted handle  |
 | `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addrs, owner)`                                                        | Multi-token batch handles      |
+| `isAllowedQueryKeys`            | `.all`, `.token(addr)`                                                                 | Session signature status       |
 | `underlyingAllowanceQueryKeys`  | `.all`, `.token(addr, wrapper)`                                                        | ERC-20 allowance               |
 | `activityFeedQueryKeys`         | `.all`, `.token(addr)`                                                                 | Activity feed                  |
 | `feeQueryKeys`                  | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(...)`, `.feeRecipient(...)` | Fee queries                    |

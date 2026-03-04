@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
-import { useTokenMetadata } from "../token/use-token-metadata";
+import { useMetadata } from "../token/use-metadata";
 import { useIsConfidential, useIsWrapper } from "../token/use-is-confidential";
 import { useTotalSupply } from "../token/use-total-supply";
 import { useConfidentialIsApproved } from "../token/use-confidential-is-approved";
@@ -19,7 +19,7 @@ import { renderWithProviders, createMockSigner } from "./test-utils";
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 
 describe("query hooks", () => {
-  describe("useTokenMetadata", () => {
+  describe("useMetadata", () => {
     it("returns name, symbol, decimals", async () => {
       const signer = createMockSigner();
       // readContract is called for name(), symbol(), decimals() by ReadonlyToken
@@ -30,7 +30,7 @@ describe("query hooks", () => {
         .mockResolvedValueOnce("TT")
         .mockResolvedValueOnce(18);
 
-      const { result } = renderWithProviders(() => useTokenMetadata(TOKEN), { signer });
+      const { result } = renderWithProviders(() => useMetadata(TOKEN), { signer });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });

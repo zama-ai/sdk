@@ -27,8 +27,11 @@ jobs:
     secrets:
       SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
+  api-report:
+    uses: ./.github/workflows/api-report.yml
+
   release:
-    needs: [vitest, playwright]
+    needs: [vitest, playwright, api-report]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

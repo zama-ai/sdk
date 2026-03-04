@@ -157,8 +157,6 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
     readonly args: readonly [`0x${string}`, bigint];
 };
 
-// Warning: (ae-forgotten-export) The symbol "BaseEvent" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export interface ApproveSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -224,6 +222,15 @@ export function balanceOfContract(tokenAddress: Address, account: Address): {
     readonly functionName: "balanceOf";
     readonly args: readonly [`0x${string}`];
 };
+
+// @public (undocumented)
+export interface BaseEvent {
+    operationId?: string;
+    // (undocumented)
+    timestamp: number;
+    // (undocumented)
+    tokenAddress?: Address;
+}
 
 // @public (undocumented)
 export const BATCH_SWAP_ABI: readonly [{
@@ -1075,7 +1082,20 @@ export interface BatchTransferData {
 }
 
 // @public
-export function clearPendingUnshield(storage: GenericStringStorage, wrapperAddress: Address): Promise<void>;
+export class ChromeSessionStorage implements GenericStorage {
+    // (undocumented)
+    delete(key: string): Promise<void>;
+    // (undocumented)
+    get<T = unknown>(key: string): Promise<T | null>;
+    // (undocumented)
+    set(key: string, value: unknown): Promise<void>;
+}
+
+// @public
+export const chromeSessionStorage: ChromeSessionStorage;
+
+// @public
+export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -7166,6 +7186,13 @@ export class CredentialExpiredError extends ZamaError {
 }
 
 // @public (undocumented)
+export interface CredentialsAllowedEvent extends BaseEvent {
+    contractAddresses?: Address[];
+    // (undocumented)
+    type: typeof ZamaSDKEvents.CredentialsAllowed;
+}
+
+// @public (undocumented)
 export interface CredentialsCachedEvent extends BaseEvent {
     contractAddresses?: Address[];
     // (undocumented)
@@ -7202,13 +7229,31 @@ export interface CredentialsLoadingEvent extends BaseEvent {
 
 // @public (undocumented)
 export class CredentialsManager {
-    // Warning: (ae-forgotten-export) The symbol "CredentialsManagerConfig" needs to be exported by the entry point index.d.ts
     constructor(config: CredentialsManagerConfig);
+    allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
     clear(): Promise<void>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
-    get(contractAddress: Address): Promise<StoredCredentials>;
-    getAll(contractAddresses: Address[]): Promise<StoredCredentials>;
+    isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
+    revoke(...contractAddresses: Address[]): Promise<void>;
+}
+
+// @public
+export interface CredentialsManagerConfig {
+    durationDays: number;
+    onEvent?: ZamaSDKEventListener;
+    relayer: RelayerSDK;
+    sessionStorage: GenericStorage;
+    signer: GenericSigner;
+    storage: GenericStorage;
+}
+
+// @public (undocumented)
+export interface CredentialsRevokedEvent extends BaseEvent {
+    // (undocumented)
+    contractAddresses?: Address[];
+    // (undocumented)
+    type: typeof ZamaSDKEvents.CredentialsRevoked;
 }
 
 // @public
@@ -12462,18 +12507,19 @@ export interface GenericSigner {
     getChainId(): Promise<number>;
     readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
 }
 
 // @public
-export interface GenericStringStorage {
+export interface GenericStorage {
     // (undocumented)
-    getItem(key: string): Promise<string | null>;
+    delete(key: string): Promise<void>;
     // (undocumented)
-    removeItem(key: string): Promise<void>;
+    get<T = unknown>(key: string): Promise<T | null>;
     // (undocumented)
-    setItem(key: string, value: string): Promise<void>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
 // @public
@@ -14667,16 +14713,16 @@ export const HardhatConfig: FhevmInstanceConfig;
 export type Hex = `0x${string}`;
 
 // @public
-export class IndexedDBStorage implements GenericStringStorage {
+export class IndexedDBStorage implements GenericStorage {
     constructor(dbName?: string, dbVersion?: number);
     // (undocumented)
     clear(): Promise<void>;
     // (undocumented)
-    getItem(key: string): Promise<string | null>;
+    delete(key: string): Promise<void>;
     // (undocumented)
-    removeItem(key: string): Promise<void>;
+    get<T = unknown>(key: string): Promise<T | null>;
     // (undocumented)
-    setItem(key: string, value: string): Promise<void>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
 // @public
@@ -17678,7 +17724,7 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 export { KmsDelegatedUserDecryptEIP712Type }
 
 // @public
-export function loadPendingUnshield(storage: GenericStringStorage, wrapperAddress: Address): Promise<Hex | null>;
+export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
 
 // @public
 export const MainnetConfig: FhevmInstanceConfig;
@@ -17689,13 +17735,13 @@ export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaE
 }): R | undefined;
 
 // @public
-export class MemoryStorage implements GenericStringStorage {
+export class MemoryStorage implements GenericStorage {
     // (undocumented)
-    getItem(key: string): Promise<string | null>;
+    delete(key: string): Promise<void>;
     // (undocumented)
-    removeItem(key: string): Promise<void>;
+    get<T = unknown>(key: string): Promise<T | null>;
     // (undocumented)
-    setItem(key: string, value: string): Promise<void>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
 // @public
@@ -19242,9 +19288,9 @@ export class ReadonlyToken {
     constructor(config: ReadonlyTokenConfig);
     // (undocumented)
     readonly address: Address;
+    allow(): Promise<void>;
+    static allow(...tokens: ReadonlyToken[]): Promise<void>;
     allowance(wrapper: Address, owner?: Address): Promise<bigint>;
-    authorize(): Promise<void>;
-    static authorizeAll(tokens: ReadonlyToken[]): Promise<void>;
     balanceOf(owner?: Address): Promise<bigint>;
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
     confidentialBalanceOf(owner?: Address): Promise<Address>;
@@ -19255,6 +19301,7 @@ export class ReadonlyToken {
     decryptHandles(handles: Address[], owner?: Address): Promise<Map<Address, bigint>>;
     discoverWrapper(coordinatorAddress: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
+    isAllowed(): Promise<boolean>;
     isConfidential(): Promise<boolean>;
     isWrapper(): Promise<boolean>;
     // (undocumented)
@@ -19264,11 +19311,12 @@ export class ReadonlyToken {
     protected normalizeHandle(value: unknown): Address;
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Address>;
+    revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     protected readonly sdk: RelayerSDK;
     // (undocumented)
     readonly signer: GenericSigner;
-    protected get storage(): GenericStringStorage;
+    protected get storage(): GenericStorage;
     symbol(): Promise<string>;
     underlyingToken(): Promise<Address>;
 }
@@ -19276,11 +19324,13 @@ export class ReadonlyToken {
 // @public
 export interface ReadonlyTokenConfig {
     address: Address;
+    credentials?: CredentialsManager;
     durationDays?: number;
     onEvent?: ZamaSDKEventListener;
-    sdk: RelayerSDK;
+    relayer: RelayerSDK;
+    sessionStorage: GenericStorage;
     signer: GenericSigner;
-    storage: GenericStringStorage;
+    storage: GenericStorage;
 }
 
 // @public
@@ -19339,7 +19389,6 @@ export class RelayerWeb implements RelayerSDK {
 export interface RelayerWebConfig {
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
-    // Warning: (ae-forgotten-export) The symbol "RelayerWebSecurityConfig" needs to be exported by the entry point index.d.ts
     security?: RelayerWebSecurityConfig;
     threads?: number;
     // (undocumented)
@@ -19347,7 +19396,13 @@ export interface RelayerWebConfig {
 }
 
 // @public
-export function savePendingUnshield(storage: GenericStringStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
+export interface RelayerWebSecurityConfig {
+    getCsrfToken?: () => string;
+    integrityCheck?: boolean;
+}
+
+// @public
+export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
 
 // @public
 export const SepoliaConfig: FhevmInstanceConfig;
@@ -22302,6 +22357,12 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.ShieldSubmitted;
+}
+
+// @public
+export interface SignerLifecycleCallbacks {
+    onAccountChange?: (newAddress: Address) => void;
+    onDisconnect?: () => void;
 }
 
 // @public
@@ -32912,14 +32973,23 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     constructor(config: ZamaSDKConfig);
+    allow(...contractAddresses: Address[]): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     // (undocumented)
+    readonly credentials: CredentialsManager;
+    dispose(): void;
+    isAllowed(): Promise<boolean>;
+    // (undocumented)
     readonly relayer: RelayerSDK;
+    revoke(...contractAddresses: Address[]): Promise<void>;
+    revokeSession(): Promise<void>;
+    // (undocumented)
+    readonly sessionStorage: GenericStorage;
     // (undocumented)
     readonly signer: GenericSigner;
     // (undocumented)
-    readonly storage: GenericStringStorage;
+    readonly storage: GenericStorage;
     terminate(): void;
 }
 
@@ -32928,12 +32998,13 @@ export interface ZamaSDKConfig {
     credentialDurationDays?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
+    sessionStorage?: GenericStorage;
     signer: GenericSigner;
-    storage: GenericStringStorage;
+    storage: GenericStorage;
 }
 
 // @public
-export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -32948,6 +33019,8 @@ export const ZamaSDKEvents: {
     readonly CredentialsExpired: "credentials:expired";
     readonly CredentialsCreating: "credentials:creating";
     readonly CredentialsCreated: "credentials:created";
+    readonly CredentialsRevoked: "credentials:revoked";
+    readonly CredentialsAllowed: "credentials:allowed";
     readonly EncryptStart: "encrypt:start";
     readonly EncryptEnd: "encrypt:end";
     readonly EncryptError: "encrypt:error";

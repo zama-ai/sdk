@@ -1,7 +1,7 @@
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { mainnet, sepolia } from "viem/chains";
-import { MemoryStorage, TokenSDK, type Address } from "@zama-fhe/sdk";
+import { MemoryStorage, ZamaSDK, type Address } from "@zama-fhe/sdk";
 import { ViemSigner, readWrapperForTokenContract } from "@zama-fhe/sdk/viem";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 
@@ -45,7 +45,7 @@ async function main() {
     TOKEN_ADDRESS,
   );
 
-  const sdk = new TokenSDK({ relayer, signer, storage });
+  const sdk = new ZamaSDK({ relayer, signer, storage });
   const token = sdk.createToken(TOKEN_ADDRESS, wrapperAddress);
 
   try {

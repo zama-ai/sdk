@@ -6,7 +6,7 @@ import {
   useShield,
   useConfidentialTransfer,
   useUnshield,
-  useTokenMetadata,
+  useMetadata,
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 
@@ -17,7 +17,7 @@ export default function Home() {
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
 
-  const metadata = useTokenMetadata(TOKEN_ADDRESS);
+  const metadata = useMetadata(TOKEN_ADDRESS);
   const balance = useConfidentialBalance({ tokenAddress: TOKEN_ADDRESS });
   const shield = useShield({ tokenAddress: TOKEN_ADDRESS, wrapperAddress: WRAPPER_ADDRESS });
   const transfer = useConfidentialTransfer({ tokenAddress: TOKEN_ADDRESS });

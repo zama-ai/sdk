@@ -2,21 +2,33 @@
 
 import type {
   GenericSigner,
-  GenericStringStorage,
+  GenericStorage,
   RelayerSDK,
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
-import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
+import {
+  createContext,
+  type PropsWithChildren,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 
 /** Props for {@link ZamaProvider}. */
-interface ZamaProviderProps extends PropsWithChildren {
+export interface ZamaProviderProps extends PropsWithChildren {
   /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
   relayer: RelayerSDK;
   /** Wallet signer (ViemSigner, EthersSigner, or custom GenericSigner). */
   signer: GenericSigner;
   /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
-  storage: GenericStringStorage;
+  storage: GenericStorage;
+  /**
+   * Session storage for wallet signatures. Defaults to in-memory (lost on reload).
+   * Pass a `chrome.storage.session`-backed store for web extensions.
+   */
+  sessionStorage?: GenericStorage;
   /** Number of days credentials remain valid (default: relayer default). */
   credentialDurationDays?: number;
   /** Callback invoked on SDK lifecycle events. */
@@ -27,7 +39,6 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
 /**
  * Provides a {@link ZamaSDK} instance to all descendant hooks.
- * Terminates the relayer on unmount.
  *
  * @example
  * ```tsx
@@ -41,24 +52,33 @@ export function ZamaProvider({
   relayer,
   signer,
   storage,
+  sessionStorage,
   credentialDurationDays,
   onEvent,
 }: ZamaProviderProps) {
+  // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
+  const onEventRef = useRef(onEvent);
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  });
+
   const sdk = useMemo(
     () =>
       new ZamaSDK({
         relayer,
         signer,
         storage,
+        sessionStorage,
         credentialDurationDays,
-        onEvent,
+        onEvent: onEventRef.current,
       }),
-    [relayer, signer, storage, credentialDurationDays, onEvent],
+    [relayer, signer, storage, sessionStorage, credentialDurationDays],
   );
 
-  useEffect(() => {
-    return () => sdk.terminate();
-  }, [sdk]);
+  // Clean up signer subscriptions on unmount without terminating the
+  // caller-owned relayer. dispose() only unsubscribes from wallet events
+  // and is idempotent.
+  useEffect(() => () => sdk.dispose(), [sdk]);
 
   return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;
 }

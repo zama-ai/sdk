@@ -1,9 +1,0 @@
-{
-  "extends": "../../api-extractor.base.json",
-  "mainEntryPointFilePath": "<projectFolder>/dist/viem/index.d.ts",
-  "apiReport": {
-    "enabled": true,
-    "reportFileName": "react-sdk-viem.api.md",
-    "reportFolder": "<projectFolder>/etc/"
-  }
-}
