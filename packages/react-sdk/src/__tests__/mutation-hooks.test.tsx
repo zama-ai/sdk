@@ -1,58 +1,150 @@
-import { describe, expect, it, vi } from "vitest";
 import { act, waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
-import { useConfidentialTransfer } from "../token/use-confidential-transfer";
-import { useConfidentialApprove } from "../token/use-confidential-approve";
-import { useApproveUnderlying } from "../token/use-approve-underlying";
-import { useShield } from "../token/use-shield";
-import { useAuthorizeAll } from "../token/use-authorize-all";
-import { useEncrypt } from "../relayer/use-encrypt";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { renderWithProviders, createMockSigner, createMockRelayer } from "./test-utils";
+import { describe, expect, test, vi } from "vitest";
+import { useEncrypt } from "../relayer/use-encrypt";
+import { useApproveUnderlying } from "../token/use-approve-underlying";
+import { useAuthorizeAll } from "../token/use-authorize-all";
+import { useConfidentialApprove } from "../token/use-confidential-approve";
+import { useConfidentialTransfer } from "../token/use-confidential-transfer";
+import { useFinalizeUnwrap } from "../token/use-finalize-unwrap";
+import { useShield } from "../token/use-shield";
+import { useUnshield } from "../token/use-unshield";
+import { useUnshieldAll } from "../token/use-unshield-all";
+import { useUnwrap } from "../token/use-unwrap";
+import { useUnwrapAll } from "../token/use-unwrap-all";
+import { createMockRelayer, createMockSigner, renderWithProviders } from "./test-utils";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+const USER = "0x2222222222222222222222222222222222222222" as Address;
 const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
+const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address;
+
+const HANDLE = `0x${"11".repeat(32)}` as Address;
+const BURN_AMOUNT_HANDLE = `0x${"22".repeat(32)}` as Address;
+const DECRYPTION_PROOF = `0x${"33".repeat(32)}` as Address;
+const UNDERLYING = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+const UNWRAP_REQUESTED_TOPIC =
+  "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee";
+
+function toTopicAddress(address: Address): Address {
+  return `0x${address.slice(2).padStart(64, "0")}` as Address;
+}
+
+function createUnwrapRequestedLog(handle: Address) {
+  return {
+    topics: [UNWRAP_REQUESTED_TOPIC, toTopicAddress(USER)],
+    data: handle,
+  };
+}
+
+function mockPublicDecrypt(relayer: ReturnType<typeof createMockRelayer>) {
+  vi.mocked(relayer.publicDecrypt).mockResolvedValue({
+    clearValues: {},
+    abiEncodedClearValues: "1",
+    decryptionProof: DECRYPTION_PROOF,
+  });
+}
 
 describe("useConfidentialTransfer", () => {
-  it("calls token.confidentialTransfer on mutate", async () => {
+  test("default", () => {
+    const { result } = renderWithProviders(() => useConfidentialTransfer({ tokenAddress: TOKEN }));
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
+
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
+  });
+
+  test("cache: invalidates handle and resets balance after transfer", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
-    // Mock encrypt flow: readContract for balanceOf handle
-    vi.mocked(signer.readContract).mockResolvedValue("0x0");
 
-    const { result } = renderWithProviders(() => useConfidentialTransfer({ tokenAddress: TOKEN }), {
+    const { result, queryClient } = renderWithProviders(() => useConfidentialTransfer({ tokenAddress: TOKEN }), {
       signer,
     });
 
-    expect(result.current.mutate).toBeDefined();
-    expect(result.current.isIdle).toBe(true);
+    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+
+    queryClient.setQueryData(handleKey, HANDLE);
+    queryClient.setQueryData(balanceKey, 1000n);
+
+    await act(() => result.current.mutateAsync({ to: RECIPIENT, amount: 500n }));
+
+    expect(queryClient.getQueryState(handleKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
   });
 });
 
 describe("useConfidentialApprove", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() => useConfidentialApprove({ tokenAddress: TOKEN }));
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expect(result.current.mutate).toBeDefined();
-    expect(result.current.isIdle).toBe(true);
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
   });
 });
 
 describe("useApproveUnderlying", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() =>
       useApproveUnderlying({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expect(result.current.mutate).toBeDefined();
-    expect(result.current.isIdle).toBe(true);
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
   });
 
-  it("invalidates underlying allowance cache on success and calls user onSuccess", async () => {
+  test("cache: invalidates allowance after approve", async () => {
     const signer = createMockSigner();
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address)
-      .mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
 
     const onSuccess = vi.fn();
     const { result, queryClient } = renderWithProviders(
@@ -65,58 +157,366 @@ describe("useApproveUnderlying", () => {
         ),
       { signer },
     );
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-    await act(async () => {
-      result.current.mutate({ amount: 100n });
-    });
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
+    queryClient.setQueryData(allowanceKey, 500n);
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await act(() => result.current.mutateAsync({ amount: 1000n }));
 
-    expect(invalidateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: zamaQueryKeys.underlyingAllowance.all,
-      }),
-    );
+    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("useShield", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() =>
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expect(result.current.mutate).toBeDefined();
-    expect(result.current.isIdle).toBe(true);
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
+  });
+
+  test("cache: invalidates allowance and resets balance after shield", async () => {
+    const signer = createMockSigner();
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+
+    const { result, queryClient } = renderWithProviders(
+      () => useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      { signer },
+    );
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
+
+    queryClient.setQueryData(balanceKey, 3000n);
+    queryClient.setQueryData(allowanceKey, 500n);
+
+    await act(() => result.current.mutateAsync({ amount: 500n }));
+
+    expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
+    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
+  });
+});
+
+describe("useUnshield", () => {
+  test("default", () => {
+    const { result } = renderWithProviders(() => useUnshield({ tokenAddress: TOKEN }));
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
+
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
+  });
+
+  test("cache: invalidates allowance and resets balance after unshield", async () => {
+    const signer = createMockSigner();
+    const relayer = createMockRelayer();
+    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+      logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
+    });
+    mockPublicDecrypt(relayer);
+
+    const { result, queryClient } = renderWithProviders(() => useUnshield({ tokenAddress: TOKEN }), {
+      signer,
+      relayer,
+    });
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
+
+    queryClient.setQueryData(balanceKey, 3000n);
+    queryClient.setQueryData(allowanceKey, 500n);
+
+    await act(() => result.current.mutateAsync({ amount: 300n }));
+
+    expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
+    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
+  });
+});
+
+describe("useUnshieldAll", () => {
+  test("default", () => {
+    const { result } = renderWithProviders(() => useUnshieldAll({ tokenAddress: TOKEN }));
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
+
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
+  });
+
+  test("cache: invalidates allowance and resets balance after unshield all", async () => {
+    const signer = createMockSigner();
+    const relayer = createMockRelayer();
+    vi.mocked(signer.readContract).mockResolvedValue(HANDLE);
+    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+      logs: [createUnwrapRequestedLog(BURN_AMOUNT_HANDLE)],
+    });
+    mockPublicDecrypt(relayer);
+
+    const { result, queryClient } = renderWithProviders(() => useUnshieldAll({ tokenAddress: TOKEN }), {
+      signer,
+      relayer,
+    });
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
+
+    queryClient.setQueryData(balanceKey, 3000n);
+    queryClient.setQueryData(allowanceKey, 500n);
+
+    await act(() => result.current.mutateAsync());
+
+    expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
+    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
+  });
+});
+
+describe("useUnwrap", () => {
+  test("default", () => {
+    const { result } = renderWithProviders(() => useUnwrap({ tokenAddress: TOKEN }));
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
+
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
+  });
+
+  test("cache: invalidates handle and resets balance after unwrap", async () => {
+    const signer = createMockSigner();
+
+    const { result, queryClient } = renderWithProviders(() => useUnwrap({ tokenAddress: TOKEN }), {
+      signer,
+    });
+
+    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+
+    queryClient.setQueryData(handleKey, HANDLE);
+    queryClient.setQueryData(balanceKey, 1000n);
+
+    await act(() => result.current.mutateAsync({ amount: 300n }));
+
+    expect(queryClient.getQueryState(handleKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
+  });
+});
+
+describe("useUnwrapAll", () => {
+  test("default", () => {
+    const { result } = renderWithProviders(() => useUnwrapAll({ tokenAddress: TOKEN }));
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
+
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
+  });
+
+  test("cache: invalidates handle and resets balance after unwrap all", async () => {
+    const signer = createMockSigner();
+    vi.mocked(signer.readContract).mockResolvedValue(HANDLE);
+
+    const { result, queryClient } = renderWithProviders(() => useUnwrapAll({ tokenAddress: TOKEN }), {
+      signer,
+    });
+
+    const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+
+    queryClient.setQueryData(handleKey, HANDLE);
+    queryClient.setQueryData(balanceKey, 1000n);
+
+    await act(() => result.current.mutateAsync());
+
+    expect(queryClient.getQueryState(handleKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
+  });
+});
+
+describe("useFinalizeUnwrap", () => {
+  test("default", () => {
+    const { result } = renderWithProviders(() => useFinalizeUnwrap({ tokenAddress: TOKEN }));
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
+
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
+  });
+
+  test("cache: invalidates allowance and resets balance after finalize", async () => {
+    const signer = createMockSigner();
+    const relayer = createMockRelayer();
+    mockPublicDecrypt(relayer);
+
+    const { result, queryClient } = renderWithProviders(
+      () => useFinalizeUnwrap({ tokenAddress: TOKEN }),
+      { signer, relayer },
+    );
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
+
+    queryClient.setQueryData(balanceKey, 3000n);
+    queryClient.setQueryData(allowanceKey, 500n);
+
+    await act(() => result.current.mutateAsync({ burnAmountHandle: BURN_AMOUNT_HANDLE }));
+
+    expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
+    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
   });
 });
 
 describe("useAuthorizeAll", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() => useAuthorizeAll());
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expect(result.current.mutate).toBeDefined();
-    expect(result.current.isIdle).toBe(true);
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
   });
 });
 
 describe("useEncrypt", () => {
-  it("calls relayer.encrypt on mutate", async () => {
+  test("default", () => {
+    const { result } = renderWithProviders(() => useEncrypt());
+    const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
+
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "context": undefined,
+        "data": undefined,
+        "error": null,
+        "failureCount": 0,
+        "failureReason": null,
+        "isError": false,
+        "isIdle": true,
+        "isPaused": false,
+        "isPending": false,
+        "isSuccess": false,
+        "status": "idle",
+        "submittedAt": 0,
+        "variables": undefined,
+      }
+    `);
+  });
+
+  test("behavior: encrypts on mutate", async () => {
     const relayer = createMockRelayer();
     const { result } = renderWithProviders(() => useEncrypt(), { relayer });
 
     await act(async () => {
       result.current.mutate({
         values: [1000n],
-        contractAddress: "0x1111111111111111111111111111111111111111" as Address,
-        userAddress: "0x2222222222222222222222222222222222222222" as Address,
+        contractAddress: TOKEN,
+        userAddress: USER,
       });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(relayer.encrypt).toHaveBeenCalled();
+
+    expect(relayer.encrypt).toHaveBeenCalledTimes(1);
     expect(result.current.data).toEqual({
       handles: [new Uint8Array([1, 2, 3])],
       inputProof: new Uint8Array([4, 5, 6]),
@@ -125,13 +525,12 @@ describe("useEncrypt", () => {
 });
 
 describe("useConfidentialTransfer optimistic updates", () => {
-  it("subtracts amount from cached balance on mutate when optimistic=true", async () => {
+  test("behavior: optimistic subtract on mutate", async () => {
     const signer = createMockSigner();
-    // Make writeContract hang so we can observe the optimistic state
-    let resolveTransfer: (v: string) => void;
+    let resolveTransfer: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
-        resolveTransfer = resolve as (v: string) => void;
+        resolveTransfer = resolve as (value: string) => void;
       }),
     );
 
@@ -140,34 +539,31 @@ describe("useConfidentialTransfer optimistic updates", () => {
       { signer },
     );
 
-    // Seed the cache with a balance
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
       result.current.mutate({
-        to: "0x8888888888888888888888888888888888888888" as Address,
+        to: RECIPIENT,
         amount: 1200n,
       });
     });
 
-    // Balance should be optimistically decreased
     await waitFor(() => {
       expect(queryClient.getQueryData(balanceKey)).toBe(3800n);
     });
 
-    // Resolve the mutation to avoid dangling promises
     await act(async () => {
       resolveTransfer!("0xtxhash");
     });
   });
 
-  it("does not modify cached balance when optimistic is not set", async () => {
+  test("behavior: no optimistic update without flag", async () => {
     const signer = createMockSigner();
-    let resolveTransfer: (v: string) => void;
+    let resolveTransfer: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
-        resolveTransfer = resolve as (v: string) => void;
+        resolveTransfer = resolve as (value: string) => void;
       }),
     );
 
@@ -181,12 +577,11 @@ describe("useConfidentialTransfer optimistic updates", () => {
 
     await act(async () => {
       result.current.mutate({
-        to: "0x8888888888888888888888888888888888888888" as Address,
+        to: RECIPIENT,
         amount: 1200n,
       });
     });
 
-    // Balance should remain unchanged
     expect(queryClient.getQueryData(balanceKey)).toBe(5000n);
 
     await act(async () => {
@@ -194,7 +589,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     });
   });
 
-  it("restores cached balance on error when optimistic=true without invalidation", async () => {
+  test("behavior: rolls back optimistic on error", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
@@ -210,7 +605,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
 
     await act(async () => {
       result.current.mutate({
-        to: "0x8888888888888888888888888888888888888888" as Address,
+        to: RECIPIENT,
         amount: 1200n,
       });
     });
@@ -225,16 +620,14 @@ describe("useConfidentialTransfer optimistic updates", () => {
 });
 
 describe("useShield optimistic updates", () => {
-  it("adds amount to cached balance on mutate when optimistic=true", async () => {
+  test("behavior: optimistic add on mutate", async () => {
     const signer = createMockSigner();
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address)
-      .mockResolvedValueOnce(5000n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
-    let resolveWrap: (v: string) => void;
+    let resolveWrap: (value: string) => void;
     vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
-        resolveWrap = resolve as (v: string) => void;
+        resolveWrap = resolve as (value: string) => void;
       }),
     );
 
@@ -251,7 +644,6 @@ describe("useShield optimistic updates", () => {
       result.current.mutate({ amount: 500n });
     });
 
-    // The optimistic value should be written before the mutation settles.
     await waitFor(() => {
       expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3500n);
     });
@@ -261,11 +653,9 @@ describe("useShield optimistic updates", () => {
     });
   });
 
-  it("restores cached balance snapshot on shield error when optimistic=true without refetch", async () => {
+  test("behavior: rolls back optimistic on error", async () => {
     const signer = createMockSigner();
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address)
-      .mockResolvedValueOnce(5000n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const { result, queryClient } = renderWithProviders(
