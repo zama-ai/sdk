@@ -33,12 +33,13 @@ export function eip1193Subscribe(
 
   const handleAccountsChanged = (accounts: Address[]) => {
     if (accounts.length === 0) {
+      currentAddress = undefined;
       return onDisconnect();
     }
     if (
-      currentAddress &&
       accounts[0] &&
-      accounts[0].toLowerCase() !== currentAddress.toLowerCase()
+      (!currentAddress ||
+        accounts[0].toLowerCase() !== currentAddress.toLowerCase())
     ) {
       onAccountChange(accounts[0]);
     }
