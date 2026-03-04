@@ -1,10 +1,5 @@
 import { ethers } from "ethers";
-import {
-  FHE_BIT_WIDTHS,
-  FheType,
-  HANDLE_VERSION,
-  PREHANDLE_MASK,
-} from "./constants";
+import { FHE_BIT_WIDTHS, FheType, HANDLE_VERSION, PREHANDLE_MASK } from "./constants";
 
 const RAW_CT_HASH_DOMAIN_SEPARATOR = ethers.toUtf8Bytes("ZK-w_rct");
 const HANDLE_HASH_DOMAIN_SEPARATOR = ethers.toUtf8Bytes("ZK-w_hdl");
@@ -24,9 +19,7 @@ export function computeMockCiphertext(
   }
 
   const clearBytes = cleartextToBytes(cleartext, fheType);
-  const inner = ethers.keccak256(
-    ethers.concat([new Uint8Array([fheType]), clearBytes, random32]),
-  );
+  const inner = ethers.keccak256(ethers.concat([new Uint8Array([fheType]), clearBytes, random32]));
 
   return ethers.keccak256(ethers.concat([RAW_CT_HASH_DOMAIN_SEPARATOR, ethers.getBytes(inner)]));
 }

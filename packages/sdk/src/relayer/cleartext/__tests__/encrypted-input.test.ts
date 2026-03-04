@@ -2,11 +2,7 @@ import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
 import { FheType } from "../constants";
 import { CleartextEncryptedInput } from "../encrypted-input";
-import {
-  CLEAR_TEXT_MOCK_CONFIG,
-  CONTRACT_ADDRESS,
-  USER_ADDRESS,
-} from "./fixtures";
+import { CLEAR_TEXT_MOCK_CONFIG, CONTRACT_ADDRESS, USER_ADDRESS } from "./fixtures";
 
 describe("CleartextEncryptedInput", () => {
   it("encrypt produces proof bytes with expected layout", async () => {
