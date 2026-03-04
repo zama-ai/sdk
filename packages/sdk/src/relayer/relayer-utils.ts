@@ -96,7 +96,7 @@ export const SepoliaConfig = {
 
 /**
  * Hardhat local network configuration (chainId 31337).
- * Deterministic addresses from @fhevm/solidity ZamaConfig._getLocalConfig().
+ * Deterministic addresses from `@fhevm/solidity` ZamaConfig._getLocalConfig().
  */
 export const HardhatConfig = {
   chainId: 31337,
