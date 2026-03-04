@@ -33,18 +33,15 @@ pnpm hardhat node --network hardhat
 
 ### 3. Use the SDK
 
+For single-chain setups (the common case), pass the config directly — no `getChainId` or `transports` needed:
+
 ```ts
-import { ZamaSDK, MemoryStorage } from "@zama-fhe/sdk";
+import { HardhatConfig, ZamaSDK, MemoryStorage } from "@zama-fhe/sdk";
 import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
 const sdk = new ZamaSDK({
-  relayer: new RelayerCleartext({
-    getChainId: async () => 31337,
-    transports: {
-      31337: { network: "http://127.0.0.1:8545" },
-    },
-  }),
+  relayer: new RelayerCleartext(HardhatConfig),
   signer: new EthersSigner({ signer: ethersSigner }),
   storage: new MemoryStorage(),
 });
@@ -55,20 +52,26 @@ await token.shield(1000n);
 const balance = await token.balanceOf();
 ```
 
-### React
+For multi-chain setups, use the `getChainId` + `transports` form:
 
-```tsx
-import { ZamaProvider, RelayerCleartext, MemoryStorage } from "@zama-fhe/react-sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
-
-const signer = new WagmiSigner({ config: wagmiConfig });
-
+```ts
+const signer = new EthersSigner({ signer: ethersSigner });
 const relayer = new RelayerCleartext({
-  getChainId: () => signer.getChainId(),
+  getChainId: async () => 31337,
   transports: {
     31337: { network: "http://127.0.0.1:8545" },
   },
 });
+```
+
+### React
+
+```tsx
+import { ZamaProvider, RelayerCleartext, HardhatConfig, MemoryStorage } from "@zama-fhe/react-sdk";
+import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+
+const signer = new WagmiSigner({ config: wagmiConfig });
+const relayer = new RelayerCleartext(HardhatConfig);
 
 function App() {
   return (
@@ -86,17 +89,12 @@ All React hooks (`useConfidentialBalance`, `useConfidentialTransfer`, etc.) work
 Swap the relayer — no other code changes needed:
 
 ```ts
-import { RelayerWeb } from "@zama-fhe/sdk";
+import { RelayerWeb, HardhatConfig } from "@zama-fhe/sdk";
 import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
 
 function createRelayer(getChainId: () => Promise<number>) {
   if (process.env.FHEVM_MODE === "cleartext") {
-    return new RelayerCleartext({
-      getChainId,
-      transports: {
-        31337: { network: "http://127.0.0.1:8545" },
-      },
-    });
+    return new RelayerCleartext(HardhatConfig);
   }
 
   return new RelayerWeb({
@@ -116,29 +114,27 @@ function createRelayer(getChainId: () => Promise<number>) {
 For Hardhat (31337) and Hoodi (560048), built-in presets provide all contract addresses. You only need `network`:
 
 ```ts
-// Hardhat
-transports: { 31337: { network: "http://127.0.0.1:8545" } }
+// Hardhat — single-transport (simplest)
+new RelayerCleartext({ chainId: 31337, network: "http://127.0.0.1:8545" });
 
 // Hoodi testnet
-transports: { 560048: { network: "https://rpc.hoodi.ethpandaops.io" } }
+new RelayerCleartext({ chainId: 560048, network: "https://rpc.hoodi.ethpandaops.io" });
 ```
 
 For custom deployments, provide the full config:
 
 ```ts
-transports: {
-  99999: {
-    chainId: 99999,
-    gatewayChainId: 10901,
-    network: "http://your-custom-node:8545",
-    aclContractAddress: "0x...",
-    kmsContractAddress: "0x...",
-    inputVerifierContractAddress: "0x...",
-    verifyingContractAddressDecryption: "0x...",
-    verifyingContractAddressInputVerification: "0x...",
-    cleartextExecutorAddress: "0x...",
-  },
-}
+new RelayerCleartext({
+  chainId: 99999,
+  gatewayChainId: 10901,
+  network: "http://your-custom-node:8545",
+  aclContractAddress: "0x...",
+  kmsContractAddress: "0x...",
+  inputVerifierContractAddress: "0x...",
+  verifyingContractAddressDecryption: "0x...",
+  verifyingContractAddressInputVerification: "0x...",
+  cleartextExecutorAddress: "0x...",
+});
 ```
 
 ## Limitations

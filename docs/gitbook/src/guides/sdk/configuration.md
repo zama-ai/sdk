@@ -76,15 +76,26 @@ const relayer = new RelayerNode({
 
 ### Development: `RelayerCleartext`
 
-No WASM, no workers, no API key. Reads plaintext values directly from on-chain contracts. Use this for local Hardhat development and testing.
+No WASM, no workers, no API key. Reads plaintext values directly from on-chain contracts. Use this for local Hardhat development and the Hoodi testnet.
+
+For single-chain setups, pass the config preset directly — no `getChainId` or `transports` needed:
 
 ```ts
+import { HardhatConfig } from "@zama-fhe/sdk";
 import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
 
+const relayer = new RelayerCleartext(HardhatConfig);
+```
+
+For multi-chain setups, use `getChainId` + `transports`:
+
+```ts
+const signer = new EthersSigner({ signer: ethersSigner });
 const relayer = new RelayerCleartext({
-  getChainId: async () => 31337,
+  getChainId: () => signer.getChainId(),
   transports: {
-    31337: { network: "http://127.0.0.1:8545" },
+    [HardhatConfig.chainId]: HardhatConfig,
+    [HoodiConfig.chainId]: HoodiConfig,
   },
 });
 ```
@@ -117,7 +128,7 @@ const transports = {
 };
 ```
 
-Available presets: `MainnetConfig` (chain 1), `SepoliaConfig` (chain 11155111), `HardhatConfig` (chain 31337).
+Available presets: `MainnetConfig` (chain 1), `SepoliaConfig` (chain 11155111), `HoodiConfig` (chain 560048), `HardhatConfig` (chain 31337).
 
 ## Signer
 

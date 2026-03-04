@@ -234,7 +234,7 @@ pnpm add @zama-fhe/sdk ethers  # or viem
 ```
 
 ```ts
-import { ZamaSDK, MemoryStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, HardhatConfig, MemoryStorage } from "@zama-fhe/sdk";
 import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
@@ -242,12 +242,7 @@ import { EthersSigner } from "@zama-fhe/sdk/ethers";
 const signer = new EthersSigner({ signer: ethersSigner });
 
 const sdk = new ZamaSDK({
-  relayer: new RelayerCleartext({
-    getChainId: async () => 31337,
-    transports: {
-      31337: { network: "http://127.0.0.1:8545" },
-    },
-  }),
+  relayer: new RelayerCleartext(HardhatConfig),
   signer,
   storage: new MemoryStorage(),
 });

@@ -124,10 +124,11 @@ The `relayer`, `signer`, and `storage` properties are public and accessible afte
 
 The `RelayerSDK` interface defines the FHE operations contract. Two implementations are provided:
 
-| Backend       | Import               | Environment | How it works                               |
-| ------------- | -------------------- | ----------- | ------------------------------------------ |
-| `RelayerWeb`  | `@zama-fhe/sdk`      | Browser     | Runs WASM in a Web Worker via CDN          |
-| `RelayerNode` | `@zama-fhe/sdk/node` | Node.js     | Uses `@zama-fhe/relayer-sdk/node` directly |
+| Backend            | Import                    | Environment | How it works                               |
+| ------------------ | ------------------------- | ----------- | ------------------------------------------ |
+| `RelayerWeb`       | `@zama-fhe/sdk`           | Browser     | Runs WASM in a Web Worker via CDN          |
+| `RelayerNode`      | `@zama-fhe/sdk/node`      | Node.js     | Uses `@zama-fhe/relayer-sdk/node` directly |
+| `RelayerCleartext` | `@zama-fhe/sdk/cleartext` | Any         | Reads plaintext on-chain (dev/test only)   |
 
 The `/node` sub-path also exports `NodeWorkerClient` and `NodeWorkerClientConfig` for running FHE operations in a Node.js worker thread.
 
@@ -378,6 +379,7 @@ Both the main entry (`@zama-fhe/sdk`) and the `/node` sub-path re-export preset 
 | --------------- | -------- | ----------------------------------- |
 | `SepoliaConfig` | 11155111 | Sepolia testnet contract addresses. |
 | `MainnetConfig` | 1        | Mainnet contract addresses.         |
+| `HoodiConfig`   | 560048   | Hoodi testnet contract addresses.   |
 | `HardhatConfig` | 31337    | Local Hardhat node addresses.       |
 
 Each preset provides contract addresses and default relayer URL. Override `network` (RPC URL) for your environment. Browser apps should override `relayerUrl` with a proxy; server-side apps add `auth`:
@@ -713,6 +715,8 @@ try {
 | `InvalidCredentialsError`   | `INVALID_CREDENTIALS`    | Relayer rejected credentials (stale or expired).                          |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No FHE ciphertext exists for this account (e.g. never shielded).          |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP error. Carries a `statusCode` property with the HTTP status. |
+| `ConfigurationError`        | `CONFIGURATION_ERROR`    | SDK configuration is invalid or incomplete.                               |
+| `NotSupportedError`         | `NOT_SUPPORTED`          | Operation not supported in current mode (e.g. ZK proofs in cleartext).    |
 
 ### `matchZamaError`
 

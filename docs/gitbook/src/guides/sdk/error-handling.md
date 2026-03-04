@@ -53,6 +53,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. If the error is
 | `CredentialExpiredError`    | `CREDENTIAL_EXPIRED`     | Decrypt keys expired — user needs to re-sign                                          |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No encrypted balance exists for this account (never shielded)                         |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP request failed (check `.statusCode`)                                     |
+| `ConfigurationError`        | `CONFIGURATION_ERROR`    | SDK configuration is invalid or incomplete                                            |
+| `NotSupportedError`         | `NOT_SUPPORTED`          | Operation not supported in current mode (e.g. ZK proofs in cleartext mode)            |
 
 ## "No balance" vs "zero balance"
 

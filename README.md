@@ -258,6 +258,7 @@ Each package exposes multiple entry points for tree-shaking:
 | `@zama-fhe/sdk` | Core SDK, RelayerWeb, storage, ABIs, event decoders, contract call builders |
 | `@zama-fhe/sdk/viem` | `ViemSigner` adapter + viem read/write contract helpers |
 | `@zama-fhe/sdk/ethers` | `EthersSigner` adapter + ethers read/write contract helpers |
+| `@zama-fhe/sdk/cleartext` | `RelayerCleartext` — plaintext backend for dev/test (no WASM) |
 | `@zama-fhe/sdk/node` | `RelayerNode`, `NodeWorkerClient`, `NodeWorkerPool`, network presets |
 
 **`@zama-fhe/react-sdk`**
@@ -268,11 +269,12 @@ Each package exposes multiple entry points for tree-shaking:
 
 ## Supported Networks
 
-| Network          | Chain ID | Preset Config   |
-| ---------------- | -------- | --------------- |
-| Ethereum Mainnet | 1        | `MainnetConfig` |
-| Sepolia Testnet  | 11155111 | `SepoliaConfig` |
-| Local Hardhat    | 31337    | `HardhatConfig` |
+| Network          | Chain ID | Preset Config   | Relayer                      |
+| ---------------- | -------- | --------------- | ---------------------------- |
+| Ethereum Mainnet | 1        | `MainnetConfig` | `RelayerWeb` / `RelayerNode` |
+| Sepolia Testnet  | 11155111 | `SepoliaConfig` | `RelayerWeb` / `RelayerNode` |
+| Hoodi Testnet    | 560048   | `HoodiConfig`   | `RelayerCleartext`           |
+| Local Hardhat    | 31337    | `HardhatConfig` | `RelayerCleartext`           |
 
 Defaults for known chains are merged automatically — you only need to supply `relayerUrl` and `network` (RPC URL).
 
@@ -294,10 +296,11 @@ Defaults for known chains are merged automatically — you only need to supply `
 
 The relayer handles FHE operations (encryption, decryption, key generation). Choose the right backend for your environment:
 
-| Environment | Class         | Import               |
-| ----------- | ------------- | -------------------- |
-| Browser     | `RelayerWeb`  | `@zama-fhe/sdk`      |
-| Node.js     | `RelayerNode` | `@zama-fhe/sdk/node` |
+| Environment | Class              | Import                    |
+| ----------- | ------------------ | ------------------------- |
+| Browser     | `RelayerWeb`       | `@zama-fhe/sdk`           |
+| Node.js     | `RelayerNode`      | `@zama-fhe/sdk/node`      |
+| Dev / Test  | `RelayerCleartext` | `@zama-fhe/sdk/cleartext` |
 
 `RelayerWeb` runs FHE in a Web Worker loading WASM from CDN. `RelayerNode` calls the relayer SDK directly and supports worker threads via `NodeWorkerClient` / `NodeWorkerPool` for parallel operations.
 
@@ -518,6 +521,8 @@ try {
 | `DecryptionFailedError`    | `DECRYPTION_FAILED`    | FHE decryption operation failed            |
 | `ApprovalFailedError`      | `APPROVAL_FAILED`      | ERC-20 approval transaction failed         |
 | `TransactionRevertedError` | `TRANSACTION_REVERTED` | On-chain transaction reverted              |
+| `ConfigurationError`       | `CONFIGURATION_ERROR`  | SDK configuration is invalid or incomplete |
+| `NotSupportedError`        | `NOT_SUPPORTED`        | Operation not supported in current mode    |
 
 ### `matchZamaError`
 

@@ -357,9 +357,7 @@ describe("RelayerCleartext", () => {
       expect(() => new RelayerCleartext(transport as RelayerCleartextConfig)).toThrow(
         ConfigurationError,
       );
-      expect(() => new RelayerCleartext(transport as RelayerCleartextConfig)).toThrow(
-        /chainId/,
-      );
+      expect(() => new RelayerCleartext(transport as RelayerCleartextConfig)).toThrow(/chainId/);
     });
   });
 });

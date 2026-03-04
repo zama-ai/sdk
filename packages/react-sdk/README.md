@@ -988,13 +988,13 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Classes:** `RelayerWeb`, `ZamaSDK`, `Token`, `ReadonlyToken`, `MemoryStorage`, `memoryStorage`, `IndexedDBStorage`, `indexedDBStorage`, `CredentialsManager`.
 
-**Network configs:** `SepoliaConfig`, `MainnetConfig`, `HardhatConfig`.
+**Network configs:** `SepoliaConfig`, `MainnetConfig`, `HoodiConfig`, `HardhatConfig`.
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
 **Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `ContractCallConfig`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
-**Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
+**Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`, `ConfigurationError`, `NotSupportedError`, `matchZamaError`.
 
 **Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`.
 
