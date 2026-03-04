@@ -6,7 +6,7 @@ Every SDK setup has three required pieces and two optional ones:
 const sdk = new ZamaSDK({
   relayer,                       // required — handles encryption & decryption
   signer,                        // required — wallet interface
-  storage,                       // required — encrypted credential persistence
+  storage,                       // required — persists encrypted decrypt keys
   sessionStorage,                // optional — wallet signature storage (default: in-memory)
   credentialDurationDays: 1,     // optional (default: 1 day)
   onEvent: (event) => { ... },   // optional — lifecycle events for debugging
@@ -179,7 +179,7 @@ By default, wallet signatures live in an in-memory store that's lost on page rel
 
 ### Per-request storage (Node.js servers)
 
-For servers where each request has its own user context, use `asyncLocalStorage` from the `/node` sub-path. It uses Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to isolate credentials per request:
+For servers where each request has its own user context, use `asyncLocalStorage` from the `/node` sub-path. It uses Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to isolate decrypt keys per request:
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
@@ -187,7 +187,7 @@ import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
     const sdk = new ZamaSDK({ relayer, signer, storage: asyncLocalStorage });
-    // credentials are scoped to this request
+    // decrypt keys are scoped to this request
     await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
@@ -266,7 +266,7 @@ const transports = {
 // auth: { __type: "BearerToken", token: "your-bearer-token" }
 ```
 
-## Credential duration
+## Decrypt key duration
 
 Decrypt keys require a wallet signature to create. By default, they're valid for 1 day. You can change this:
 
@@ -289,9 +289,9 @@ const sdk = new ZamaSDK({
 
 ## Session management
 
-Decrypt keys are stored encrypted at rest. The wallet signature that unlocks them lives in `sessionStorage` (in-memory by default). This means:
+Decrypt keys are encrypted before being persisted to `storage`. The wallet signature used to unlock them lives in `sessionStorage` (in-memory by default). This means:
 
-- On page load, the user must re-sign once to authorize their decrypt keys for the session
+- On page load, the user must re-sign once to unlock their decrypt keys for the session
 - Closing the tab (or calling `await sdk.revokeSession()`) clears the signature from memory
 - The encrypted keys survive across sessions in `storage`; only the allow step repeats
 - In web extensions, you can use `chromeSessionStorage` so the signature survives service worker restarts ([see below](#web-extensions))
@@ -313,7 +313,7 @@ await sdk.allow("0xTokenA", "0xTokenB");
 const allowed = await sdk.isAllowed();
 ```
 
-A single signature covers all addresses passed to `allow()`. If you later call `allow()` with a contract not in the original set, the SDK must generate a fresh keypair and request a new wallet signature. Batching upfront avoids this.
+A single signature covers all contract addresses passed to `allow()`. The signed EIP-712 message includes the exact set of contracts, so if you later call `allow()` with a contract not in the original set, the SDK must generate a fresh keypair and request a new wallet signature. Batching all your token addresses upfront avoids extra popups.
 
 ### Revoke (clear session)
 
