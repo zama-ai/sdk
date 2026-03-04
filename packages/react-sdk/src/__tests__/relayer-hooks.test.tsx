@@ -16,7 +16,6 @@ import { renderWithProviders, createMockRelayer } from "./test-utils";
 describe("decryptionKeys", () => {
   it("produces stable query keys", () => {
     const key = decryptionKeys.value("0xhandle1");
-    expect(String(key[0]).startsWith("zama.")).toBe(true);
     expect(key).toEqual(["zama.decryption", { handle: "0xhandle1" }]);
   });
 });
@@ -229,7 +228,9 @@ describe("useUserDecryptedValue", () => {
 
 describe("useUserDecryptedValues", () => {
   it("reads multiple handles from cache", () => {
-    const { result, queryClient } = renderWithProviders(() => useUserDecryptedValues(["0xh1", "0xh2"]));
+    const { result, queryClient } = renderWithProviders(() =>
+      useUserDecryptedValues(["0xh1", "0xh2"]),
+    );
 
     expect(result.current.data).toEqual({
       "0xh1": undefined,
