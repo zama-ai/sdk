@@ -58,6 +58,15 @@ describe("confidentialBalancesQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
+  test("enabled is false when handles are missing", () => {
+    const t1 = createMockReadonlyToken(tokenA);
+    const options = confidentialBalancesQueryOptions([t1], {
+      owner,
+    });
+
+    expect(options.enabled).toBe(false);
+  });
+
   test("queryFn delegates to ReadonlyToken.batchDecryptBalances", async () => {
     const t1 = createMockReadonlyToken(tokenA);
     const t2 = createMockReadonlyToken(tokenB);

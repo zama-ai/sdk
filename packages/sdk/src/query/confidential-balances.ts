@@ -20,7 +20,10 @@ export function confidentialBalancesQueryOptions(
 > {
   const tokenAddresses = tokens.map((token) => token.address);
   const ownerKey = config?.owner ?? "";
-  const handlesKey = config?.handles?.join(",") ?? "";
+  const handlesReady =
+    Array.isArray(config?.handles) &&
+    config.handles.length === tokens.length &&
+    config.handles.every((handle) => Boolean(handle));
   const queryKey = zamaQueryKeys.confidentialBalances.tokens(
     tokenAddresses,
     ownerKey,
@@ -42,7 +45,7 @@ export function confidentialBalancesQueryOptions(
     enabled:
       Boolean(ownerKey) &&
       tokens.length > 0 &&
-      Boolean(handlesKey || config?.handles === undefined) &&
+      handlesReady &&
       config?.query?.enabled !== false,
     staleTime: Infinity,
   };
