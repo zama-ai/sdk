@@ -1,0 +1,16 @@
+{
+  "name": "node-cleartext-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@zama-fhe/sdk": "git+https://github.com/zama-ai/sdk.git",
+    "viem": "^2.30.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}
