@@ -26,7 +26,7 @@ function computeFee(amount: bigint): bigint {
   return (amount * 100n + 9999n) / 10000n;
 }
 
-// Global setup mints MINTED ERC-20 tokens to the test account per token.
+// The fixture mints MINTED ERC-20 tokens to the test account before each test snapshot.
 // Shielding (done by alice) deposits MINTED into each confidential token.
 // Net initial confidential balance = shielded - shieldFee(shielded).
 // ERC-20 balance is untouched because alice shields with her own tokens.
@@ -38,6 +38,19 @@ const initialBalances = {
   USDC: MINTED,
   cUSDC: CONFIDENTIAL,
 } as const;
+
+const mintAbi = [
+  {
+    type: "function",
+    name: "mint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+] as const;
 
 const viemClient = createTestClient({
   account,
@@ -92,7 +105,29 @@ export const test = base.extend<TestFixtures>({
   formatUnits: async ({}, use) => use(formatUnits),
   computeFee: async ({}, use) => use(computeFee),
   readErc20Balance: async ({}, use) => use(readErc20Balance),
-  page: async ({ page, baseURL, privateKey, viemClient }, use) => {
+  page: async ({ page, baseURL, privateKey, account, viemClient, contracts }, use) => {
+    // Mint ERC-20 tokens to the test account before snapshotting, so every test
+    // starts from a funded state regardless of what the deploy script did.
+    const nonce = await viemClient.getTransactionCount({ address: account.address });
+    const usdcHash = await viemClient.writeContract({
+      address: contracts.USDC,
+      abi: mintAbi,
+      functionName: "mint",
+      args: [account.address, MINTED],
+      nonce,
+    });
+    const usdtHash = await viemClient.writeContract({
+      address: contracts.USDT,
+      abi: mintAbi,
+      functionName: "mint",
+      args: [account.address, MINTED],
+      nonce: nonce + 1,
+    });
+    await Promise.all([
+      viemClient.waitForTransactionReceipt({ hash: usdcHash }),
+      viemClient.waitForTransactionReceipt({ hash: usdtHash }),
+    ]);
+
     const id = await viemClient.snapshot();
 
     await mockRelayerSdk(page, baseURL);
