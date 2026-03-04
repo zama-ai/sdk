@@ -300,17 +300,9 @@ export class CredentialsManager {
     return Math.floor(Date.now() / 1000) - entry.createdAt >= entry.ttl;
   }
 
-  /**
-   * Read session entry from storage, handling backward compatibility with bare strings.
-   * Returns null if no entry exists.
-   */
   async #getSessionEntry(storeKey: string): Promise<SessionEntry | null> {
     const raw = await this.#sessionStorage.get(storeKey);
     if (raw === null) return null;
-    // Backward compat: bare string from old format → treat as persistent
-    if (typeof raw === "string") {
-      return { signature: raw, createdAt: 0, ttl: "persistent" };
-    }
     return raw as SessionEntry;
   }
 

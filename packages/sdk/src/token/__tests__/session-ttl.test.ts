@@ -211,25 +211,6 @@ describe("Session TTL", () => {
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
-  it("backward compat: bare string in session storage treated as persistent", async () => {
-    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-
-    // Create credentials first (to populate persistent storage)
-    const manager1 = createManager(3600);
-    await manager1.allow("0xtoken" as Address);
-
-    // Simulate old-format bare string in session storage
-    const storeKey = await computeStoreKey("0xuser");
-    await sessionStore.set(storeKey, "0xsig789"); // bare string, old format
-
-    // New manager reads it — should treat as persistent (no expiry)
-    vi.advanceTimersByTime(7200 * 1000); // 2 hours past TTL
-    const manager2 = createManager(3600);
-    await manager2.allow("0xtoken" as Address);
-    // Should NOT re-sign — bare string is treated as persistent
-    expect(signer.signTypedData).toHaveBeenCalledOnce();
-  });
-
   it("chain switch with active TTL: independent sessions unaffected", async () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
     const manager = createManager(3600);
