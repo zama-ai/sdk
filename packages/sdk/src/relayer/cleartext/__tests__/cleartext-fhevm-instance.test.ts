@@ -18,6 +18,12 @@ const EXECUTOR_INTERFACE = new ethers.Interface(EXECUTOR_ABI);
 type MockProviderOptions = {
   persistAllowed?: (handle: string, account: string) => boolean;
   isAllowedForDecryption?: (handle: string) => boolean;
+  isHandleDelegatedForUserDecryption?: (
+    delegator: string,
+    delegate: string,
+    contractAddress: string,
+    handle: string,
+  ) => boolean;
   plaintexts?: Record<string, bigint>;
 };
 type JsonRpcSendParams = Parameters<ethers.JsonRpcProvider["send"]>[1];
@@ -54,6 +60,21 @@ function createMockProvider(options: MockProviderOptions = {}) {
               ? options.isAllowedForDecryption(String(handle))
               : true;
             return ACL_INTERFACE.encodeFunctionResult("isAllowedForDecryption", [allowed]);
+          }
+
+          if (parsed.name === "isHandleDelegatedForUserDecryption") {
+            const [delegator, delegate, contractAddress, handle] = parsed.args;
+            const isDelegated = options.isHandleDelegatedForUserDecryption
+              ? options.isHandleDelegatedForUserDecryption(
+                  String(delegator),
+                  String(delegate),
+                  String(contractAddress),
+                  String(handle),
+                )
+              : true;
+            return ACL_INTERFACE.encodeFunctionResult("isHandleDelegatedForUserDecryption", [
+              isDelegated,
+            ]);
           }
         }
 
@@ -262,39 +283,170 @@ describe("CleartextFhevmInstance", () => {
     expect(() => fhevm.terminate()).not.toThrow();
   });
 
-  it("createDelegatedUserDecryptEIP712 throws in cleartext mode", async () => {
+  it("createDelegatedUserDecryptEIP712 returns domain and message with delegatorAddress", async () => {
     const { provider } = createMockProvider();
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
 
-    await expect(
-      fhevm.createDelegatedUserDecryptEIP712(
-        "0x" + "11".repeat(32),
-        [CONTRACT_ADDRESS],
-        USER_ADDRESS,
-        1,
-        1,
-      ),
-    ).rejects.toThrow("Not implemented in cleartext mode");
+    const typedData = await fhevm.createDelegatedUserDecryptEIP712(
+      "0x" + "ab".repeat(32),
+      [CONTRACT_ADDRESS],
+      USER_ADDRESS,
+      1710000000,
+      7,
+    );
+
+    expect(typedData.domain.verifyingContract).toBe(
+      CLEAR_TEXT_MOCK_CONFIG.verifyingContractAddressDecryption,
+    );
+    expect(typedData.domain.name).toBe("Decryption");
+    expect(typedData.domain.version).toBe("1");
+    expect(typedData.message.delegatorAddress).toBe(USER_ADDRESS);
+    expect(typedData.message.publicKey).toBe("0x" + "ab".repeat(32));
+    expect(typedData.message.contractAddresses).toEqual([CONTRACT_ADDRESS]);
   });
 
-  it("delegatedUserDecrypt throws in cleartext mode", async () => {
-    const { provider } = createMockProvider();
+  it("delegatedUserDecrypt throws when delegation check returns false", async () => {
+    const handle = "0x" + "12".repeat(32);
+    const normalizedHandle = ethers.toBeHex(ethers.toBigInt(handle), 32);
+    const delegatorAddress = USER_ADDRESS;
+    const delegateAddress = "0x3000000000000000000000000000000000000003";
+    const { provider, calls } = createMockProvider({
+      isHandleDelegatedForUserDecryption: () => false,
+    });
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
 
-    await expect(
-      fhevm.delegatedUserDecrypt({
-        handles: ["0x" + "11".repeat(32)],
+    const promise = fhevm.delegatedUserDecrypt({
+      handles: [handle],
+      contractAddress: CONTRACT_ADDRESS,
+      signedContractAddresses: [CONTRACT_ADDRESS],
+      privateKey: "0x" + "01".repeat(32),
+      publicKey: "0x" + "02".repeat(32),
+      signature: "0x" + "03".repeat(65),
+      delegatorAddress,
+      delegateAddress,
+      startTimestamp: 1,
+      durationDays: 1,
+    });
+
+    await expect(promise).rejects.toThrow(normalizedHandle);
+    await expect(promise).rejects.toThrow(delegatorAddress);
+    await expect(promise).rejects.toThrow(delegateAddress);
+    await expect(promise).rejects.toThrow(CONTRACT_ADDRESS);
+
+    const plaintextCalls = calls.filter(
+      (call) =>
+        call.method === "eth_call" &&
+        (call.params[0] as { to: string }).to.toLowerCase() ===
+          TEST_FHEVM_ADDRESSES.executor.toLowerCase(),
+    );
+    expect(plaintextCalls).toHaveLength(0);
+  });
+
+  it("delegatedUserDecrypt calls isHandleDelegatedForUserDecryption for each handle", async () => {
+    const handleA = "0x" + "01".repeat(32);
+    const handleB = "0x" + "02".repeat(32);
+    const delegatorAddress = USER_ADDRESS;
+    const delegateAddress = "0x3000000000000000000000000000000000000003";
+    const delegationCalls: Array<{
+      delegator: string;
+      delegate: string;
+      contractAddress: string;
+      handle: string;
+    }> = [];
+
+    const { provider, calls } = createMockProvider({
+      isHandleDelegatedForUserDecryption: (delegator, delegate, contractAddress, handle) => {
+        delegationCalls.push({ delegator, delegate, contractAddress, handle });
+        return true;
+      },
+      plaintexts: {
+        [handleA.toLowerCase()]: 7n,
+        [handleB.toLowerCase()]: 11n,
+      },
+    });
+    const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    await fhevm.delegatedUserDecrypt({
+      handles: [handleA, handleB],
+      contractAddress: CONTRACT_ADDRESS,
+      signedContractAddresses: [CONTRACT_ADDRESS],
+      privateKey: "0x" + "11".repeat(32),
+      publicKey: "0x" + "22".repeat(32),
+      signature: "0x" + "33".repeat(65),
+      delegatorAddress,
+      delegateAddress,
+      startTimestamp: 1,
+      durationDays: 1,
+    });
+
+    expect(delegationCalls).toHaveLength(2);
+    expect(delegationCalls.map((call) => call.handle.toLowerCase())).toEqual([
+      handleA.toLowerCase(),
+      handleB.toLowerCase(),
+    ]);
+    expect(delegationCalls).toEqual([
+      {
+        delegator: delegatorAddress,
+        delegate: delegateAddress,
         contractAddress: CONTRACT_ADDRESS,
-        signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: "0x" + "11".repeat(32),
-        publicKey: "0x" + "22".repeat(32),
-        signature: "0x" + "33".repeat(65),
-        delegatorAddress: USER_ADDRESS,
-        delegateAddress: "0x3000000000000000000000000000000000000003",
-        startTimestamp: 1,
-        durationDays: 1,
-      }),
-    ).rejects.toThrow("Not implemented in cleartext mode");
+        handle: handleA.toLowerCase(),
+      },
+      {
+        delegator: delegatorAddress,
+        delegate: delegateAddress,
+        contractAddress: CONTRACT_ADDRESS,
+        handle: handleB.toLowerCase(),
+      },
+    ]);
+
+    const callNames = calls
+      .filter((call) => call.method === "eth_call")
+      .map((call) => {
+        const tx = call.params[0] as { to: string; data: string };
+        const target = tx.to.toLowerCase();
+        if (target === TEST_FHEVM_ADDRESSES.acl.toLowerCase()) {
+          return ACL_INTERFACE.parseTransaction({ data: tx.data })?.name ?? "unknown";
+        }
+        if (target === TEST_FHEVM_ADDRESSES.executor.toLowerCase()) {
+          return EXECUTOR_INTERFACE.parseTransaction({ data: tx.data })?.name ?? "unknown";
+        }
+        return "unknown";
+      });
+    expect(callNames).toEqual([
+      "isHandleDelegatedForUserDecryption",
+      "isHandleDelegatedForUserDecryption",
+      "plaintexts",
+      "plaintexts",
+    ]);
+  });
+
+  it("delegatedUserDecrypt returns cleartext values when delegation is valid", async () => {
+    const handleA = "0x" + "01".repeat(32);
+    const handleB = "0x" + "02".repeat(32);
+    const { provider } = createMockProvider({
+      isHandleDelegatedForUserDecryption: () => true,
+      plaintexts: {
+        [handleA.toLowerCase()]: 7n,
+        [handleB.toLowerCase()]: 11n,
+      },
+    });
+    const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    const result = await fhevm.delegatedUserDecrypt({
+      handles: [handleA, handleB],
+      contractAddress: CONTRACT_ADDRESS,
+      signedContractAddresses: [CONTRACT_ADDRESS],
+      privateKey: "0x" + "11".repeat(32),
+      publicKey: "0x" + "22".repeat(32),
+      signature: "0x" + "33".repeat(65),
+      delegatorAddress: USER_ADDRESS,
+      delegateAddress: "0x3000000000000000000000000000000000000003",
+      startTimestamp: 1,
+      durationDays: 1,
+    });
+
+    expect(result[handleA]).toBe(7n);
+    expect(result[handleB]).toBe(11n);
   });
 
   it("requestZKProofVerification throws in cleartext mode", async () => {

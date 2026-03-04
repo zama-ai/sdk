@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
 import {
+  DELEGATED_USER_DECRYPT_EIP712,
   INPUT_VERIFICATION_EIP712,
   KMS_DECRYPTION_EIP712,
   USER_DECRYPT_EIP712,
@@ -55,6 +56,22 @@ describe("eip712", () => {
     expect(USER_DECRYPT_EIP712.types.UserDecryptRequestVerification.map((field) => field.name)).toEqual([
       "publicKey",
       "contractAddresses",
+      "startTimestamp",
+      "durationDays",
+      "extraData",
+    ]);
+  });
+
+  it("DELEGATED_USER_DECRYPT_EIP712 includes delegatorAddress field", () => {
+    expect(DELEGATED_USER_DECRYPT_EIP712.domain(10901, ethers.ZeroAddress).name).toBe("Decryption");
+    expect(
+      DELEGATED_USER_DECRYPT_EIP712.types.DelegatedUserDecryptRequestVerification.map(
+        (field) => field.name,
+      ),
+    ).toEqual([
+      "publicKey",
+      "contractAddresses",
+      "delegatorAddress",
       "startTimestamp",
       "durationDays",
       "extraData",

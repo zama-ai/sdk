@@ -55,3 +55,17 @@ export const USER_DECRYPT_EIP712 = {
     ],
   },
 } as const;
+
+export const DELEGATED_USER_DECRYPT_EIP712 = {
+  domain: decryptionDomain,
+  types: {
+    DelegatedUserDecryptRequestVerification: [
+      { name: "publicKey", type: "bytes" },
+      { name: "contractAddresses", type: "address[]" },
+      { name: "delegatorAddress", type: "address" },
+      { name: "startTimestamp", type: "uint256" },
+      { name: "durationDays", type: "uint256" },
+      { name: "extraData", type: "bytes" },
+    ],
+  },
+} as const;
