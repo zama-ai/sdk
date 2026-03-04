@@ -4,7 +4,7 @@ import type { Hex } from "../../token/token.types";
 
 // ── Mock ethers ──────────────────────────────────────────────
 
-const { mockContractMethod, MockContract } = vi.hoisted(() => {
+const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } = vi.hoisted(() => {
   const mockContractMethod = vi.fn();
 
   // Must be a real function (not arrow) so it can be used with `new`
@@ -20,13 +20,23 @@ const { mockContractMethod, MockContract } = vi.hoisted(() => {
     );
   }
 
-  return { mockContractMethod, MockContract };
+  const mockGetSigner = vi.fn();
+
+  class MockBrowserProvider {
+    constructor(_provider: unknown) {}
+    getSigner() {
+      return mockGetSigner();
+    }
+  }
+
+  return { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner };
 });
 
 vi.mock("ethers", () => {
   return {
     ethers: { Contract: MockContract },
     Contract: MockContract,
+    BrowserProvider: MockBrowserProvider,
   };
 });
 
@@ -74,14 +84,6 @@ function createMockSigner() {
   };
 }
 
-function createMockBrowserProvider() {
-  const signer = createMockSigner();
-  return {
-    browserProvider: { getSigner: vi.fn().mockResolvedValue(signer) },
-    signer,
-  };
-}
-
 // ── EthersSigner ─────────────────────────────────────────────
 
 describe("EthersSigner", () => {
@@ -90,12 +92,14 @@ describe("EthersSigner", () => {
   });
 
   describe("constructor", () => {
-    it("accepts a BrowserProvider and lazily resolves its signer", async () => {
-      const { browserProvider, signer } = createMockBrowserProvider();
-      const ethersSigner = new EthersSigner({ signer: browserProvider as never });
+    it("accepts an EIP-1193 provider and creates BrowserProvider internally", async () => {
+      const signer = createMockSigner();
+      mockGetSigner.mockResolvedValue(signer);
+
+      const mockEthereum = { on: vi.fn(), removeListener: vi.fn(), request: vi.fn() };
+      const ethersSigner = new EthersSigner({ ethereum: mockEthereum as never });
 
       const address = await ethersSigner.getAddress();
-      expect(browserProvider.getSigner).toHaveBeenCalled();
       expect(signer.getAddress).toHaveBeenCalled();
       expect(address).toBe("0xMyAddress");
     });
@@ -107,6 +111,39 @@ describe("EthersSigner", () => {
       const address = await ethersSigner.getAddress();
       expect(signer.getAddress).toHaveBeenCalled();
       expect(address).toBe("0xMyAddress");
+    });
+
+    it("subscribe works with { ethereum } config", () => {
+      const mockEthereum = { on: vi.fn(), removeListener: vi.fn(), request: vi.fn() };
+      const signer = createMockSigner();
+      mockGetSigner.mockResolvedValue(signer);
+
+      const ethersSigner = new EthersSigner({ ethereum: mockEthereum as never });
+
+      const onDisconnect = vi.fn();
+      const onAccountChange = vi.fn();
+      const unsub = ethersSigner.subscribe({ onDisconnect, onAccountChange });
+
+      expect(mockEthereum.on).toHaveBeenCalledWith("accountsChanged", expect.any(Function));
+      expect(mockEthereum.on).toHaveBeenCalledWith("disconnect", onDisconnect);
+      expect(typeof unsub).toBe("function");
+
+      unsub();
+      expect(mockEthereum.removeListener).toHaveBeenCalledWith(
+        "accountsChanged",
+        expect.any(Function),
+      );
+      expect(mockEthereum.removeListener).toHaveBeenCalledWith("disconnect", onDisconnect);
+    });
+
+    it("subscribe returns no-op with { signer } config", () => {
+      const signer = createMockSigner();
+      const ethersSigner = new EthersSigner({ signer: signer as never });
+
+      const unsub = ethersSigner.subscribe({ onDisconnect: vi.fn(), onAccountChange: vi.fn() });
+      expect(typeof unsub).toBe("function");
+      // Should not throw
+      unsub();
     });
   });
 

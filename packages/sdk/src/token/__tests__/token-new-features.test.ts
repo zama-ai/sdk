@@ -62,6 +62,7 @@ function createMockSigner(): GenericSigner {
     readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getChainId: vi.fn().mockResolvedValue(31337),
+    subscribe: vi.fn().mockReturnValue(() => {}),
   };
 }
 
@@ -74,9 +75,10 @@ describe("NoCiphertextError detection (P3)", () => {
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
   });
@@ -192,9 +194,10 @@ describe("Unshield callbacks (P4)", () => {
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
   });
@@ -321,9 +324,10 @@ describe("Address normalization (P6)", () => {
 
   it("preserves token address case in constructor", () => {
     const token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
@@ -332,9 +336,10 @@ describe("Address normalization (P6)", () => {
 
   it("preserves wrapper address case in constructor", () => {
     const token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
       wrapper: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
@@ -344,9 +349,10 @@ describe("Address normalization (P6)", () => {
 
   it("defaults wrapper to normalized address when not provided", () => {
     const token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
@@ -357,9 +363,10 @@ describe("Address normalization (P6)", () => {
     expect(
       () =>
         new Token({
-          sdk: sdk as unknown as RelayerSDK,
+          relayer: sdk as unknown as RelayerSDK,
           signer,
           storage: new MemoryStorage(),
+          sessionStorage: new MemoryStorage(),
           address: "0xinvalid" as Address,
         }),
     ).toThrow("address must be a valid address");

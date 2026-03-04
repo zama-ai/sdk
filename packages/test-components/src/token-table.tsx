@@ -1,10 +1,17 @@
 "use client";
 
-import { useConfidentialBalances, useTokenMetadata, type Address } from "@zama-fhe/react-sdk";
+import {
+  balanceOfContract,
+  decimalsContract,
+  symbolContract,
+  useAllow,
+  useConfidentialBalances,
+  useMetadata,
+  type Address,
+} from "@zama-fhe/react-sdk";
 import { useState } from "react";
 import { formatUnits } from "viem";
 import { useConnection, useReadContracts } from "wagmi";
-import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/react-sdk";
 
 function TokenRow({
   address,
@@ -19,7 +26,7 @@ function TokenRow({
   isDecrypting: boolean;
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
-  const { data: metadata } = useTokenMetadata(address);
+  const { data: metadata } = useMetadata(address);
 
   return (
     <tr data-testid={`token-row-${metadata?.symbol ?? address}`}>
@@ -98,15 +105,27 @@ export function TokenTable({
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const [revealed, setRevealed] = useState(false);
-  const { data: balances, isFetching } = useConfidentialBalances({
+  const { mutate: allowTokens } = useAllow();
+  const {
+    data: balances,
+    isFetching,
+    isLoading,
+  } = useConfidentialBalances({
     tokenAddresses: revealed ? tokenAddresses : [],
   });
 
   return (
     <div className="space-y-4">
       <button
-        onClick={() => setRevealed(!revealed)}
+        onClick={() =>
+          allowTokens(tokenAddresses, {
+            onSuccess() {
+              setRevealed(!revealed);
+            },
+          })
+        }
         className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover transition-colors"
+        disabled={isLoading}
         data-testid="reveal-button"
       >
         {revealed ? "Hide Balances" : "Reveal Balances"}

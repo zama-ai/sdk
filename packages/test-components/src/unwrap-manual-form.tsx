@@ -5,7 +5,7 @@ import {
   useUnwrap,
   useFinalizeUnwrap,
   useConfidentialBalance,
-  useTokenMetadata,
+  useMetadata,
   findUnwrapRequested,
   type Address,
 } from "@zama-fhe/react-sdk";
@@ -18,7 +18,7 @@ export function UnwrapManualForm({
   wrapperAddress?: Address;
 }) {
   const [burnAmountHandle, setBurnAmountHandle] = useState<Address | null>(null);
-  const { data: metadata } = useTokenMetadata(tokenAddress);
+  const { data: metadata } = useMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ tokenAddress });
   const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
   const finalizeUnwrap = useFinalizeUnwrap({ tokenAddress, wrapperAddress });

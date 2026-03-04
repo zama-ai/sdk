@@ -1,17 +1,31 @@
-import type {
-  GenericSigner,
-  ContractCallConfig,
-  TransactionReceipt,
-  Hex,
-} from "../token/token.types";
-import type { PublicClient, WalletClient } from "viem";
-import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { EIP1193Provider, PublicClient, WalletClient } from "viem";
 import { writeContract } from "viem/actions";
+import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type {
+  ContractCallConfig,
+  GenericSigner,
+  Hex,
+  SignerLifecycleCallbacks,
+  TransactionReceipt,
+} from "../token/token.types";
+import { eip1193Subscribe } from "../token/eip1193-subscribe";
 
-/** Configuration for {@link ViemSigner}. */
+/**
+ * Configuration for {@link ViemSigner}.
+ *
+ * The optional `ethereum` field is needed for `subscribe()` (EIP-1193
+ * `accountsChanged` / `disconnect` events). It cannot be auto-extracted from
+ * `walletClient` because viem's `custom(ethereum)` transport captures the
+ * provider in a closure and does **not** expose `on` / `removeListener` on
+ * `walletClient.transport`.
+ *
+ * If you omit `ethereum`, `subscribe()` returns a no-op. For automatic
+ * wallet lifecycle handling, consider using `WagmiSigner` instead.
+ */
 export interface ViemSignerConfig {
   walletClient: WalletClient;
   publicClient: PublicClient;
+  ethereum?: EIP1193Provider;
 }
 
 /**
@@ -22,10 +36,12 @@ export interface ViemSignerConfig {
 export class ViemSigner implements GenericSigner {
   private readonly walletClient: WalletClient;
   private readonly publicClient: PublicClient;
+  private readonly ethereum?: EIP1193Provider;
 
   constructor(config: ViemSignerConfig) {
     this.walletClient = config.walletClient;
     this.publicClient = config.publicClient;
+    this.ethereum = config.ethereum;
   }
 
   async getChainId(): Promise<number> {
@@ -69,5 +85,9 @@ export class ViemSigner implements GenericSigner {
 
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     return this.publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  subscribe(callbacks: SignerLifecycleCallbacks): () => void {
+    return eip1193Subscribe(this.ethereum, () => this.getAddress(), callbacks);
   }
 }

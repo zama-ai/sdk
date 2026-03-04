@@ -7,12 +7,15 @@ Every React app using the SDK needs a `ZamaProvider` in the component tree. It w
   relayer={relayer}
   signer={signer}
   storage={storage}
+  sessionStorage={sessionStorage} // optional — wallet signature storage (default: in-memory)
   credentialDurationDays={1} // optional, default: 1 day
   onEvent={(e) => console.debug(e)} // optional, for debugging
 >
   {children}
 </ZamaProvider>
 ```
+
+For web extensions, pass a `ChromeSessionStorage` instance as `sessionStorage` so wallet signatures survive service worker restarts. See the [SDK configuration guide](../sdk/configuration.md#web-extensions) for a complete example.
 
 Below are complete setup examples for each Web3 library.
 
@@ -101,8 +104,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-// ethersSigner from BrowserProvider.getSigner() or similar
-const signer = new EthersSigner({ signer: ethersSigner });
+// Pass the raw EIP-1193 provider — BrowserProvider is created internally
+// and subscribe() works automatically for wallet lifecycle events
+const signer = new EthersSigner({ ethereum: window.ethereum! });
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
@@ -159,24 +163,37 @@ export function TokenBalance({ address }: { address: string }) {
 }
 ```
 
-## FHE credential lifecycle
+## Decrypt key lifecycle
 
 When a user first decrypts a balance, the SDK:
 
-1. Generates an FHE keypair
+1. Generates a decrypt keypair
 2. Creates EIP-712 typed data and prompts the wallet to sign
-3. Stores the signed credential in your storage backend
+3. Encrypts the private key with AES-GCM (key derived from the signature via PBKDF2)
+4. Stores the encrypted decrypt key in your storage backend
+5. Caches the wallet signature **in memory only** for the session
 
-On subsequent decrypts, cached credentials are reused silently — no wallet popup.
+The wallet signature is never written to disk — only the encrypted decrypt key is persisted. On subsequent page loads, the user must re-sign once to authorize their decrypt keys for the session.
 
-Credentials expire after `credentialDurationDays` (default: 1). After expiry, the wallet is prompted again.
+### Session flow
+
+```
+First visit:  generate keypair → wallet signs → encrypt & store → cache signature
+Page reload:  load encrypted keys → wallet re-signs → cache signature
+Same session: reuse cached signature — no wallet popup
+Disconnect:   WagmiSigner auto-revokes; viem/ethers call sdk.revokeSession()
+```
+
+### Pre-authorize to avoid popups
 
 To avoid multiple popups when your app shows several token balances, pre-authorize all tokens at once:
 
 ```tsx
-const { mutateAsync: authorizeAll } = useAuthorizeAll();
+const { mutateAsync: allow } = useAllow();
 
 // Call this early, e.g. after loading the token list
-await authorizeAll(allTokenAddresses);
-// Now all balance decrypts reuse the cached credential
+await allow(allTokenAddresses);
+// All balance decrypts reuse the cached session signature
 ```
+
+Decrypt keys expire after `credentialDurationDays` (default: 1). After expiry, fresh keys are generated and the wallet is prompted again.

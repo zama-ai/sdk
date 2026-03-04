@@ -6,6 +6,14 @@
  */
 
 export { EthersSigner, type EthersSignerConfig } from "./ethers-signer";
+export type {
+  EIP1193Provider,
+  EIP1193Events,
+  EIP1193EventMap,
+  ProviderConnectInfo,
+  ProviderMessage,
+} from "./ethers.types";
+export { ProviderRpcError } from "./ethers.types";
 export {
   readConfidentialBalanceOfContract,
   readWrapperForTokenContract,
@@ -21,3 +29,15 @@ export {
   writeWrapContract,
   writeWrapETHContract,
 } from "./contracts";
+
+// Re-export types used in EthersSigner's public API
+export type {
+  GenericSigner,
+  SignerLifecycleCallbacks,
+  ContractCallConfig,
+  TransactionReceipt,
+  Hex,
+} from "../token/token.types";
+export type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+export type { BatchTransferData } from "../contracts";
+export type { RawLog } from "../events/onchain-events";

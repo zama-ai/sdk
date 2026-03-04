@@ -24,7 +24,7 @@ The following areas are in scope for security reports:
 ### FHE Credential Management
 
 - **Key derivation** — AES-GCM keys derived from wallet signatures via PBKDF2 (see `CredentialsManager`)
-- **Credential storage** — encrypted private keys stored via `GenericStringStorage` (IndexedDB in browsers)
+- **Credential storage** — encrypted private keys stored via `GenericStorage` (IndexedDB in browsers)
 - **EIP-712 signatures** — authorization scoping (contract addresses, expiration)
 
 ### Signer Adapters
@@ -50,7 +50,7 @@ The following areas are in scope for security reports:
 FHE private keys are encrypted with AES-GCM before storage. The encryption key is derived from the wallet's EIP-712 signature using PBKDF2 (600,000 iterations). However:
 
 - **Browser storage** (IndexedDB) is accessible to same-origin scripts. Ensure your application follows CSP best practices.
-- **Custom storage backends** — if implementing `GenericStringStorage`, ensure the backend provides appropriate access controls.
+- **Custom storage backends** — if implementing `GenericStorage`, ensure the backend provides appropriate access controls.
 
 ### EIP-712 Authorization
 

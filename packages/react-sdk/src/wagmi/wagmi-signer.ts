@@ -1,10 +1,11 @@
 import type {
-  GenericSigner,
-  ContractCallConfig,
-  TransactionReceipt,
   Address,
-  Hex,
+  ContractCallConfig,
   EIP712TypedData,
+  GenericSigner,
+  Hex,
+  SignerLifecycleCallbacks,
+  TransactionReceipt,
 } from "@zama-fhe/sdk";
 import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
@@ -13,6 +14,7 @@ import {
   readContract,
   signTypedData,
   waitForTransactionReceipt,
+  watchConnection,
   writeContract,
 } from "wagmi/actions";
 import { getConnection } from "./compat";
@@ -79,5 +81,25 @@ export class WagmiSigner implements GenericSigner {
       }
       throw error;
     }
+  }
+
+  subscribe({
+    onDisconnect = () => {},
+    onAccountChange = () => {},
+  }: SignerLifecycleCallbacks): () => void {
+    return watchConnection(this.config, {
+      onChange(connection, prevConnection) {
+        if (connection.status === "disconnected" && prevConnection.status !== "disconnected") {
+          onDisconnect();
+        }
+        if (
+          prevConnection.address &&
+          connection.address &&
+          connection.address !== prevConnection.address
+        ) {
+          onAccountChange(connection.address);
+        }
+      },
+    });
   }
 }

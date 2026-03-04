@@ -8,7 +8,7 @@
  */
 
 // Provider
-export { ZamaProvider, useZamaSDK } from "./provider";
+export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt, encryptMutationOptions } from "./relayer/use-encrypt";
@@ -26,12 +26,14 @@ export {
   publicKeyQueryKeys,
   publicKeyQueryOptions,
   type PublicKeyData,
+  type PublicKeyResult,
 } from "./relayer/use-public-key";
 export {
   usePublicParams,
   publicParamsQueryKeys,
   publicParamsQueryOptions,
   type PublicParamsData,
+  type PublicParamsResult,
 } from "./relayer/use-public-params";
 
 // Read hooks (cached lookups)
@@ -49,12 +51,15 @@ export {
   IndexedDBStorage,
   indexedDBStorage,
   CredentialsManager,
+  ChromeSessionStorage,
+  chromeSessionStorage,
 } from "@zama-fhe/sdk";
 
 // Re-export core types
 export type {
   RelayerSDK,
   RelayerWebConfig,
+  RelayerWebSecurityConfig,
   ZamaSDKConfig,
   TokenConfig,
   ReadonlyTokenConfig,
@@ -75,10 +80,12 @@ export type {
   BatchTransferData,
   StoredCredentials,
   UnshieldCallbacks,
+  CredentialsManagerConfig,
   ZamaSDKEventType,
   ZamaSDKEvent,
   ZamaSDKEventInput,
   ZamaSDKEventListener,
+  BaseEvent,
   ShieldSubmittedEvent,
   TransferSubmittedEvent,
   TransferFromSubmittedEvent,
@@ -101,6 +108,8 @@ export type {
   CredentialsExpiredEvent,
   CredentialsCreatingEvent,
   CredentialsCreatedEvent,
+  CredentialsRevokedEvent,
+  CredentialsAllowedEvent,
 } from "@zama-fhe/sdk";
 
 // Re-export pending-unshield persistence utilities
@@ -178,7 +187,10 @@ export {
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
-export { useAuthorizeAll, authorizeAllMutationOptions } from "./token/use-authorize-all";
+export { useAllow, allowMutationOptions } from "./token/use-allow";
+export { useIsAllowed, isAllowedQueryKeys, isAllowedQueryOptions } from "./token/use-is-allowed";
+export { useRevoke, revokeMutationOptions } from "./token/use-revoke";
+export { useRevokeSession, revokeSessionMutationOptions } from "./token/use-revoke-session";
 export {
   useConfidentialTransfer,
   confidentialTransferMutationOptions,
@@ -254,12 +266,12 @@ export {
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
 export {
-  useTokenMetadata,
-  useTokenMetadataSuspense,
-  tokenMetadataQueryKeys,
-  tokenMetadataQueryOptions,
+  useMetadata,
+  useMetadataSuspense,
+  metadataQueryKeys,
+  metadataQueryOptions,
   type TokenMetadata,
-} from "./token/use-token-metadata";
+} from "./token/use-metadata";
 export {
   useActivityFeed,
   activityFeedQueryKeys,
@@ -344,7 +356,7 @@ export type {
   Address,
   Hex,
   GenericSigner,
-  GenericStringStorage,
+  GenericStorage,
   ContractCallConfig,
   TransactionReceipt,
   TransactionResult,

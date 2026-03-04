@@ -17,9 +17,12 @@ import { approveContract } from '@zama-fhe/sdk';
 import { ApproveSubmittedEvent } from '@zama-fhe/sdk';
 import { ApproveUnderlyingSubmittedEvent } from '@zama-fhe/sdk';
 import { balanceOfContract } from '@zama-fhe/sdk';
+import { BaseEvent } from '@zama-fhe/sdk';
 import { BATCH_SWAP_ABI } from '@zama-fhe/sdk';
 import { BatchDecryptOptions } from '@zama-fhe/sdk';
 import { BatchTransferData } from '@zama-fhe/sdk';
+import { ChromeSessionStorage } from '@zama-fhe/sdk';
+import { chromeSessionStorage } from '@zama-fhe/sdk';
 import { clearPendingUnshield } from '@zama-fhe/sdk';
 import { confidentialBalanceOfContract } from '@zama-fhe/sdk';
 import { confidentialBatchTransferContract } from '@zama-fhe/sdk';
@@ -29,12 +32,15 @@ import { ConfidentialTransferEvent } from '@zama-fhe/sdk';
 import { confidentialTransferFromContract } from '@zama-fhe/sdk';
 import { ContractCallConfig } from '@zama-fhe/sdk';
 import { CredentialExpiredError } from '@zama-fhe/sdk';
+import { CredentialsAllowedEvent } from '@zama-fhe/sdk';
 import { CredentialsCachedEvent } from '@zama-fhe/sdk';
 import { CredentialsCreatedEvent } from '@zama-fhe/sdk';
 import { CredentialsCreatingEvent } from '@zama-fhe/sdk';
 import { CredentialsExpiredEvent } from '@zama-fhe/sdk';
 import { CredentialsLoadingEvent } from '@zama-fhe/sdk';
 import { CredentialsManager } from '@zama-fhe/sdk';
+import { CredentialsManagerConfig } from '@zama-fhe/sdk';
+import { CredentialsRevokedEvent } from '@zama-fhe/sdk';
 import { decimalsContract } from '@zama-fhe/sdk';
 import { decodeConfidentialTransfer } from '@zama-fhe/sdk';
 import { decodeOnChainEvent } from '@zama-fhe/sdk';
@@ -72,7 +78,7 @@ import { FinalizeUnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { findUnwrapRequested } from '@zama-fhe/sdk';
 import { findWrapped } from '@zama-fhe/sdk';
 import { GenericSigner } from '@zama-fhe/sdk';
-import { GenericStringStorage } from '@zama-fhe/sdk';
+import { GenericStorage } from '@zama-fhe/sdk';
 import { getBatchTransferFeeContract } from '@zama-fhe/sdk';
 import { getFeeRecipientContract } from '@zama-fhe/sdk';
 import { getUnwrapFeeContract } from '@zama-fhe/sdk';
@@ -110,6 +116,7 @@ import { RelayerSDK } from '@zama-fhe/sdk';
 import { RelayerSDKStatus } from '@zama-fhe/sdk';
 import { RelayerWeb } from '@zama-fhe/sdk';
 import { RelayerWebConfig } from '@zama-fhe/sdk';
+import { RelayerWebSecurityConfig } from '@zama-fhe/sdk';
 import { savePendingUnshield } from '@zama-fhe/sdk';
 import { SepoliaConfig } from '@zama-fhe/sdk';
 import { setFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
@@ -189,6 +196,12 @@ export { Address }
 
 export { allowanceContract }
 
+// @public
+export function allowMutationOptions(sdk: ZamaSDK): {
+    mutationKey: readonly ["allow"];
+    mutationFn: (tokenAddresses: Address[]) => Promise<void>;
+};
+
 export { applyDecryptedValues }
 
 export { ApprovalFailedError }
@@ -210,13 +223,9 @@ export interface ApproveUnderlyingParams {
 
 export { ApproveUnderlyingSubmittedEvent }
 
-// @public
-export function authorizeAllMutationOptions(sdk: ZamaSDK): {
-    mutationKey: readonly ["authorizeAll"];
-    mutationFn: (tokenAddresses: Address[]) => Promise<void>;
-};
-
 export { balanceOfContract }
+
+export { BaseEvent }
 
 export { BATCH_SWAP_ABI }
 
@@ -230,6 +239,10 @@ export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAd
     readonly queryFn: () => Promise<bigint>;
     readonly staleTime: 30000;
 };
+
+export { ChromeSessionStorage }
+
+export { chromeSessionStorage }
 
 export { clearPendingUnshield }
 
@@ -343,6 +356,8 @@ export interface CreateEIP712Params {
 
 export { CredentialExpiredError }
 
+export { CredentialsAllowedEvent }
+
 export { CredentialsCachedEvent }
 
 export { CredentialsCreatedEvent }
@@ -354,6 +369,10 @@ export { CredentialsExpiredEvent }
 export { CredentialsLoadingEvent }
 
 export { CredentialsManager }
+
+export { CredentialsManagerConfig }
+
+export { CredentialsRevokedEvent }
 
 export { decimalsContract }
 
@@ -466,7 +485,7 @@ export { findWrapped }
 
 export { GenericSigner }
 
-export { GenericStringStorage }
+export { GenericStorage }
 
 export { getBatchTransferFeeContract }
 
@@ -489,6 +508,17 @@ export { indexedDBStorage }
 export { InputProofBytesType }
 
 export { InvalidCredentialsError }
+
+// @public (undocumented)
+export const isAllowedQueryKeys: {
+    all: readonly ["zama", "isAllowed"];
+};
+
+// @public (undocumented)
+export function isAllowedQueryOptions(sdk: ZamaSDK): {
+    queryKey: readonly ["zama", "isAllowed"];
+    queryFn: () => Promise<boolean>;
+};
 
 // @public
 export const isConfidentialQueryKeys: {
@@ -534,6 +564,19 @@ export { matchZamaError }
 
 export { MemoryStorage }
 
+// @public
+export const metadataQueryKeys: {
+    readonly all: readonly ["tokenMetadata"];
+    readonly token: (tokenAddress: string) => readonly ["tokenMetadata", string];
+};
+
+// @public
+export function metadataQueryOptions(token: ReadonlyToken): {
+    readonly queryKey: readonly ["tokenMetadata", string];
+    readonly queryFn: () => Promise<TokenMetadata>;
+    readonly staleTime: number;
+};
+
 export { nameContract }
 
 export { NetworkType }
@@ -564,6 +607,9 @@ export function publicKeyQueryOptions(sdk: ZamaSDK): {
     readonly staleTime: number;
 };
 
+// @public (undocumented)
+export type PublicKeyResult = PublicKeyData | null;
+
 // @public
 export interface PublicParamsData {
     publicParams: Uint8Array;
@@ -583,6 +629,9 @@ export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number): {
     readonly staleTime: number;
 };
 
+// @public (undocumented)
+export type PublicParamsResult = PublicParamsData | null;
+
 export { rateContract }
 
 export { RawLog }
@@ -601,6 +650,8 @@ export { RelayerWeb }
 
 export { RelayerWebConfig }
 
+export { RelayerWebSecurityConfig }
+
 // @public
 export function resumeUnshieldMutationOptions(token: Token): {
     mutationKey: readonly ["resumeUnshield", `0x${string}`];
@@ -612,6 +663,18 @@ export interface ResumeUnshieldParams {
     callbacks?: UnshieldCallbacks;
     unwrapTxHash: Hex;
 }
+
+// @public
+export function revokeMutationOptions(sdk: ZamaSDK): {
+    mutationKey: readonly ["revoke"];
+    mutationFn: (tokenAddresses: Address[]) => Promise<void>;
+};
+
+// @public
+export function revokeSessionMutationOptions(sdk: ZamaSDK): {
+    mutationKey: readonly ["revokeSession"];
+    mutationFn: () => Promise<void>;
+};
 
 export { savePendingUnshield }
 
@@ -679,19 +742,6 @@ export interface TokenMetadata {
     name: string;
     symbol: string;
 }
-
-// @public
-export const tokenMetadataQueryKeys: {
-    readonly all: readonly ["tokenMetadata"];
-    readonly token: (tokenAddress: string) => readonly ["tokenMetadata", string];
-};
-
-// @public
-export function tokenMetadataQueryOptions(token: ReadonlyToken): {
-    readonly queryKey: readonly ["tokenMetadata", string];
-    readonly queryFn: () => Promise<TokenMetadata>;
-    readonly staleTime: number;
-};
 
 export { Topics }
 
@@ -818,10 +868,10 @@ export interface UseActivityFeedConfig {
 }
 
 // @public
-export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
+export function useAllow(): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useAuthorizeAll(): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
 
 // @public
 export function useBatchTransferFee(feeManagerAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
@@ -1252,6 +1302,9 @@ export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOp
 export function useGenerateKeypair(): _tanstack_react_query.UseMutationResult<FHEKeypair, Error, void, unknown>;
 
 // @public
+export function useIsAllowed(): _tanstack_react_query.UseQueryResult<boolean, Error>;
+
+// @public
 export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
 
 // @public
@@ -1262,6 +1315,12 @@ export function useIsWrapper(tokenAddress: Address, options?: Omit<UseQueryOptio
 
 // @public
 export function useIsWrapperSuspense(tokenAddress: Address): UseSuspenseQueryResult<boolean, Error>;
+
+// @public
+export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">): UseQueryResult<TokenMetadata, Error>;
+
+// @public
+export function useMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
 export function usePublicDecrypt(): _tanstack_react_query.UseMutationResult<PublicDecryptResult, Error, string[], unknown>;
@@ -1287,6 +1346,12 @@ export function useRequestZKProofVerification(): _tanstack_react_query.UseMutati
 export function useResumeUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
 
 // @public
+export function useRevoke(): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+
+// @public
+export function useRevokeSession(): _tanstack_react_query.UseMutationResult<void, Error, void, unknown>;
+
+// @public
 export function useShield(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ShieldParams, `0x${string}`>;
 
 // @public
@@ -1302,12 +1367,6 @@ export function useShieldFee(config: UseFeeConfig, options?: Omit<UseQueryOption
 
 // @public
 export function useToken(config: UseZamaConfig): _zama_fhe_sdk.Token;
-
-// @public
-export function useTokenMetadata(tokenAddress: Address, options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">): UseQueryResult<TokenMetadata, Error>;
-
-// @public
-export function useTokenMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
 export function useTotalSupply(tokenAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
@@ -1409,10 +1468,18 @@ export { ZamaError }
 
 export { ZamaErrorCode }
 
-// Warning: (ae-forgotten-export) The symbol "ZamaProviderProps" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function ZamaProvider(input: ZamaProviderProps): react_jsx_runtime.JSX.Element;
+
+// @public
+export interface ZamaProviderProps extends PropsWithChildren {
+    credentialDurationDays?: number;
+    onEvent?: ZamaSDKEventListener;
+    relayer: RelayerSDK;
+    sessionStorage?: GenericStorage;
+    signer: GenericSigner;
+    storage: GenericStorage;
+}
 
 export { ZamaSDK }
 
@@ -1431,11 +1498,6 @@ export { ZamaSDKEventType }
 export { ZERO_HANDLE }
 
 export { ZKProofLike }
-
-// Warnings were encountered during analysis:
-//
-// dist/index.d.ts:236:5 - (ae-forgotten-export) The symbol "PublicKeyResult" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:280:5 - (ae-forgotten-export) The symbol "PublicParamsResult" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

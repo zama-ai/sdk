@@ -36,6 +36,14 @@ export interface ContractCallConfig {
   readonly gas?: bigint;
 }
 
+/** Callbacks for signer lifecycle events (wallet disconnect, account switch). */
+export interface SignerLifecycleCallbacks {
+  /** Called when the wallet disconnects. */
+  onDisconnect?: () => void;
+  /** Called when the active account changes. */
+  onAccountChange?: (newAddress: Address) => void;
+}
+
 /**
  * Framework-agnostic signer interface.
  * Wallet devs implement this with their library of choice.
@@ -56,13 +64,30 @@ export interface GenericSigner {
   ): Promise<T>;
   /** Wait for a transaction to be mined and return its receipt. */
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+  /**
+   * Subscribe to wallet lifecycle events (disconnect, account change).
+   * Returns an unsubscribe function. When no EIP-1193 provider is available,
+   * returns a no-op unsubscribe.
+   *
+   * Optional — server-side signers or custom implementations that don't
+   * support lifecycle events can omit this method entirely.
+   */
+  subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
 }
 
-/** Pluggable key-value store for persisting FHE credentials. */
-export interface GenericStringStorage {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  removeItem(key: string): Promise<void>;
+/**
+ * Pluggable key-value store for persisting FHE credentials.
+ *
+ * The SDK stores objects directly (not JSON strings). Implementations must
+ * preserve value types through round-trips — e.g. `IndexedDBStorage` uses
+ * structured clone, `MemoryStorage` stores values as-is. If your custom
+ * backend serializes to JSON internally, it must handle `JSON.parse` /
+ * `JSON.stringify` transparently so callers always receive the original type.
+ */
+export interface GenericStorage {
+  get<T = unknown>(key: string): Promise<T | null>;
+  set<T = unknown>(key: string, value: T): Promise<void>;
+  delete(key: string): Promise<void>;
 }
 
 /** Stored FHE credential data (serialized as JSON in the credential store). */

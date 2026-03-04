@@ -21,7 +21,7 @@ export interface PublicKeyData {
   publicKey: Uint8Array;
 }
 
-type PublicKeyResult = PublicKeyData | null;
+export type PublicKeyResult = PublicKeyData | null;
 
 /**
  * TanStack Query options factory for the FHE public key.

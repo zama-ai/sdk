@@ -89,8 +89,8 @@ const values = await token.decryptHandles([handle1, handle2, handle3]);
 ```ts
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 
-// One wallet signature authorizes decryption for all tokens
-await ReadonlyToken.authorizeAll(tokens);
+// One wallet signature allows decryption for all tokens
+await ReadonlyToken.allow(...tokens);
 
 // Then decrypt all balances in parallel — no more wallet prompts
 const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });

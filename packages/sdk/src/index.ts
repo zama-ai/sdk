@@ -11,6 +11,7 @@ export { RelayerWeb } from "./relayer/relayer-web";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
   RelayerWebConfig,
+  RelayerWebSecurityConfig,
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
@@ -53,7 +54,9 @@ export type { ReadonlyTokenConfig, BatchDecryptOptions } from "./token/readonly-
 export { ZERO_HANDLE } from "./token/readonly-token";
 export { MemoryStorage, memoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
-export { CredentialsManager } from "./token/credential-manager";
+export { ChromeSessionStorage, chromeSessionStorage } from "./token/chrome-session-storage";
+export { CredentialsManager } from "./token/credentials-manager";
+export type { CredentialsManagerConfig } from "./token/credentials-manager";
 export {
   savePendingUnshield,
   loadPendingUnshield,
@@ -63,7 +66,8 @@ export type {
   Address,
   Hex,
   GenericSigner,
-  GenericStringStorage,
+  GenericStorage,
+  SignerLifecycleCallbacks,
   StoredCredentials,
   ContractCallConfig,
   TransactionReceipt,
@@ -76,6 +80,7 @@ export type {
   ZamaSDKEvent,
   ZamaSDKEventInput,
   ZamaSDKEventListener,
+  BaseEvent,
   ShieldSubmittedEvent,
   TransferSubmittedEvent,
   TransferFromSubmittedEvent,
@@ -98,6 +103,8 @@ export type {
   CredentialsExpiredEvent,
   CredentialsCreatingEvent,
   CredentialsCreatedEvent,
+  CredentialsRevokedEvent,
+  CredentialsAllowedEvent,
 } from "./events/sdk-events";
 export {
   ZamaError,
