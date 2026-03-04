@@ -7244,6 +7244,7 @@ export interface CredentialsManagerConfig {
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage: GenericStorage;
+    sessionTTL?: SessionTTL;
     signer: GenericSigner;
     storage: GenericStorage;
 }
@@ -19405,6 +19406,16 @@ export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Add
 
 // @public
 export const SepoliaConfig: FhevmInstanceConfig;
+
+// @public (undocumented)
+export interface SessionExpiredEvent extends BaseEvent {
+    reason: "ttl";
+    // (undocumented)
+    type: typeof ZamaSDKEvents.SessionExpired;
+}
+
+// @public
+export type SessionTTL = "persistent" | number;
 
 // @public
 export function setFinalizeUnwrapOperatorContract(tokenAddress: Address, operator: Address, timestamp?: number): {
@@ -32998,12 +33009,13 @@ export interface ZamaSDKConfig {
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
+    sessionTTL?: SessionTTL;
     signer: GenericSigner;
     storage: GenericStorage;
 }
 
 // @public
-export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -33020,6 +33032,7 @@ export const ZamaSDKEvents: {
     readonly CredentialsCreated: "credentials:created";
     readonly CredentialsRevoked: "credentials:revoked";
     readonly CredentialsAllowed: "credentials:allowed";
+    readonly SessionExpired: "session:expired";
     readonly EncryptStart: "encrypt:start";
     readonly EncryptEnd: "encrypt:end";
     readonly EncryptError: "encrypt:error";
