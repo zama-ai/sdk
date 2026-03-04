@@ -14,9 +14,9 @@ import {
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
 import { normalizeAddress, pLimit } from "../utils";
-import type { GenericSigner, GenericStringStorage } from "./token.types";
+import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
-import { CredentialsManager } from "./credential-manager";
+import { CredentialsManager } from "./credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
@@ -51,11 +51,15 @@ export interface BatchDecryptOptions {
 /** Configuration for constructing a {@link ReadonlyToken}. */
 export interface ReadonlyTokenConfig {
   /** FHE relayer backend. */
-  sdk: RelayerSDK;
+  relayer: RelayerSDK;
   /** Wallet signer for read calls and credential signing. */
   signer: GenericSigner;
   /** Credential storage backend. */
-  storage: GenericStringStorage;
+  storage: GenericStorage;
+  /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
+  sessionStorage: GenericStorage;
+  /** Shared CredentialsManager instance. When provided, storage/sessionStorage/durationDays/onEvent are ignored for credential creation. */
+  credentials?: CredentialsManager;
   /** Address of the confidential token contract. */
   address: Address;
   /** Number of days FHE credentials remain valid. Default: `1`. */
@@ -74,19 +78,22 @@ export class ReadonlyToken {
   protected readonly sdk: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
-  readonly #storage: GenericStringStorage;
+  readonly #storage: GenericStorage;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
     const address = normalizeAddress(config.address, "address");
-    this.credentials = new CredentialsManager({
-      sdk: config.sdk,
-      signer: config.signer,
-      storage: config.storage,
-      durationDays: config.durationDays ?? 1,
-      onEvent: config.onEvent,
-    });
-    this.sdk = config.sdk;
+    this.credentials =
+      config.credentials ??
+      new CredentialsManager({
+        relayer: config.relayer,
+        signer: config.signer,
+        storage: config.storage,
+        sessionStorage: config.sessionStorage,
+        durationDays: config.durationDays ?? 1,
+        onEvent: config.onEvent,
+      });
+    this.sdk = config.relayer;
     this.signer = config.signer;
     this.address = address;
     this.#storage = config.storage;
@@ -94,7 +101,7 @@ export class ReadonlyToken {
   }
 
   /** Access the storage backend (used by static batch methods). */
-  protected get storage(): GenericStringStorage {
+  protected get storage(): GenericStorage {
     return this.#storage;
   }
 
@@ -133,7 +140,7 @@ export class ReadonlyToken {
     });
     if (cached !== null) return cached;
 
-    const creds = await this.credentials.get(this.address);
+    const creds = await this.credentials.allow(this.address);
 
     const t0 = Date.now();
     try {
@@ -274,7 +281,7 @@ export class ReadonlyToken {
     }
 
     const allAddresses = tokens.map((t) => t.address);
-    const creds = await tokens[0]!.credentials.getAll(allAddresses);
+    const creds = await tokens[0]!.credentials.allow(...allAddresses);
 
     const tokenStorage = tokens[0]!.storage;
     const results = new Map<Address, bigint>();
@@ -461,13 +468,30 @@ export class ReadonlyToken {
    *
    * @example
    * ```ts
-   * await token.authorize();
+   * await token.allow();
    * // Credentials are now cached — subsequent decrypts won't prompt
    * const balance = await token.balanceOf();
    * ```
    */
-  async authorize(): Promise<void> {
-    await this.credentials.get(this.address);
+  async allow(): Promise<void> {
+    await this.credentials.allow(this.address);
+  }
+
+  /**
+   * Whether a session signature is currently cached for the connected wallet.
+   * Use this to check if decrypt operations can proceed without a wallet prompt.
+   */
+  async isAllowed(): Promise<boolean> {
+    return this.credentials.isAllowed();
+  }
+
+  /**
+   * Revoke the session signature for the connected wallet.
+   * Stored credentials remain intact, but the next decrypt operation
+   * will require a fresh wallet signature.
+   */
+  async revoke(...contractAddresses: Address[]): Promise<void> {
+    await this.credentials.revoke(...contractAddresses);
   }
 
   /**
@@ -475,20 +499,20 @@ export class ReadonlyToken {
    * wallet signature. Call this early (e.g. after loading the token list) so
    * that subsequent individual decrypt operations reuse cached credentials.
    *
-   * @param tokens - Array of ReadonlyToken instances to authorize.
+   * @param tokens - Array of ReadonlyToken instances to allow.
    * @returns Resolves when all credentials are cached.
    *
    * @example
    * ```ts
    * const tokens = addresses.map(a => sdk.createReadonlyToken(a));
-   * await ReadonlyToken.authorizeAll(tokens);
+   * await ReadonlyToken.allow(...tokens);
    * // All tokens now share the same credentials
    * ```
    */
-  static async authorizeAll(tokens: ReadonlyToken[]): Promise<void> {
+  static async allow(...tokens: ReadonlyToken[]): Promise<void> {
     if (tokens.length === 0) return;
     const allAddresses = tokens.map((t) => t.address);
-    await tokens[0]!.credentials.getAll(allAddresses);
+    await tokens[0]!.credentials.allow(...allAddresses);
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Address> {
@@ -541,7 +565,7 @@ export class ReadonlyToken {
     });
     if (cached !== null) return cached;
 
-    const creds = await this.credentials.get(this.address);
+    const creds = await this.credentials.allow(this.address);
 
     const t0 = Date.now();
     try {
@@ -601,7 +625,7 @@ export class ReadonlyToken {
 
     if (nonZeroHandles.length === 0) return results;
 
-    const creds = await this.credentials.get(this.address);
+    const creds = await this.credentials.allow(this.address);
 
     const t0 = Date.now();
     try {

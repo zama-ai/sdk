@@ -2,7 +2,7 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import { vi } from "vitest";
-import type { GenericSigner, GenericStringStorage, RelayerSDK } from "@zama-fhe/sdk";
+import type { GenericSigner, GenericStorage, RelayerSDK } from "@zama-fhe/sdk";
 import { ZamaProvider } from "../provider";
 
 const USER = "0x2222222222222222222222222222222222222222" as `0x${string}`;
@@ -15,6 +15,7 @@ export function createMockSigner(): GenericSigner {
     readContract: vi.fn().mockResolvedValue("0x0"),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getChainId: vi.fn().mockResolvedValue(31337),
+    subscribe: vi.fn().mockReturnValue(() => {}),
   };
 }
 
@@ -55,15 +56,15 @@ export function createMockRelayer(): RelayerSDK {
   } as unknown as RelayerSDK;
 }
 
-export function createMockStorage(): GenericStringStorage {
-  const store = new Map<string, string>();
+export function createMockStorage(): GenericStorage {
+  const store = new Map<string, unknown>();
   return {
-    getItem: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
-    setItem: vi.fn((key: string, value: string) => {
+    get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)) as GenericStorage["get"],
+    set: vi.fn((key: string, value: unknown) => {
       store.set(key, value);
       return Promise.resolve();
     }),
-    removeItem: vi.fn((key: string) => {
+    delete: vi.fn((key: string) => {
       store.delete(key);
       return Promise.resolve();
     }),
@@ -73,7 +74,7 @@ export function createMockStorage(): GenericStringStorage {
 interface WrapperOverrides {
   signer?: GenericSigner;
   relayer?: RelayerSDK;
-  storage?: GenericStringStorage;
+  storage?: GenericStorage;
 }
 
 export function createWrapper(overrides?: WrapperOverrides) {

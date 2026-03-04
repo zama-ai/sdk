@@ -5,12 +5,84 @@
 ```ts
 
 import { Address } from '@zama-fhe/relayer-sdk/bundle';
-import { BrowserProvider } from 'ethers';
+import { Eip1193Provider } from 'ethers';
 import { Provider } from 'ethers';
 import { Signer } from 'ethers';
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
-//
+// @public
+export interface BatchTransferData {
+    // (undocumented)
+    encryptedAmount: Address;
+    // (undocumented)
+    inputProof: Address;
+    // (undocumented)
+    retryFor: bigint;
+    // (undocumented)
+    to: Address;
+}
+
+// @public
+export interface ContractCallConfig {
+    readonly abi: readonly unknown[];
+    readonly address: Address;
+    readonly args: readonly unknown[];
+    readonly functionName: string;
+    readonly gas?: bigint;
+    readonly value?: bigint;
+}
+
+// @public (undocumented)
+export interface EIP1193EventMap {
+    // (undocumented)
+    accountsChanged(accounts: Address[]): void;
+    // (undocumented)
+    chainChanged(chainId: string): void;
+    // (undocumented)
+    connect(connectInfo: ProviderConnectInfo): void;
+    // (undocumented)
+    disconnect(error: ProviderRpcError): void;
+    // (undocumented)
+    message(message: ProviderMessage): void;
+}
+
+// @public (undocumented)
+export interface EIP1193Events {
+    // (undocumented)
+    on<event extends keyof EIP1193EventMap>(event: event, listener: EIP1193EventMap[event]): void;
+    // (undocumented)
+    removeListener<event extends keyof EIP1193EventMap>(event: event, listener: EIP1193EventMap[event]): void;
+}
+
+// @public (undocumented)
+export interface EIP1193Provider extends Eip1193Provider, EIP1193Events {
+}
+
+// @public
+export interface EIP712TypedData {
+    // (undocumented)
+    domain: {
+        name: string;
+        version: string;
+        chainId: number;
+        verifyingContract: Address;
+    };
+    // (undocumented)
+    message: {
+        publicKey: string;
+        contractAddresses: string[];
+        startTimestamp: bigint;
+        durationDays: bigint;
+        extraData: string;
+    };
+    // (undocumented)
+    types: {
+        [key: string]: Array<{
+            name: string;
+            type: string;
+        }>;
+    };
+}
+
 // @public
 export class EthersSigner implements GenericSigner {
     constructor(config: EthersSignerConfig);
@@ -20,25 +92,64 @@ export class EthersSigner implements GenericSigner {
     getChainId(): Promise<number>;
     // (undocumented)
     readContract<T, C extends ContractCallConfig>(config: C): Promise<T>;
-    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "Hex" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
-    //
+    // (undocumented)
+    subscribe(callbacks: SignerLifecycleCallbacks): () => void;
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    // Warning: (ae-forgotten-export) The symbol "ContractCallConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
 }
 
 // @public
-export interface EthersSignerConfig {
+export type EthersSignerConfig = {
+    ethereum: EIP1193Provider;
+} | {
+    signer: Signer;
+};
+
+// @public
+export interface GenericSigner {
+    getAddress: () => Promise<Address>;
+    getChainId(): Promise<number>;
+    readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
+    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
+    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+    writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
+}
+
+// @public
+export type Hex = `0x${string}`;
+
+// @public (undocumented)
+export interface ProviderConnectInfo {
     // (undocumented)
-    signer: BrowserProvider | Signer;
+    chainId: string;
+}
+
+// @public (undocumented)
+export interface ProviderMessage {
+    // (undocumented)
+    data: unknown;
+    // (undocumented)
+    type: string;
+}
+
+// @public (undocumented)
+export class ProviderRpcError extends Error {
+    constructor(code: number, message: string);
+    // (undocumented)
+    code: number;
+    // (undocumented)
+    details: string;
+}
+
+// @public
+export interface RawLog {
+    readonly data: string;
+    readonly topics: readonly string[];
 }
 
 // @public (undocumented)
@@ -56,8 +167,17 @@ export function readWrapperExistsContract(provider: Provider | Signer, coordinat
 // @public (undocumented)
 export function readWrapperForTokenContract(provider: Provider | Signer, coordinator: Address, tokenAddress: Address): Promise<any>;
 
-// Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts
-//
+// @public
+export interface SignerLifecycleCallbacks {
+    onAccountChange?: (newAddress: Address) => void;
+    onDisconnect?: () => void;
+}
+
+// @public
+export interface TransactionReceipt {
+    readonly logs: readonly RawLog[];
+}
+
 // @public (undocumented)
 export function writeConfidentialBatchTransferContract(signer: Signer, batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[], fees: bigint): Promise<`0x${string}`>;
 

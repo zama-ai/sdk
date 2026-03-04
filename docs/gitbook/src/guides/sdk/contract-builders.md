@@ -75,15 +75,20 @@ const txHash = await writeWrapContract(signer, wrapperAddress, recipient, amount
 | `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap                |
 | `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address |
 
-### Discovery and fees
+### Discovery, detection, and fees
 
-| Builder                                                                    | What it does                |
-| -------------------------------------------------------------------------- | --------------------------- |
-| `getWrapperContract(coordinator, token)`                                   | Look up wrapper for a token |
-| `wrapperExistsContract(coordinator, token)`                                | Check if wrapper exists     |
-| `supportsInterfaceContract(token, interfaceId)`                            | ERC-165 interface check     |
-| `getWrapFeeContract(feeManager, amount, from, to)`                         | Calculate wrap fee          |
-| `getUnwrapFeeContract(feeManager, amount, from, to)`                       | Calculate unwrap fee        |
-| `getBatchTransferFeeContract(feeManager)`                                  | Get batch transfer fee      |
-| `getFeeRecipientContract(feeManager)`                                      | Get fee recipient address   |
-| `confidentialBatchTransferContract(batcher, token, from, transfers, fees)` | Batch encrypted transfers   |
+| Builder                                                                    | What it does                          |
+| -------------------------------------------------------------------------- | ------------------------------------- |
+| `getWrapperContract(coordinator, token)`                                   | Look up wrapper for a token           |
+| `wrapperExistsContract(coordinator, token)`                                | Check if wrapper exists               |
+| `deploymentCoordinatorContract(token)`                                     | Read the deployment coordinator       |
+| `supportsInterfaceContract(token, interfaceId)`                            | ERC-165 interface check               |
+| `isConfidentialTokenContract(token)`                                       | Check if token is ERC-7984 compliant  |
+| `isConfidentialWrapperContract(token)`                                     | Check if token is an ERC-7984 wrapper |
+| `isFinalizeUnwrapOperatorContract(token, holder, operator)`                | Check finalize-unwrap operator status |
+| `setFinalizeUnwrapOperatorContract(token, operator, timestamp?)`           | Set finalize-unwrap operator approval |
+| `getWrapFeeContract(feeManager, amount, from, to)`                         | Calculate wrap fee                    |
+| `getUnwrapFeeContract(feeManager, amount, from, to)`                       | Calculate unwrap fee                  |
+| `getBatchTransferFeeContract(feeManager)`                                  | Get batch transfer fee                |
+| `getFeeRecipientContract(feeManager)`                                      | Get fee recipient address             |
+| `confidentialBatchTransferContract(batcher, token, from, transfers, fees)` | Batch encrypted transfers             |

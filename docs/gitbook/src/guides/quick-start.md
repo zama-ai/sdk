@@ -164,8 +164,8 @@ pnpm add @zama-fhe/sdk ethers
 import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-// ethersSigner comes from your ethers setup (e.g. BrowserProvider.getSigner())
-const signer = new EthersSigner({ signer: ethersSigner });
+// Pass the raw EIP-1193 provider — BrowserProvider is created internally
+const signer = new EthersSigner({ ethereum: window.ethereum! });
 
 const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
@@ -214,7 +214,7 @@ const sdk = new ZamaSDK({
     },
   }),
   signer,
-  // in-memory for scripts; implement GenericStringStorage for persistence
+  // in-memory for scripts; implement GenericStorage for persistence
   storage: new MemoryStorage(),
 });
 

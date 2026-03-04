@@ -14,7 +14,7 @@ import { useReadonlyToken } from "./use-readonly-token";
  * Query key factory for token metadata queries.
  * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
  */
-export const tokenMetadataQueryKeys = {
+export const metadataQueryKeys = {
   /** Match all token metadata queries. */
   all: ["tokenMetadata"] as const,
   /** Match metadata query for a specific token. */
@@ -40,13 +40,13 @@ export interface TokenMetadata {
  *
  * @example
  * ```ts
- * const options = tokenMetadataQueryOptions(token);
+ * const options = metadataQueryOptions(token);
  * await queryClient.prefetchQuery(options);
  * ```
  */
-export function tokenMetadataQueryOptions(token: ReadonlyToken) {
+export function metadataQueryOptions(token: ReadonlyToken) {
   return {
-    queryKey: tokenMetadataQueryKeys.token(token.address),
+    queryKey: metadataQueryKeys.token(token.address),
     queryFn: async () => {
       const [name, symbol, decimals] = await Promise.all([
         token.name(),
@@ -69,24 +69,24 @@ export function tokenMetadataQueryOptions(token: ReadonlyToken) {
  *
  * @example
  * ```tsx
- * const { data: metadata } = useTokenMetadata("0xToken");
+ * const { data: metadata } = useMetadata("0xToken");
  * // metadata?.name, metadata?.symbol, metadata?.decimals
  * ```
  */
-export function useTokenMetadata(
+export function useMetadata(
   tokenAddress: Address,
   options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">,
 ): UseQueryResult<TokenMetadata, Error> {
   const token = useReadonlyToken(tokenAddress);
 
   return useQuery<TokenMetadata, Error>({
-    ...tokenMetadataQueryOptions(token),
+    ...metadataQueryOptions(token),
     ...options,
   });
 }
 
 /**
- * Suspense variant of {@link useTokenMetadata}.
+ * Suspense variant of {@link useMetadata}.
  * Suspends rendering until metadata is loaded.
  *
  * @param tokenAddress - Address of the token contract.
@@ -94,13 +94,13 @@ export function useTokenMetadata(
  *
  * @example
  * ```tsx
- * const { data: metadata } = useTokenMetadataSuspense("0xToken");
+ * const { data: metadata } = useMetadataSuspense("0xToken");
  * ```
  */
-export function useTokenMetadataSuspense(
+export function useMetadataSuspense(
   tokenAddress: Address,
 ): UseSuspenseQueryResult<TokenMetadata, Error> {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<TokenMetadata, Error>(tokenMetadataQueryOptions(token));
+  return useSuspenseQuery<TokenMetadata, Error>(metadataQueryOptions(token));
 }

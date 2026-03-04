@@ -40,6 +40,15 @@
             "command": "pnpm lint"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm format"
+          }
+        ]
       }
     ]
   }

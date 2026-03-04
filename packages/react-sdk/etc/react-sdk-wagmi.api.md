@@ -10,6 +10,7 @@ import { ContractCallConfig } from '@zama-fhe/sdk';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { Hex } from '@zama-fhe/sdk';
+import { SignerLifecycleCallbacks } from '@zama-fhe/sdk';
 import { TransactionReceipt } from '@zama-fhe/sdk';
 
 // @public
@@ -23,6 +24,8 @@ export class WagmiSigner implements GenericSigner {
     readContract<T, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    // (undocumented)
+    subscribe(input: SignerLifecycleCallbacks): () => void;
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     // (undocumented)

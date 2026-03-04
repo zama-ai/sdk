@@ -56,6 +56,7 @@ function createMockSigner(): GenericSigner {
     readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getChainId: vi.fn().mockResolvedValue(31337),
+    subscribe: vi.fn().mockReturnValue(() => {}),
   };
 }
 
@@ -68,9 +69,10 @@ describe("Token", () => {
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
   });
@@ -165,9 +167,10 @@ describe("Token", () => {
 
     it("decrypts pre-read handles without calling readContract", async () => {
       const token2 = new Token({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 
@@ -187,9 +190,10 @@ describe("Token", () => {
 
     it("skips decryption for zero handles", async () => {
       const token2 = new Token({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 
@@ -392,9 +396,9 @@ describe("Token", () => {
     });
   });
 
-  describe("authorize", () => {
+  describe("allow", () => {
     it("generates credentials without reading balance", async () => {
-      await token.authorize();
+      await token.allow();
 
       expect(sdk.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
