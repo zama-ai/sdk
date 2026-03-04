@@ -1,8 +1,8 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { GenericStringStorage } from "./token.types";
+import type { GenericStorage } from "./token.types";
 
 /**
- * {@link GenericStringStorage} backed by Node.js {@link AsyncLocalStorage}.
+ * {@link GenericStorage} backed by Node.js {@link AsyncLocalStorage}.
  *
  * Each async context (e.g. HTTP request) gets its own isolated `Map`,
  * so credentials from one request never leak into another.
@@ -20,23 +20,23 @@ import type { GenericStringStorage } from "./token.types";
  * });
  * ```
  */
-class AsyncLocalMapStorage implements GenericStringStorage {
-  readonly #als = new AsyncLocalStorage<Map<string, string>>();
+export class AsyncLocalMapStorage implements GenericStorage {
+  readonly #als = new AsyncLocalStorage<Map<string, unknown>>();
 
   /** Execute `fn` within an isolated storage context. */
-  run<T>(fn: () => T | Promise<T>): T | Promise<T> {
+  run<R>(fn: () => R | Promise<R>): R | Promise<R> {
     return this.#als.run(new Map(), fn);
   }
 
-  async getItem(key: string): Promise<string | null> {
-    return this.#als.getStore()?.get(key) ?? null;
+  async get<T = unknown>(key: string): Promise<T | null> {
+    return (this.#als.getStore()?.get(key) as T) ?? null;
   }
 
-  async setItem(key: string, value: string): Promise<void> {
+  async set<T = unknown>(key: string, value: T): Promise<void> {
     this.#als.getStore()?.set(key, value);
   }
 
-  async removeItem(key: string): Promise<void> {
+  async delete(key: string): Promise<void> {
     this.#als.getStore()?.delete(key);
   }
 }

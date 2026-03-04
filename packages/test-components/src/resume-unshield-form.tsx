@@ -5,7 +5,7 @@ import {
   useUnwrap,
   useResumeUnshield,
   useConfidentialBalance,
-  useTokenMetadata,
+  useMetadata,
   type Address,
 } from "@zama-fhe/react-sdk";
 
@@ -17,7 +17,7 @@ export function ResumeUnshieldForm({
   wrapperAddress?: Address;
 }) {
   const [unwrapTxHash, setUnwrapTxHash] = useState<string | null>(null);
-  const { data: metadata } = useTokenMetadata(tokenAddress);
+  const { data: metadata } = useMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ tokenAddress });
   const unwrap = useUnwrap({ tokenAddress, wrapperAddress });
   const resumeUnshield = useResumeUnshield({ tokenAddress, wrapperAddress });

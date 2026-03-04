@@ -1,6 +1,7 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address } from "../relayer/relayer-sdk.types";
-import type { GenericSigner, GenericStringStorage, StoredCredentials } from "./token.types";
+import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
+import { MemoryStorage } from "./memory-storage";
 import { SigningRejectedError, SigningFailedError } from "./errors";
 import { assertObject, assertString, assertArray } from "../utils";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -32,33 +33,63 @@ interface LegacyEncryptedCredentials extends EncryptedCredentials {
 /** Configuration for constructing a {@link CredentialsManager}. */
 export interface CredentialsManagerConfig {
   /** FHE relayer backend for keypair generation and EIP-712 creation. */
-  sdk: RelayerSDK;
+  relayer: RelayerSDK;
   /** Wallet signer for signing EIP-712 typed data. */
   signer: GenericSigner;
   /** Credential storage backend for persisting encrypted credentials. */
-  storage: GenericStringStorage;
+  storage: GenericStorage;
+  /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
+  sessionStorage: GenericStorage;
   /** Number of days generated credentials remain valid. */
   durationDays: number;
   /** Optional structured event listener. */
   onEvent?: ZamaSDKEventListener;
 }
 
+/**
+ * Compute the storage key for a given address and chainId.
+ * Returns a truncated SHA-256 hex hash to avoid leaking raw addresses in storage keys.
+ */
+export async function computeStoreKey(address: string, chainId: number): Promise<string> {
+  const hash = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`${address.toLowerCase()}:${chainId}`),
+  );
+  const hex = Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return hex.slice(0, 32);
+}
+
 export class CredentialsManager {
-  #sdk: RelayerSDK;
+  #relayer: RelayerSDK;
   #signer: GenericSigner;
-  #storage: GenericStringStorage;
+  #storage: GenericStorage;
+  #sessionStorage: GenericStorage;
   #durationDays: number;
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
-  #sessionSignatures: Map<string, string> = new Map();
 
   constructor(config: CredentialsManagerConfig) {
-    this.#sdk = config.sdk;
+    this.#relayer = config.relayer;
     this.#signer = config.signer;
     this.#storage = config.storage;
+    this.#sessionStorage = config.sessionStorage;
     this.#durationDays = config.durationDays;
     this.#onEvent = config.onEvent ?? Boolean;
+
+    // Warn when using in-memory session storage inside a Chrome extension context
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const chrome = typeof globalThis !== "undefined" ? (globalThis as any).chrome : undefined;
+    if (chrome?.runtime?.id && config.sessionStorage instanceof MemoryStorage) {
+      console.warn(
+        "[zama-sdk] Detected Chrome extension context with in-memory session storage. " +
+          "Session signatures will be lost on service worker restart and won't be shared across contexts. " +
+          "Consider using chromeSessionStorage instead. ",
+      );
+    }
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
   #emit(partial: ZamaSDKEventInput): void {
@@ -66,66 +97,58 @@ export class CredentialsManager {
   }
 
   /**
-   * Get or create FHE credentials for a single contract address.
-   * Shorthand for `getAll([contractAddress])`.
-   *
-   * @example
-   * ```ts
-   * const creds = await credentials.get("0xTokenAddress");
-   * ```
-   */
-  async get(contractAddress: Address): Promise<StoredCredentials> {
-    return this.getAll([contractAddress]);
-  }
-
-  /**
-   * Get or create FHE credentials covering multiple contract addresses.
+   * Authorize FHE credentials for one or more contract addresses.
    * Returns cached credentials if still valid and covering all addresses,
    * otherwise generates a fresh keypair and requests an EIP-712 signature.
+   * The wallet signature is cached in session storage.
    *
    * @example
    * ```ts
-   * const creds = await credentials.getAll(["0xTokenA", "0xTokenB"]);
+   * const creds = await credentials.allow("0xTokenAddress");
+   * const creds = await credentials.allow("0xTokenA", "0xTokenB");
    * ```
    */
-  async getAll(contractAddresses: Address[]): Promise<StoredCredentials> {
+  async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
     const storeKey = await this.#storeKey();
     this.#emit({ type: ZamaSDKEvents.CredentialsLoading, contractAddresses });
     try {
-      const stored = await this.#storage.getItem(storeKey);
+      const stored = await this.#storage.get(storeKey);
       if (stored) {
-        const encrypted = JSON.parse(stored) as unknown;
+        const encrypted = stored as unknown;
         this.#assertEncryptedCredentials(encrypted);
 
         // Migration: if legacy format has signature, use it and cache in session
         if (this.#hasLegacySignature(encrypted)) {
           const creds = await this.#decryptCredentials(encrypted, encrypted.signature);
           if (this.#isValid(creds, contractAddresses)) {
-            this.#sessionSignatures.set(storeKey, encrypted.signature);
+            await this.#sessionStorage.set(storeKey, encrypted.signature);
             // Re-persist without signature (migration)
             const migrated = await this.#encryptCredentials(creds);
-            await this.#storage.setItem(storeKey, JSON.stringify(migrated)).catch(() => {});
+            await this.#storage.set(storeKey, migrated).catch(() => {});
             this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+            this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
             return creds;
           }
           this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
         } else {
-          // New format: check session map
-          const sessionSig = this.#sessionSignatures.get(storeKey);
+          // New format: check session storage
+          const sessionSig = await this.#sessionStorage.get(storeKey);
           if (sessionSig) {
-            const creds = await this.#decryptCredentials(encrypted, sessionSig);
+            const creds = await this.#decryptCredentials(encrypted, sessionSig as string);
             if (this.#isValid(creds, contractAddresses)) {
               this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+              this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
               return creds;
             }
             this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
           } else {
             // No session signature — need to re-sign
             if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
-              const signature = await this.#reSign(encrypted);
-              this.#sessionSignatures.set(storeKey, signature);
+              const signature = await this.#sign(encrypted);
+              await this.#sessionStorage.set(storeKey, signature);
               const creds = await this.#decryptCredentials(encrypted, signature);
               this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+              this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
               return creds;
             }
             this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
@@ -134,19 +157,27 @@ export class CredentialsManager {
       }
     } catch {
       try {
-        await this.#storage.removeItem(storeKey);
+        await this.#storage.delete(storeKey);
       } catch {
         /* best effort */
       }
     }
 
-    const key = contractAddresses.slice().sort().join(",");
+    const key = contractAddresses
+      .map((a) => a.toLowerCase())
+      .sort()
+      .join(",");
     if (!this.#createPromise || this.#createPromiseKey !== key) {
       this.#createPromiseKey = key;
-      this.#createPromise = this.create(contractAddresses).finally(() => {
-        this.#createPromise = null;
-        this.#createPromiseKey = null;
-      });
+      this.#createPromise = this.create(contractAddresses)
+        .then((creds) => {
+          this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
+          return creds;
+        })
+        .finally(() => {
+          this.#createPromise = null;
+          this.#createPromiseKey = null;
+        });
     }
     return this.#createPromise;
   }
@@ -172,10 +203,10 @@ export class CredentialsManager {
   async isExpired(contractAddress?: Address): Promise<boolean> {
     const storeKey = await this.#storeKey();
     try {
-      const stored = await this.#storage.getItem(storeKey);
+      const stored = await this.#storage.get(storeKey);
       if (!stored) return false;
 
-      const encrypted = JSON.parse(stored) as unknown;
+      const encrypted = stored as unknown;
       this.#assertEncryptedCredentials(encrypted);
 
       const requiredContracts = contractAddress ? [contractAddress] : [];
@@ -183,6 +214,38 @@ export class CredentialsManager {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Revoke the session signature for the connected wallet. Stored credentials
+   * remain intact, but the next decrypt operation will require a fresh wallet
+   * signature.
+   *
+   * @param contractAddresses - Optional addresses included in the revoked event
+   *   for observability. The session signature is always fully revoked since it
+   *   is atomic over all addresses.
+   *
+   * @example
+   * ```ts
+   * await credentials.revoke();
+   * await credentials.revoke("0xTokenA", "0xTokenB");
+   * ```
+   */
+  async revoke(...contractAddresses: Address[]): Promise<void> {
+    const storeKey = await this.#storeKey();
+    await this.#sessionStorage.delete(storeKey);
+    this.#emit({
+      type: ZamaSDKEvents.CredentialsRevoked,
+      ...(contractAddresses.length > 0 && { contractAddresses }),
+    });
+  }
+
+  /**
+   * Whether a session signature is currently cached for the connected wallet.
+   */
+  async isAllowed(): Promise<boolean> {
+    const storeKey = await this.#storeKey();
+    return (await this.#sessionStorage.get(storeKey)) !== null;
   }
 
   /**
@@ -195,22 +258,19 @@ export class CredentialsManager {
    */
   async clear(): Promise<void> {
     const storeKey = await this.#storeKey();
-    this.#sessionSignatures.delete(storeKey);
+    await this.#sessionStorage.delete(storeKey);
     try {
-      await this.#storage.removeItem(storeKey);
+      await this.#storage.delete(storeKey);
     } catch {
       // Best effort
     }
   }
 
-  /** Returns a truncated SHA-256 hash of the address to avoid leaking it in storage. */
+  /** Returns a truncated SHA-256 hash of the address and chainId to avoid leaking it in storage. */
   async #storeKey(): Promise<string> {
     const address = (await this.#signer.getAddress()).toLowerCase();
-    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address));
-    const hex = Array.from(new Uint8Array(hash))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return hex.slice(0, 32);
+    const chainId = await this.#signer.getChainId();
+    return computeStoreKey(address, chainId);
   }
 
   // ── Validation ──────────────────────────────────────────────
@@ -245,12 +305,12 @@ export class CredentialsManager {
     return requiredContracts.every((addr) => signedSet.has(addr.toLowerCase()));
   }
 
-  async #reSign(encrypted: EncryptedCredentials): Promise<string> {
-    const eip712 = await this.#sdk.createEIP712(
+  async #sign(encrypted: EncryptedCredentials): Promise<string> {
+    const eip712 = await this.#relayer.createEIP712(
       encrypted.publicKey,
       encrypted.contractAddresses,
       encrypted.startTimestamp,
-      this.#durationDays,
+      encrypted.durationDays,
     );
     return this.#signer.signTypedData(eip712);
   }
@@ -269,10 +329,11 @@ export class CredentialsManager {
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
     this.#emit({ type: ZamaSDKEvents.CredentialsCreating, contractAddresses });
     try {
-      const keypair = await this.#sdk.generateKeypair();
+      const storeKey = await this.#storeKey();
+      const keypair = await this.#relayer.generateKeypair();
       const startTimestamp = Math.floor(Date.now() / 1000);
 
-      const eip712 = await this.#sdk.createEIP712(
+      const eip712 = await this.#relayer.createEIP712(
         keypair.publicKey,
         contractAddresses,
         startTimestamp,
@@ -280,7 +341,7 @@ export class CredentialsManager {
       );
 
       const signature = await this.#signer.signTypedData(eip712);
-      this.#sessionSignatures.set(await this.#storeKey(), signature);
+      await this.#sessionStorage.set(storeKey, signature);
 
       const creds: StoredCredentials = {
         publicKey: keypair.publicKey,
@@ -291,10 +352,9 @@ export class CredentialsManager {
         durationDays: this.#durationDays,
       };
 
-      const storeKey = await this.#storeKey();
       try {
         const encrypted = await this.#encryptCredentials(creds);
-        await this.#storage.setItem(storeKey, JSON.stringify(encrypted));
+        await this.#storage.set(storeKey, encrypted);
       } catch {
         // Store write failed — credentials still usable in memory
       }

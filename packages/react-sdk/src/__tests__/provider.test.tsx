@@ -41,13 +41,12 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.relayer).toBeDefined();
   });
 
-  it("calls terminate on unmount", () => {
+  it("does not terminate relayer on unmount (caller owns the relayer)", () => {
     const relayer = createMockRelayer();
     const { unmount } = renderWithProviders(() => useZamaSDK(), { relayer });
 
-    expect(relayer.terminate).not.toHaveBeenCalled();
     unmount();
-    expect(relayer.terminate).toHaveBeenCalledOnce();
+    expect(relayer.terminate).not.toHaveBeenCalled();
   });
 
   it("passes credentialDurationDays and onEvent to ZamaSDK", () => {
@@ -81,13 +80,17 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.signer).toBe(signer);
     expect(result.current.relayer).toBe(relayer);
 
-    // Verify ZamaSDK was constructed with credentialDurationDays and onEvent
+    // Verify ZamaSDK was constructed with credentialDurationDays
     expect(tokenSDKConstructorArgs).toHaveLength(1);
     expect(tokenSDKConstructorArgs[0]).toEqual(
       expect.objectContaining({
         credentialDurationDays: 7,
-        onEvent,
       }),
     );
+
+    // onEvent is stabilized via ref — verify it delegates correctly
+    const wrappedOnEvent = tokenSDKConstructorArgs[0]!.onEvent!;
+    wrappedOnEvent({ type: "credentials:loading", timestamp: 1, contractAddresses: [] } as never);
+    expect(onEvent).toHaveBeenCalledTimes(1);
   });
 });

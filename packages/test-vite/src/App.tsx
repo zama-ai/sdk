@@ -31,7 +31,7 @@ export default function App() {
           <Route path="unshield-all" Component={lazy(() => import("./pages/unshield-all"))} />
           <Route path="unwrap-manual" Component={lazy(() => import("./pages/unwrap-manual"))} />
           <Route path="approve" Component={lazy(() => import("./pages/approve"))} />
-          <Route path="authorize-all" Component={lazy(() => import("./pages/authorize-all"))} />
+          <Route path="allow-all" Component={lazy(() => import("./pages/allow-all"))} />
           <Route path="fhe-relayer" Component={lazy(() => import("./pages/fhe-relayer"))} />
           <Route
             path="wrapper-discovery"
