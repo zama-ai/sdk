@@ -9,16 +9,9 @@
  * @module
  */
 
-import {
-  getBytes,
-  hexlify,
-  AbiCoder,
-  keccak256,
-  concat,
-  toUtf8Bytes,
-  type SigningKey,
-} from "ethers";
+import { getBytes, hexlify, keccak256, concat, toUtf8Bytes, type SigningKey } from "ethers";
 import type { CleartextExecutor } from "./cleartext-executor";
+import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712-utils";
 
 /** Decrypted value — `boolean` for ebool, `bigint` for all other FHE types. */
 type ClearValue = bigint | boolean;
@@ -80,12 +73,6 @@ function formatPlaintext(value: bigint, fheTypeId: number): ClearValue {
   return value; // euint*
 }
 
-const abiCoder = AbiCoder.defaultAbiCoder();
-
-const EIP712_DOMAIN_TYPEHASH = keccak256(
-  toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-);
-
 const PUBLIC_DECRYPT_TYPEHASH = keccak256(
   toUtf8Bytes(
     "PublicDecryptVerification(bytes32[] ctHandles,bytes decryptedResult,bytes extraData)",
@@ -101,19 +88,7 @@ function signDecryptionProof(
   abiEncodedClearValues: string,
   ctx: DecryptionSigningContext,
 ): Uint8Array {
-  // Build domain separator — name="Decryption", version="1"
-  const domainSeparator = keccak256(
-    abiCoder.encode(
-      ["bytes32", "bytes32", "bytes32", "uint256", "address"],
-      [
-        EIP712_DOMAIN_TYPEHASH,
-        keccak256(toUtf8Bytes("Decryption")),
-        keccak256(toUtf8Bytes("1")),
-        ctx.gatewayChainId,
-        ctx.verifyingContract,
-      ],
-    ),
-  );
+  const domainSeparator = buildDomainSeparator("Decryption", ctx.gatewayChainId, ctx.verifyingContract);
 
   // Hash the ctHandles array: keccak256(abi.encodePacked(handles))
   const ctHandlesHash = keccak256(concat(handleHexes));
@@ -132,19 +107,9 @@ function signDecryptionProof(
     ),
   );
 
-  // EIP-712 digest: \x19\x01 + domainSeparator + structHash
-  const digest = keccak256(concat(["0x1901", domainSeparator, structHash]));
-
-  // Sign with the KMS key
+  const digest = eip712Digest(domainSeparator, structHash);
   const sig = ctx.signingKey.sign(digest);
-
-  // Pack as r[32] + s[32] + v[1]
-  const sigBytes = new Uint8Array(65);
-  sigBytes.set(getBytes(sig.r), 0);
-  sigBytes.set(getBytes(sig.s), 32);
-  sigBytes[64] = sig.v;
-
-  return sigBytes;
+  return packSignature(sig);
 }
 
 /**
@@ -239,16 +204,18 @@ export async function cleartextUserDecrypt(
 
   const fheTypes = handlesHex.map((h) => getFheTypeId(h));
 
-  // Check ACL: both user and contract must have persistAllowed (parallel)
+  // Check ACL: both user and contract must have persistAllowed (parallel across handles and checks)
   await Promise.all(
-    handlesHex.map(async (h, i) => {
+    handlesHex.flatMap((h, i) => {
       const contract = handleContractPairs[i]!.contractAddress;
-      if (!(await acl.persistAllowed(h, userAddress))) {
-        throw new Error(`User ${userAddress} is not authorized to decrypt handle ${h}`);
-      }
-      if (!(await acl.persistAllowed(h, contract))) {
-        throw new Error(`Contract ${contract} is not authorized to decrypt handle ${h}`);
-      }
+      return [
+        acl.persistAllowed(h, userAddress).then((ok) => {
+          if (!ok) throw new Error(`User ${userAddress} is not authorized to decrypt handle ${h}`);
+        }),
+        acl.persistAllowed(h, contract).then((ok) => {
+          if (!ok) throw new Error(`Contract ${contract} is not authorized to decrypt handle ${h}`);
+        }),
+      ];
     }),
   );
 

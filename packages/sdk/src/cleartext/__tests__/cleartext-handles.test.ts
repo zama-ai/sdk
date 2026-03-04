@@ -109,6 +109,17 @@ describe("computeCleartextHandles", () => {
       }),
     ).toThrow("Unsupported encryption bit-width: 7");
   });
+
+  it("encodes multi-byte chain IDs correctly (Hoodi 560048)", () => {
+    const { handles } = computeCleartextHandles({
+      values: [42n],
+      encryptionBits: [64],
+      aclContractAddress: ACL_ADDRESS,
+      chainId: 560048,
+    });
+    const parsed = parseHandle(handles[0]!);
+    expect(parsed.chainId).toBe(BigInt(560048));
+  });
 });
 
 describe("parseHandle", () => {

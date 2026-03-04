@@ -1,4 +1,7 @@
 import { createCleartextInstance } from "../cleartext/cleartext-instance";
+import { convertToBigIntRecord } from "../cleartext/convert";
+import type { CleartextInstanceConfig } from "../cleartext/types";
+import { ZamaError, EncryptionFailedError } from "../token/errors";
 import { assertNonNullable } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
@@ -14,12 +17,7 @@ import type {
   UserDecryptParams,
   ZKProofLike,
 } from "./relayer-sdk.types";
-import {
-  buildEIP712DomainType,
-  CleartextInstanceConfig,
-  convertToBigIntRecord,
-  DefaultConfigs,
-} from "./relayer-utils";
+import { buildEIP712DomainType, DefaultConfigs } from "./relayer-utils";
 
 type CleartextInstance = Awaited<ReturnType<typeof createCleartextInstance>>;
 
@@ -78,7 +76,11 @@ export class RelayerCleartext implements RelayerSDK {
     if (!this.#initPromise) {
       this.#initPromise = this.#initInstance(chainId).catch((error) => {
         this.#initPromise = null;
-        throw error;
+        throw error instanceof ZamaError
+          ? error
+          : new EncryptionFailedError("Failed to initialize cleartext instance", {
+              cause: error instanceof Error ? error : undefined,
+            });
       });
     }
     return this.#initPromise;
@@ -87,7 +89,7 @@ export class RelayerCleartext implements RelayerSDK {
   async #initInstance(chainId: number): Promise<CleartextInstance> {
     const overrides = this.#config.transports[chainId];
     if (!overrides) {
-      throw new Error(`No cleartext transport config for chainId: ${chainId}`);
+      throw new EncryptionFailedError(`No cleartext transport config for chainId: ${chainId}`);
     }
 
     const base = DefaultConfigs[chainId];
@@ -98,8 +100,8 @@ export class RelayerCleartext implements RelayerSDK {
       assertNonNullable(config.coprocessorSignerPrivateKey, `coprocessorSignerPrivateKey`);
       assertNonNullable(config.kmsSignerPrivateKey, `kmsSignerPrivateKey`);
     } catch (error) {
-      throw new Error(`Incomplete cleartext config for chainId: ${chainId}`, {
-        cause: error,
+      throw new EncryptionFailedError(`Incomplete cleartext config for chainId: ${chainId}`, {
+        cause: error instanceof Error ? error : undefined,
       });
     }
 
@@ -256,7 +258,7 @@ export class RelayerCleartext implements RelayerSDK {
   }
 
   async requestZKProofVerification(_zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    throw new Error(
+    throw new EncryptionFailedError(
       "requestZKProofVerification is not supported in cleartext mode. Use encrypt() instead.",
     );
   }

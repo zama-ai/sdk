@@ -6,7 +6,7 @@ import { CONTRACTS } from "../constants";
 export default function ShieldPage() {
   const [searchParams] = useSearchParams();
   const token = (searchParams.get("token") as Address) ?? CONTRACTS.USDT;
-  const wrapper = (searchParams.get("wrapper") as Address) ?? CONTRACTS.wrapper;
+  const wrapper = (searchParams.get("wrapper") as Address) ?? CONTRACTS.cUSDT;
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Shield Tokens</h1>

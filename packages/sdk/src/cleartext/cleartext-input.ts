@@ -21,8 +21,9 @@
  * @module
  */
 
-import { getAddress, getBytes, SigningKey, keccak256, AbiCoder, concat, toUtf8Bytes } from "ethers";
+import { getAddress, getBytes, SigningKey, keccak256, concat, toUtf8Bytes } from "ethers";
 import { computeCleartextHandles } from "./cleartext-handles";
+import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712-utils";
 
 /**
  * Fluent builder interface for cleartext encrypted inputs.
@@ -55,17 +56,11 @@ export interface InputSigningContext {
   contractChainId: number;
 }
 
-const EIP712_DOMAIN_TYPEHASH = keccak256(
-  toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-);
-
 const CIPHERTEXT_VERIFICATION_TYPEHASH = keccak256(
   toUtf8Bytes(
     "CiphertextVerification(bytes32[] ctHandles,address userAddress,address contractAddress,uint256 contractChainId,bytes extraData)",
   ),
 );
-
-const abiCoder = AbiCoder.defaultAbiCoder();
 
 function checkValue(value: number | bigint, bits: number): void {
   if (value == null) throw new Error("Missing value");
@@ -99,19 +94,7 @@ function signCiphertextVerification(
   extraData: Uint8Array,
   ctx: InputSigningContext,
 ): Uint8Array {
-  // Build domain separator
-  const domainSeparator = keccak256(
-    abiCoder.encode(
-      ["bytes32", "bytes32", "bytes32", "uint256", "address"],
-      [
-        EIP712_DOMAIN_TYPEHASH,
-        keccak256(toUtf8Bytes("InputVerification")),
-        keccak256(toUtf8Bytes("1")),
-        ctx.gatewayChainId,
-        ctx.verifyingContract,
-      ],
-    ),
-  );
+  const domainSeparator = buildDomainSeparator("InputVerification", ctx.gatewayChainId, ctx.verifyingContract);
 
   // Hash the ctHandles array: keccak256(abi.encodePacked(handles))
   const ctHandlesHash = keccak256(concat(handleHexes));
@@ -134,19 +117,9 @@ function signCiphertextVerification(
     ),
   );
 
-  // EIP-712 digest: \x19\x01 + domainSeparator + structHash
-  const digest = keccak256(concat(["0x1901", domainSeparator, structHash]));
-
-  // Sign with the coprocessor key
+  const digest = eip712Digest(domainSeparator, structHash);
   const sig = ctx.signingKey.sign(digest);
-
-  // Pack as r[32] + s[32] + v[1]
-  const sigBytes = new Uint8Array(65);
-  sigBytes.set(getBytes(sig.r), 0);
-  sigBytes.set(getBytes(sig.s), 32);
-  sigBytes[64] = sig.v;
-
-  return sigBytes;
+  return packSignature(sig);
 }
 
 /**
@@ -203,9 +176,10 @@ export function createCleartextEncryptedInput(params: {
   const { aclContractAddress, chainId, signingContext } = params;
   const bits: number[] = [];
   const values: bigint[] = [];
+  let totalBits = 0;
 
   const checkLimit = (added: number): void => {
-    if (bits.reduce((acc, b) => acc + Math.max(2, b), 0) + added > 2048) {
+    if (totalBits + added > 2048) {
       throw new Error("Packing more than 2048 bits in a single input ciphertext is unsupported");
     }
     if (bits.length + 1 > 255) {
@@ -215,62 +189,53 @@ export function createCleartextEncryptedInput(params: {
     }
   };
 
+  const pushValue = (value: bigint, bitWidth: number): void => {
+    checkLimit(Math.max(2, bitWidth));
+    values.push(value);
+    bits.push(bitWidth);
+    totalBits += Math.max(2, bitWidth);
+  };
+
   const self: CleartextEncryptedInput = {
     addBool(value) {
       const v = Number(value);
       if (!Number.isInteger(v) || v < 0 || v > 1) throw new Error("The value must be 0 or 1.");
-      checkLimit(2);
-      values.push(BigInt(v));
-      bits.push(2);
+      pushValue(BigInt(v), 2);
       return self;
     },
     add8(value) {
       checkValue(value, 8);
-      checkLimit(8);
-      values.push(BigInt(value));
-      bits.push(8);
+      pushValue(BigInt(value), 8);
       return self;
     },
     add16(value) {
       checkValue(value, 16);
-      checkLimit(16);
-      values.push(BigInt(value));
-      bits.push(16);
+      pushValue(BigInt(value), 16);
       return self;
     },
     add32(value) {
       checkValue(value, 32);
-      checkLimit(32);
-      values.push(BigInt(value));
-      bits.push(32);
+      pushValue(BigInt(value), 32);
       return self;
     },
     add64(value) {
       checkValue(value, 64);
-      checkLimit(64);
-      values.push(BigInt(value));
-      bits.push(64);
+      pushValue(BigInt(value), 64);
       return self;
     },
     add128(value) {
       checkValue(value, 128);
-      checkLimit(128);
-      values.push(BigInt(value));
-      bits.push(128);
+      pushValue(BigInt(value), 128);
       return self;
     },
     add256(value) {
       checkValue(value, 256);
-      checkLimit(256);
-      values.push(BigInt(value));
-      bits.push(256);
+      pushValue(BigInt(value), 256);
       return self;
     },
     addAddress(value) {
       const checksummed = getAddress(value); // throws if not valid address
-      checkLimit(160);
-      values.push(BigInt(checksummed));
-      bits.push(160);
+      pushValue(BigInt(checksummed), 160);
       return self;
     },
     getBits() {

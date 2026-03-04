@@ -137,4 +137,15 @@ describe("createCleartextEncryptedInput", () => {
     // total = 2 (header) + 32 (handle) + 65 (signature) + 32 (extraData, no version prefix)
     expect(result.inputProof.length).toBe(2 + 32 + 65 + 32);
   });
+
+  it("addBool accepts bigint 0n and 1n", () => {
+    const input = makeInput();
+    input.addBool(0n).addBool(1n);
+    expect(input.getBits()).toEqual([2, 2]);
+  });
+
+  it("addBool rejects bigint 2n", () => {
+    const input = makeInput();
+    expect(() => input.addBool(2n)).toThrow("must be 0 or 1");
+  });
 });

@@ -8,7 +8,6 @@
 
 import {
   keccak256,
-  AbiCoder,
   concat,
   toBeHex,
   zeroPadValue,
@@ -16,6 +15,7 @@ import {
   hexlify,
   randomBytes,
 } from "ethers";
+import { abiCoder } from "./eip712-utils";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -88,8 +88,6 @@ export interface ParsedHandle {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const abiCoder = AbiCoder.defaultAbiCoder();
 
 /**
  * Convert an ASCII string to a hex-encoded string (0x-prefixed).
