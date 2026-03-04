@@ -9,8 +9,8 @@ The React SDK provides library-specific sub-paths that give you thin hooks over 
 Each sub-path re-exports its signer adapter:
 
 ```ts
-import { ViemSigner } from "@zama-fhe/react-sdk/viem";
-import { EthersSigner } from "@zama-fhe/react-sdk/ethers";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 ```
 
@@ -21,7 +21,7 @@ import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 Pass a `PublicClient`. All read hooks have `*Suspense` variants for React Suspense.
 
 ```tsx
-import { useConfidentialBalanceOf } from "@zama-fhe/react-sdk/viem";
+import { useConfidentialBalanceOf } from "@zama-fhe/react-sdk";
 
 const { data: handle } = useConfidentialBalanceOf(publicClient, tokenAddress, userAddress);
 ```
@@ -33,7 +33,7 @@ Available: `useConfidentialBalanceOf`, `useWrapperForToken`, `useUnderlyingToken
 Mutation params include `client: WalletClient`.
 
 ```tsx
-import { useConfidentialTransfer } from "@zama-fhe/react-sdk/viem";
+import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
 const { mutateAsync: transfer } = useConfidentialTransfer();
 
@@ -53,7 +53,7 @@ Available: `useConfidentialTransfer`, `useConfidentialBatchTransfer`, `useUnwrap
 Same set as viem. Read hooks take `Provider | Signer`, write hooks take `Signer`.
 
 ```tsx
-import { useConfidentialBalanceOf, useConfidentialTransfer } from "@zama-fhe/react-sdk/ethers";
+import { useConfidentialBalanceOf, useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
 const { data: handle } = useConfidentialBalanceOf(provider, tokenAddress, userAddress);
 

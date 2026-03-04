@@ -264,9 +264,7 @@ Each package exposes multiple entry points for tree-shaking:
 | Import Path | Contents |
 | --- | --- |
 | `@zama-fhe/react-sdk` | Provider-based hooks + all re-exports from core SDK |
-| `@zama-fhe/react-sdk/viem` | Viem-specific hooks + `ViemSigner` |
-| `@zama-fhe/react-sdk/ethers` | Ethers-specific hooks + `EthersSigner` |
-| `@zama-fhe/react-sdk/wagmi` | Wagmi-specific hooks + `WagmiSigner` |
+| `@zama-fhe/react-sdk/wagmi` | `WagmiSigner` adapter |
 
 ## Supported Networks
 
