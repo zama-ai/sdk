@@ -169,36 +169,16 @@ const { mutateAsync: shield } = useShield({ tokenAddress });
 await shield({ amount: 1000n }); // encryption + approval handled for you
 ```
 
-**Use the library sub-path** (`/viem`, `/ethers`, `/wagmi`) when you need direct contract-level control without a provider. You handle encryption and cache management yourself:
-
 ```tsx
-import { useShield } from "@zama-fhe/react-sdk/viem";
-
-const { mutateAsync: shield } = useShield();
-await shield({ client: walletClient, wrapperAddress, to, amount }); // raw contract call
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 ```
 
-### Comparison of Colliding Hook Names
+The `WagmiSigner` is the only adapter in the react-sdk since wagmi is React-specific:
 
-Five hooks share names across both layers. Here's how they differ:
-
-| Hook                      | Main (`@zama-fhe/react-sdk`)                                | Sub-path (`/viem`, `/ethers`, `/wagmi`)                                              |
-| ------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `useConfidentialTransfer` | `mutate({ to, amount })` — auto-encrypts                    | `mutate({ client, token, to, handle, inputProof })` — pre-encrypted                  |
-| `useShield`               | `mutate({ amount, approvalStrategy? })` — auto-approves     | `mutate({ client, wrapper, to, amount })` — raw wrap call                            |
-| `useShieldETH`            | `mutate({ amount, value? })` — `value` defaults to `amount` | `mutate({ client, wrapper, to, amount, value })` — all fields required               |
-| `useUnwrap`               | `mutate({ amount })` — auto-encrypts                        | `mutate({ client, token, from, to, encryptedAmount, inputProof })` — pre-encrypted   |
-| `useFinalizeUnwrap`       | `mutate({ burnAmountHandle })` — fetches proof from relayer | `mutate({ client, wrapper, burntAmount, cleartext, proof })` — caller provides proof |
-
-| Feature                 | Main                    | Sub-path                      |
-| ----------------------- | ----------------------- | ----------------------------- |
-| Requires `ZamaProvider` | Yes                     | No                            |
-| FHE encryption          | Automatic               | Manual (caller pre-encrypts)  |
-| ERC-20 approval         | Automatic (`useShield`) | None                          |
-| Cache invalidation      | Automatic               | None                          |
-| Return type             | `TransactionResult`     | Raw tx hash or wagmi mutation |
-
-> **Rule of thumb:** If you're building a standard dApp UI, use the main import. If you're building custom transaction pipelines or need to compose with other wagmi hooks at the contract level, use the sub-path.
+```tsx
+import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+```
 
 ## Hooks Reference
 
@@ -858,30 +838,13 @@ import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 const signer = new WagmiSigner({ config: wagmiConfig });
 ```
 
-## Viem & Ethers Adapter Hooks
+## Signer Adapters
 
-Both `@zama-fhe/react-sdk/viem` and `@zama-fhe/react-sdk/ethers` export the same set of read/write hooks, but typed for their respective libraries. They also include `Suspense` variants of all read hooks.
-
-### Read hooks
-
-`useConfidentialBalanceOf`, `useWrapperForToken`, `useUnderlyingToken`, `useWrapperExists`, `useSupportsInterface` — plus `*Suspense` variants.
-
-- **viem:** First parameter is `PublicClient`.
-- **ethers:** First parameter is `Provider | Signer`.
-
-### Write hooks
-
-`useConfidentialTransfer`, `useConfidentialBatchTransfer`, `useUnwrap`, `useUnwrapFromBalance`, `useFinalizeUnwrap`, `useSetOperator`, `useShield`, `useShieldETH`.
-
-- **viem:** Mutation params include `client: WalletClient`.
-- **ethers:** Mutation params include `signer: Signer`.
-
-### Signer adapters
+Signer adapters are provided by the core SDK package:
 
 ```ts
-// Re-exported for convenience
-import { ViemSigner } from "@zama-fhe/react-sdk/viem";
-import { EthersSigner } from "@zama-fhe/react-sdk/ethers";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 ```
 
 ## Wallet Integration Guide
