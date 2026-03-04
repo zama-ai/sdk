@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { mainnet, sepolia } from "viem/chains";
 import type { RelayerSDK } from "../relayer-sdk";
 import type {
   Address,
@@ -59,7 +60,15 @@ export class CleartextFhevmInstance implements RelayerSDK {
   readonly #provider: RpcLike;
   readonly #config: CleartextConfig;
 
+  static readonly #FORBIDDEN_CHAIN_IDS = new Set([BigInt(mainnet.id), BigInt(sepolia.id)]);
+
   constructor(provider: RpcLike, config: CleartextConfig) {
+    if (CleartextFhevmInstance.#FORBIDDEN_CHAIN_IDS.has(config.chainId)) {
+      throw new Error(
+        `Cleartext mode is not allowed on chain ${config.chainId}. ` +
+          `It is intended for local development and testing only.`,
+      );
+    }
     this.#provider = provider;
     this.#config = config;
   }
