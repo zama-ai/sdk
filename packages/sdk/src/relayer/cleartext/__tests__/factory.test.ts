@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { RelayerSDK } from "../../relayer-sdk";
 import { createCleartextRelayer } from "../factory";
 import { hardhat } from "../presets";
 
@@ -9,23 +8,13 @@ describe("createCleartextRelayer", () => {
     expect(relayer).toBeDefined();
   });
 
-  it("returns an object satisfying the RelayerSDK shape", () => {
+  it("generates a distinct keypair", async () => {
     const relayer = createCleartextRelayer(hardhat);
+    const { publicKey, privateKey } = await relayer.generateKeypair();
 
-    const sdk: RelayerSDK = relayer;
-    expect(sdk).toBeDefined();
-
-    expect(typeof relayer.generateKeypair).toBe("function");
-    expect(typeof relayer.createEIP712).toBe("function");
-    expect(typeof relayer.encrypt).toBe("function");
-    expect(typeof relayer.userDecrypt).toBe("function");
-    expect(typeof relayer.publicDecrypt).toBe("function");
-    expect(typeof relayer.createDelegatedUserDecryptEIP712).toBe("function");
-    expect(typeof relayer.delegatedUserDecrypt).toBe("function");
-    expect(typeof relayer.requestZKProofVerification).toBe("function");
-    expect(typeof relayer.getPublicKey).toBe("function");
-    expect(typeof relayer.getPublicParams).toBe("function");
-    expect(typeof relayer.terminate).toBe("function");
+    expect(publicKey).toMatch(/^0x[0-9a-f]{64}$/i);
+    expect(privateKey).toMatch(/^0x[0-9a-f]{64}$/i);
+    expect(publicKey).not.toBe(privateKey);
   });
 
   it("accepts an Eip1193Provider value in rpcUrl", () => {
