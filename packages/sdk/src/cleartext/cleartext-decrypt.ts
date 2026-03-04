@@ -88,7 +88,11 @@ function signDecryptionProof(
   abiEncodedClearValues: string,
   ctx: DecryptionSigningContext,
 ): Uint8Array {
-  const domainSeparator = buildDomainSeparator("Decryption", ctx.gatewayChainId, ctx.verifyingContract);
+  const domainSeparator = buildDomainSeparator(
+    "Decryption",
+    ctx.gatewayChainId,
+    ctx.verifyingContract,
+  );
 
   // Hash the ctHandles array: keccak256(abi.encodePacked(handles))
   const ctHandlesHash = keccak256(concat(handleHexes));

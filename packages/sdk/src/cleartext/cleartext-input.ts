@@ -94,7 +94,11 @@ function signCiphertextVerification(
   extraData: Uint8Array,
   ctx: InputSigningContext,
 ): Uint8Array {
-  const domainSeparator = buildDomainSeparator("InputVerification", ctx.gatewayChainId, ctx.verifyingContract);
+  const domainSeparator = buildDomainSeparator(
+    "InputVerification",
+    ctx.gatewayChainId,
+    ctx.verifyingContract,
+  );
 
   // Hash the ctHandles array: keccak256(abi.encodePacked(handles))
   const ctHandlesHash = keccak256(concat(handleHexes));

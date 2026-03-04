@@ -6,15 +6,7 @@
  * expected by the CleartextFHEVM executor.
  */
 
-import {
-  keccak256,
-  concat,
-  toBeHex,
-  zeroPadValue,
-  getBytes,
-  hexlify,
-  randomBytes,
-} from "ethers";
+import { keccak256, concat, toBeHex, zeroPadValue, getBytes, hexlify, randomBytes } from "ethers";
 import { abiCoder } from "./eip712-utils";
 
 // ---------------------------------------------------------------------------

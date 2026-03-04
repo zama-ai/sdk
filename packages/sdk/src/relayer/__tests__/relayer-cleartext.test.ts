@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  EncryptionFailedError,
-  ConfigurationError,
-  NotSupportedError,
-} from "../../token/errors";
+import { EncryptionFailedError, ConfigurationError, NotSupportedError } from "../../token/errors";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks (available inside vi.mock factories)
@@ -227,9 +223,7 @@ describe("RelayerCleartext", () => {
 
       const tooBig = 2n ** 64n; // exceeds uint64 max
 
-      await expect(relayer.encrypt(encryptParams([tooBig]))).rejects.toThrow(
-        EncryptionFailedError,
-      );
+      await expect(relayer.encrypt(encryptParams([tooBig]))).rejects.toThrow(EncryptionFailedError);
       await expect(relayer.encrypt(encryptParams([tooBig]))).rejects.toThrow(
         /only supports values up to uint64/,
       );

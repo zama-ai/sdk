@@ -172,7 +172,12 @@ describe("cleartextPublicDecrypt", () => {
     const executor = mockExecutor(new Map());
     const acl = mockAcl();
 
-    const result = await cleartextPublicDecrypt([], executor as never, acl as never, mockSigningCtx);
+    const result = await cleartextPublicDecrypt(
+      [],
+      executor as never,
+      acl as never,
+      mockSigningCtx,
+    );
     expect(result.clearValues).toEqual({});
     expect(result.decryptionProof.startsWith("0x")).toBe(true);
   });
@@ -289,7 +294,12 @@ describe("cleartextUserDecrypt", () => {
     const executor = mockExecutor(new Map());
     const acl = mockAcl();
 
-    const result = await cleartextUserDecrypt([], "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", executor as never, acl as never);
+    const result = await cleartextUserDecrypt(
+      [],
+      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      executor as never,
+      acl as never,
+    );
     expect(result).toEqual({});
   });
 });
