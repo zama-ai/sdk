@@ -2,9 +2,26 @@ import { Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createCleartextRelayer, hardhat } from "@zama-fhe/sdk/cleartext";
+import { createCleartextRelayer } from "@zama-fhe/sdk/cleartext";
+import deployments from "../../../hardhat/deployments.json" with { type: "json" };
+import { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "@zama-fhe/sdk/cleartext";
+import type { CleartextChainConfig } from "@zama-fhe/sdk/cleartext";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const hardhat = {
+  chainId: 31_337n,
+  gatewayChainId: GATEWAY_CHAIN_ID,
+  rpcUrl: "http://127.0.0.1:8545",
+  contracts: {
+    acl: deployments.fhevm.acl,
+    executor: deployments.fhevm.executor,
+    inputVerifier: deployments.fhevm.inputVerifier,
+    kmsVerifier: deployments.fhevm.kmsVerifier,
+    verifyingInputVerifier: VERIFYING_CONTRACTS.inputVerification,
+    verifyingDecryption: VERIFYING_CONTRACTS.decryption,
+  },
+} satisfies CleartextChainConfig;
 
 export async function mockRelayerSdk(page: Page, baseURL: string) {
   const fhevm = createCleartextRelayer(hardhat);

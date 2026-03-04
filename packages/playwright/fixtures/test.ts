@@ -14,6 +14,7 @@ import { mockRelayerSdk } from "./fhevm";
 import { TEST_PRIVATE_KEY, MINTED } from "./constants";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
 import type { Address } from "viem";
+import { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "./constants";
 
 const privateKey = TEST_PRIVATE_KEY;
 

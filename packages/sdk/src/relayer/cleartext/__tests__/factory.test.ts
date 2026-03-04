@@ -1,15 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createCleartextRelayer } from "../factory";
-import { hardhat } from "../presets";
+import { hoodi } from "../presets";
 
 describe("createCleartextRelayer", () => {
-  it("instantiates from hardhat preset without throwing", () => {
-    const relayer = createCleartextRelayer(hardhat);
-    expect(relayer).toBeDefined();
-  });
-
   it("generates a distinct keypair", async () => {
-    const relayer = createCleartextRelayer(hardhat);
+    const relayer = createCleartextRelayer(hoodi);
     const { publicKey, privateKey } = await relayer.generateKeypair();
 
     expect(publicKey).toMatch(/^0x[0-9a-f]{64}$/i);
@@ -23,7 +18,7 @@ describe("createCleartextRelayer", () => {
     };
 
     const relayer = createCleartextRelayer({
-      ...hardhat,
+      ...hoodi,
       rpcUrl: mockEip1193Provider,
     });
 
@@ -31,18 +26,18 @@ describe("createCleartextRelayer", () => {
   });
 
   it("exposes terminate() that runs without error", () => {
-    const relayer = createCleartextRelayer(hardhat);
+    const relayer = createCleartextRelayer(hoodi);
     expect(() => relayer.terminate()).not.toThrow();
   });
 
   it("rejects mainnet chain ID", () => {
-    expect(() => createCleartextRelayer({ ...hardhat, chainId: 1n })).toThrow(
+    expect(() => createCleartextRelayer({ ...hoodi, chainId: 1n })).toThrow(
       /not allowed on chain 1/,
     );
   });
 
   it("rejects Sepolia chain ID", () => {
-    expect(() => createCleartextRelayer({ ...hardhat, chainId: 11155111n })).toThrow(
+    expect(() => createCleartextRelayer({ ...hoodi, chainId: 11155111n })).toThrow(
       /not allowed on chain 11155111/,
     );
   });
