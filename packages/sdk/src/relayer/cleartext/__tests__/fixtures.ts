@@ -1,4 +1,4 @@
-import { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "../constants";
+import { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "../presets";
 import type { CleartextFhevmConfig } from "../types";
 
 // Deterministic Hardhat deployment addresses (from FHEVMHostAddresses.sol).

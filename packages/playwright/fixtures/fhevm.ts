@@ -1,36 +1,13 @@
 import { Page } from "@playwright/test";
-import { JsonRpcProvider } from "ethers";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { hardhat } from "viem/chains";
-import {
-  CleartextFhevmInstance,
-  GATEWAY_CHAIN_ID,
-  VERIFYING_CONTRACTS,
-} from "@zama-fhe/sdk/cleartext";
-import deployments from "../../../hardhat/deployments.json" with { type: "json" };
+import { createCleartextRelayer, hardhat } from "@zama-fhe/sdk/cleartext";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function createMockFhevmInstance(rpcUrl: string) {
-  const provider = new JsonRpcProvider(rpcUrl);
-  return new CleartextFhevmInstance(provider, {
-    chainId: BigInt(hardhat.id),
-    gatewayChainId: GATEWAY_CHAIN_ID,
-    aclAddress: deployments.fhevm.acl,
-    executorProxyAddress: deployments.fhevm.executor,
-    inputVerifierContractAddress: deployments.fhevm.inputVerifier,
-    kmsContractAddress: deployments.fhevm.kmsVerifier,
-    verifyingContractAddressInputVerification: VERIFYING_CONTRACTS.inputVerification,
-    verifyingContractAddressDecryption: VERIFYING_CONTRACTS.decryption,
-  });
-}
-
 export async function mockRelayerSdk(page: Page, baseURL: string) {
-  const rpcUrl = hardhat.rpcUrls.default.http[0];
-
-  const fhevm = createMockFhevmInstance(rpcUrl);
+  const fhevm = createCleartextRelayer(hardhat);
 
   await page.route(`${baseURL}/generateKeypair`, async (route) => {
     const result = await fhevm.generateKeypair();
