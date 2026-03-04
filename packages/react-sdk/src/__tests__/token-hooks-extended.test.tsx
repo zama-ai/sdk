@@ -1,4 +1,4 @@
-import { describe, expect, it, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { useConfidentialTransferFrom } from "../token/use-confidential-transfer-from";
@@ -45,7 +45,7 @@ function createRelayerWithValidDecrypt() {
 // ---------------------------------------------------------------------------
 
 describe("useConfidentialTransferFrom", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() =>
       useConfidentialTransferFrom({ tokenAddress: TOKEN }),
     );
@@ -54,7 +54,7 @@ describe("useConfidentialTransferFrom", () => {
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.confidentialTransferFrom on mutateAsync", async () => {
+  test("behavior: mutates via token.confidentialTransferFrom", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -75,7 +75,7 @@ describe("useConfidentialTransferFrom", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
-  it("invalidates balance caches on success", async () => {
+  test("cache: invalidates balance caches on success", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -121,14 +121,14 @@ describe("useConfidentialTransferFrom", () => {
 });
 
 describe("useFinalizeUnwrap", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() => useFinalizeUnwrap({ tokenAddress: TOKEN }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.finalizeUnwrap on mutate", async () => {
+  test("behavior: mutates via token.finalizeUnwrap", async () => {
     const signer = createMockSigner();
     const relayer = createRelayerWithValidDecrypt();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
@@ -147,7 +147,7 @@ describe("useFinalizeUnwrap", () => {
     expect(relayer.publicDecrypt).toHaveBeenCalled();
   });
 
-  it("invalidates balance caches on success", async () => {
+  test("cache: invalidates balance caches on success", async () => {
     const signer = createMockSigner();
     const relayer = createRelayerWithValidDecrypt();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
@@ -180,14 +180,14 @@ describe("useFinalizeUnwrap", () => {
 });
 
 describe("useUnwrap", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() => useUnwrap({ tokenAddress: TOKEN }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.unwrap on mutate", async () => {
+  test("behavior: mutates via token.unwrap", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -201,7 +201,7 @@ describe("useUnwrap", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
-  it("invalidates balance caches on success", async () => {
+  test("cache: invalidates balance caches on success", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -232,14 +232,14 @@ describe("useUnwrap", () => {
 });
 
 describe("useUnwrapAll", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() => useUnwrapAll({ tokenAddress: TOKEN }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.unwrapAll on mutate", async () => {
+  test("behavior: mutates via token.unwrapAll", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -253,7 +253,7 @@ describe("useUnwrapAll", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
-  it("invalidates balance caches on success", async () => {
+  test("cache: invalidates balance caches on success", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -285,7 +285,7 @@ describe("useUnwrapAll", () => {
 });
 
 describe("useUnshield", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() =>
       useUnshield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
@@ -294,7 +294,7 @@ describe("useUnshield", () => {
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("reports error when receipt has no UnwrapRequested event", async () => {
+  test("error: reports when receipt has no UnwrapRequested event", async () => {
     // useUnshield orchestrates: unwrap -> waitForTransactionReceipt -> findUnwrapRequested -> finalizeUnwrap.
     // With the default mock returning { logs: [] }, findUnwrapRequested returns undefined,
     // causing a TransactionRevertedError.
@@ -317,7 +317,7 @@ describe("useUnshield", () => {
 });
 
 describe("useUnshieldAll", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() =>
       useUnshieldAll({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
@@ -326,7 +326,7 @@ describe("useUnshieldAll", () => {
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("reports error when receipt has no UnwrapRequested event", async () => {
+  test("error: reports when receipt has no UnwrapRequested event", async () => {
     // Same orchestration flow as useUnshield: unwrapAll -> receipt -> findUnwrapRequested -> finalizeUnwrap.
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
@@ -347,7 +347,7 @@ describe("useUnshieldAll", () => {
 });
 
 describe("useShieldETH", () => {
-  it("provides mutate function", () => {
+  test("default", () => {
     const { result } = renderWithProviders(() =>
       useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
     );
@@ -356,7 +356,7 @@ describe("useShieldETH", () => {
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.shieldETH on mutate", async () => {
+  test("behavior: mutates via token.shieldETH", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -373,7 +373,7 @@ describe("useShieldETH", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
-  it("accepts optional value parameter", async () => {
+  test("parameters: accepts optional value parameter", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
@@ -392,7 +392,7 @@ describe("useShieldETH", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
-  it("invalidates balance caches on success", async () => {
+  test("cache: invalidates balance caches on success", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
