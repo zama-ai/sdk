@@ -119,8 +119,6 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
 
     /** Generate a random (non-FHE) keypair for signature flows. */
     generateKeypair() {
-      // Use crypto.getRandomValues directly — ethers' browser randomBytes
-      // caps at 1024 bytes, but cleartext keypairs need 1632 bytes.
       const pub = new Uint8Array(800);
       const priv = new Uint8Array(1632);
       crypto.getRandomValues(pub);
@@ -140,18 +138,12 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
     ) {
       return {
         domain: {
-          name: "KMSVerifier",
+          name: "Decryption",
           version: "1",
           chainId: BigInt(config.gatewayChainId),
           verifyingContract: config.verifyingContractAddressDecryption,
         },
         types: {
-          EIP712Domain: [
-            { name: "name", type: "string" },
-            { name: "version", type: "string" },
-            { name: "chainId", type: "uint256" },
-            { name: "verifyingContract", type: "address" },
-          ],
           UserDecryptRequestVerification: [
             { name: "publicKey", type: "bytes" },
             { name: "contractAddresses", type: "address[]" },
@@ -187,12 +179,6 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
         },
         primaryType: "DelegatedUserDecryptRequestVerification" as const,
         types: {
-          EIP712Domain: [
-            { name: "name", type: "string" },
-            { name: "version", type: "string" },
-            { name: "chainId", type: "uint256" },
-            { name: "verifyingContract", type: "address" },
-          ] as const,
           DelegatedUserDecryptRequestVerification: [
             { name: "publicKey", type: "bytes" },
             { name: "contractAddresses", type: "address[]" },

@@ -20,5 +20,8 @@ describe("CleartextExecutor", () => {
     const executor = new CleartextExecutor(mockContract as never);
     const result = await executor.getPlaintexts([HANDLE, handle2]);
     expect(result).toEqual([42n, 100n]);
+    expect(mockContract.plaintexts).toHaveBeenCalledTimes(2);
+    expect(mockContract.plaintexts).toHaveBeenCalledWith(HANDLE);
+    expect(mockContract.plaintexts).toHaveBeenCalledWith(handle2);
   });
 });

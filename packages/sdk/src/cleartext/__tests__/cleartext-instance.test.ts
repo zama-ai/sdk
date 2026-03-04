@@ -104,7 +104,7 @@ describe("createCleartextInstance", () => {
     const contracts = ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"];
     const result = instance.createEIP712(pubKey, contracts, 1000, 30);
 
-    expect(result.domain.name).toBe("KMSVerifier");
+    expect(result.domain.name).toBe("Decryption");
     expect(result.domain.version).toBe("1");
     expect(result.domain.chainId).toBe(BigInt(CONFIG.gatewayChainId));
     expect(result.domain.verifyingContract).toBe(CONFIG.verifyingContractAddressDecryption);
@@ -137,10 +137,11 @@ describe("createCleartextInstance", () => {
     // The mock Contract returns 42n for plaintexts and true for ACL checks
     const handle = "0x" + "00".repeat(32);
     const result = await instance.publicDecrypt([handle]);
-    expect(result.clearValues).toBeDefined();
-    // Decryption proof is now a signed EIP-712 proof: 1 byte numSigners + 65 bytes signature = 66 bytes
+    // handle byte 30 = 0x00 → fheTypeId 0 (ebool), mock returns 42n → formatPlaintext(42n, 0) → false
+    expect(result.clearValues[handle]).toBe(false);
+    // Decryption proof: 1 byte numSigners + 65 bytes signature = 66 bytes
     expect(result.decryptionProof).toMatch(/^0x/);
-    expect(result.decryptionProof.length).toBe(2 + 66 * 2); // "0x" + 66 bytes hex
+    expect(result.decryptionProof.length).toBe(2 + 66 * 2);
   });
 
   it("userDecrypt delegates to cleartextUserDecrypt", async () => {

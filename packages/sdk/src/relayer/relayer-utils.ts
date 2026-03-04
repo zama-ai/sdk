@@ -112,7 +112,10 @@ export const HardhatConfig = {
   kmsSignerPrivateKey: "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91",
 } as const satisfies CleartextInstanceConfig;
 
-/** Hoodi testnet cleartext configuration (chainId 560048). */
+/**
+ * Hoodi testnet cleartext configuration (chainId 560048).
+ * WARNING: signer keys are shared/insecure defaults for development only.
+ */
 export const HoodiConfig = {
   chainId: 560048,
   gatewayChainId: 10901,

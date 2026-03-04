@@ -203,6 +203,19 @@ describe("cleartextUserDecrypt", () => {
     expect(result[handleHex]).toBe(55n);
   });
 
+  it("converts ebool correctly", async () => {
+    const executor = mockExecutor(new Map([[HANDLE_EBOOL, 1n]]));
+    const acl = mockAcl();
+
+    const result = await cleartextUserDecrypt(
+      [{ handle: HANDLE_EBOOL, contractAddress: CONTRACT }],
+      USER,
+      executor as never,
+      acl as never,
+    );
+    expect(result[HANDLE_EBOOL]).toBe(true);
+  });
+
   it("throws when user lacks permission", async () => {
     const executor = mockExecutor(new Map([[HANDLE_EUINT32, 100n]]));
     const acl = mockAcl({ persistAllowed: false });
@@ -259,5 +272,8 @@ describe("cleartextUserDecrypt", () => {
         acl as never,
       ),
     ).rejects.toThrow("not authorized");
+    // Verify call order: user check first, then contract check
+    expect(acl.persistAllowed).toHaveBeenNthCalledWith(1, HANDLE_EUINT32, USER);
+    expect(acl.persistAllowed).toHaveBeenNthCalledWith(2, HANDLE_EUINT32, CONTRACT);
   });
 });

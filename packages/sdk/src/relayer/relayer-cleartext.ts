@@ -49,10 +49,12 @@ export class RelayerCleartext implements RelayerSDK {
 
   async #ensureInstance(): Promise<CleartextInstance> {
     if (this.#ensureLock) return this.#ensureLock;
-    this.#ensureLock = this.#ensureInstanceInner().finally(() => {
+    this.#ensureLock = this.#ensureInstanceInner();
+    try {
+      return await this.#ensureLock;
+    } finally {
       this.#ensureLock = null;
-    });
-    return this.#ensureLock;
+    }
   }
 
   async #ensureInstanceInner(): Promise<CleartextInstance> {
@@ -110,6 +112,11 @@ export class RelayerCleartext implements RelayerSDK {
     return instance;
   }
 
+  /**
+   * Mark the instance as terminated. Unlike {@link RelayerNode} (which throws
+   * on use-after-terminate), RelayerCleartext auto-restarts on the next
+   * operation to support React StrictMode's unmount→remount cycle and HMR.
+   */
   terminate(): void {
     this.#terminated = true;
     this.#initPromise = null;
@@ -168,10 +175,11 @@ export class RelayerCleartext implements RelayerSDK {
     for (const value of params.values) {
       try {
         input.add64(value);
-      } catch {
+      } catch (error) {
         throw new Error(
           `RelayerCleartext.encrypt() only supports values up to uint64 (2^64 - 1). ` +
             `For larger types (uint128, uint256, address), use createCleartextInstance() and the low-level add* methods.`,
+          { cause: error },
         );
       }
     }
