@@ -12,9 +12,14 @@
  * ```ts
  * import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
  *
+ * // Single transport (recommended for local dev):
+ * const relayer = new RelayerCleartext(HardhatConfig);
+ *
+ * // Multi-transport (dynamic chain switching):
+ * const signer = new EthersSigner({ ethereum: window.ethereum! })
  * const relayer = new RelayerCleartext({
- *   transports: { 31337: { network: "http://127.0.0.1:8545" } },
- *   getChainId: async () => 31337,
+ *   getChainId: () => signer.getChaindId(),
+ *   transports: { [HardhatConfig.chainId]: HardhatConfig, [HoodiConfig.chainId]: HoodiConfig },
  * });
  * ```
  *
@@ -34,7 +39,10 @@
 
 /** High-level cleartext adapter implementing the {@link RelayerSDK} interface. */
 export { RelayerCleartext } from "../relayer/relayer-cleartext";
-export type { RelayerCleartextConfig } from "../relayer/relayer-cleartext";
+export type {
+  RelayerCleartextConfig,
+  RelayerCleartextMultiConfig,
+} from "../relayer/relayer-cleartext";
 
 /** Low-level cleartext instance factory — mirrors the production FhevmInstance API. */
 export { createCleartextInstance } from "./cleartext-instance";

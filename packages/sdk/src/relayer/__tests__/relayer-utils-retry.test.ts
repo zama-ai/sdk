@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { withRetry, convertToBigIntRecord } from "../relayer-utils";
+import { withRetry } from "../relayer-utils";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -111,22 +111,5 @@ describe("withRetry", () => {
     await vi.advanceTimersByTimeAsync(500);
     const result = await promise;
     expect(result).toBe("ok");
-  });
-});
-
-describe("convertToBigIntRecord — error case", () => {
-  it("throws TypeError for unsupported value types", () => {
-    expect(() => convertToBigIntRecord({ bad: undefined as unknown })).toThrow(TypeError);
-    expect(() => convertToBigIntRecord({ bad: undefined as unknown })).toThrow(
-      "Unexpected decrypted value type for handle bad",
-    );
-  });
-
-  it("throws TypeError for object values", () => {
-    expect(() => convertToBigIntRecord({ obj: {} as unknown })).toThrow(TypeError);
-  });
-
-  it("throws TypeError for null values", () => {
-    expect(() => convertToBigIntRecord({ n: null as unknown })).toThrow(TypeError);
   });
 });

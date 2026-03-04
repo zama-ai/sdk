@@ -66,7 +66,8 @@ describe("createCleartextEncryptedInput", () => {
 
   it("throws on fractional value for addBool", () => {
     const input = makeInput();
-    expect(() => input.addBool(0.5 as never)).toThrow("The value must be 0 or 1.");
+    // BigInt(0.5) throws TypeError — non-integer values are rejected before the 0/1 check
+    expect(() => input.addBool(0.5 as never)).toThrow();
   });
 
   it("throws on null/undefined value for add8", () => {

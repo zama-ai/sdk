@@ -57,14 +57,18 @@ function resolveProvider(network: Eip1193Provider | string): Provider {
  * const { handles, inputProof } = await input.encrypt();
  * ```
  */
-/** Chain IDs where cleartext mode must never be used (values are stored in plaintext). */
-const PRODUCTION_CHAIN_IDS = new Set([1, 11155111]); // Mainnet, Sepolia
+/**
+ * Chain IDs where cleartext mode must never be used (values are stored in plaintext).
+ * Hoodi (560048) is intentionally NOT listed here — it is a cleartext-enabled
+ * development testnet with a CleartextFHEVMExecutor contract deployed.
+ */
+const FHEVM_CHAIN_IDS = new Set([1, 11155111]); // Mainnet, Sepolia
 
 export async function createCleartextInstance(config: CleartextInstanceConfig) {
-  if (PRODUCTION_CHAIN_IDS.has(config.chainId)) {
+  if (FHEVM_CHAIN_IDS.has(config.chainId)) {
     throw new Error(
       `Cleartext mode is not allowed on chain ${config.chainId}. ` +
-        `Cleartext stores values in plaintext — use RelayerWeb or RelayerNode for production networks.`,
+        `Cleartext stores values in plaintext — use RelayerWeb or RelayerNode for fhevm networks.`,
     );
   }
 

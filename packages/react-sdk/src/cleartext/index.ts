@@ -8,4 +8,4 @@
  */
 
 export { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
-export type { RelayerCleartextConfig } from "@zama-fhe/sdk/cleartext";
+export type { RelayerCleartextConfig, RelayerCleartextMultiConfig } from "@zama-fhe/sdk/cleartext";

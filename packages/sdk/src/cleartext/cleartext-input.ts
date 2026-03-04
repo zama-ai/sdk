@@ -202,9 +202,9 @@ export function createCleartextEncryptedInput(params: {
 
   const self: CleartextEncryptedInput = {
     addBool(value) {
-      const v = Number(value);
-      if (!Number.isInteger(v) || v < 0 || v > 1) throw new Error("The value must be 0 or 1.");
-      pushValue(BigInt(v), 2);
+      const v = BigInt(value);
+      if (v !== 0n && v !== 1n) throw new Error("The value must be 0 or 1.");
+      pushValue(v, 2);
       return self;
     },
     add8(value) {

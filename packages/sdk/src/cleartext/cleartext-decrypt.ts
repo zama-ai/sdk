@@ -141,6 +141,11 @@ function buildDecryptionProof(
  * - `abiEncodedClearValues` — Solidity ABI encoding of the values
  * - `decryptionProof` — EIP-712 signed proof for on-chain verification
  *
+ * **Note:** ACL checks and plaintext reads are separate RPC calls, unlike the
+ * production coprocessor which performs them atomically inside a TEE. This
+ * TOCTOU gap is acceptable for development/testing but means access-control
+ * revocation tests may not perfectly match production timing.
+ *
  * @throws {Error} If any handle is not allowed for public decryption.
  */
 export async function cleartextPublicDecrypt(
@@ -193,6 +198,9 @@ export async function cleartextPublicDecrypt(
  * Verifies that both the user and the originating contract have
  * `persistAllowed` permission for each handle, then reads and formats
  * the plaintext values.
+ *
+ * **Note:** See {@link cleartextPublicDecrypt} for the TOCTOU caveat on
+ * non-atomic ACL checks vs plaintext reads.
  *
  * @throws {Error} If the user or contract is not authorized for any handle.
  */

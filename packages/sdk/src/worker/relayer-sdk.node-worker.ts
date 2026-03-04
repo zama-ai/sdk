@@ -5,7 +5,7 @@
 
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
 import { parentPort, type Transferable } from "node:worker_threads";
-import { convertToBigIntRecord } from "../relayer/relayer-utils";
+import { convertToBigIntRecord } from "../utils/convert";
 import type {
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,

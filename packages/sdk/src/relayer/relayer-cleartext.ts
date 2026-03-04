@@ -1,5 +1,5 @@
 import { createCleartextInstance } from "../cleartext/cleartext-instance";
-import { convertToBigIntRecord } from "../cleartext/convert";
+import { convertToBigIntRecord } from "../utils/convert";
 import type { CleartextInstanceConfig } from "../cleartext/types";
 import {
   ZamaError,
@@ -26,43 +26,77 @@ import { buildEIP712DomainType, DefaultConfigs } from "./relayer-utils";
 
 type CleartextInstance = Awaited<ReturnType<typeof createCleartextInstance>>;
 
-export interface RelayerCleartextConfig {
-  /** Per-chain cleartext transport configs, keyed by chain ID. */
-  transports: Record<number, Partial<CleartextInstanceConfig>>;
+export interface RelayerCleartextMultiConfig {
   /** Resolve the current chain ID. Called lazily before each operation. */
   getChainId: () => Promise<number>;
+  /** Per-chain cleartext transport configs, keyed by chain ID. */
+  transports: Record<number, Partial<CleartextInstanceConfig>>;
+}
+
+/**
+ * Single transport: a full or partial {@link CleartextInstanceConfig}.
+ * The `chainId` field determines which {@link DefaultConfigs} entry to merge with.
+ *
+ * Multi-transport: a {@link RelayerCleartextMultiConfig} with per-chain configs
+ * and a `getChainId` callback.
+ */
+export type RelayerCleartextConfig = Partial<CleartextInstanceConfig> | RelayerCleartextMultiConfig;
+
+function isMultiConfig(config: RelayerCleartextConfig): config is RelayerCleartextMultiConfig {
+  return (
+    "transports" in config &&
+    typeof (config as RelayerCleartextMultiConfig).getChainId === "function"
+  );
 }
 
 /**
  * RelayerCleartext — cleartext encryption/decryption layer for development and testing.
  * No WASM, no workers. Reads plaintext values from a CleartextFHEVMExecutor contract.
  *
- * Uses the same lazy-init + chain-switch pattern as {@link RelayerNode} and {@link RelayerWeb}.
+ * Accepts either a single transport config (most common) or a multi-transport config
+ * with per-chain overrides and a `getChainId` callback.
+ *
+ * @example Single transport (recommended for local dev)
+ * ```ts
+ * const relayer = new RelayerCleartext(HardhatConfig);
+ * ```
+ *
+ * @example Multi-transport (dynamic chain switching)
+ * ```ts
+ * const signer = EthersSigner({ ethereum: window.ethereum! })
+ * const relayer = new RelayerCleartext({
+ *   getChainId: () => signer.getChainId(),
+ *   transports: { [HardhatConfig.chainId]: HardhatConfig, [HoodiConfig.chainId]: HoodiConfig },
+ * });
+ * ```
  */
 export class RelayerCleartext implements RelayerSDK {
-  readonly #config: RelayerCleartextConfig;
+  readonly #config: RelayerCleartextMultiConfig;
   #initPromise: Promise<CleartextInstance> | null = null;
-  #ensureLock: Promise<CleartextInstance> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
 
   constructor(config: RelayerCleartextConfig) {
-    this.#config = config;
-  }
-
-  async #ensureInstance(): Promise<CleartextInstance> {
-    if (this.#ensureLock) return this.#ensureLock;
-    this.#ensureLock = this.#ensureInstanceInner();
-    try {
-      return await this.#ensureLock;
-    } finally {
-      this.#ensureLock = null;
+    if (isMultiConfig(config)) {
+      this.#config = config;
+    } else {
+      const chainId = config.chainId;
+      if (chainId == null) {
+        throw new ConfigurationError(
+          "Single-transport config must include a chainId, or use the multi-transport form with getChainId.",
+        );
+      }
+      this.#config = {
+        transports: { [chainId]: config },
+        getChainId: async () => chainId,
+      };
     }
   }
 
-  async #ensureInstanceInner(): Promise<CleartextInstance> {
-    // Auto-restart after terminate() — supports React StrictMode's
-    // unmount→remount cycle and HMR without permanently killing the instance.
+  async #ensureInstance(): Promise<CleartextInstance> {
+    // Auto-restart after terminate() — discard stale state so a fresh init
+    // runs. Clear #terminated here so that #initInstance's post-init guard
+    // only fires if terminate() is called *during* an in-flight init.
     if (this.#terminated) {
       this.#terminated = false;
       this.#initPromise = null;
@@ -112,6 +146,9 @@ export class RelayerCleartext implements RelayerSDK {
 
     const instance = await createCleartextInstance(config);
 
+    // If terminate() was called while createCleartextInstance was in flight,
+    // discard the freshly created instance — the caller will get an error and
+    // the next operation will trigger a clean re-init.
     if (this.#terminated) {
       throw new Error("RelayerCleartext was terminated during initialization");
     }
@@ -127,7 +164,6 @@ export class RelayerCleartext implements RelayerSDK {
   terminate(): void {
     this.#terminated = true;
     this.#initPromise = null;
-    this.#ensureLock = null;
   }
 
   async generateKeypair(): Promise<FHEKeypair> {

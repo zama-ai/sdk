@@ -8,7 +8,7 @@ import type {
   FhevmInstanceConfig,
   RelayerSDKGlobal,
 } from "../relayer/relayer-sdk.types";
-import { convertToBigIntRecord } from "../relayer/relayer-utils";
+import { convertToBigIntRecord } from "../utils/convert";
 import { assertObject, assertString } from "../utils";
 import type {
   CreateDelegatedEIP712Request,

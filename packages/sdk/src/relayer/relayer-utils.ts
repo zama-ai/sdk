@@ -1,8 +1,5 @@
 import type { CleartextInstanceConfig } from "../cleartext/types";
-import { convertToBigIntRecord } from "../cleartext/convert";
 import type { EIP712TypedData, FhevmInstanceConfig } from "./relayer-sdk.types";
-
-export { convertToBigIntRecord };
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;

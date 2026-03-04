@@ -32,7 +32,11 @@ vi.mock("../../cleartext/cleartext-instance", () => ({
 // Import after mocks are registered
 // ---------------------------------------------------------------------------
 
-import { RelayerCleartext, type RelayerCleartextConfig } from "../relayer-cleartext";
+import {
+  RelayerCleartext,
+  type RelayerCleartextConfig,
+  type RelayerCleartextMultiConfig,
+} from "../relayer-cleartext";
 import type { EncryptParams } from "../relayer-sdk.types";
 
 // ---------------------------------------------------------------------------
@@ -54,7 +58,7 @@ function validTransport(): Partial<Record<string, unknown>> {
   };
 }
 
-function makeConfig(overrides?: Partial<RelayerCleartextConfig>): RelayerCleartextConfig {
+function makeConfig(overrides?: Partial<RelayerCleartextMultiConfig>): RelayerCleartextMultiConfig {
   return {
     transports: { [CHAIN_ID]: validTransport() as never },
     getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
@@ -323,6 +327,39 @@ describe("RelayerCleartext", () => {
         publicParamsId: "mock-public-params-id",
         publicParams: new Uint8Array(32),
       });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 11. Single-transport mode
+  // -----------------------------------------------------------------------
+  describe("single-transport mode", () => {
+    it("accepts a single config with chainId and initialises correctly", async () => {
+      mockInstance.generateKeypair.mockReturnValue({
+        publicKey: "0xpub",
+        privateKey: "0xpriv",
+      });
+
+      const relayer = new RelayerCleartext({
+        ...validTransport(),
+        chainId: CHAIN_ID,
+      } as RelayerCleartextConfig);
+
+      const keypair = await relayer.generateKeypair();
+
+      expect(mockCreateCleartextInstance).toHaveBeenCalledTimes(1);
+      expect(keypair).toEqual({ publicKey: "0xpub", privateKey: "0xpriv" });
+    });
+
+    it("throws ConfigurationError when single config is missing chainId", () => {
+      const transport = validTransport();
+      // No chainId — should throw synchronously in constructor
+      expect(() => new RelayerCleartext(transport as RelayerCleartextConfig)).toThrow(
+        ConfigurationError,
+      );
+      expect(() => new RelayerCleartext(transport as RelayerCleartextConfig)).toThrow(
+        /chainId/,
+      );
     });
   });
 });
