@@ -158,41 +158,53 @@ If you need to control each step separately:
 
 ## Authorization
 
-### `useTokenAllow`
+### `useAllow`
 
 Pre-authorize decrypt keys for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually. Automatically invalidates `isAllowed` queries on success.
 
 ```tsx
-const { mutateAsync: tokenAllow } = useTokenAllow();
+const { mutateAsync: allow } = useAllow();
 
-await tokenAllow(["0xTokenA", "0xTokenB", "0xTokenC"]);
+await allow(["0xTokenA", "0xTokenB", "0xTokenC"]);
 // All subsequent balance reads reuse the cached credential
 ```
 
-### `useIsTokenAllowed`
+### `useIsAllowed`
 
 Check whether a session signature is cached for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt.
 
 ```tsx
-import { useIsTokenAllowed } from "@zama-fhe/react-sdk";
+import { useIsAllowed } from "@zama-fhe/react-sdk";
 
-const { data: allowed } = useIsTokenAllowed("0xToken");
+const { data: allowed } = useIsAllowed("0xToken");
 // allowed === true → decrypts won't prompt the wallet
 ```
 
-### `useTokenRevoke`
+### `useRevoke`
 
 Revoke the session signature for the connected wallet. Stored credentials remain intact, but the next decrypt will require a fresh wallet signature. Automatically invalidates `isAllowed` queries on success.
 
 ```tsx
-import { useTokenRevoke } from "@zama-fhe/react-sdk";
+import { useRevoke } from "@zama-fhe/react-sdk";
 
-const { mutate: tokenRevoke } = useTokenRevoke();
+const { mutate: revoke } = useRevoke();
 
-tokenRevoke(["0xTokenA", "0xTokenB"]);
+revoke(["0xTokenA", "0xTokenB"]);
 ```
 
-> **Note:** If you use `WagmiSigner`, the SDK automatically revokes the session on wallet disconnect or account change — you don't need to call `useTokenRevoke` manually for that case.
+### `useRevokeSession`
+
+Revoke the entire session for the connected wallet. Unlike `useRevoke` which targets specific tokens, this clears the session-level signature.
+
+```tsx
+import { useRevokeSession } from "@zama-fhe/react-sdk";
+
+const { mutate: revokeSession } = useRevokeSession();
+
+revokeSession();
+```
+
+> **Note:** If you use `WagmiSigner`, the SDK automatically revokes the session on wallet disconnect or account change — you don't need to call `useRevoke` or `useRevokeSession` manually for that case.
 
 ### Session management
 
@@ -251,12 +263,12 @@ Read the ERC-20 allowance of the underlying token for the wrapper.
 
 Find the wrapper contract for a token via the deployment coordinator. Cached indefinitely.
 
-### `useTokenMetadata`
+### `useMetadata`
 
 Get name, symbol, and decimals in one call. Cached indefinitely.
 
 ```tsx
-const { data: meta } = useTokenMetadata("0xToken");
+const { data: meta } = useMetadata("0xToken");
 // meta?.name, meta?.symbol, meta?.decimals
 ```
 
@@ -287,6 +299,20 @@ feed?.forEach((item) => {
 | `useUnshieldFee({ feeManagerAddress, amount, from, to })` | Unshield (unwrap) fee |
 | `useBatchTransferFee("0xFeeManager")`                     | Batch transfer fee    |
 | `useFeeRecipient("0xFeeManager")`                         | Fee recipient address |
+
+## Suspense variants
+
+Most read hooks have a Suspense variant that throws a promise instead of returning `isLoading`. Use them inside a `<Suspense>` boundary:
+
+| Hook                        | Suspense variant                    |
+| --------------------------- | ----------------------------------- |
+| `useConfidentialIsApproved` | `useConfidentialIsApprovedSuspense` |
+| `useUnderlyingAllowance`    | `useUnderlyingAllowanceSuspense`    |
+| `useWrapperDiscovery`       | `useWrapperDiscoverySuspense`       |
+| `useMetadata`               | `useMetadataSuspense`               |
+| `useIsConfidential`         | `useIsConfidentialSuspense`         |
+| `useIsWrapper`              | `useIsWrapperSuspense`              |
+| `useTotalSupply`            | `useTotalSupplySuspense`            |
 
 ## SDK access
 
