@@ -542,7 +542,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       { signer },
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
@@ -575,7 +575,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       { signer },
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
     queryClient.setQueryData(balanceKey, 5000n);
 
     await act(async () => {
@@ -601,7 +601,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
       { signer },
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
     queryClient.setQueryData(balanceKey, 5000n);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
@@ -639,7 +639,7 @@ describe("useShield optimistic updates", () => {
       { signer },
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
     queryClient.setQueryData(balanceKey, 3000n);
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
 
@@ -666,7 +666,7 @@ describe("useShield optimistic updates", () => {
       { signer },
     );
 
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
     queryClient.setQueryData(balanceKey, 3000n);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
