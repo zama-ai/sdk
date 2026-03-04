@@ -93,6 +93,30 @@ function createMockProvider(options: MockProviderOptions = {}) {
 }
 
 describe("CleartextFhevmInstance", () => {
+  it("throws when configured with mainnet chain ID", () => {
+    const { provider } = createMockProvider();
+
+    expect(
+      () =>
+        new CleartextFhevmInstance(provider, {
+          ...CLEAR_TEXT_MOCK_CONFIG,
+          chainId: 1n,
+        }),
+    ).toThrow(/not allowed on chain 1/);
+  });
+
+  it("throws when configured with Sepolia chain ID", () => {
+    const { provider } = createMockProvider();
+
+    expect(
+      () =>
+        new CleartextFhevmInstance(provider, {
+          ...CLEAR_TEXT_MOCK_CONFIG,
+          chainId: 11155111n,
+        }),
+    ).toThrow(/not allowed on chain 11155111/);
+  });
+
   it("generateKeypair returns distinct 32-byte hex strings", async () => {
     const { provider } = createMockProvider();
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
@@ -225,6 +249,103 @@ describe("CleartextFhevmInstance", () => {
     expect(plaintextCalls).toHaveLength(2);
   });
 
+  it("userDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
+    const handleA = "0x" + "aa".repeat(32);
+    const handleB = "0x" + "bb".repeat(32);
+    const normalizedB = ethers.toBeHex(ethers.toBigInt(handleB), 32);
+
+    const { provider, calls } = createMockProvider({
+      persistAllowed: (handle) => handle.toLowerCase() !== normalizedB.toLowerCase(),
+      plaintexts: {
+        [handleA.toLowerCase()]: 1n,
+        [handleB.toLowerCase()]: 2n,
+      },
+    });
+    const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    await expect(
+      fhevm.userDecrypt({
+        handles: [handleA, handleB],
+        contractAddress: CONTRACT_ADDRESS,
+        signedContractAddresses: [CONTRACT_ADDRESS],
+        privateKey: "0x" + "01".repeat(32),
+        publicKey: "0x" + "02".repeat(32),
+        signature: "0x" + "03".repeat(65),
+        signerAddress: USER_ADDRESS,
+        startTimestamp: 1,
+        durationDays: 1,
+      }),
+    ).rejects.toThrow(new RegExp(normalizedB));
+
+    const plaintextCalls = calls.filter(
+      (call) =>
+        call.method === "eth_call" &&
+        (call.params[0] as { to: string }).to.toLowerCase() ===
+          TEST_FHEVM_ADDRESSES.executor.toLowerCase(),
+    );
+    expect(plaintextCalls).toHaveLength(0);
+  });
+
+  it("userDecrypt checks ACL against signerAddress not contractAddress", async () => {
+    const handle = "0x" + "cc".repeat(32);
+    const persistAllowedAccounts: string[] = [];
+
+    const { provider } = createMockProvider({
+      persistAllowed: (_handle, account) => {
+        persistAllowedAccounts.push(account);
+        return true;
+      },
+      plaintexts: { [handle.toLowerCase()]: 42n },
+    });
+    const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    await fhevm.userDecrypt({
+      handles: [handle],
+      contractAddress: CONTRACT_ADDRESS,
+      signedContractAddresses: [CONTRACT_ADDRESS],
+      privateKey: "0x" + "01".repeat(32),
+      publicKey: "0x" + "02".repeat(32),
+      signature: "0x" + "03".repeat(65),
+      signerAddress: USER_ADDRESS,
+      startTimestamp: 1,
+      durationDays: 1,
+    });
+
+    expect(persistAllowedAccounts.length).toBeGreaterThan(0);
+    for (const account of persistAllowedAccounts) {
+      expect(account.toLowerCase()).toBe(USER_ADDRESS.toLowerCase());
+    }
+  });
+
+  it("userDecrypt normalizes uppercase hex handles to lowercase 0x-prefixed 66-char keys", async () => {
+    const handleUpper = "0x" + "AB".repeat(32);
+    const normalizedHandle = ethers.toBeHex(ethers.toBigInt(handleUpper), 32);
+
+    const { provider } = createMockProvider({
+      persistAllowed: () => true,
+      plaintexts: { [normalizedHandle.toLowerCase()]: 55n },
+    });
+    const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    const result = await fhevm.userDecrypt({
+      handles: [handleUpper],
+      contractAddress: CONTRACT_ADDRESS,
+      signedContractAddresses: [CONTRACT_ADDRESS],
+      privateKey: "0x" + "01".repeat(32),
+      publicKey: "0x" + "02".repeat(32),
+      signature: "0x" + "03".repeat(65),
+      signerAddress: USER_ADDRESS,
+      startTimestamp: 1,
+      durationDays: 1,
+    });
+
+    const keys = Object.keys(result);
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(keys[0]).toHaveLength(66);
+    expect(result[keys[0]!]).toBe(55n);
+  });
+
   it("publicDecrypt throws when ACL.isAllowedForDecryption returns false", async () => {
     const handle = "0x" + "34".repeat(32);
     const { provider } = createMockProvider({
@@ -233,6 +354,31 @@ describe("CleartextFhevmInstance", () => {
     const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(fhevm.publicDecrypt([handle])).rejects.toThrow(/not allowed/i);
+  });
+
+  it("publicDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
+    const handleA = "0x" + "dd".repeat(32);
+    const handleB = "0x" + "ee".repeat(32);
+    const normalizedB = ethers.toBeHex(ethers.toBigInt(handleB), 32);
+
+    const { provider, calls } = createMockProvider({
+      isAllowedForDecryption: (handle) => handle.toLowerCase() !== normalizedB.toLowerCase(),
+      plaintexts: {
+        [handleA.toLowerCase()]: 10n,
+        [handleB.toLowerCase()]: 20n,
+      },
+    });
+    const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    await expect(fhevm.publicDecrypt([handleA, handleB])).rejects.toThrow(new RegExp(normalizedB));
+
+    const plaintextCalls = calls.filter(
+      (call) =>
+        call.method === "eth_call" &&
+        (call.params[0] as { to: string }).to.toLowerCase() ===
+          TEST_FHEVM_ADDRESSES.executor.toLowerCase(),
+    );
+    expect(plaintextCalls).toHaveLength(0);
   });
 
   it("publicDecrypt proof layout is [numSigners=1][kmsSignature]", async () => {
@@ -415,6 +561,56 @@ describe("CleartextFhevmInstance", () => {
       "plaintexts",
       "plaintexts",
     ]);
+  });
+
+  it("delegatedUserDecrypt partial delegation failure throws with second handle and makes exactly 2 delegation calls", async () => {
+    const handleA = "0x" + "a1".repeat(32);
+    const handleB = "0x" + "b2".repeat(32);
+    const normalizedB = ethers.toBeHex(ethers.toBigInt(handleB), 32);
+    const delegatorAddress = USER_ADDRESS;
+    const delegateAddress = "0x3000000000000000000000000000000000000003";
+
+    const { provider, calls } = createMockProvider({
+      isHandleDelegatedForUserDecryption: (_delegator, _delegate, _contractAddress, handle) =>
+        handle.toLowerCase() !== normalizedB.toLowerCase(),
+      plaintexts: {
+        [handleA.toLowerCase()]: 7n,
+        [handleB.toLowerCase()]: 11n,
+      },
+    });
+    const fhevm = new CleartextFhevmInstance(provider, CLEAR_TEXT_MOCK_CONFIG);
+
+    await expect(
+      fhevm.delegatedUserDecrypt({
+        handles: [handleA, handleB],
+        contractAddress: CONTRACT_ADDRESS,
+        signedContractAddresses: [CONTRACT_ADDRESS],
+        privateKey: "0x" + "01".repeat(32),
+        publicKey: "0x" + "02".repeat(32),
+        signature: "0x" + "03".repeat(65),
+        delegatorAddress,
+        delegateAddress,
+        startTimestamp: 1,
+        durationDays: 1,
+      }),
+    ).rejects.toThrow(new RegExp(normalizedB));
+
+    const delegationCalls = calls.filter((call) => {
+      if (call.method !== "eth_call") return false;
+      const tx = call.params[0] as { to: string; data: string };
+      if (tx.to.toLowerCase() !== TEST_FHEVM_ADDRESSES.acl.toLowerCase()) return false;
+      const parsed = ACL_INTERFACE.parseTransaction({ data: tx.data });
+      return parsed?.name === "isHandleDelegatedForUserDecryption";
+    });
+    expect(delegationCalls).toHaveLength(2);
+
+    const executorCalls = calls.filter(
+      (call) =>
+        call.method === "eth_call" &&
+        (call.params[0] as { to: string }).to.toLowerCase() ===
+          TEST_FHEVM_ADDRESSES.executor.toLowerCase(),
+    );
+    expect(executorCalls).toHaveLength(0);
   });
 
   it("delegatedUserDecrypt returns cleartext values when delegation is valid", async () => {
