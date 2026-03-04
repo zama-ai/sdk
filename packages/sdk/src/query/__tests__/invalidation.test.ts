@@ -12,6 +12,7 @@ import { zamaQueryKeys } from "../query-keys";
 function createMockQueryClient(): QueryClient {
   return {
     invalidateQueries: vi.fn(),
+    removeQueries: vi.fn(),
     resetQueries: vi.fn(),
   } as unknown as QueryClient;
 }
@@ -22,6 +23,9 @@ describe("invalidation", () => {
     invalidateBalanceQueries(qc, "0xabc");
 
     expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
+      queryKey: zamaQueryKeys.confidentialHandle.token("0xabc"),
+    });
+    expect(vi.mocked(qc.removeQueries)).toHaveBeenCalledWith({
       queryKey: zamaQueryKeys.confidentialHandle.token("0xabc"),
     });
     expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
@@ -42,11 +46,14 @@ describe("invalidation", () => {
     expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
       queryKey: zamaQueryKeys.underlyingAllowance.token("0xabc"),
     });
+    expect(vi.mocked(qc.removeQueries)).toHaveBeenCalledWith({
+      queryKey: zamaQueryKeys.underlyingAllowance.token("0xabc"),
+    });
 
     const predicateCall = vi
       .mocked(qc.invalidateQueries)
       .mock.calls.find(
-        ([arg]) => typeof (arg as { predicate?: unknown })?.predicate === "function",
+        ([arg]: [{ predicate?: unknown }]) => typeof arg?.predicate === "function",
       );
     expect(predicateCall).toBeDefined();
   });
@@ -56,6 +63,9 @@ describe("invalidation", () => {
     invalidateAfterUnshield(qc, "0xabc");
 
     expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
+      queryKey: zamaQueryKeys.underlyingAllowance.token("0xabc"),
+    });
+    expect(vi.mocked(qc.removeQueries)).toHaveBeenCalledWith({
       queryKey: zamaQueryKeys.underlyingAllowance.token("0xabc"),
     });
   });

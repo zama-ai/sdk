@@ -86,7 +86,7 @@ describe("useConfidentialTransfer", () => {
 
     await act(() => result.current.mutateAsync({ to: RECIPIENT, amount: 500n }));
 
-    expect(queryClient.getQueryState(handleKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(handleKey)).toBeUndefined();
     expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
   });
 });
@@ -163,7 +163,7 @@ describe("useApproveUnderlying", () => {
 
     await act(() => result.current.mutateAsync({ amount: 1000n }));
 
-    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(allowanceKey)).toBeUndefined();
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 });
@@ -212,7 +212,7 @@ describe("useShield", () => {
     await act(() => result.current.mutateAsync({ amount: 500n }));
 
     expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
-    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(allowanceKey)).toBeUndefined();
   });
 });
 
@@ -262,7 +262,7 @@ describe("useUnshield", () => {
     await act(() => result.current.mutateAsync({ amount: 300n }));
 
     expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
-    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(allowanceKey)).toBeUndefined();
   });
 });
 
@@ -313,7 +313,7 @@ describe("useUnshieldAll", () => {
     await act(() => result.current.mutateAsync());
 
     expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
-    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(allowanceKey)).toBeUndefined();
   });
 });
 
@@ -356,7 +356,7 @@ describe("useUnwrap", () => {
 
     await act(() => result.current.mutateAsync({ amount: 300n }));
 
-    expect(queryClient.getQueryState(handleKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(handleKey)).toBeUndefined();
     expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
   });
 });
@@ -401,7 +401,7 @@ describe("useUnwrapAll", () => {
 
     await act(() => result.current.mutateAsync());
 
-    expect(queryClient.getQueryState(handleKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(handleKey)).toBeUndefined();
     expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
   });
 });
@@ -449,7 +449,7 @@ describe("useFinalizeUnwrap", () => {
     await act(() => result.current.mutateAsync({ burnAmountHandle: BURN_AMOUNT_HANDLE }));
 
     expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
-    expect(queryClient.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(allowanceKey)).toBeUndefined();
   });
 });
 

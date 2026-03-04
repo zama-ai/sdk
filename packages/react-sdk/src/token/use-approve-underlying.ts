@@ -38,6 +38,9 @@ export function useApproveUnderlying(
       await queryClient.invalidateQueries({
         queryKey: zamaQueryKeys.underlyingAllowance.all,
       });
+      queryClient.removeQueries({
+        queryKey: zamaQueryKeys.underlyingAllowance.all,
+      });
       await options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
