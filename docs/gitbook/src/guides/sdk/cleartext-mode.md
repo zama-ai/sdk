@@ -55,11 +55,12 @@ const balance = await token.balanceOf();
 For multi-chain setups, use the `getChainId` + `transports` form:
 
 ```ts
-const signer = new EthersSigner({ signer: ethersSigner });
+// signer is an EthersSigner, ViemSigner, or WagmiSigner (see above)
 const relayer = new RelayerCleartext({
-  getChainId: async () => 31337,
+  getChainId: () => signer.getChainId(),
   transports: {
-    31337: { network: "http://127.0.0.1:8545" },
+    [HardhatConfig.chainId]: HardhatConfig,
+    [HoodiConfig.chainId]: HoodiConfig,
   },
 });
 ```
@@ -134,6 +135,8 @@ new RelayerCleartext({
   verifyingContractAddressDecryption: "0x...",
   verifyingContractAddressInputVerification: "0x...",
   cleartextExecutorAddress: "0x...",
+  coprocessorSignerPrivateKey: "0x...",
+  kmsSignerPrivateKey: "0x...",
 });
 ```
 
