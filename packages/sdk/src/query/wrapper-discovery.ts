@@ -31,6 +31,6 @@ export function wrapperDiscoveryQueryOptions(
       );
     },
     staleTime: Infinity,
-    enabled: config.query?.enabled !== false,
+    enabled: Boolean(tokenAddress) && config.query?.enabled !== false,
   };
 }

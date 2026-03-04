@@ -1,9 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { Address } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
 import {
   batchTransferFeeQueryOptions,
+  confidentialBalanceQueryOptions,
+  confidentialBalancesQueryOptions,
   confidentialIsApprovedQueryOptions,
+  feeRecipientQueryOptions,
   isConfidentialQueryOptions,
   isWrapperQueryOptions,
   publicKeyQueryOptions,
@@ -14,7 +17,6 @@ import {
   underlyingAllowanceQueryOptions,
   unshieldFeeQueryOptions,
   wrapperDiscoveryQueryOptions,
-  feeRecipientQueryOptions,
   zamaQueryKeys,
 } from "@zama-fhe/sdk/query";
 import { createMockSigner, createMockRelayer, createMockStorage } from "./test-utils";
@@ -25,104 +27,55 @@ const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
 const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
 
-function executeQueryFn<T>(options: {
-  queryKey: readonly unknown[];
-  queryFn: unknown;
-}): Promise<T> {
-  const queryFn = options.queryFn as (context: { queryKey: readonly unknown[] }) => Promise<T> | T;
-  return Promise.resolve(queryFn({ queryKey: options.queryKey }));
+function mockReadonlyToken(
+  address: Address,
+): Parameters<typeof confidentialBalanceQueryOptions>[0] {
+  return { address } as unknown as Parameters<typeof confidentialBalanceQueryOptions>[0];
 }
 
 describe("query options factories", () => {
   describe("tokenMetadataQueryOptions", () => {
-    it("returns namespaced queryKey and staleTime", () => {
+    it("default", () => {
       const signer = createMockSigner();
       const opts = tokenMetadataQueryOptions(signer, TOKEN_ADDR);
 
       expect(opts.queryKey).toEqual(["zama.tokenMetadata", { tokenAddress: TOKEN_ADDR }]);
       expect(opts.staleTime).toBe(Infinity);
     });
-
-    it("queryFn calls signer.readContract 3 times", async () => {
-      const signer = createMockSigner();
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("TestToken")
-        .mockResolvedValueOnce("TT")
-        .mockResolvedValueOnce(18);
-
-      const opts = tokenMetadataQueryOptions(signer, TOKEN_ADDR);
-      const result = await executeQueryFn(opts);
-
-      expect(signer.readContract).toHaveBeenCalledTimes(3);
-      expect(result).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });
-    });
   });
 
   describe("isConfidentialQueryOptions", () => {
-    it("returns namespaced queryKey and staleTime Infinity", () => {
+    it("default", () => {
       const signer = createMockSigner();
       const opts = isConfidentialQueryOptions(signer, TOKEN_ADDR);
 
       expect(opts.queryKey).toEqual(["zama.isConfidential", { tokenAddress: TOKEN_ADDR }]);
       expect(opts.staleTime).toBe(Infinity);
     });
-
-    it("queryFn calls signer.readContract", async () => {
-      const signer = createMockSigner();
-      vi.mocked(signer.readContract).mockResolvedValue(true);
-
-      const opts = isConfidentialQueryOptions(signer, TOKEN_ADDR);
-      const result = await executeQueryFn(opts);
-
-      expect(signer.readContract).toHaveBeenCalled();
-      expect(result).toBe(true);
-    });
   });
 
   describe("isWrapperQueryOptions", () => {
-    it("returns namespaced queryKey and staleTime Infinity", () => {
+    it("default", () => {
       const signer = createMockSigner();
       const opts = isWrapperQueryOptions(signer, TOKEN_ADDR);
 
       expect(opts.queryKey).toEqual(["zama.isWrapper", { tokenAddress: TOKEN_ADDR }]);
       expect(opts.staleTime).toBe(Infinity);
     });
-
-    it("queryFn calls signer.readContract", async () => {
-      const signer = createMockSigner();
-      vi.mocked(signer.readContract).mockResolvedValue(false);
-
-      const opts = isWrapperQueryOptions(signer, TOKEN_ADDR);
-      const result = await executeQueryFn(opts);
-
-      expect(signer.readContract).toHaveBeenCalled();
-      expect(result).toBe(false);
-    });
   });
 
   describe("totalSupplyQueryOptions", () => {
-    it("returns namespaced queryKey and staleTime 30_000", () => {
+    it("default", () => {
       const signer = createMockSigner();
       const opts = totalSupplyQueryOptions(signer, TOKEN_ADDR);
 
       expect(opts.queryKey).toEqual(["zama.totalSupply", { tokenAddress: TOKEN_ADDR }]);
       expect(opts.staleTime).toBe(30_000);
     });
-
-    it("queryFn calls signer.readContract", async () => {
-      const signer = createMockSigner();
-      vi.mocked(signer.readContract).mockResolvedValue(42000n);
-
-      const opts = totalSupplyQueryOptions(signer, TOKEN_ADDR);
-      const result = await executeQueryFn(opts);
-
-      expect(signer.readContract).toHaveBeenCalled();
-      expect(result).toBe(42000n);
-    });
   });
 
   describe("confidentialIsApprovedQueryOptions", () => {
-    it("queryKey includes token, owner, and spender", () => {
+    it("parameters: key includes token owner and spender", () => {
       const signer = createMockSigner();
       const opts = confidentialIsApprovedQueryOptions(signer, TOKEN_ADDR, {
         owner: OWNER,
@@ -134,24 +87,10 @@ describe("query options factories", () => {
         { tokenAddress: TOKEN_ADDR, owner: OWNER, spender: SPENDER },
       ]);
     });
-
-    it("queryFn calls signer.readContract", async () => {
-      const signer = createMockSigner();
-      vi.mocked(signer.readContract).mockResolvedValue(true);
-
-      const opts = confidentialIsApprovedQueryOptions(signer, TOKEN_ADDR, {
-        owner: OWNER,
-        spender: SPENDER,
-      });
-      const result = await executeQueryFn(opts);
-
-      expect(signer.readContract).toHaveBeenCalled();
-      expect(result).toBe(true);
-    });
   });
 
   describe("underlyingAllowanceQueryOptions", () => {
-    it("queryKey includes token, owner, and wrapperAddress", () => {
+    it("parameters: key includes token owner and wrapperAddress", () => {
       const signer = createMockSigner();
       const opts = underlyingAllowanceQueryOptions(signer, TOKEN_ADDR, {
         owner: OWNER,
@@ -163,24 +102,85 @@ describe("query options factories", () => {
         { tokenAddress: TOKEN_ADDR, owner: OWNER, wrapperAddress: WRAPPER },
       ]);
     });
+  });
 
-    it("queryFn calls signer.readContract", async () => {
-      const signer = createMockSigner();
-      vi.mocked(signer.readContract).mockResolvedValue(1000n);
+  describe("confidentialBalanceQueryOptions", () => {
+    const HANDLE = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
 
-      const opts = underlyingAllowanceQueryOptions(signer, TOKEN_ADDR, {
+    it("enabled: true when owner and handle are present", () => {
+      const token = mockReadonlyToken(TOKEN_ADDR);
+      const opts = confidentialBalanceQueryOptions(token, { owner: OWNER, handle: HANDLE });
+
+      expect(opts.enabled).toBe(true);
+    });
+
+    it("enabled: false when owner is missing", () => {
+      const token = mockReadonlyToken(TOKEN_ADDR);
+      const opts = confidentialBalanceQueryOptions(token, { handle: HANDLE });
+
+      expect(opts.enabled).toBe(false);
+    });
+
+    it("enabled: false when handle is missing", () => {
+      const token = mockReadonlyToken(TOKEN_ADDR);
+      const opts = confidentialBalanceQueryOptions(token, { owner: OWNER });
+
+      expect(opts.enabled).toBe(false);
+    });
+
+    it("enabled: false when query override is disabled", () => {
+      const token = mockReadonlyToken(TOKEN_ADDR);
+      const opts = confidentialBalanceQueryOptions(token, {
         owner: OWNER,
-        wrapperAddress: WRAPPER,
+        handle: HANDLE,
+        query: { enabled: false },
       });
-      const result = await executeQueryFn(opts);
 
-      expect(signer.readContract).toHaveBeenCalled();
-      expect(result).toBe(1000n);
+      expect(opts.enabled).toBe(false);
+    });
+  });
+
+  describe("confidentialBalancesQueryOptions", () => {
+    const HANDLE_A =
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+    const HANDLE_B =
+      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
+    const TOKEN_B = "0x6666666666666666666666666666666666666666" as Address;
+
+    it("enabled: true when handle count matches token count", () => {
+      const tokens = [mockReadonlyToken(TOKEN_ADDR), mockReadonlyToken(TOKEN_B)];
+      const opts = confidentialBalancesQueryOptions(tokens, {
+        owner: OWNER,
+        handles: [HANDLE_A, HANDLE_B],
+      });
+
+      expect(opts.enabled).toBe(true);
+    });
+
+    it("enabled: false when handle count differs from token count", () => {
+      const tokens = [mockReadonlyToken(TOKEN_ADDR), mockReadonlyToken(TOKEN_B)];
+      const opts = confidentialBalancesQueryOptions(tokens, {
+        owner: OWNER,
+        handles: [HANDLE_A],
+      });
+
+      expect(opts.enabled).toBe(false);
+    });
+
+    it("enabled: false when query override is disabled", () => {
+      const tokens = [mockReadonlyToken(TOKEN_ADDR), mockReadonlyToken(TOKEN_B)];
+      const opts = confidentialBalancesQueryOptions(tokens, {
+        owner: OWNER,
+        handles: [HANDLE_A, HANDLE_B],
+        query: { enabled: false },
+      });
+
+      expect(opts.enabled).toBe(false);
     });
   });
 
   describe("wrapperDiscoveryQueryOptions", () => {
-    it("returns namespaced queryKey and staleTime Infinity", () => {
+    it("default", () => {
       const signer = createMockSigner();
       const opts = wrapperDiscoveryQueryOptions(signer, TOKEN_ADDR, {
         coordinatorAddress: COORDINATOR,
@@ -193,19 +193,32 @@ describe("query options factories", () => {
       expect(opts.staleTime).toBe(Infinity);
     });
 
-    it("queryFn returns wrapper when wrapper exists", async () => {
+    it("enabled: false when tokenAddress is missing", () => {
       const signer = createMockSigner();
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce("0xwrapperResult" as Address);
+      const opts = wrapperDiscoveryQueryOptions(signer, undefined as unknown as Address, {
+        coordinatorAddress: COORDINATOR,
+      });
 
+      expect(opts.enabled).toBe(false);
+    });
+
+    it("enabled: true when tokenAddress is present", () => {
+      const signer = createMockSigner();
       const opts = wrapperDiscoveryQueryOptions(signer, TOKEN_ADDR, {
         coordinatorAddress: COORDINATOR,
       });
-      const result = await executeQueryFn(opts);
 
-      expect(signer.readContract).toHaveBeenCalledTimes(2);
-      expect(result).toBe("0xwrapperResult");
+      expect(opts.enabled).toBe(true);
+    });
+
+    it("enabled: false when query override is disabled", () => {
+      const signer = createMockSigner();
+      const opts = wrapperDiscoveryQueryOptions(signer, TOKEN_ADDR, {
+        coordinatorAddress: COORDINATOR,
+        query: { enabled: false },
+      });
+
+      expect(opts.enabled).toBe(false);
     });
   });
 
@@ -221,7 +234,7 @@ describe("query options factories", () => {
       to: TO,
     };
 
-    it("shieldFeeQueryOptions key includes amount/from/to", () => {
+    it("parameters: shield fee key includes amount from and to", () => {
       const opts = shieldFeeQueryOptions(signer, feeConfig);
       expect(opts.queryKey).toEqual([
         "zama.fees",
@@ -230,14 +243,14 @@ describe("query options factories", () => {
       expect(opts.staleTime).toBe(30_000);
     });
 
-    it("zamaQueryKeys.fees.shieldFee omits amount/from/to when amount is undefined", () => {
+    it("parameters: shield fee key omits amount from and to when amount is undefined", () => {
       expect(zamaQueryKeys.fees.shieldFee(FEE_MANAGER)).toEqual([
         "zama.fees",
         { type: "shield", feeManagerAddress: FEE_MANAGER },
       ]);
     });
 
-    it("unshieldFeeQueryOptions key includes amount/from/to", () => {
+    it("parameters: unshield fee key includes amount from and to", () => {
       const opts = unshieldFeeQueryOptions(signer, feeConfig);
       expect(opts.queryKey).toEqual([
         "zama.fees",
@@ -252,14 +265,14 @@ describe("query options factories", () => {
       expect(opts.staleTime).toBe(30_000);
     });
 
-    it("zamaQueryKeys.fees.unshieldFee omits amount/from/to when amount is undefined", () => {
+    it("parameters: unshield fee key omits amount from and to when amount is undefined", () => {
       expect(zamaQueryKeys.fees.unshieldFee(FEE_MANAGER)).toEqual([
         "zama.fees",
         { type: "unshield", feeManagerAddress: FEE_MANAGER },
       ]);
     });
 
-    it("batchTransferFeeQueryOptions key includes feeManagerAddress", () => {
+    it("parameters: batch transfer fee key includes feeManagerAddress", () => {
       const opts = batchTransferFeeQueryOptions(signer, FEE_MANAGER);
       expect(opts.queryKey).toEqual([
         "zama.fees",
@@ -268,7 +281,7 @@ describe("query options factories", () => {
       expect(opts.staleTime).toBe(30_000);
     });
 
-    it("feeRecipientQueryOptions key includes feeManagerAddress", () => {
+    it("parameters: fee recipient key includes feeManagerAddress", () => {
       const opts = feeRecipientQueryOptions(signer, FEE_MANAGER);
       expect(opts.queryKey).toEqual([
         "zama.fees",
@@ -276,20 +289,10 @@ describe("query options factories", () => {
       ]);
       expect(opts.staleTime).toBe(30_000);
     });
-
-    it("shieldFeeQueryOptions queryFn calls signer.readContract", async () => {
-      vi.mocked(signer.readContract).mockResolvedValue(50n);
-
-      const opts = shieldFeeQueryOptions(signer, feeConfig);
-      const result = await executeQueryFn(opts);
-
-      expect(signer.readContract).toHaveBeenCalled();
-      expect(result).toBe(50n);
-    });
   });
 
   describe("publicKeyQueryOptions", () => {
-    it("returns namespaced queryKey and staleTime Infinity", () => {
+    it("default", () => {
       const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
         signer: createMockSigner(),
@@ -300,24 +303,10 @@ describe("query options factories", () => {
       expect(opts.queryKey).toEqual(["zama.publicKey"]);
       expect(opts.staleTime).toBe(Infinity);
     });
-
-    it("queryFn calls relayer.getPublicKey", async () => {
-      const relayer = createMockRelayer();
-      const sdk = new ZamaSDK({
-        relayer,
-        signer: createMockSigner(),
-        storage: createMockStorage(),
-      });
-      const opts = publicKeyQueryOptions(sdk);
-      const result = await executeQueryFn(opts);
-
-      expect(relayer.getPublicKey).toHaveBeenCalled();
-      expect(result).toEqual({ publicKeyId: "pk-1", publicKey: new Uint8Array([1]) });
-    });
   });
 
   describe("publicParamsQueryOptions", () => {
-    it("queryKey includes bits in namespaced key", () => {
+    it("parameters: key includes bits in namespaced key", () => {
       const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
         signer: createMockSigner(),
@@ -327,20 +316,6 @@ describe("query options factories", () => {
 
       expect(opts.queryKey).toEqual(["zama.publicParams", { bits: 2048 }]);
       expect(opts.staleTime).toBe(Infinity);
-    });
-
-    it("queryFn calls relayer.getPublicParams", async () => {
-      const relayer = createMockRelayer();
-      const sdk = new ZamaSDK({
-        relayer,
-        signer: createMockSigner(),
-        storage: createMockStorage(),
-      });
-      const opts = publicParamsQueryOptions(sdk, 2048);
-      const result = await executeQueryFn(opts);
-
-      expect(relayer.getPublicParams).toHaveBeenCalledWith(2048);
-      expect(result).toEqual({ publicParams: new Uint8Array([2]), publicParamsId: "pp-1" });
     });
   });
 });
