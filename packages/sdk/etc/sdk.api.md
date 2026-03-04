@@ -14745,7 +14745,7 @@ export const HoodiConfig: {
 };
 
 // @public
-export class IndexedDBStorage implements GenericStringStorage {
+export class IndexedDBStorage implements GenericStorage {
     constructor(dbName?: string, dbVersion?: number);
     // (undocumented)
     clear(): Promise<void>;

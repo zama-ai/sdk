@@ -362,20 +362,6 @@ export interface GetPublicParamsResponseData {
 }
 
 // @public
-export const HardhatConfig: FhevmInstanceConfig;
-
-// @public (undocumented)
-export interface InitRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        cdnUrl: string;
-        fhevmConfig: FhevmInstanceConfig;
-        csrfToken: string;
-        integrity?: string;
-    };
-    // (undocumented)
-    type: "INIT";
-}
 export const HardhatConfig: {
     readonly chainId: 31337;
     readonly gatewayChainId: 10901;
@@ -389,6 +375,19 @@ export const HardhatConfig: {
     readonly coprocessorSignerPrivateKey: "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901";
     readonly kmsSignerPrivateKey: "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91";
 };
+
+// @public (undocumented)
+export interface InitRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        cdnUrl: string;
+        fhevmConfig: FhevmInstanceConfig;
+        csrfToken: string;
+        integrity?: string;
+    };
+    // (undocumented)
+    type: "INIT";
+}
 
 // @public
 export const MainnetConfig: {
@@ -587,7 +586,17 @@ export interface RequestZKProofVerificationRequest extends BaseRequest {
 export type RequestZKProofVerificationResponseData = InputProofBytesType;
 
 // @public
-export const SepoliaConfig: FhevmInstanceConfig;
+export const SepoliaConfig: {
+    readonly chainId: 11155111;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "https://relayer.testnet.zama.org/v2";
+    readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
+    readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
+    readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
+    readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
+    readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+    readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+};
 
 // @public (undocumented)
 export interface SuccessResponse<T> extends BaseResponse {
