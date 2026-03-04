@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { waitFor } from "@testing-library/react";
+import { hashFn } from "@zama-fhe/sdk/query";
 import { useGenerateKeypair } from "../relayer/use-generate-keypair";
 import { useCreateEIP712 } from "../relayer/use-create-eip712";
 import { useCreateDelegatedUserDecryptEIP712 } from "../relayer/use-create-delegated-user-decrypt-eip712";
@@ -215,6 +216,9 @@ describe("useUserDecryptedValue", () => {
     // Populate cache manually
     queryClient.setQueryData(decryptionKeys.value("0xhandle1"), 42n);
     // The query is disabled so it won't refetch - data comes from cache seed
+
+    const query = queryClient.getQueryCache().find({ queryKey: decryptionKeys.value("0xhandle1") });
+    expect(query?.options.queryKeyHashFn).toBe(hashFn);
   });
 
   it("handles undefined handle", () => {
@@ -225,13 +229,18 @@ describe("useUserDecryptedValue", () => {
 
 describe("useUserDecryptedValues", () => {
   it("reads multiple handles from cache", () => {
-    const { result } = renderWithProviders(() => useUserDecryptedValues(["0xh1", "0xh2"]));
+    const { result, queryClient } = renderWithProviders(() => useUserDecryptedValues(["0xh1", "0xh2"]));
 
     expect(result.current.data).toEqual({
       "0xh1": undefined,
       "0xh2": undefined,
     });
     expect(result.current.results).toHaveLength(2);
+
+    const query1 = queryClient.getQueryCache().find({ queryKey: decryptionKeys.value("0xh1") });
+    const query2 = queryClient.getQueryCache().find({ queryKey: decryptionKeys.value("0xh2") });
+    expect(query1?.options.queryKeyHashFn).toBe(hashFn);
+    expect(query2?.options.queryKeyHashFn).toBe(hashFn);
   });
 
   it("returns empty for empty handles", () => {
