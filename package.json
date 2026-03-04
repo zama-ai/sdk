@@ -98,7 +98,8 @@
   },
   "pnpm": {
     "overrides": {
-      "minimatch": ">=10.2.3"
+      "minimatch": ">=10.2.3",
+      "@walletconnect/ethereum-provider": "^2.23.7"
     }
   },
   "packageManager": "pnpm@10.30.2",
