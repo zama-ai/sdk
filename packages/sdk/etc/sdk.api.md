@@ -7171,6 +7171,11 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
 };
 
 // @public
+export class ConfigurationError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export interface ContractCallConfig {
     readonly abi: readonly unknown[];
     readonly address: Address;
@@ -17824,6 +17829,11 @@ export type NetworkType = "hardhat" | "sepolia" | "mainnet";
 
 // @public
 export class NoCiphertextError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class NotSupportedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
@@ -33011,6 +33021,8 @@ export const ZamaErrorCode: {
     readonly InvalidCredentials: "INVALID_CREDENTIALS";
     readonly NoCiphertext: "NO_CIPHERTEXT";
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
+    readonly ConfigurationError: "CONFIGURATION_ERROR";
+    readonly NotSupported: "NOT_SUPPORTED";
 };
 
 // @public
