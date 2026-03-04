@@ -1,7 +1,8 @@
 import { ethers } from "ethers";
-import { FHE_BIT_WIDTHS, FheType, MOCK_INPUT_SIGNER_PK } from "./constants";
+import { FHE_BIT_WIDTHS, FheType } from "./constants";
 import { INPUT_VERIFICATION_EIP712 } from "./eip712";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
+import { MOCK_INPUT_SIGNER_PK } from "./presets";
 import type { CleartextFhevmConfig } from "./types";
 
 const INPUT_VERIFICATION_TYPES: Record<string, ethers.TypedDataField[]> = {

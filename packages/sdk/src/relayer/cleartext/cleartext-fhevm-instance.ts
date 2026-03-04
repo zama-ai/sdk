@@ -13,13 +13,13 @@ import type {
   UserDecryptParams,
   ZKProofLike,
 } from "../relayer-sdk.types";
-import { MOCK_KMS_SIGNER_PK } from "./constants";
 import {
   DELEGATED_USER_DECRYPT_EIP712,
   KMS_DECRYPTION_EIP712,
   USER_DECRYPT_EIP712,
 } from "./eip712";
 import { CleartextEncryptedInput } from "./encrypted-input";
+import { MOCK_KMS_SIGNER_PK } from "./presets";
 import type { CleartextFhevmConfig } from "./types";
 
 export const ACL_ABI = [
