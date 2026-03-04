@@ -116,6 +116,14 @@ export interface UnshieldCallbacks {
   onFinalizeSubmitted?: (txHash: Hex) => void;
 }
 
+/**
+ * Controls how long session signatures remain valid.
+ * - `"persistent"` (default): no time-based expiry, current behavior.
+ * - `0`: never persist — every operation triggers a signing prompt.
+ * - Positive number: seconds until the session signature expires.
+ */
+export type SessionTTL = "persistent" | number;
+
 // Re-export errors for backward compatibility
 export {
   ZamaErrorCode,

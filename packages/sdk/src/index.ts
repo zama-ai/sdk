@@ -73,6 +73,7 @@ export type {
   TransactionReceipt,
   TransactionResult,
   UnshieldCallbacks,
+  SessionTTL,
 } from "./token/token.types";
 export { ZamaSDKEvents } from "./events/sdk-events";
 export type {
@@ -105,6 +106,7 @@ export type {
   CredentialsCreatedEvent,
   CredentialsRevokedEvent,
   CredentialsAllowedEvent,
+  SessionExpiredEvent,
 } from "./events/sdk-events";
 export {
   ZamaError,

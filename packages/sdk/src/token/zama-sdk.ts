@@ -5,7 +5,7 @@ import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
 import { CredentialsManager, computeStoreKey } from "./credentials-manager";
-import type { GenericSigner, GenericStorage } from "./token.types";
+import type { GenericSigner, GenericStorage, SessionTTL } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 
@@ -25,6 +25,13 @@ export interface ZamaSDKConfig {
   sessionStorage?: GenericStorage;
   /** Number of days FHE credentials remain valid. Default: `1`. Set `0` to require a wallet signature on every decrypt (high-security mode). */
   credentialDurationDays?: number;
+  /**
+   * Controls how long session signatures (EIP-712 wallet signatures) remain valid.
+   * - `"persistent"` (default): no time-based expiry, sessions last until revocation or storage clear.
+   * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
+   * - Positive number: seconds until the session signature expires and requires re-authentication.
+   */
+  sessionTTL?: SessionTTL;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -57,6 +64,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       durationDays: config.credentialDurationDays ?? 1,
+      sessionTTL: config.sessionTTL ?? "persistent",
       onEvent: this.#onEvent,
     });
     this.#identityReady = this.#initIdentity();
