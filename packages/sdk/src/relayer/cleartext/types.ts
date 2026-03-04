@@ -1,26 +1,20 @@
 import type { Eip1193Provider } from "ethers";
 
-export interface CleartextFhevmConfig {
-  chainId: bigint;
-  gatewayChainId: number;
-  aclAddress: string;
-  executorProxyAddress: string;
-  inputVerifierContractAddress: string;
-  kmsContractAddress: string;
-  verifyingContractAddressInputVerification: string;
-  verifyingContractAddressDecryption: string;
+export interface CleartextContracts {
+  acl: string;
+  executor: string;
+  inputVerifier: string;
+  kmsVerifier: string;
+  verifyingInputVerifier: string;
+  verifyingDecryption: string;
 }
 
-export interface CleartextChainConfig {
+export interface CleartextConfig {
   chainId: bigint;
   gatewayChainId: number;
+  contracts: CleartextContracts;
+}
+
+export interface CleartextChainConfig extends CleartextConfig {
   rpcUrl: string | Eip1193Provider;
-  contracts: {
-    acl: string;
-    executor: string;
-    inputVerifier: string;
-    kmsVerifier: string;
-    verifyingInputVerifier: string;
-    verifyingDecryption: string;
-  };
 }
