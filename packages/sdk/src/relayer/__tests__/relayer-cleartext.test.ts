@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { EncryptionFailedError } from "../../token/errors";
+import {
+  EncryptionFailedError,
+  ConfigurationError,
+  NotSupportedError,
+} from "../../token/errors";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks (available inside vi.mock factories)
@@ -167,14 +171,14 @@ describe("RelayerCleartext", () => {
   // 4. Missing transport config
   // -----------------------------------------------------------------------
   describe("missing transport config", () => {
-    it("throws EncryptionFailedError when no transport config exists for chainId", async () => {
+    it("throws ConfigurationError when no transport config exists for chainId", async () => {
       const relayer = new RelayerCleartext(
         makeConfig({
           transports: {}, // no config for CHAIN_ID
         }),
       );
 
-      await expect(relayer.encrypt(encryptParams([1n]))).rejects.toThrow(EncryptionFailedError);
+      await expect(relayer.encrypt(encryptParams([1n]))).rejects.toThrow(ConfigurationError);
 
       await expect(relayer.encrypt(encryptParams([1n]))).rejects.toThrow(
         /No cleartext transport config for chainId/,
@@ -186,7 +190,7 @@ describe("RelayerCleartext", () => {
   // 5. Incomplete config (missing cleartextExecutorAddress)
   // -----------------------------------------------------------------------
   describe("incomplete config", () => {
-    it("throws EncryptionFailedError with cause when cleartextExecutorAddress is missing", async () => {
+    it("throws ConfigurationError with cause when cleartextExecutorAddress is missing", async () => {
       // Use a chain ID with no DefaultConfigs entry so the base config is empty
       // and only the (incomplete) override is used.
       const CUSTOM_CHAIN = 99999;
@@ -200,9 +204,9 @@ describe("RelayerCleartext", () => {
 
       const err = await relayer.encrypt(encryptParams([1n])).catch((e: unknown) => e);
 
-      expect(err).toBeInstanceOf(EncryptionFailedError);
-      expect((err as EncryptionFailedError).message).toMatch(/Incomplete cleartext config/);
-      expect((err as EncryptionFailedError).cause).toBeDefined();
+      expect(err).toBeInstanceOf(ConfigurationError);
+      expect((err as ConfigurationError).message).toMatch(/Incomplete cleartext config/);
+      expect((err as ConfigurationError).cause).toBeDefined();
     });
   });
 
@@ -224,6 +228,9 @@ describe("RelayerCleartext", () => {
       const tooBig = 2n ** 64n; // exceeds uint64 max
 
       await expect(relayer.encrypt(encryptParams([tooBig]))).rejects.toThrow(
+        EncryptionFailedError,
+      );
+      await expect(relayer.encrypt(encryptParams([tooBig]))).rejects.toThrow(
         /only supports values up to uint64/,
       );
     });
@@ -233,11 +240,11 @@ describe("RelayerCleartext", () => {
   // 7. requestZKProofVerification throws EncryptionFailedError
   // -----------------------------------------------------------------------
   describe("requestZKProofVerification", () => {
-    it("throws EncryptionFailedError indicating unsupported in cleartext mode", async () => {
+    it("throws NotSupportedError indicating unsupported in cleartext mode", async () => {
       const relayer = new RelayerCleartext(makeConfig());
 
       await expect(relayer.requestZKProofVerification({} as never)).rejects.toThrow(
-        EncryptionFailedError,
+        NotSupportedError,
       );
       await expect(relayer.requestZKProofVerification({} as never)).rejects.toThrow(
         /not supported in cleartext mode/,

@@ -1,7 +1,12 @@
 import { createCleartextInstance } from "../cleartext/cleartext-instance";
 import { convertToBigIntRecord } from "../cleartext/convert";
 import type { CleartextInstanceConfig } from "../cleartext/types";
-import { ZamaError, EncryptionFailedError } from "../token/errors";
+import {
+  ZamaError,
+  EncryptionFailedError,
+  ConfigurationError,
+  NotSupportedError,
+} from "../token/errors";
 import { assertNonNullable } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
@@ -89,7 +94,7 @@ export class RelayerCleartext implements RelayerSDK {
   async #initInstance(chainId: number): Promise<CleartextInstance> {
     const overrides = this.#config.transports[chainId];
     if (!overrides) {
-      throw new EncryptionFailedError(`No cleartext transport config for chainId: ${chainId}`);
+      throw new ConfigurationError(`No cleartext transport config for chainId: ${chainId}`);
     }
 
     const base = DefaultConfigs[chainId];
@@ -100,7 +105,7 @@ export class RelayerCleartext implements RelayerSDK {
       assertNonNullable(config.coprocessorSignerPrivateKey, `coprocessorSignerPrivateKey`);
       assertNonNullable(config.kmsSignerPrivateKey, `kmsSignerPrivateKey`);
     } catch (error) {
-      throw new EncryptionFailedError(`Incomplete cleartext config for chainId: ${chainId}`, {
+      throw new ConfigurationError(`Incomplete cleartext config for chainId: ${chainId}`, {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -178,10 +183,10 @@ export class RelayerCleartext implements RelayerSDK {
       try {
         input.add64(value);
       } catch (error) {
-        throw new Error(
+        throw new EncryptionFailedError(
           `RelayerCleartext.encrypt() only supports values up to uint64 (2^64 - 1). ` +
             `For larger types (uint128, uint256, address), use createCleartextInstance() and the low-level add* methods.`,
-          { cause: error },
+          { cause: error instanceof Error ? error : undefined },
         );
       }
     }
@@ -258,7 +263,7 @@ export class RelayerCleartext implements RelayerSDK {
   }
 
   async requestZKProofVerification(_zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    throw new EncryptionFailedError(
+    throw new NotSupportedError(
       "requestZKProofVerification is not supported in cleartext mode. Use encrypt() instead.",
     );
   }

@@ -34,6 +34,10 @@ export const ZamaErrorCode = {
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
   RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
+  /** SDK configuration is invalid or incomplete. */
+  ConfigurationError: "CONFIGURATION_ERROR",
+  /** Operation is not supported in the current mode. */
+  NotSupported: "NOT_SUPPORTED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -136,6 +140,22 @@ export class RelayerRequestFailedError extends ZamaError {
     super(ZamaErrorCode.RelayerRequestFailed, message, options);
     this.name = "RelayerRequestFailedError";
     this.statusCode = statusCode;
+  }
+}
+
+/** SDK configuration is invalid or incomplete. */
+export class ConfigurationError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.ConfigurationError, message, options);
+    this.name = "ConfigurationError";
+  }
+}
+
+/** Operation is not supported in the current mode (e.g. ZK proofs in cleartext mode). */
+export class NotSupportedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.NotSupported, message, options);
+    this.name = "NotSupportedError";
   }
 }
 

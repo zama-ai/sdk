@@ -119,6 +119,8 @@ export {
   InvalidCredentialsError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  ConfigurationError,
+  NotSupportedError,
   matchZamaError,
 } from "./token/errors";
 
