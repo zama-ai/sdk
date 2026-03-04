@@ -8,61 +8,12 @@ import { MemoryStorage } from "../memory-storage";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { ZamaSDKEvent, ZamaSDKEventListener } from "../../events/sdk-events";
 import { CredentialsManager } from "../credentials-manager";
-import type { GenericSigner } from "../token.types";
+import { createMockRelayer, createMockSigner } from "./test-helpers";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const USER = "0x2222222222222222222222222222222222222222" as Address;
 const ZERO_HANDLE = "0x" + "0".repeat(64);
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
-
-function createMockSdk() {
-  return {
-    generateKeypair: vi.fn().mockResolvedValue({
-      publicKey: "0xpub",
-      privateKey: "0xpriv",
-    }),
-    createEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { UserDecryptRequestVerification: [] },
-      message: {
-        publicKey: "0xpub",
-        contractAddresses: [TOKEN],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    }),
-    encrypt: vi.fn().mockResolvedValue({
-      handles: [new Uint8Array([1, 2, 3])],
-      inputProof: new Uint8Array([4, 5, 6]),
-    }),
-    userDecrypt: vi.fn().mockResolvedValue({
-      [VALID_HANDLE]: 1000n,
-    }),
-    publicDecrypt: vi.fn().mockResolvedValue({
-      clearValues: { "0xburn": 500n },
-      abiEncodedClearValues: "0x1f4",
-      decryptionProof: "0xproof",
-    }),
-  } as unknown as RelayerSDK;
-}
-
-function createMockSigner(): GenericSigner {
-  return {
-    getAddress: vi.fn().mockResolvedValue(USER),
-    signTypedData: vi.fn().mockResolvedValue("0xsig"),
-    writeContract: vi.fn().mockResolvedValue("0xtxhash"),
-    readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
-    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-    getChainId: vi.fn().mockResolvedValue(31337),
-    subscribe: vi.fn().mockReturnValue(() => {}),
-  };
-}
 
 describe("ZamaSDKEvents constants", () => {
   it("has all expected event keys", () => {
@@ -103,21 +54,30 @@ describe("ZamaSDKEvents constants", () => {
 });
 
 describe("ReadonlyToken event emissions", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
-  let signer: GenericSigner;
+  let sdk: RelayerSDK;
+  let signer: ReturnType<typeof createMockSigner>;
   let events: ZamaSDKEvent[];
   let onEvent: ZamaSDKEventListener;
 
   beforeEach(() => {
-    sdk = createMockSdk();
-    signer = createMockSigner();
+    sdk = createMockRelayer({
+      userDecrypt: vi.fn().mockResolvedValue({ [VALID_HANDLE]: 1000n }),
+      publicDecrypt: vi.fn().mockResolvedValue({
+        clearValues: { "0xburn": 500n },
+        abiEncodedClearValues: "0x1f4",
+        decryptionProof: "0xproof",
+      }),
+    });
+    signer = createMockSigner(USER, {
+      readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
+    });
     events = [];
     onEvent = (event) => events.push(event);
   });
 
   function createReadonlyToken() {
     return new ReadonlyToken({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -217,7 +177,7 @@ describe("ReadonlyToken event emissions", () => {
 
   it("works without onEvent (no-op, does not throw)", async () => {
     const token = new ReadonlyToken({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -230,21 +190,30 @@ describe("ReadonlyToken event emissions", () => {
 });
 
 describe("Token event emissions", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
-  let signer: GenericSigner;
+  let sdk: RelayerSDK;
+  let signer: ReturnType<typeof createMockSigner>;
   let events: ZamaSDKEvent[];
   let onEvent: ZamaSDKEventListener;
 
   beforeEach(() => {
-    sdk = createMockSdk();
-    signer = createMockSigner();
+    sdk = createMockRelayer({
+      userDecrypt: vi.fn().mockResolvedValue({ [VALID_HANDLE]: 1000n }),
+      publicDecrypt: vi.fn().mockResolvedValue({
+        clearValues: { "0xburn": 500n },
+        abiEncodedClearValues: "0x1f4",
+        decryptionProof: "0xproof",
+      }),
+    });
+    signer = createMockSigner(USER, {
+      readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
+    });
     events = [];
     onEvent = (event) => events.push(event);
   });
 
   function createToken() {
     return new Token({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -580,21 +549,30 @@ describe("Token event emissions", () => {
 });
 
 describe("CredentialsManager event emissions", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
-  let signer: GenericSigner;
+  let sdk: RelayerSDK;
+  let signer: ReturnType<typeof createMockSigner>;
   let events: ZamaSDKEvent[];
   let onEvent: ZamaSDKEventListener;
 
   beforeEach(() => {
-    sdk = createMockSdk();
-    signer = createMockSigner();
+    sdk = createMockRelayer({
+      userDecrypt: vi.fn().mockResolvedValue({ [VALID_HANDLE]: 1000n }),
+      publicDecrypt: vi.fn().mockResolvedValue({
+        clearValues: { "0xburn": 500n },
+        abiEncodedClearValues: "0x1f4",
+        decryptionProof: "0xproof",
+      }),
+    });
+    signer = createMockSigner(USER, {
+      readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
+    });
     events = [];
     onEvent = (event) => events.push(event);
   });
 
   it("emits CredentialsLoading and CredentialsCreating/Created on first call", async () => {
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -613,7 +591,7 @@ describe("CredentialsManager event emissions", () => {
   it("emits CredentialsCached on cache hit", async () => {
     const store = new MemoryStorage();
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -636,7 +614,7 @@ describe("CredentialsManager event emissions", () => {
   it("emits CredentialsExpired when credentials are expired", async () => {
     const store = new MemoryStorage();
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -666,7 +644,7 @@ describe("CredentialsManager event emissions", () => {
 
     // New manager reads expired data
     const manager2 = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: store,
       sessionStorage: new MemoryStorage(),
@@ -683,7 +661,7 @@ describe("CredentialsManager event emissions", () => {
 
   it("includes contractAddresses on credential events", async () => {
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -707,7 +685,7 @@ describe("CredentialsManager event emissions", () => {
 
   it("adds timestamp to all emitted events", async () => {
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -724,7 +702,7 @@ describe("CredentialsManager event emissions", () => {
 
   it("works without onEvent (no-op, does not throw)", async () => {
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),

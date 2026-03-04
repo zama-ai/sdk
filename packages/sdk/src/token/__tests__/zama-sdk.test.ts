@@ -4,37 +4,9 @@ import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
 import { computeStoreKey } from "../credentials-manager";
-import type { GenericSigner, SignerLifecycleCallbacks } from "../token.types";
+import type { SignerLifecycleCallbacks } from "../token.types";
 import type { Address } from "../../relayer/relayer-sdk.types";
-import type { RelayerSDK } from "../../relayer/relayer-sdk";
-
-function createMockSigner(): GenericSigner {
-  return {
-    getAddress: vi.fn().mockResolvedValue("0xuser"),
-    signTypedData: vi.fn().mockResolvedValue("0xsig"),
-    writeContract: vi.fn(),
-    readContract: vi.fn(),
-    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-    getChainId: vi.fn().mockResolvedValue(31337),
-    subscribe: vi.fn().mockReturnValue(() => {}),
-  };
-}
-
-function createMockRelayer(): RelayerSDK {
-  return {
-    generateKeypair: vi.fn(),
-    createEIP712: vi.fn(),
-    encrypt: vi.fn(),
-    userDecrypt: vi.fn(),
-    publicDecrypt: vi.fn(),
-    createDelegatedUserDecryptEIP712: vi.fn(),
-    delegatedUserDecrypt: vi.fn(),
-    requestZKProofVerification: vi.fn(),
-    getPublicKey: vi.fn(),
-    getPublicParams: vi.fn(),
-    terminate: vi.fn(),
-  };
-}
+import { createMockRelayer, createMockSigner } from "./test-helpers";
 
 describe("ZamaSDK", () => {
   const storage = new MemoryStorage();

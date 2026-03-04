@@ -3,73 +3,34 @@ import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
-import { ZamaError, ZamaErrorCode, type GenericSigner } from "../token.types";
+import { ZamaError, ZamaErrorCode } from "../token.types";
 import { MemoryStorage } from "../memory-storage";
+import { createMockRelayer, createMockSigner } from "./test-helpers";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const USER = "0x2222222222222222222222222222222222222222" as Address;
 const ZERO_HANDLE = "0x" + "0".repeat(64);
 const VALID_HANDLE = "0x" + "ab".repeat(32);
 
-function createMockSdk() {
-  return {
-    generateKeypair: vi.fn().mockResolvedValue({
-      publicKey: "0xpub",
-      privateKey: "0xpriv",
-    }),
-    createEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { UserDecryptRequestVerification: [] },
-      message: {
-        publicKey: "0xpub",
-        contractAddresses: [TOKEN],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    }),
-    encrypt: vi.fn().mockResolvedValue({
-      handles: [new Uint8Array([1, 2, 3])],
-      inputProof: new Uint8Array([4, 5, 6]),
-    }),
-    userDecrypt: vi.fn().mockResolvedValue({
-      [VALID_HANDLE]: 1000n,
-    }),
-    publicDecrypt: vi.fn().mockResolvedValue({
-      clearValues: { "0xburn": 500n },
-      abiEncodedClearValues: "0x1f4",
-      decryptionProof: "0xproof",
-    }),
-  } as unknown as RelayerSDK;
-}
-
-function createMockSigner(): GenericSigner {
-  return {
-    getAddress: vi.fn().mockResolvedValue(USER),
-    signTypedData: vi.fn().mockResolvedValue("0xsig"),
-    writeContract: vi.fn().mockResolvedValue("0xtxhash"),
-    readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
-    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-    getChainId: vi.fn().mockResolvedValue(31337),
-    subscribe: vi.fn().mockReturnValue(() => {}),
-  };
-}
-
 describe("Token", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
-  let signer: GenericSigner;
+  let sdk: RelayerSDK;
+  let signer: ReturnType<typeof createMockSigner>;
   let token: Token;
 
   beforeEach(() => {
-    sdk = createMockSdk();
-    signer = createMockSigner();
+    sdk = createMockRelayer({
+      userDecrypt: vi.fn().mockResolvedValue({ [VALID_HANDLE]: 1000n }),
+      publicDecrypt: vi.fn().mockResolvedValue({
+        clearValues: { "0xburn": 500n },
+        abiEncodedClearValues: "0x1f4",
+        decryptionProof: "0xproof",
+      }),
+    });
+    signer = createMockSigner(USER, {
+      readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
+    });
     token = new Token({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
@@ -167,7 +128,7 @@ describe("Token", () => {
 
     it("decrypts pre-read handles without calling readContract", async () => {
       const token2 = new Token({
-        relayer: sdk as unknown as RelayerSDK,
+        relayer: sdk,
         signer,
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),
@@ -190,7 +151,7 @@ describe("Token", () => {
 
     it("skips decryption for zero handles", async () => {
       const token2 = new Token({
-        relayer: sdk as unknown as RelayerSDK,
+        relayer: sdk,
         signer,
         storage: new MemoryStorage(),
         sessionStorage: new MemoryStorage(),
