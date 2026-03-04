@@ -11,7 +11,7 @@ import type { Eip1193Provider } from "ethers";
  * - {@link HardhatConfig} — local Hardhat node (chainId 31337)
  * - {@link HoodiConfig} — Hoodi testnet (chainId 560048)
  */
-export type CleartextInstanceConfig = {
+export interface CleartextInstanceConfig {
   /** JSON-RPC URL string or EIP-1193 provider (e.g. MetaMask's `window.ethereum`). */
   network: Eip1193Provider | string;
   /** Chain ID of the target network. */
@@ -30,4 +30,8 @@ export type CleartextInstanceConfig = {
   verifyingContractAddressInputVerification: string;
   /** Address of the CleartextFHEVMExecutor contract that stores plaintext values. */
   cleartextExecutorAddress: string;
-};
+  /** Private key of the mock coprocessor signer (hex string). Required for input proof signing. */
+  coprocessorSignerPrivateKey: string;
+  /** Private key of the mock KMS signer (hex string). Required for decryption proof signing. */
+  kmsSignerPrivateKey: string;
+}

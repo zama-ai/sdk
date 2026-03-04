@@ -10,18 +10,15 @@ export const CONTRACTS = {
   transferBatcher: deployments.transferBatcher as Address,
 } as const;
 
-export const CONFIDENTIAL_TOKEN_ADDRESSES: Address[] = [
-  CONTRACTS.cUSDT, // cUSDT
-  CONTRACTS.cUSDC, // cUSDC
-];
+export const CONFIDENTIAL_TOKEN_ADDRESSES: Address[] = [CONTRACTS.cUSDT, CONTRACTS.cUSDC];
 
 export const ERC20_TOKENS: { address: Address; wrapper: Address }[] = [
   {
-    address: CONTRACTS.USDT, // USDT
-    wrapper: CONTRACTS.cUSDT, // cUSDT
+    address: CONTRACTS.USDT,
+    wrapper: CONTRACTS.cUSDT,
   },
   {
-    address: CONTRACTS.USDC, // USDC
-    wrapper: CONTRACTS.cUSDC, // cUSDC
+    address: CONTRACTS.USDC,
+    wrapper: CONTRACTS.cUSDC,
   },
 ];

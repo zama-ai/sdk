@@ -99,8 +99,10 @@ export const test = base.extend<TestFixtures>({
       window.localStorage.setItem("burnerWallet.pk", pk);
     }, privateKey);
 
-    // Navigate to home and ensure wallet is connected
-    await page.goto("/");
+    // Navigate to wallet page and ensure wallet is connected
+    // (both Next.js and Vite redirect "/" → "/wallet"; navigating directly
+    // avoids a server-side 307 in Next.js that Playwright treats as ERR_ABORTED)
+    await page.goto("/wallet");
     const connectButton = page.getByRole("button", {
       name: "Connect Wallet",
     });

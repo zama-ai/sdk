@@ -9,7 +9,7 @@
  * @module
  */
 
-import { getBytes, hexlify, AbiCoder } from "ethers";
+import { getBytes, hexlify, AbiCoder, keccak256, concat, toUtf8Bytes, type SigningKey } from "ethers";
 import type { CleartextExecutor } from "./cleartext-executor";
 
 /** Decrypted value — `boolean` for ebool, `bigint` for all other FHE types. */
@@ -26,6 +26,13 @@ type ClearValue = bigint | boolean;
 export interface CleartextACL {
   isAllowedForDecryption(handle: string): Promise<boolean>;
   persistAllowed(handle: string, account: string): Promise<boolean>;
+}
+
+/** EIP-712 signing context for the KMS decryption verification. */
+export interface DecryptionSigningContext {
+  signingKey: SigningKey;
+  gatewayChainId: number;
+  verifyingContract: string;
 }
 
 /** Extract fheTypeId from byte 30 of a bytes32 handle. */
@@ -48,6 +55,87 @@ function formatPlaintext(value: bigint, fheTypeId: number): ClearValue {
   return value; // euint*
 }
 
+const abiCoder = AbiCoder.defaultAbiCoder();
+
+const EIP712_DOMAIN_TYPEHASH = keccak256(
+  toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+);
+
+const PUBLIC_DECRYPT_TYPEHASH = keccak256(
+  toUtf8Bytes("PublicDecryptVerification(bytes32[] ctHandles,bytes decryptedResult,bytes extraData)"),
+);
+
+/**
+ * Sign a PublicDecryptVerification struct using EIP-712.
+ * Returns a 65-byte compact signature (r[32] + s[32] + v[1]).
+ */
+function signDecryptionProof(
+  handleHexes: string[],
+  abiEncodedClearValues: string,
+  ctx: DecryptionSigningContext,
+): Uint8Array {
+  // Build domain separator — name="Decryption", version="1"
+  const domainSeparator = keccak256(
+    abiCoder.encode(
+      ["bytes32", "bytes32", "bytes32", "uint256", "address"],
+      [
+        EIP712_DOMAIN_TYPEHASH,
+        keccak256(toUtf8Bytes("Decryption")),
+        keccak256(toUtf8Bytes("1")),
+        ctx.gatewayChainId,
+        ctx.verifyingContract,
+      ],
+    ),
+  );
+
+  // Hash the ctHandles array: keccak256(abi.encodePacked(handles))
+  const ctHandlesHash = keccak256(concat(handleHexes));
+
+  // Hash the decryptedResult
+  const decryptedResultHash = keccak256(abiEncodedClearValues);
+
+  // Empty extraData
+  const extraDataHash = keccak256("0x");
+
+  // Build struct hash
+  const structHash = keccak256(
+    abiCoder.encode(
+      ["bytes32", "bytes32", "bytes32", "bytes32"],
+      [PUBLIC_DECRYPT_TYPEHASH, ctHandlesHash, decryptedResultHash, extraDataHash],
+    ),
+  );
+
+  // EIP-712 digest: \x19\x01 + domainSeparator + structHash
+  const digest = keccak256(concat(["0x1901", domainSeparator, structHash]));
+
+  // Sign with the KMS key
+  const sig = ctx.signingKey.sign(digest);
+
+  // Pack as r[32] + s[32] + v[1]
+  const sigBytes = new Uint8Array(65);
+  sigBytes.set(getBytes(sig.r), 0);
+  sigBytes.set(getBytes(sig.s), 32);
+  sigBytes[64] = sig.v;
+
+  return sigBytes;
+}
+
+/**
+ * Build a decryption proof: numSigners (1 byte) + signatures (65 * numSigners).
+ * No extraData appended.
+ */
+function buildDecryptionProof(
+  handleHexes: string[],
+  abiEncodedClearValues: string,
+  ctx: DecryptionSigningContext,
+): Uint8Array {
+  const signature = signDecryptionProof(handleHexes, abiEncodedClearValues, ctx);
+  const proof = new Uint8Array(1 + 65);
+  proof[0] = 1; // numSigners = 1
+  proof.set(signature, 1);
+  return proof;
+}
+
 /**
  * Decrypt handles that have been marked for public decryption.
  *
@@ -55,7 +143,7 @@ function formatPlaintext(value: bigint, fheTypeId: number): ClearValue {
  * plaintext values from the executor and returns:
  * - `clearValues` — formatted per FHE type (bool / address / bigint)
  * - `abiEncodedClearValues` — Solidity ABI encoding of the values
- * - `decryptionProof` — always `"0x00"` in cleartext mode (no real proof)
+ * - `decryptionProof` — EIP-712 signed proof for on-chain verification
  *
  * @throws {Error} If any handle is not allowed for public decryption.
  */
@@ -63,6 +151,7 @@ export async function cleartextPublicDecrypt(
   handles: (Uint8Array | string)[],
   executor: CleartextExecutor,
   acl: CleartextACL,
+  decryptionSigningCtx?: DecryptionSigningContext,
 ): Promise<{
   clearValues: Record<string, ClearValue>;
   abiEncodedClearValues: string;
@@ -84,7 +173,6 @@ export async function cleartextPublicDecrypt(
     clearValues[h] = formatPlaintext(rawValues[i]!, getFheTypeId(h));
   });
 
-  const abiCoder = AbiCoder.defaultAbiCoder();
   const abiTypes = handlesHex.map((h) => fheTypeToSolidity(getFheTypeId(h)));
   const abiValues = handlesHex.map((h, i) => {
     const fheType = getFheTypeId(h);
@@ -94,7 +182,16 @@ export async function cleartextPublicDecrypt(
   });
   const abiEncodedClearValues = abiCoder.encode(abiTypes, abiValues);
 
-  return { clearValues, abiEncodedClearValues, decryptionProof: "0x00" };
+  // Build signed decryption proof if signing context is provided
+  let decryptionProof: string;
+  if (decryptionSigningCtx) {
+    const proofBytes = buildDecryptionProof(handlesHex, abiEncodedClearValues, decryptionSigningCtx);
+    decryptionProof = hexlify(proofBytes);
+  } else {
+    decryptionProof = "0x00";
+  }
+
+  return { clearValues, abiEncodedClearValues, decryptionProof };
 }
 
 /**

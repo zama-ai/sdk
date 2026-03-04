@@ -108,6 +108,8 @@ export const HardhatConfig = {
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
   cleartextExecutorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
+  coprocessorSignerPrivateKey: "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901",
+  kmsSignerPrivateKey: "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91",
 } as const satisfies CleartextInstanceConfig;
 
 /** Hoodi testnet cleartext configuration (chainId 560048). */
@@ -121,6 +123,8 @@ export const HoodiConfig = {
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   cleartextExecutorAddress: "0x5Be76f3C86886827047430884a5a295348967682",
+  coprocessorSignerPrivateKey: "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901",
+  kmsSignerPrivateKey: "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91",
 } as const satisfies CleartextInstanceConfig;
 
 export const DefaultConfigs: Record<number, FhevmInstanceConfig | CleartextInstanceConfig> = {

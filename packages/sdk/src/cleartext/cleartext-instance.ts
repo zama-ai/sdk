@@ -3,7 +3,7 @@ import {
   Contract,
   hexlify,
   JsonRpcProvider,
-  randomBytes,
+  SigningKey,
   type Eip1193Provider,
   type Provider,
 } from "ethers";
@@ -11,6 +11,7 @@ import {
   cleartextPublicDecrypt,
   cleartextUserDecrypt,
   type CleartextACL,
+  type DecryptionSigningContext,
 } from "./cleartext-decrypt";
 import { CleartextExecutor } from "./cleartext-executor";
 import { createCleartextEncryptedInput } from "./cleartext-input";
@@ -59,6 +60,14 @@ function resolveProvider(network: Eip1193Provider | string): Provider {
 export async function createCleartextInstance(config: CleartextInstanceConfig) {
   const provider = resolveProvider(config.network);
   const { aclContractAddress, chainId, cleartextExecutorAddress } = config;
+  const coprocessorSigningKey = new SigningKey(config.coprocessorSignerPrivateKey);
+  const kmsSigningKey = new SigningKey(config.kmsSignerPrivateKey);
+
+  const decryptionSigningCtx: DecryptionSigningContext = {
+    signingKey: kmsSigningKey,
+    gatewayChainId: config.gatewayChainId,
+    verifyingContract: config.verifyingContractAddressDecryption,
+  };
 
   const executor = new CleartextExecutor({
     executorAddress: cleartextExecutorAddress,
@@ -80,6 +89,14 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
         chainId,
         contractAddress,
         userAddress,
+        signingContext: {
+          signingKey: coprocessorSigningKey,
+          gatewayChainId: config.gatewayChainId,
+          verifyingContract: config.verifyingContractAddressInputVerification,
+          contractAddress,
+          userAddress,
+          contractChainId: chainId,
+        },
       });
     },
 
@@ -92,9 +109,15 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
 
     /** Generate a random (non-FHE) keypair for signature flows. */
     generateKeypair() {
+      // Use crypto.getRandomValues directly — ethers' browser randomBytes
+      // caps at 1024 bytes, but cleartext keypairs need 1632 bytes.
+      const pub = new Uint8Array(800);
+      const priv = new Uint8Array(1632);
+      crypto.getRandomValues(pub);
+      crypto.getRandomValues(priv);
       return {
-        publicKey: hexlify(randomBytes(800)),
-        privateKey: hexlify(randomBytes(1632)),
+        publicKey: hexlify(pub),
+        privateKey: hexlify(priv),
       };
     },
 
@@ -181,7 +204,7 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
 
     /** Decrypt handles marked for public decryption. Checks ACL permissions first. */
     async publicDecrypt(handles: (string | Uint8Array)[]) {
-      return cleartextPublicDecrypt(handles, executor, acl);
+      return cleartextPublicDecrypt(handles, executor, acl, decryptionSigningCtx);
     },
 
     /** Decrypt handles for a specific user. Verifies user + contract ACL permissions. */
@@ -213,13 +236,13 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
       return cleartextUserDecrypt(handleContractPairs, delegatorAddress, executor, acl);
     },
 
-    /** Always `null` — no real FHE public key in cleartext mode. */
+    /** Returns mock public key data in cleartext mode. */
     getPublicKey() {
-      return null;
+      return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array(32) };
     },
-    /** Always `null` — no real FHE public params in cleartext mode. */
+    /** Returns mock public params data in cleartext mode. */
     getPublicParams() {
-      return null;
+      return { publicParamsId: "mock-public-params-id", publicParams: new Uint8Array(32) };
     },
   };
 }

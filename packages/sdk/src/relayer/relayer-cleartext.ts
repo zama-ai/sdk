@@ -55,8 +55,12 @@ export class RelayerCleartext implements RelayerSDK {
   }
 
   async #ensureInstanceInner(): Promise<CleartextInstance> {
+    // Auto-restart after terminate() — supports React StrictMode's
+    // unmount→remount cycle and HMR without permanently killing the instance.
     if (this.#terminated) {
-      throw new Error("RelayerCleartext has been terminated");
+      this.#terminated = false;
+      this.#initPromise = null;
+      this.#resolvedChainId = null;
     }
 
     const chainId = await this.#config.getChainId();
@@ -237,12 +241,12 @@ export class RelayerCleartext implements RelayerSDK {
   }
 
   async getPublicKey(): Promise<{ publicKeyId: string; publicKey: Uint8Array } | null> {
-    return null;
+    return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array(32) };
   }
 
   async getPublicParams(
     _bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
-    return null;
+    return { publicParamsId: "mock-public-params-id", publicParams: new Uint8Array(32) };
   }
 }

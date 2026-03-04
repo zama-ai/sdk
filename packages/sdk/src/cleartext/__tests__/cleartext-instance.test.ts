@@ -41,6 +41,8 @@ const CONFIG = {
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
   cleartextExecutorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
+  coprocessorSignerPrivateKey: "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901",
+  kmsSignerPrivateKey: "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91",
 };
 
 describe("createCleartextInstance", () => {
@@ -75,9 +77,11 @@ describe("createCleartextInstance", () => {
     expect(input.encrypt).toBeTypeOf("function");
   });
 
-  it("getPublicKey returns null", async () => {
+  it("getPublicKey returns mock data", async () => {
     const instance = await createCleartextInstance(CONFIG);
-    expect(instance.getPublicKey()).toBeNull();
+    const result = instance.getPublicKey();
+    expect(result).not.toBeNull();
+    expect(result!.publicKeyId).toBe("mock-public-key-id");
   });
 
   it("requestZKProofVerification throws", async () => {
@@ -87,9 +91,11 @@ describe("createCleartextInstance", () => {
     );
   });
 
-  it("getPublicParams returns null", async () => {
+  it("getPublicParams returns mock data", async () => {
     const instance = await createCleartextInstance(CONFIG);
-    expect(instance.getPublicParams()).toBeNull();
+    const result = instance.getPublicParams();
+    expect(result).not.toBeNull();
+    expect(result!.publicParamsId).toBe("mock-public-params-id");
   });
 
   it("createEIP712 returns correct EIP712 structure", async () => {
@@ -132,7 +138,9 @@ describe("createCleartextInstance", () => {
     const handle = "0x" + "00".repeat(32);
     const result = await instance.publicDecrypt([handle]);
     expect(result.clearValues).toBeDefined();
-    expect(result.decryptionProof).toBe("0x00");
+    // Decryption proof is now a signed EIP-712 proof: 1 byte numSigners + 65 bytes signature = 66 bytes
+    expect(result.decryptionProof).toMatch(/^0x/);
+    expect(result.decryptionProof.length).toBe(2 + 66 * 2); // "0x" + 66 bytes hex
   });
 
   it("userDecrypt delegates to cleartextUserDecrypt", async () => {
