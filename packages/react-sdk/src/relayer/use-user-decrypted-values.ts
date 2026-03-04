@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueries } from "@tanstack/react-query";
+import { hashFn } from "@zama-fhe/sdk/query";
 import { decryptionKeys } from "./decryption-cache";
 
 /**
@@ -11,6 +12,7 @@ export function useUserDecryptedValues(handles: string[]) {
   const results = useQueries({
     queries: handles.map((handle) => ({
       queryKey: decryptionKeys.value(handle),
+      queryKeyHashFn: hashFn,
       queryFn: () => undefined as never,
       enabled: false,
     })),

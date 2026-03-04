@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { hashFn } from "@zama-fhe/sdk/query";
 import { decryptionKeys } from "./decryption-cache";
 
 /**
@@ -11,6 +12,7 @@ import { decryptionKeys } from "./decryption-cache";
 export function useUserDecryptedValue(handle: string | undefined) {
   return useQuery<bigint>({
     queryKey: decryptionKeys.value(handle ?? ""),
+    queryKeyHashFn: hashFn,
     queryFn: () => undefined as never,
     enabled: false,
   });

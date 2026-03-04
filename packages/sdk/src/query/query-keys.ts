@@ -137,7 +137,13 @@ export const zamaQueryKeys = {
 
   decryption: {
     all: ["zama.decryption"] as const,
-    handle: (handle: string, contractAddress: string) =>
-      ["zama.decryption", { handle, contractAddress }] as const,
+    handle: (handle: string, contractAddress?: string) =>
+      [
+        "zama.decryption",
+        {
+          handle,
+          ...(contractAddress === undefined ? {} : { contractAddress }),
+        },
+      ] as const,
   },
 } as const;

@@ -470,6 +470,25 @@ describe("useConfidentialBalance", () => {
     // The balance (phase 2) query should not be fetching without a handle
     expect(result.current.isFetching).toBe(false);
   });
+
+  it("does not run decrypt query when options.enabled=true but handle is undefined", async () => {
+    const signer = createMockSigner();
+    const relayer = createMockRelayer();
+    // Keep phase 1 unresolved so handle remains undefined
+    vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderWithProviders(
+      () => useConfidentialBalance({ tokenAddress: TOKEN }, { enabled: true }),
+      {
+        signer,
+        relayer,
+      },
+    );
+
+    await waitFor(() => expect(result.current.handleQuery.isFetching).toBe(true));
+    expect(result.current.isFetching).toBe(false);
+    expect(relayer.userDecrypt).not.toHaveBeenCalled();
+  });
 });
 
 describe("useConfidentialBalances", () => {
@@ -524,6 +543,19 @@ describe("useConfidentialBalances", () => {
     );
 
     expect(result.current.handlesQuery.isFetching).toBe(false);
+  });
+
+  it("keeps decrypt query disabled when options.enabled=true but owner is unavailable", () => {
+    const signer = createMockSigner();
+    vi.mocked(signer.getAddress).mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderWithProviders(
+      () => useConfidentialBalances({ tokenAddresses: [TOKEN] }, { enabled: true }),
+      { signer },
+    );
+
+    expect(result.current.handlesQuery.isFetching).toBe(false);
+    expect(result.current.isFetching).toBe(false);
   });
 });
 

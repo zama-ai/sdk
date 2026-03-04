@@ -47,6 +47,33 @@ describe("useApproveUnderlying", () => {
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
+
+  it("invalidates underlying allowance cache on success and calls user onSuccess", async () => {
+    const onSuccess = vi.fn();
+    const { result, queryClient } = renderWithProviders(
+      () =>
+        useApproveUnderlying(
+          { tokenAddress: TOKEN, wrapperAddress: WRAPPER },
+          {
+            onSuccess,
+          },
+        ),
+    );
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    await act(async () => {
+      result.current.mutate({ amount: 100n });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: zamaQueryKeys.underlyingAllowance.all,
+      }),
+    );
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("useShield", () => {
@@ -224,7 +251,7 @@ describe("useShield optimistic updates", () => {
     });
   });
 
-  it("invalidates balance queries on shield error when optimistic=true", async () => {
+  it("restores cached balance snapshot on shield error when optimistic=true without refetch", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
@@ -236,6 +263,7 @@ describe("useShield optimistic updates", () => {
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, "0xuser", "0xhandle");
     queryClient.setQueryData(balanceKey, 3000n);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
 
     await act(async () => {
       result.current.mutate({ amount: 500n });
@@ -243,10 +271,9 @@ describe("useShield optimistic updates", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    expect(invalidateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
-      }),
-    );
+    expect(queryClient.getQueryData(balanceKey)).toBe(3000n);
+    expect(invalidateSpy).not.toHaveBeenCalled();
+    expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3500n);
+    expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3000n);
   });
 });

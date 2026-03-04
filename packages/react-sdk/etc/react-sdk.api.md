@@ -379,7 +379,10 @@ export { DecryptionFailedError }
 
 // @public
 export const decryptionKeys: {
-    value: (handle: string) => readonly ["decryptedValue", string];
+    value: (handle: string) => readonly ["zama.decryption", {
+        readonly handle: string;
+        readonly contractAddress?: string;
+    }];
 };
 
 export { DecryptStartEvent }
