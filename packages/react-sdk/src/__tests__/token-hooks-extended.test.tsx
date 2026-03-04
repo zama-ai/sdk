@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { act, waitFor } from "@testing-library/react";
+import { describe, expect, it, test, vi } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { useConfidentialTransferFrom } from "../token/use-confidential-transfer-from";
 import { useFinalizeUnwrap } from "../token/use-finalize-unwrap";
@@ -11,11 +11,19 @@ import { useShieldETH } from "../token/use-shield-eth";
 import { useActivityFeed } from "../token/use-activity-feed";
 import { useConfidentialBalance } from "../token/use-confidential-balance";
 import { useConfidentialBalances } from "../token/use-confidential-balances";
+import { useUserDecryptedValue } from "../relayer/use-user-decrypted-value";
+import { decryptionKeys } from "../relayer/decryption-cache";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { renderWithProviders, createMockSigner, createMockRelayer } from "./test-utils";
+import {
+  createWrapper,
+  renderWithProviders,
+  createMockSigner,
+  createMockRelayer,
+} from "./test-utils";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
+const USER = "0x2222222222222222222222222222222222222222" as Address;
 
 /**
  * Creates a mock relayer whose publicDecrypt returns a value
@@ -63,7 +71,7 @@ describe("useConfidentialTransferFrom", () => {
       });
     });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
@@ -87,7 +95,7 @@ describe("useConfidentialTransferFrom", () => {
       });
     });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -420,19 +428,89 @@ describe("useShieldETH", () => {
 // ---------------------------------------------------------------------------
 
 describe("useConfidentialBalance", () => {
-  it("resolves the handle via phase 1 polling", async () => {
+  test("default", async () => {
     const signer = createMockSigner();
-    vi.mocked(signer.readContract).mockResolvedValue("0xbalancehandle" as Address);
+    const relayer = createMockRelayer();
+    const handle = `0x${"aa".repeat(32)}` as Address;
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
 
     const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }), {
       signer,
+      relayer,
     });
 
-    await waitFor(() => expect(result.current.handleQuery.isSuccess).toBe(true));
-    expect(result.current.handleQuery.data).toBe("0xbalancehandle");
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const { data, dataUpdatedAt, handleQuery, ...state } = result.current;
+    const { data: handleData, dataUpdatedAt: handleDataUpdatedAt, ...handleState } = handleQuery;
+    expect(data).toBe(123n);
+    expect(handleData).toBe(handle);
+    expect(dataUpdatedAt).toEqual(expect.any(Number));
+    expect(handleDataUpdatedAt).toEqual(expect.any(Number));
+    expect({ ...state, handleQuery: handleState }).toMatchInlineSnapshot(`
+      {
+        "error": null,
+        "errorUpdateCount": 0,
+        "errorUpdatedAt": 0,
+        "failureCount": 0,
+        "failureReason": null,
+        "fetchStatus": "idle",
+        "handleQuery": {
+          "error": null,
+          "errorUpdateCount": 0,
+          "errorUpdatedAt": 0,
+          "failureCount": 0,
+          "failureReason": null,
+          "fetchStatus": "idle",
+          "isEnabled": true,
+          "isError": false,
+          "isFetched": true,
+          "isFetchedAfterMount": true,
+          "isFetching": false,
+          "isInitialLoading": false,
+          "isLoading": false,
+          "isLoadingError": false,
+          "isPaused": false,
+          "isPending": false,
+          "isPlaceholderData": false,
+          "isRefetchError": false,
+          "isRefetching": false,
+          "isStale": true,
+          "isSuccess": true,
+          "promise": Promise {
+            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
+            "status": "rejected",
+          },
+          "refetch": [Function],
+          "status": "success",
+        },
+        "isEnabled": true,
+        "isError": false,
+        "isFetched": true,
+        "isFetchedAfterMount": true,
+        "isFetching": false,
+        "isInitialLoading": false,
+        "isLoading": false,
+        "isLoadingError": false,
+        "isPaused": false,
+        "isPending": false,
+        "isPlaceholderData": false,
+        "isRefetchError": false,
+        "isRefetching": false,
+        "isStale": false,
+        "isSuccess": true,
+        "promise": Promise {
+          "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
+          "status": "rejected",
+        },
+        "refetch": [Function],
+        "status": "success",
+      }
+    `);
   });
 
-  it("disables downstream queries when getAddress fails", async () => {
+  test("error: disabled when getAddress fails", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.getAddress).mockRejectedValue(new Error("no wallet"));
 
@@ -440,14 +518,14 @@ describe("useConfidentialBalance", () => {
       signer,
     });
 
-    // Wait for the address query to settle in error state
-    await waitFor(() => expect(result.current.handleQuery.isFetching).toBe(false));
-    // The handle and balance queries should stay disabled since signerAddress is undefined
+    await waitFor(() => expect(result.current.handleQuery.fetchStatus).toBe("idle"));
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.handleQuery.data).toBeUndefined();
     expect(result.current.data).toBeUndefined();
   });
 
-  it("does not fetch when signer address is unavailable", () => {
+  test("behavior: disabled when signer address unavailable", () => {
     const signer = createMockSigner();
     vi.mocked(signer.getAddress).mockReturnValue(new Promise(() => {}));
 
@@ -455,26 +533,27 @@ describe("useConfidentialBalance", () => {
       signer,
     });
 
-    expect(result.current.handleQuery.isFetching).toBe(false);
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.handleQuery.fetchStatus).toBe("idle");
   });
 
-  it("balance query stays disabled when handle is not yet resolved", () => {
+  test("behavior: disabled when handle is not yet resolved", async () => {
     const signer = createMockSigner();
-    // readContract never resolves, so handle stays undefined
     vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
 
     const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }), {
       signer,
     });
 
-    // The balance (phase 2) query should not be fetching without a handle
-    expect(result.current.isFetching).toBe(false);
+    await waitFor(() => expect(result.current.handleQuery.fetchStatus).toBe("fetching"));
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
   });
 
-  it("does not run decrypt query when options.enabled=true but handle is undefined", async () => {
+  test("behavior: disabled when handle undefined despite enabled=true", async () => {
     const signer = createMockSigner();
     const relayer = createMockRelayer();
-    // Keep phase 1 unresolved so handle remains undefined
     vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
 
     const { result } = renderWithProviders(
@@ -485,39 +564,206 @@ describe("useConfidentialBalance", () => {
       },
     );
 
-    await waitFor(() => expect(result.current.handleQuery.isFetching).toBe(true));
-    expect(result.current.isFetching).toBe(false);
+    await waitFor(() => expect(result.current.handleQuery.fetchStatus).toBe("fetching"));
+    expect(result.current.fetchStatus).toBe("idle");
     expect(relayer.userDecrypt).not.toHaveBeenCalled();
+  });
+
+  test("behavior: signer undefined -> defined", async () => {
+    const signer = createMockSigner();
+    const relayer = createMockRelayer();
+    const handle = `0x${"ac".repeat(32)}` as Address;
+    let resolveAddress: (value: Address) => void;
+    const addressPromise = new Promise<Address>((resolve) => {
+      resolveAddress = resolve;
+    });
+
+    vi.mocked(signer.getAddress).mockReturnValue(addressPromise);
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 321n });
+
+    const { result, rerender } = renderWithProviders(
+      () => useConfidentialBalance({ tokenAddress: TOKEN }),
+      { signer, relayer },
+    );
+
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+
+    resolveAddress!(USER);
+    rerender();
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBe(321n);
+  });
+
+  describe("behavior: full lifecycle", () => {
+    test("handle poll -> decrypt cascade", async () => {
+      const signer = createMockSigner();
+      const relayer = createMockRelayer();
+      const handleA = `0x${"ab".repeat(32)}` as Address;
+      const handleB = `0x${"bc".repeat(32)}` as Address;
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handleA).mockResolvedValueOnce(handleB);
+      vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => {
+        const value = handles[0] === handleA ? 111n : 222n;
+        return { [handles[0] as Address]: value };
+      });
+
+      const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }), {
+        signer,
+        relayer,
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
+      expect(result.current.handleQuery.data).toBe(handleA);
+      expect(result.current.data).toBe(111n);
+
+      await act(async () => {
+        await result.current.handleQuery.refetch();
+      });
+
+      await waitFor(() => expect(result.current.handleQuery.data).toBe(handleB), {
+        timeout: 5_000,
+      });
+      await waitFor(() => expect(result.current.data).toBe(222n), { timeout: 5_000 });
+      expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ handles: [handleA] }),
+      );
+      expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ handles: [handleB] }),
+      );
+    });
+  });
+
+  test("behavior: re-render preserves cached data", async () => {
+    const signer = createMockSigner();
+    const relayer = createMockRelayer();
+    const handle = `0x${"ad".repeat(32)}` as Address;
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 999n });
+
+    const { result, rerender } = renderWithProviders(
+      () => useConfidentialBalance({ tokenAddress: TOKEN }),
+      { signer, relayer },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
+    const firstData = result.current.data;
+
+    rerender();
+
+    expect(result.current.data).toBe(firstData);
   });
 });
 
 describe("useConfidentialBalances", () => {
-  it("resolves handles for multiple tokens", async () => {
+  test("default", async () => {
     const signer = createMockSigner();
-    vi.mocked(signer.readContract).mockResolvedValue("0xhandle" as Address);
+    const relayer = createMockRelayer();
+    const tokenTwo = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+    const handleA = `0x${"ca".repeat(32)}` as Address;
+    const handleB = `0x${"cb".repeat(32)}` as Address;
+    vi.mocked(signer.readContract).mockResolvedValueOnce(handleA).mockResolvedValueOnce(handleB);
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({
+      [handleA]: 10n,
+      [handleB]: 20n,
+    });
 
-    const tokens = [TOKEN, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address];
+    const tokens = [TOKEN, tokenTwo];
+    const { result } = renderWithProviders(() => useConfidentialBalances({ tokenAddresses: tokens }), {
+      signer,
+      relayer,
+    });
 
-    const { result } = renderWithProviders(
-      () => useConfidentialBalances({ tokenAddresses: tokens }),
-      { signer },
-    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
-    await waitFor(() => expect(result.current.handlesQuery.isSuccess).toBe(true));
-    expect(result.current.handlesQuery.data).toHaveLength(2);
+    const { data, dataUpdatedAt, handlesQuery, isStale: _isStale, ...state } = result.current;
+    const {
+      data: handlesData,
+      dataUpdatedAt: handlesDataUpdatedAt,
+      isStale: _handlesIsStale,
+      ...handlesState
+    } = handlesQuery;
+    expect(data?.get(TOKEN)).toBe(10n);
+    expect(data?.get(tokenTwo)).toBe(20n);
+    expect(handlesData).toEqual([handleA, handleB]);
+    expect(dataUpdatedAt).toEqual(expect.any(Number));
+    expect(handlesDataUpdatedAt).toEqual(expect.any(Number));
+    expect({ ...state, handlesQuery: handlesState }).toMatchInlineSnapshot(`
+      {
+        "error": null,
+        "errorUpdateCount": 0,
+        "errorUpdatedAt": 0,
+        "failureCount": 0,
+        "failureReason": null,
+        "fetchStatus": "idle",
+        "handlesQuery": {
+          "error": null,
+          "errorUpdateCount": 0,
+          "errorUpdatedAt": 0,
+          "failureCount": 0,
+          "failureReason": null,
+          "fetchStatus": "idle",
+          "isEnabled": true,
+          "isError": false,
+          "isFetched": true,
+          "isFetchedAfterMount": true,
+          "isFetching": false,
+          "isInitialLoading": false,
+          "isLoading": false,
+          "isLoadingError": false,
+          "isPaused": false,
+          "isPending": false,
+          "isPlaceholderData": false,
+          "isRefetchError": false,
+          "isRefetching": false,
+          "isSuccess": true,
+          "promise": Promise {
+            "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
+            "status": "rejected",
+          },
+          "refetch": [Function],
+          "status": "success",
+        },
+        "isEnabled": true,
+        "isError": false,
+        "isFetched": true,
+        "isFetchedAfterMount": true,
+        "isFetching": false,
+        "isInitialLoading": false,
+        "isLoading": false,
+        "isLoadingError": false,
+        "isPaused": false,
+        "isPending": false,
+        "isPlaceholderData": false,
+        "isRefetchError": false,
+        "isRefetching": false,
+        "isSuccess": true,
+        "promise": Promise {
+          "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
+          "status": "rejected",
+        },
+        "refetch": [Function],
+        "status": "success",
+      }
+    `);
   });
 
-  it("stays idle when tokenAddresses is empty", () => {
+  test("behavior: disabled when tokenAddresses is empty", () => {
     const signer = createMockSigner();
 
     const { result } = renderWithProviders(() => useConfidentialBalances({ tokenAddresses: [] }), {
       signer,
     });
 
-    expect(result.current.handlesQuery.isFetching).toBe(false);
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.handlesQuery.fetchStatus).toBe("idle");
   });
 
-  it("disables downstream queries when getAddress fails", async () => {
+  test("error: disabled when getAddress fails", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.getAddress).mockRejectedValue(new Error("disconnected"));
 
@@ -526,14 +772,14 @@ describe("useConfidentialBalances", () => {
       { signer },
     );
 
-    // Wait for the address query to settle in error state
-    await waitFor(() => expect(result.current.handlesQuery.isFetching).toBe(false));
-    // The handles and balances queries should stay disabled since signerAddress is undefined
+    await waitFor(() => expect(result.current.handlesQuery.fetchStatus).toBe("idle"));
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.handlesQuery.data).toBeUndefined();
     expect(result.current.data).toBeUndefined();
   });
 
-  it("does not fetch when signer address is unavailable", () => {
+  test("behavior: disabled when signer address unavailable", () => {
     const signer = createMockSigner();
     vi.mocked(signer.getAddress).mockReturnValue(new Promise(() => {}));
 
@@ -542,10 +788,12 @@ describe("useConfidentialBalances", () => {
       { signer },
     );
 
-    expect(result.current.handlesQuery.isFetching).toBe(false);
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.handlesQuery.fetchStatus).toBe("idle");
   });
 
-  it("keeps decrypt query disabled when options.enabled=true but owner is unavailable", () => {
+  test("behavior: disabled when owner unavailable despite enabled=true", () => {
     const signer = createMockSigner();
     vi.mocked(signer.getAddress).mockReturnValue(new Promise(() => {}));
 
@@ -554,14 +802,13 @@ describe("useConfidentialBalances", () => {
       { signer },
     );
 
-    expect(result.current.handlesQuery.isFetching).toBe(false);
-    expect(result.current.isFetching).toBe(false);
+    expect(result.current.handlesQuery.fetchStatus).toBe("idle");
+    expect(result.current.fetchStatus).toBe("idle");
   });
 
-  it("does not run decrypt query when options.enabled=true but handles are undefined", async () => {
+  test("behavior: disabled when handles undefined despite enabled=true", async () => {
     const signer = createMockSigner();
     const relayer = createMockRelayer();
-    // Keep phase 1 unresolved so handles remain undefined
     vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
 
     const { result } = renderWithProviders(
@@ -569,27 +816,56 @@ describe("useConfidentialBalances", () => {
       { signer, relayer },
     );
 
-    await waitFor(() => expect(result.current.handlesQuery.isFetching).toBe(true));
-    expect(result.current.isFetching).toBe(false);
+    await waitFor(() => expect(result.current.handlesQuery.fetchStatus).toBe("fetching"));
+    expect(result.current.fetchStatus).toBe("idle");
     expect(relayer.userDecrypt).not.toHaveBeenCalled();
+  });
+
+  test("behavior: signer undefined -> defined", async () => {
+    const signer = createMockSigner();
+    const relayer = createMockRelayer();
+    const handle = `0x${"cc".repeat(32)}` as Address;
+    let resolveAddress: (value: Address) => void;
+    const addressPromise = new Promise<Address>((resolve) => {
+      resolveAddress = resolve;
+    });
+
+    vi.mocked(signer.getAddress).mockReturnValue(addressPromise);
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 456n });
+
+    const { result, rerender } = renderWithProviders(
+      () => useConfidentialBalances({ tokenAddresses: [TOKEN] }),
+      { signer, relayer },
+    );
+
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+
+    resolveAddress!(USER);
+    rerender();
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
+    expect(result.current.data?.get(TOKEN)).toBe(456n);
   });
 });
 
 describe("useActivityFeed", () => {
-  it("stays idle when logs is undefined", () => {
+  test("behavior: disabled when logs is undefined", () => {
     const { result } = renderWithProviders(() =>
       useActivityFeed({
         tokenAddress: TOKEN,
-        userAddress: "0x2222222222222222222222222222222222222222" as Address,
+        userAddress: USER,
         logs: undefined,
       }),
     );
 
-    expect(result.current.isFetching).toBe(false);
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
 
-  it("stays idle when userAddress is undefined", () => {
+  test("behavior: disabled when userAddress is undefined", () => {
     const { result } = renderWithProviders(() =>
       useActivityFeed({
         tokenAddress: TOKEN,
@@ -598,41 +874,108 @@ describe("useActivityFeed", () => {
       }),
     );
 
-    expect(result.current.isFetching).toBe(false);
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
 
-  it("returns empty array when logs is empty", async () => {
+  test("default", async () => {
     const signer = createMockSigner();
 
     const { result } = renderWithProviders(
       () =>
         useActivityFeed({
           tokenAddress: TOKEN,
-          userAddress: "0x2222222222222222222222222222222222222222" as Address,
+          userAddress: USER,
           logs: [],
         }),
       { signer },
     );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const { data, dataUpdatedAt, ...state } = result.current;
+    expect(data).toEqual([]);
+    expect(dataUpdatedAt).toEqual(expect.any(Number));
+    expect(state).toMatchInlineSnapshot(`
+      {
+        "error": null,
+        "errorUpdateCount": 0,
+        "errorUpdatedAt": 0,
+        "failureCount": 0,
+        "failureReason": null,
+        "fetchStatus": "idle",
+        "isEnabled": true,
+        "isError": false,
+        "isFetched": true,
+        "isFetchedAfterMount": true,
+        "isFetching": false,
+        "isInitialLoading": false,
+        "isLoading": false,
+        "isLoadingError": false,
+        "isPaused": false,
+        "isPending": false,
+        "isPlaceholderData": false,
+        "isRefetchError": false,
+        "isRefetching": false,
+        "isStale": false,
+        "isSuccess": true,
+        "promise": Promise {
+          "reason": [Error: experimental_prefetchInRender feature flag is not enabled],
+          "status": "rejected",
+        },
+        "refetch": [Function],
+        "status": "success",
+      }
+    `);
+  });
+
+  test("behavior: params undefined -> defined", async () => {
+    const signer = createMockSigner();
+    const ctx = createWrapper({ signer });
+    const { result, rerender } = renderHook(
+      ({ userAddress, logs }) =>
+        useActivityFeed({
+          tokenAddress: TOKEN,
+          userAddress,
+          logs,
+          decrypt: false,
+        }),
+      {
+        wrapper: ctx.Wrapper,
+        initialProps: {
+          userAddress: undefined as Address | undefined,
+          logs: undefined as [] | undefined,
+        },
+      },
+    );
+
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+
+    rerender({
+      userAddress: USER,
+      logs: [],
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
   });
+});
 
-  it("is enabled when both userAddress and logs are provided", async () => {
-    const signer = createMockSigner();
+describe("useUserDecryptedValue", () => {
+  test("behavior: re-render preserves cached data", () => {
+    const cached = 1000n;
+    const ctx = createWrapper();
+    ctx.queryClient.setQueryData(decryptionKeys.value("0xhandle"), cached);
 
-    const { result } = renderWithProviders(
-      () =>
-        useActivityFeed({
-          tokenAddress: TOKEN,
-          userAddress: "0x2222222222222222222222222222222222222222" as Address,
-          logs: [],
-          decrypt: false,
-        }),
-      { signer },
-    );
+    const { result, rerender } = renderHook(() => useUserDecryptedValue("0xhandle"), {
+      wrapper: ctx.Wrapper,
+    });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const firstData = result.current.data;
+    rerender();
+
+    expect(firstData).toBe(cached);
+    expect(result.current.data).toBe(firstData);
   });
 });
