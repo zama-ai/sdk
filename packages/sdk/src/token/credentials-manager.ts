@@ -303,7 +303,19 @@ export class CredentialsManager {
   async #getSessionEntry(storeKey: string): Promise<SessionEntry | null> {
     const raw = await this.#sessionStorage.get(storeKey);
     if (raw === null) return null;
-    return raw as SessionEntry;
+    this.#assertSessionEntry(raw);
+    return raw;
+  }
+
+  #assertSessionEntry(data: unknown): asserts data is SessionEntry {
+    assertObject(data, "Session entry");
+    assertString(data.signature, "session.signature");
+    if (typeof data.createdAt !== "number") {
+      throw new TypeError(`Expected session.createdAt to be a number`);
+    }
+    if (data.ttl !== "persistent" && typeof data.ttl !== "number") {
+      throw new TypeError(`Expected session.ttl to be "persistent" or a number`);
+    }
   }
 
   /** Create and store a session entry with current TTL config. */
@@ -420,7 +432,7 @@ export class CredentialsManager {
     }
   }
 
-  // ── AES-GCM encryption (ported from KeypairDB) ─────────────
+  // ── AES-GCM encryption  ─────────────
 
   async #encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials> {
     const address = (await this.#signer.getAddress()).toLowerCase();

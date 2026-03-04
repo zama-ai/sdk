@@ -1,68 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CredentialsManager } from "../credentials-manager";
+import { CredentialsManager, computeStoreKey } from "../credentials-manager";
 import { MemoryStorage } from "../memory-storage";
-import type { GenericSigner } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
-
-function createMockSdk() {
-  return {
-    generateKeypair: vi.fn().mockResolvedValue({
-      publicKey: "0xpub123",
-      privateKey: "0xpriv456",
-    }),
-    createEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { UserDecryptRequestVerification: [] },
-      message: {
-        publicKey: "0xpub123",
-        contractAddresses: ["0xtoken"],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    }),
-  } as unknown as RelayerSDK;
-}
-
-function createMockSigner(address: Address = "0xuser" as Address): GenericSigner {
-  return {
-    getAddress: vi.fn().mockResolvedValue(address),
-    signTypedData: vi.fn().mockResolvedValue("0xsig789"),
-    writeContract: vi.fn(),
-    readContract: vi.fn(),
-    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-    getChainId: vi.fn().mockResolvedValue(31337),
-    subscribe: vi.fn().mockReturnValue(() => {}),
-  };
-}
-
-async function computeStoreKey(address: string, chainId: number = 31337): Promise<string> {
-  const hash = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(`${address.toLowerCase()}:${chainId}`),
-  );
-  const hex = Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hex.slice(0, 32);
-}
+import { createMockRelayer, createMockSigner } from "./test-helpers";
 
 describe("Session TTL", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
-  let signer: GenericSigner;
+  let sdk: RelayerSDK;
+  let signer: ReturnType<typeof createMockSigner>;
   let store: MemoryStorage;
   let sessionStore: MemoryStorage;
   let events: ZamaSDKEvent[];
 
   beforeEach(() => {
-    sdk = createMockSdk();
+    sdk = createMockRelayer({
+      generateKeypair: vi.fn().mockResolvedValue({
+        publicKey: "0xpub123",
+        privateKey: "0xpriv456",
+      }),
+    });
     signer = createMockSigner();
     store = new MemoryStorage();
     sessionStore = new MemoryStorage();
@@ -76,7 +33,7 @@ describe("Session TTL", () => {
 
   function createManager(sessionTTL: "persistent" | number = "persistent") {
     return new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: store,
       sessionStorage: sessionStore,
@@ -145,7 +102,7 @@ describe("Session TTL", () => {
     const manager = createManager(3600);
     await manager.allow("0xtoken" as Address);
 
-    const storeKey = await computeStoreKey("0xuser");
+    const storeKey = await computeStoreKey("0xuser", 31337);
     const storedBefore = await store.get(storeKey);
     expect(storedBefore).not.toBeNull();
 
@@ -197,7 +154,7 @@ describe("Session TTL", () => {
 
     // Create new manager with 10-second TTL (simulates config change)
     const manager2 = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer,
       storage: store,
       sessionStorage: sessionStore, // same session storage
@@ -221,7 +178,7 @@ describe("Session TTL", () => {
     vi.mocked(signer2.getChainId).mockResolvedValue(1); // mainnet
 
     const manager2 = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer: sdk,
       signer: signer2,
       storage: store,
       sessionStorage: sessionStore,
