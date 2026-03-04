@@ -333,7 +333,11 @@ await sdk.revokeSession();
 
 ### Wallet lifecycle integration
 
-When the wallet disconnects or the user switches accounts, the session signature should be cleared so stale decrypt keys don't persist.
+The SDK should revoke the session signature when the wallet state changes. There are two distinct cases:
+
+**Disconnect / lock** — the user explicitly disconnects or locks their wallet. The session signature should be cleared so the next connection requires a fresh sign.
+
+**Account switch** — the user switches from address A to address B (or switches chains). The previous account's session signature is revoked so it can't be reused if the user switches back. The EIP-712 signature is address- and chain-scoped, so leaving it around isn't a security hole, but it creates confusing UX if stale keys appear "allowed."
 
 #### wagmi users: automatic
 
@@ -341,15 +345,20 @@ If you use `WagmiSigner`, auto-revoke is built in — the SDK subscribes to wagm
 
 #### viem / ethers users: manual wiring
 
-Wire `revokeSession()` to wallet events directly:
+Wire `revokeSession()` to wallet events for both cases:
 
 ```ts
-// Clear session signature on wallet disconnect or account switch
+// Disconnect / lock — clear the session entirely
 wallet.on("disconnect", () => sdk.revokeSession());
+
+// Account switch — revoke the previous account's session
+// The SDK tracks the last-known address and chain internally,
+// so revokeSession() clears the correct key even though
+// the signer now returns the new account.
 wallet.on("accountsChanged", () => sdk.revokeSession());
 ```
 
-Without this, a cached session signature remains valid until expiry — even if the user switches accounts or disconnects. This isn't a security hole (signatures are time-bounded and chain-scoped), but it creates confusing UX.
+Without this wiring, cached session signatures remain valid until expiry. This isn't a security hole (signatures are time-bounded and chain-scoped), but it creates confusing UX — e.g. a user switches from account A to B and back, and A's old session still appears active.
 
 ### Typical flow
 
