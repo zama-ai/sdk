@@ -13,10 +13,20 @@ on:
 jobs:
   claude:
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      github.event.sender.type != 'Bot' &&
+      (
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.issue.author_association == 'MEMBER' ||
+        github.event.issue.author_association == 'OWNER' ||
+        github.event.review.author_association == 'MEMBER' ||
+        github.event.review.author_association == 'OWNER'
+      ) && (
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+        (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -51,6 +61,20 @@ jobs:
             "Bash(pnpm build*)"
             "Bash(pnpm api-report*)"
             "Bash(pnpm size*)"
-            "Bash(gh pr*)"
-            "Bash(gh issue*)"
-            "Bash(git *)"
+            "Bash(gh pr view*)"
+            "Bash(gh pr diff*)"
+            "Bash(gh pr checks*)"
+            "Bash(gh pr comment*)"
+            "Bash(gh pr create*)"
+            "Bash(gh issue view*)"
+            "Bash(gh issue comment*)"
+            "Bash(gh issue list*)"
+            "Bash(git status*)"
+            "Bash(git diff*)"
+            "Bash(git log*)"
+            "Bash(git add*)"
+            "Bash(git commit*)"
+            "Bash(git checkout*)"
+            "Bash(git switch*)"
+            "Bash(git branch*)"
+            "Bash(git push origin HEAD*)"
