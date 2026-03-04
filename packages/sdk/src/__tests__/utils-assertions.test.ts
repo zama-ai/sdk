@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { assertAddress, assertObject, assertString, assertArray, assertNonNullable } from "../utils";
+import {
+  assertAddress,
+  assertObject,
+  assertString,
+  assertArray,
+  assertNonNullable,
+} from "../utils";
 
 describe("assertAddress", () => {
   it("accepts a valid checksummed address", () => {
