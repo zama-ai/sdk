@@ -1,5 +1,5 @@
 import { createCleartextInstance } from "../cleartext/cleartext-instance";
-import { assertArray } from "../utils";
+import { assertNonNullable } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   Address,
@@ -90,13 +90,15 @@ export class RelayerCleartext implements RelayerSDK {
 
     const base = DefaultConfigs[chainId];
     const config = { ...base, ...overrides } as CleartextInstanceConfig;
-    if (
-      !config.network ||
-      !config.cleartextExecutorAddress ||
-      !config.coprocessorSignerPrivateKey ||
-      !config.kmsSignerPrivateKey
-    ) {
-      throw new Error(`Incomplete cleartext config for chainId: ${chainId}`);
+    try {
+      assertNonNullable(config.network, `network`);
+      assertNonNullable(config.cleartextExecutorAddress, `cleartextExecutorAddress`);
+      assertNonNullable(config.coprocessorSignerPrivateKey, `coprocessorSignerPrivateKey`);
+      assertNonNullable(config.kmsSignerPrivateKey, `kmsSignerPrivateKey`);
+    } catch (error) {
+      throw new Error(`Incomplete cleartext config for chainId: ${chainId}`, {
+        cause: error,
+      });
     }
 
     const instance = await createCleartextInstance(config);
