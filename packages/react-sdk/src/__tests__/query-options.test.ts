@@ -145,7 +145,7 @@ describe("query options factories", () => {
       "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
     const HANDLE_B =
       "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
-    const TOKEN_B = "0x6666666666666666666666666666666666666666" as Address;
+    const TOKEN_B = "0x7777777777777777777777777777777777777777" as Address;
 
     it("enabled: true when handle count matches token count", () => {
       const tokens = [mockReadonlyToken(TOKEN_ADDR), mockReadonlyToken(TOKEN_B)];
@@ -162,6 +162,24 @@ describe("query options factories", () => {
       const opts = confidentialBalancesQueryOptions(tokens, {
         owner: OWNER,
         handles: [HANDLE_A],
+      });
+
+      expect(opts.enabled).toBe(false);
+    });
+
+    it("enabled: false when owner is missing", () => {
+      const tokens = [mockReadonlyToken(TOKEN_ADDR), mockReadonlyToken(TOKEN_B)];
+      const opts = confidentialBalancesQueryOptions(tokens, {
+        handles: [HANDLE_A, HANDLE_B],
+      });
+
+      expect(opts.enabled).toBe(false);
+    });
+
+    it("enabled: false when token list is empty", () => {
+      const opts = confidentialBalancesQueryOptions([], {
+        owner: OWNER,
+        handles: [],
       });
 
       expect(opts.enabled).toBe(false);
