@@ -1,71 +1,7 @@
 /**
- * Wagmi-specific React hooks for low-level contract interactions.
- *
- * These hooks do NOT require {@link react-sdk/src.ZamaProvider | ZamaProvider} — they operate through
- * wagmi's `Config` and `useWriteContract`.
+ * Wagmi adapter for {@link react-sdk/src.ZamaProvider | ZamaProvider}.
  *
  * @packageDocumentation
  */
 
-export {
-  useBalanceOf,
-  useBalanceOfSuspense,
-  type UseBalanceOfConfig,
-  type UseBalanceOfSuspenseConfig,
-  type UseBalanceOfResult,
-} from "./use-balance-of";
-export {
-  useConfidentialBalanceOf,
-  useConfidentialBalanceOfSuspense,
-  type UseConfidentialBalanceOfConfig,
-  type UseConfidentialBalanceOfSuspenseConfig,
-} from "./use-confidential-balance-of";
-export { useConfidentialTransfer } from "./use-confidential-transfer";
-export { useConfidentialBatchTransfer } from "./use-confidential-batch-transfer";
-export { useUnwrap } from "./use-unwrap";
-export { useUnwrapFromBalance } from "./use-unwrap-from-balance";
-export { useFinalizeUnwrap } from "./use-finalize-unwrap";
-export { useSetOperator } from "./use-set-operator";
-export {
-  useWrapperForToken,
-  useWrapperForTokenSuspense,
-  type UseWrapperForZamaConfig,
-  type UseWrapperForTokenSuspenseConfig,
-} from "./use-wrapper-for-token";
-export {
-  useUnderlyingToken,
-  useUnderlyingTokenSuspense,
-  type UseUnderlyingZamaConfig,
-  type UseUnderlyingTokenSuspenseConfig,
-} from "./use-underlying-token";
-export {
-  useWrapperExists,
-  useWrapperExistsSuspense,
-  type UseWrapperExistsConfig,
-  type UseWrapperExistsSuspenseConfig,
-} from "./use-wrapper-exists";
-export {
-  useSupportsInterface,
-  useSupportsInterfaceSuspense,
-  type UseSupportsInterfaceConfig,
-  type UseSupportsInterfaceSuspenseConfig,
-} from "./use-supports-interface";
-export { useShield } from "./use-wrap";
-export { useShieldETH } from "./use-wrap-eth";
 export { WagmiSigner, type WagmiSignerConfig } from "./wagmi-signer";
-
-// High-level token hooks (re-exported for convenience)
-export {
-  useUnshield,
-  useUnshieldAll,
-  useResumeUnshield,
-  useConfidentialTransferFrom,
-  useConfidentialApprove,
-  useConfidentialBalance,
-  useConfidentialBalances,
-  useAuthorizeAll,
-  useTokenMetadata,
-  useActivityFeed,
-  useApproveUnderlying,
-  useUnwrapAll,
-} from "../index";
