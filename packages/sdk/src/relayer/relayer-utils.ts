@@ -97,6 +97,9 @@ export const SepoliaConfig = {
 /**
  * Hardhat local network configuration (chainId 31337).
  * Deterministic addresses from `@fhevm/solidity` ZamaConfig._getLocalConfig().
+ *
+ * **WARNING:** `coprocessorSignerPrivateKey` and `kmsSignerPrivateKey` are
+ * well-known Hardhat default keys. **Never use them on a real network.**
  */
 export const HardhatConfig = {
   chainId: 31337,
@@ -114,7 +117,10 @@ export const HardhatConfig = {
 
 /**
  * Hoodi testnet cleartext configuration (chainId 560048).
- * WARNING: signer keys are shared/insecure defaults for development only.
+ *
+ * **WARNING:** `coprocessorSignerPrivateKey` and `kmsSignerPrivateKey` are
+ * shared insecure defaults for development only. **Never use them on a
+ * production network.**
  */
 export const HoodiConfig = {
   chainId: 560048,

@@ -269,7 +269,7 @@ export function createCleartextEncryptedInput(params: {
     addAddress(value) {
       const checksummed = getAddress(value); // throws if not valid address
       checkLimit(160);
-      values.push(BigInt(checksummed.toLowerCase()));
+      values.push(BigInt(checksummed));
       bits.push(160);
       return self;
     },
