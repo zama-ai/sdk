@@ -40,7 +40,7 @@ export function BatchTransferForm({
 
         const encrypted = await encrypt.mutateAsync({
           values: [amount1, amount2],
-          contractAddress: tokenAddress,
+          contractAddress: batcherAddress,
           userAddress,
         });
 

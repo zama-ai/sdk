@@ -1,6 +1,11 @@
 import { test, expect } from "../fixtures";
+import { WRAPPER_ABI } from "../../sdk/src/abi/wrapper.abi";
 
-test("should shield USDT then batch transfer to two recipients", async ({ page, contracts }) => {
+test("should shield USDT then batch transfer to two recipients", async ({
+  page,
+  contracts,
+  viemClient,
+}) => {
   const shieldAmount = 500n;
   const transferAmount1 = 50n;
   const transferAmount2 = 50n;
@@ -11,6 +16,14 @@ test("should shield USDT then batch transfer to two recipients", async ({ page, 
   await page.getByTestId("amount-input").fill(shieldAmount.toString());
   await page.getByTestId("shield-button").click();
   await expect(page.getByTestId("shield-success")).toContainText("Tx: 0x");
+
+  // Approve the TransferBatcher as an operator on the cToken
+  await viemClient.writeContract({
+    address: contracts.cUSDT as `0x${string}`,
+    abi: WRAPPER_ABI,
+    functionName: "setOperator",
+    args: [contracts.transferBatcher as `0x${string}`, Math.floor(Date.now() / 1000) + 86400],
+  });
 
   // Navigate to batch transfer page
   await page.goto(
