@@ -15,6 +15,7 @@
 ### Task 1: Types module
 
 **Files:**
+
 - Modify: `packages/sdk/src/cleartext/types.ts` (currently doesn't exist as separate file)
 
 **Step 1: Write types.ts**
@@ -66,6 +67,7 @@ feat(sdk): extract CleartextInstanceConfig to cleartext/types
 ### Task 2: Handle generation
 
 **Files:**
+
 - Create: `packages/sdk/src/cleartext/cleartext-handles.ts`
 - Create: `packages/sdk/src/cleartext/__tests__/cleartext-handles.test.ts`
 
@@ -174,14 +176,14 @@ const HANDLE_VERSION = 0;
 
 /** Map encryption bit width → FHE type ID used in handle byte 30. */
 const BITS_TO_FHE_TYPE: Record<number, number> = {
-  2: 0,    // ebool
-  8: 2,    // euint8
-  16: 3,   // euint16
-  32: 4,   // euint32
-  64: 5,   // euint64
-  128: 6,  // euint128
-  160: 7,  // eaddress
-  256: 8,  // euint256
+  2: 0, // ebool
+  8: 2, // euint8
+  16: 3, // euint16
+  32: 4, // euint32
+  64: 5, // euint64
+  128: 6, // euint128
+  160: 7, // eaddress
+  256: 8, // euint256
 };
 
 /** Parsed handle fields. */
@@ -236,7 +238,12 @@ export function computeCleartextHandles(params: {
   // fakeCiphertext = "CLEARTEXT" + ABI.encode(uint256[])(values)
   const marker = encoder.encode("CLEARTEXT");
   const abiCoder = AbiCoder.defaultAbiCoder();
-  const encoded = getBytes(abiCoder.encode(values.map(() => "uint256"), values));
+  const encoded = getBytes(
+    abiCoder.encode(
+      values.map(() => "uint256"),
+      values,
+    ),
+  );
   const fakeCiphertext = new Uint8Array([...marker, ...encoded]);
 
   // blobHash = keccak256("ZK-w_rct" + fakeCiphertext)
@@ -266,13 +273,13 @@ export function computeCleartextHandles(params: {
 
     // Assemble 32-byte handle
     const handle = new Uint8Array(32);
-    handle.set(hash21Bytes, 0);           // bytes 0-20: hash21
-    handle[21] = i;                        // byte 21: index
+    handle.set(hash21Bytes, 0); // bytes 0-20: hash21
+    handle[21] = i; // byte 21: index
     // bytes 22-29: chainId as uint64 big-endian
     const chainIdBuf = getBytes(zeroPadValue(toBeHex(chainId), 8));
     handle.set(chainIdBuf, 22);
-    handle[30] = fheTypeId;                // byte 30: fheTypeId
-    handle[31] = HANDLE_VERSION;           // byte 31: version
+    handle[30] = fheTypeId; // byte 30: fheTypeId
+    handle[31] = HANDLE_VERSION; // byte 31: version
 
     handles.push(hexlify(handle));
   }
@@ -297,6 +304,7 @@ feat(sdk): add cleartext handle generation
 ### Task 3: Encrypted input builder
 
 **Files:**
+
 - Create: `packages/sdk/src/cleartext/cleartext-input.ts`
 - Create: `packages/sdk/src/cleartext/__tests__/cleartext-input.test.ts`
 
@@ -483,7 +491,9 @@ export function createCleartextEncryptedInput(params: {
       throw new Error("Packing more than 2048 bits in a single input ciphertext is unsupported");
     }
     if (bits.length + 1 > 256) {
-      throw new Error("Packing more than 256 variables in a single input ciphertext is unsupported");
+      throw new Error(
+        "Packing more than 256 variables in a single input ciphertext is unsupported",
+      );
     }
   };
 
@@ -496,12 +506,48 @@ export function createCleartextEncryptedInput(params: {
       bits.push(2);
       return self;
     },
-    add8(value) { checkValue(value, 8); checkLimit(8); values.push(BigInt(value)); bits.push(8); return self; },
-    add16(value) { checkValue(value, 16); checkLimit(16); values.push(BigInt(value)); bits.push(16); return self; },
-    add32(value) { checkValue(value, 32); checkLimit(32); values.push(BigInt(value)); bits.push(32); return self; },
-    add64(value) { checkValue(value, 64); checkLimit(64); values.push(BigInt(value)); bits.push(64); return self; },
-    add128(value) { checkValue(value, 128); checkLimit(128); values.push(BigInt(value)); bits.push(128); return self; },
-    add256(value) { checkValue(value, 256); checkLimit(256); values.push(BigInt(value)); bits.push(256); return self; },
+    add8(value) {
+      checkValue(value, 8);
+      checkLimit(8);
+      values.push(BigInt(value));
+      bits.push(8);
+      return self;
+    },
+    add16(value) {
+      checkValue(value, 16);
+      checkLimit(16);
+      values.push(BigInt(value));
+      bits.push(16);
+      return self;
+    },
+    add32(value) {
+      checkValue(value, 32);
+      checkLimit(32);
+      values.push(BigInt(value));
+      bits.push(32);
+      return self;
+    },
+    add64(value) {
+      checkValue(value, 64);
+      checkLimit(64);
+      values.push(BigInt(value));
+      bits.push(64);
+      return self;
+    },
+    add128(value) {
+      checkValue(value, 128);
+      checkLimit(128);
+      values.push(BigInt(value));
+      bits.push(128);
+      return self;
+    },
+    add256(value) {
+      checkValue(value, 256);
+      checkLimit(256);
+      values.push(BigInt(value));
+      bits.push(256);
+      return self;
+    },
     addAddress(value) {
       getAddress(value); // throws if not valid checksummed address
       checkLimit(160);
@@ -509,10 +555,17 @@ export function createCleartextEncryptedInput(params: {
       bits.push(160);
       return self;
     },
-    getBits() { return [...bits]; },
+    getBits() {
+      return [...bits];
+    },
     async encrypt() {
       if (bits.length === 0) throw new Error("Encrypted input must contain at least one value");
-      const { handles } = computeCleartextHandles({ values, encryptionBits: bits, aclContractAddress, chainId });
+      const { handles } = computeCleartextHandles({
+        values,
+        encryptionBits: bits,
+        aclContractAddress,
+        chainId,
+      });
       const inputProof = buildInputProof(handles, values);
       return {
         handles: handles.map((h) => getBytes(h)),
@@ -541,6 +594,7 @@ feat(sdk): add cleartext encrypted input builder
 ### Task 4: CleartextExecutor
 
 **Files:**
+
 - Create: `packages/sdk/src/cleartext/cleartext-executor.ts`
 - Create: `packages/sdk/src/cleartext/__tests__/cleartext-executor.test.ts`
 
@@ -566,9 +620,7 @@ describe("CleartextExecutor", () => {
   it("reads multiple plaintexts", async () => {
     const handle2 = "0x" + "cd".repeat(32);
     const mockContract = {
-      plaintexts: vi.fn()
-        .mockResolvedValueOnce(42n)
-        .mockResolvedValueOnce(100n),
+      plaintexts: vi.fn().mockResolvedValueOnce(42n).mockResolvedValueOnce(100n),
     };
     const executor = new CleartextExecutor(mockContract as any);
 
@@ -630,6 +682,7 @@ feat(sdk): add CleartextExecutor for reading plaintexts from chain
 ### Task 5: Cleartext decrypt
 
 **Files:**
+
 - Create: `packages/sdk/src/cleartext/cleartext-decrypt.ts`
 - Create: `packages/sdk/src/cleartext/__tests__/cleartext-decrypt.test.ts`
 
@@ -644,7 +697,12 @@ import { cleartextPublicDecrypt, cleartextUserDecrypt } from "../cleartext-decry
 function makeHandle(fheTypeId: number): string {
   const bytes = new Uint8Array(32);
   bytes[30] = fheTypeId;
-  return "0x" + Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+  return (
+    "0x" +
+    Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+  );
 }
 
 const HANDLE_EUINT32 = makeHandle(4);
@@ -654,7 +712,7 @@ const CONTRACT = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
 
 function mockExecutor(map: Map<string, bigint>) {
   return {
-    getPlaintexts: vi.fn(async (handles: string[]) => handles.map(h => map.get(h) ?? 0n)),
+    getPlaintexts: vi.fn(async (handles: string[]) => handles.map((h) => map.get(h) ?? 0n)),
   };
 }
 
@@ -759,8 +817,12 @@ export async function cleartextPublicDecrypt(
   handles: (Uint8Array | string)[],
   executor: CleartextExecutor,
   acl: CleartextACL,
-): Promise<{ clearValues: Record<string, ClearValue>; abiEncodedClearValues: string; decryptionProof: string }> {
-  const handlesHex = handles.map(h => typeof h === "string" ? h : hexlify(h));
+): Promise<{
+  clearValues: Record<string, ClearValue>;
+  abiEncodedClearValues: string;
+  decryptionProof: string;
+}> {
+  const handlesHex = handles.map((h) => (typeof h === "string" ? h : hexlify(h)));
 
   // Check ACL permissions
   for (const h of handlesHex) {
@@ -791,7 +853,7 @@ export async function cleartextUserDecrypt(
   executor: CleartextExecutor,
   acl: CleartextACL,
 ): Promise<Record<string, ClearValue>> {
-  const handlesHex = handleContractPairs.map(p =>
+  const handlesHex = handleContractPairs.map((p) =>
     typeof p.handle === "string" ? p.handle : hexlify(p.handle),
   );
 
@@ -834,6 +896,7 @@ feat(sdk): add cleartext public and user decrypt with ACL checks
 ### Task 6: createCleartextInstance factory
 
 **Files:**
+
 - Create: `packages/sdk/src/cleartext/cleartext-instance.ts`
 - Create: `packages/sdk/src/cleartext/__tests__/cleartext-instance.test.ts`
 
@@ -928,11 +991,22 @@ Expected: FAIL
 
 ```typescript
 // packages/sdk/src/cleartext/cleartext-instance.ts
-import { Contract, JsonRpcProvider, randomBytes, hexlify, type Provider, type Eip1193Provider } from "ethers";
+import {
+  Contract,
+  JsonRpcProvider,
+  randomBytes,
+  hexlify,
+  type Provider,
+  type Eip1193Provider,
+} from "ethers";
 import type { CleartextInstanceConfig } from "./types";
 import { CleartextExecutor } from "./cleartext-executor";
 import { createCleartextEncryptedInput } from "./cleartext-input";
-import { cleartextPublicDecrypt, cleartextUserDecrypt, type CleartextACL } from "./cleartext-decrypt";
+import {
+  cleartextPublicDecrypt,
+  cleartextUserDecrypt,
+  type CleartextACL,
+} from "./cleartext-decrypt";
 
 const ACL_ABI = [
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
@@ -960,18 +1034,30 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
 
   return {
     createEncryptedInput(contractAddress: string, userAddress: string) {
-      return createCleartextEncryptedInput({ aclContractAddress, chainId, contractAddress, userAddress });
+      return createCleartextEncryptedInput({
+        aclContractAddress,
+        chainId,
+        contractAddress,
+        userAddress,
+      });
     },
 
     async requestZKProofVerification(): Promise<never> {
-      throw new Error("requestZKProofVerification is not supported in cleartext mode. Use createEncryptedInput().encrypt() instead.");
+      throw new Error(
+        "requestZKProofVerification is not supported in cleartext mode. Use createEncryptedInput().encrypt() instead.",
+      );
     },
 
     generateKeypair() {
       return { publicKey: hexlify(randomBytes(800)), privateKey: hexlify(randomBytes(1632)) };
     },
 
-    createEIP712(publicKey: string, contractAddresses: string[], startTimestamp: number, durationDays: number) {
+    createEIP712(
+      publicKey: string,
+      contractAddresses: string[],
+      startTimestamp: number,
+      durationDays: number,
+    ) {
       return {
         domain: {
           name: "KMSVerifier",
@@ -1004,7 +1090,13 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
       };
     },
 
-    createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: string[], delegatorAddress: string, startTimestamp: number, durationDays: number) {
+    createDelegatedUserDecryptEIP712(
+      publicKey: string,
+      contractAddresses: string[],
+      delegatorAddress: string,
+      startTimestamp: number,
+      durationDays: number,
+    ) {
       return {
         domain: {
           name: "KMSVerifier",
@@ -1045,24 +1137,37 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
 
     async userDecrypt(
       handles: { handle: string | Uint8Array; contractAddress: string }[],
-      _privateKey: string, _publicKey: string, _signature: string,
-      _contractAddresses: string[], userAddress: string,
-      _startTimestamp: number, _durationDays: number,
+      _privateKey: string,
+      _publicKey: string,
+      _signature: string,
+      _contractAddresses: string[],
+      userAddress: string,
+      _startTimestamp: number,
+      _durationDays: number,
     ) {
       return cleartextUserDecrypt(handles, userAddress, executor, acl);
     },
 
     async delegatedUserDecrypt(
       handleContractPairs: { handle: string | Uint8Array; contractAddress: string }[],
-      _privateKey: string, _publicKey: string, _signature: string,
-      _contractAddresses: string[], delegatorAddress: string,
-      _delegateAddress: string, _startTimestamp: number, _durationDays: number,
+      _privateKey: string,
+      _publicKey: string,
+      _signature: string,
+      _contractAddresses: string[],
+      delegatorAddress: string,
+      _delegateAddress: string,
+      _startTimestamp: number,
+      _durationDays: number,
     ) {
       return cleartextUserDecrypt(handleContractPairs, delegatorAddress, executor, acl);
     },
 
-    getPublicKey() { return null; },
-    getPublicParams() { return null; },
+    getPublicKey() {
+      return null;
+    },
+    getPublicParams() {
+      return null;
+    },
   };
 }
 ```
@@ -1083,6 +1188,7 @@ feat(sdk): add createCleartextInstance factory
 ### Task 7: Wire up RelayerCleartext and update exports
 
 **Files:**
+
 - Modify: `packages/sdk/src/relayer/relayer-cleartext.ts` (replace import source)
 - Delete: `packages/sdk/src/relayer/relayer-sdk-cleartext.d.ts`
 - Modify: `packages/sdk/src/cleartext/index.ts` (add new exports)
@@ -1142,6 +1248,7 @@ feat(sdk): wire self-contained cleartext into RelayerCleartext
 ### Task 8: Integration test with hardhat
 
 **Files:**
+
 - Create: `packages/sdk/src/cleartext/__tests__/cleartext-integration.test.ts`
 
 **Step 1: Write integration test**
@@ -1168,7 +1275,7 @@ async function isHardhatRunning(): Promise<boolean> {
   }
 }
 
-describe.skipIf(!await isHardhatRunning())("cleartext integration", () => {
+describe.skipIf(!(await isHardhatRunning()))("cleartext integration", () => {
   let instance: Awaited<ReturnType<typeof createCleartextInstance>>;
 
   beforeAll(async () => {

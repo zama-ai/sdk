@@ -9,7 +9,15 @@
  * @module
  */
 
-import { getBytes, hexlify, AbiCoder, keccak256, concat, toUtf8Bytes, type SigningKey } from "ethers";
+import {
+  getBytes,
+  hexlify,
+  AbiCoder,
+  keccak256,
+  concat,
+  toUtf8Bytes,
+  type SigningKey,
+} from "ethers";
 import type { CleartextExecutor } from "./cleartext-executor";
 
 /** Decrypted value — `boolean` for ebool, `bigint` for all other FHE types. */
@@ -43,19 +51,24 @@ function getFheTypeId(handleHex: string): number {
 /** Map fheTypeId to the Solidity ABI type for encoding. */
 function fheTypeToSolidity(fheTypeId: number) {
   switch (fheTypeId) {
-    case 0: return "bool";         // ebool
-    case 2: return "uint256";      // euint8
-    case 3: return "uint256";      // euint16
-    case 4: return "uint256";      // euint32
-    case 5: return "uint256";      // euint64
-    case 6: return "uint256";      // euint128
-    case 7: return "address";      // eaddress
-    case 8: return "uint256";      // euint256
-    case 9: return "bytes";        // ebytes64
-    case 10: return "bytes";       // ebytes128
-    case 11: return "bytes";       // ebytes256
+    case 0:
+      return "bool"; // ebool
+    case 2:
+      return "uint256"; // euint8
+    case 3:
+      return "uint256"; // euint16
+    case 4:
+      return "uint256"; // euint32
+    case 5:
+      return "uint256"; // euint64
+    case 6:
+      return "uint256"; // euint128
+    case 7:
+      return "address"; // eaddress
+    case 8:
+      return "uint256"; // euint256
     default:
-      throw new Error(`Unknown FHE type ID: ${fheTypeId}`);
+      throw new Error(`Unsupported FHE type ID in cleartext mode: ${fheTypeId}`);
   }
 }
 
@@ -74,7 +87,9 @@ const EIP712_DOMAIN_TYPEHASH = keccak256(
 );
 
 const PUBLIC_DECRYPT_TYPEHASH = keccak256(
-  toUtf8Bytes("PublicDecryptVerification(bytes32[] ctHandles,bytes decryptedResult,bytes extraData)"),
+  toUtf8Bytes(
+    "PublicDecryptVerification(bytes32[] ctHandles,bytes decryptedResult,bytes extraData)",
+  ),
 );
 
 /**

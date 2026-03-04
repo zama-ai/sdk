@@ -180,11 +180,12 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
     ) {
       return {
         domain: {
-          name: "KMSVerifier",
-          version: "1",
+          name: "Decryption" as const,
+          version: "1" as const,
           chainId: BigInt(config.gatewayChainId),
           verifyingContract: config.verifyingContractAddressDecryption,
         },
+        primaryType: "DelegatedUserDecryptRequestVerification" as const,
         types: {
           EIP712Domain: [
             { name: "name", type: "string" },

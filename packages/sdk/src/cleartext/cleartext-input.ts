@@ -157,7 +157,7 @@ function signCiphertextVerification(
  *   [byte 1]     numSigners (1 for cleartext)
  *   [32*n bytes] handles
  *   [65*m bytes] signatures
- *   [remaining]  extraData: 0x00 version + 32-byte padded plaintext per value
+ *   [remaining]  extraData: 32-byte padded plaintext per value
  */
 function buildInputProof(
   handleHexes: string[],
@@ -217,7 +217,8 @@ export function createCleartextEncryptedInput(params: {
 
   const self: CleartextEncryptedInput = {
     addBool(value) {
-      if (Number(value) > 1) throw new Error("The value must be 0 or 1.");
+      const v = Number(value);
+      if (v < 0 || v > 1) throw new Error("The value must be 0 or 1.");
       checkLimit(2);
       values.push(BigInt(Number(value)));
       bits.push(2);

@@ -21,7 +21,11 @@ export class CleartextExecutor {
   constructor(params: { executorAddress: string; provider: Provider });
   constructor(arg: PlaintextContract | { executorAddress: string; provider: Provider }) {
     if ("executorAddress" in arg) {
-      this.#contract = new Contract(arg.executorAddress, EXECUTOR_ABI, arg.provider) as unknown as PlaintextContract;
+      this.#contract = new Contract(
+        arg.executorAddress,
+        EXECUTOR_ABI,
+        arg.provider,
+      ) as unknown as PlaintextContract;
     } else {
       this.#contract = arg;
     }

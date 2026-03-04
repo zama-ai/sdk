@@ -15,6 +15,7 @@ source and uses heavy internal types (`FhevmHandle`, `ACL`, `InputProof`,
 `FhevmHostChainConfig`, etc.) that cannot be imported from the token SDK.
 
 By rewriting the ~400 lines of cleartext logic using ethers.js directly, we:
+
 - Remove the dependency on an unreleased relayer-sdk feature
 - Produce a smaller bundle (no WASM, no heavy relayer-sdk code path)
 - Gain full control over cleartext behavior
@@ -30,6 +31,7 @@ By rewriting the ~400 lines of cleartext logic using ethers.js directly, we:
 ```
 
 Where:
+
 - `blobHash = keccak256("ZK-w_rct" + fakeCiphertext)`
 - `fakeCiphertext = TextEncoder("CLEARTEXT") + ABI.encode(uint256[])(values)`
 
@@ -46,19 +48,20 @@ Where:
 
 All files in `packages/sdk/src/cleartext/`:
 
-| File | Responsibility |
-|------|---------------|
-| `types.ts` | `CleartextInstanceConfig` type definition |
-| `cleartext-handles.ts` | `computeCleartextHandles()` — deterministic handle generation |
-| `cleartext-input.ts` | `createCleartextEncryptedInput()` — builder returning `{handles, inputProof}` |
+| File                    | Responsibility                                                                |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `types.ts`              | `CleartextInstanceConfig` type definition                                     |
+| `cleartext-handles.ts`  | `computeCleartextHandles()` — deterministic handle generation                 |
+| `cleartext-input.ts`    | `createCleartextEncryptedInput()` — builder returning `{handles, inputProof}` |
 | `cleartext-executor.ts` | `CleartextExecutor` — reads `plaintexts(bytes32)` from CleartextFHEVMExecutor |
-| `cleartext-decrypt.ts` | `cleartextPublicDecrypt()` + `cleartextUserDecrypt()` with ACL checks |
-| `cleartext-instance.ts` | `createCleartextInstance()` — factory wiring everything together |
-| `index.ts` | Public re-exports |
+| `cleartext-decrypt.ts`  | `cleartextPublicDecrypt()` + `cleartextUserDecrypt()` with ACL checks         |
+| `cleartext-instance.ts` | `createCleartextInstance()` — factory wiring everything together              |
+| `index.ts`              | Public re-exports                                                             |
 
 ## ACL contract interaction
 
 Two read-only calls via `ethers.Contract`:
+
 - `isAllowedForDecryption(bytes32 handle) → bool` — for public decrypt
 - `persistAllowed(bytes32 handle, address account) → bool` — for user decrypt (check both user and contract addresses)
 

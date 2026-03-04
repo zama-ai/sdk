@@ -89,7 +89,12 @@ export class RelayerCleartext implements RelayerSDK {
 
     const base = DefaultConfigs[chainId];
     const config = { ...base, ...overrides } as CleartextInstanceConfig;
-    if (!config.network || !config.cleartextExecutorAddress) {
+    if (
+      !config.network ||
+      !config.cleartextExecutorAddress ||
+      !config.coprocessorSignerPrivateKey ||
+      !config.kmsSignerPrivateKey
+    ) {
       throw new Error(`Incomplete cleartext config for chainId: ${chainId}`);
     }
 
@@ -214,7 +219,7 @@ export class RelayerCleartext implements RelayerSDK {
       delegatorAddress,
       startTimestamp,
       durationDays,
-    ) as unknown as KmsDelegatedUserDecryptEIP712Type;
+    ) as KmsDelegatedUserDecryptEIP712Type;
   }
 
   async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
