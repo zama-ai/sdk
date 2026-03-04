@@ -1,4 +1,5 @@
 import { createCleartextInstance } from "../cleartext/cleartext-instance";
+import { assertArray } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   Address,
@@ -213,13 +214,15 @@ export class RelayerCleartext implements RelayerSDK {
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const instance = await this.#ensureInstance();
+    // Cast needed: our plain `string` types don't satisfy the external lib's
+    // branded `0x${string}` / ChecksummedAddress types, but values are correct.
     return instance.createDelegatedUserDecryptEIP712(
       publicKey,
       contractAddresses,
       delegatorAddress,
       startTimestamp,
       durationDays,
-    ) as KmsDelegatedUserDecryptEIP712Type;
+    ) as unknown as KmsDelegatedUserDecryptEIP712Type;
   }
 
   async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {

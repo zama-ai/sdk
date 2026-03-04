@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assertAddress, assertObject, assertString, assertArray } from "../utils";
+import { assertAddress, assertObject, assertString, assertArray, assertNonNullable } from "../utils";
 
 describe("assertAddress", () => {
   it("accepts a valid checksummed address", () => {
@@ -112,5 +112,33 @@ describe("assertArray", () => {
 
   it("throws for undefined", () => {
     expect(() => assertArray(undefined, "ctx")).toThrow("ctx must be an array, got undefined");
+  });
+});
+
+describe("assertNonNullable", () => {
+  it("accepts a string", () => {
+    expect(() => assertNonNullable("hello", "test")).not.toThrow();
+  });
+
+  it("accepts zero", () => {
+    expect(() => assertNonNullable(0, "test")).not.toThrow();
+  });
+
+  it("accepts false", () => {
+    expect(() => assertNonNullable(false, "test")).not.toThrow();
+  });
+
+  it("accepts empty string", () => {
+    expect(() => assertNonNullable("", "test")).not.toThrow();
+  });
+
+  it("throws for null", () => {
+    expect(() => assertNonNullable(null, "ctx")).toThrow(TypeError);
+    expect(() => assertNonNullable(null, "ctx")).toThrow("ctx must not be null");
+  });
+
+  it("throws for undefined", () => {
+    expect(() => assertNonNullable(undefined, "ctx")).toThrow(TypeError);
+    expect(() => assertNonNullable(undefined, "ctx")).toThrow("ctx must not be undefined");
   });
 });

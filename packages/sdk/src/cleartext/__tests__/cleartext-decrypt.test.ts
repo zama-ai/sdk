@@ -59,7 +59,7 @@ describe("cleartextPublicDecrypt", () => {
     expect(result.decryptionProof.length).toBe(2 + 132);
   });
 
-  it("converts ebool to boolean", async () => {
+  it("converts ebool true (1n) to boolean true", async () => {
     const executor = mockExecutor(new Map([[HANDLE_EBOOL, 1n]]));
     const acl = mockAcl();
 
@@ -70,6 +70,29 @@ describe("cleartextPublicDecrypt", () => {
       mockSigningCtx,
     );
     expect(result.clearValues[HANDLE_EBOOL]).toBe(true);
+  });
+
+  it("converts ebool false (0n) to boolean false", async () => {
+    const executor = mockExecutor(new Map([[HANDLE_EBOOL, 0n]]));
+    const acl = mockAcl();
+
+    const result = await cleartextPublicDecrypt(
+      [HANDLE_EBOOL],
+      executor as never,
+      acl as never,
+      mockSigningCtx,
+    );
+    expect(result.clearValues[HANDLE_EBOOL]).toBe(false);
+  });
+
+  it("throws on unsupported FHE type ID", async () => {
+    const handleUnknown = makeHandle(99);
+    const executor = mockExecutor(new Map([[handleUnknown, 1n]]));
+    const acl = mockAcl();
+
+    await expect(
+      cleartextPublicDecrypt([handleUnknown], executor as never, acl as never, mockSigningCtx),
+    ).rejects.toThrow("Unsupported FHE type ID");
   });
 
   it("returns eaddress as bigint (matching RelayerSDK interface)", async () => {
@@ -192,6 +215,30 @@ describe("cleartextUserDecrypt", () => {
         acl as never,
       ),
     ).rejects.toThrow("not authorized");
+  });
+
+  it("decrypts multiple handles in a single call", async () => {
+    const handleA = makeHandle(4); // euint32
+    const handleB = makeHandle(5); // euint64
+    const executor = mockExecutor(
+      new Map([
+        [handleA, 10n],
+        [handleB, 20n],
+      ]),
+    );
+    const acl = mockAcl();
+
+    const result = await cleartextUserDecrypt(
+      [
+        { handle: handleA, contractAddress: CONTRACT },
+        { handle: handleB, contractAddress: CONTRACT },
+      ],
+      USER,
+      executor as never,
+      acl as never,
+    );
+    expect(result[handleA]).toBe(10n);
+    expect(result[handleB]).toBe(20n);
   });
 
   it("throws when contract lacks permission", async () => {

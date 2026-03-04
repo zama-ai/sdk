@@ -123,7 +123,7 @@ describe("createCleartextInstance", () => {
     const delegator = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
     const result = instance.createDelegatedUserDecryptEIP712(pubKey, contracts, delegator, 2000, 7);
 
-    expect(result.domain.name).toBe("KMSVerifier");
+    expect(result.domain.name).toBe("Decryption");
     expect(result.domain.chainId).toBe(BigInt(CONFIG.gatewayChainId));
     expect(result.types.DelegatedUserDecryptRequestVerification).toBeDefined();
     expect(result.message.publicKey).toBe(pubKey);

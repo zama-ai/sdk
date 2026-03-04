@@ -185,24 +185,27 @@ export async function cleartextPublicDecrypt(
   decryptionProof: string;
 }> {
   const handlesHex = handles.map((h) => (typeof h === "string" ? h : hexlify(h)));
+  const fheTypes = handlesHex.map((h) => getFheTypeId(h));
 
-  // Check ACL permissions
-  for (const h of handlesHex) {
-    if (!(await acl.isAllowedForDecryption(h))) {
-      throw new Error(`Handle ${h} is not allowed for decryption`);
-    }
-  }
+  // Check ACL permissions in parallel
+  await Promise.all(
+    handlesHex.map(async (h) => {
+      if (!(await acl.isAllowedForDecryption(h))) {
+        throw new Error(`Handle ${h} is not allowed for decryption`);
+      }
+    }),
+  );
 
   const rawValues = await executor.getPlaintexts(handlesHex);
 
   const clearValues: Record<string, ClearValue> = {};
   handlesHex.forEach((h, i) => {
-    clearValues[h] = formatPlaintext(rawValues[i]!, getFheTypeId(h));
+    clearValues[h] = formatPlaintext(rawValues[i]!, fheTypes[i]!);
   });
 
-  const abiTypes = handlesHex.map((h) => fheTypeToSolidity(getFheTypeId(h)));
-  const abiValues = handlesHex.map((h, i) => {
-    const fheType = getFheTypeId(h);
+  const abiTypes = fheTypes.map((t) => fheTypeToSolidity(t));
+  const abiValues = handlesHex.map((_, i) => {
+    const fheType = fheTypes[i]!;
     if (fheType === 0) return rawValues[i]! === 1n; // bool
     if (fheType === 7) return "0x" + rawValues[i]!.toString(16).padStart(40, "0"); // address
     return rawValues[i]!;
@@ -234,23 +237,26 @@ export async function cleartextUserDecrypt(
     typeof p.handle === "string" ? p.handle : hexlify(p.handle),
   );
 
-  // Check ACL: both user and contract must have persistAllowed
-  for (let i = 0; i < handlesHex.length; i++) {
-    const h = handlesHex[i]!;
-    const contract = handleContractPairs[i]!.contractAddress;
-    if (!(await acl.persistAllowed(h, userAddress))) {
-      throw new Error(`User ${userAddress} is not authorized to decrypt handle ${h}`);
-    }
-    if (!(await acl.persistAllowed(h, contract))) {
-      throw new Error(`Contract ${contract} is not authorized to decrypt handle ${h}`);
-    }
-  }
+  const fheTypes = handlesHex.map((h) => getFheTypeId(h));
+
+  // Check ACL: both user and contract must have persistAllowed (parallel)
+  await Promise.all(
+    handlesHex.map(async (h, i) => {
+      const contract = handleContractPairs[i]!.contractAddress;
+      if (!(await acl.persistAllowed(h, userAddress))) {
+        throw new Error(`User ${userAddress} is not authorized to decrypt handle ${h}`);
+      }
+      if (!(await acl.persistAllowed(h, contract))) {
+        throw new Error(`Contract ${contract} is not authorized to decrypt handle ${h}`);
+      }
+    }),
+  );
 
   const rawValues = await executor.getPlaintexts(handlesHex);
 
   const results: Record<string, ClearValue> = {};
   handlesHex.forEach((h, i) => {
-    results[h] = formatPlaintext(rawValues[i]!, getFheTypeId(h));
+    results[h] = formatPlaintext(rawValues[i]!, fheTypes[i]!);
   });
 
   return results;

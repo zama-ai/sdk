@@ -50,6 +50,15 @@ export function assertArray(value: unknown, context: string): asserts value is u
   }
 }
 
+export function assertNonNullable<T>(
+  value: T,
+  context: string,
+): asserts value is NonNullable<T> {
+  if (value === null || value === undefined) {
+    throw new TypeError(`${context} must not be ${value}`);
+  }
+}
+
 // ── Concurrency helper ──────────────────────────────────────
 
 /**

@@ -192,7 +192,7 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
             { name: "version", type: "string" },
             { name: "chainId", type: "uint256" },
             { name: "verifyingContract", type: "address" },
-          ],
+          ] as const,
           DelegatedUserDecryptRequestVerification: [
             { name: "publicKey", type: "bytes" },
             { name: "contractAddresses", type: "address[]" },
@@ -200,7 +200,7 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
             { name: "startTimestamp", type: "uint256" },
             { name: "durationDays", type: "uint256" },
             { name: "extraData", type: "bytes" },
-          ],
+          ] as const,
         },
         message: {
           publicKey,
