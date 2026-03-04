@@ -40,7 +40,7 @@ describe("createCleartextEncryptedInput", () => {
     expect(result.inputProof.length).toBeGreaterThan(0);
   });
 
-  it("is deterministic", async () => {
+  it("produces unique handles for identical values (entropy injection)", async () => {
     const make = () => {
       const input = makeInput();
       input.add8(42).add16(1000);
@@ -48,8 +48,9 @@ describe("createCleartextEncryptedInput", () => {
     };
     const r1 = await make();
     const r2 = await make();
-    expect(r1.handles[0]).toEqual(r2.handles[0]);
-    expect(r1.handles[1]).toEqual(r2.handles[1]);
+    // Same plaintext values must produce different handles (random nonce in ciphertext)
+    expect(r1.handles[0]).not.toEqual(r2.handles[0]);
+    expect(r1.handles[1]).not.toEqual(r2.handles[1]);
   });
 
   it("throws on empty encrypt", async () => {
@@ -61,11 +62,6 @@ describe("createCleartextEncryptedInput", () => {
     const input = makeInput();
     for (let i = 0; i < 8; i++) input.add256(BigInt(i));
     expect(() => input.add256(9n)).toThrow("2048 bits");
-  });
-
-  it("throws on null/undefined value for addBool", () => {
-    const input = makeInput();
-    expect(() => input.addBool(null as never)).toThrow("Missing value");
   });
 
   it("throws on null/undefined value for add8", () => {

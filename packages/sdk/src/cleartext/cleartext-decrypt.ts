@@ -42,9 +42,21 @@ function getFheTypeId(handleHex: string): number {
 
 /** Map fheTypeId to the Solidity ABI type for encoding. */
 function fheTypeToSolidity(fheTypeId: number) {
-  if (fheTypeId === 0) return "bool";
-  if (fheTypeId === 7) return "address";
-  return "uint256";
+  switch (fheTypeId) {
+    case 0: return "bool";         // ebool
+    case 2: return "uint256";      // euint8
+    case 3: return "uint256";      // euint16
+    case 4: return "uint256";      // euint32
+    case 5: return "uint256";      // euint64
+    case 6: return "uint256";      // euint128
+    case 7: return "address";      // eaddress
+    case 8: return "uint256";      // euint256
+    case 9: return "bytes";        // ebytes64
+    case 10: return "bytes";       // ebytes128
+    case 11: return "bytes";       // ebytes256
+    default:
+      throw new Error(`Unknown FHE type ID: ${fheTypeId}`);
+  }
 }
 
 /** Format a raw bigint plaintext based on the handle's FHE type. */
@@ -151,7 +163,7 @@ export async function cleartextPublicDecrypt(
   handles: (Uint8Array | string)[],
   executor: CleartextExecutor,
   acl: CleartextACL,
-  decryptionSigningCtx?: DecryptionSigningContext,
+  decryptionSigningCtx: DecryptionSigningContext,
 ): Promise<{
   clearValues: Record<string, ClearValue>;
   abiEncodedClearValues: string;
@@ -182,14 +194,8 @@ export async function cleartextPublicDecrypt(
   });
   const abiEncodedClearValues = abiCoder.encode(abiTypes, abiValues);
 
-  // Build signed decryption proof if signing context is provided
-  let decryptionProof: string;
-  if (decryptionSigningCtx) {
-    const proofBytes = buildDecryptionProof(handlesHex, abiEncodedClearValues, decryptionSigningCtx);
-    decryptionProof = hexlify(proofBytes);
-  } else {
-    decryptionProof = "0x00";
-  }
+  const proofBytes = buildDecryptionProof(handlesHex, abiEncodedClearValues, decryptionSigningCtx);
+  const decryptionProof = hexlify(proofBytes);
 
   return { clearValues, abiEncodedClearValues, decryptionProof };
 }

@@ -24,7 +24,7 @@ describe("computeCleartextHandles", () => {
     }
   });
 
-  it("is deterministic — same inputs produce same handles", () => {
+  it("produces unique handles for identical inputs (entropy injection)", () => {
     const params = {
       values: [42n, 100n],
       encryptionBits: [32, 64],
@@ -35,8 +35,8 @@ describe("computeCleartextHandles", () => {
     const result1 = computeCleartextHandles(params);
     const result2 = computeCleartextHandles(params);
 
-    expect(result1.handles).toEqual(result2.handles);
-    expect(result1.fakeCiphertext).toEqual(result2.fakeCiphertext);
+    expect(result1.handles[0]).not.toBe(result2.handles[0]);
+    expect(result1.fakeCiphertext).not.toEqual(result2.fakeCiphertext);
   });
 
   it("different values produce different handles", () => {

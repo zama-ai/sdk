@@ -6,7 +6,16 @@
  * expected by the CleartextFHEVM executor.
  */
 
-import { keccak256, AbiCoder, concat, toBeHex, zeroPadValue, getBytes, hexlify } from "ethers";
+import {
+  keccak256,
+  AbiCoder,
+  concat,
+  toBeHex,
+  zeroPadValue,
+  getBytes,
+  hexlify,
+  randomBytes,
+} from "ethers";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -94,10 +103,6 @@ function asciiToHex(str: string): string {
   return hex;
 }
 
-function domainHex(domain: string): string {
-  return asciiToHex(domain);
-}
-
 /**
  * Encode a chainId as an 8-byte big-endian hex string.
  */
@@ -112,19 +117,17 @@ function chainIdHex(chainId: number): string {
 /**
  * Build a fake ciphertext blob from the plaintext values.
  *
- * Layout: `TextEncoder("CLEARTEXT") || ABI.encode(uint256[])(values)`
+ * Layout: `"CLEARTEXT" || nonce(32) || ABI.encode(uint256[])(values)`
+ *
+ * The 32-byte random nonce ensures that encrypting the same value twice
+ * produces different handles — matching production FHE behavior where
+ * entropy injection prevents handle collisions across users.
  */
 function buildFakeCiphertext(values: bigint[]): Uint8Array {
   const prefix = asciiToHex("CLEARTEXT");
+  const nonce = randomBytes(32);
   const encoded = abiCoder.encode(["uint256[]"], [values]);
-  return getBytes(concat([prefix, encoded]));
-}
-
-/**
- * Compute the blob hash: `keccak256(RAW_CT_HASH_DOMAIN_SEPARATOR || fakeCiphertext)`.
- */
-function computeBlobHash(fakeCiphertext: Uint8Array): string {
-  return keccak256(concat([domainHex(RAW_CT_HASH_DOMAIN_SEPARATOR), fakeCiphertext]));
+  return getBytes(concat([prefix, nonce, encoded]));
 }
 
 /**
@@ -150,7 +153,7 @@ function computeSingleHandle(
   // hash input = domain || blobHash || index(1 byte) || aclAddr(20 bytes) || chainId(8 bytes)
   const indexHex = hexlify(Uint8Array.from([index]));
   const hashInput = concat([
-    domainHex(HANDLE_HASH_DOMAIN_SEPARATOR),
+    asciiToHex(HANDLE_HASH_DOMAIN_SEPARATOR),
     blobHash,
     indexHex,
     aclContractAddress,
@@ -196,7 +199,7 @@ export function computeCleartextHandles(
   }
 
   const fakeCiphertext = buildFakeCiphertext(values);
-  const blobHash = computeBlobHash(fakeCiphertext);
+  const blobHash = keccak256(concat([asciiToHex(RAW_CT_HASH_DOMAIN_SEPARATOR), fakeCiphertext]));
 
   const handles: string[] = values.map((_, i) => {
     const bits = encryptionBits[i]!;

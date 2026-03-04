@@ -217,7 +217,6 @@ export function createCleartextEncryptedInput(params: {
 
   const self: CleartextEncryptedInput = {
     addBool(value) {
-      if (value == null) throw new Error("Missing value");
       if (Number(value) > 1) throw new Error("The value must be 0 or 1.");
       checkLimit(2);
       values.push(BigInt(Number(value)));

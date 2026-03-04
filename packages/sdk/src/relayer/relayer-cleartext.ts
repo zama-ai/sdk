@@ -154,6 +154,9 @@ export class RelayerCleartext implements RelayerSDK {
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const instance = await this.#ensureInstance();
     const input = instance.createEncryptedInput(params.contractAddress, params.userAddress);
+    // TODO: support all FHE types (addBool, add8, add16, add32, add128, add256, addAddress)
+    // Currently defaults to add64 — callers needing other types should use
+    // createCleartextInstance() and the low-level add* methods directly.
     for (const value of params.values) {
       try {
         input.add64(value);

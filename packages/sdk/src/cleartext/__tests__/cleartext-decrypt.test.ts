@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import { cleartextPublicDecrypt, cleartextUserDecrypt } from "../cleartext-decrypt";
+import { SigningKey } from "ethers";
+import {
+  cleartextPublicDecrypt,
+  cleartextUserDecrypt,
+  type DecryptionSigningContext,
+} from "../cleartext-decrypt";
 
 // Build a fake handle with fheTypeId at byte 30
 function makeHandle(fheTypeId: number): string {
@@ -17,6 +22,12 @@ const HANDLE_EUINT32 = makeHandle(4);
 const HANDLE_EBOOL = makeHandle(0);
 const USER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 const CONTRACT = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
+
+const mockSigningCtx: DecryptionSigningContext = {
+  signingKey: new SigningKey("0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91"),
+  gatewayChainId: 10901,
+  verifyingContract: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
+};
 
 function mockExecutor(map: Map<string, bigint>) {
   return {
@@ -36,16 +47,28 @@ describe("cleartextPublicDecrypt", () => {
     const executor = mockExecutor(new Map([[HANDLE_EUINT32, 42n]]));
     const acl = mockAcl();
 
-    const result = await cleartextPublicDecrypt([HANDLE_EUINT32], executor as never, acl as never);
+    const result = await cleartextPublicDecrypt(
+      [HANDLE_EUINT32],
+      executor as never,
+      acl as never,
+      mockSigningCtx,
+    );
     expect(result.clearValues[HANDLE_EUINT32]).toBe(42n);
-    expect(result.decryptionProof).toBe("0x00");
+    // Proof is now always a signed EIP-712 proof (1 byte numSigners + 65 byte sig = 66 bytes = 132 hex + "0x" prefix)
+    expect(result.decryptionProof.startsWith("0x")).toBe(true);
+    expect(result.decryptionProof.length).toBe(2 + 132);
   });
 
   it("converts ebool to boolean", async () => {
     const executor = mockExecutor(new Map([[HANDLE_EBOOL, 1n]]));
     const acl = mockAcl();
 
-    const result = await cleartextPublicDecrypt([HANDLE_EBOOL], executor as never, acl as never);
+    const result = await cleartextPublicDecrypt(
+      [HANDLE_EBOOL],
+      executor as never,
+      acl as never,
+      mockSigningCtx,
+    );
     expect(result.clearValues[HANDLE_EBOOL]).toBe(true);
   });
 
@@ -55,7 +78,12 @@ describe("cleartextPublicDecrypt", () => {
     const executor = mockExecutor(new Map([[handleAddress, addressValue]]));
     const acl = mockAcl();
 
-    const result = await cleartextPublicDecrypt([handleAddress], executor as never, acl as never);
+    const result = await cleartextPublicDecrypt(
+      [handleAddress],
+      executor as never,
+      acl as never,
+      mockSigningCtx,
+    );
     expect(result.clearValues[handleAddress]).toBe(addressValue);
     expect(result.abiEncodedClearValues).toBeDefined();
     expect(result.abiEncodedClearValues.length).toBeGreaterThan(2);
@@ -78,21 +106,33 @@ describe("cleartextPublicDecrypt", () => {
       [handleBool, handleUint, handleAddr],
       executor as never,
       acl as never,
+      mockSigningCtx,
     );
     expect(result.clearValues[handleBool]).toBe(true);
     expect(result.clearValues[handleUint]).toBe(999n);
-    expect(result.clearValues[handleAddr]).toBe(BigInt("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"));
+    expect(result.clearValues[handleAddr]).toBe(
+      BigInt("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+    );
     expect(result.abiEncodedClearValues.startsWith("0x")).toBe(true);
   });
 
   it("accepts Uint8Array handles", async () => {
     const handleBytes = new Uint8Array(32);
     handleBytes[30] = 4; // euint32
-    const handleHex = "0x" + Array.from(handleBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const handleHex =
+      "0x" +
+      Array.from(handleBytes)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
     const executor = mockExecutor(new Map([[handleHex, 77n]]));
     const acl = mockAcl();
 
-    const result = await cleartextPublicDecrypt([handleBytes], executor as never, acl as never);
+    const result = await cleartextPublicDecrypt(
+      [handleBytes],
+      executor as never,
+      acl as never,
+      mockSigningCtx,
+    );
     expect(result.clearValues[handleHex]).toBe(77n);
   });
 
@@ -101,7 +141,7 @@ describe("cleartextPublicDecrypt", () => {
     const acl = mockAcl({ publicAllowed: false });
 
     await expect(
-      cleartextPublicDecrypt([HANDLE_EUINT32], executor as never, acl as never),
+      cleartextPublicDecrypt([HANDLE_EUINT32], executor as never, acl as never, mockSigningCtx),
     ).rejects.toThrow("not allowed for decryption");
   });
 });
@@ -123,7 +163,11 @@ describe("cleartextUserDecrypt", () => {
   it("accepts Uint8Array handles", async () => {
     const handleBytes = new Uint8Array(32);
     handleBytes[30] = 4; // euint32
-    const handleHex = "0x" + Array.from(handleBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const handleHex =
+      "0x" +
+      Array.from(handleBytes)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
     const executor = mockExecutor(new Map([[handleHex, 55n]]));
     const acl = mockAcl();
 

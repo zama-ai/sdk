@@ -258,7 +258,7 @@ await token.shield(1000n);
 const balance = await token.balanceOf();
 ```
 
-See [Cleartext Mode](sdk/cleartext-mode.md) for the full guide including React setup, switching between environments, and the low-level API.
+See [Cleartext Mode](sdk/cleartext-mode.md) for the full guide including React setup, Hardhat setup, and switching between environments.
 
 ---
 
