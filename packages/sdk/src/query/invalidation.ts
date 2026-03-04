@@ -1,6 +1,21 @@
 import type { Query, QueryClient } from "@tanstack/query-core";
 import { zamaQueryKeys } from "./query-keys";
 
+function invalidateUnderlyingAllowanceQueries(queryClient: QueryClient, tokenAddress: string): void {
+  queryClient.invalidateQueries({
+    queryKey: zamaQueryKeys.underlyingAllowance.token(tokenAddress),
+  });
+  queryClient.removeQueries({
+    queryKey: zamaQueryKeys.underlyingAllowance.token(tokenAddress),
+  });
+}
+
+function invalidateAfterUnwrapLike(queryClient: QueryClient, tokenAddress: string): void {
+  invalidateBalanceQueries(queryClient, tokenAddress);
+  invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
+  invalidateWagmiBalanceQueries(queryClient);
+}
+
 export function invalidateBalanceQueries(queryClient: QueryClient, tokenAddress: string): void {
   queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialHandle.token(tokenAddress) });
   queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialHandle.token(tokenAddress) });
@@ -10,25 +25,15 @@ export function invalidateBalanceQueries(queryClient: QueryClient, tokenAddress:
 }
 
 export function invalidateAfterShield(queryClient: QueryClient, tokenAddress: string): void {
-  invalidateBalanceQueries(queryClient, tokenAddress);
-  queryClient.invalidateQueries({
-    queryKey: zamaQueryKeys.underlyingAllowance.token(tokenAddress),
-  });
-  queryClient.removeQueries({
-    queryKey: zamaQueryKeys.underlyingAllowance.token(tokenAddress),
-  });
-  invalidateWagmiBalanceQueries(queryClient);
+  invalidateAfterUnwrapLike(queryClient, tokenAddress);
 }
 
 export function invalidateAfterUnshield(queryClient: QueryClient, tokenAddress: string): void {
-  invalidateBalanceQueries(queryClient, tokenAddress);
-  queryClient.invalidateQueries({
-    queryKey: zamaQueryKeys.underlyingAllowance.token(tokenAddress),
-  });
-  queryClient.removeQueries({
-    queryKey: zamaQueryKeys.underlyingAllowance.token(tokenAddress),
-  });
-  invalidateWagmiBalanceQueries(queryClient);
+  invalidateAfterUnwrapLike(queryClient, tokenAddress);
+}
+
+export function invalidateAfterApproveUnderlying(queryClient: QueryClient, tokenAddress: string): void {
+  invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
 }
 
 export function invalidateAfterApprove(queryClient: QueryClient, tokenAddress: string): void {

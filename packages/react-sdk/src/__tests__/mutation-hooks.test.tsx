@@ -16,6 +16,7 @@ import { useUnwrapAll } from "../token/use-unwrap-all";
 import { createMockRelayer, createMockSigner, renderWithProviders } from "./test-utils";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+const OTHER_TOKEN = "0x9999999999999999999999999999999999999999" as Address;
 const USER = "0x2222222222222222222222222222222222222222" as Address;
 const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address;
@@ -159,11 +160,14 @@ describe("useApproveUnderlying", () => {
     );
 
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(TOKEN);
+    const otherAllowanceKey = zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN);
     queryClient.setQueryData(allowanceKey, 500n);
+    queryClient.setQueryData(otherAllowanceKey, 777n);
 
     await act(() => result.current.mutateAsync({ amount: 1000n }));
 
     expect(queryClient.getQueryData(allowanceKey)).toBeUndefined();
+    expect(queryClient.getQueryData(otherAllowanceKey)).toBe(777n);
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 });

@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/query-core";
 import { describe, expect, test, vi } from "vitest";
 import {
   invalidateAfterApprove,
+  invalidateAfterApproveUnderlying,
   invalidateAfterShield,
   invalidateAfterUnshield,
   invalidateBalanceQueries,
@@ -76,6 +77,18 @@ describe("invalidation", () => {
 
     expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
       queryKey: zamaQueryKeys.confidentialIsApproved.token("0xabc"),
+    });
+  });
+
+  test("invalidateAfterApproveUnderlying invalidates and removes allowance for token key", () => {
+    const qc = createMockQueryClient();
+    invalidateAfterApproveUnderlying(qc, "0xabc");
+
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
+      queryKey: zamaQueryKeys.underlyingAllowance.token("0xabc"),
+    });
+    expect(vi.mocked(qc.removeQueries)).toHaveBeenCalledWith({
+      queryKey: zamaQueryKeys.underlyingAllowance.token("0xabc"),
     });
   });
 
