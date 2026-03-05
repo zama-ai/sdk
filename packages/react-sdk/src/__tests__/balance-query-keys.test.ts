@@ -1,5 +1,5 @@
 import type { Query } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "../test-fixtures";
 import type { Address } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
@@ -9,43 +9,49 @@ import {
   wagmiBalancePredicates,
 } from "../token/balance-query-keys";
 
-const TOKEN = "0x1111111111111111111111111111111111111111";
-const OWNER = "0x2222222222222222222222222222222222222222";
-
 function queryWithKey(queryKey: unknown): Query {
   return { queryKey } as unknown as Query;
 }
 
 describe("balance-query-keys", () => {
-  it("builds expected confidential balance query keys", () => {
+  it("builds expected confidential balance query keys", ({ tokenAddress, userAddress }) => {
     expect(confidentialBalanceQueryKeys.all).toEqual(["confidentialBalance"]);
-    expect(confidentialBalanceQueryKeys.token(TOKEN)).toEqual(["confidentialBalance", TOKEN]);
-    expect(confidentialBalanceQueryKeys.owner(TOKEN, OWNER)).toEqual([
+    expect(confidentialBalanceQueryKeys.token(tokenAddress)).toEqual([
       "confidentialBalance",
-      TOKEN,
-      OWNER,
+      tokenAddress,
+    ]);
+    expect(confidentialBalanceQueryKeys.owner(tokenAddress, userAddress)).toEqual([
+      "confidentialBalance",
+      tokenAddress,
+      userAddress,
     ]);
   });
 
-  it("builds expected batch confidential balance and handle query keys", () => {
+  it("builds expected batch confidential balance and handle query keys", ({
+    tokenAddress,
+    userAddress,
+  }) => {
     expect(confidentialBalancesQueryKeys.all).toEqual(["confidentialBalances"]);
-    expect(confidentialBalancesQueryKeys.tokens([TOKEN], OWNER)).toEqual([
+    expect(confidentialBalancesQueryKeys.tokens([tokenAddress], userAddress)).toEqual([
       "confidentialBalances",
-      [TOKEN],
-      OWNER,
+      [tokenAddress],
+      userAddress,
     ]);
     expect(confidentialHandleQueryKeys.all).toEqual(["confidentialHandle"]);
-    expect(confidentialHandleQueryKeys.token(TOKEN)).toEqual(["confidentialHandle", TOKEN]);
-    expect(confidentialHandleQueryKeys.owner(TOKEN, OWNER)).toEqual([
+    expect(confidentialHandleQueryKeys.token(tokenAddress)).toEqual([
       "confidentialHandle",
-      TOKEN,
-      OWNER,
+      tokenAddress,
+    ]);
+    expect(confidentialHandleQueryKeys.owner(tokenAddress, userAddress)).toEqual([
+      "confidentialHandle",
+      tokenAddress,
+      userAddress,
     ]);
     expect(confidentialHandlesQueryKeys.all).toEqual(["confidentialHandles"]);
-    expect(confidentialHandlesQueryKeys.tokens([TOKEN], OWNER)).toEqual([
+    expect(confidentialHandlesQueryKeys.tokens([tokenAddress], userAddress)).toEqual([
       "confidentialHandles",
-      [TOKEN],
-      OWNER,
+      [tokenAddress],
+      userAddress,
     ]);
   });
 

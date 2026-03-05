@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueries } from "@tanstack/react-query";
+import type { DecryptedValue } from "@zama-fhe/sdk";
 import { decryptionKeys } from "./decryption-cache";
 
 /**
@@ -16,9 +17,9 @@ export function useUserDecryptedValues(handles: string[]) {
     })),
   });
 
-  const data: Record<string, bigint | undefined> = {};
+  const data: Record<string, DecryptedValue | undefined> = {};
   for (let i = 0; i < handles.length; i++) {
-    data[handles[i]!] = results[i]!.data as bigint | undefined;
+    data[handles[i]!] = results[i]!.data as DecryptedValue | undefined;
   }
 
   return {

@@ -39,7 +39,10 @@ export function BatchTransferForm({
         const amount2 = BigInt(formData.get("amount2") as string);
 
         const encrypted = await encrypt.mutateAsync({
-          values: [amount1, amount2],
+          values: [
+            { value: amount1, type: "euint64" as const },
+            { value: amount2, type: "euint64" as const },
+          ],
           contractAddress: batcherAddress,
           userAddress,
         });

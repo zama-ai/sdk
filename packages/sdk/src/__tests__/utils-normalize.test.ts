@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "../test-fixtures";
 import { normalizeAddress } from "../utils";
 
 describe("normalizeAddress", () => {

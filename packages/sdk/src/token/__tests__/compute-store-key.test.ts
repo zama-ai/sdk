@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "../../test-fixtures";
 import { computeStoreKey } from "../credentials-manager";
 
 describe("computeStoreKey", () => {
