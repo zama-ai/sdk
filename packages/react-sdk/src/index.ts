@@ -11,7 +11,7 @@
 export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
-export { useEncrypt, encryptMutationOptions } from "./relayer/use-encrypt";
+export { useEncrypt } from "./relayer/use-encrypt";
 export { useUserDecrypt } from "./relayer/use-user-decrypt";
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
@@ -21,20 +21,8 @@ export { useCreateDelegatedUserDecryptEIP712 } from "./relayer/use-create-delega
 export type { CreateDelegatedUserDecryptEIP712Params } from "./relayer/use-create-delegated-user-decrypt-eip712";
 export { useDelegatedUserDecrypt } from "./relayer/use-delegated-user-decrypt";
 export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
-export {
-  usePublicKey,
-  publicKeyQueryKeys,
-  publicKeyQueryOptions,
-  type PublicKeyData,
-  type PublicKeyResult,
-} from "./relayer/use-public-key";
-export {
-  usePublicParams,
-  publicParamsQueryKeys,
-  publicParamsQueryOptions,
-  type PublicParamsData,
-  type PublicParamsResult,
-} from "./relayer/use-public-params";
+export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
+export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
 
 // Orchestration hooks
 export {
@@ -202,131 +190,118 @@ export {
   useConfidentialBalances,
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
-  type ConfidentialBalancesData,
 } from "./token/use-confidential-balances";
-export { useAllow, allowMutationOptions } from "./token/use-allow";
-export { useIsAllowed, isAllowedQueryKeys, isAllowedQueryOptions } from "./token/use-is-allowed";
-export { useRevoke, revokeMutationOptions } from "./token/use-revoke";
-export { useRevokeSession, revokeSessionMutationOptions } from "./token/use-revoke-session";
+export { useAllow } from "./token/use-allow";
+export { useIsAllowed } from "./token/use-is-allowed";
+export { useRevoke } from "./token/use-revoke";
+export { useRevokeSession } from "./token/use-revoke-session";
 export {
   useConfidentialTransfer,
-  confidentialTransferMutationOptions,
-  type ConfidentialTransferParams,
   type UseConfidentialTransferConfig,
 } from "./token/use-confidential-transfer";
-export {
-  useConfidentialTransferFrom,
-  confidentialTransferFromMutationOptions,
-  type ConfidentialTransferFromParams,
-} from "./token/use-confidential-transfer-from";
-export {
-  useConfidentialApprove,
-  confidentialApproveMutationOptions,
-  type ConfidentialApproveParams,
-} from "./token/use-confidential-approve";
+export { useConfidentialTransferFrom } from "./token/use-confidential-transfer-from";
+export { useConfidentialApprove } from "./token/use-confidential-approve";
 export {
   useConfidentialIsApproved,
   useConfidentialIsApprovedSuspense,
-  confidentialIsApprovedQueryKeys,
-  confidentialIsApprovedQueryOptions,
   type UseConfidentialIsApprovedConfig,
   type UseConfidentialIsApprovedSuspenseConfig,
 } from "./token/use-confidential-is-approved";
-export {
-  useShield,
-  shieldMutationOptions,
-  type ShieldParams,
-  type UseShieldConfig,
-} from "./token/use-shield";
-export {
-  useShieldETH,
-  shieldETHMutationOptions,
-  type ShieldETHParams,
-} from "./token/use-shield-eth";
-export { useUnwrap, unwrapMutationOptions, type UnwrapParams } from "./token/use-unwrap";
-export { useUnwrapAll, unwrapAllMutationOptions } from "./token/use-unwrap-all";
-export {
-  useFinalizeUnwrap,
-  finalizeUnwrapMutationOptions,
-  type FinalizeUnwrapParams,
-} from "./token/use-finalize-unwrap";
-export { useUnshield, unshieldMutationOptions, type UnshieldParams } from "./token/use-unshield";
-export {
-  useUnshieldAll,
-  unshieldAllMutationOptions,
-  type UnshieldAllParams,
-} from "./token/use-unshield-all";
-export {
-  useResumeUnshield,
-  resumeUnshieldMutationOptions,
-  type ResumeUnshieldParams,
-} from "./token/use-resume-unshield";
+export { useShield, type UseShieldConfig } from "./token/use-shield";
+export { useShieldETH } from "./token/use-shield-eth";
+export { useUnwrap } from "./token/use-unwrap";
+export { useUnwrapAll } from "./token/use-unwrap-all";
+export { useFinalizeUnwrap } from "./token/use-finalize-unwrap";
+export { useUnshield } from "./token/use-unshield";
+export { useUnshieldAll } from "./token/use-unshield-all";
+export { useResumeUnshield } from "./token/use-resume-unshield";
 export {
   useUnderlyingAllowance,
   useUnderlyingAllowanceSuspense,
-  underlyingAllowanceQueryKeys,
-  underlyingAllowanceQueryOptions,
   type UseUnderlyingAllowanceConfig,
 } from "./token/use-underlying-allowance";
 export {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-} from "./token/balance-query-keys";
-export {
   useWrapperDiscovery,
   useWrapperDiscoverySuspense,
-  wrapperDiscoveryQueryKeys,
-  wrapperDiscoveryQueryOptions,
   type UseWrapperDiscoveryConfig,
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
-export {
-  useMetadata,
-  useMetadataSuspense,
-  metadataQueryKeys,
-  metadataQueryOptions,
-  type TokenMetadata,
-} from "./token/use-metadata";
-export {
-  useActivityFeed,
-  activityFeedQueryKeys,
-  type UseActivityFeedConfig,
-} from "./token/use-activity-feed";
-export {
-  useApproveUnderlying,
-  approveUnderlyingMutationOptions,
-  type ApproveUnderlyingParams,
-} from "./token/use-approve-underlying";
+export { useMetadata, useMetadataSuspense, type TokenMetadata } from "./token/use-metadata";
+export { useActivityFeed, type UseActivityFeedConfig } from "./token/use-activity-feed";
+export { useApproveUnderlying } from "./token/use-approve-underlying";
 export {
   useIsConfidential,
   useIsConfidentialSuspense,
-  isConfidentialQueryKeys,
-  isConfidentialQueryOptions,
   useIsWrapper,
   useIsWrapperSuspense,
-  isWrapperQueryKeys,
-  isWrapperQueryOptions,
 } from "./token/use-is-confidential";
-export {
-  useTotalSupply,
-  useTotalSupplySuspense,
-  totalSupplyQueryKeys,
-  totalSupplyQueryOptions,
-} from "./token/use-total-supply";
+export { useTotalSupply, useTotalSupplySuspense } from "./token/use-total-supply";
 export {
   useShieldFee,
   useUnshieldFee,
   useBatchTransferFee,
   useFeeRecipient,
+  type UseFeeConfig,
+} from "./token/use-fees";
+
+// Re-export query utilities and factories from core sdk/query
+export {
+  zamaQueryKeys,
+  hashFn,
+  filterQueryOptions,
+  signerAddressQueryOptions,
+  tokenMetadataQueryOptions,
+  isConfidentialQueryOptions,
+  isWrapperQueryOptions,
+  totalSupplyQueryOptions,
+  wrapperDiscoveryQueryOptions,
+  underlyingAllowanceQueryOptions,
+  confidentialIsApprovedQueryOptions,
   shieldFeeQueryOptions,
   unshieldFeeQueryOptions,
   batchTransferFeeQueryOptions,
   feeRecipientQueryOptions,
-  feeQueryKeys,
-  type UseFeeConfig,
-} from "./token/use-fees";
+  publicKeyQueryOptions,
+  publicParamsQueryOptions,
+  confidentialHandleQueryOptions,
+  confidentialBalanceQueryOptions,
+  confidentialHandlesQueryOptions,
+  confidentialBalancesQueryOptions,
+  type ConfidentialBalancesData,
+  activityFeedQueryOptions,
+  shieldMutationOptions,
+  type ShieldParams,
+  shieldETHMutationOptions,
+  type ShieldETHParams,
+  confidentialTransferMutationOptions,
+  type ConfidentialTransferParams,
+  confidentialTransferFromMutationOptions,
+  type ConfidentialTransferFromParams,
+  confidentialApproveMutationOptions,
+  type ConfidentialApproveParams,
+  approveUnderlyingMutationOptions,
+  type ApproveUnderlyingParams,
+  unshieldMutationOptions,
+  type UnshieldParams,
+  unshieldAllMutationOptions,
+  type UnshieldAllParams,
+  resumeUnshieldMutationOptions,
+  type ResumeUnshieldParams,
+  unwrapMutationOptions,
+  type UnwrapParams,
+  unwrapAllMutationOptions,
+  finalizeUnwrapMutationOptions,
+  type FinalizeUnwrapParams,
+  encryptMutationOptions,
+  allowMutationOptions,
+  isAllowedQueryOptions,
+  revokeMutationOptions,
+  revokeSessionMutationOptions,
+} from "@zama-fhe/sdk/query";
+export type {
+  OptimisticBalanceSnapshot,
+  OptimisticMutateContext,
+} from "./token/optimistic-balance-update";
 
 // Re-export event decoders, types, and constants from core SDK
 export { ZERO_HANDLE } from "@zama-fhe/sdk";

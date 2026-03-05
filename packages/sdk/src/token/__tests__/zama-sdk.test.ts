@@ -65,6 +65,7 @@ describe("ZamaSDK", () => {
     expect(subscribeSigner.subscribe).toHaveBeenCalledWith({
       onDisconnect: expect.any(Function),
       onAccountChange: expect.any(Function),
+      onChainChange: expect.any(Function),
     });
 
     sdk.terminate();
@@ -284,6 +285,50 @@ describe("ZamaSDK", () => {
       await vi.waitFor(async () => {
         expect(await sessionStorage.get(keyA)).toBeNull();
       });
+
+      sdk.terminate();
+    });
+
+    it("onChainChange revokes the previous chain session and tracks the new chain", async ({
+      createMockRelayer,
+      createMockSigner,
+      storage,
+      sessionStorage,
+    }) => {
+      let subscribeCbs: Required<SignerLifecycleCallbacks>;
+
+      const mockSigner = createMockSigner("0xuser" as Address);
+      const signer = {
+        ...mockSigner,
+        subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+          subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
+          return () => {};
+        }),
+      };
+
+      const sdk = new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage,
+        sessionStorage,
+      });
+
+      const oldKey = await CredentialsManager.computeStoreKey("0xuser", 31337);
+      await sessionStorage.set(oldKey, "0xsigA");
+
+      subscribeCbs!.onChainChange(1);
+
+      await vi.waitFor(async () => {
+        expect(await sessionStorage.get(oldKey)).toBeNull();
+      });
+
+      (signer.getChainId as Mock).mockResolvedValue(1);
+      const newKey = await CredentialsManager.computeStoreKey("0xuser", 1);
+      await sessionStorage.set(newKey, "0xsigB");
+
+      await sdk.revokeSession();
+
+      expect(await sessionStorage.get(newKey)).toBeNull();
 
       sdk.terminate();
     });

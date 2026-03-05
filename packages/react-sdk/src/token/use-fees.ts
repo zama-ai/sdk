@@ -1,36 +1,22 @@
 "use client";
 
-import { useQuery, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
 import {
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
-  type Address,
-  type GenericSigner,
-} from "@zama-fhe/sdk";
+  batchTransferFeeQueryOptions,
+  feeRecipientQueryOptions,
+  hashFn,
+  shieldFeeQueryOptions,
+  unshieldFeeQueryOptions,
+} from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-/**
- * Query key factory for fee-related queries.
- * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
- */
-export const feeQueryKeys = {
-  /** Match shield fee query for given parameters. */
-  shieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) =>
-    ["shieldFee", feeManagerAddress, ...(amount !== undefined ? [amount, from, to] : [])] as const,
-  /** Match unshield fee query for given parameters. */
-  unshieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) =>
-    [
-      "unshieldFee",
-      feeManagerAddress,
-      ...(amount !== undefined ? [amount, from, to] : []),
-    ] as const,
-  /** Match batch transfer fee query for a specific fee manager. */
-  batchTransferFee: (feeManagerAddress: string) => ["batchTransferFee", feeManagerAddress] as const,
-  /** Match fee recipient query for a specific fee manager. */
-  feeRecipient: (feeManagerAddress: string) => ["feeRecipient", feeManagerAddress] as const,
-} as const;
+export {
+  batchTransferFeeQueryOptions,
+  feeRecipientQueryOptions,
+  shieldFeeQueryOptions,
+  unshieldFeeQueryOptions,
+};
 
 /** Configuration for {@link useShieldFee} and {@link useUnshieldFee}. */
 export interface UseFeeConfig {
@@ -42,68 +28,6 @@ export interface UseFeeConfig {
   from: Address;
   /** Receiver address. */
   to: Address;
-}
-
-/**
- * TanStack Query options factory for shield fee.
- *
- * @param signer - A `GenericSigner` instance.
- * @param config - {@link UseFeeConfig} with fee manager address, amount, from, and to.
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- */
-export function shieldFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig) {
-  const { feeManagerAddress, amount, from, to } = config;
-  return {
-    queryKey: feeQueryKeys.shieldFee(feeManagerAddress, amount.toString(), from, to),
-    queryFn: () => signer.readContract(getWrapFeeContract(feeManagerAddress, amount, from, to)),
-    staleTime: 30_000,
-  } as const;
-}
-
-/**
- * TanStack Query options factory for unshield fee.
- *
- * @param signer - A `GenericSigner` instance.
- * @param config - Fee manager address, amount, from, and to.
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- */
-export function unshieldFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig) {
-  const { feeManagerAddress, amount, from, to } = config;
-  return {
-    queryKey: feeQueryKeys.unshieldFee(feeManagerAddress, amount.toString(), from, to),
-    queryFn: () => signer.readContract(getUnwrapFeeContract(feeManagerAddress, amount, from, to)),
-    staleTime: 30_000,
-  } as const;
-}
-
-/**
- * TanStack Query options factory for batch transfer fee.
- *
- * @param signer - A `GenericSigner` instance.
- * @param feeManagerAddress - Address of the fee manager contract.
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- */
-export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress: Address) {
-  return {
-    queryKey: feeQueryKeys.batchTransferFee(feeManagerAddress),
-    queryFn: () => signer.readContract(getBatchTransferFeeContract(feeManagerAddress)),
-    staleTime: 30_000,
-  } as const;
-}
-
-/**
- * TanStack Query options factory for fee recipient.
- *
- * @param signer - A `GenericSigner` instance.
- * @param feeManagerAddress - Address of the fee manager contract.
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- */
-export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddress: Address) {
-  return {
-    queryKey: feeQueryKeys.feeRecipient(feeManagerAddress),
-    queryFn: () => signer.readContract(getFeeRecipientContract(feeManagerAddress)),
-    staleTime: 30_000,
-  } as const;
 }
 
 /**
@@ -126,13 +50,14 @@ export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddres
 export function useShieldFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<bigint, Error> {
+) {
   const sdk = useZamaSDK();
 
-  return useQuery<bigint, Error>({
+  return useQuery({
     ...shieldFeeQueryOptions(sdk.signer, config),
     ...options,
-  });
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<bigint, Error>);
 }
 
 /**
@@ -155,13 +80,14 @@ export function useShieldFee(
 export function useUnshieldFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<bigint, Error> {
+) {
   const sdk = useZamaSDK();
 
-  return useQuery<bigint, Error>({
+  return useQuery({
     ...unshieldFeeQueryOptions(sdk.signer, config),
     ...options,
-  });
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<bigint, Error>);
 }
 
 /**
@@ -179,13 +105,14 @@ export function useUnshieldFee(
 export function useBatchTransferFee(
   feeManagerAddress: Address,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<bigint, Error> {
+) {
   const sdk = useZamaSDK();
 
-  return useQuery<bigint, Error>({
+  return useQuery({
     ...batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress),
     ...options,
-  });
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<bigint, Error>);
 }
 
 /**
@@ -203,11 +130,12 @@ export function useBatchTransferFee(
 export function useFeeRecipient(
   feeManagerAddress: Address,
   options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<Address, Error> {
+) {
   const sdk = useZamaSDK();
 
-  return useQuery<Address, Error>({
+  return useQuery({
     ...feeRecipientQueryOptions(sdk.signer, feeManagerAddress),
     ...options,
-  });
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<Address, Error>);
 }

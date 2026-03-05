@@ -1,19 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import type { ZamaSDK } from "@zama-fhe/sdk";
+import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { hashFn, isAllowedQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-
-export const isAllowedQueryKeys = {
-  all: ["zama", "isAllowed"] as const,
-};
-
-export function isAllowedQueryOptions(sdk: ZamaSDK) {
-  return {
-    queryKey: isAllowedQueryKeys.all,
-    queryFn: () => sdk.isAllowed(),
-  };
-}
 
 /**
  * Check whether a session signature is cached for the connected wallet.
@@ -27,5 +16,8 @@ export function isAllowedQueryOptions(sdk: ZamaSDK) {
 export function useIsAllowed() {
   const sdk = useZamaSDK();
 
-  return useQuery<boolean, Error>(isAllowedQueryOptions(sdk));
+  return useQuery({
+    ...isAllowedQueryOptions(sdk),
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<boolean, Error>);
 }

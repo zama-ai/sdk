@@ -1,24 +1,19 @@
 "use client";
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult, TransferCallbacks } from "@zama-fhe/sdk";
+import type { TransactionResult } from "@zama-fhe/sdk";
 import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-} from "./balance-query-keys";
+  confidentialTransferMutationOptions,
+  invalidateAfterTransfer,
+  type ConfidentialTransferParams,
+} from "@zama-fhe/sdk/query";
+import {
+  applyOptimisticBalanceDelta,
+  type OptimisticMutateContext,
+  rollbackOptimisticBalanceDelta,
+  unwrapOptimisticCallerContext,
+} from "./optimistic-balance-update";
 import { useToken, type UseZamaConfig } from "./use-token";
-
-/** Parameters passed to the `mutate` function of {@link useConfidentialTransfer}. */
-export interface ConfidentialTransferParams {
-  /** Recipient address. */
-  to: Address;
-  /** Amount to transfer (plaintext — encrypted automatically). */
-  amount: bigint;
-  /** Optional progress callbacks for the multi-step transfer flow. */
-  callbacks?: TransferCallbacks;
-}
 
 /** Configuration for {@link useConfidentialTransfer}. */
 export interface UseConfidentialTransferConfig extends UseZamaConfig {
@@ -28,20 +23,6 @@ export interface UseConfidentialTransferConfig extends UseZamaConfig {
    * @defaultValue false
    */
   optimistic?: boolean;
-}
-
-/**
- * TanStack Query mutation options factory for confidential transfer.
- *
- * @param token - A `Token` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function confidentialTransferMutationOptions(token: Token) {
-  return {
-    mutationKey: ["confidentialTransfer", token.address] as const,
-    mutationFn: ({ to, amount, callbacks }: ConfidentialTransferParams) =>
-      token.confidentialTransfer(to, amount, callbacks),
-  };
 }
 
 /**
@@ -76,51 +57,65 @@ export function confidentialTransferMutationOptions(token: Token) {
  */
 export function useConfidentialTransfer(
   config: UseConfidentialTransferConfig,
-  options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams>,
+  // Context type is OptimisticMutateContext because our onMutate wraps the caller's
+  // context inside { snapshot, callerContext }. Caller callbacks receive the unwrapped callerContext.
+  options?: UseMutationOptions<
+    TransactionResult,
+    Error,
+    ConfidentialTransferParams,
+    OptimisticMutateContext
+  >,
 ) {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<TransactionResult, Error, ConfidentialTransferParams>({
-    mutationKey: ["confidentialTransfer", config.tokenAddress],
-    mutationFn: ({ to, amount, callbacks }) => token.confidentialTransfer(to, amount, callbacks),
-    ...options,
-    onMutate: config.optimistic
-      ? async (variables, mutationContext) => {
-          const balanceKey = confidentialBalanceQueryKeys.token(config.tokenAddress);
-          await queryClient.cancelQueries({ queryKey: balanceKey });
-          const previous = queryClient.getQueriesData<bigint>({ queryKey: balanceKey });
-          for (const [key, value] of previous) {
-            if (value !== undefined) {
-              queryClient.setQueryData(key, value - variables.amount);
-            }
+  return useMutation<TransactionResult, Error, ConfidentialTransferParams, OptimisticMutateContext>(
+    {
+      ...confidentialTransferMutationOptions(token),
+      ...options,
+      onMutate: config.optimistic
+        ? async (variables, mutationContext) => {
+            const snapshot = await applyOptimisticBalanceDelta(
+              queryClient,
+              config.tokenAddress,
+              variables.amount,
+              "subtract",
+            );
+            const callerContext = await options?.onMutate?.(variables, mutationContext);
+            return { snapshot, callerContext };
           }
-          return options?.onMutate?.(variables, mutationContext);
+        : options?.onMutate,
+      onError: (error, variables, rawContext, context) => {
+        const { wrappedContext, callerContext } = unwrapOptimisticCallerContext(
+          config.optimistic,
+          rawContext,
+        );
+        if (wrappedContext) {
+          rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
         }
-      : options?.onMutate,
-    onError: (error, variables, onMutateResult, context) => {
-      if (config.optimistic) {
-        // Rollback: invalidate to refetch actual values
-        queryClient.invalidateQueries({
-          queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-        });
-      }
-      options?.onError?.(error, variables, onMutateResult, context);
+        // callerContext is the user's original onMutate return — cast required by wrapper pattern
+        options?.onError?.(
+          error,
+          variables,
+          callerContext as OptimisticMutateContext | undefined,
+          context,
+        );
+      },
+      onSuccess: (data, variables, rawContext, context) => {
+        const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
+        options?.onSuccess?.(data, variables, callerContext as OptimisticMutateContext, context);
+        invalidateAfterTransfer(context.client, config.tokenAddress);
+      },
+      onSettled: (data, error, variables, rawContext, context) => {
+        const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
+        options?.onSettled?.(
+          data,
+          error,
+          variables,
+          callerContext as OptimisticMutateContext | undefined,
+          context,
+        );
+      },
     },
-    onSuccess: (data, variables, onMutateResult, context) => {
-      context.client.invalidateQueries({
-        queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialHandlesQueryKeys.all,
-      });
-      context.client.resetQueries({
-        queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialBalancesQueryKeys.all,
-      });
-      options?.onSuccess?.(data, variables, onMutateResult, context);
-    },
-  });
+  );
 }

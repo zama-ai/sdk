@@ -16,8 +16,8 @@ describe("useUnderlyingAllowance", () => {
     renderWithProviders,
   }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
-      .mockResolvedValueOnce(5000n); // allowance()
+      .mockResolvedValueOnce("0x5555555555555555555555555555555555555555")
+      .mockResolvedValueOnce(5000n);
 
     const { result } = renderWithProviders(
       () =>

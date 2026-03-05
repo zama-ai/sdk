@@ -1,7 +1,8 @@
 import { vi } from "vitest";
 import { describe, expect, it } from "../test-fixtures";
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 // Spy on ZamaSDK constructor by wrapping the real class
@@ -42,6 +43,33 @@ describe("ZamaProvider & useZamaSDK", () => {
 
     unmount();
     expect(relayer.terminate).not.toHaveBeenCalled();
+  });
+
+  it("invalidates wallet-scoped queries when the signer lifecycle changes", ({
+    createWrapper,
+    signer,
+  }) => {
+    const { Wrapper, queryClient } = createWrapper({ signer });
+    renderHook(() => useZamaSDK(), { wrapper: Wrapper });
+
+    const lifecycle = vi.mocked(signer.subscribe!).mock.calls.at(-1)?.[0];
+    const signerKey = zamaQueryKeys.signerAddress.all;
+    const balanceKey = zamaQueryKeys.confidentialBalance.token(
+      "0x1111111111111111111111111111111111111111",
+    );
+    const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
+
+    queryClient.setQueryData(signerKey, "0xuser");
+    queryClient.setQueryData(balanceKey, 1n);
+    queryClient.setQueryData(wagmiBalanceKey, 2n);
+
+    lifecycle?.onChainChange?.(1);
+
+    return waitFor(() => {
+      expect(queryClient.getQueryData(signerKey)).toBeUndefined();
+      expect(queryClient.getQueryState(balanceKey)?.isInvalidated).toBe(true);
+      expect(queryClient.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);
+    });
   });
 
   it("passes keypairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {

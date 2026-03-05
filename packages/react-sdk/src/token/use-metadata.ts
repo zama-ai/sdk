@@ -1,63 +1,11 @@
 "use client";
 
-import {
-  useQuery,
-  useSuspenseQuery,
-  type UseQueryOptions,
-  type UseQueryResult,
-  type UseSuspenseQueryResult,
-} from "@tanstack/react-query";
-import type { Address, ReadonlyToken } from "@zama-fhe/sdk";
+import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import { hashFn, tokenMetadataQueryOptions, type TokenMetadata } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
 
-/**
- * Query key factory for token metadata queries.
- * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
- */
-export const metadataQueryKeys = {
-  /** Match all token metadata queries. */
-  all: ["tokenMetadata"] as const,
-  /** Match metadata query for a specific token. */
-  token: (tokenAddress: string) => ["tokenMetadata", tokenAddress] as const,
-} as const;
-
-/** ERC-20 token metadata (name, symbol, decimals). */
-export interface TokenMetadata {
-  /** Human-readable token name (e.g. "Wrapped Ether"). */
-  name: string;
-  /** Short ticker symbol (e.g. "WETH"). */
-  symbol: string;
-  /** Number of decimal places (e.g. 18). */
-  decimals: number;
-}
-
-/**
- * TanStack Query options factory for token metadata.
- * Returns a config object usable with `useQuery`, `prefetchQuery`, `useQueries`, etc.
- *
- * @param token - A `ReadonlyToken` instance.
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- *
- * @example
- * ```ts
- * const options = metadataQueryOptions(token);
- * await queryClient.prefetchQuery(options);
- * ```
- */
-export function metadataQueryOptions(token: ReadonlyToken) {
-  return {
-    queryKey: metadataQueryKeys.token(token.address),
-    queryFn: async () => {
-      const [name, symbol, decimals] = await Promise.all([
-        token.name(),
-        token.symbol(),
-        token.decimals(),
-      ]);
-      return { name, symbol, decimals } as TokenMetadata;
-    },
-    staleTime: Infinity,
-  } as const;
-}
+export { type TokenMetadata };
 
 /**
  * Read ERC-20 token metadata (name, symbol, decimals).
@@ -76,13 +24,14 @@ export function metadataQueryOptions(token: ReadonlyToken) {
 export function useMetadata(
   tokenAddress: Address,
   options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<TokenMetadata, Error> {
+) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useQuery<TokenMetadata, Error>({
-    ...metadataQueryOptions(token),
+  return useQuery({
+    ...tokenMetadataQueryOptions(token.signer, tokenAddress),
     ...options,
-  });
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<TokenMetadata, Error>);
 }
 
 /**
@@ -97,10 +46,11 @@ export function useMetadata(
  * const { data: metadata } = useMetadataSuspense("0xToken");
  * ```
  */
-export function useMetadataSuspense(
-  tokenAddress: Address,
-): UseSuspenseQueryResult<TokenMetadata, Error> {
+export function useMetadataSuspense(tokenAddress: Address) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<TokenMetadata, Error>(metadataQueryOptions(token));
+  return useSuspenseQuery({
+    ...tokenMetadataQueryOptions(token.signer, tokenAddress),
+    queryKeyHashFn: hashFn,
+  });
 }

@@ -1,0 +1,93 @@
+import { ReadonlyToken } from "../token/readonly-token";
+import { DecryptionFailedError } from "../token/errors";
+import type { Address } from "../token/token.types";
+import type { EncryptedBalanceHandle } from "./confidential-balance";
+import type { QueryFactoryOptions } from "./factory-types";
+import { filterQueryOptions, normalizeHandle } from "./utils";
+import { zamaQueryKeys } from "./query-keys";
+
+/** Result type for batch confidential balance queries with partial error support. */
+export interface ConfidentialBalancesData {
+  /** Successfully decrypted balances (address to balance). */
+  balances: Map<Address, bigint>;
+  /** Per-token errors for tokens that failed to decrypt. */
+  errors: Map<Address, Error>;
+  /** `true` if some but not all tokens failed. */
+  isPartialError: boolean;
+}
+
+export interface ConfidentialBalancesQueryConfig {
+  owner?: Address;
+  handles?: EncryptedBalanceHandle[];
+  maxConcurrency?: number;
+  query?: Record<string, unknown>;
+}
+
+export function confidentialBalancesQueryOptions(
+  tokens: ReadonlyToken[],
+  config?: ConfidentialBalancesQueryConfig,
+): QueryFactoryOptions<
+  ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>,
+  ConfidentialBalancesData
+> {
+  const tokenAddresses = tokens.map((token) => token.address);
+  const ownerKey = config?.owner ?? "";
+  const handlesReady =
+    Array.isArray(config?.handles) &&
+    config.handles.length === tokens.length &&
+    config.handles.every((handle) => Boolean(handle));
+  const queryKey = zamaQueryKeys.confidentialBalances.tokens(
+    tokenAddresses,
+    ownerKey,
+    config?.handles,
+  );
+
+  return {
+    ...filterQueryOptions(config?.query ?? {}),
+    queryKey,
+    queryFn: async (context) => {
+      const [, { owner: keyOwner, handles: keyHandles }] = context.queryKey;
+      const normalizedHandles = Array.isArray(keyHandles)
+        ? keyHandles.map((handle) => normalizeHandle(handle))
+        : undefined;
+
+      const perTokenErrors = new Map<Address, Error>();
+
+      const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
+        owner: keyOwner as Address,
+        handles: normalizedHandles,
+        maxConcurrency: config?.maxConcurrency,
+        onError: (error, address) => {
+          perTokenErrors.set(address, error);
+          return 0n;
+        },
+      });
+
+      // Re-key with caller's original addresses (tokens normalize to lowercase)
+      const balances = new Map<Address, bigint>();
+      const errors = new Map<Address, Error>();
+      for (let i = 0; i < tokens.length; i++) {
+        const tokenAddr = tokens[i]!.address;
+        const originalAddr = tokenAddresses[i]!;
+        const tokenError = perTokenErrors.get(tokenAddr);
+        if (tokenError) {
+          errors.set(originalAddr, tokenError);
+        } else {
+          const balance = raw.get(tokenAddr);
+          if (balance !== undefined) balances.set(originalAddr, balance);
+        }
+      }
+
+      // Total failure: throw so TanStack Query sets isError = true
+      if (errors.size === tokens.length && tokens.length > 0) {
+        const firstError = errors.values().next().value;
+        throw firstError ?? new DecryptionFailedError("All token balance decryptions failed");
+      }
+
+      return { balances, errors, isPartialError: errors.size > 0 };
+    },
+    enabled:
+      Boolean(ownerKey) && tokens.length > 0 && handlesReady && config?.query?.enabled !== false,
+    staleTime: Infinity,
+  };
+}

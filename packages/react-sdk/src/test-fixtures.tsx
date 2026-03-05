@@ -1,10 +1,11 @@
 /* eslint-disable no-empty-pattern */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import type { GenericSigner, GenericStorage, RelayerSDK } from "@zama-fhe/sdk";
+import type { GenericSigner, GenericStorage, RelayerSDK, Token } from "@zama-fhe/sdk";
 import React, { PropsWithChildren } from "react";
 import { test as base } from "../../sdk/src/test-fixtures";
 import { ZamaProvider, ZamaProviderProps } from "./provider";
+import { createMockToken } from "./__tests__/mutation-test-helpers";
 
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
@@ -29,6 +30,7 @@ function Providers({
 // ---------------------------------------------------------------------------
 
 interface ReactSdkFixtures {
+  token: Token;
   queryClient: QueryClient;
   createWrapper: (overrides?: Partial<ZamaProviderProps>) => {
     Wrapper: React.FC<{ children?: React.ReactNode }>;
@@ -45,6 +47,9 @@ interface ReactSdkFixtures {
 }
 
 export const test = base.extend<ReactSdkFixtures>({
+  token: async ({}, use) => {
+    await use(createMockToken());
+  },
   queryClient: async ({}, use) => {
     await use(
       new QueryClient({

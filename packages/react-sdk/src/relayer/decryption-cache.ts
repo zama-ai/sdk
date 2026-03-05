@@ -1,4 +1,4 @@
-import type { Handle } from "@zama-fhe/sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 /**
  * Query key helpers for the shared decryption cache.
@@ -6,5 +6,6 @@ import type { Handle } from "@zama-fhe/sdk";
  * and by useUserDecryptedValue to read.
  */
 export const decryptionKeys = {
-  value: (handle: Handle) => ["decryptedValue", handle] as const,
+  value: (handle: string, contractAddress?: string) =>
+    zamaQueryKeys.decryption.handle(handle, contractAddress),
 };

@@ -8,6 +8,7 @@ import { CredentialsManager } from "./credentials-manager";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
+import type { SignerLifecycleCallbacks } from "./token.types";
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -38,6 +39,8 @@ export interface ZamaSDKConfig {
   sessionTTL?: number;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
+  /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
+  signerLifecycleCallbacks?: SignerLifecycleCallbacks;
 }
 
 /**
@@ -78,11 +81,13 @@ export class ZamaSDK {
     this.#identityReady = this.#initIdentity();
 
     if (this.signer.subscribe) {
+      const lifecycleCallbacks = config.signerLifecycleCallbacks;
       this.#unsubscribeSigner = this.signer.subscribe({
         onDisconnect: () => {
           void this.#revokeByTrackedIdentity().then(() => {
             this.#lastAddress = null;
             this.#lastChainId = null;
+            lifecycleCallbacks?.onDisconnect?.();
           });
         },
         onAccountChange: (newAddress: Address) => {
@@ -93,6 +98,18 @@ export class ZamaSDK {
             } catch {
               // Signer may not be ready — keep previous chainId
             }
+            lifecycleCallbacks?.onAccountChange?.(newAddress);
+          });
+        },
+        onChainChange: (newChainId: number) => {
+          void this.#revokeByTrackedIdentity().then(async () => {
+            this.#lastChainId = newChainId;
+            try {
+              this.#lastAddress = (await this.signer.getAddress()).toLowerCase();
+            } catch {
+              // Signer may not be ready — keep previous address
+            }
+            lifecycleCallbacks?.onChainChange?.(newChainId);
           });
         },
       });

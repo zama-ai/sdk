@@ -1,32 +1,13 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Address, ZamaSDK } from "@zama-fhe/sdk";
+import { useMutation, useQueryClient, type UseMutationOptions } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import { revokeMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { isAllowedQueryKeys } from "./use-is-allowed";
 
 /**
- * TanStack Query mutation options factory for token revoke.
- *
- * @param sdk - A `ZamaSDK` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function revokeMutationOptions(sdk: ZamaSDK) {
-  return {
-    mutationKey: ["revoke"] as const,
-    mutationFn: async (tokenAddresses: Address[]) => {
-      await sdk.revoke(...tokenAddresses);
-    },
-  };
-}
-
-/**
- * Revoke the session signature for the connected wallet.
- * Stored credentials remain intact, but the next decrypt operation
- * will require a fresh wallet signature.
- *
- * The addresses are passed through to the `credentials:revoked` event
- * for observability.
+ * Revoke stored FHE credentials for a list of token addresses.
+ * The next decrypt operation will require a fresh wallet signature.
  *
  * @example
  * ```tsx
@@ -34,14 +15,16 @@ export function revokeMutationOptions(sdk: ZamaSDK) {
  * revoke(["0xTokenA", "0xTokenB"]);
  * ```
  */
-export function useRevoke() {
+export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>) {
   const sdk = useZamaSDK();
   const queryClient = useQueryClient();
 
   return useMutation<void, Error, Address[]>({
     ...revokeMutationOptions(sdk),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: isAllowedQueryKeys.all });
+    ...options,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      options?.onSuccess?.(data, variables, onMutateResult, context);
+      queryClient.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
     },
   });
 }

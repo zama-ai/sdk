@@ -3,7 +3,7 @@ import { test as base, describe, expect } from "../test-fixtures";
 import type { Address } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 
-type Connection = { status: string; address?: Address };
+type Connection = { status: string; address?: Address; chainId?: number };
 type OnChange = (connection: Connection, prevConnection: Connection) => void;
 
 let capturedOnChange: OnChange | undefined;
@@ -86,5 +86,18 @@ describe("WagmiSigner.subscribe", () => {
       { status: "connected", address: "0xaaa" as Address },
     );
     expect(onAccountChange).not.toHaveBeenCalled();
+  });
+
+  wit("fires onChainChange when chain id changes", ({ wagmiSigner }) => {
+    const onChainChange = vi.fn();
+    wagmiSigner.subscribe({ onChainChange });
+
+    capturedOnChange!(
+      { status: "connected", address: "0xaaa" as Address, chainId: 2 },
+      { status: "connected", address: "0xaaa" as Address, chainId: 1 },
+    );
+
+    expect(onChainChange).toHaveBeenCalledOnce();
+    expect(onChainChange).toHaveBeenCalledWith(2);
   });
 });
