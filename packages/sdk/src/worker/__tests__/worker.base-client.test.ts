@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "../../test-fixtures";
 import { BaseWorkerClient, DEFAULT_TIMEOUT_MS } from "../worker.base-client";
 import type {
   GenericLogger,

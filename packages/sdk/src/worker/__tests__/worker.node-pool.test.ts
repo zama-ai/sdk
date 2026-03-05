@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi } from "vitest";
+import { describe, it, expect, beforeEach } from "../../test-fixtures";
 import type { NodeWorkerPoolConfig } from "../worker.node-pool";
 import { NodeWorkerPool } from "../worker.node-pool";
 import type { ZKProofLike } from "../../relayer/relayer-sdk.types";

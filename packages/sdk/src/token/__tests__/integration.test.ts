@@ -1,43 +1,25 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Topics } from "../../events";
-import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Address } from "../../relayer/relayer-sdk.types";
-import { Token } from "../token";
-import { MemoryStorage } from "../memory-storage";
-import type { GenericSigner } from "../token.types";
-import { createMockRelayer, createMockSigner, USER } from "./test-utils";
+import { describe, expect, it, vi } from "../../test-fixtures";
+import { Address } from "../token.types";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const WRAPPER = TOKEN;
 const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address;
-const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Address;
 
 describe("Integration: multi-step workflows", () => {
-  let sdk: ReturnType<typeof createMockRelayer>;
-  let signer: GenericSigner;
-  let token: Token;
-
-  beforeEach(() => {
-    sdk = createMockRelayer();
-    signer = createMockSigner();
-    token = new Token({
-      relayer: sdk as unknown as RelayerSDK,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
-    });
-  });
-
   describe("shield flow: approve → shield → verify balance", () => {
-    it("performs full shield flow with exact approval", async () => {
+    it("performs full shield flow with exact approval", async ({
+      relayer,
+      signer,
+      token,
+      handle,
+    }) => {
+      const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
+
       // Step 1: readContract calls for underlying and allowance
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(UNDERLYING) // #getUnderlying
         .mockResolvedValueOnce(0n) // allowance check (insufficient)
-        .mockResolvedValueOnce(VALID_HANDLE); // confidentialBalanceOf after wrap
+        .mockResolvedValueOnce(handle); // confidentialBalanceOf after wrap
 
       // Step 2: Execute shield (triggers approve + wrap)
       const shieldResult = await token.shield(500n);
@@ -55,29 +37,38 @@ describe("Integration: multi-step workflows", () => {
       );
 
       // Step 3: Check balance after shield — should read the new handle
-      const handle = await token.confidentialBalanceOf();
-      expect(handle).toBe(VALID_HANDLE);
+      const balanceHandle = await token.confidentialBalanceOf();
+      expect(balanceHandle).toBe(handle);
 
       // Step 4: Decrypt the balance
-      const balance = await token.decryptBalance(handle);
+      const balance = await token.decryptBalance(balanceHandle);
       expect(balance).toBe(1000n);
-      expect(sdk.userDecrypt).toHaveBeenCalledWith(
-        expect.objectContaining({ handles: [VALID_HANDLE] }),
+      expect(relayer.userDecrypt).toHaveBeenCalledWith(
+        expect.objectContaining({ handles: [handle] }),
       );
     });
   });
 
   describe("confidentialTransfer flow: encrypt → transfer → verify", () => {
-    it("performs full transfer flow", async () => {
+    it("performs full transfer flow", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      token,
+      userAddress,
+      handle,
+      createToken,
+      createMockStorage,
+    }) => {
       // Step 1: Execute transfer (encrypts amount, sends tx)
       const transferResult = await token.confidentialTransfer(RECIPIENT, 250n);
       expect(transferResult.txHash).toBe("0xtxhash");
 
       // Verify encrypt was called with correct params
-      expect(sdk.encrypt).toHaveBeenCalledWith({
+      expect(relayer.encrypt).toHaveBeenCalledWith({
         values: [{ value: 250n, type: "euint64" }],
-        contractAddress: TOKEN,
-        userAddress: USER,
+        contractAddress: tokenAddress,
+        userAddress,
       });
 
       // Verify writeContract was called for the transfer
@@ -89,35 +80,41 @@ describe("Integration: multi-step workflows", () => {
       );
 
       // Step 2: Check sender balance after transfer
-      vi.mocked(signer.readContract).mockResolvedValueOnce(VALID_HANDLE);
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle);
       const senderHandle = await token.confidentialBalanceOf();
-      expect(senderHandle).toBe(VALID_HANDLE);
+      expect(senderHandle).toBe(handle);
 
       // Step 3: Check receiver balance (different token instance for same contract)
-      const receiverToken = new Token({
-        relayer: sdk as unknown as RelayerSDK,
+      const receiverToken = createToken({
+        relayer,
         signer,
-        storage: new MemoryStorage(),
-        sessionStorage: new MemoryStorage(),
-        address: TOKEN,
+        storage: createMockStorage(),
+        sessionStorage: createMockStorage(),
+        address: tokenAddress,
       });
-      vi.mocked(signer.readContract).mockResolvedValueOnce(VALID_HANDLE);
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle);
       const receiverHandle = await receiverToken.confidentialBalanceOf(RECIPIENT);
-      expect(receiverHandle).toBe(VALID_HANDLE);
+      expect(receiverHandle).toBe(handle);
     });
   });
 
   describe("unwrap flow: unwrap → finalize → verify", () => {
-    it("performs full unwrap and finalize flow", async () => {
+    it("performs full unwrap and finalize flow", async ({
+      relayer,
+      signer,
+      token,
+      tokenAddress,
+      userAddress,
+    }) => {
       // Step 1: Execute unwrap (encrypts amount, sends tx)
       const unwrapResult = await token.unwrap(500n);
       expect(unwrapResult.txHash).toBe("0xtxhash");
 
       // Verify encryption happened
-      expect(sdk.encrypt).toHaveBeenCalledWith({
+      expect(relayer.encrypt).toHaveBeenCalledWith({
         values: [{ value: 500n, type: "euint64" }],
-        contractAddress: WRAPPER,
-        userAddress: USER,
+        contractAddress: tokenAddress,
+        userAddress,
       });
 
       // Step 2: Wait for receipt and finalize
@@ -125,7 +122,7 @@ describe("Integration: multi-step workflows", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValueOnce({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
+            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
             data: BURN_HANDLE,
           },
         ],
@@ -139,7 +136,7 @@ describe("Integration: multi-step workflows", () => {
       expect(finalizeResult.txHash).toBe("0xfinalizetx");
 
       // Verify publicDecrypt was called with the burn handle
-      expect(sdk.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
 
       // Verify finalizeUnwrap contract call
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -147,7 +144,12 @@ describe("Integration: multi-step workflows", () => {
       );
     });
 
-    it("performs combined unshield (unwrap + finalize) in one call", async () => {
+    it("performs combined unshield (unwrap + finalize) in one call", async ({
+      relayer,
+      signer,
+      token,
+      userAddress,
+    }) => {
       // Mock receipt with UnwrapRequested event for the auto-finalize path.
       // unwrap() now calls waitForTransactionReceipt (1st call),
       // then #waitAndFinalizeUnshield calls it again (2nd call) to parse the event,
@@ -155,7 +157,7 @@ describe("Integration: multi-step workflows", () => {
       const eventReceipt = {
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
+            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
             data: BURN_HANDLE,
           },
         ],
@@ -169,12 +171,12 @@ describe("Integration: multi-step workflows", () => {
       expect(unshieldResult.txHash).toBe("0xtxhash");
 
       // Verify full pipeline: encrypt → unwrap → waitForReceipt → publicDecrypt → finalizeUnwrap
-      expect(sdk.encrypt).toHaveBeenCalled();
+      expect(relayer.encrypt).toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(signer.waitForTransactionReceipt).toHaveBeenCalled();
-      expect(sdk.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );

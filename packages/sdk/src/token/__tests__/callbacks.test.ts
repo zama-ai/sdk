@@ -1,46 +1,28 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "../../test-fixtures";
 import { Topics } from "../../events";
-import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
-import { Token } from "../token";
 import { DecryptionFailedError, TransactionRevertedError } from "../errors";
 import type { GenericSigner } from "../token.types";
-import { MemoryStorage } from "../memory-storage";
-import { createMockRelayer, createMockSigner, USER } from "./test-utils";
-
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const VALID_HANDLE = "0x" + "ab".repeat(32);
 
 describe("Unshield callbacks (P4)", () => {
-  let sdk: ReturnType<typeof createMockRelayer>;
-  let signer: GenericSigner;
-  let token: Token;
-
-  function mockReceiptWithUnwrapRequested() {
+  function mockReceiptWithUnwrapRequested(signer: GenericSigner, userAddress: Address) {
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
       logs: [
         {
-          topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
+          topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
           data: "0x" + "ff".repeat(32),
         },
       ],
     });
   }
 
-  beforeEach(() => {
-    sdk = createMockRelayer();
-    signer = createMockSigner();
-    token = new Token({
-      relayer: sdk as unknown as RelayerSDK,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
-    });
-  });
-
-  it("fires all callbacks during unshield", async () => {
-    mockReceiptWithUnwrapRequested();
+  it("fires all callbacks during unshield", async ({
+    relayer: _relayer,
+    signer,
+    userAddress,
+    token,
+  }) => {
+    mockReceiptWithUnwrapRequested(signer, userAddress);
 
     const onUnwrapSubmitted = vi.fn();
     const onFinalizing = vi.fn();
@@ -53,9 +35,9 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires all callbacks during unshieldAll", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    mockReceiptWithUnwrapRequested();
+  it("fires all callbacks during unshieldAll", async ({ signer, userAddress, handle, token }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    mockReceiptWithUnwrapRequested(signer, userAddress);
 
     const onUnwrapSubmitted = vi.fn();
     const onFinalizing = vi.fn();
@@ -68,8 +50,8 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires callbacks during resumeUnshield", async () => {
-    mockReceiptWithUnwrapRequested();
+  it("fires callbacks during resumeUnshield", async ({ signer, userAddress, token }) => {
+    mockReceiptWithUnwrapRequested(signer, userAddress);
 
     const onFinalizing = vi.fn();
     const onFinalizeSubmitted = vi.fn();
@@ -81,16 +63,16 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("works without callbacks (backward compatible)", async () => {
-    mockReceiptWithUnwrapRequested();
+  it("works without callbacks (backward compatible)", async ({ signer, userAddress, token }) => {
+    mockReceiptWithUnwrapRequested(signer, userAddress);
 
     const result = await token.unshield(50n);
     expect(result.txHash).toBe("0xtxhash");
     expect(result.receipt).toBeDefined();
   });
 
-  it("completes unshield even when callbacks throw", async () => {
-    mockReceiptWithUnwrapRequested();
+  it("completes unshield even when callbacks throw", async ({ signer, userAddress, token }) => {
+    mockReceiptWithUnwrapRequested(signer, userAddress);
 
     const result = await token.unshield(50n, {
       onUnwrapSubmitted: () => {
@@ -108,8 +90,8 @@ describe("Unshield callbacks (P4)", () => {
     expect(signer.writeContract).toHaveBeenCalledTimes(2); // unwrap + finalize
   });
 
-  it("fires onFinalizing before onFinalizeSubmitted", async () => {
-    mockReceiptWithUnwrapRequested();
+  it("fires onFinalizing before onFinalizeSubmitted", async ({ signer, userAddress, token }) => {
+    mockReceiptWithUnwrapRequested(signer, userAddress);
 
     const order: string[] = [];
     await token.unshield(50n, {
@@ -121,20 +103,27 @@ describe("Unshield callbacks (P4)", () => {
     expect(order).toEqual(["unwrapSubmitted", "finalizing", "finalizeSubmitted"]);
   });
 
-  it("throws TransactionRevertedError when receipt fetch fails", async () => {
+  it("throws TransactionRevertedError when receipt fetch fails", async ({ signer, token }) => {
     vi.mocked(signer.waitForTransactionReceipt).mockRejectedValue(new Error("network error"));
 
     await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
   });
 
-  it("throws TransactionRevertedError when no UnwrapRequested event in receipt", async () => {
+  it("throws TransactionRevertedError when no UnwrapRequested event in receipt", async ({
+    signer,
+    token,
+  }) => {
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
     await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
   });
 
-  it("throws TransactionRevertedError when finalize writeContract fails", async () => {
-    mockReceiptWithUnwrapRequested();
+  it("throws TransactionRevertedError when finalize writeContract fails", async ({
+    signer,
+    userAddress,
+    token,
+  }) => {
+    mockReceiptWithUnwrapRequested(signer, userAddress);
     vi.mocked(signer.writeContract)
       .mockResolvedValueOnce("0xunwraphash") // unwrap succeeds
       .mockRejectedValueOnce(new Error("finalize failed")); // finalize fails
@@ -142,35 +131,39 @@ describe("Unshield callbacks (P4)", () => {
     await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
   });
 
-  it("throws DecryptionFailedError when publicDecrypt fails during finalize", async () => {
-    mockReceiptWithUnwrapRequested();
-    vi.mocked(sdk.publicDecrypt).mockRejectedValue(new Error("decrypt error"));
+  it("throws DecryptionFailedError when publicDecrypt fails during finalize", async ({
+    relayer,
+    signer,
+    userAddress,
+    token,
+  }) => {
+    mockReceiptWithUnwrapRequested(signer, userAddress);
+    vi.mocked(relayer.publicDecrypt).mockRejectedValue(new Error("decrypt error"));
 
     await expect(token.unshield(50n)).rejects.toBeInstanceOf(DecryptionFailedError);
   });
 });
 
 describe("Shield callbacks (SDK-19)", () => {
-  let sdk: ReturnType<typeof createMockRelayer>;
-  let signer: GenericSigner;
-  let token: Token;
-
-  beforeEach(() => {
-    sdk = createMockRelayer();
-    signer = createMockSigner();
+  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({
+    relayer,
+    signer,
+    createToken,
+    storage,
+    sessionStorage,
+    tokenAddress,
+  }) => {
     // underlying() returns a non-zero address so it's treated as ERC-20, not ETH
     vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
-    token = new Token({
-      relayer: sdk as unknown as RelayerSDK,
+    const token = createToken({
+      relayer,
       signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
-      wrapper: TOKEN,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
+      wrapper: tokenAddress,
     });
-  });
 
-  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async () => {
     // Mock allowance to 0 so approval is needed
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
@@ -187,7 +180,24 @@ describe("Shield callbacks (SDK-19)", () => {
     expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("skips onApprovalSubmitted when allowance is sufficient", async () => {
+  it("skips onApprovalSubmitted when allowance is sufficient", async ({
+    relayer,
+    signer,
+    createToken,
+    storage,
+    sessionStorage,
+    tokenAddress,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
+    const token = createToken({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
+      wrapper: tokenAddress,
+    });
+
     // Mock allowance to be greater than amount
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
@@ -204,7 +214,24 @@ describe("Shield callbacks (SDK-19)", () => {
     expect(onShieldSubmitted).toHaveBeenCalledOnce();
   });
 
-  it("completes shield even when callbacks throw", async () => {
+  it("completes shield even when callbacks throw", async ({
+    relayer,
+    signer,
+    createToken,
+    storage,
+    sessionStorage,
+    tokenAddress,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
+    const token = createToken({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
+      wrapper: tokenAddress,
+    });
+
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce("0x9999999999999999999999999999999999999999")
       .mockResolvedValueOnce(0n);
@@ -223,7 +250,24 @@ describe("Shield callbacks (SDK-19)", () => {
     expect(result.txHash).toBe("0xtxhash");
   });
 
-  it("passes to parameter for shield recipient", async () => {
+  it("passes to parameter for shield recipient", async ({
+    relayer,
+    signer,
+    createToken,
+    storage,
+    sessionStorage,
+    tokenAddress,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
+    const token = createToken({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
+      wrapper: tokenAddress,
+    });
+
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce("0x9999999999999999999999999999999999999999")
       .mockResolvedValueOnce(1000n);
@@ -237,23 +281,7 @@ describe("Shield callbacks (SDK-19)", () => {
 });
 
 describe("Transfer callbacks (SDK-19)", () => {
-  let sdk: ReturnType<typeof createMockRelayer>;
-  let signer: GenericSigner;
-  let token: Token;
-
-  beforeEach(() => {
-    sdk = createMockRelayer();
-    signer = createMockSigner();
-    token = new Token({
-      relayer: sdk as unknown as RelayerSDK,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
-    });
-  });
-
-  it("fires onEncryptComplete and onTransferSubmitted callbacks", async () => {
+  it("fires onEncryptComplete and onTransferSubmitted callbacks", async ({ token }) => {
     const onEncryptComplete = vi.fn();
     const onTransferSubmitted = vi.fn();
 
@@ -267,7 +295,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     expect(onTransferSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires callbacks in correct order", async () => {
+  it("fires callbacks in correct order", async ({ token }) => {
     const order: string[] = [];
 
     await token.confidentialTransfer(
@@ -282,7 +310,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     expect(order).toEqual(["encrypted", "submitted"]);
   });
 
-  it("works without callbacks (backward compatible)", async () => {
+  it("works without callbacks (backward compatible)", async ({ token }) => {
     const result = await token.confidentialTransfer(
       "0x8888888888888888888888888888888888888888" as Address,
       100n,
@@ -291,7 +319,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     expect(result.txHash).toBe("0xtxhash");
   });
 
-  it("completes transfer even when callbacks throw", async () => {
+  it("completes transfer even when callbacks throw", async ({ token }) => {
     const result = await token.confidentialTransfer(
       "0x8888888888888888888888888888888888888888" as Address,
       100n,

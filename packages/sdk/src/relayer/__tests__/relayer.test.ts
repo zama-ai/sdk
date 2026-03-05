@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi } from "vitest";
+import { describe, it, expect, beforeEach } from "../../test-fixtures";
 import { EncryptionFailedError } from "../../token/errors";
 
 // ---------------------------------------------------------------------------

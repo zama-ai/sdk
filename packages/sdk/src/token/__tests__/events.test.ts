@@ -1,19 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "../../test-fixtures";
 import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
-import { Token } from "../token";
 import { ReadonlyToken } from "../readonly-token";
-import { MemoryStorage } from "../memory-storage";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { ZamaSDKEvent, ZamaSDKEventListener } from "../../events/sdk-events";
 import { CredentialsManager } from "../credentials-manager";
-import type { GenericSigner } from "../token.types";
-import { createMockRelayer, createMockSigner, USER } from "./test-utils";
+import type { GenericSigner, GenericStorage } from "../token.types";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const ZERO_HANDLE = "0x" + "0".repeat(64);
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 
 describe("ZamaSDKEvents constants", () => {
   it("has all expected event keys", () => {
@@ -54,32 +49,43 @@ describe("ZamaSDKEvents constants", () => {
 });
 
 describe("ReadonlyToken event emissions", () => {
-  let sdk: ReturnType<typeof createMockRelayer>;
-  let signer: GenericSigner;
-  let events: ZamaSDKEvent[];
-  let onEvent: ZamaSDKEventListener;
-
-  beforeEach(() => {
-    sdk = createMockRelayer();
-    signer = createMockSigner();
-    events = [];
-    onEvent = (event) => events.push(event);
-  });
-
-  function createReadonlyToken() {
+  function createReadonlyToken(
+    relayer: RelayerSDK,
+    signer: GenericSigner,
+    onEvent: ZamaSDKEventListener,
+    tokenAddress: Address,
+    storage: GenericStorage,
+    sessionStorage: GenericStorage,
+  ) {
     return new ReadonlyToken({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
       onEvent,
     });
   }
 
-  it("emits DecryptStart and DecryptEnd during balanceOf", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    const token = createReadonlyToken();
+  it("emits DecryptStart and DecryptEnd during balanceOf", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    handle,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    const token = createReadonlyToken(
+      relayer,
+      signer,
+      onEvent,
+      tokenAddress,
+      storage,
+      sessionStorage,
+    );
 
     await token.balanceOf();
 
@@ -91,9 +97,24 @@ describe("ReadonlyToken event emissions", () => {
     );
   });
 
-  it("does not emit decrypt events for zero balance handle", async () => {
+  it("does not emit decrypt events for zero balance handle", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
     vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
-    const token = createReadonlyToken();
+    const token = createReadonlyToken(
+      relayer,
+      signer,
+      onEvent,
+      tokenAddress,
+      storage,
+      sessionStorage,
+    );
 
     await token.balanceOf();
 
@@ -102,29 +123,77 @@ describe("ReadonlyToken event emissions", () => {
     expect(types).not.toContain(ZamaSDKEvents.DecryptEnd);
   });
 
-  it("emits DecryptStart and DecryptEnd during decryptBalance", async () => {
-    const token = createReadonlyToken();
+  it("emits DecryptStart and DecryptEnd during decryptBalance", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    handle,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+    const token = createReadonlyToken(
+      relayer,
+      signer,
+      onEvent,
+      tokenAddress,
+      storage,
+      sessionStorage,
+    );
 
-    await token.decryptBalance(VALID_HANDLE);
+    await token.decryptBalance(handle);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.DecryptStart);
     expect(types).toContain(ZamaSDKEvents.DecryptEnd);
   });
 
-  it("emits DecryptStart and DecryptEnd during decryptHandles", async () => {
-    const token = createReadonlyToken();
+  it("emits DecryptStart and DecryptEnd during decryptHandles", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    handle,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+    const token = createReadonlyToken(
+      relayer,
+      signer,
+      onEvent,
+      tokenAddress,
+      storage,
+      sessionStorage,
+    );
 
-    await token.decryptHandles([VALID_HANDLE]);
+    await token.decryptHandles([handle]);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.DecryptStart);
     expect(types).toContain(ZamaSDKEvents.DecryptEnd);
   });
 
-  it("populates tokenAddress and timestamp on decrypt events", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    const token = createReadonlyToken();
+  it("populates tokenAddress and timestamp on decrypt events", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    handle,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    const token = createReadonlyToken(
+      relayer,
+      signer,
+      onEvent,
+      tokenAddress,
+      storage,
+      sessionStorage,
+    );
 
     await token.balanceOf();
 
@@ -134,15 +203,31 @@ describe("ReadonlyToken event emissions", () => {
     );
     expect(decryptEvents.length).toBeGreaterThan(0);
     for (const event of decryptEvents) {
-      expect(event.tokenAddress).toBe(TOKEN);
+      expect(event.tokenAddress).toBe(tokenAddress);
       expect(event.timestamp).toBeGreaterThan(0);
       expect(typeof event.timestamp).toBe("number");
     }
   });
 
-  it("includes durationMs on DecryptEnd events", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    const token = createReadonlyToken();
+  it("includes durationMs on DecryptEnd events", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    handle,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    const token = createReadonlyToken(
+      relayer,
+      signer,
+      onEvent,
+      tokenAddress,
+      storage,
+      sessionStorage,
+    );
 
     await token.balanceOf();
 
@@ -152,10 +237,26 @@ describe("ReadonlyToken event emissions", () => {
     expect("durationMs" in endEvent! && endEvent.durationMs).toBeGreaterThanOrEqual(0);
   });
 
-  it("emits DecryptError when userDecrypt fails", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    sdk.userDecrypt = vi.fn().mockRejectedValue(new Error("decrypt boom"));
-    const token = createReadonlyToken();
+  it("emits DecryptError when userDecrypt fails", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    handle,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    relayer.userDecrypt = vi.fn().mockRejectedValue(new Error("decrypt boom"));
+    const token = createReadonlyToken(
+      relayer,
+      signer,
+      onEvent,
+      tokenAddress,
+      storage,
+      sessionStorage,
+    );
 
     await expect(token.balanceOf()).rejects.toThrow();
 
@@ -166,47 +267,74 @@ describe("ReadonlyToken event emissions", () => {
     expect("durationMs" in errorEvent! && errorEvent.durationMs).toBeGreaterThanOrEqual(0);
   });
 
-  it("works without onEvent (no-op, does not throw)", async () => {
+  it("works without onEvent (no-op, does not throw)", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    handle,
+    storage,
+    sessionStorage,
+  }) => {
     const token = new ReadonlyToken({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
     });
 
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
     await expect(token.balanceOf()).resolves.toBe(1000n);
   });
 });
 
 describe("Token event emissions", () => {
-  let sdk: ReturnType<typeof createMockRelayer>;
-  let signer: GenericSigner;
-  let events: ZamaSDKEvent[];
-  let onEvent: ZamaSDKEventListener;
-
-  beforeEach(() => {
-    sdk = createMockRelayer();
-    signer = createMockSigner();
-    events = [];
-    onEvent = (event) => events.push(event);
-  });
-
-  function createToken() {
-    return new Token({
-      relayer: sdk as unknown as RelayerSDK,
+  function createTokenWithEvent(
+    relayer: RelayerSDK,
+    signer: GenericSigner,
+    onEvent: ZamaSDKEventListener,
+    tokenAddress: Address,
+    storage: GenericStorage,
+    sessionStorage: GenericStorage,
+    createToken: (config: {
+      relayer: RelayerSDK;
+      signer: GenericSigner;
+      storage: GenericStorage;
+      sessionStorage: GenericStorage;
+      address: Address;
+      onEvent: ZamaSDKEventListener;
+    }) => import("../token").Token,
+  ) {
+    return createToken({
+      relayer,
       signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
       onEvent,
     });
   }
 
   describe("confidentialTransfer events", () => {
-    it("emits EncryptStart, EncryptEnd, TransferSubmitted", async () => {
-      const token = createToken();
+    it("emits EncryptStart, EncryptEnd, TransferSubmitted", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       await token.confidentialTransfer(
         "0x8888888888888888888888888888888888888888" as Address,
         100n,
@@ -222,8 +350,25 @@ describe("Token event emissions", () => {
       );
     });
 
-    it("includes txHash on TransferSubmitted event", async () => {
-      const token = createToken();
+    it("includes txHash on TransferSubmitted event", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       await token.confidentialTransfer(
         "0x8888888888888888888888888888888888888888" as Address,
         100n,
@@ -234,8 +379,25 @@ describe("Token event emissions", () => {
       expect("txHash" in submitted! && submitted.txHash).toBe("0xtxhash");
     });
 
-    it("includes durationMs on EncryptEnd event", async () => {
-      const token = createToken();
+    it("includes durationMs on EncryptEnd event", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       await token.confidentialTransfer(
         "0x8888888888888888888888888888888888888888" as Address,
         100n,
@@ -246,9 +408,26 @@ describe("Token event emissions", () => {
       expect("durationMs" in endEvent! && endEvent.durationMs).toBeGreaterThanOrEqual(0);
     });
 
-    it("emits EncryptError when encryption fails", async () => {
-      sdk.encrypt = vi.fn().mockRejectedValue(new Error("encrypt boom"));
-      const token = createToken();
+    it("emits EncryptError when encryption fails", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      relayer.encrypt = vi.fn().mockRejectedValue(new Error("encrypt boom"));
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
 
       await expect(
         token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
@@ -261,9 +440,26 @@ describe("Token event emissions", () => {
       expect("durationMs" in errorEvent! && errorEvent.durationMs).toBeGreaterThanOrEqual(0);
     });
 
-    it("emits TransactionError (not EncryptError) when writeContract fails", async () => {
+    it("emits TransactionError (not EncryptError) when writeContract fails", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
-      const token = createToken();
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
 
       await expect(
         token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
@@ -282,8 +478,25 @@ describe("Token event emissions", () => {
   });
 
   describe("confidentialTransferFrom events", () => {
-    it("emits EncryptStart, EncryptEnd, TransferFromSubmitted", async () => {
-      const token = createToken();
+    it("emits EncryptStart, EncryptEnd, TransferFromSubmitted", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       await token.confidentialTransferFrom(
         "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
         "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
@@ -298,16 +511,50 @@ describe("Token event emissions", () => {
   });
 
   describe("approve events", () => {
-    it("emits ApproveSubmitted", async () => {
-      const token = createToken();
+    it("emits ApproveSubmitted", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       await token.approve("0x3333333333333333333333333333333333333333" as Address);
 
       const types = events.map((e) => e.type);
       expect(types).toContain(ZamaSDKEvents.ApproveSubmitted);
     });
 
-    it("includes txHash on ApproveSubmitted event", async () => {
-      const token = createToken();
+    it("includes txHash on ApproveSubmitted event", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       await token.approve("0x3333333333333333333333333333333333333333" as Address);
 
       const submitted = events.find((e) => e.type === ZamaSDKEvents.ApproveSubmitted);
@@ -317,8 +564,25 @@ describe("Token event emissions", () => {
   });
 
   describe("shield events", () => {
-    it("emits ShieldSubmitted for ERC-20 shield", async () => {
-      const token = createToken();
+    it("emits ShieldSubmitted for ERC-20 shield", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       vi.mocked(signer.readContract).mockResolvedValueOnce(
         "0x9999999999999999999999999999999999999999",
       ); // underlying
@@ -329,8 +593,25 @@ describe("Token event emissions", () => {
       expect(types).toContain(ZamaSDKEvents.ShieldSubmitted);
     });
 
-    it("emits ShieldSubmitted for shieldETH", async () => {
-      const token = createToken();
+    it("emits ShieldSubmitted for shieldETH", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       await token.shieldETH(1000n);
 
       const types = events.map((e) => e.type);
@@ -339,8 +620,25 @@ describe("Token event emissions", () => {
   });
 
   describe("unwrap events", () => {
-    it("emits EncryptStart, EncryptEnd, UnwrapSubmitted", async () => {
-      const token = createToken();
+    it("emits EncryptStart, EncryptEnd, UnwrapSubmitted", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       await token.unwrap(50n);
 
       const types = events.map((e) => e.type);
@@ -351,9 +649,27 @@ describe("Token event emissions", () => {
   });
 
   describe("unwrapAll events", () => {
-    it("emits UnwrapSubmitted", async () => {
-      const token = createToken();
-      vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    it("emits UnwrapSubmitted", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      handle,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
+      vi.mocked(signer.readContract).mockResolvedValue(handle);
       await token.unwrapAll();
 
       const types = events.map((e) => e.type);
@@ -362,8 +678,25 @@ describe("Token event emissions", () => {
   });
 
   describe("finalizeUnwrap events", () => {
-    it("emits DecryptStart, DecryptEnd, FinalizeUnwrapSubmitted", async () => {
-      const token = createToken();
+    it("emits DecryptStart, DecryptEnd, FinalizeUnwrapSubmitted", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       await token.finalizeUnwrap("0xburn" as Address);
 
       const types = events.map((e) => e.type);
@@ -372,9 +705,26 @@ describe("Token event emissions", () => {
       expect(types).toContain(ZamaSDKEvents.FinalizeUnwrapSubmitted);
     });
 
-    it("emits DecryptError when publicDecrypt fails", async () => {
-      sdk.publicDecrypt = vi.fn().mockRejectedValue(new Error("finalize boom"));
-      const token = createToken();
+    it("emits DecryptError when publicDecrypt fails", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      relayer.publicDecrypt = vi.fn().mockRejectedValue(new Error("finalize boom"));
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
 
       await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow();
 
@@ -386,8 +736,25 @@ describe("Token event emissions", () => {
   });
 
   describe("approveUnderlying events", () => {
-    it("emits ApproveUnderlyingSubmitted", async () => {
-      const token = createToken();
+    it("emits ApproveUnderlyingSubmitted", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
@@ -400,20 +767,38 @@ describe("Token event emissions", () => {
   });
 
   describe("unshield event sequence", () => {
-    function mockReceiptWithUnwrapRequested() {
+    function mockReceiptWithUnwrapRequested(signer: GenericSigner, userAddress: Address) {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + USER.slice(2)],
+            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
             data: "0x" + "ff".repeat(32),
           },
         ],
       });
     }
 
-    it("emits full unshield event sequence in order", async () => {
-      const token = createToken();
-      mockReceiptWithUnwrapRequested();
+    it("emits full unshield event sequence in order", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      userAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
+      mockReceiptWithUnwrapRequested(signer, userAddress);
 
       await token.unshield(50n);
 
@@ -440,9 +825,27 @@ describe("Token event emissions", () => {
       expect(phase2StartIdx).toBeLessThan(phase2SubmitIdx);
     });
 
-    it("includes txHash on phase events", async () => {
-      const token = createToken();
-      mockReceiptWithUnwrapRequested();
+    it("includes txHash on phase events", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      userAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
+      mockReceiptWithUnwrapRequested(signer, userAddress);
 
       await token.unshield(50n);
 
@@ -455,9 +858,27 @@ describe("Token event emissions", () => {
       expect("txHash" in phase2! && phase2.txHash).toBeTruthy();
     });
 
-    it("shares the same operationId across all unshield phase events", async () => {
-      const token = createToken();
-      mockReceiptWithUnwrapRequested();
+    it("shares the same operationId across all unshield phase events", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      userAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
+      mockReceiptWithUnwrapRequested(signer, userAddress);
 
       await token.unshield(50n);
 
@@ -478,12 +899,29 @@ describe("Token event emissions", () => {
   });
 
   describe("TransactionError events", () => {
-    it("emits TransactionError with operation 'shield' on shield failure", async () => {
+    it("emits TransactionError with operation 'shield' on shield failure", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
       vi.mocked(signer.readContract).mockResolvedValueOnce(
         "0x9999999999999999999999999999999999999999",
       );
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
-      const token = createToken();
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
 
       await expect(token.shield(100n, { approvalStrategy: "skip" })).rejects.toThrow();
 
@@ -492,9 +930,26 @@ describe("Token event emissions", () => {
       expect("operation" in txError! && txError.operation).toBe("shield");
     });
 
-    it("emits TransactionError with operation 'approve' on approve failure", async () => {
+    it("emits TransactionError with operation 'approve' on approve failure", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("approve failed"));
-      const token = createToken();
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
 
       await expect(
         token.approve("0x3333333333333333333333333333333333333333" as Address),
@@ -505,9 +960,26 @@ describe("Token event emissions", () => {
       expect("operation" in txError! && txError.operation).toBe("approve");
     });
 
-    it("emits TransactionError with operation 'unwrap' on unwrap write failure", async () => {
+    it("emits TransactionError with operation 'unwrap' on unwrap write failure", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("unwrap failed"));
-      const token = createToken();
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
 
       await expect(token.unwrap(50n)).rejects.toThrow();
 
@@ -516,10 +988,27 @@ describe("Token event emissions", () => {
       expect("operation" in txError! && txError.operation).toBe("unwrap");
     });
 
-    it("emits TransactionError with operation 'finalizeUnwrap' on finalize write failure", async () => {
+    it("emits TransactionError with operation 'finalizeUnwrap' on finalize write failure", async ({
+      relayer,
+      signer,
+      tokenAddress,
+      storage,
+      sessionStorage,
+      createToken,
+    }) => {
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
       // publicDecrypt succeeds, writeContract fails
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("finalize tx failed"));
-      const token = createToken();
+      const token = createTokenWithEvent(
+        relayer,
+        signer,
+        onEvent,
+        tokenAddress,
+        storage,
+        sessionStorage,
+        createToken,
+      );
 
       await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow();
 
@@ -531,24 +1020,19 @@ describe("Token event emissions", () => {
 });
 
 describe("CredentialsManager event emissions", () => {
-  let sdk: ReturnType<typeof createMockRelayer>;
-  let signer: GenericSigner;
-  let events: ZamaSDKEvent[];
-  let onEvent: ZamaSDKEventListener;
-
-  beforeEach(() => {
-    sdk = createMockRelayer();
-    signer = createMockSigner();
-    events = [];
-    onEvent = (event) => events.push(event);
-  });
-
-  it("emits CredentialsLoading and CredentialsCreating/Created on first call", async () => {
+  it("emits CredentialsLoading and CredentialsCreating/Created on first call", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
+      storage,
+      sessionStorage,
       durationDays: 1,
       onEvent,
     });
@@ -561,13 +1045,15 @@ describe("CredentialsManager event emissions", () => {
     expect(types).toContain(ZamaSDKEvents.CredentialsCreated);
   });
 
-  it("emits CredentialsCached on cache hit", async () => {
-    const store = new MemoryStorage();
+  it("emits CredentialsCached on cache hit", async ({ relayer, signer, createMockStorage }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+    const store = createMockStorage();
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
       storage: store,
-      sessionStorage: new MemoryStorage(),
+      sessionStorage: createMockStorage(),
       durationDays: 1,
       onEvent,
     });
@@ -584,13 +1070,19 @@ describe("CredentialsManager event emissions", () => {
     expect(types).not.toContain(ZamaSDKEvents.CredentialsCreating);
   });
 
-  it("emits CredentialsExpired when credentials are expired", async () => {
-    const store = new MemoryStorage();
+  it("emits CredentialsExpired when credentials are expired", async ({
+    relayer,
+    signer,
+    createMockStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+    const store = createMockStorage();
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
       storage: store,
-      sessionStorage: new MemoryStorage(),
+      sessionStorage: createMockStorage(),
       durationDays: 1,
       onEvent,
     });
@@ -617,10 +1109,10 @@ describe("CredentialsManager event emissions", () => {
 
     // New manager reads expired data
     const manager2 = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
       storage: store,
-      sessionStorage: new MemoryStorage(),
+      sessionStorage: createMockStorage(),
       durationDays: 1,
       onEvent,
     });
@@ -632,12 +1124,19 @@ describe("CredentialsManager event emissions", () => {
     expect(types).toContain(ZamaSDKEvents.CredentialsCreated);
   });
 
-  it("includes contractAddresses on credential events", async () => {
+  it("includes contractAddresses on credential events", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
+      storage,
+      sessionStorage,
       durationDays: 1,
       onEvent,
     });
@@ -656,12 +1155,19 @@ describe("CredentialsManager event emissions", () => {
     }
   });
 
-  it("adds timestamp to all emitted events", async () => {
+  it("adds timestamp to all emitted events", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+  }) => {
+    const events: ZamaSDKEvent[] = [];
+    const onEvent: ZamaSDKEventListener = (event) => events.push(event);
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
+      storage,
+      sessionStorage,
       durationDays: 1,
       onEvent,
     });
@@ -673,12 +1179,17 @@ describe("CredentialsManager event emissions", () => {
     }
   });
 
-  it("works without onEvent (no-op, does not throw)", async () => {
+  it("works without onEvent (no-op, does not throw)", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+  }) => {
     const manager = new CredentialsManager({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
+      storage,
+      sessionStorage,
       durationDays: 1,
     });
 

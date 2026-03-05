@@ -1,5 +1,5 @@
-import { expect, it, vi } from "vitest";
-import type { Token, Address } from "@zama-fhe/sdk";
+import { expect, it } from "../test-fixtures";
+import type { Token, Address, ZamaSDK } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions } from "../token/use-confidential-transfer";
 import { confidentialTransferFromMutationOptions } from "../token/use-confidential-transfer-from";
 import { confidentialApproveMutationOptions } from "../token/use-confidential-approve";
@@ -14,33 +14,16 @@ import { unshieldAllMutationOptions } from "../token/use-unshield-all";
 import { resumeUnshieldMutationOptions } from "../token/use-resume-unshield";
 import { allowMutationOptions } from "../token/use-allow";
 import { encryptMutationOptions } from "../relayer/use-encrypt";
-import { createMockSigner, createMockRelayer, createMockStorage } from "./test-utils";
 
 const TOKEN_ADDR = "0xtoken" as Address;
 
-const MOCK_TX_RESULT = { txHash: "0xtx", receipt: { logs: [] } };
+const MOCK_TX_RESULT = { txHash: "0xtx" as `0x${string}`, receipt: { logs: [] } };
 
-function createMockToken(address: Address = TOKEN_ADDR) {
-  return {
-    address,
-    signer: createMockSigner(),
-    confidentialTransfer: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    confidentialTransferFrom: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    approve: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    approveUnderlying: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    shield: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    shieldETH: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    unwrap: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    unwrapAll: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    finalizeUnwrap: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    unshield: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    unshieldAll: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-    resumeUnshield: vi.fn().mockResolvedValue(MOCK_TX_RESULT),
-  } as unknown as Token;
-}
-
-it("confidentialTransferMutationOptions", async () => {
-  const token = createMockToken();
+it("confidentialTransferMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = confidentialTransferMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["confidentialTransfer", TOKEN_ADDR]);
@@ -48,8 +31,11 @@ it("confidentialTransferMutationOptions", async () => {
   expect(token.confidentialTransfer).toHaveBeenCalledWith("0xto", 100n, undefined);
 });
 
-it("confidentialTransferFromMutationOptions", async () => {
-  const token = createMockToken();
+it("confidentialTransferFromMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = confidentialTransferFromMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["confidentialTransferFrom", TOKEN_ADDR]);
@@ -57,8 +43,11 @@ it("confidentialTransferFromMutationOptions", async () => {
   expect(token.confidentialTransferFrom).toHaveBeenCalledWith("0xfrom", "0xto", 100n, undefined);
 });
 
-it("confidentialApproveMutationOptions", async () => {
-  const token = createMockToken();
+it("confidentialApproveMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = confidentialApproveMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["confidentialApprove", TOKEN_ADDR]);
@@ -66,8 +55,11 @@ it("confidentialApproveMutationOptions", async () => {
   expect(token.approve).toHaveBeenCalledWith("0xspender", undefined);
 });
 
-it("approveUnderlyingMutationOptions", async () => {
-  const token = createMockToken();
+it("approveUnderlyingMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = approveUnderlyingMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["approveUnderlying", TOKEN_ADDR]);
@@ -75,8 +67,11 @@ it("approveUnderlyingMutationOptions", async () => {
   expect(token.approveUnderlying).toHaveBeenCalledWith(500n);
 });
 
-it("shieldMutationOptions", async () => {
-  const token = createMockToken();
+it("shieldMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = shieldMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["shield", TOKEN_ADDR]);
@@ -87,8 +82,11 @@ it("shieldMutationOptions", async () => {
   });
 });
 
-it("shieldETHMutationOptions", async () => {
-  const token = createMockToken();
+it("shieldETHMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = shieldETHMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["shieldETH", TOKEN_ADDR]);
@@ -96,8 +94,11 @@ it("shieldETHMutationOptions", async () => {
   expect(token.shieldETH).toHaveBeenCalledWith(1000n, 2000n);
 });
 
-it("unwrapMutationOptions", async () => {
-  const token = createMockToken();
+it("unwrapMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = unwrapMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["unwrap", TOKEN_ADDR]);
@@ -105,8 +106,11 @@ it("unwrapMutationOptions", async () => {
   expect(token.unwrap).toHaveBeenCalledWith(500n);
 });
 
-it("unwrapAllMutationOptions", async () => {
-  const token = createMockToken();
+it("unwrapAllMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = unwrapAllMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["unwrapAll", TOKEN_ADDR]);
@@ -114,8 +118,11 @@ it("unwrapAllMutationOptions", async () => {
   expect(token.unwrapAll).toHaveBeenCalled();
 });
 
-it("finalizeUnwrapMutationOptions", async () => {
-  const token = createMockToken();
+it("finalizeUnwrapMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = finalizeUnwrapMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["finalizeUnwrap", TOKEN_ADDR]);
@@ -123,8 +130,11 @@ it("finalizeUnwrapMutationOptions", async () => {
   expect(token.finalizeUnwrap).toHaveBeenCalledWith("0xhandle");
 });
 
-it("unshieldMutationOptions", async () => {
-  const token = createMockToken();
+it("unshieldMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = unshieldMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["unshield", TOKEN_ADDR]);
@@ -132,8 +142,11 @@ it("unshieldMutationOptions", async () => {
   expect(token.unshield).toHaveBeenCalledWith(300n, undefined);
 });
 
-it("unshieldAllMutationOptions", async () => {
-  const token = createMockToken();
+it("unshieldAllMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = unshieldAllMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["unshieldAll", TOKEN_ADDR]);
@@ -141,8 +154,11 @@ it("unshieldAllMutationOptions", async () => {
   expect(token.unshieldAll).toHaveBeenCalledWith(undefined);
 });
 
-it("resumeUnshieldMutationOptions", async () => {
-  const token = createMockToken();
+it("resumeUnshieldMutationOptions", async ({ createMockToken }) => {
+  const token = createMockToken({
+    txResult: MOCK_TX_RESULT,
+    address: TOKEN_ADDR,
+  }) as unknown as Token;
   const opts = resumeUnshieldMutationOptions(token);
 
   expect(opts.mutationKey).toEqual(["resumeUnshield", TOKEN_ADDR]);
@@ -151,27 +167,16 @@ it("resumeUnshieldMutationOptions", async () => {
   expect(token.resumeUnshield).toHaveBeenCalledWith(txHash, undefined);
 });
 
-it("allowMutationOptions", async () => {
-  const relayer = createMockRelayer();
-  const signer = createMockSigner();
-  const storage = createMockStorage();
-  // We need a real-ish ZamaSDK to test this
-  const { ZamaSDK: ZamaSDKClass } = await import("@zama-fhe/sdk");
-  const sdk = new ZamaSDKClass({ relayer, signer, storage });
-  const opts = allowMutationOptions(sdk);
+it("allowMutationOptions", async ({ sdk }) => {
+  const opts = allowMutationOptions(sdk as unknown as ZamaSDK);
 
   expect(opts.mutationKey).toEqual(["allow"]);
   // mutationFn creates ReadonlyToken instances and calls ReadonlyToken.allow — just verify it doesn't throw on empty
   // We can't fully test without mocking static methods, so just verify the key
 });
 
-it("encryptMutationOptions", async () => {
-  const relayer = createMockRelayer();
-  const signer = createMockSigner();
-  const storage = createMockStorage();
-  const { ZamaSDK: ZamaSDKClass } = await import("@zama-fhe/sdk");
-  const sdk = new ZamaSDKClass({ relayer, signer, storage });
-  const opts = encryptMutationOptions(sdk);
+it("encryptMutationOptions", async ({ sdk, relayer }) => {
+  const opts = encryptMutationOptions(sdk as unknown as ZamaSDK);
 
   expect(opts.mutationKey).toEqual(["encrypt"]);
   const params = {

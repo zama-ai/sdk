@@ -1,13 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { vi } from "vitest";
+import { describe, expect, it } from "../test-fixtures";
 import { renderHook } from "@testing-library/react";
 import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
 import { useReadonlyZamaSDK, useZamaSDK } from "../provider";
-import { createMockRelayer, createWrapper, renderWithProviders } from "./test-utils";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaSDKConfig[] = [];
-vi.mock("@zama-fhe/sdk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@zama-fhe/sdk")>();
+vi.mock("@zama-fhe/sdk", async (importOriginal: () => Promise<typeof import("@zama-fhe/sdk")>) => {
+  const actual = await importOriginal();
   return {
     ...actual,
     ZamaSDK: class MockZamaSDK extends actual.ZamaSDK {
@@ -24,7 +24,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(() => renderHook(() => useZamaSDK())).toThrow("useZamaSDK requires a connected signer");
   });
 
-  it("returns a ZamaSDK instance inside provider", () => {
+  it("returns a ZamaSDK instance inside provider", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useZamaSDK());
 
     expect(result.current).toBeDefined();
@@ -32,15 +32,17 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.relayer).toBeDefined();
   });
 
-  it("does not terminate relayer on unmount (caller owns the relayer)", () => {
-    const relayer = createMockRelayer();
+  it("does not terminate relayer on unmount (caller owns the relayer)", ({
+    relayer,
+    renderWithProviders,
+  }) => {
     const { unmount } = renderWithProviders(() => useZamaSDK(), { relayer });
 
     unmount();
     expect(relayer.terminate).not.toHaveBeenCalled();
   });
 
-  it("passes credentialDurationDays and onEvent to ZamaSDK", () => {
+  it("passes credentialDurationDays and onEvent to ZamaSDK", ({ createWrapper }) => {
     tokenSDKConstructorArgs.length = 0;
 
     const onEvent: ZamaSDKEventListener = vi.fn();
@@ -70,21 +72,21 @@ describe("ZamaProvider & useZamaSDK", () => {
   });
 
   // SDK-18: Optional signer / read-only mode
-  it("useReadonlyZamaSDK returns null when no signer is provided", () => {
-    const { Wrapper } = createWrapper({ signer: null });
+  it("useReadonlyZamaSDK returns null when no signer is provided", ({ createWrapper }) => {
+    const { Wrapper } = createWrapper({ signer: undefined });
 
     const { result } = renderHook(() => useReadonlyZamaSDK(), { wrapper: Wrapper });
     expect(result.current).toBeNull();
   });
 
-  it("useReadonlyZamaSDK returns SDK when signer is provided", () => {
+  it("useReadonlyZamaSDK returns SDK when signer is provided", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useReadonlyZamaSDK());
     expect(result.current).not.toBeNull();
     expect(result.current).toBeDefined();
   });
 
-  it("useZamaSDK throws descriptive error when no signer", () => {
-    const { Wrapper } = createWrapper({ signer: null });
+  it("useZamaSDK throws descriptive error when no signer", ({ createWrapper }) => {
+    const { Wrapper } = createWrapper({ signer: undefined });
 
     expect(() => renderHook(() => useZamaSDK(), { wrapper: Wrapper })).toThrow(
       "useZamaSDK requires a connected signer",

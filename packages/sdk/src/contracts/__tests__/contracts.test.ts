@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "../../test-fixtures";
 import type { Address } from "../../relayer/relayer-sdk.types";
 
 // ERC-20
@@ -58,52 +58,49 @@ import {
 // Transfer batcher
 import { confidentialBatchTransferContract } from "../transfer-batcher";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
 const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
-const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
 const FEE_MANAGER = "0x6666666666666666666666666666666666666666" as Address;
 const BATCHER = "0x7777777777777777777777777777777777777777" as Address;
 
 describe("ERC-20 contract builders", () => {
-  it("nameContract", () => {
-    const config = nameContract(TOKEN);
-    expect(config.address).toBe(TOKEN);
+  it("nameContract", ({ tokenAddress }) => {
+    const config = nameContract(tokenAddress);
+    expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("name");
     expect(config.args).toEqual([]);
   });
 
-  it("symbolContract", () => {
-    const config = symbolContract(TOKEN);
+  it("symbolContract", ({ tokenAddress }) => {
+    const config = symbolContract(tokenAddress);
     expect(config.functionName).toBe("symbol");
     expect(config.args).toEqual([]);
   });
 
-  it("decimalsContract", () => {
-    const config = decimalsContract(TOKEN);
+  it("decimalsContract", ({ tokenAddress }) => {
+    const config = decimalsContract(tokenAddress);
     expect(config.functionName).toBe("decimals");
     expect(config.args).toEqual([]);
   });
 
-  it("allowanceContract", () => {
-    const config = allowanceContract(TOKEN, USER, SPENDER);
-    expect(config.address).toBe(TOKEN);
+  it("allowanceContract", ({ tokenAddress, userAddress }) => {
+    const config = allowanceContract(tokenAddress, userAddress, SPENDER);
+    expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("allowance");
-    expect(config.args).toEqual([USER, SPENDER]);
+    expect(config.args).toEqual([userAddress, SPENDER]);
   });
 
-  it("approveContract", () => {
-    const config = approveContract(TOKEN, SPENDER, 100n);
+  it("approveContract", ({ tokenAddress }) => {
+    const config = approveContract(tokenAddress, SPENDER, 100n);
     expect(config.functionName).toBe("approve");
     expect(config.args).toEqual([SPENDER, 100n]);
   });
 });
 
 describe("ERC-165 contract builders", () => {
-  it("supportsInterfaceContract", () => {
-    const config = supportsInterfaceContract(TOKEN, ERC7984_INTERFACE_ID);
-    expect(config.address).toBe(TOKEN);
+  it("supportsInterfaceContract", ({ tokenAddress }) => {
+    const config = supportsInterfaceContract(tokenAddress, ERC7984_INTERFACE_ID);
+    expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("supportsInterface");
     expect(config.args).toEqual([ERC7984_INTERFACE_ID]);
   });
@@ -113,118 +110,127 @@ describe("ERC-165 contract builders", () => {
     expect(ERC7984_WRAPPER_INTERFACE_ID).toBe("0xd04584ba");
   });
 
-  it("isConfidentialTokenContract uses ERC7984_INTERFACE_ID", () => {
-    const config = isConfidentialTokenContract(TOKEN);
-    expect(config.address).toBe(TOKEN);
+  it("isConfidentialTokenContract uses ERC7984_INTERFACE_ID", ({ tokenAddress }) => {
+    const config = isConfidentialTokenContract(tokenAddress);
+    expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("supportsInterface");
     expect(config.args).toEqual([ERC7984_INTERFACE_ID]);
   });
 
-  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID", () => {
-    const config = isConfidentialWrapperContract(TOKEN);
-    expect(config.address).toBe(TOKEN);
+  it("isConfidentialWrapperContract uses ERC7984_WRAPPER_INTERFACE_ID", ({ tokenAddress }) => {
+    const config = isConfidentialWrapperContract(tokenAddress);
+    expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("supportsInterface");
     expect(config.args).toEqual([ERC7984_WRAPPER_INTERFACE_ID]);
   });
 });
 
 describe("Encryption contract builders", () => {
-  it("confidentialBalanceOfContract", () => {
-    const config = confidentialBalanceOfContract(TOKEN, USER);
-    expect(config.address).toBe(TOKEN);
+  it("confidentialBalanceOfContract", ({ tokenAddress, userAddress }) => {
+    const config = confidentialBalanceOfContract(tokenAddress, userAddress);
+    expect(config.address).toBe(tokenAddress);
     expect(config.functionName).toBe("confidentialBalanceOf");
-    expect(config.args).toEqual([USER]);
+    expect(config.args).toEqual([userAddress]);
   });
 
-  it("confidentialTransferContract converts handles to hex", () => {
+  it("confidentialTransferContract converts handles to hex", ({ tokenAddress, userAddress }) => {
     const handle = new Uint8Array([1, 2, 3]);
     const proof = new Uint8Array([4, 5, 6]);
-    const config = confidentialTransferContract(TOKEN, USER, handle, proof);
+    const config = confidentialTransferContract(tokenAddress, userAddress, handle, proof);
     expect(config.functionName).toBe("confidentialTransfer");
-    expect(config.args[0]).toBe(USER);
+    expect(config.args[0]).toBe(userAddress);
     expect(config.args[1]).toBe("0x010203");
     expect(config.args[2]).toBe("0x040506");
   });
 
-  it("confidentialTransferFromContract converts handles to hex", () => {
+  it("confidentialTransferFromContract converts handles to hex", ({
+    tokenAddress,
+    userAddress,
+  }) => {
     const handle = new Uint8Array([0xab]);
     const proof = new Uint8Array([0xcd]);
-    const config = confidentialTransferFromContract(TOKEN, USER, SPENDER, handle, proof);
+    const config = confidentialTransferFromContract(
+      tokenAddress,
+      userAddress,
+      SPENDER,
+      handle,
+      proof,
+    );
     expect(config.functionName).toBe("confidentialTransferFrom");
-    expect(config.args).toEqual([USER, SPENDER, "0xab", "0xcd"]);
+    expect(config.args).toEqual([userAddress, SPENDER, "0xab", "0xcd"]);
   });
 
-  it("isOperatorContract", () => {
-    const config = isOperatorContract(TOKEN, USER, SPENDER);
+  it("isOperatorContract", ({ tokenAddress, userAddress }) => {
+    const config = isOperatorContract(tokenAddress, userAddress, SPENDER);
     expect(config.functionName).toBe("isOperator");
-    expect(config.args).toEqual([USER, SPENDER]);
+    expect(config.args).toEqual([userAddress, SPENDER]);
   });
 
-  it("setOperatorContract with explicit timestamp", () => {
-    const config = setOperatorContract(TOKEN, SPENDER, 12345);
+  it("setOperatorContract with explicit timestamp", ({ tokenAddress }) => {
+    const config = setOperatorContract(tokenAddress, SPENDER, 12345);
     expect(config.functionName).toBe("setOperator");
     expect(config.args).toEqual([SPENDER, 12345]);
   });
 
-  it("setOperatorContract defaults timestamp to ~1 hour from now", () => {
+  it("setOperatorContract defaults timestamp to ~1 hour from now", ({ tokenAddress }) => {
     const before = Math.floor(Date.now() / 1000) + 3600;
-    const config = setOperatorContract(TOKEN, SPENDER);
+    const config = setOperatorContract(tokenAddress, SPENDER);
     const after = Math.floor(Date.now() / 1000) + 3600;
     expect(config.args[1]).toBeGreaterThanOrEqual(before);
     expect(config.args[1]).toBeLessThanOrEqual(after);
   });
 
-  it("unwrapContract converts handles to hex", () => {
+  it("unwrapContract converts handles to hex", ({ tokenAddress, userAddress }) => {
     const handle = new Uint8Array([0xde, 0xad]);
     const proof = new Uint8Array([0xbe, 0xef]);
-    const config = unwrapContract(TOKEN, USER, SPENDER, handle, proof);
+    const config = unwrapContract(tokenAddress, userAddress, SPENDER, handle, proof);
     expect(config.functionName).toBe("unwrap");
-    expect(config.args).toEqual([USER, SPENDER, "0xdead", "0xbeef"]);
+    expect(config.args).toEqual([userAddress, SPENDER, "0xdead", "0xbeef"]);
   });
 
-  it("unwrapFromBalanceContract", () => {
+  it("unwrapFromBalanceContract", ({ tokenAddress, userAddress }) => {
     const handle = "0x" + "ab".repeat(32);
-    const config = unwrapFromBalanceContract(TOKEN, USER, SPENDER, handle as Address);
+    const config = unwrapFromBalanceContract(tokenAddress, userAddress, SPENDER, handle as Address);
     expect(config.functionName).toBe("unwrap");
-    expect(config.args).toEqual([USER, SPENDER, handle]);
+    expect(config.args).toEqual([userAddress, SPENDER, handle]);
   });
 
-  it("confidentialTotalSupplyContract", () => {
-    const config = confidentialTotalSupplyContract(TOKEN);
+  it("confidentialTotalSupplyContract", ({ tokenAddress }) => {
+    const config = confidentialTotalSupplyContract(tokenAddress);
     expect(config.functionName).toBe("confidentialTotalSupply");
     expect(config.args).toEqual([]);
   });
 
-  it("totalSupplyContract", () => {
-    const config = totalSupplyContract(TOKEN);
+  it("totalSupplyContract", ({ tokenAddress }) => {
+    const config = totalSupplyContract(tokenAddress);
     expect(config.functionName).toBe("totalSupply");
   });
 
-  it("rateContract", () => {
-    const config = rateContract(TOKEN);
+  it("rateContract", ({ tokenAddress }) => {
+    const config = rateContract(tokenAddress);
     expect(config.functionName).toBe("rate");
   });
 
-  it("deploymentCoordinatorContract", () => {
-    const config = deploymentCoordinatorContract(TOKEN);
+  it("deploymentCoordinatorContract", ({ tokenAddress }) => {
+    const config = deploymentCoordinatorContract(tokenAddress);
     expect(config.functionName).toBe("deploymentCoordinator");
   });
 
-  it("isFinalizeUnwrapOperatorContract", () => {
-    const config = isFinalizeUnwrapOperatorContract(TOKEN, USER, SPENDER);
+  it("isFinalizeUnwrapOperatorContract", ({ tokenAddress, userAddress }) => {
+    const config = isFinalizeUnwrapOperatorContract(tokenAddress, userAddress, SPENDER);
     expect(config.functionName).toBe("isFinalizeUnwrapOperator");
-    expect(config.args).toEqual([USER, SPENDER]);
+    expect(config.args).toEqual([userAddress, SPENDER]);
   });
 
-  it("setFinalizeUnwrapOperatorContract with explicit timestamp", () => {
-    const config = setFinalizeUnwrapOperatorContract(TOKEN, SPENDER, 99999);
+  it("setFinalizeUnwrapOperatorContract with explicit timestamp", ({ tokenAddress }) => {
+    const config = setFinalizeUnwrapOperatorContract(tokenAddress, SPENDER, 99999);
     expect(config.functionName).toBe("setFinalizeUnwrapOperator");
     expect(config.args).toEqual([SPENDER, 99999]);
   });
 
-  it("setFinalizeUnwrapOperatorContract defaults timestamp", () => {
+  it("setFinalizeUnwrapOperatorContract defaults timestamp", ({ tokenAddress }) => {
     const before = Math.floor(Date.now() / 1000) + 3600;
-    const config = setFinalizeUnwrapOperatorContract(TOKEN, SPENDER);
+    const config = setFinalizeUnwrapOperatorContract(tokenAddress, SPENDER);
     const after = Math.floor(Date.now() / 1000) + 3600;
     expect(config.args[1]).toBeGreaterThanOrEqual(before);
     expect(config.args[1]).toBeLessThanOrEqual(after);
@@ -232,62 +238,62 @@ describe("Encryption contract builders", () => {
 });
 
 describe("Wrapper contract builders", () => {
-  it("finalizeUnwrapContract", () => {
+  it("finalizeUnwrapContract", ({ wrapperAddress }) => {
     const handle = ("0x" + "ab".repeat(32)) as Address;
     const proof = ("0x" + "cd".repeat(32)) as Address;
-    const config = finalizeUnwrapContract(WRAPPER, handle, 500n, proof);
-    expect(config.address).toBe(WRAPPER);
+    const config = finalizeUnwrapContract(wrapperAddress, handle, 500n, proof);
+    expect(config.address).toBe(wrapperAddress);
     expect(config.functionName).toBe("finalizeUnwrap");
     expect(config.args).toEqual(["0x" + "ab".repeat(32), 500n, "0x" + "cd".repeat(32)]);
   });
 
-  it("underlyingContract", () => {
-    const config = underlyingContract(WRAPPER);
-    expect(config.address).toBe(WRAPPER);
+  it("underlyingContract", ({ wrapperAddress }) => {
+    const config = underlyingContract(wrapperAddress);
+    expect(config.address).toBe(wrapperAddress);
     expect(config.functionName).toBe("underlying");
   });
 
-  it("wrapContract", () => {
-    const config = wrapContract(WRAPPER, USER, 1000n);
+  it("wrapContract", ({ wrapperAddress, userAddress }) => {
+    const config = wrapContract(wrapperAddress, userAddress, 1000n);
     expect(config.functionName).toBe("wrap");
-    expect(config.args).toEqual([USER, 1000n]);
+    expect(config.args).toEqual([userAddress, 1000n]);
   });
 
-  it("wrapETHContract includes value", () => {
-    const config = wrapETHContract(WRAPPER, USER, 500n, 500n);
+  it("wrapETHContract includes value", ({ wrapperAddress, userAddress }) => {
+    const config = wrapETHContract(wrapperAddress, userAddress, 500n, 500n);
     expect(config.functionName).toBe("wrapETH");
-    expect(config.args).toEqual([USER, 500n]);
+    expect(config.args).toEqual([userAddress, 500n]);
     expect(config.value).toBe(500n);
   });
 });
 
 describe("Deployment coordinator contract builders", () => {
-  it("getWrapperContract", () => {
-    const config = getWrapperContract(COORDINATOR, TOKEN);
+  it("getWrapperContract", ({ tokenAddress }) => {
+    const config = getWrapperContract(COORDINATOR, tokenAddress);
     expect(config.address).toBe(COORDINATOR);
     expect(config.functionName).toBe("getWrapper");
-    expect(config.args).toEqual([TOKEN]);
+    expect(config.args).toEqual([tokenAddress]);
   });
 
-  it("wrapperExistsContract", () => {
-    const config = wrapperExistsContract(COORDINATOR, TOKEN);
+  it("wrapperExistsContract", ({ tokenAddress }) => {
+    const config = wrapperExistsContract(COORDINATOR, tokenAddress);
     expect(config.functionName).toBe("wrapperExists");
-    expect(config.args).toEqual([TOKEN]);
+    expect(config.args).toEqual([tokenAddress]);
   });
 });
 
 describe("Fee manager contract builders", () => {
-  it("getWrapFeeContract", () => {
-    const config = getWrapFeeContract(FEE_MANAGER, 100n, USER, SPENDER);
+  it("getWrapFeeContract", ({ userAddress }) => {
+    const config = getWrapFeeContract(FEE_MANAGER, 100n, userAddress, SPENDER);
     expect(config.address).toBe(FEE_MANAGER);
     expect(config.functionName).toBe("getWrapFee");
-    expect(config.args).toEqual([100n, USER, SPENDER]);
+    expect(config.args).toEqual([100n, userAddress, SPENDER]);
   });
 
-  it("getUnwrapFeeContract", () => {
-    const config = getUnwrapFeeContract(FEE_MANAGER, 200n, USER, SPENDER);
+  it("getUnwrapFeeContract", ({ userAddress }) => {
+    const config = getUnwrapFeeContract(FEE_MANAGER, 200n, userAddress, SPENDER);
     expect(config.functionName).toBe("getUnwrapFee");
-    expect(config.args).toEqual([200n, USER, SPENDER]);
+    expect(config.args).toEqual([200n, userAddress, SPENDER]);
   });
 
   it("getBatchTransferFeeContract", () => {
@@ -304,19 +310,19 @@ describe("Fee manager contract builders", () => {
 });
 
 describe("Transfer batcher contract builders", () => {
-  it("confidentialBatchTransferContract", () => {
+  it("confidentialBatchTransferContract", ({ tokenAddress, userAddress }) => {
     const data = [
       {
-        to: USER,
+        to: userAddress,
         encryptedAmount: ("0x" + "aa".repeat(32)) as Address,
         inputProof: ("0x" + "bb".repeat(32)) as Address,
         retryFor: 0n,
       },
     ];
-    const config = confidentialBatchTransferContract(BATCHER, TOKEN, USER, data, 10n);
+    const config = confidentialBatchTransferContract(BATCHER, tokenAddress, userAddress, data, 10n);
     expect(config.address).toBe(BATCHER);
     expect(config.functionName).toBe("confidentialBatchTransfer");
-    expect(config.args).toEqual([TOKEN, USER, data]);
+    expect(config.args).toEqual([tokenAddress, userAddress, data]);
     expect(config.value).toBe(10n);
   });
 });
