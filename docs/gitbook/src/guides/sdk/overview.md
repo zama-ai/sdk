@@ -6,6 +6,10 @@ The core SDK (`@zama-fhe/sdk`) lets you shield, transfer, and unshield confident
 
 ```bash
 pnpm add @zama-fhe/sdk
+# or
+npm install @zama-fhe/sdk
+# or
+yarn add @zama-fhe/sdk
 ```
 
 You also need a Web3 library. Pick one:
@@ -18,12 +22,17 @@ pnpm add viem
 pnpm add ethers
 
 # Option C: implement GenericSigner yourself (no extra dep)
+# (or substitute npm install / yarn add)
 ```
 
 For Node.js, you'll additionally need `@zama-fhe/relayer-sdk`:
 
 ```bash
 pnpm add @zama-fhe/relayer-sdk
+# or
+npm install @zama-fhe/relayer-sdk
+# or
+yarn add @zama-fhe/relayer-sdk
 ```
 
 ## Three things to set up

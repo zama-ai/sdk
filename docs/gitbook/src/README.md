@@ -25,6 +25,8 @@ pnpm add @zama-fhe/react-sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 pnpm add @zama-fhe/sdk
+
+# (or substitute npm install / yarn add)
 ```
 
 ## Your first confidential transfer in 30 seconds

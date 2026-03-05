@@ -6,6 +6,10 @@ A TypeScript SDK for building privacy-preserving token applications using Fully 
 
 ```bash
 pnpm add @zama-fhe/sdk
+# or
+npm install @zama-fhe/sdk
+# or
+yarn add @zama-fhe/sdk
 ```
 
 ### Peer dependencies
