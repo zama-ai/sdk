@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import { useGenerateKeypair } from "../relayer/use-generate-keypair";
 import { useCreateEIP712 } from "../relayer/use-create-eip712";
@@ -10,7 +10,6 @@ import { useRequestZKProofVerification } from "../relayer/use-request-zk-proof-v
 import { useUserDecryptedValue } from "../relayer/use-user-decrypted-value";
 import { useUserDecryptedValues } from "../relayer/use-user-decrypted-values";
 import { decryptionKeys } from "../relayer/decryption-cache";
-import { renderWithProviders, createMockRelayer } from "./test-utils";
 
 describe("decryptionKeys", () => {
   it("produces stable query keys", () => {
@@ -19,8 +18,7 @@ describe("decryptionKeys", () => {
 });
 
 describe("useGenerateKeypair", () => {
-  it("delegates to relayer.generateKeypair", async () => {
-    const relayer = createMockRelayer();
+  it("delegates to relayer.generateKeypair", async ({ relayer, renderWithProviders }) => {
     const { result } = renderWithProviders(() => useGenerateKeypair(), { relayer });
 
     expect(result.current.mutate).toBeDefined();
@@ -34,8 +32,7 @@ describe("useGenerateKeypair", () => {
 });
 
 describe("useCreateEIP712", () => {
-  it("delegates to relayer.createEIP712", async () => {
-    const relayer = createMockRelayer();
+  it("delegates to relayer.createEIP712", async ({ relayer, renderWithProviders }) => {
     const { result } = renderWithProviders(() => useCreateEIP712(), { relayer });
 
     result.current.mutate({
@@ -49,8 +46,7 @@ describe("useCreateEIP712", () => {
     expect(relayer.createEIP712).toHaveBeenCalledWith("0xpub", ["0xtoken"], 1000, 2);
   });
 
-  it("passes undefined for optional durationDays", async () => {
-    const relayer = createMockRelayer();
+  it("passes undefined for optional durationDays", async ({ relayer, renderWithProviders }) => {
     const { result } = renderWithProviders(() => useCreateEIP712(), { relayer });
 
     result.current.mutate({
@@ -65,8 +61,10 @@ describe("useCreateEIP712", () => {
 });
 
 describe("useCreateDelegatedUserDecryptEIP712", () => {
-  it("delegates to relayer.createDelegatedUserDecryptEIP712", async () => {
-    const relayer = createMockRelayer();
+  it("delegates to relayer.createDelegatedUserDecryptEIP712", async ({
+    relayer,
+    renderWithProviders,
+  }) => {
     const { result } = renderWithProviders(() => useCreateDelegatedUserDecryptEIP712(), {
       relayer,
     });
@@ -89,8 +87,7 @@ describe("useCreateDelegatedUserDecryptEIP712", () => {
     );
   });
 
-  it("passes undefined for optional durationDays", async () => {
-    const relayer = createMockRelayer();
+  it("passes undefined for optional durationDays", async ({ relayer, renderWithProviders }) => {
     const { result } = renderWithProviders(() => useCreateDelegatedUserDecryptEIP712(), {
       relayer,
     });
@@ -114,14 +111,18 @@ describe("useCreateDelegatedUserDecryptEIP712", () => {
 });
 
 describe("useUserDecrypt", () => {
-  it("delegates to relayer.userDecrypt and populates cache", async () => {
-    const relayer = createMockRelayer();
+  it("delegates to relayer.userDecrypt and populates cache", async ({
+    relayer,
+    renderWithProviders,
+  }) => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({
       "0xhandle1": 100n,
       "0xhandle2": 200n,
     });
 
-    const { result, queryClient } = renderWithProviders(() => useUserDecrypt(), { relayer });
+    const { result, queryClient } = renderWithProviders(() => useUserDecrypt(), {
+      relayer,
+    });
 
     result.current.mutate({
       handles: ["0xhandle1", "0xhandle2"],
@@ -145,15 +146,19 @@ describe("useUserDecrypt", () => {
 });
 
 describe("usePublicDecrypt", () => {
-  it("delegates to relayer.publicDecrypt and populates cache", async () => {
-    const relayer = createMockRelayer();
+  it("delegates to relayer.publicDecrypt and populates cache", async ({
+    relayer,
+    renderWithProviders,
+  }) => {
     vi.mocked(relayer.publicDecrypt).mockResolvedValue({
       clearValues: { "0xhandle1": 500n },
       abiEncodedClearValues: "0x",
       decryptionProof: "0xproof",
     });
 
-    const { result, queryClient } = renderWithProviders(() => usePublicDecrypt(), { relayer });
+    const { result, queryClient } = renderWithProviders(() => usePublicDecrypt(), {
+      relayer,
+    });
 
     result.current.mutate(["0xhandle1"]);
 
@@ -166,11 +171,12 @@ describe("usePublicDecrypt", () => {
 });
 
 describe("useDelegatedUserDecrypt", () => {
-  it("delegates to relayer.delegatedUserDecrypt", async () => {
-    const relayer = createMockRelayer();
+  it("delegates to relayer.delegatedUserDecrypt", async ({ relayer, renderWithProviders }) => {
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ "0xhandle1": 300n });
 
-    const { result } = renderWithProviders(() => useDelegatedUserDecrypt(), { relayer });
+    const { result } = renderWithProviders(() => useDelegatedUserDecrypt(), {
+      relayer,
+    });
 
     result.current.mutate({
       handles: ["0xhandle1"],
@@ -192,9 +198,13 @@ describe("useDelegatedUserDecrypt", () => {
 });
 
 describe("useRequestZKProofVerification", () => {
-  it("delegates to relayer.requestZKProofVerification", async () => {
-    const relayer = createMockRelayer();
-    const { result } = renderWithProviders(() => useRequestZKProofVerification(), { relayer });
+  it("delegates to relayer.requestZKProofVerification", async ({
+    relayer,
+    renderWithProviders,
+  }) => {
+    const { result } = renderWithProviders(() => useRequestZKProofVerification(), {
+      relayer,
+    });
 
     result.current.mutate({} as unknown as Parameters<typeof result.current.mutate>[0]);
 
@@ -204,7 +214,7 @@ describe("useRequestZKProofVerification", () => {
 });
 
 describe("useUserDecryptedValue", () => {
-  it("reads from decryption cache", () => {
+  it("reads from decryption cache", ({ renderWithProviders }) => {
     const { result, queryClient } = renderWithProviders(() => useUserDecryptedValue("0xhandle1"));
 
     // Initially no data
@@ -215,14 +225,14 @@ describe("useUserDecryptedValue", () => {
     // The query is disabled so it won't refetch - data comes from cache seed
   });
 
-  it("handles undefined handle", () => {
+  it("handles undefined handle", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useUserDecryptedValue(undefined));
     expect(result.current.data).toBeUndefined();
   });
 });
 
 describe("useUserDecryptedValues", () => {
-  it("reads multiple handles from cache", () => {
+  it("reads multiple handles from cache", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useUserDecryptedValues(["0xh1", "0xh2"]));
 
     expect(result.current.data).toEqual({
@@ -232,7 +242,7 @@ describe("useUserDecryptedValues", () => {
     expect(result.current.results).toHaveLength(2);
   });
 
-  it("returns empty for empty handles", () => {
+  it("returns empty for empty handles", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useUserDecryptedValues([]));
     expect(result.current.data).toEqual({});
     expect(result.current.results).toHaveLength(0);

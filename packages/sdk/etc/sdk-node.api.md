@@ -197,8 +197,10 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
 
 // @public (undocumented)
 export interface DelegatedUserDecryptResponseData {
+    // Warning: (ae-forgotten-export) The symbol "DecryptedValue" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    clearValues: Record<string, bigint>;
+    clearValues: Record<string, DecryptedValue>;
 }
 
 // @public
@@ -233,8 +235,8 @@ export interface EncryptParams {
     contractAddress: Address;
     // (undocumented)
     userAddress: Address;
-    // (undocumented)
-    values: bigint[];
+    // Warning: (ae-forgotten-export) The symbol "EncryptInput" needs to be exported by the entry point index.d.ts
+    values: EncryptInput[];
 }
 
 // @public (undocumented)
@@ -244,7 +246,7 @@ export type EncryptPayload = EncryptRequest["payload"];
 export interface EncryptRequest extends BaseRequest {
     // (undocumented)
     payload: {
-        values: bigint[];
+        values: EncryptInput[];
         contractAddress: Address;
         userAddress: Address;
     };
@@ -384,6 +386,7 @@ export interface InitRequest extends BaseRequest {
         fhevmConfig: FhevmInstanceConfig;
         csrfToken: string;
         integrity?: string;
+        thread?: number;
     };
     // (undocumented)
     type: "INIT";
@@ -516,7 +519,7 @@ export class RelayerNode implements RelayerSDK {
     // (undocumented)
     createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, DecryptedValue>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
@@ -538,7 +541,7 @@ export class RelayerNode implements RelayerSDK {
     // (undocumented)
     terminate(): void;
     // (undocumented)
-    userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>>;
+    userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>>;
 }
 
 // @public (undocumented)
@@ -555,7 +558,7 @@ export interface RelayerNodeConfig {
 export interface RelayerSDK {
     createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, DecryptedValue>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<FHEKeypair>;
     getPublicKey(): Promise<{
@@ -569,7 +572,7 @@ export interface RelayerSDK {
     publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>>;
+    userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>>;
 }
 
 // @public (undocumented)
@@ -662,7 +665,7 @@ export interface UserDecryptRequest extends BaseRequest {
 // @public (undocumented)
 export interface UserDecryptResponseData {
     // (undocumented)
-    clearValues: Record<string, bigint>;
+    clearValues: Record<string, DecryptedValue>;
 }
 
 // @public (undocumented)

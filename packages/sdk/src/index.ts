@@ -15,6 +15,9 @@ export type {
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
+  EncryptInput,
+  FheType,
+  DecryptedValue,
   UserDecryptParams,
   PublicDecryptResult,
   FHEKeypair,
@@ -73,6 +76,8 @@ export type {
   TransactionReceipt,
   TransactionResult,
   UnshieldCallbacks,
+  ShieldCallbacks,
+  TransferCallbacks,
 } from "./token/token.types";
 export { ZamaSDKEvents } from "./events/sdk-events";
 export type {

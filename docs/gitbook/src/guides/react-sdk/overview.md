@@ -6,6 +6,10 @@ The React SDK (`@zama-fhe/react-sdk`) gives you hooks for confidential token ope
 
 ```bash
 pnpm add @zama-fhe/react-sdk @tanstack/react-query
+# or
+npm install @zama-fhe/react-sdk @tanstack/react-query
+# or
+yarn add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
 You **don't** need to install `@zama-fhe/sdk` separately — it's included and re-exported, so you import everything from one place.
@@ -17,6 +21,7 @@ Then add your Web3 library:
 pnpm add wagmi viem    # wagmi (most common for React dApps)
 pnpm add viem          # viem only
 pnpm add ethers        # ethers only
+# (or substitute npm install / yarn add)
 ```
 
 ## Minimal example

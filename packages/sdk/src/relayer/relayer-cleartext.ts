@@ -185,13 +185,42 @@ export class RelayerCleartext implements RelayerSDK {
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const instance = await this.#getInstance();
     const input = instance.createEncryptedInput(params.contractAddress, params.userAddress);
-    for (const value of params.values) {
+    for (const { type, value } of params.values) {
       try {
-        input.add64(value);
+        if (type === "ebool") {
+          input.addBool(value);
+        } else if (type === "eaddress") {
+          input.addAddress(String(value));
+        } else {
+          // All euintN types expect number | bigint
+          const n = typeof value === "boolean" ? BigInt(value) : value;
+          switch (type) {
+            case "euint8":
+              input.add8(n);
+              break;
+            case "euint16":
+              input.add16(n);
+              break;
+            case "euint32":
+              input.add32(n);
+              break;
+            case "euint64":
+              input.add64(n);
+              break;
+            case "euint128":
+              input.add128(n);
+              break;
+            case "euint256":
+              input.add256(n);
+              break;
+            default:
+              throw new Error(`Unsupported FHE type: ${type as string}`);
+          }
+        }
       } catch (error) {
+        if (error instanceof EncryptionFailedError) throw error;
         throw new EncryptionFailedError(
-          `RelayerCleartext.encrypt() only supports values up to uint64 (2^64 - 1). ` +
-            `For larger types (uint128, uint256, address), use createCleartextInstance() and the low-level add* methods.`,
+          `RelayerCleartext.encrypt() failed for type "${type}": ${error instanceof Error ? error.message : String(error)}`,
           { cause: error instanceof Error ? error : undefined },
         );
       }

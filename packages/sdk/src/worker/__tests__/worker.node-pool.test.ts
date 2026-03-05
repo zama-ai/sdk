@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi } from "vitest";
+import { describe, it, expect, beforeEach } from "../../test-fixtures";
 import type { NodeWorkerPoolConfig } from "../worker.node-pool";
 import { NodeWorkerPool } from "../worker.node-pool";
 import type { ZKProofLike } from "../../relayer/relayer-sdk.types";
@@ -136,9 +137,13 @@ describe("NodeWorkerPool", () => {
       durationDays: 7,
     });
 
-    await pool.encrypt({ values: [1n], contractAddress: "0xC", userAddress: "0xU" });
+    await pool.encrypt({
+      values: [{ value: 1n, type: "euint8" as const }],
+      contractAddress: "0xC",
+      userAddress: "0xU",
+    });
     expect(instance.encrypt).toHaveBeenCalledWith({
-      values: [1n],
+      values: [{ value: 1n, type: "euint8" as const }],
       contractAddress: "0xC",
       userAddress: "0xU",
     });

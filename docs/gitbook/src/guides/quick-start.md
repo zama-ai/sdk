@@ -25,6 +25,10 @@ The most common setup for dApps. You'll need wagmi, React Query, and the React S
 
 ```bash
 pnpm add @zama-fhe/react-sdk @tanstack/react-query wagmi viem
+# or
+npm install @zama-fhe/react-sdk @tanstack/react-query wagmi viem
+# or
+yarn add @zama-fhe/react-sdk @tanstack/react-query wagmi viem
 ```
 
 ### 1. Set up providers
@@ -109,6 +113,10 @@ For vanilla TypeScript apps that use viem for wallet interactions.
 
 ```bash
 pnpm add @zama-fhe/sdk viem
+# or
+npm install @zama-fhe/sdk viem
+# or
+yarn add @zama-fhe/sdk viem
 ```
 
 ```ts
@@ -158,6 +166,10 @@ Same flow, different signer adapter.
 
 ```bash
 pnpm add @zama-fhe/sdk ethers
+# or
+npm install @zama-fhe/sdk ethers
+# or
+yarn add @zama-fhe/sdk ethers
 ```
 
 ```ts
@@ -192,6 +204,10 @@ For backend services, scripts, and bots. Uses native worker threads instead of a
 
 ```bash
 pnpm add @zama-fhe/sdk viem @zama-fhe/relayer-sdk
+# or
+npm install @zama-fhe/sdk viem @zama-fhe/relayer-sdk
+# or
+yarn add @zama-fhe/sdk viem @zama-fhe/relayer-sdk
 ```
 
 ```ts

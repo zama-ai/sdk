@@ -42,6 +42,22 @@ export interface RelayerWebConfig {
   security?: RelayerWebSecurityConfig;
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
+  /**
+   * Number of WASM threads for parallel FHE operations inside the Web Worker.
+   * Uses `wasm-bindgen-rayon` under the hood via `SharedArrayBuffer`.
+   *
+   * **Requirements:** The page must be served with COOP/COEP headers:
+   * - `Cross-Origin-Opener-Policy: same-origin`
+   * - `Cross-Origin-Embedder-Policy: require-corp`
+   *
+   * 4–8 threads is the practical sweet spot; beyond that, diminishing returns
+   * and higher memory usage on low-end devices.
+   *
+   * When omitted, the relayer SDK uses its default (single-threaded).
+   */
+  threads?: number;
+  /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
+  onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
 }
 
 /** Result from encryption operation */
@@ -50,12 +66,39 @@ export interface EncryptResult {
   inputProof: Uint8Array;
 }
 
+/** Supported FHE encrypted types. */
+export type FheType =
+  | "ebool"
+  | "euint4"
+  | "euint8"
+  | "euint16"
+  | "euint32"
+  | "euint64"
+  | "euint128"
+  | "euint256"
+  | "eaddress";
+
+/** A single value to encrypt with its FHE type. */
+export interface EncryptInput {
+  value: bigint | boolean;
+  type: FheType;
+}
+
 /** Parameters for encryption */
 export interface EncryptParams {
-  values: bigint[];
+  /** Typed inputs for encryption. Each value must specify its FHE type. */
+  values: EncryptInput[];
   contractAddress: Address;
   userAddress: Address;
 }
+
+/**
+ * Union of possible decrypted value types.
+ * - bigint for euintN types
+ * - boolean for ebool
+ * - hex string for eaddress
+ */
+export type DecryptedValue = bigint | boolean | `0x${string}`;
 
 /** Parameters for user decryption */
 export interface UserDecryptParams {

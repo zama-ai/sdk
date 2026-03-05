@@ -6,6 +6,10 @@ React hooks for confidential token operations, built on [React Query](https://ta
 
 ```bash
 pnpm add @zama-fhe/react-sdk @tanstack/react-query
+# or
+npm install @zama-fhe/react-sdk @tanstack/react-query
+# or
+yarn add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
 `@zama-fhe/sdk` is included as a direct dependency — no need to install it separately.

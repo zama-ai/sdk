@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "../../test-fixtures";
 import { withRetry } from "../relayer-utils";
 
 beforeEach(() => {

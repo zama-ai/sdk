@@ -4,6 +4,7 @@
  */
 
 import type {
+  EncryptInput,
   FhevmInstance,
   FhevmInstanceConfig,
   RelayerSDKGlobal,
@@ -257,7 +258,7 @@ async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> 
  */
 async function handleInit(request: InitRequest): Promise<void> {
   const { id, type, payload } = request;
-  const { cdnUrl, fhevmConfig, csrfToken, integrity } = payload;
+  const { cdnUrl, fhevmConfig, csrfToken, integrity, thread } = payload;
 
   try {
     // Extract relayerUrl from config for fetch interception
@@ -276,8 +277,8 @@ async function handleInit(request: InitRequest): Promise<void> {
 
     sdkGlobal = self.relayerSDK;
 
-    // Initialize WASM
-    await sdkGlobal.initSDK();
+    // Initialize WASM (optionally with a rayon thread pool for parallel FHE ops)
+    await sdkGlobal.initSDK(thread != null ? { thread } : undefined);
 
     // Create SDK instance with caller-provided config
     const config: FhevmInstanceConfig = {
@@ -296,6 +297,44 @@ async function handleInit(request: InitRequest): Promise<void> {
 }
 
 /**
+ * Add a single typed value to the encrypted input builder.
+ */
+function addTypedValue(
+  input: ReturnType<FhevmInstance["createEncryptedInput"]>,
+  entry: EncryptInput,
+): void {
+  const { value, type: fheType } = entry;
+  switch (fheType) {
+    case "ebool":
+      input.addBool(typeof value === "boolean" ? value : value !== 0n);
+      break;
+    case "euint8":
+      input.add8(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      break;
+    case "euint16":
+      input.add16(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      break;
+    case "euint32":
+      input.add32(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      break;
+    case "euint64":
+      input.add64(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      break;
+    case "euint128":
+      input.add128(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      break;
+    case "euint256":
+      input.add256(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      break;
+    case "eaddress":
+      input.addAddress(typeof value === "boolean" ? String(value) : String(value));
+      break;
+    default:
+      throw new Error(`Unsupported FHE type: ${fheType}`);
+  }
+}
+
+/**
  * Handle ENCRYPT request.
  */
 async function handleEncrypt(request: EncryptRequest): Promise<void> {
@@ -309,8 +348,8 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
 
     const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
 
-    for (const value of values) {
-      input.add64(value);
+    for (const entry of values) {
+      addTypedValue(input, entry);
     }
 
     const encrypted = await input.encrypt();

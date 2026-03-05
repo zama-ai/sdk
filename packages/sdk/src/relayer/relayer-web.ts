@@ -1,5 +1,6 @@
 import type {
   Address,
+  DecryptedValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -8,6 +9,7 @@ import type {
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
   PublicDecryptResult,
+  RelayerSDKStatus,
   RelayerWebConfig,
   UserDecryptParams,
   ZKProofLike,
@@ -58,15 +60,43 @@ export class RelayerWeb implements RelayerSDK {
   #ensureLock: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
+  #status: RelayerSDKStatus = "idle";
+  #initError: Error | undefined;
   readonly #config: RelayerWebConfig;
 
   constructor(config: RelayerWebConfig) {
     this.#config = config;
   }
 
+  /** Current WASM initialization status. */
+  get status(): RelayerSDKStatus {
+    return this.#status;
+  }
+
+  /** The error that caused initialization to fail, if `status` is `"error"`. */
+  get initError(): Error | undefined {
+    return this.#initError;
+  }
+
+  #setStatus(status: RelayerSDKStatus, error?: Error): void {
+    this.#status = status;
+    this.#initError = error;
+    this.#config.onStatusChange?.(status, error);
+  }
+
   async #getWorkerConfig(): Promise<WorkerClientConfig> {
     const chainId = await this.#config.getChainId();
-    const { transports, security } = this.#config;
+    const { transports, security, threads } = this.#config;
+
+    if (threads !== undefined && (!Number.isInteger(threads) || threads < 1)) {
+      throw new Error(`Invalid thread count: ${threads}. Must be a positive integer.`);
+    }
+
+    if (threads !== undefined && typeof globalThis.SharedArrayBuffer === "undefined") {
+      this.#config.logger?.warn(
+        "threads option requires SharedArrayBuffer (COOP/COEP headers). Falling back to single-threaded.",
+      );
+    }
 
     return {
       cdnUrl: CDN_URL,
@@ -74,6 +104,9 @@ export class RelayerWeb implements RelayerSDK {
       csrfToken: security?.getCsrfToken?.() ?? "",
       integrity: security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
       logger: this.#config.logger,
+      // Public API uses `threads` (plural, "how many threads"); upstream
+      // `initSDK` expects `thread` (singular) — rename at the boundary.
+      thread: threads,
     };
   }
 
@@ -114,14 +147,23 @@ export class RelayerWeb implements RelayerSDK {
     this.#resolvedChainId = chainId;
 
     if (!this.#initPromise) {
-      this.#initPromise = this.#initWorker().catch((error) => {
-        this.#initPromise = null;
-        throw error instanceof ZamaError
-          ? error
-          : new EncryptionFailedError("Failed to initialize FHE worker", {
-              cause: error instanceof Error ? error : undefined,
-            });
-      });
+      this.#setStatus("initializing");
+      this.#initPromise = this.#initWorker()
+        .then((client) => {
+          this.#setStatus("ready");
+          return client;
+        })
+        .catch((error) => {
+          this.#initPromise = null;
+          const wrappedError =
+            error instanceof ZamaError
+              ? error
+              : new EncryptionFailedError("Failed to initialize FHE worker", {
+                  cause: error instanceof Error ? error : undefined,
+                });
+          this.#setStatus("error", wrappedError);
+          throw wrappedError;
+        });
     }
     return this.#initPromise;
   }
@@ -223,7 +265,7 @@ export class RelayerWeb implements RelayerSDK {
 
   /**
    * Encrypt values for use in smart contract calls.
-   * All values are treated as 64-bit unsigned integers.
+   * Each value must specify its FHE type (ebool, euint4–256, eaddress).
    */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const { values, contractAddress, userAddress } = params;
@@ -240,7 +282,7 @@ export class RelayerWeb implements RelayerSDK {
    * Decrypt ciphertexts using user's private key.
    * Requires a valid EIP712 signature.
    */
-  async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
+  async userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
@@ -290,7 +332,9 @@ export class RelayerWeb implements RelayerSDK {
    * Decrypt ciphertexts via delegation.
    * Requires a valid EIP712 signature from the delegator.
    */
-  async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
+  async delegatedUserDecrypt(
+    params: DelegatedUserDecryptParams,
+  ): Promise<Record<string, DecryptedValue>> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();

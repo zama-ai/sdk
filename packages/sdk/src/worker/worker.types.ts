@@ -1,5 +1,7 @@
 import type {
   Address,
+  DecryptedValue,
+  EncryptInput,
   FhevmInstanceConfig,
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
@@ -54,6 +56,8 @@ export interface InitRequest extends BaseRequest {
     csrfToken: string;
     /** Expected SHA-384 hex digest for integrity verification. */
     integrity?: string;
+    /** Number of WASM threads for parallel FHE operations. */
+    thread?: number;
   };
 }
 
@@ -74,7 +78,7 @@ export interface UpdateCsrfRequest extends BaseRequest {
 export interface EncryptRequest extends BaseRequest {
   type: "ENCRYPT";
   payload: {
-    values: bigint[];
+    values: EncryptInput[];
     contractAddress: Address;
     userAddress: Address;
   };
@@ -229,7 +233,7 @@ export interface EncryptResponseData {
 }
 
 export interface UserDecryptResponseData {
-  clearValues: Record<string, bigint>;
+  clearValues: Record<string, DecryptedValue>;
 }
 
 export interface PublicDecryptResponseData {
@@ -268,7 +272,7 @@ export interface CreateEIP712ResponseData {
 export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
 
 export interface DelegatedUserDecryptResponseData {
-  clearValues: Record<string, bigint>;
+  clearValues: Record<string, DecryptedValue>;
 }
 
 export type RequestZKProofVerificationResponseData = InputProofBytesType;

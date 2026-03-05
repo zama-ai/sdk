@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
+import type { Address, Token, TransactionResult, ShieldCallbacks } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -19,6 +19,10 @@ export interface ShieldParams {
   fees?: bigint;
   /** ERC-20 approval strategy: `"exact"` (default), `"max"`, or `"skip"`. */
   approvalStrategy?: "max" | "exact" | "skip";
+  /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
+  to?: Address;
+  /** Optional progress callbacks for the multi-step shield flow. */
+  callbacks?: ShieldCallbacks;
 }
 
 /** Configuration for {@link useShield}. */
@@ -40,8 +44,8 @@ export interface UseShieldConfig extends UseZamaConfig {
 export function shieldMutationOptions(token: Token) {
   return {
     mutationKey: ["shield", token.address] as const,
-    mutationFn: async ({ amount, fees, approvalStrategy }: ShieldParams) =>
-      token.shield(amount, { fees, approvalStrategy }),
+    mutationFn: async ({ amount, fees, approvalStrategy, to, callbacks }: ShieldParams) =>
+      token.shield(amount, { fees, approvalStrategy, to, callbacks }),
   };
 }
 
@@ -73,8 +77,8 @@ export function useShield(
 
   return useMutation<TransactionResult, Error, ShieldParams, Address>({
     mutationKey: ["shield", config.tokenAddress],
-    mutationFn: async ({ amount, fees, approvalStrategy }) =>
-      token.shield(amount, { fees, approvalStrategy }),
+    mutationFn: async ({ amount, fees, approvalStrategy, to, callbacks }) =>
+      token.shield(amount, { fees, approvalStrategy, to, callbacks }),
     ...options,
     onMutate: config.optimistic
       ? async (variables, mutationContext) => {

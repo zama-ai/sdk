@@ -37,7 +37,7 @@ import {
   type RelayerCleartextConfig,
   type RelayerCleartextMultiConfig,
 } from "../relayer-cleartext";
-import type { EncryptParams } from "../relayer-sdk.types";
+import type { EncryptInput, EncryptParams } from "../relayer-sdk.types";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -66,7 +66,7 @@ function makeConfig(overrides?: Partial<RelayerCleartextMultiConfig>): RelayerCl
   };
 }
 
-function encryptParams(values: bigint[] = [42n]): EncryptParams {
+function encryptParams(values: EncryptInput[] = [{ value: 42n, type: "euint64" }]): EncryptParams {
   return { contractAddress: CONTRACT_ADDR, userAddress: USER_ADDR, values };
 }
 
@@ -155,14 +155,14 @@ describe("RelayerCleartext", () => {
       const relayer = new RelayerCleartext(makeConfig());
 
       // First encrypt — creates instance
-      await relayer.encrypt(encryptParams([1n]));
+      await relayer.encrypt(encryptParams([{ value: 1n, type: "euint64" }]));
       expect(mockCreateCleartextInstance).toHaveBeenCalledTimes(1);
 
       // Terminate
       relayer.terminate();
 
       // Second encrypt — should auto-restart and create a new instance
-      await relayer.encrypt(encryptParams([1n]));
+      await relayer.encrypt(encryptParams([{ value: 1n, type: "euint64" }]));
       expect(mockCreateCleartextInstance).toHaveBeenCalledTimes(2);
     });
   });
@@ -178,11 +178,13 @@ describe("RelayerCleartext", () => {
         }),
       );
 
-      await expect(relayer.encrypt(encryptParams([1n]))).rejects.toThrow(ConfigurationError);
+      await expect(
+        relayer.encrypt(encryptParams([{ value: 1n, type: "euint64" }])),
+      ).rejects.toThrow(ConfigurationError);
 
-      await expect(relayer.encrypt(encryptParams([1n]))).rejects.toThrow(
-        /No cleartext transport config for chainId/,
-      );
+      await expect(
+        relayer.encrypt(encryptParams([{ value: 1n, type: "euint64" }])),
+      ).rejects.toThrow(/No cleartext transport config for chainId/);
     });
   });
 
@@ -202,7 +204,9 @@ describe("RelayerCleartext", () => {
         getChainId: vi.fn().mockResolvedValue(CUSTOM_CHAIN),
       });
 
-      const err = await relayer.encrypt(encryptParams([1n])).catch((e: unknown) => e);
+      const err = await relayer
+        .encrypt(encryptParams([{ value: 1n, type: "euint64" }]))
+        .catch((e: unknown) => e);
 
       expect(err).toBeInstanceOf(ConfigurationError);
       expect((err as ConfigurationError).message).toMatch(/Incomplete cleartext config/);
@@ -226,10 +230,11 @@ describe("RelayerCleartext", () => {
       const relayer = new RelayerCleartext(makeConfig());
 
       const tooBig = 2n ** 64n; // exceeds uint64 max
+      const input: EncryptInput = { value: tooBig, type: "euint64" };
 
-      await expect(relayer.encrypt(encryptParams([tooBig]))).rejects.toThrow(EncryptionFailedError);
-      await expect(relayer.encrypt(encryptParams([tooBig]))).rejects.toThrow(
-        /only supports values up to uint64/,
+      await expect(relayer.encrypt(encryptParams([input]))).rejects.toThrow(EncryptionFailedError);
+      await expect(relayer.encrypt(encryptParams([input]))).rejects.toThrow(
+        /failed for type "euint64"/,
       );
     });
   });

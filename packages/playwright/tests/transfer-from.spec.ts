@@ -1,16 +1,19 @@
 import { test, expect } from "../fixtures";
+
 const operator = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"; // Hardhat account #0 (test wallet)
 const recipient = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"; // Hardhat account #1
 
 test("should shield, approve, then transfer-from on cUSDT", async ({
   page,
   contracts,
-  initialBalances,
   formatUnits,
   computeFee,
+  confidentialBalances,
 }) => {
   const shieldAmount = 1000n;
   const transferAmount = 100n;
+
+  const cUSDTBefore = confidentialBalances.cUSDT;
 
   // Shield first to ensure balance
   await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
@@ -34,8 +37,7 @@ test("should shield, approve, then transfer-from on cUSDT", async ({
   // Verify balance decreased by transfer amount
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance =
-    initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount) - transferAmount;
+  const expectedBalance = cUSDTBefore + shieldAmount - computeFee(shieldAmount) - transferAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedBalance, 6),
   );
