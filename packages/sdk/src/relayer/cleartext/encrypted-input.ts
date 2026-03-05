@@ -6,8 +6,7 @@ import { MOCK_INPUT_SIGNER_PK } from "./constants";
 import type { CleartextConfig } from "./types";
 
 const INPUT_VERIFICATION_TYPES: Record<string, ethers.TypedDataField[]> = {
-  CiphertextVerification: INPUT_VERIFICATION_EIP712.types
-    .CiphertextVerification as ethers.TypedDataField[],
+  CiphertextVerification: [...INPUT_VERIFICATION_EIP712.types.CiphertextVerification],
 };
 const INPUT_SIGNER = new ethers.Wallet(MOCK_INPUT_SIGNER_PK);
 

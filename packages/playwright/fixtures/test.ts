@@ -5,7 +5,6 @@ import { createTestClient, formatUnits, http, publicActions, walletActions } fro
 import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
-
 const privateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
 
 const account = privateKeyToAccount(privateKey);

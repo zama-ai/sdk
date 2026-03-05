@@ -6,6 +6,7 @@ import { type ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
+import deployments from "../../../hardhat/deployments.json" with { type: "json" };
 import { burner } from "./burner-connector";
 
 const isHardhat = import.meta.env.VITE_NETWORK === "hardhat";
@@ -28,7 +29,13 @@ const wagmiConfig = createConfig({
 
 const signer = new WagmiSigner({ config: wagmiConfig });
 
-const relayer = new RelayerCleartext(HardhatConfig);
+const relayer = new RelayerCleartext({
+  ...HardhatConfig,
+  aclContractAddress: deployments.fhevm.acl,
+  inputVerifierContractAddress: deployments.fhevm.inputVerifier,
+  kmsContractAddress: deployments.fhevm.kmsVerifier,
+  cleartextExecutorAddress: deployments.fhevm.executor,
+});
 
 const storage = new MemoryStorage();
 

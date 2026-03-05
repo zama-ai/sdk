@@ -36,8 +36,7 @@ export const EXECUTOR_ABI = ["function plaintexts(bytes32 handle) view returns (
 const ACL_INTERFACE = new ethers.Interface(ACL_ABI);
 const EXECUTOR_INTERFACE = new ethers.Interface(EXECUTOR_ABI);
 const USER_DECRYPT_TYPES: Record<string, ethers.TypedDataField[]> = {
-  UserDecryptRequestVerification: USER_DECRYPT_EIP712.types
-    .UserDecryptRequestVerification as ethers.TypedDataField[],
+  UserDecryptRequestVerification: [...USER_DECRYPT_EIP712.types.UserDecryptRequestVerification],
 };
 const DELEGATED_USER_DECRYPT_TYPES: KmsDelegatedUserDecryptEIP712Type["types"] = {
   EIP712Domain: [
@@ -50,8 +49,7 @@ const DELEGATED_USER_DECRYPT_TYPES: KmsDelegatedUserDecryptEIP712Type["types"] =
     DELEGATED_USER_DECRYPT_EIP712.types.DelegatedUserDecryptRequestVerification,
 };
 const KMS_DECRYPTION_TYPES: Record<string, ethers.TypedDataField[]> = {
-  PublicDecryptVerification: KMS_DECRYPTION_EIP712.types
-    .PublicDecryptVerification as ethers.TypedDataField[],
+  PublicDecryptVerification: [...KMS_DECRYPTION_EIP712.types.PublicDecryptVerification],
 };
 
 type RpcLike = Pick<ethers.JsonRpcProvider, "send">;
