@@ -195,6 +195,9 @@ export class RelayerCleartext implements RelayerSDK {
           // All euintN types expect number | bigint
           const n = typeof value === "boolean" ? BigInt(value) : value;
           switch (type) {
+            case "euint4":
+              input.add4(n);
+              break;
             case "euint8":
               input.add8(n);
               break;
@@ -302,12 +305,14 @@ export class RelayerCleartext implements RelayerSDK {
   }
 
   async getPublicKey(): Promise<{ publicKeyId: string; publicKey: Uint8Array } | null> {
-    return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array(32) };
+    const instance = await this.#getInstance();
+    return instance.getPublicKey();
   }
 
   async getPublicParams(
     _bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
-    return { publicParamsId: "mock-public-params-id", publicParams: new Uint8Array(32) };
+    const instance = await this.#getInstance();
+    return instance.getPublicParams();
   }
 }

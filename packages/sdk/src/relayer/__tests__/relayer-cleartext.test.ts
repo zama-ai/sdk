@@ -312,7 +312,12 @@ describe("RelayerCleartext", () => {
   // 10. getPublicKey / getPublicParams return mock data
   // -----------------------------------------------------------------------
   describe("getPublicKey", () => {
-    it("returns mock public key data", async () => {
+    it("delegates to the cleartext instance", async () => {
+      mockInstance.getPublicKey.mockReturnValue({
+        publicKeyId: "mock-public-key-id",
+        publicKey: new Uint8Array(32),
+      });
+
       const relayer = new RelayerCleartext(makeConfig());
       const result = await relayer.getPublicKey();
 
@@ -320,11 +325,17 @@ describe("RelayerCleartext", () => {
         publicKeyId: "mock-public-key-id",
         publicKey: new Uint8Array(32),
       });
+      expect(mockInstance.getPublicKey).toHaveBeenCalled();
     });
   });
 
   describe("getPublicParams", () => {
-    it("returns mock public params data", async () => {
+    it("delegates to the cleartext instance", async () => {
+      mockInstance.getPublicParams.mockReturnValue({
+        publicParamsId: "mock-public-params-id",
+        publicParams: new Uint8Array(32),
+      });
+
       const relayer = new RelayerCleartext(makeConfig());
       const result = await relayer.getPublicParams(2048);
 
@@ -332,6 +343,7 @@ describe("RelayerCleartext", () => {
         publicParamsId: "mock-public-params-id",
         publicParams: new Uint8Array(32),
       });
+      expect(mockInstance.getPublicParams).toHaveBeenCalled();
     });
   });
 

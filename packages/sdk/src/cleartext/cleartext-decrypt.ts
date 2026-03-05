@@ -201,18 +201,6 @@ export async function cleartextPublicDecrypt(
 }
 
 /**
- * Decrypt handles scoped to a specific user.
- *
- * Verifies that both the user and the originating contract have
- * `persistAllowed` permission for each handle, then reads and formats
- * the plaintext values.
- *
- * **Note:** See {@link cleartextPublicDecrypt} for the TOCTOU caveat on
- * non-atomic ACL checks vs plaintext reads.
- *
- * @throws {Error} If the user or contract is not authorized for any handle.
- */
-/**
  * Decrypt handles on behalf of a delegator via delegation ACL.
  *
  * Verifies that each handle has been delegated for user decryption using
