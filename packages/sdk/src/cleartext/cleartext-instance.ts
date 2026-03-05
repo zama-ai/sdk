@@ -18,6 +18,7 @@ import {
 import { CleartextExecutor } from "./cleartext-executor";
 import { createCleartextEncryptedInput } from "./cleartext-input";
 import { KEYPAIR_PRIVATE_KEY_BYTES, KEYPAIR_PUBLIC_KEY_BYTES, MOCK_KEY_BYTES } from "./constants";
+import { USER_DECRYPT_EIP712, DELEGATED_USER_DECRYPT_EIP712 } from "./eip712";
 import type { CleartextInstanceConfig } from "./types";
 
 const ACL_ABI = [
@@ -34,6 +35,13 @@ function resolveProvider(network: Eip1193Provider | string): Provider {
   }
   return new BrowserProvider(network);
 }
+
+/**
+ * Chain IDs where cleartext mode must never be used (values are stored in plaintext).
+ * Hoodi (560048) is intentionally NOT listed here — it is a cleartext-enabled
+ * development testnet with a CleartextFHEVMExecutor contract deployed.
+ */
+const FORBIDDEN_CHAIN_IDS = new Set([1, 11155111]); // Mainnet, Sepolia
 
 /**
  * Create a cleartext FHEVM instance — the main entry point for cleartext mode.
@@ -62,13 +70,6 @@ function resolveProvider(network: Eip1193Provider | string): Provider {
  * const { handles, inputProof } = await input.encrypt();
  * ```
  */
-/**
- * Chain IDs where cleartext mode must never be used (values are stored in plaintext).
- * Hoodi (560048) is intentionally NOT listed here — it is a cleartext-enabled
- * development testnet with a CleartextFHEVMExecutor contract deployed.
- */
-const FORBIDDEN_CHAIN_IDS = new Set([1, 11155111]); // Mainnet, Sepolia
-
 export function createCleartextInstance(config: CleartextInstanceConfig) {
   if (FORBIDDEN_CHAIN_IDS.has(config.chainId)) {
     throw new ConfigurationError(
@@ -152,22 +153,12 @@ export function createCleartextInstance(config: CleartextInstanceConfig) {
       durationDays: number,
     ) {
       return {
-        domain: {
-          name: "Decryption" as const,
-          version: "1" as const,
-          chainId: BigInt(config.gatewayChainId),
-          verifyingContract: config.verifyingContractAddressDecryption,
-        },
+        domain: USER_DECRYPT_EIP712.domain(
+          BigInt(config.gatewayChainId),
+          config.verifyingContractAddressDecryption,
+        ),
         primaryType: "UserDecryptRequestVerification" as const,
-        types: {
-          UserDecryptRequestVerification: [
-            { name: "publicKey", type: "bytes" },
-            { name: "contractAddresses", type: "address[]" },
-            { name: "startTimestamp", type: "uint256" },
-            { name: "durationDays", type: "uint256" },
-            { name: "extraData", type: "bytes" },
-          ],
-        },
+        types: USER_DECRYPT_EIP712.types,
         message: {
           publicKey,
           contractAddresses,
@@ -187,23 +178,12 @@ export function createCleartextInstance(config: CleartextInstanceConfig) {
       durationDays: number,
     ) {
       return {
-        domain: {
-          name: "Decryption" as const,
-          version: "1" as const,
-          chainId: BigInt(config.gatewayChainId),
-          verifyingContract: config.verifyingContractAddressDecryption,
-        },
+        domain: DELEGATED_USER_DECRYPT_EIP712.domain(
+          BigInt(config.gatewayChainId),
+          config.verifyingContractAddressDecryption,
+        ),
         primaryType: "DelegatedUserDecryptRequestVerification" as const,
-        types: {
-          DelegatedUserDecryptRequestVerification: [
-            { name: "publicKey", type: "bytes" },
-            { name: "contractAddresses", type: "address[]" },
-            { name: "delegatorAddress", type: "address" },
-            { name: "startTimestamp", type: "uint256" },
-            { name: "durationDays", type: "uint256" },
-            { name: "extraData", type: "bytes" },
-          ] as const,
-        },
+        types: DELEGATED_USER_DECRYPT_EIP712.types,
         message: {
           publicKey,
           contractAddresses,
