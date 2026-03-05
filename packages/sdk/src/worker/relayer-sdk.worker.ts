@@ -257,7 +257,7 @@ async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> 
  */
 async function handleInit(request: InitRequest): Promise<void> {
   const { id, type, payload } = request;
-  const { cdnUrl, fhevmConfig, csrfToken, integrity } = payload;
+  const { cdnUrl, fhevmConfig, csrfToken, integrity, thread } = payload;
 
   try {
     // Extract relayerUrl from config for fetch interception
@@ -276,8 +276,8 @@ async function handleInit(request: InitRequest): Promise<void> {
 
     sdkGlobal = self.relayerSDK;
 
-    // Initialize WASM
-    await sdkGlobal.initSDK();
+    // Initialize WASM (optionally with a rayon thread pool for parallel FHE ops)
+    await sdkGlobal.initSDK(thread != null ? { thread } : undefined);
 
     // Create SDK instance with caller-provided config
     const config: FhevmInstanceConfig = {
