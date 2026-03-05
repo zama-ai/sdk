@@ -11064,7 +11064,7 @@ export interface FHEKeypair {
 }
 
 // @public
-export type FheType = "ebool" | "euint8" | "euint16" | "euint32" | "euint64" | "euint128" | "euint256" | "eaddress";
+export type FheType = "ebool" | "euint4" | "euint8" | "euint16" | "euint32" | "euint64" | "euint128" | "euint256" | "eaddress";
 
 export { FhevmInstanceConfig }
 
