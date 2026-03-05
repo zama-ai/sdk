@@ -1540,7 +1540,7 @@ export function ZamaProvider(input: ZamaProviderProps): react_jsx_runtime.JSX.El
 
 // @public
 export interface ZamaProviderProps extends PropsWithChildren {
-    credentialDurationDays?: number;
+    keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;

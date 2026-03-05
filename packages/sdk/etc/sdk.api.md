@@ -33036,7 +33036,7 @@ export class ZamaSDK {
 
 // @public
 export interface ZamaSDKConfig {
-    credentialDurationDays?: number;
+    keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
