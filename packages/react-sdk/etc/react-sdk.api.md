@@ -1352,9 +1352,6 @@ export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOption
 export function useMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
-export function useReadonlyZamaSDK(): ZamaSDK | null;
-
-// @public
 export function usePublicDecrypt(): _tanstack_react_query.UseMutationResult<PublicDecryptResult, Error, string[], unknown>;
 
 // @public
@@ -1381,6 +1378,9 @@ export { UserDecryptParams }
 
 // @public
 export function useReadonlyToken(address: Address): _zama_fhe_sdk.ReadonlyToken;
+
+// @public
+export function useReadonlyZamaSDK(): ZamaSDK | null;
 
 // @public
 export function useRequestZKProofVerification(): _tanstack_react_query.UseMutationResult<Readonly<{
