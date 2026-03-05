@@ -135,7 +135,7 @@ export const test = base.extend<SdkFixtures>({
         signer,
         storage,
         sessionStorage,
-        durationDays: 1,
+        keypairTTL: 86400,
       }),
     );
   },

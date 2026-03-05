@@ -192,10 +192,6 @@ Add private helper methods to the `CredentialsManager` class:
   async #getSessionEntry(storeKey: string): Promise<SessionEntry | null> {
     const raw = await this.#sessionStorage.get(storeKey);
     if (raw === null) return null;
-    // Backward compat: bare string from old format → treat as persistent
-    if (typeof raw === "string") {
-      return { signature: raw, createdAt: 0, ttl: "persistent" };
-    }
     return raw as SessionEntry;
   }
 

@@ -302,7 +302,6 @@ export class CredentialsManager {
   async #getSessionEntry(storeKey: string): Promise<SessionEntry | null> {
     const raw = await this.#sessionStorage.get(storeKey);
     if (raw === null) return null;
-    if (typeof raw === "string") return { signature: raw, createdAt: 0, ttl: 0 };
     this.#assertSessionEntry(raw);
     return raw;
   }
