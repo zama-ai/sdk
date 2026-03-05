@@ -23,6 +23,8 @@ import { CleartextEncryptedInput } from "./encrypted-input";
 import { MOCK_KMS_SIGNER_PK } from "./constants";
 import type { CleartextConfig } from "./types";
 
+const KMS_SIGNER = new ethers.Wallet(MOCK_KMS_SIGNER_PK);
+
 export const ACL_ABI = [
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
@@ -34,9 +36,8 @@ export const EXECUTOR_ABI = ["function plaintexts(bytes32 handle) view returns (
 const ACL_INTERFACE = new ethers.Interface(ACL_ABI);
 const EXECUTOR_INTERFACE = new ethers.Interface(EXECUTOR_ABI);
 const USER_DECRYPT_TYPES: Record<string, ethers.TypedDataField[]> = {
-  UserDecryptRequestVerification: USER_DECRYPT_EIP712.types.UserDecryptRequestVerification.map(
-    (field) => ({ ...field }),
-  ),
+  UserDecryptRequestVerification: USER_DECRYPT_EIP712.types
+    .UserDecryptRequestVerification as ethers.TypedDataField[],
 };
 const DELEGATED_USER_DECRYPT_TYPES: KmsDelegatedUserDecryptEIP712Type["types"] = {
   EIP712Domain: [
@@ -49,9 +50,8 @@ const DELEGATED_USER_DECRYPT_TYPES: KmsDelegatedUserDecryptEIP712Type["types"] =
     DELEGATED_USER_DECRYPT_EIP712.types.DelegatedUserDecryptRequestVerification,
 };
 const KMS_DECRYPTION_TYPES: Record<string, ethers.TypedDataField[]> = {
-  PublicDecryptVerification: KMS_DECRYPTION_EIP712.types.PublicDecryptVerification.map((field) => ({
-    ...field,
-  })),
+  PublicDecryptVerification: KMS_DECRYPTION_EIP712.types
+    .PublicDecryptVerification as ethers.TypedDataField[],
 };
 
 type RpcLike = Pick<ethers.JsonRpcProvider, "send">;
@@ -174,8 +174,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
       ethers.concat(orderedValues.map((v) => ethers.zeroPadValue(ethers.toBeHex(v), 32))),
     );
 
-    const kmsSigner = new ethers.Wallet(MOCK_KMS_SIGNER_PK);
-    const signature = await kmsSigner.signTypedData(
+    const signature = await KMS_SIGNER.signTypedData(
       KMS_DECRYPTION_EIP712.domain(
         this.#config.gatewayChainId,
         this.#config.contracts.verifyingDecryption,
@@ -236,18 +235,21 @@ export class CleartextFhevmInstance implements RelayerSDK {
       ethers.toBeHex(ethers.toBigInt(handle), 32),
     );
 
-    for (const handle of normalizedHandles) {
-      const isDelegated = await this.#isHandleDelegatedForUserDecryption(
-        params.delegatorAddress,
-        params.delegateAddress,
-        params.contractAddress,
-        handle,
+    const delegatedResults = await Promise.all(
+      normalizedHandles.map((handle) =>
+        this.#isHandleDelegatedForUserDecryption(
+          params.delegatorAddress,
+          params.delegateAddress,
+          params.contractAddress,
+          handle,
+        ),
+      ),
+    );
+    const unauthorizedIndex = delegatedResults.findIndex((isDelegated) => !isDelegated);
+    if (unauthorizedIndex !== -1) {
+      throw new Error(
+        `Handle ${normalizedHandles[unauthorizedIndex]!} is not delegated for user decryption (delegator=${params.delegatorAddress}, delegate=${params.delegateAddress}, contract=${params.contractAddress})`,
       );
-      if (!isDelegated) {
-        throw new Error(
-          `Handle ${handle} is not delegated for user decryption (delegator=${params.delegatorAddress}, delegate=${params.delegateAddress}, contract=${params.contractAddress})`,
-        );
-      }
     }
 
     const values = await Promise.all(

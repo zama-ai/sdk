@@ -6,10 +6,10 @@ import { MOCK_INPUT_SIGNER_PK } from "./constants";
 import type { CleartextConfig } from "./types";
 
 const INPUT_VERIFICATION_TYPES: Record<string, ethers.TypedDataField[]> = {
-  CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification.map((field) => ({
-    ...field,
-  })),
+  CiphertextVerification: INPUT_VERIFICATION_EIP712.types
+    .CiphertextVerification as ethers.TypedDataField[],
 };
+const INPUT_SIGNER = new ethers.Wallet(MOCK_INPUT_SIGNER_PK);
 
 type AddedValue = {
   fheType: FheType;
@@ -110,8 +110,7 @@ export class CleartextEncryptedInput {
       ),
     );
 
-    const inputSigner = new ethers.Wallet(MOCK_INPUT_SIGNER_PK);
-    const signature = await inputSigner.signTypedData(
+    const signature = await INPUT_SIGNER.signTypedData(
       INPUT_VERIFICATION_EIP712.domain(
         this.#config.gatewayChainId,
         this.#config.contracts.verifyingInputVerifier,
