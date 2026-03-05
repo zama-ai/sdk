@@ -118,10 +118,10 @@ export function useZamaSDK(): ZamaSDK {
  *
  * @example
  * ```tsx
- * const sdk = useOptionalZamaSDK();
+ * const sdk = useReadonlyZamaSDK();
  * if (!sdk) return <ConnectWalletPrompt />;
  * ```
  */
-export function useOptionalZamaSDK(): ZamaSDK | null {
+export function useReadonlyZamaSDK(): ZamaSDK | null {
   return useContext(ZamaSDKContext);
 }
