@@ -1,0 +1,13 @@
+import type { Address } from "@zama-fhe/sdk";
+
+export const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
+export const USER = "0x2222222222222222222222222222222222222222" as Address;
+export const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
+export const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
+export const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
+export const FEE_MANAGER = "0x6666666666666666666666666666666666666666" as Address;
+export const TOKEN_B = "0x7777777777777777777777777777777777777777" as Address;
+export const WAGMI_BALANCE_KEY = [
+  "readContract",
+  { functionName: "balanceOf", address: TOKEN, args: [USER] },
+] as const;
