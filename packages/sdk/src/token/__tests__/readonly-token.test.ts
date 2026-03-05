@@ -50,6 +50,7 @@ function createMockSigner(): GenericSigner {
     readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getChainId: vi.fn().mockResolvedValue(31337),
+    subscribe: vi.fn().mockReturnValue(() => {}),
   };
 }
 
@@ -62,9 +63,10 @@ describe("ReadonlyToken", () => {
     sdk = createMockSdk();
     signer = createMockSigner();
     token = new ReadonlyToken({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
   });
@@ -209,9 +211,10 @@ describe("ReadonlyToken", () => {
 
     it("throws DecryptionFailedError by default when decryption fails", async () => {
       const token2 = new ReadonlyToken({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 
@@ -238,9 +241,10 @@ describe("ReadonlyToken", () => {
 
     it("returns fallback from onError callback instead of throwing", async () => {
       const token2 = new ReadonlyToken({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 
@@ -259,9 +263,10 @@ describe("ReadonlyToken", () => {
 
     it("onError receives correct error and address", async () => {
       const token2 = new ReadonlyToken({
-        sdk: sdk as unknown as RelayerSDK,
+        relayer: sdk as unknown as RelayerSDK,
         signer,
         storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
         address: TOKEN2,
       });
 
@@ -296,27 +301,56 @@ describe("ReadonlyToken", () => {
     });
   });
 
-  describe("authorizeAll", () => {
-    it("returns immediately for empty token array", async () => {
-      await ReadonlyToken.authorizeAll([]);
+  describe("allow", () => {
+    it("returns immediately when called with no tokens", async () => {
+      await ReadonlyToken.allow();
 
       expect(sdk.generateKeypair).not.toHaveBeenCalled();
       expect(signer.signTypedData).not.toHaveBeenCalled();
     });
 
-    it("authorizes credentials for all tokens in a single signature", async () => {
-      const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
-      const token2 = new ReadonlyToken({
-        sdk: sdk as unknown as RelayerSDK,
-        signer,
-        storage: new MemoryStorage(),
-        address: TOKEN2,
-      });
-
-      await ReadonlyToken.authorizeAll([token, token2]);
+    it("instance allow() delegates to credentials manager", async () => {
+      await token.allow();
 
       expect(sdk.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
+    });
+
+    it("allows credentials for all tokens in a single signature", async () => {
+      const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+      const token2 = new ReadonlyToken({
+        relayer: sdk as unknown as RelayerSDK,
+        signer,
+        storage: new MemoryStorage(),
+        sessionStorage: new MemoryStorage(),
+        address: TOKEN2,
+      });
+
+      await ReadonlyToken.allow(token, token2);
+
+      expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("isAllowed", () => {
+    it("returns false before allow()", async () => {
+      expect(await token.isAllowed()).toBe(false);
+    });
+
+    it("returns true after allow()", async () => {
+      await token.allow();
+      expect(await token.isAllowed()).toBe(true);
+    });
+  });
+
+  describe("revoke", () => {
+    it("clears the session so isAllowed returns false", async () => {
+      await token.allow();
+      expect(await token.isAllowed()).toBe(true);
+
+      await token.revoke();
+      expect(await token.isAllowed()).toBe(false);
     });
   });
 });
@@ -326,9 +360,10 @@ describe("ZamaSDK token factory", () => {
     const sdk = createMockSdk();
     const signer = createMockSigner();
     const token = new ReadonlyToken({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
 

@@ -1,15 +1,15 @@
 "use client";
 
-import type { GenericStringStorage } from "./token.types";
+import type { GenericStorage } from "./token.types";
 
 /**
- * IndexedDB-backed {@link GenericStringStorage}.
+ * IndexedDB-backed {@link GenericStorage}.
  *
- * Stores encrypted credential JSON strings keyed by a hashed wallet address.
+ * Stores encrypted credential objects keyed by a hashed wallet address.
  * Encryption is handled by {@link CredentialsManager} — this store only
- * persists opaque string values.
+ * persists opaque values.
  */
-export class IndexedDBStorage implements GenericStringStorage {
+export class IndexedDBStorage implements GenericStorage {
   #db: IDBDatabase | null = null;
   #dbPromise: Promise<IDBDatabase> | null = null;
   #dbName: string;
@@ -60,7 +60,7 @@ export class IndexedDBStorage implements GenericStringStorage {
     return this.#dbPromise;
   }
 
-  async getItem(key: string): Promise<string | null> {
+  async get<T = unknown>(key: string): Promise<T | null> {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readonly");
@@ -72,7 +72,7 @@ export class IndexedDBStorage implements GenericStringStorage {
     });
   }
 
-  async setItem(key: string, value: string): Promise<void> {
+  async set<T = unknown>(key: string, value: T): Promise<void> {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readwrite");
@@ -84,7 +84,7 @@ export class IndexedDBStorage implements GenericStringStorage {
     });
   }
 
-  async removeItem(key: string): Promise<void> {
+  async delete(key: string): Promise<void> {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.#storeName, "readwrite");

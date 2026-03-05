@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ReadonlyToken, Token, Address } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
-import { tokenMetadataQueryOptions } from "../token/use-token-metadata";
+import { metadataQueryOptions } from "../token/use-metadata";
 import { isConfidentialQueryOptions, isWrapperQueryOptions } from "../token/use-is-confidential";
 import { totalSupplyQueryOptions } from "../token/use-total-supply";
 import { confidentialIsApprovedQueryOptions } from "../token/use-confidential-is-approved";
@@ -47,10 +47,10 @@ function createMockToken(address: Address = TOKEN_ADDR) {
 }
 
 describe("query options factories", () => {
-  describe("tokenMetadataQueryOptions", () => {
+  describe("metadataQueryOptions", () => {
     it("returns correct queryKey and staleTime", () => {
       const token = createMockReadonlyToken();
-      const opts = tokenMetadataQueryOptions(token);
+      const opts = metadataQueryOptions(token);
 
       expect(opts.queryKey).toEqual(["tokenMetadata", TOKEN_ADDR]);
       expect(opts.staleTime).toBe(Infinity);
@@ -58,7 +58,7 @@ describe("query options factories", () => {
 
     it("queryFn calls name, symbol, decimals", async () => {
       const token = createMockReadonlyToken();
-      const opts = tokenMetadataQueryOptions(token);
+      const opts = metadataQueryOptions(token);
       const result = await opts.queryFn();
 
       expect(token.name).toHaveBeenCalled();

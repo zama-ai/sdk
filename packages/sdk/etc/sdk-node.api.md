@@ -12,10 +12,296 @@ import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'
 import { Worker as Worker_2 } from 'node:worker_threads';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
-// Warning: (ae-forgotten-export) The symbol "AsyncLocalMapStorage" needs to be exported by the entry point index.d.ts
-//
+// @public
+export class AsyncLocalMapStorage implements GenericStorage {
+    // (undocumented)
+    delete(key: string): Promise<void>;
+    // (undocumented)
+    get<T = unknown>(key: string): Promise<T | null>;
+    run<R>(fn: () => R | Promise<R>): R | Promise<R>;
+    // (undocumented)
+    set<T = unknown>(key: string, value: T): Promise<void>;
+}
+
 // @public
 export const asyncLocalStorage: AsyncLocalMapStorage;
+
+// @public (undocumented)
+export interface BaseRequest {
+    // (undocumented)
+    id: string;
+    // (undocumented)
+    type: WorkerRequestType;
+}
+
+// @public
+export abstract class BaseWorkerClient<TWorker, TConfig> {
+    constructor(config: TConfig, logger: GenericLogger | undefined);
+    // (undocumented)
+    protected readonly config: TConfig;
+    // (undocumented)
+    createDelegatedUserDecryptEIP712(params: CreateDelegatedEIP712Payload): Promise<CreateDelegatedEIP712ResponseData>;
+    // (undocumented)
+    createEIP712(params: CreateEIP712Payload): Promise<CreateEIP712ResponseData>;
+    protected abstract createWorker(): TWorker;
+    // (undocumented)
+    delegatedUserDecrypt(params: DelegatedUserDecryptPayload): Promise<DelegatedUserDecryptResponseData>;
+    // (undocumented)
+    encrypt(params: EncryptPayload): Promise<EncryptResponseData>;
+    // (undocumented)
+    generateKeypair(): Promise<GenerateKeypairResponseData>;
+    protected abstract generateRequestId(): string;
+    protected abstract getInitPayload(): {
+        type: WorkerRequestType;
+        payload: WorkerRequest["payload"];
+    };
+    // (undocumented)
+    getPublicKey(): Promise<GetPublicKeyResponseData>;
+    // (undocumented)
+    getPublicParams(bits: number): Promise<GetPublicParamsResponseData>;
+    // (undocumented)
+    protected handleResponse(response: WorkerResponse<unknown>): void;
+    // (undocumented)
+    protected handleWorkerError(message: string): void;
+    // (undocumented)
+    protected handleWorkerMessageError(): void;
+    // (undocumented)
+    initWorker(): Promise<TWorker>;
+    // (undocumented)
+    protected readonly logger: GenericLogger | undefined;
+    protected onWorkerReady?(_worker: TWorker): void;
+    protected abstract postMessage(worker: TWorker, request: WorkerRequest): void;
+    // (undocumented)
+    publicDecrypt(handles: string[]): Promise<PublicDecryptResponseData>;
+    // (undocumented)
+    requestZKProofVerification(zkProof: ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
+    // (undocumented)
+    protected sendRequest<T>(type: WorkerRequestType, payload: WorkerRequest["payload"], timeoutMs?: number): Promise<T>;
+    // (undocumented)
+    protected sendRequestTo<T>(worker: TWorker, type: WorkerRequestType, payload: WorkerRequest["payload"], timeoutMs?: number): Promise<T>;
+    // (undocumented)
+    terminate(): void;
+    protected abstract terminateWorker(worker: TWorker): void;
+    // (undocumented)
+    userDecrypt(params: UserDecryptPayload): Promise<UserDecryptResponseData>;
+    protected abstract wireEvents(worker: TWorker): void;
+}
+
+// @public (undocumented)
+export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload"];
+
+// @public (undocumented)
+export interface CreateDelegatedEIP712Request extends BaseRequest {
+    // (undocumented)
+    payload: {
+        publicKey: string;
+        contractAddresses: Address[];
+        delegatorAddress: string;
+        startTimestamp: number;
+        durationDays: number;
+    };
+    // (undocumented)
+    type: "CREATE_DELEGATED_EIP712";
+}
+
+// @public (undocumented)
+export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
+
+// @public (undocumented)
+export type CreateEIP712Payload = CreateEIP712Request["payload"];
+
+// @public (undocumented)
+export interface CreateEIP712Request extends BaseRequest {
+    // (undocumented)
+    payload: {
+        publicKey: string;
+        contractAddresses: Address[];
+        startTimestamp: number;
+        durationDays: number;
+    };
+    // (undocumented)
+    type: "CREATE_EIP712";
+}
+
+// @public (undocumented)
+export interface CreateEIP712ResponseData {
+    // (undocumented)
+    domain: {
+        name: string;
+        version: string;
+        chainId: number;
+        verifyingContract: Address;
+    };
+    // (undocumented)
+    message: {
+        publicKey: string;
+        contractAddresses: string[];
+        startTimestamp: bigint;
+        durationDays: bigint;
+        extraData: string;
+    };
+    // (undocumented)
+    types: {
+        UserDecryptRequestVerification: Array<{
+            name: string;
+            type: string;
+        }>;
+    };
+}
+
+// @public
+export interface DelegatedUserDecryptParams {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    delegateAddress: Address;
+    // (undocumented)
+    delegatorAddress: Address;
+    // (undocumented)
+    durationDays: number;
+    // (undocumented)
+    handles: string[];
+    // (undocumented)
+    privateKey: string;
+    // (undocumented)
+    publicKey: string;
+    // (undocumented)
+    signature: string;
+    // (undocumented)
+    signedContractAddresses: Address[];
+    // (undocumented)
+    startTimestamp: number;
+}
+
+// @public (undocumented)
+export type DelegatedUserDecryptPayload = DelegatedUserDecryptRequest["payload"];
+
+// @public (undocumented)
+export interface DelegatedUserDecryptRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        handles: string[];
+        contractAddress: Address;
+        signedContractAddresses: Address[];
+        privateKey: string;
+        publicKey: string;
+        signature: string;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+        startTimestamp: number;
+        durationDays: number;
+    };
+    // (undocumented)
+    type: "DELEGATED_USER_DECRYPT";
+}
+
+// @public (undocumented)
+export interface DelegatedUserDecryptResponseData {
+    // (undocumented)
+    clearValues: Record<string, bigint>;
+}
+
+// @public
+export interface EIP712TypedData {
+    // (undocumented)
+    domain: {
+        name: string;
+        version: string;
+        chainId: number;
+        verifyingContract: Address;
+    };
+    // (undocumented)
+    message: {
+        publicKey: string;
+        contractAddresses: string[];
+        startTimestamp: bigint;
+        durationDays: bigint;
+        extraData: string;
+    };
+    // (undocumented)
+    types: {
+        [key: string]: Array<{
+            name: string;
+            type: string;
+        }>;
+    };
+}
+
+// @public
+export interface EncryptParams {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    userAddress: Address;
+    // (undocumented)
+    values: bigint[];
+}
+
+// @public (undocumented)
+export type EncryptPayload = EncryptRequest["payload"];
+
+// @public (undocumented)
+export interface EncryptRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        values: bigint[];
+        contractAddress: Address;
+        userAddress: Address;
+    };
+    // (undocumented)
+    type: "ENCRYPT";
+}
+
+// @public (undocumented)
+export interface EncryptResponseData {
+    // (undocumented)
+    handles: Uint8Array[];
+    // (undocumented)
+    inputProof: Uint8Array;
+}
+
+// @public
+export interface EncryptResult {
+    // (undocumented)
+    handles: Uint8Array[];
+    // (undocumented)
+    inputProof: Uint8Array;
+}
+
+// Warning: (ae-forgotten-export) The symbol "BaseResponse" needs to be exported by the entry point index.d.ts
+//
+// @public (undocumented)
+export interface ErrorResponse extends BaseResponse {
+    // (undocumented)
+    error: string;
+    statusCode?: number;
+    // (undocumented)
+    success: false;
+}
+
+// @public
+export interface FHEKeypair {
+    // (undocumented)
+    privateKey: string;
+    // (undocumented)
+    publicKey: string;
+}
+
+// @public (undocumented)
+export interface GenerateKeypairRequest extends BaseRequest {
+    // (undocumented)
+    payload: Record<string, never>;
+    // (undocumented)
+    type: "GENERATE_KEYPAIR";
+}
+
+// @public (undocumented)
+export interface GenerateKeypairResponseData {
+    // (undocumented)
+    privateKey: string;
+    // (undocumented)
+    publicKey: string;
+}
 
 // @public
 export interface GenericLogger {
@@ -30,13 +316,81 @@ export interface GenericLogger {
 }
 
 // @public
+export interface GenericStorage {
+    // (undocumented)
+    delete(key: string): Promise<void>;
+    // (undocumented)
+    get<T = unknown>(key: string): Promise<T | null>;
+    // (undocumented)
+    set<T = unknown>(key: string, value: T): Promise<void>;
+}
+
+// @public (undocumented)
+export interface GetPublicKeyRequest extends BaseRequest {
+    // (undocumented)
+    payload: Record<string, never>;
+    // (undocumented)
+    type: "GET_PUBLIC_KEY";
+}
+
+// @public (undocumented)
+export interface GetPublicKeyResponseData {
+    // (undocumented)
+    result: {
+        publicKeyId: string;
+        publicKey: Uint8Array;
+    } | null;
+}
+
+// @public (undocumented)
+export interface GetPublicParamsRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        bits: number;
+    };
+    // (undocumented)
+    type: "GET_PUBLIC_PARAMS";
+}
+
+// @public (undocumented)
+export interface GetPublicParamsResponseData {
+    // (undocumented)
+    result: {
+        publicParams: Uint8Array;
+        publicParamsId: string;
+    } | null;
+}
+
+// @public
 export const HardhatConfig: FhevmInstanceConfig;
+
+// @public (undocumented)
+export interface InitRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        cdnUrl: string;
+        fhevmConfig: FhevmInstanceConfig;
+        csrfToken: string;
+        integrity?: string;
+        thread?: number;
+    };
+    // (undocumented)
+    type: "INIT";
+}
 
 // @public
 export const MainnetConfig: FhevmInstanceConfig;
 
-// Warning: (ae-forgotten-export) The symbol "BaseWorkerClient" needs to be exported by the entry point index.d.ts
-//
+// @public (undocumented)
+export interface NodeInitRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        fhevmConfig: FhevmInstanceConfig;
+    };
+    // (undocumented)
+    type: "NODE_INIT";
+}
+
 // @public
 export class NodeWorkerClient extends BaseWorkerClient<Worker_2, NodeWorkerClientConfig> {
     constructor(config: NodeWorkerClientConfig);
@@ -51,8 +405,6 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker_2, NodeWorkerClien
     };
     // (undocumented)
     protected onWorkerReady(worker: Worker_2): void;
-    // Warning: (ae-forgotten-export) The symbol "WorkerRequest" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     protected postMessage(worker: Worker_2, request: WorkerRequest): void;
     // (undocumented)
@@ -71,55 +423,30 @@ export interface NodeWorkerClientConfig {
 // @public
 export class NodeWorkerPool {
     constructor(config: NodeWorkerPoolConfig);
-    // Warning: (ae-forgotten-export) The symbol "CreateDelegatedEIP712Payload" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "CreateDelegatedEIP712ResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     createDelegatedUserDecryptEIP712(params: CreateDelegatedEIP712Payload): Promise<CreateDelegatedEIP712ResponseData>;
-    // Warning: (ae-forgotten-export) The symbol "CreateEIP712Payload" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "CreateEIP712ResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     createEIP712(params: CreateEIP712Payload): Promise<CreateEIP712ResponseData>;
-    // Warning: (ae-forgotten-export) The symbol "DelegatedUserDecryptPayload" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "DelegatedUserDecryptResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     delegatedUserDecrypt(params: DelegatedUserDecryptPayload): Promise<DelegatedUserDecryptResponseData>;
-    // Warning: (ae-forgotten-export) The symbol "EncryptPayload" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "EncryptResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     encrypt(params: EncryptPayload): Promise<EncryptResponseData>;
-    // Warning: (ae-forgotten-export) The symbol "GenerateKeypairResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     generateKeypair(): Promise<GenerateKeypairResponseData>;
-    // Warning: (ae-forgotten-export) The symbol "GetPublicKeyResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     getPublicKey(): Promise<GetPublicKeyResponseData>;
-    // Warning: (ae-forgotten-export) The symbol "GetPublicParamsResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     getPublicParams(bits: number): Promise<GetPublicParamsResponseData>;
     // (undocumented)
     initPool(): Promise<void>;
     // (undocumented)
     get poolSize(): number;
-    // Warning: (ae-forgotten-export) The symbol "PublicDecryptResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     publicDecrypt(handles: string[]): Promise<PublicDecryptResponseData>;
-    // Warning: (ae-forgotten-export) The symbol "RequestZKProofVerificationResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     requestZKProofVerification(zkProof: ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
     // (undocumented)
     terminate(): void;
-    // Warning: (ae-forgotten-export) The symbol "UserDecryptPayload" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "UserDecryptResponseData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     userDecrypt(params: UserDecryptPayload): Promise<UserDecryptResponseData>;
 }
@@ -130,28 +457,47 @@ export interface NodeWorkerPoolConfig extends NodeWorkerClientConfig {
     poolSize?: number;
 }
 
-// Warning: (ae-forgotten-export) The symbol "RelayerSDK" needs to be exported by the entry point index.d.ts
-//
+// @public (undocumented)
+export interface PublicDecryptRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        handles: string[];
+    };
+    // (undocumented)
+    type: "PUBLIC_DECRYPT";
+}
+
+// @public (undocumented)
+export interface PublicDecryptResponseData {
+    // (undocumented)
+    abiEncodedClearValues: string;
+    // (undocumented)
+    clearValues: Record<string, bigint>;
+    // (undocumented)
+    decryptionProof: Address;
+}
+
+// @public
+export interface PublicDecryptResult {
+    // (undocumented)
+    abiEncodedClearValues: string;
+    // (undocumented)
+    clearValues: Record<string, bigint>;
+    // (undocumented)
+    decryptionProof: Address;
+}
+
 // @public
 export class RelayerNode implements RelayerSDK {
     constructor(config: RelayerNodeConfig);
     // (undocumented)
     createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    // Warning: (ae-forgotten-export) The symbol "DelegatedUserDecryptParams" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>>;
-    // Warning: (ae-forgotten-export) The symbol "EncryptParams" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "EncryptResult" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    // Warning: (ae-forgotten-export) The symbol "FHEKeypair" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     generateKeypair(): Promise<FHEKeypair>;
     // (undocumented)
@@ -164,16 +510,12 @@ export class RelayerNode implements RelayerSDK {
         publicParams: Uint8Array;
         publicParamsId: string;
     } | null>;
-    // Warning: (ae-forgotten-export) The symbol "PublicDecryptResult" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
     // (undocumented)
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     // (undocumented)
     terminate(): void;
-    // Warning: (ae-forgotten-export) The symbol "UserDecryptParams" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>>;
 }
@@ -189,11 +531,117 @@ export interface RelayerNodeConfig {
 }
 
 // @public
+export interface RelayerSDK {
+    createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>>;
+    encrypt(params: EncryptParams): Promise<EncryptResult>;
+    generateKeypair(): Promise<FHEKeypair>;
+    getPublicKey(): Promise<{
+        publicKeyId: string;
+        publicKey: Uint8Array;
+    } | null>;
+    getPublicParams(bits: number): Promise<{
+        publicParams: Uint8Array;
+        publicParamsId: string;
+    } | null>;
+    publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
+    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
+    terminate(): void;
+    userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>>;
+}
+
+// @public (undocumented)
+export interface RequestZKProofVerificationRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        zkProof: ZKProofLike;
+    };
+    // (undocumented)
+    type: "REQUEST_ZK_PROOF_VERIFICATION";
+}
+
+// @public (undocumented)
+export type RequestZKProofVerificationResponseData = InputProofBytesType;
+
+// @public
 export const SepoliaConfig: FhevmInstanceConfig;
 
-// Warnings were encountered during analysis:
-//
-// dist/node/index.d.ts:110:9 - (ae-forgotten-export) The symbol "WorkerRequestType" needs to be exported by the entry point index.d.ts
+// @public (undocumented)
+export interface SuccessResponse<T> extends BaseResponse {
+    // (undocumented)
+    data: T;
+    // (undocumented)
+    success: true;
+}
+
+// @public (undocumented)
+export interface UpdateCsrfRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        csrfToken: string;
+    };
+    // (undocumented)
+    type: "UPDATE_CSRF";
+}
+
+// @public
+export interface UserDecryptParams {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    durationDays: number;
+    // (undocumented)
+    handles: string[];
+    // (undocumented)
+    privateKey: string;
+    // (undocumented)
+    publicKey: string;
+    // (undocumented)
+    signature: string;
+    // (undocumented)
+    signedContractAddresses: Address[];
+    // (undocumented)
+    signerAddress: Address;
+    // (undocumented)
+    startTimestamp: number;
+}
+
+// @public (undocumented)
+export type UserDecryptPayload = UserDecryptRequest["payload"];
+
+// @public (undocumented)
+export interface UserDecryptRequest extends BaseRequest {
+    // (undocumented)
+    payload: {
+        handles: string[];
+        contractAddress: Address;
+        signedContractAddresses: Address[];
+        privateKey: string;
+        publicKey: string;
+        signature: string;
+        signerAddress: Address;
+        startTimestamp: number;
+        durationDays: number;
+    };
+    // (undocumented)
+    type: "USER_DECRYPT";
+}
+
+// @public (undocumented)
+export interface UserDecryptResponseData {
+    // (undocumented)
+    clearValues: Record<string, bigint>;
+}
+
+// @public (undocumented)
+export type WorkerRequest = InitRequest | NodeInitRequest | UpdateCsrfRequest | EncryptRequest | UserDecryptRequest | PublicDecryptRequest | GenerateKeypairRequest | CreateEIP712Request | CreateDelegatedEIP712Request | DelegatedUserDecryptRequest | RequestZKProofVerificationRequest | GetPublicKeyRequest | GetPublicParamsRequest;
+
+// @public (undocumented)
+export type WorkerRequestType = "INIT" | "NODE_INIT" | "UPDATE_CSRF" | "ENCRYPT" | "USER_DECRYPT" | "PUBLIC_DECRYPT" | "GENERATE_KEYPAIR" | "CREATE_EIP712" | "CREATE_DELEGATED_EIP712" | "DELEGATED_USER_DECRYPT" | "REQUEST_ZK_PROOF_VERIFICATION" | "GET_PUBLIC_KEY" | "GET_PUBLIC_PARAMS";
+
+// @public (undocumented)
+export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
 
 // (No @packageDocumentation comment for this package)
 

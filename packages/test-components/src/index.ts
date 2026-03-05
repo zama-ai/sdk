@@ -1,5 +1,5 @@
 export { ApproveForm } from "./approve-form";
-export { AuthorizeAllPanel } from "./authorize-all-panel";
+export { AllowAllPanel } from "./allow-all-panel";
 export { ConnectWallet } from "./connect-wallet";
 export { FheRelayerPanel } from "./fhe-relayer-panel";
 export { ShieldForm } from "./shield-form";

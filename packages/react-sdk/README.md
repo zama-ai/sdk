@@ -6,6 +6,10 @@ React hooks for confidential token operations, built on [React Query](https://ta
 
 ```bash
 pnpm add @zama-fhe/react-sdk @tanstack/react-query
+# or
+npm install @zama-fhe/react-sdk @tanstack/react-query
+# or
+yarn add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
 `@zama-fhe/sdk` is included as a direct dependency — no need to install it separately.
@@ -148,7 +152,8 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 <ZamaProvider
   relayer={relayer} // RelayerSDK (RelayerWeb or RelayerNode instance)
   signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
-  storage={storage} // GenericStringStorage
+  storage={storage} // GenericStorage
+  sessionStorage={sessionStorage} // Optional. Session storage for wallet signatures. Default: in-memory (lost on reload).
   credentialDurationDays={1} // Optional. Days FHE credentials remain valid. Default: 1. Set 0 for sign-every-time.
   onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
@@ -169,36 +174,16 @@ const { mutateAsync: shield } = useShield({ tokenAddress });
 await shield({ amount: 1000n }); // encryption + approval handled for you
 ```
 
-**Use the library sub-path** (`/viem`, `/ethers`, `/wagmi`) when you need direct contract-level control without a provider. You handle encryption and cache management yourself:
-
 ```tsx
-import { useShield } from "@zama-fhe/react-sdk/viem";
-
-const { mutateAsync: shield } = useShield();
-await shield({ client: walletClient, wrapperAddress, to, amount }); // raw contract call
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 ```
 
-### Comparison of Colliding Hook Names
+The `WagmiSigner` is the only adapter in the react-sdk since wagmi is React-specific:
 
-Five hooks share names across both layers. Here's how they differ:
-
-| Hook                      | Main (`@zama-fhe/react-sdk`)                                | Sub-path (`/viem`, `/ethers`, `/wagmi`)                                              |
-| ------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `useConfidentialTransfer` | `mutate({ to, amount })` — auto-encrypts                    | `mutate({ client, token, to, handle, inputProof })` — pre-encrypted                  |
-| `useShield`               | `mutate({ amount, approvalStrategy? })` — auto-approves     | `mutate({ client, wrapper, to, amount })` — raw wrap call                            |
-| `useShieldETH`            | `mutate({ amount, value? })` — `value` defaults to `amount` | `mutate({ client, wrapper, to, amount, value })` — all fields required               |
-| `useUnwrap`               | `mutate({ amount })` — auto-encrypts                        | `mutate({ client, token, from, to, encryptedAmount, inputProof })` — pre-encrypted   |
-| `useFinalizeUnwrap`       | `mutate({ burnAmountHandle })` — fetches proof from relayer | `mutate({ client, wrapper, burntAmount, cleartext, proof })` — caller provides proof |
-
-| Feature                 | Main                    | Sub-path                      |
-| ----------------------- | ----------------------- | ----------------------------- |
-| Requires `ZamaProvider` | Yes                     | No                            |
-| FHE encryption          | Automatic               | Manual (caller pre-encrypts)  |
-| ERC-20 approval         | Automatic (`useShield`) | None                          |
-| Cache invalidation      | Automatic               | None                          |
-| Return type             | `TransactionResult`     | Raw tx hash or wagmi mutation |
-
-> **Rule of thumb:** If you're building a standard dApp UI, use the main import. If you're building custom transaction pipelines or need to compose with other wagmi hooks at the contract level, use the sub-path.
+```tsx
+import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+```
 
 ## Hooks Reference
 
@@ -289,22 +274,53 @@ const tokenABalance = balances?.get("0xTokenA");
 
 ### Authorization
 
-#### `useAuthorizeAll`
+#### `useTokenAllow`
 
 Pre-authorize FHE decrypt credentials for a list of token addresses with a single wallet signature. Call this early (e.g. after loading the token list) so that subsequent individual decrypt operations reuse cached credentials without prompting the wallet again.
 
 ```ts
-function useAuthorizeAll(): UseMutationResult<void, Error, Address[]>;
+function useTokenAllow(): UseMutationResult<void, Error, Address[]>;
 ```
 
 ```tsx
-const { mutateAsync: authorizeAll, isPending } = useAuthorizeAll();
+const { mutateAsync: tokenAllow, isPending } = useTokenAllow();
 
 // Pre-authorize all known tokens up front
-await authorizeAll(allTokenAddresses);
+await tokenAllow(allTokenAddresses);
 
 // Individual balance decrypts now reuse cached credentials
 const { data: balance } = useConfidentialBalance("0xTokenA");
+```
+
+#### `useIsTokenAllowed`
+
+Check whether a session signature is cached for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt. Use this to conditionally enable UI elements (e.g. a "Reveal Balances" button).
+
+```ts
+function useIsTokenAllowed(tokenAddress: Address): UseQueryResult<boolean, Error>;
+```
+
+```tsx
+const { data: allowed } = useIsTokenAllowed("0xTokenAddress");
+
+<button disabled={!allowed}>Reveal Balance</button>;
+```
+
+Automatically invalidated when `useTokenAllow` or `useTokenRevoke` succeed.
+
+#### `useTokenRevoke`
+
+Revoke the session signature for the connected wallet. Stored credentials remain intact, but the next decrypt operation will require a fresh wallet signature.
+
+```ts
+function useTokenRevoke(): UseMutationResult<void, Error, Address[]>;
+```
+
+```tsx
+const { mutate: tokenRevoke } = useTokenRevoke();
+
+// Revoke session — addresses are included in the credentials:revoked event
+tokenRevoke(["0xTokenA", "0xTokenB"]);
 ```
 
 ### Transfer Hooks
@@ -785,6 +801,7 @@ import {
   confidentialBalancesQueryKeys,
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
+  isAllowedQueryKeys,
   underlyingAllowanceQueryKeys,
   activityFeedQueryKeys,
   feeQueryKeys,
@@ -798,6 +815,7 @@ import {
 | `confidentialBalancesQueryKeys` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
 | `confidentialHandleQueryKeys`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
 | `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
+| `isAllowedQueryKeys`            | `.all`, `.token(address)`                                                                | Session signature status.           |
 | `underlyingAllowanceQueryKeys`  | `.all`, `.token(address, wrapper)`                                                       | Underlying ERC-20 allowance.        |
 | `activityFeedQueryKeys`         | `.all`, `.token(address)`                                                                | Activity feed items.                |
 | `feeQueryKeys`                  | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
@@ -858,30 +876,13 @@ import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 const signer = new WagmiSigner({ config: wagmiConfig });
 ```
 
-## Viem & Ethers Adapter Hooks
+## Signer Adapters
 
-Both `@zama-fhe/react-sdk/viem` and `@zama-fhe/react-sdk/ethers` export the same set of read/write hooks, but typed for their respective libraries. They also include `Suspense` variants of all read hooks.
-
-### Read hooks
-
-`useConfidentialBalanceOf`, `useWrapperForToken`, `useUnderlyingToken`, `useWrapperExists`, `useSupportsInterface` — plus `*Suspense` variants.
-
-- **viem:** First parameter is `PublicClient`.
-- **ethers:** First parameter is `Provider | Signer`.
-
-### Write hooks
-
-`useConfidentialTransfer`, `useConfidentialBatchTransfer`, `useUnwrap`, `useUnwrapFromBalance`, `useFinalizeUnwrap`, `useSetOperator`, `useShield`, `useShieldETH`.
-
-- **viem:** Mutation params include `client: WalletClient`.
-- **ethers:** Mutation params include `signer: Signer`.
-
-### Signer adapters
+Signer adapters are provided by the core SDK package:
 
 ```ts
-// Re-exported for convenience
-import { ViemSigner } from "@zama-fhe/react-sdk/viem";
-import { EthersSigner } from "@zama-fhe/react-sdk/ethers";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 ```
 
 ## Wallet Integration Guide
@@ -900,12 +901,34 @@ Place `ZamaProvider` inside your client-only layout. Do **not** create the relay
 
 ### FHE Credentials Lifecycle
 
-FHE decrypt credentials are generated once per wallet + token set and cached in the storage backend you provide (e.g. `IndexedDBStorage`). The lifecycle:
+FHE decrypt credentials are generated once per wallet + token set and cached in the storage backend you provide (e.g. `IndexedDBStorage`). The wallet signature is kept **in memory only** — never persisted to disk. The lifecycle:
 
-1. **First decrypt** — SDK generates an FHE keypair, creates EIP-712 typed data, and prompts the wallet to sign. The signed credential is stored.
-2. **Subsequent decrypts** — If cached credentials cover the requested token, they're reused silently (no wallet prompt).
-3. **Expiry** — Credentials expire based on `durationDays`. After expiry, the next decrypt re-prompts the wallet.
-4. **Pre-authorization** — Call `useAuthorizeAll(tokenAddresses)` early to batch-authorize all tokens in one wallet prompt, avoiding repeated popups.
+1. **First decrypt** — SDK generates an FHE keypair, creates EIP-712 typed data, and prompts the wallet to sign. The encrypted credential is stored; the signature is cached in memory.
+2. **Same session** — Cached credentials and session signature are reused silently (no wallet prompt).
+3. **Page reload** — Encrypted credentials are loaded from storage; the wallet is prompted once to re-sign for the session.
+4. **Expiry** — Credentials expire based on `credentialDurationDays`. After expiry, the next decrypt regenerates and re-prompts.
+5. **Pre-authorization** — Call `useTokenAllow(tokenAddresses)` early to batch-authorize all tokens in one wallet prompt, avoiding repeated popups.
+6. **Check status** — Use `useIsTokenAllowed(tokenAddress)` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
+7. **Disconnect** — Call `useTokenRevoke(tokenAddresses)` or `await credentials.revoke()` to clear the session signature from memory.
+
+### Web Extension Support
+
+By default, wallet signatures are stored in memory and lost on page reload (or service worker restart). For MV3 web extensions, use the built-in `chromeSessionStorage` singleton so signatures survive service worker restarts and are shared across popup, background, and content script contexts:
+
+```tsx
+import { chromeSessionStorage } from "@zama-fhe/react-sdk";
+
+<ZamaProvider
+  relayer={relayer}
+  signer={signer}
+  storage={indexedDBStorage}
+  sessionStorage={chromeSessionStorage}
+>
+  <App />
+</ZamaProvider>;
+```
+
+This keeps the encrypted credentials in IndexedDB (persistent) while the unlock signature lives in `chrome.storage.session` (ephemeral, cleared when the browser closes).
 
 ### Error-to-User-Message Mapping
 
@@ -973,7 +996,7 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
-**Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStringStorage`, `ContractCallConfig`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
+**Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `ContractCallConfig`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
 **Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 

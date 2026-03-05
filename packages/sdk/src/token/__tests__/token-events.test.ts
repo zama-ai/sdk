@@ -7,7 +7,7 @@ import { ReadonlyToken } from "../readonly-token";
 import { MemoryStorage } from "../memory-storage";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { ZamaSDKEvent, ZamaSDKEventListener } from "../../events/sdk-events";
-import { CredentialsManager } from "../credential-manager";
+import { CredentialsManager } from "../credentials-manager";
 import type { GenericSigner } from "../token.types";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
@@ -60,6 +60,7 @@ function createMockSigner(): GenericSigner {
     readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getChainId: vi.fn().mockResolvedValue(31337),
+    subscribe: vi.fn().mockReturnValue(() => {}),
   };
 }
 
@@ -70,6 +71,8 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.CredentialsExpired).toBe("credentials:expired");
     expect(ZamaSDKEvents.CredentialsCreating).toBe("credentials:creating");
     expect(ZamaSDKEvents.CredentialsCreated).toBe("credentials:created");
+    expect(ZamaSDKEvents.CredentialsRevoked).toBe("credentials:revoked");
+    expect(ZamaSDKEvents.CredentialsAllowed).toBe("credentials:allowed");
     expect(ZamaSDKEvents.EncryptStart).toBe("encrypt:start");
     expect(ZamaSDKEvents.EncryptEnd).toBe("encrypt:end");
     expect(ZamaSDKEvents.EncryptError).toBe("encrypt:error");
@@ -89,8 +92,8 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.UnshieldPhase2Submitted).toBe("unshield:phase2_submitted");
   });
 
-  it("has exactly 22 event types", () => {
-    expect(Object.keys(ZamaSDKEvents)).toHaveLength(22);
+  it("has exactly 24 event types", () => {
+    expect(Object.keys(ZamaSDKEvents)).toHaveLength(24);
   });
 
   it("has unique event values", () => {
@@ -114,9 +117,10 @@ describe("ReadonlyToken event emissions", () => {
 
   function createReadonlyToken() {
     return new ReadonlyToken({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
       onEvent,
     });
@@ -213,9 +217,10 @@ describe("ReadonlyToken event emissions", () => {
 
   it("works without onEvent (no-op, does not throw)", async () => {
     const token = new ReadonlyToken({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
     });
 
@@ -239,9 +244,10 @@ describe("Token event emissions", () => {
 
   function createToken() {
     return new Token({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       address: TOKEN,
       onEvent,
     });
@@ -588,14 +594,15 @@ describe("CredentialsManager event emissions", () => {
 
   it("emits CredentialsLoading and CredentialsCreating/Created on first call", async () => {
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
@@ -606,18 +613,19 @@ describe("CredentialsManager event emissions", () => {
   it("emits CredentialsCached on cache hit", async () => {
     const store = new MemoryStorage();
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
     events.length = 0; // reset
 
     // Second call should hit cache
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
@@ -628,38 +636,44 @@ describe("CredentialsManager event emissions", () => {
   it("emits CredentialsExpired when credentials are expired", async () => {
     const store = new MemoryStorage();
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     // Tamper stored data to simulate expiration
     const address = (await signer.getAddress()).toLowerCase();
-    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address));
+    const chainId = await signer.getChainId();
+    const hash = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(`${address}:${chainId}`),
+    );
     const hex = Array.from(new Uint8Array(hash))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
     const storeKey = hex.slice(0, 32);
-    const stored = await store.getItem(storeKey);
-    const parsed = JSON.parse(stored!);
+    const stored = await store.get(storeKey);
+    const parsed = { ...(stored as Record<string, unknown>) };
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
-    await store.setItem(storeKey, JSON.stringify(parsed));
+    await store.set(storeKey, parsed);
 
     events.length = 0; // reset
 
     // New manager reads expired data
     const manager2 = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: store,
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
-    await manager2.get("0xtoken" as Address);
+    await manager2.allow("0xtoken" as Address);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsExpired);
@@ -669,14 +683,15 @@ describe("CredentialsManager event emissions", () => {
 
   it("includes contractAddresses on credential events", async () => {
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     const credEvents = events.filter(
       (e) =>
@@ -692,14 +707,15 @@ describe("CredentialsManager event emissions", () => {
 
   it("adds timestamp to all emitted events", async () => {
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
       onEvent,
     });
 
-    await manager.get("0xtoken" as Address);
+    await manager.allow("0xtoken" as Address);
 
     for (const event of events) {
       expect(event.timestamp).toBeGreaterThan(0);
@@ -708,13 +724,14 @@ describe("CredentialsManager event emissions", () => {
 
   it("works without onEvent (no-op, does not throw)", async () => {
     const manager = new CredentialsManager({
-      sdk: sdk as unknown as RelayerSDK,
+      relayer: sdk as unknown as RelayerSDK,
       signer,
       storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
       durationDays: 1,
     });
 
-    const creds = await manager.get("0xtoken" as Address);
+    const creds = await manager.allow("0xtoken" as Address);
     expect(creds.publicKey).toBe("0xpub");
   });
 });

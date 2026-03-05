@@ -6,6 +6,10 @@ The core SDK (`@zama-fhe/sdk`) lets you shield, transfer, and unshield confident
 
 ```bash
 pnpm add @zama-fhe/sdk
+# or
+npm install @zama-fhe/sdk
+# or
+yarn add @zama-fhe/sdk
 ```
 
 You also need a Web3 library. Pick one:
@@ -18,12 +22,17 @@ pnpm add viem
 pnpm add ethers
 
 # Option C: implement GenericSigner yourself (no extra dep)
+# (or substitute npm install / yarn add)
 ```
 
 For Node.js, you'll additionally need `@zama-fhe/relayer-sdk`:
 
 ```bash
 pnpm add @zama-fhe/relayer-sdk
+# or
+npm install @zama-fhe/relayer-sdk
+# or
+yarn add @zama-fhe/relayer-sdk
 ```
 
 ## Three things to set up
@@ -34,7 +43,7 @@ Every SDK setup needs three pieces:
 const sdk = new ZamaSDK({
   relayer, // handles encryption & decryption (RelayerWeb or RelayerNode)
   signer, // signs transactions and typed data (ViemSigner, EthersSigner, or your own)
-  storage, // persists FHE credentials so users don't re-sign on every page load
+  storage, // persists decrypt keys so users don't re-sign on every page load
 });
 ```
 
@@ -125,7 +134,7 @@ When your app manages multiple tokens, you can pre-authorize them all with one w
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 
 // One wallet signature covers all tokens
-await ReadonlyToken.authorizeAll(tokens);
+await ReadonlyToken.allow(...tokens);
 
 // Decrypt all balances in parallel
 const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });

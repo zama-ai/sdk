@@ -6,6 +6,10 @@ A TypeScript SDK for building privacy-preserving token applications using Fully 
 
 ```bash
 pnpm add @zama-fhe/sdk
+# or
+npm install @zama-fhe/sdk
+# or
+yarn add @zama-fhe/sdk
 ```
 
 ### Peer dependencies
@@ -105,7 +109,7 @@ Entry point to the SDK. Composes a relayer backend with a signer and storage lay
 const sdk = new ZamaSDK({
   relayer, // RelayerSDK — either RelayerWeb (browser) or RelayerNode (Node.js)
   signer, // GenericSigner
-  storage, // GenericStringStorage
+  storage, // GenericStorage
 });
 
 // Read-only — balances, metadata, decryption. No wrapper needed.
@@ -168,28 +172,35 @@ interface TransactionResult {
 
 Read-only subset. No wrapper address needed.
 
-| Method                                | Description                                                       |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| `balanceOf(owner?)`                   | Decrypt and return the plaintext balance.                         |
-| `confidentialBalanceOf(owner?)`       | Return the raw encrypted balance handle (no decryption).          |
-| `decryptBalance(handle, owner?)`      | Decrypt a single encrypted handle.                                |
-| `decryptHandles(handles, owner?)`     | Batch-decrypt handles in a single relayer call.                   |
-| `authorize()`                         | Ensure FHE decrypt credentials exist (generates/signs if needed). |
-| `authorizeAll(tokens)` _(static)_     | Pre-authorize multiple tokens with a single wallet signature.     |
-| `isConfidential()`                    | ERC-165 check for ERC-7984 support.                               |
-| `isWrapper()`                         | ERC-165 check for wrapper interface.                              |
-| `discoverWrapper(coordinatorAddress)` | Look up a wrapper for this token via the deployment coordinator.  |
-| `underlyingToken()`                   | Read the underlying ERC-20 address from a wrapper.                |
-| `allowance(wrapper, owner?)`          | Read ERC-20 allowance of the underlying token.                    |
-| `isZeroHandle(handle)`                | Returns `true` if the handle is the zero sentinel.                |
-| `name()` / `symbol()` / `decimals()`  | Read token metadata.                                              |
+| Method                                | Description                                                                 |
+| ------------------------------------- | --------------------------------------------------------------------------- |
+| `balanceOf(owner?)`                   | Decrypt and return the plaintext balance.                                   |
+| `confidentialBalanceOf(owner?)`       | Return the raw encrypted balance handle (no decryption).                    |
+| `decryptBalance(handle, owner?)`      | Decrypt a single encrypted handle.                                          |
+| `decryptHandles(handles, owner?)`     | Batch-decrypt handles in a single relayer call.                             |
+| `allow()`                             | Ensure FHE decrypt credentials exist (generates/signs if needed).           |
+| `allow(...tokens)` _(static)_         | Pre-authorize multiple tokens with a single wallet signature.               |
+| `isAllowed()`                         | Whether a session signature is currently cached for this token.             |
+| `revoke()`                            | Clear the session signature for the connected wallet.                       |
+| `credentials.allow(...addresses)`     | Pre-authorize and cache the session signature for specific token addresses. |
+| `credentials.revoke(...addresses?)`   | Clear the session signature for the connected wallet.                       |
+| `credentials.isAllowed()`             | Whether a session signature is currently cached.                            |
+| `credentials.isExpired(address?)`     | Whether stored credentials are past their expiration time.                  |
+| `credentials.clear()`                 | Delete stored credentials for the connected wallet.                         |
+| `isConfidential()`                    | ERC-165 check for ERC-7984 support.                                         |
+| `isWrapper()`                         | ERC-165 check for wrapper interface.                                        |
+| `discoverWrapper(coordinatorAddress)` | Look up a wrapper for this token via the deployment coordinator.            |
+| `underlyingToken()`                   | Read the underlying ERC-20 address from a wrapper.                          |
+| `allowance(wrapper, owner?)`          | Read ERC-20 allowance of the underlying token.                              |
+| `isZeroHandle(handle)`                | Returns `true` if the handle is the zero sentinel.                          |
+| `name()` / `symbol()` / `decimals()`  | Read token metadata.                                                        |
 
 Static methods for multi-token operations:
 
 ```ts
 // Pre-authorize all tokens with a single wallet signature
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
-await ReadonlyToken.authorizeAll(tokens);
+await ReadonlyToken.allow(...tokens);
 // All subsequent decrypts reuse cached credentials — no more wallet prompts
 
 // Decrypt balances for multiple tokens in parallel
@@ -219,34 +230,60 @@ if (pending) {
 
 ### Storage
 
-FHE credentials (keypair + EIP-712 signature) are persisted to storage. Three options:
+FHE credentials (encrypted keypair + metadata) are persisted to `storage`. The wallet signature is kept in `sessionStorage` (in-memory by default) — never written to disk. Two storage roles:
+
+**Credential storage** (`storage`) — persists encrypted keypairs:
 
 | Storage             | Use case                                                 |
 | ------------------- | -------------------------------------------------------- |
 | `indexedDBStorage`  | Browser apps — persists across page reloads and sessions |
 | `memoryStorage`     | Tests, scripts, throwaway sessions                       |
 | `asyncLocalStorage` | Node.js servers — isolate credentials per request        |
-| Custom              | Implement the `GenericStringStorage` interface           |
+| Custom              | Implement the `GenericStorage` interface                 |
+
+**Session storage** (`sessionStorage`) — holds wallet signatures for the current session:
+
+| Storage                | Use case                                                    |
+| ---------------------- | ----------------------------------------------------------- |
+| Default (in-memory)    | Standard web apps — signature lost on reload, user re-signs |
+| `chromeSessionStorage` | MV3 web extensions — survives service worker restarts       |
+| Custom                 | Implement the `GenericStorage` interface                    |
 
 ```ts
-interface GenericStringStorage {
-  getItem(key: string): string | Promise<string | null> | null;
-  setItem(key: string, value: string): void | Promise<void>;
-  removeItem(key: string): void | Promise<void>;
+interface GenericStorage<T = unknown> {
+  get(key: string): Promise<T | null>;
+  set(key: string, value: T): Promise<void>;
+  delete(key: string): Promise<void>;
 }
+```
+
+#### Web Extension Example
+
+For MV3 extensions, use the built-in `chromeSessionStorage` singleton to share the wallet signature across popup, background, and content script contexts:
+
+```ts
+import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
+
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage: indexedDBStorage, // encrypted keypairs (persistent)
+  sessionStorage: chromeSessionStorage, // wallet signatures (ephemeral, shared across contexts)
+});
 ```
 
 ## Configuration Reference
 
 ### `ZamaSDKConfig`
 
-| Field                    | Type                   | Description                                                                                                                           |
-| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                              |
-| `signer`                 | `GenericSigner`        | Wallet signer interface.                                                                                                              |
-| `storage`                | `GenericStringStorage` | Credential storage backend.                                                                                                           |
-| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. Set `0` to require a wallet signature on every decrypt (high-security mode). |
-| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                    |
+| Field                    | Type                   | Description                                                                                                                            |
+| ------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                               |
+| `signer`                 | `GenericSigner`        | Wallet signer interface.                                                                                                               |
+| `storage`                | `GenericStorage`       | Credential storage backend.                                                                                                            |
+| `sessionStorage`         | `GenericStorage`       | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
+| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. Set `0` to require a wallet signature on every decrypt (high-security mode).  |
+| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                     |
 
 #### Structured Event Listener
 
@@ -270,7 +307,7 @@ const sdk = new ZamaSDK({
 
 | Category               | Events                                                                                                                                                               | Key fields                                                       |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Credentials            | `credentials:loading`, `credentials:cached`, `credentials:expired`, `credentials:creating`, `credentials:created`                                                    | `contractAddresses`                                              |
+| Credentials            | `credentials:loading`, `credentials:cached`, `credentials:expired`, `credentials:creating`, `credentials:created`, `credentials:revoked`, `credentials:allowed`      | `contractAddresses`                                              |
 | Encryption             | `encrypt:start`, `encrypt:end`, `encrypt:error`                                                                                                                      | `durationMs` (end/error), `error` (error)                        |
 | Decryption             | `decrypt:start`, `decrypt:end`, `decrypt:error`                                                                                                                      | `durationMs` (end/error), `error` (error)                        |
 | Transactions           | `transaction:error`                                                                                                                                                  | `operation` (`"transfer"`, `"wrap"`, `"approve"`, etc.), `error` |
@@ -314,12 +351,13 @@ const sdk = new ZamaSDK({
 
 ### `RelayerWebConfig` (browser)
 
-| Field        | Type                                  | Description                                                                                  |
-| ------------ | ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `getChainId` | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.   |
-| `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses). |
-| `security`   | `RelayerWebSecurityConfig`            | Optional. Security options (see below).                                                      |
-| `logger`     | `GenericLogger`                       | Optional. Logger for worker lifecycle and request timing.                                    |
+| Field        | Type                                  | Description                                                                                     |
+| ------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `getChainId` | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.      |
+| `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses).    |
+| `security`   | `RelayerWebSecurityConfig`            | Optional. Security options (see below).                                                         |
+| `logger`     | `GenericLogger`                       | Optional. Logger for worker lifecycle and request timing.                                       |
+| `threads`    | `number`                              | Optional. WASM thread count for parallel FHE ops (4–8 recommended). Requires COOP/COEP headers. |
 
 #### `RelayerWebSecurityConfig`
 

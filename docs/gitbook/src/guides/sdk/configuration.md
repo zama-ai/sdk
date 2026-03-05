@@ -6,7 +6,8 @@ Every SDK setup has three required pieces and two optional ones:
 const sdk = new ZamaSDK({
   relayer,                       // required — handles encryption & decryption
   signer,                        // required — wallet interface
-  storage,                       // required — credential persistence
+  storage,                       // required — persists encrypted decrypt keys
+  sessionStorage,                // optional — wallet signature storage (default: in-memory)
   credentialDurationDays: 1,     // optional (default: 1 day)
   onEvent: (event) => { ... },   // optional — lifecycle events for debugging
 });
@@ -39,6 +40,26 @@ const relayer = new RelayerWeb({
 ```
 
 `getChainId` is called lazily — the relayer initializes (or re-initializes) its worker when the chain changes.
+
+**Multi-threaded FHE (optional):**
+
+By default, WASM FHE runs single-threaded inside the Web Worker. Pass `threads` to enable parallel FHE operations via `wasm-bindgen-rayon` and `SharedArrayBuffer`:
+
+```ts
+const relayer = new RelayerWeb({
+  // ...transports
+  threads: Math.min(navigator.hardwareConcurrency, 8),
+});
+```
+
+Each rayon thread allocates its own WASM stack and linear memory, so more isn't always better. **4–8 threads** is the practical sweet spot for FHE operations; beyond that you'll see diminishing returns and higher memory usage on low-end devices.
+
+> **Requirement:** The page must be served with [COOP/COEP headers](https://web.dev/articles/coop-coep) for `SharedArrayBuffer` to be available:
+>
+> ```
+> Cross-Origin-Opener-Policy: same-origin
+> Cross-Origin-Embedder-Policy: require-corp
+> ```
 
 **Security options:**
 
@@ -118,7 +139,11 @@ const signer = new ViemSigner({ walletClient, publicClient });
 ```ts
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-const signer = new EthersSigner({ signer: ethersSigner });
+// Browser — pass the raw EIP-1193 provider; subscribe() works automatically
+const signer = new EthersSigner({ ethereum: window.ethereum! });
+
+// Node.js — pass an ethers Signer directly (no subscribe support)
+// const signer = new EthersSigner({ signer: wallet });
 ```
 
 ### wagmi (React only)
@@ -141,27 +166,40 @@ interface GenericSigner {
   writeContract(config: ContractCallConfig): Promise<Hex>;
   readContract(config: ContractCallConfig): Promise<unknown>;
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+  subscribe?(callbacks: SignerLifecycleCallbacks): () => void; // optional — auto-revoke on disconnect/account change
 }
 ```
 
+If your signer has access to wallet lifecycle events, implement `subscribe` so the SDK can automatically revoke the session on disconnect or account change. See [`WagmiSigner`](https://github.com/zama-ai/token-sdk/blob/main/packages/react-sdk/src/wagmi/wagmi-signer.ts) for a reference implementation.
+
 ## Storage
 
-FHE credentials (a keypair + EIP-712 signature) and decrypted balances are cached so users don't get a wallet popup on every decrypt or a loading spinner on page reload. You choose where to store them:
+Decrypt keys (a keypair used to decrypt confidential balances) and decrypted balances are cached so users don't get a wallet popup on every decrypt or a loading spinner on page reload. You choose where to store them:
 
-| Storage             | When to use                                                                                              |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                 |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                                                                       |
-| `asyncLocalStorage` | Node.js servers — isolate credentials per request ([example below](#per-request-storage-nodejs-servers)) |
-| Custom              | Implement `GenericStringStorage` (3 async methods: `getItem`, `setItem`, `removeItem`)                   |
+| Storage             | When to use                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                  |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                                                                        |
+| `asyncLocalStorage` | Node.js servers — isolate decrypt keys per request ([example below](#per-request-storage-nodejs-servers)) |
+| Custom              | Implement `GenericStorage` (3 async methods: `get`, `set`, `delete`)                                      |
 
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 ```
 
+### Session storage (`sessionStorage`)
+
+By default, wallet signatures live in an in-memory store that's lost on page reload (the user re-signs once per session). You can override this for environments where in-memory isn't sufficient:
+
+| Storage                | When to use                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| Default (in-memory)    | Standard web apps — user re-signs once per page load                          |
+| `chromeSessionStorage` | MV3 web extensions — survives service worker restarts, shared across contexts |
+| Custom                 | Implement `GenericStorage`                                                    |
+
 ### Per-request storage (Node.js servers)
 
-For servers where each request has its own user context, use `asyncLocalStorage` from the `/node` sub-path. It uses Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to isolate credentials per request:
+For servers where each request has its own user context, use `asyncLocalStorage` from the `/node` sub-path. It uses Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to isolate decrypt keys per request:
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
@@ -169,7 +207,7 @@ import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
     const sdk = new ZamaSDK({ relayer, signer, storage: asyncLocalStorage });
-    // credentials are scoped to this request
+    // decrypt keys are scoped to this request
     await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
@@ -248,9 +286,9 @@ const transports = {
 // auth: { __type: "BearerToken", token: "your-bearer-token" }
 ```
 
-## Credential duration
+## Decrypt key duration
 
-FHE decrypt credentials require a wallet signature to create. By default, they're valid for 1 day. You can change this:
+Decrypt keys require a wallet signature to create. By default, they're valid for 1 day. You can change this:
 
 ```ts
 const sdk = new ZamaSDK({
@@ -269,6 +307,122 @@ const sdk = new ZamaSDK({
 });
 ```
 
+## Session management
+
+Decrypt keys are encrypted before being persisted to `storage`. The wallet signature used to unlock them lives in `sessionStorage` (in-memory by default). This means:
+
+- On page load, the user must re-sign once to unlock their decrypt keys for the session
+- Closing the tab (or calling `await sdk.revokeSession()`) clears the signature from memory
+- The encrypted keys survive across sessions in `storage`; only the allow step repeats
+- In web extensions, you can use `chromeSessionStorage` so the signature survives service worker restarts ([see below](#web-extensions))
+
+### Allow (pre-authorize for the session)
+
+Prompt the wallet to sign and cache the session signature. Call this early (e.g. after wallet connect) to avoid popups during balance decrypts:
+
+```ts
+const token = sdk.createToken("0xTokenAddress");
+
+// Allow a single token
+await token.allow();
+
+// Or allow multiple tokens at the SDK level with a single wallet signature
+await sdk.allow("0xTokenA", "0xTokenB");
+
+// Check if session is active
+const allowed = await sdk.isAllowed();
+```
+
+A single signature covers all contract addresses passed to `allow()`. The signed EIP-712 message includes the exact set of contracts, so if you later call `allow()` with a contract not in the original set, the SDK must generate a fresh keypair and request a new wallet signature. Batching all your token addresses upfront avoids extra popups.
+
+### Revoke (clear session)
+
+Clear the session signature when the user disconnects or locks their wallet:
+
+```ts
+// Revoke from a token instance
+await token.revoke();
+
+// Or revoke at the SDK level with addresses (included in the credentials:revoked event)
+await sdk.revoke("0xTokenA", "0xTokenB");
+
+// Or revoke the session without specifying addresses
+await sdk.revokeSession();
+// Next decrypt will require a fresh wallet signature
+```
+
+### Wallet lifecycle integration
+
+The SDK revokes the session signature when the wallet state changes. There are two distinct cases:
+
+**Disconnect / lock** — the user explicitly disconnects or locks their wallet. The session signature is cleared so the next connection requires a fresh sign.
+
+**Account switch** — the user switches from address A to address B. The previous account's session signature is revoked because the EIP-712 signature is address-scoped — leaving A's session active while B is connected creates confusing UX.
+
+**Chain switch** — the user switches networks (e.g. Ethereum → Base) while keeping the same address. Session signatures are **not** revoked. Since credentials are keyed by `address + chainId`, each chain has independent sessions that persist across switches. When the user switches back to the original chain, their session is still active — no re-signing needed.
+
+#### wagmi users: automatic
+
+If you use `WagmiSigner`, auto-revoke on disconnect and account change is built in — the SDK subscribes to wagmi's `watchConnection`. No manual wiring needed.
+
+#### viem / ethers users: manual wiring
+
+Wire `revokeSession()` to wallet events:
+
+```ts
+// Disconnect / lock — clear the session entirely
+wallet.on("disconnect", () => sdk.revokeSession());
+
+// Account switch — revoke the previous account's session
+// The SDK tracks the last-known address internally,
+// so revokeSession() clears the correct key even though
+// the signer now returns the new account.
+wallet.on("accountsChanged", () => sdk.revokeSession());
+```
+
+Chain switches (`chainChanged`) do **not** need wiring — credentials for each chain are stored independently and persist across switches.
+
+Without disconnect/account-change wiring, cached session signatures remain valid until expiry. This isn't a security hole (signatures are time-bounded and chain-scoped), but it creates confusing UX — e.g. a user switches from account A to B and back, and A's old session still appears active.
+
+### Typical flow
+
+```ts
+// 1. User connects wallet
+const token = sdk.createToken("0xTokenAddress");
+
+// 2. Allow once for the session
+await sdk.allow("0xTokenAddress");
+
+// 3. All decrypts reuse the cached session signature — no popups
+const balance = await token.decryptBalance(handle);
+
+// 4. User disconnects
+await sdk.revokeSession();
+```
+
+## Web extensions
+
+MV3 extensions run background logic in a service worker that Chrome can terminate at any time. The default in-memory session storage is lost when this happens, forcing the user to re-sign.
+
+To fix this, use the built-in `chromeSessionStorage` singleton and pass it as `sessionStorage`:
+
+```ts
+import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
+
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage: indexedDBStorage, // encrypted keypairs (persistent)
+  sessionStorage: chromeSessionStorage, // wallet signatures (ephemeral, shared across contexts)
+});
+```
+
+This gives you:
+
+- **Popup ↔ Background ↔ Content script** — all contexts share the same session signature
+- **Service worker restart** — signature survives because `chrome.storage.session` is not in-memory JS
+- **Browser close** — signature is cleared automatically (Chrome purges session storage on close)
+
 ## Event listener
 
 For debugging and telemetry, you can listen to SDK lifecycle events. Events never contain sensitive data (no amounts, keys, or proofs).
@@ -284,7 +438,7 @@ const sdk = new ZamaSDK({
 });
 ```
 
-Events include: credential lifecycle (`credentials:loading`, `credentials:created`, ...), encryption/decryption timing (`encrypt:start`, `decrypt:end`, ...), transaction confirmations (`transfer:submitted`, `wrap:submitted`, ...), and errors.
+Events include: credential lifecycle (`credentials:loading`, `credentials:created`, `credentials:revoked`, `credentials:allowed`, ...), encryption/decryption timing (`encrypt:start`, `decrypt:end`, ...), transaction confirmations (`transfer:submitted`, `shield:submitted`, ...), and errors.
 
 ## Cleanup
 

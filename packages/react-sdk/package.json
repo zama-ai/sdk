@@ -17,14 +17,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./viem": {
-      "types": "./dist/viem/index.d.ts",
-      "import": "./dist/viem/index.js"
-    },
-    "./ethers": {
-      "types": "./dist/ethers/index.d.ts",
-      "import": "./dist/ethers/index.js"
-    },
     "./wagmi": {
       "types": "./dist/wagmi/index.d.ts",
       "import": "./dist/wagmi/index.js"
@@ -67,25 +59,15 @@
     "@zama-fhe/sdk": "^1.0.0-alpha.7",
     "react": ">=18",
     "@tanstack/react-query": ">=5",
-    "ethers": ">=6",
-    "viem": ">=2",
     "wagmi": ">=2"
   },
   "sideEffects": false,
   "peerDependenciesMeta": {
-    "ethers": {
-      "optional": true
-    },
-    "viem": {
-      "optional": true
-    },
     "wagmi": {
       "optional": true
     }
   },
-  "packageManager": "pnpm@10.30.2",
   "engines": {
-    "node": ">=22",
-    "pnpm": ">=10"
+    "node": ">=22"
   }
 }

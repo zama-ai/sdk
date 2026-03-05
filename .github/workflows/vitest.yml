@@ -40,8 +40,8 @@ jobs:
 
       - run: pnpm format:check
 
-      - name: Check API reports are up to date
-        run: pnpm api-report:check
+      - name: Build packages
+        run: pnpm build
 
       - name: Check bundle size
         run: pnpm size

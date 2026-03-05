@@ -23,7 +23,7 @@ export interface PublicParamsData {
   publicParamsId: string;
 }
 
-type PublicParamsResult = PublicParamsData | null;
+export type PublicParamsResult = PublicParamsData | null;
 
 /**
  * TanStack Query options factory for FHE public parameters.

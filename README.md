@@ -37,9 +37,11 @@ The examples below use a backend proxy (`relayerUrl`) to keep your API key serve
 ```bash
 # Core SDK (vanilla TypeScript)
 pnpm add @zama-fhe/sdk
+# or: npm install @zama-fhe/sdk / yarn add @zama-fhe/sdk
 
 # React hooks
 pnpm add @zama-fhe/react-sdk @tanstack/react-query
+# or: npm install @zama-fhe/react-sdk @tanstack/react-query / yarn add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
 ### Read extended documentation
@@ -264,9 +266,7 @@ Each package exposes multiple entry points for tree-shaking:
 | Import Path | Contents |
 | --- | --- |
 | `@zama-fhe/react-sdk` | Provider-based hooks + all re-exports from core SDK |
-| `@zama-fhe/react-sdk/viem` | Viem-specific hooks + `ViemSigner` |
-| `@zama-fhe/react-sdk/ethers` | Ethers-specific hooks + `EthersSigner` |
-| `@zama-fhe/react-sdk/wagmi` | Wagmi-specific hooks + `WagmiSigner` |
+| `@zama-fhe/react-sdk/wagmi` | `WagmiSigner` adapter |
 
 ## Supported Networks
 
@@ -409,12 +409,12 @@ The `Auth` types (`ApiKeyHeader`, `ApiKeyCookie`, `BearerToken`) are exported fr
 
 FHE credentials (keypair + EIP-712 signature) need to be persisted so users don't re-sign on every page load:
 
-| Storage             | Use Case                                                                         |
-| ------------------- | -------------------------------------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                         |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                                               |
-| `asyncLocalStorage` | Node.js servers — isolate credentials per request                                |
-| Custom              | Implement `GenericStringStorage` (3 methods: `getItem`, `setItem`, `removeItem`) |
+| Storage             | Use Case                                                       |
+| ------------------- | -------------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions       |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                             |
+| `asyncLocalStorage` | Node.js servers — isolate credentials per request              |
+| Custom              | Implement `GenericStorage` (3 methods: `get`, `set`, `delete`) |
 
 ### 5. Token Operations
 
@@ -582,18 +582,21 @@ const relayer = new RelayerWeb({
 
 ### Credential storage model
 
-FHE decrypt credentials (a keypair + EIP-712 wallet signature) are cached so users aren't prompted on every decrypt. Before writing to storage, the SDK encrypts the private key with AES-256-GCM. The encryption key is derived via PBKDF2 (600 000 iterations, SHA-256) from the wallet signature — a secret known only to the wallet holder.
+FHE decrypt credentials are cached so users aren't prompted on every page load. The FHE private key is encrypted with AES-256-GCM before storage. The encryption key is derived via PBKDF2 (600 000 iterations, SHA-256) from the wallet's EIP-712 signature — a secret known only to the wallet holder.
+
+The wallet signature is **never written to disk** — it lives only in an in-memory session map. On page reload, the user must re-sign once to unlock their credentials for the session.
 
 What's stored:
 
-| Field                 | Plaintext? | Notes                                            |
-| --------------------- | ---------- | ------------------------------------------------ |
-| `publicKey`           | Yes        | Needed by the relayer to create decrypt requests |
-| `signature`           | Yes        | EIP-712 authorization, already visible on-chain  |
-| `contractAddresses`   | Yes        | Token addresses covered by the credential        |
-| `startTimestamp`      | Yes        | Credential validity start                        |
-| `durationDays`        | Yes        | Credential validity window                       |
-| `encryptedPrivateKey` | No         | AES-256-GCM encrypted, IV stored alongside       |
+| Field                 | Stored? | Notes                                            |
+| --------------------- | ------- | ------------------------------------------------ |
+| `publicKey`           | Yes     | Needed by the relayer to create decrypt requests |
+| `contractAddresses`   | Yes     | Token addresses covered by the credential        |
+| `startTimestamp`      | Yes     | Credential validity start                        |
+| `durationDays`        | Yes     | Credential validity window                       |
+| `encryptedPrivateKey` | Yes     | AES-256-GCM encrypted, IV stored alongside       |
+| `signature`           | **No**  | Session-only, in memory — never persisted        |
+| `privateKey`          | **No**  | Only exists decrypted in memory                  |
 
 Storage keys are truncated SHA-256 hashes of the wallet address — the raw address is never written to the store.
 
@@ -628,7 +631,7 @@ The token is refreshed before each encrypt/decrypt call.
 | Balance stuck at `undefined`                    | Encrypted handle is `0x000...` (no balance) | Check that the user has shielded tokens first. A zero handle means nothing to decrypt.                                                            |
 | `EncryptionFailedError`                         | Web Worker failed to load WASM bundle       | Check CSP headers — the worker loads WASM from a CDN. Ensure `wasm-unsafe-eval` is allowed.                                                       |
 | `DecryptionFailedError` after page reload       | Unshield interrupted mid-flow               | Use `loadPendingUnshield()` on mount to detect and `resumeUnshield()` to complete the finalize step.                                              |
-| Duplicate wallet popups                         | Credentials not cached or expired           | Call `useAuthorizeAll(tokenAddresses)` once on load to batch-authorize all tokens in a single signature.                                          |
+| Duplicate wallet popups                         | Credentials not cached or expired           | Call `useTokenAllow(tokenAddresses)` once on load to batch-allow all tokens in a single signature.                                                |
 | `TransactionRevertedError` on unshield finalize | Unwrap event not found or already finalized | Check the unwrap tx hash — if the tx was already finalized, clear the pending state with `clearPendingUnshield()`.                                |
 | Balance not updating after transfer             | Handle polling interval too long            | Mutation hooks auto-invalidate caches, but if using direct contract calls, manually invalidate `confidentialBalanceQueryKeys`.                    |
 | "Decrypting..." spinner on every page reload    | Storage backend not persisting              | Decrypted balances are cached in storage. Ensure you're using `indexedDBStorage` (browser) or `asyncLocalStorage` (Node.js), not `memoryStorage`. |

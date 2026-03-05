@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useShield,
-  useUnderlyingAllowance,
-  useTokenMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useShield, useUnderlyingAllowance, useMetadata, type Address } from "@zama-fhe/react-sdk";
 
 export function ShieldForm({
   tokenAddress,
@@ -14,7 +9,7 @@ export function ShieldForm({
   tokenAddress: Address;
   wrapperAddress: Address;
 }) {
-  const { data: metadata } = useTokenMetadata(tokenAddress);
+  const { data: metadata } = useMetadata(tokenAddress);
   const { data: allowance } = useUnderlyingAllowance({ tokenAddress, wrapperAddress });
   const shield = useShield({ tokenAddress, wrapperAddress });
 

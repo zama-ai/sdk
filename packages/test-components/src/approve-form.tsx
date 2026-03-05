@@ -3,7 +3,7 @@
 import {
   useConfidentialApprove,
   useConfidentialIsApproved,
-  useTokenMetadata,
+  useMetadata,
   type Address,
 } from "@zama-fhe/react-sdk";
 
@@ -14,7 +14,7 @@ export function ApproveForm({
   tokenAddress: Address;
   defaultSpender?: Address;
 }) {
-  const { data: metadata } = useTokenMetadata(tokenAddress);
+  const { data: metadata } = useMetadata(tokenAddress);
   const approve = useConfidentialApprove({ tokenAddress });
   const { data: isApproved } = useConfidentialIsApproved({ tokenAddress, spender: defaultSpender });
 

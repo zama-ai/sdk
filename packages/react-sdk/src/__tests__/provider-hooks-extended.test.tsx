@@ -4,7 +4,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { useUnderlyingAllowance } from "../token/use-underlying-allowance";
 import { useUnshield } from "../token/use-unshield";
 import { useUnshieldAll } from "../token/use-unshield-all";
-import { useTokenMetadataSuspense } from "../token/use-token-metadata";
+import { useMetadataSuspense } from "../token/use-metadata";
 import { useTotalSupplySuspense } from "../token/use-total-supply";
 import { useWrapperDiscoverySuspense } from "../token/use-wrapper-discovery";
 import { renderWithProviders, createMockSigner } from "./test-utils";
@@ -56,7 +56,7 @@ describe("useUnshieldAll", () => {
   });
 });
 
-describe("useTokenMetadataSuspense", () => {
+describe("useMetadataSuspense", () => {
   it("returns metadata via suspense", async () => {
     const signer = createMockSigner();
     vi.mocked(signer.readContract)
@@ -64,7 +64,7 @@ describe("useTokenMetadataSuspense", () => {
       .mockResolvedValueOnce("TT")
       .mockResolvedValueOnce(18);
 
-    const { result } = renderWithProviders(() => useTokenMetadataSuspense(TOKEN), { signer });
+    const { result } = renderWithProviders(() => useMetadataSuspense(TOKEN), { signer });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });

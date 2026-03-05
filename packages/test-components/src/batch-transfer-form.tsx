@@ -3,13 +3,13 @@
 import {
   useEncrypt,
   useConfidentialBalance,
-  useTokenMetadata,
+  useMetadata,
   useBatchTransferFee,
+  confidentialBatchTransferContract,
   type Address,
   type BatchTransferData,
 } from "@zama-fhe/react-sdk";
-import { useConfidentialBatchTransfer } from "@zama-fhe/react-sdk/wagmi";
-import { useAccount } from "wagmi";
+import { useAccount, useWriteContract } from "wagmi";
 import { bytesToHex } from "viem";
 
 export function BatchTransferForm({
@@ -22,11 +22,11 @@ export function BatchTransferForm({
   feeManagerAddress: Address;
 }) {
   const { address: userAddress } = useAccount();
-  const { data: metadata } = useTokenMetadata(tokenAddress);
+  const { data: metadata } = useMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ tokenAddress });
   const { data: batchFee } = useBatchTransferFee(feeManagerAddress);
   const encrypt = useEncrypt();
-  const batchTransfer = useConfidentialBatchTransfer();
+  const batchTransfer = useWriteContract();
 
   return (
     <form
@@ -40,7 +40,7 @@ export function BatchTransferForm({
 
         const encrypted = await encrypt.mutateAsync({
           values: [amount1, amount2],
-          contractAddress: tokenAddress,
+          contractAddress: batcherAddress,
           userAddress,
         });
 
@@ -59,7 +59,15 @@ export function BatchTransferForm({
           },
         ];
 
-        batchTransfer.mutate(batcherAddress, tokenAddress, userAddress, transfers, batchFee);
+        batchTransfer.mutate(
+          confidentialBatchTransferContract(
+            batcherAddress,
+            tokenAddress,
+            userAddress,
+            transfers,
+            batchFee,
+          ),
+        );
       }}
       className="space-y-4"
       data-testid="batch-transfer-form"

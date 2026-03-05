@@ -17,6 +17,8 @@ export interface WorkerClientConfig {
   integrity?: string;
   /** Optional logger for tracing worker request lifecycle. */
   logger?: GenericLogger;
+  /** Number of WASM threads for parallel FHE operations (passed to `initSDK({ thread })`). */
+  thread?: number;
 }
 
 /**
