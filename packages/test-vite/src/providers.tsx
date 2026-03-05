@@ -5,7 +5,7 @@ import { type ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
-import { burner } from "./burner-connector";
+import { burner } from "@zama-fhe/test-components";
 
 const isHardhat = import.meta.env.VITE_NETWORK === "hardhat";
 

@@ -22,7 +22,6 @@ import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { getHttpRpcClient, hexToBigInt, hexToNumber } from "viem/utils";
 
 const STORAGE_KEY = "burnerWallet.pk";
-const DEFAULT_PK: Hex = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 interface BurnerConnectorOptions {
   rpcUrls?: Record<number, string>;
@@ -69,8 +68,11 @@ class BurnerWalletConnector {
   }
 
   private static loadPrivateKey(): Hex {
-    if (typeof window === "undefined") return DEFAULT_PK;
-    return (localStorage.getItem(STORAGE_KEY) ?? DEFAULT_PK) as Hex;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      throw new Error(`No private key found in localStorage at key: ${STORAGE_KEY}`);
+    }
+    return stored as Hex;
   }
 
   private getAccount(): PrivateKeyAccount {
@@ -154,12 +156,12 @@ class BurnerWalletConnector {
     }): Promise<unknown> => {
       switch (method) {
         case "eth_sendTransaction":
-          return this.handleSendTransaction(client, account, (params as TransactionParams[])[0]);
+          return this.handleSendTransaction(client, account, (params as [TransactionParams])[0]);
 
         case "personal_sign":
           return client.signMessage({
             account,
-            message: { raw: (params as Hex[])[0] },
+            message: { raw: (params as [Hex])[0] },
           });
 
         case "eth_signTypedData_v4": {
