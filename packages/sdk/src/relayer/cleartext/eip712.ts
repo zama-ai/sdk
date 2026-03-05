@@ -1,22 +1,19 @@
-import type { ethers } from "ethers";
+import type { TypedDataDomain } from "viem";
 
-type DomainFactory = (
-  chainId: number | bigint,
-  verifyingContract: string,
-) => ethers.TypedDataDomain;
+type DomainFactory = (chainId: number | bigint, verifyingContract: string) => TypedDataDomain;
 
 const inputDomain: DomainFactory = (chainId, verifyingContract) => ({
   name: "InputVerification",
   version: "1",
-  chainId,
-  verifyingContract,
+  chainId: Number(chainId),
+  verifyingContract: verifyingContract as `0x${string}`,
 });
 
 const decryptionDomain: DomainFactory = (chainId, verifyingContract) => ({
   name: "Decryption",
   version: "1",
-  chainId,
-  verifyingContract,
+  chainId: Number(chainId),
+  verifyingContract: verifyingContract as `0x${string}`,
 });
 
 export const INPUT_VERIFICATION_EIP712 = {

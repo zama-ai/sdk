@@ -1,12 +1,12 @@
-import { ethers } from "ethers";
+import { concat, encodePacked, keccak256, pad, toBytes, toHex } from "viem";
 import { FHE_BIT_WIDTHS, FheType, HANDLE_VERSION, PREHANDLE_MASK } from "./constants";
 
-const RAW_CT_HASH_DOMAIN_SEPARATOR = ethers.toUtf8Bytes("ZK-w_rct");
-const HANDLE_HASH_DOMAIN_SEPARATOR = ethers.toUtf8Bytes("ZK-w_hdl");
+const RAW_CT_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_rct");
+const HANDLE_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_hdl");
 
 function cleartextToBytes(cleartext: bigint, fheType: FheType): Uint8Array {
   const byteLength = Math.ceil(FHE_BIT_WIDTHS[fheType] / 8);
-  return ethers.getBytes(ethers.zeroPadValue(ethers.toBeHex(cleartext), byteLength));
+  return toBytes(pad(toHex(cleartext), { size: byteLength }));
 }
 
 export function computeMockCiphertext(
@@ -19,9 +19,11 @@ export function computeMockCiphertext(
   }
 
   const clearBytes = cleartextToBytes(cleartext, fheType);
-  const inner = ethers.keccak256(ethers.concat([new Uint8Array([fheType]), clearBytes, random32]));
+  const inner = keccak256(
+    concat([toHex(new Uint8Array([fheType])), toHex(clearBytes), toHex(random32)]),
+  );
 
-  return ethers.keccak256(ethers.concat([RAW_CT_HASH_DOMAIN_SEPARATOR, ethers.getBytes(inner)]));
+  return keccak256(concat([toHex(RAW_CT_HASH_DOMAIN_SEPARATOR), inner]));
 }
 
 export function computeInputHandle(
@@ -35,12 +37,20 @@ export function computeInputHandle(
     throw new Error("index must be an integer between 0 and 255");
   }
 
-  const blobHash = ethers.keccak256(
-    ethers.concat([RAW_CT_HASH_DOMAIN_SEPARATOR, ethers.getBytes(mockCiphertext)]),
+  const blobHash = keccak256(
+    concat([toHex(RAW_CT_HASH_DOMAIN_SEPARATOR), mockCiphertext as `0x${string}`]),
   );
-  const handleHash = ethers.solidityPackedKeccak256(
-    ["bytes", "bytes32", "uint8", "address", "uint256"],
-    [HANDLE_HASH_DOMAIN_SEPARATOR, blobHash, index, aclAddress, chainId],
+  const handleHash = keccak256(
+    encodePacked(
+      ["bytes", "bytes32", "uint8", "address", "uint256"],
+      [
+        toHex(HANDLE_HASH_DOMAIN_SEPARATOR),
+        blobHash as `0x${string}`,
+        index,
+        aclAddress as `0x${string}`,
+        chainId,
+      ],
+    ),
   );
 
   const chainId64 = chainId & 0xffff_ffff_ffff_ffffn;
@@ -51,5 +61,5 @@ export function computeInputHandle(
     (BigInt(fheType) << 8n) |
     BigInt(HANDLE_VERSION);
 
-  return ethers.toBeHex(handle, 32);
+  return toHex(handle, { size: 32 });
 }

@@ -15,7 +15,9 @@ describe("createCleartextRelayer", () => {
   it("accepts an Eip1193Provider value in rpcUrl", () => {
     const mockEip1193Provider = {
       request: async (_request: { method: string; params?: unknown[] }) => null,
-    };
+      on: () => {},
+      removeListener: () => {},
+    } as const;
 
     const relayer = createCleartextRelayer({
       ...hoodi,

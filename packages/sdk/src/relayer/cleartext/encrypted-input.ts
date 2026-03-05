@@ -1,15 +1,12 @@
-import { ethers } from "ethers";
+import { concat, getAddress, keccak256, pad, toBytes, toHex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { FHE_BIT_WIDTHS, FheType } from "./constants";
 import { INPUT_VERIFICATION_EIP712 } from "./eip712";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
 import { MOCK_INPUT_SIGNER_PK } from "./constants";
 import type { CleartextConfig } from "./types";
 
-const INPUT_VERIFICATION_TYPES: Record<string, ethers.TypedDataField[]> = {
-  CiphertextVerification: INPUT_VERIFICATION_EIP712.types
-    .CiphertextVerification as unknown as ethers.TypedDataField[],
-};
-const INPUT_SIGNER = new ethers.Wallet(MOCK_INPUT_SIGNER_PK);
+const INPUT_SIGNER = privateKeyToAccount(MOCK_INPUT_SIGNER_PK as `0x${string}`);
 
 type AddedValue = {
   fheType: FheType;
@@ -23,8 +20,8 @@ export class CleartextEncryptedInput {
   readonly #values: AddedValue[] = [];
 
   constructor(contractAddress: string, userAddress: string, config: CleartextConfig) {
-    this.#contractAddress = ethers.getAddress(contractAddress);
-    this.#userAddress = ethers.getAddress(userAddress);
+    this.#contractAddress = getAddress(contractAddress);
+    this.#userAddress = getAddress(userAddress);
     this.#config = config;
   }
 
@@ -76,7 +73,7 @@ export class CleartextEncryptedInput {
   }
 
   addAddress(value: string): this {
-    return this.#addValue(FheType.Uint160, BigInt(ethers.getAddress(value)));
+    return this.#addValue(FheType.Uint160, BigInt(getAddress(value)));
   }
 
   add256(value: bigint): this {
@@ -84,15 +81,14 @@ export class CleartextEncryptedInput {
   }
 
   async encrypt(): Promise<{ handles: Uint8Array[]; inputProof: Uint8Array }> {
-    const random32List = this.#values.map(() => ethers.randomBytes(32));
+    const random32List = this.#values.map(() => crypto.getRandomValues(new Uint8Array(32)));
 
     const mockCiphertexts = this.#values.map(({ fheType, value }, index) =>
       computeMockCiphertext(fheType, value, random32List[index]!),
     );
 
-    const ciphertextBlob = ethers.keccak256(
-      ethers.concat(mockCiphertexts.map((ciphertext) => ethers.getBytes(ciphertext))),
-    );
+    const ciphertextParts = mockCiphertexts.map((ciphertext) => ciphertext as `0x${string}`);
+    const ciphertextBlob = keccak256(ciphertextParts.length > 0 ? concat(ciphertextParts) : "0x");
 
     const handles = this.#values.map(({ fheType }, index) =>
       computeInputHandle(
@@ -104,39 +100,39 @@ export class CleartextEncryptedInput {
       ),
     );
 
-    const cleartextBytes = ethers.concat(
-      this.#values.map(({ value }) =>
-        ethers.getBytes(ethers.zeroPadValue(ethers.toBeHex(value), 32)),
-      ),
-    );
+    const cleartextParts = this.#values.map(({ value }) => pad(toHex(value), { size: 32 }));
+    const cleartextBytes: `0x${string}` = cleartextParts.length > 0 ? concat(cleartextParts) : "0x";
 
-    const signature = await INPUT_SIGNER.signTypedData(
-      INPUT_VERIFICATION_EIP712.domain(
+    const signature = await INPUT_SIGNER.signTypedData({
+      domain: INPUT_VERIFICATION_EIP712.domain(
         this.#config.gatewayChainId,
         this.#config.contracts.verifyingInputVerifier,
       ),
-      INPUT_VERIFICATION_TYPES,
-      {
-        ctHandles: handles,
-        userAddress: this.#userAddress,
-        contractAddress: this.#contractAddress,
+      types: {
+        CiphertextVerification: [...INPUT_VERIFICATION_EIP712.types.CiphertextVerification],
+      },
+      primaryType: "CiphertextVerification",
+      message: {
+        ctHandles: handles as `0x${string}`[],
+        userAddress: this.#userAddress as `0x${string}`,
+        contractAddress: this.#contractAddress as `0x${string}`,
         contractChainId: this.#config.chainId,
         extraData: cleartextBytes,
       },
-    );
+    });
 
-    const inputProof = ethers.getBytes(
-      ethers.concat([
-        new Uint8Array([handles.length]),
-        new Uint8Array([1]),
-        ...handles.map((handle) => ethers.getBytes(handle)),
-        ethers.getBytes(signature),
+    const inputProof = toBytes(
+      concat([
+        toHex(new Uint8Array([handles.length])),
+        toHex(new Uint8Array([1])),
+        ...handles.map((handle) => handle as `0x${string}`),
+        signature,
         cleartextBytes,
       ]),
     );
 
     return {
-      handles: handles.map((handle) => ethers.getBytes(handle)),
+      handles: handles.map((handle) => toBytes(handle as `0x${string}`)),
       inputProof,
     };
   }

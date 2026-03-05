@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { hexToBigInt, toHex } from "viem";
 import { describe, expect, it } from "vitest";
 import { FheType } from "../constants";
 import { CleartextEncryptedInput } from "../encrypted-input";
@@ -17,14 +17,14 @@ describe("CleartextEncryptedInput", () => {
     expect(inputProof[1]).toBe(1);
     expect(inputProof.length).toBe(195);
 
-    expect(ethers.hexlify(inputProof.slice(2, 34))).toBe(ethers.hexlify(handles[0]!));
-    expect(ethers.hexlify(inputProof.slice(34, 66))).toBe(ethers.hexlify(handles[1]!));
+    expect(toHex(inputProof.slice(2, 34))).toBe(toHex(handles[0]!));
+    expect(toHex(inputProof.slice(34, 66))).toBe(toHex(handles[1]!));
 
     const signature = inputProof.slice(66, 131);
     expect(signature.length).toBe(65);
 
-    const clear0 = ethers.toBigInt(ethers.hexlify(inputProof.slice(131, 163)));
-    const clear1 = ethers.toBigInt(ethers.hexlify(inputProof.slice(163, 195)));
+    const clear0 = hexToBigInt(toHex(inputProof.slice(131, 163)));
+    const clear1 = hexToBigInt(toHex(inputProof.slice(163, 195)));
     expect(clear0).toBe(42n);
     expect(clear1).toBe(99n);
   });
@@ -64,9 +64,7 @@ describe("CleartextEncryptedInput", () => {
       inputProof.slice(2 + index * 32, 2 + (index + 1) * 32),
     );
 
-    expect(embedded.map((chunk) => ethers.hexlify(chunk))).toEqual(
-      handles.map((handle) => ethers.hexlify(handle)),
-    );
+    expect(embedded.map((chunk) => toHex(chunk))).toEqual(handles.map((handle) => toHex(handle)));
   });
 
   it("addBool rejects bigint values outside 0/1", () => {
@@ -98,7 +96,7 @@ describe("CleartextEncryptedInput", () => {
     for (const value of invalidAddresses) {
       const input = createInput();
 
-      expect(() => input.addAddress(value)).toThrow(/invalid address/i);
+      expect(() => input.addAddress(value)).toThrow(/invalid/i);
     }
   });
 

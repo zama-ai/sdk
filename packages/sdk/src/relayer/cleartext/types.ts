@@ -1,4 +1,4 @@
-import type { Eip1193Provider } from "ethers";
+import type { EIP1193Provider } from "viem";
 
 export interface CleartextContracts {
   acl: string;
@@ -16,5 +16,5 @@ export interface CleartextConfig {
 }
 
 export interface CleartextChainConfig extends CleartextConfig {
-  rpcUrl: string | Eip1193Provider;
+  rpcUrl: string | EIP1193Provider;
 }
