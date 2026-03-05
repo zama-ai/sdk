@@ -273,6 +273,13 @@ export const confidentialBalanceQueryKeys: {
 };
 
 // @public
+export interface ConfidentialBalancesData {
+    balances: Map<Address, bigint>;
+    errors: Map<Address, Error>;
+    isPartialError: boolean;
+}
+
+// @public
 export const confidentialBalancesQueryKeys: {
     readonly all: readonly ["confidentialBalances"];
     readonly tokens: (tokenAddresses: string[], owner: string) => readonly ["confidentialBalances", string[], string];
@@ -1552,10 +1559,6 @@ export { ZamaSDKEventType }
 export { ZERO_HANDLE }
 
 export { ZKProofLike }
-
-// Warnings were encountered during analysis:
-//
-// dist/index.d.ts:670:5 - (ae-forgotten-export) The symbol "ConfidentialBalancesData" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

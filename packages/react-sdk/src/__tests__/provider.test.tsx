@@ -21,7 +21,9 @@ vi.mock("@zama-fhe/sdk", async (importOriginal: () => Promise<typeof import("@za
 
 describe("ZamaProvider & useZamaSDK", () => {
   it("throws when used outside provider", () => {
-    expect(() => renderHook(() => useZamaSDK())).toThrow("useZamaSDK requires a connected signer");
+    expect(() => renderHook(() => useZamaSDK())).toThrow(
+      "useZamaSDK must be used within a <ZamaProvider>",
+    );
   });
 
   it("returns a ZamaSDK instance inside provider", ({ renderWithProviders }) => {

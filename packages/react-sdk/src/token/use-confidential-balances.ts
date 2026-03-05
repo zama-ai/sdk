@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useRef } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { ReadonlyToken, type Address } from "@zama-fhe/sdk";
+import { DecryptionFailedError, ReadonlyToken, type Address } from "@zama-fhe/sdk";
+import { useMemo } from "react";
 import { useZamaSDK } from "../provider";
 import { confidentialBalancesQueryKeys, confidentialHandlesQueryKeys } from "./balance-query-keys";
 
@@ -88,16 +88,11 @@ export function useConfidentialBalances(
   const handles = handlesQuery.data;
   const handlesKey = handles?.join(",") ?? "";
 
-  // Collect per-token errors during batch decryption via a ref
-  // so the callback closure doesn't trigger re-renders.
-  const errorsRef = useRef(new Map<Address, Error>());
-
   // Phase 2: Batch decrypt only when any handle changes
   const balancesQuery = useQuery<ConfidentialBalancesData, Error>({
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, ownerKey), handlesKey],
     queryFn: async () => {
       const perTokenErrors = new Map<Address, Error>();
-      errorsRef.current = perTokenErrors;
 
       const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
         handles: handles!,
@@ -126,7 +121,10 @@ export function useConfidentialBalances(
 
       // If ALL tokens failed, throw so isError is true
       if (errors.size === tokens.length && tokens.length > 0) {
-        throw errors.values().next().value;
+        throw (
+          errors.values().next().value ??
+          new DecryptionFailedError("All token balance decryptions failed")
+        );
       }
 
       return {

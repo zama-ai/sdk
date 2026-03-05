@@ -200,6 +200,7 @@ export {
   useConfidentialBalances,
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
+  type ConfidentialBalancesData,
 } from "./token/use-confidential-balances";
 export { useAllow, allowMutationOptions } from "./token/use-allow";
 export { useIsAllowed, isAllowedQueryKeys, isAllowedQueryOptions } from "./token/use-is-allowed";

@@ -39,7 +39,8 @@ export interface ZamaProviderProps extends PropsWithChildren {
   onEvent?: ZamaSDKEventListener;
 }
 
-const ZamaSDKContext = createContext<ZamaSDK | null>(null);
+const NO_PROVIDER = Symbol("no-provider");
+const ZamaSDKContext = createContext<ZamaSDK | null | typeof NO_PROVIDER>(NO_PROVIDER);
 
 /**
  * Provides a {@link ZamaSDK} instance to all descendant hooks.
@@ -102,6 +103,13 @@ export function ZamaProvider({
 export function useZamaSDK(): ZamaSDK {
   const context = useContext(ZamaSDKContext);
 
+  if (context === NO_PROVIDER) {
+    throw new Error(
+      "useZamaSDK must be used within a <ZamaProvider>. " +
+        "Wrap your component tree in <ZamaProvider relayer={…} signer={…} storage={…}>.",
+    );
+  }
+
   if (!context) {
     throw new Error(
       "useZamaSDK requires a connected signer. " +
@@ -123,5 +131,6 @@ export function useZamaSDK(): ZamaSDK {
  * ```
  */
 export function useReadonlyZamaSDK(): ZamaSDK | null {
-  return useContext(ZamaSDKContext);
+  const context = useContext(ZamaSDKContext);
+  return context === NO_PROVIDER ? null : context;
 }
