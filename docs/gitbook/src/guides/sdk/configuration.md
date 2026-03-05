@@ -208,7 +208,7 @@ import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
     const sdk = new ZamaSDK({ relayer, signer, storage: asyncLocalStorage });
-    // FHE keypair are scoped to this request
+    // FHE keypair is scoped to this request
     await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
@@ -334,7 +334,7 @@ const sdk = new ZamaSDK({ relayer, signer, storage, sessionTTL: 0 });
 
 ## Session management
 
-FHE keypair are encrypted before being persisted to `storage`. The wallet signature used to unlock them lives in `sessionStorage` (in-memory by default). This means:
+FHE keypair is encrypted before being persisted to `storage`. The wallet signature used to unlock them lives in `sessionStorage` (in-memory by default). This means:
 
 - On page load, the user must re-sign once to unlock their FHE keypair for the session
 - Closing the tab (or calling `await sdk.revokeSession()`) clears the signature from memory
