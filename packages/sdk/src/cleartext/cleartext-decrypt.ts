@@ -10,7 +10,7 @@
  */
 
 import { hexlify, keccak256, concat, toUtf8Bytes, type SigningKey } from "ethers";
-import { DecryptionFailedError } from "../token/errors";
+import { ConfigurationError, DecryptionFailedError } from "../token/errors";
 import type { CleartextExecutor } from "./cleartext-executor";
 import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712";
 
@@ -70,7 +70,7 @@ function fheTypeToSolidity(fheTypeId: number) {
     case 8:
       return "uint256"; // euint256
     default:
-      throw new Error(`Unsupported FHE type ID in cleartext mode: ${fheTypeId}`);
+      throw new ConfigurationError(`Unsupported FHE type ID in cleartext mode: ${fheTypeId}`);
   }
 }
 

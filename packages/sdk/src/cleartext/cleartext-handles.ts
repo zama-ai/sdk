@@ -77,7 +77,7 @@ export interface ParsedHandle {
 function computeMockCiphertext(fheType: number, cleartext: bigint, random32: Uint8Array): string {
   const bitWidth = FHE_BIT_WIDTHS[fheType as FheType];
   if (bitWidth === undefined) {
-    throw new Error(`Unknown FheType: ${fheType}`);
+    throw new EncryptionFailedError(`Unknown FheType: ${fheType}`);
   }
   const byteLength = Math.ceil(bitWidth / 8);
   const clearBytes = getBytes(zeroPadValue(toBeHex(cleartext), byteLength));
@@ -144,14 +144,14 @@ export function computeCleartextHandles(
     );
   }
   if (values.length > 255) {
-    throw new Error(`Cannot generate more than 255 handles (got ${values.length})`);
+    throw new EncryptionFailedError(`Cannot generate more than 255 handles (got ${values.length})`);
   }
 
   // Generate per-value mock ciphertexts with individual random entropy
   const fheTypeIds = encryptionBits.map((bits) => {
     const id = BITS_TO_FHE_TYPE[bits];
     if (id === undefined) {
-      throw new Error(`Unsupported encryption bit-width: ${bits}`);
+      throw new EncryptionFailedError(`Unsupported encryption bit-width: ${bits}`);
     }
     return id;
   });
@@ -181,7 +181,7 @@ export function parseHandle(handleHex: string): ParsedHandle {
 
   const bytes = getBytes(handleHex);
   if (bytes.length !== 32) {
-    throw new Error(`Expected 32 bytes, got ${bytes.length}`);
+    throw new EncryptionFailedError(`Expected 32 bytes, got ${bytes.length}`);
   }
 
   const hash21 = hexlify(bytes.slice(0, 21));
