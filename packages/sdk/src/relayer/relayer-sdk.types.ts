@@ -67,7 +67,6 @@ export interface EncryptResult {
 /** Supported FHE encrypted types. */
 export type FheType =
   | "ebool"
-  | "euint4"
   | "euint8"
   | "euint16"
   | "euint32"
@@ -92,9 +91,9 @@ export interface EncryptParams {
 
 /**
  * Union of possible decrypted value types.
- * - `bigint` for euintN types
- * - `boolean` for ebool
- * - `` `0x${string}` `` for eaddress
+ * - bigint for euintN types
+ * - boolean for ebool
+ * - hex string for eaddress
  */
 export type DecryptedValue = bigint | boolean | `0x${string}`;
 

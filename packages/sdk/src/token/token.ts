@@ -24,7 +24,12 @@ import {
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { TransactionResult, UnshieldCallbacks, ShieldCallbacks, TransferCallbacks } from "./token.types";
+import type {
+  TransactionResult,
+  UnshieldCallbacks,
+  ShieldCallbacks,
+  TransferCallbacks,
+} from "./token.types";
 
 /** Coerce an unknown caught value to an Error instance. */
 function toError(error: unknown): Error {

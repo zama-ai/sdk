@@ -332,7 +332,9 @@ export class RelayerWeb implements RelayerSDK {
    * Decrypt ciphertexts via delegation.
    * Requires a valid EIP712 signature from the delegator.
    */
-  async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, DecryptedValue>> {
+  async delegatedUserDecrypt(
+    params: DelegatedUserDecryptParams,
+  ): Promise<Record<string, DecryptedValue>> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();

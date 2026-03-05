@@ -95,9 +95,6 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
         case "ebool":
           input.addBool(typeof value === "boolean" ? value : value !== 0n);
           break;
-        case "euint4":
-          input.add4(typeof value === "boolean" ? (value ? 1n : 0n) : value);
-          break;
         case "euint8":
           input.add8(typeof value === "boolean" ? (value ? 1n : 0n) : value);
           break;
