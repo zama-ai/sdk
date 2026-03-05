@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0-alpha.8](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.7...v1.0.0-alpha.8) (2026-03-05)
+
+### Features
+
+- expose WASM thread pool option for RelayerWeb [SDK-10] ([#28](https://github.com/zama-ai/sdk/issues/28)) ([11dae99](https://github.com/zama-ai/sdk/commit/11dae99a2801378aca1d36dd2be64b061b039669))
+- implement 10 SDK backlog items — types, hooks, callbacks, status tracking (Vibe Kanban) ([#57](https://github.com/zama-ai/sdk/issues/57)) ([b59e222](https://github.com/zama-ai/sdk/commit/b59e222fa522c7fd0e137b9be418eb59b8a1cc55)), closes [#ensureAllowance](https://github.com/zama-ai/sdk/issues/ensureAllowance)
+- session-scoped signatures & SDK API improvements [SDK-6] ([#25](https://github.com/zama-ai/sdk/issues/25)) ([116ae85](https://github.com/zama-ai/sdk/commit/116ae85a8d4c1a592563e6d5f3a1f65cabb7711f)), closes [CredentialsManager#sessionSignatures](https://github.com/zama-ai/CredentialsManager/issues/sessionSignatures) [#reSign](https://github.com/zama-ai/sdk/issues/reSign) [#storeKey](https://github.com/zama-ai/sdk/issues/storeKey) [#onEvent](https://github.com/zama-ai/sdk/issues/onEvent) [#lastChainId](https://github.com/zama-ai/sdk/issues/lastChainId) [#unsubscribeSigner](https://github.com/zama-ai/sdk/issues/unsubscribeSigner)
+
+### Bug Fixes
+
+- use real hardhat-deployed addresses, add missing transferBatcher approval ([#50](https://github.com/zama-ai/sdk/issues/50)) ([06c6428](https://github.com/zama-ai/sdk/commit/06c64286ca1e4a8b6d9cf0f3485bd530829b0eef))
+
 ## 1.0.0-alpha.1 (2026-03-05)
 
 ### Features
