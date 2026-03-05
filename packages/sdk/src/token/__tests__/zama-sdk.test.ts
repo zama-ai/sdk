@@ -1,44 +1,36 @@
-import { describe, it, expect, vi, type Mock } from "vitest";
+import { describe, it, expect, vi, type Mock } from "../../test-fixtures";
 import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
-import { MemoryStorage } from "../memory-storage";
 import { computeStoreKey } from "../credentials-manager";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "../token.types";
 import type { Address } from "../../relayer/relayer-sdk.types";
-import { createMockRelayer, createMockSigner } from "./test-helpers";
 
 describe("ZamaSDK", () => {
-  const storage = new MemoryStorage();
-  const signer = createMockSigner();
-  const relayer = createMockRelayer();
-
-  const sdk = new ZamaSDK({
-    relayer,
-    signer,
-    storage,
-  });
-
-  it("exposes signer and storage", () => {
+  it("exposes signer and storage", ({ relayer, signer, storage }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
     expect(sdk.signer).toBe(signer);
     expect(sdk.storage).toBe(storage);
   });
 
-  it("createReadonlyToken returns ReadonlyToken", () => {
-    const token = sdk.createReadonlyToken("0x1111111111111111111111111111111111111111" as Address);
+  it("createReadonlyToken returns ReadonlyToken", ({ relayer, signer, storage, tokenAddress }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const token = sdk.createReadonlyToken(tokenAddress);
     expect(token).toBeInstanceOf(ReadonlyToken);
-    expect(token.address).toBe("0x1111111111111111111111111111111111111111");
-    expect(token.signer).toBe(signer);
+    expect(token.address).toBe(tokenAddress);
+    expect(token.signer).toBe(sdk.signer);
   });
 
-  it("createToken returns Token", () => {
-    const token = sdk.createToken("0x1111111111111111111111111111111111111111" as Address);
+  it("createToken returns Token", ({ relayer, signer, storage, tokenAddress }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const token = sdk.createToken(tokenAddress);
     expect(token).toBeInstanceOf(Token);
-    expect(token.address).toBe("0x1111111111111111111111111111111111111111");
+    expect(token.address).toBe(tokenAddress);
   });
 
-  it("creates distinct instances per address", () => {
+  it("creates distinct instances per address", ({ relayer, signer, storage }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
     const t1 = sdk.createReadonlyToken("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address);
     const t2 = sdk.createReadonlyToken("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address);
     expect(t1).not.toBe(t2);
@@ -46,22 +38,27 @@ describe("ZamaSDK", () => {
     expect(t2.address).toBe("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
   });
 
-  it("terminate delegates to relayer.terminate", () => {
+  it("terminate delegates to relayer.terminate", ({ relayer, signer, storage }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
     sdk.terminate();
     expect(relayer.terminate).toHaveBeenCalledOnce();
   });
 
-  it("calls signer.subscribe when available", () => {
+  it("calls signer.subscribe when available", ({
+    createMockSigner,
+    createMockRelayer,
+    storage,
+  }) => {
     const unsubscribe = vi.fn();
     const subscribeSigner = {
       ...createMockSigner(),
       subscribe: vi.fn().mockReturnValue(unsubscribe),
     };
 
-    const sdkWithSubscribe = new ZamaSDK({
+    const sdk = new ZamaSDK({
       relayer: createMockRelayer(),
       signer: subscribeSigner,
-      storage: new MemoryStorage(),
+      storage,
     });
 
     expect(subscribeSigner.subscribe).toHaveBeenCalledOnce();
@@ -70,100 +67,83 @@ describe("ZamaSDK", () => {
       onAccountChange: expect.any(Function),
     });
 
-    // Cleanup
-    sdkWithSubscribe.terminate();
+    sdk.terminate();
   });
 
-  it("terminate calls unsubscribe from signer.subscribe", () => {
+  it("terminate calls unsubscribe from signer.subscribe", ({
+    createMockRelayer,
+    createMockSigner,
+    storage,
+  }) => {
     const unsubscribe = vi.fn();
     const subscribeSigner = {
       ...createMockSigner(),
       subscribe: vi.fn().mockReturnValue(unsubscribe),
     };
 
-    const sdkWithSubscribe = new ZamaSDK({
+    const sdk = new ZamaSDK({
       relayer: createMockRelayer(),
       signer: subscribeSigner,
-      storage: new MemoryStorage(),
+      storage,
     });
 
-    sdkWithSubscribe.terminate();
+    sdk.terminate();
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
-  it("does not fail when subscribe returns a no-op unsubscribe", () => {
-    const plainSigner = createMockSigner();
-
-    const sdkNoSubscribe = new ZamaSDK({
-      relayer: createMockRelayer(),
-      signer: plainSigner,
-      storage: new MemoryStorage(),
-    });
-
+  it("does not fail when subscribe returns a no-op unsubscribe", ({ relayer, signer, storage }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
     // Should not throw
-    sdkNoSubscribe.terminate();
+    sdk.terminate();
   });
 
-  it("revoke clears session storage", async () => {
-    const sessionStorage = new MemoryStorage();
-    const localSigner = createMockSigner();
-    const localRelayer = createMockRelayer();
-
-    const localSdk = new ZamaSDK({
-      relayer: localRelayer,
-      signer: localSigner,
-      storage: new MemoryStorage(),
-      sessionStorage,
-    });
+  it("revoke clears session storage", async ({ signer, relayer, storage, sessionStorage }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage });
 
     // Simulate a cached session signature by computing the same store key
     // the CredentialsManager uses.
-    const address = (await localSigner.getAddress()).toLowerCase();
-    const chainId = await localSigner.getChainId();
+    const address = (await signer.getAddress()).toLowerCase();
+    const chainId = await signer.getChainId();
     const storeKey = await computeStoreKey(address, chainId);
 
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
 
-    await localSdk.revoke();
+    await sdk.revoke();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
   });
 
-  it("revokeSession clears session storage", async () => {
-    const sessionStorage = new MemoryStorage();
-    const localSigner = createMockSigner();
-    const localRelayer = createMockRelayer();
+  it("revokeSession clears session storage", async ({
+    signer,
+    relayer,
+    storage,
+    sessionStorage,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage });
 
-    const localSdk = new ZamaSDK({
-      relayer: localRelayer,
-      signer: localSigner,
-      storage: new MemoryStorage(),
-      sessionStorage,
-    });
-
-    const address = (await localSigner.getAddress()).toLowerCase();
-    const chainId = await localSigner.getChainId();
+    const address = (await signer.getAddress()).toLowerCase();
+    const chainId = await signer.getChainId();
     const storeKey = await computeStoreKey(address, chainId);
 
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
 
-    await localSdk.revokeSession();
+    await sdk.revokeSession();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
   });
 
-  it("revokeSession emits CredentialsRevoked event", async () => {
+  it("revokeSession emits CredentialsRevoked event", async ({ relayer, signer, storage }) => {
     const events: { type: string }[] = [];
-    const localSdk = new ZamaSDK({
-      relayer: createMockRelayer(),
-      signer: createMockSigner(),
-      storage: new MemoryStorage(),
+    const sdk = new ZamaSDK({
+      relayer,
+      signer,
+      storage,
       onEvent: (e) => events.push(e),
     });
 
-    await localSdk.revokeSession();
+    await sdk.revokeSession();
 
     expect(events).toContainEqual(
       expect.objectContaining({ type: ZamaSDKEvents.CredentialsRevoked }),
@@ -171,11 +151,15 @@ describe("ZamaSDK", () => {
   });
 
   describe("lifecycle auto-revoke", () => {
-    it("onAccountChange revokes the PREVIOUS account session, not the new one", async () => {
-      const sessionStorage = new MemoryStorage();
+    it("onAccountChange revokes the PREVIOUS account session, not the new one", async ({
+      createMockRelayer,
+      createMockSigner,
+      storage,
+      sessionStorage,
+    }) => {
       let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
-      const mockSigner = createMockSigner();
+      const mockSigner = createMockSigner("0xuser" as Address);
       const signer = {
         ...mockSigner,
         subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
@@ -187,7 +171,7 @@ describe("ZamaSDK", () => {
       const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
         signer,
-        storage: new MemoryStorage(),
+        storage,
         sessionStorage,
       });
 
@@ -213,11 +197,15 @@ describe("ZamaSDK", () => {
       sdk.terminate();
     });
 
-    it("A→B→A: both account sessions are revoked on their respective switches", async () => {
-      const sessionStorage = new MemoryStorage();
+    it("A→B→A: both account sessions are revoked on their respective switches", async ({
+      createMockRelayer,
+      createMockSigner,
+      storage,
+      sessionStorage,
+    }) => {
       let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
-      const mockSigner = createMockSigner();
+      const mockSigner = createMockSigner("0xuser" as Address);
       const signer = {
         ...mockSigner,
         subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
@@ -229,7 +217,7 @@ describe("ZamaSDK", () => {
       const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
         signer,
-        storage: new MemoryStorage(),
+        storage,
         sessionStorage,
       });
 
@@ -259,11 +247,15 @@ describe("ZamaSDK", () => {
       sdk.terminate();
     });
 
-    it("onDisconnect revokes the current account session", async () => {
-      const sessionStorage = new MemoryStorage();
+    it("onDisconnect revokes the current account session", async ({
+      createMockRelayer,
+      createMockSigner,
+      storage,
+      sessionStorage,
+    }) => {
       let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
-      const mockSigner = createMockSigner();
+      const mockSigner = createMockSigner("0xuser" as Address);
       const signer = {
         ...mockSigner,
         subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
@@ -275,7 +267,7 @@ describe("ZamaSDK", () => {
       const sdk = new ZamaSDK({
         relayer: createMockRelayer(),
         signer,
-        storage: new MemoryStorage(),
+        storage,
         sessionStorage,
       });
 

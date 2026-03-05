@@ -116,6 +116,22 @@ export interface UnshieldCallbacks {
   onFinalizeSubmitted?: (txHash: Hex) => void;
 }
 
+/** Progress callbacks for multi-step shield operations. */
+export interface ShieldCallbacks {
+  /** Fired after the ERC-20 approval transaction is submitted (skipped when `approvalStrategy: "skip"`). */
+  onApprovalSubmitted?: (txHash: Hex) => void;
+  /** Fired after the shield (wrap) transaction is submitted. */
+  onShieldSubmitted?: (txHash: Hex) => void;
+}
+
+/** Progress callbacks for multi-step confidential transfer operations. */
+export interface TransferCallbacks {
+  /** Fired after FHE encryption of the transfer amount completes. */
+  onEncryptComplete?: () => void;
+  /** Fired after the transfer transaction is submitted. */
+  onTransferSubmitted?: (txHash: Hex) => void;
+}
+
 /**
  * Controls how long session signatures remain valid.
  * - `"persistent"` (default): no time-based expiry, current behavior.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { DecryptedValue } from "@zama-fhe/sdk";
 import { decryptionKeys } from "./decryption-cache";
 
 /**
@@ -9,7 +10,7 @@ import { decryptionKeys } from "./decryption-cache";
  * You can also populate manually via queryClient.setQueryData(decryptionKeys.value(handle), value).
  */
 export function useUserDecryptedValue(handle: string | undefined) {
-  return useQuery<bigint>({
+  return useQuery<DecryptedValue>({
     queryKey: decryptionKeys.value(handle ?? ""),
     queryFn: () => undefined as never,
     enabled: false,

@@ -4,6 +4,7 @@ import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-ut
 import { ZamaError, EncryptionFailedError } from "../token/errors";
 import type {
   Address,
+  DecryptedValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -173,7 +174,7 @@ export class RelayerNode implements RelayerSDK {
     });
   }
 
-  async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
+  async userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>> {
     return withRetry(async () => {
       const pool = await this.#ensurePool();
       const result = await pool.userDecrypt(params);
@@ -210,7 +211,9 @@ export class RelayerNode implements RelayerSDK {
     });
   }
 
-  async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
+  async delegatedUserDecrypt(
+    params: DelegatedUserDecryptParams,
+  ): Promise<Record<string, DecryptedValue>> {
     return withRetry(async () => {
       const pool = await this.#ensurePool();
       const result = await pool.delegatedUserDecrypt(params);

@@ -80,9 +80,7 @@
       "optional": true
     }
   },
-  "packageManager": "pnpm@10.30.2",
   "engines": {
-    "node": ">=22",
-    "pnpm": ">=10"
+    "node": ">=22"
   }
 }

@@ -7313,6 +7313,9 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
 
+// @public
+export type DecryptedValue = bigint | boolean | `0x${string}`;
+
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -8910,6 +8913,14 @@ export interface EncryptErrorEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.EncryptError;
 }
 
+// @public
+export interface EncryptInput {
+    // (undocumented)
+    type: FheType;
+    // (undocumented)
+    value: bigint | boolean;
+}
+
 // @public (undocumented)
 export const ENCRYPTION_ABI: readonly [{
     readonly inputs: readonly [];
@@ -10387,8 +10398,7 @@ export interface EncryptParams {
     contractAddress: Address;
     // (undocumented)
     userAddress: Address;
-    // (undocumented)
-    values: bigint[];
+    values: EncryptInput[];
 }
 
 // @public
@@ -11048,6 +11058,9 @@ export interface FHEKeypair {
     // (undocumented)
     publicKey: string;
 }
+
+// @public
+export type FheType = "ebool" | "euint8" | "euint16" | "euint32" | "euint64" | "euint128" | "euint256" | "eaddress";
 
 export { FhevmInstanceConfig }
 
@@ -19344,7 +19357,7 @@ export class RelayerRequestFailedError extends ZamaError {
 export interface RelayerSDK {
     createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, DecryptedValue>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<FHEKeypair>;
     getPublicKey(): Promise<{
@@ -19358,7 +19371,7 @@ export interface RelayerSDK {
     publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>>;
+    userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>>;
 }
 
 // @public
@@ -19369,7 +19382,7 @@ export class RelayerWeb implements RelayerSDK {
     constructor(config: RelayerWebConfig);
     createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, DecryptedValue>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<FHEKeypair>;
     getPublicKey(): Promise<{
@@ -19380,17 +19393,21 @@ export class RelayerWeb implements RelayerSDK {
         publicParams: Uint8Array;
         publicParamsId: string;
     } | null>;
+    get initError(): Error | undefined;
     publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
+    get status(): RelayerSDKStatus;
     terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>>;
+    userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>>;
 }
 
 // @public
 export interface RelayerWebConfig {
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
+    onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
     security?: RelayerWebSecurityConfig;
+    threads?: number;
     // (undocumented)
     transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
 }
@@ -22361,6 +22378,12 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
     readonly gas: 5000000n;
 };
 
+// @public
+export interface ShieldCallbacks {
+    onApprovalSubmitted?: (txHash: Hex) => void;
+    onShieldSubmitted?: (txHash: Hex) => void;
+}
+
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -22460,14 +22483,16 @@ export class Token extends ReadonlyToken {
     constructor(config: TokenConfig);
     approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    confidentialTransfer(to: Address, amount: bigint): Promise<TransactionResult>;
-    confidentialTransferFrom(from: Address, to: Address, amount: bigint): Promise<TransactionResult>;
+    confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     finalizeUnwrap(burnAmountHandle: Address): Promise<TransactionResult>;
-    isApproved(spender: Address): Promise<boolean>;
+    isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint;
+        to?: Address;
+        callbacks?: ShieldCallbacks;
     }): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
     unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
@@ -24162,6 +24187,12 @@ export const TRANSFER_BATCHER_ABI: readonly [{
     readonly stateMutability: "view";
     readonly type: "function";
 }];
+
+// @public
+export interface TransferCallbacks {
+    onEncryptComplete?: () => void;
+    onTransferSubmitted?: (txHash: Hex) => void;
+}
 
 // @public (undocumented)
 export interface TransferFromSubmittedEvent extends BaseEvent {

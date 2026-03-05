@@ -3,12 +3,14 @@ import { test, expect } from "../fixtures";
 test("should shield USDT then unwrap and finalize in two steps", async ({
   page,
   contracts,
-  initialBalances,
   formatUnits,
   computeFee,
+  confidentialBalances,
 }) => {
   const shieldAmount = 1000n;
   const unwrapAmount = 500n;
+
+  const cUSDTBefore = confidentialBalances.cUSDT;
 
   // Shield first
   await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
@@ -32,8 +34,7 @@ test("should shield USDT then unwrap and finalize in two steps", async ({
   // Verify balance decreased by unwrap amount
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance =
-    initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount) - unwrapAmount;
+  const expectedBalance = cUSDTBefore + shieldAmount - computeFee(shieldAmount) - unwrapAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedBalance, 6),
   );
