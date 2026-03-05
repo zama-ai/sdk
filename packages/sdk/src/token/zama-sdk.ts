@@ -70,7 +70,7 @@ export class ZamaSDK {
       durationDays: (() => {
         const ttl = config.keypairTTL ?? 86400;
         if (ttl <= 0) throw new Error("keypairTTL must be a positive number (seconds)");
-        return ttl / 86400;
+        return Math.ceil(ttl / 86400);
       })(),
       sessionTTL: config.sessionTTL ?? "persistent",
       onEvent: this.#onEvent,

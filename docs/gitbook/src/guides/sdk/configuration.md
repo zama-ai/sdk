@@ -8,7 +8,7 @@ const sdk = new ZamaSDK({
   signer,                        // required — wallet interface
   storage,                       // required — persists encrypted decrypt keys
   sessionStorage,                // optional — wallet signature storage (default: in-memory)
-  credentialDurationDays: 1,     // optional (default: 1 day)
+  keypairTTL: 86400,             // optional (default: 86400 = 1 day, in seconds)
   sessionTTL: "persistent",      // optional — session signature lifetime (default: "persistent")
   onEvent: (event) => { ... },   // optional — lifecycle events for debugging
 });
@@ -296,15 +296,7 @@ const sdk = new ZamaSDK({
   relayer,
   signer,
   storage,
-  credentialDurationDays: 7, // re-sign once a week
-});
-
-// For high-security apps: require a signature on every decrypt
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage,
-  credentialDurationDays: 0,
+  keypairTTL: 604800, // 7 days in seconds — re-sign once a week
 });
 ```
 

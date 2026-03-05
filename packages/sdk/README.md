@@ -276,14 +276,14 @@ const sdk = new ZamaSDK({
 
 ### `ZamaSDKConfig`
 
-| Field                    | Type                   | Description                                                                                                                            |
-| ------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                               |
-| `signer`                 | `GenericSigner`        | Wallet signer interface.                                                                                                               |
-| `storage`                | `GenericStorage`       | Credential storage backend.                                                                                                            |
-| `sessionStorage`         | `GenericStorage`       | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
-| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. Set `0` to require a wallet signature on every decrypt (high-security mode).  |
-| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                     |
+| Field            | Type                   | Description                                                                                                                            |
+| ---------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `relayer`        | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                               |
+| `signer`         | `GenericSigner`        | Wallet signer interface.                                                                                                               |
+| `storage`        | `GenericStorage`       | Credential storage backend.                                                                                                            |
+| `sessionStorage` | `GenericStorage`       | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
+| `keypairTTL`     | `number`               | Optional. Seconds the ML-KEM re-encryption keypair remains valid. Default: `86400` (1 day). Must be positive.                          |
+| `onEvent`        | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                     |
 
 #### Structured Event Listener
 
