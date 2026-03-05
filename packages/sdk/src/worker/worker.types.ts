@@ -54,6 +54,8 @@ export interface InitRequest extends BaseRequest {
     csrfToken: string;
     /** Expected SHA-384 hex digest for integrity verification. */
     integrity?: string;
+    /** Number of WASM threads for parallel FHE operations. */
+    thread?: number;
   };
 }
 

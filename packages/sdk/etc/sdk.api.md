@@ -19390,6 +19390,7 @@ export interface RelayerWebConfig {
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
     security?: RelayerWebSecurityConfig;
+    threads?: number;
     // (undocumented)
     transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
 }
