@@ -437,7 +437,7 @@ describe("Session TTL", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
   });
 
-  it("TTL expiry does not clear decrypt keys in persistent storage", async () => {
+  it("TTL expiry does not clear FHE keypair in persistent storage", async () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
     const manager = createManager(3600);
     await manager.allow("0xtoken" as Address);
@@ -450,7 +450,7 @@ describe("Session TTL", () => {
     vi.advanceTimersByTime(3601 * 1000);
     await manager.allow("0xtoken" as Address);
 
-    // Persistent storage should still have the decrypt keys
+    // Persistent storage should still have the FHE keypair
     const storedAfter = await store.get(storeKey);
     expect(storedAfter).not.toBeNull();
     // keypair should NOT have been regenerated

@@ -40,7 +40,7 @@ When a session is found expired:
 2. Emit `session:expired` event with `reason: "ttl"`.
 3. Fall through to re-sign path (single wallet popup, no keypair regen).
 
-Decrypt keys in persistent storage are unaffected.
+FHE keypair in persistent storage is unaffected.
 
 ### TTL `0` semantics
 
@@ -74,8 +74,6 @@ TTL expiry and disconnect/account-change revocation are independent. Whichever f
 2. Session with TTL, operation after expiry → cleared, `SessionExpired` fires, re-auth required.
 3. Session with TTL, disconnect before expiry → revoked (existing behavior).
 4. `sessionTTL: 0` → every operation triggers signing prompt.
-5. `"persistent"` (default) → no time-based expiry.
-6. TTL expiry does not clear decrypt keys in persistent storage.
-7. Chain switch with active TTL → independent sessions unaffected.
-8. Config change between sessions → old sessions use their recorded TTL.
-9. Backward compat: bare string in session storage treated as persistent.
+5. TTL expiry does not clear FHE keypair in persistent storage.
+6. Chain switch with active TTL → independent sessions unaffected.
+7. Config change between sessions → old sessions use their recorded TTL.
