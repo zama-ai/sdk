@@ -32,25 +32,25 @@ describe("Session TTL", () => {
     vi.useRealTimers();
   });
 
-  function createManager(sessionTTL: "persistent" | number = "persistent") {
+  function createManager(sessionTTL: number = 2592000, keypairTTL: number = 604800) {
     return new CredentialsManager({
       relayer: sdk,
       signer,
       storage: store,
       sessionStorage: sessionStore,
-      durationDays: 7,
+      keypairTTL,
       sessionTTL,
       onEvent: (e) => events.push(e),
     });
   }
 
-  it("default (persistent): no time-based expiry", async () => {
+  it("default (30 days): no re-sign within TTL", async () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
     const manager = createManager();
     await manager.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
-    // Advance 6 days — within durationDays (7), session should still be valid
+    // Advance 6 days — within default 30-day TTL and durationDays (7)
     vi.advanceTimersByTime(6 * 86400 * 1000);
     await manager.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
@@ -159,7 +159,7 @@ describe("Session TTL", () => {
       signer,
       storage: store,
       sessionStorage: sessionStore, // same session storage
-      durationDays: 7,
+      keypairTTL: 604800,
       sessionTTL: 10, // shorter TTL
       onEvent: (e) => events.push(e),
     });
@@ -167,6 +167,23 @@ describe("Session TTL", () => {
     // Old session should still be valid (uses its recorded 3600s TTL)
     await manager2.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
+  });
+
+  it("backward compat: bare string in session storage triggers re-sign", async () => {
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+    const manager = createManager(3600);
+
+    // Seed persistent storage with valid encrypted credentials via a normal allow
+    await manager.allow("0xtoken" as Address);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+
+    // Overwrite session storage with a bare string (old format)
+    const storeKey = await computeStoreKey("0xuser", 31337);
+    await sessionStore.set(storeKey, "0xoldsignature");
+
+    // Bare string is migrated to { signature, createdAt: 0, ttl: 0 }
+    // ttl: 0 means immediately expired, so isAllowed returns false
+    expect(await manager.isAllowed()).toBe(false);
   });
 
   it("chain switch with active TTL: independent sessions unaffected", async () => {
@@ -183,7 +200,7 @@ describe("Session TTL", () => {
       signer: signer2,
       storage: store,
       sessionStorage: sessionStore,
-      durationDays: 7,
+      keypairTTL: 604800,
       sessionTTL: 3600,
       onEvent: (e) => events.push(e),
     });

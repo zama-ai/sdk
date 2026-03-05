@@ -155,6 +155,7 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
   storage={storage} // GenericStorage
   sessionStorage={sessionStorage} // Optional. Session storage for wallet signatures. Default: in-memory (lost on reload).
   keypairTTL={86400} // Optional. Seconds the ML-KEM keypair remains valid. Default: 86400 (1 day).
+  sessionTTL={2592000} // Optional. Seconds the session signature remains valid. Default: 2592000 (30 days). 0 = re-sign every operation.
   onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
   {children}

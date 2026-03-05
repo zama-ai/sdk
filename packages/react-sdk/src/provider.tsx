@@ -4,7 +4,6 @@ import type {
   GenericSigner,
   GenericStorage,
   RelayerSDK,
-  SessionTTL,
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
@@ -40,12 +39,12 @@ export interface ZamaProviderProps extends PropsWithChildren {
    */
   keypairTTL?: number;
   /**
-   * Controls how long session signatures (EIP-712 wallet signatures) remain valid.
-   * - `"persistent"` (default): no time-based expiry, sessions last until revocation or storage clear.
+   * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
+   * Default: `2592000` (30 days).
    * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
    * - Positive number: seconds until the session signature expires and requires re-authentication.
    */
-  sessionTTL?: SessionTTL;
+  sessionTTL?: number;
   /** Callback invoked on SDK lifecycle events. */
   onEvent?: ZamaSDKEventListener;
 }

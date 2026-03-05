@@ -123,7 +123,6 @@ import { RelayerWebSecurityConfig } from '@zama-fhe/sdk';
 import { savePendingUnshield } from '@zama-fhe/sdk';
 import { SepoliaConfig } from '@zama-fhe/sdk';
 import { SessionExpiredEvent } from '@zama-fhe/sdk';
-import { SessionTTL } from '@zama-fhe/sdk';
 import { setFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
 import { setOperatorContract } from '@zama-fhe/sdk';
 import { ShieldCallbacks } from '@zama-fhe/sdk';
@@ -711,8 +710,6 @@ export { savePendingUnshield }
 export { SepoliaConfig }
 
 export { SessionExpiredEvent }
-
-export { SessionTTL }
 
 export { setFinalizeUnwrapOperatorContract }
 
@@ -1544,7 +1541,7 @@ export interface ZamaProviderProps extends PropsWithChildren {
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
-    sessionTTL?: SessionTTL;
+    sessionTTL?: number;
     signer?: GenericSigner;
     storage: GenericStorage;
 }

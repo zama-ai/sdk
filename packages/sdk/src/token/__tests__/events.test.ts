@@ -1033,7 +1033,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage,
       sessionStorage,
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
@@ -1054,7 +1054,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage: store,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
@@ -1083,7 +1083,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage: store,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
@@ -1107,7 +1107,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage: store,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
     await manager2.allow("0xtoken" as Address);
@@ -1131,7 +1131,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage,
       sessionStorage,
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
@@ -1162,7 +1162,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage,
       sessionStorage,
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
@@ -1184,7 +1184,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage,
       sessionStorage,
-      durationDays: 1,
+      keypairTTL: 86400,
     });
 
     const creds = await manager.allow("0xtoken" as Address);

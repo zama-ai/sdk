@@ -171,7 +171,7 @@ await allow(["0xTokenA", "0xTokenB", "0xTokenC"]);
 
 ### `useIsAllowed`
 
-Check whether a session signature is cached and valid for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt. If a `sessionTTL` is configured, returns `false` once the session has expired.
+Check whether a session signature is cached and valid for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt. Returns `false` once the `sessionTTL` has expired (default: 30 days).
 
 ```tsx
 import { useIsAllowed } from "@zama-fhe/react-sdk";

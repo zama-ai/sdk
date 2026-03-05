@@ -7240,11 +7240,11 @@ export class CredentialsManager {
 
 // @public
 export interface CredentialsManagerConfig {
-    durationDays: number;
+    keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage: GenericStorage;
-    sessionTTL?: SessionTTL;
+    sessionTTL?: number;
     signer: GenericSigner;
     storage: GenericStorage;
 }
@@ -19339,7 +19339,7 @@ export class ReadonlyToken {
 export interface ReadonlyTokenConfig {
     address: Address;
     credentials?: CredentialsManager;
-    durationDays?: number;
+    keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage: GenericStorage;
@@ -19430,9 +19430,6 @@ export interface SessionExpiredEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.SessionExpired;
 }
-
-// @public
-export type SessionTTL = "persistent" | number;
 
 // @public
 export function setFinalizeUnwrapOperatorContract(tokenAddress: Address, operator: Address, timestamp?: number): {
@@ -33040,7 +33037,7 @@ export interface ZamaSDKConfig {
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
-    sessionTTL?: SessionTTL;
+    sessionTTL?: number;
     signer: GenericSigner;
     storage: GenericStorage;
 }

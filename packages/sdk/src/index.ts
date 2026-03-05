@@ -78,7 +78,6 @@ export type {
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
-  SessionTTL,
 } from "./token/token.types";
 export { ZamaSDKEvents } from "./events/sdk-events";
 export type {

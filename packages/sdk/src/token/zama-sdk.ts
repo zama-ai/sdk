@@ -5,7 +5,7 @@ import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
 import { CredentialsManager, computeStoreKey } from "./credentials-manager";
-import type { GenericSigner, GenericStorage, SessionTTL } from "./token.types";
+import type { GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 
@@ -30,12 +30,12 @@ export interface ZamaSDKConfig {
    */
   keypairTTL?: number;
   /**
-   * Controls how long session signatures (EIP-712 wallet signatures) remain valid.
-   * - `"persistent"` (default): no time-based expiry, sessions last until revocation or storage clear.
+   * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
+   * Default: `2592000` (30 days).
    * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
    * - Positive number: seconds until the session signature expires and requires re-authentication.
    */
-  sessionTTL?: SessionTTL;
+  sessionTTL?: number;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -67,12 +67,12 @@ export class ZamaSDK {
       signer: this.signer,
       storage: this.storage,
       sessionStorage: this.sessionStorage,
-      durationDays: (() => {
+      keypairTTL: (() => {
         const ttl = config.keypairTTL ?? 86400;
         if (ttl <= 0) throw new Error("keypairTTL must be a positive number (seconds)");
-        return Math.ceil(ttl / 86400);
+        return ttl;
       })(),
-      sessionTTL: config.sessionTTL ?? "persistent",
+      sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: this.#onEvent,
     });
     this.#identityReady = this.#initIdentity();

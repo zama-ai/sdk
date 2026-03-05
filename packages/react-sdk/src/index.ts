@@ -94,7 +94,6 @@ export type {
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
-  SessionTTL,
   CredentialsManagerConfig,
   ZamaSDKEventType,
   ZamaSDKEvent,

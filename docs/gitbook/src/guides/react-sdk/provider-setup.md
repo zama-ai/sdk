@@ -9,7 +9,7 @@ Every React app using the SDK needs a `ZamaProvider` in the component tree. It w
   storage={storage}
   sessionStorage={sessionStorage} // optional — wallet signature storage (default: in-memory)
   keypairTTL={86400} // optional, default: 86400 (1 day, in seconds)
-  sessionTTL="persistent" // optional — session signature lifetime (default: "persistent")
+  sessionTTL={2592000} // optional — session signature lifetime in seconds (default: 2592000 = 30 days)
   onEvent={(e) => console.debug(e)} // optional, for debugging
 >
   {children}

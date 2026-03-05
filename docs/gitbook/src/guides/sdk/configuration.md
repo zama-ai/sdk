@@ -9,7 +9,7 @@ const sdk = new ZamaSDK({
   storage,                       // required — persists encrypted decrypt keys
   sessionStorage,                // optional — wallet signature storage (default: in-memory)
   keypairTTL: 86400,             // optional (default: 86400 = 1 day, in seconds)
-  sessionTTL: "persistent",      // optional — session signature lifetime (default: "persistent")
+  sessionTTL: 2592000,            // optional — session signature lifetime in seconds (default: 2592000 = 30 days)
   onEvent: (event) => { ... },   // optional — lifecycle events for debugging
 });
 ```
@@ -302,16 +302,16 @@ const sdk = new ZamaSDK({
 
 ## Session TTL
 
-By default, session signatures persist until the user disconnects or the browser session ends. You can control this with `sessionTTL`:
+By default, session signatures expire after 30 days. You can control this with `sessionTTL`:
 
 | Value               | Behavior                                                                                                         |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `"persistent"`      | Default. Session signatures last until explicit revocation (disconnect/account change) or storage clear.         |
+| `2592000` (default) | Session signatures expire after 30 days. The user must re-sign once to unlock their decrypt keys.                |
 | Duration in seconds | Session signatures expire after the specified duration. The user must re-sign once to unlock their decrypt keys. |
 | `0`                 | Never persist. Every operation triggers a signing prompt. Useful for maximum-security contexts.                  |
 
 ```ts
-// Default — sessions persist until revocation
+// Default (30 days) — sessions expire after 30 days
 const sdk = new ZamaSDK({ relayer, signer, storage });
 
 // 1-hour session — wallet re-signs after 60 minutes
