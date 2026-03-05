@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import { ReadonlyToken, type Address } from "@zama-fhe/sdk";
 import { useZamaSDK } from "../provider";
@@ -16,9 +16,19 @@ export interface UseConfidentialBalancesConfig {
   maxConcurrency?: number;
 }
 
+/** Result type for the decrypt phase of {@link useConfidentialBalances}. */
+export interface ConfidentialBalancesData {
+  /** Successfully decrypted balances (address → balance). */
+  balances: Map<Address, bigint>;
+  /** Per-token errors for tokens that failed to decrypt. */
+  errors: Map<Address, Error>;
+  /** `true` if some but not all tokens failed. */
+  isPartialError: boolean;
+}
+
 /** Query options for the decrypt phase of {@link useConfidentialBalances}. */
 export type UseConfidentialBalancesOptions = Omit<
-  UseQueryOptions<Map<Address, bigint>, Error>,
+  UseQueryOptions<ConfidentialBalancesData, Error>,
   "queryKey" | "queryFn"
 >;
 
@@ -29,16 +39,22 @@ const DEFAULT_HANDLE_REFETCH_INTERVAL = 10_000;
  * Uses two-phase polling: cheaply polls encrypted handles, then only
  * decrypts when any handle changes.
  *
+ * Returns partial results when some tokens fail — successful balances are
+ * always returned alongside per-token error information.
+ *
  * @param config - Token addresses and optional polling interval.
  * @param options - React Query options forwarded to the decrypt query.
- * @returns The decrypt query result (Map of address → balance) plus `handlesQuery` for Phase 1 state.
+ * @returns The decrypt query result plus `handlesQuery` for Phase 1 state.
  *
  * @example
  * ```tsx
- * const { data: balances } = useConfidentialBalances({
+ * const { data } = useConfidentialBalances({
  *   tokenAddresses: ["0xTokenA", "0xTokenB"],
  * });
- * const balance = balances?.get("0xTokenA");
+ * const balance = data?.balances.get("0xTokenA");
+ * if (data?.isPartialError) {
+ *   // some tokens failed — check data.errors
+ * }
  * ```
  */
 export function useConfidentialBalances(
@@ -72,22 +88,52 @@ export function useConfidentialBalances(
   const handles = handlesQuery.data;
   const handlesKey = handles?.join(",") ?? "";
 
+  // Collect per-token errors during batch decryption via a ref
+  // so the callback closure doesn't trigger re-renders.
+  const errorsRef = useRef(new Map<Address, Error>());
+
   // Phase 2: Batch decrypt only when any handle changes
-  const balancesQuery = useQuery<Map<Address, bigint>, Error>({
+  const balancesQuery = useQuery<ConfidentialBalancesData, Error>({
     queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, ownerKey), handlesKey],
     queryFn: async () => {
+      const perTokenErrors = new Map<Address, Error>();
+      errorsRef.current = perTokenErrors;
+
       const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
         handles: handles!,
         maxConcurrency,
+        onError: (error, address) => {
+          perTokenErrors.set(address, error);
+          return 0n; // fallback so the batch continues
+        },
       });
+
       // Re-key the Map with the caller's original addresses so lookups
       // work regardless of address casing (tokens normalize to lowercase).
-      const remapped = new Map<Address, bigint>();
+      const balances = new Map<Address, bigint>();
+      const errors = new Map<Address, Error>();
       for (let i = 0; i < tokens.length; i++) {
-        const balance = raw.get(tokens[i]!.address);
-        if (balance !== undefined) remapped.set(tokenAddresses[i]!, balance);
+        const tokenAddr = tokens[i]!.address;
+        const originalAddr = tokenAddresses[i]!;
+        const tokenError = perTokenErrors.get(tokenAddr);
+        if (tokenError) {
+          errors.set(originalAddr, tokenError);
+        } else {
+          const balance = raw.get(tokenAddr);
+          if (balance !== undefined) balances.set(originalAddr, balance);
+        }
       }
-      return remapped;
+
+      // If ALL tokens failed, throw so isError is true
+      if (errors.size === tokens.length && tokens.length > 0) {
+        throw errors.values().next().value;
+      }
+
+      return {
+        balances,
+        errors,
+        isPartialError: errors.size > 0,
+      };
     },
     enabled: tokenAddresses.length > 0 && !!signerAddress && !!handles,
     staleTime: Infinity,

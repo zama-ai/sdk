@@ -64,12 +64,39 @@ export interface EncryptResult {
   inputProof: Uint8Array;
 }
 
+/** Supported FHE encrypted types. */
+export type FheType =
+  | "ebool"
+  | "euint4"
+  | "euint8"
+  | "euint16"
+  | "euint32"
+  | "euint64"
+  | "euint128"
+  | "euint256"
+  | "eaddress";
+
+/** A single value to encrypt with its FHE type. */
+export interface EncryptInput {
+  value: bigint | boolean;
+  type: FheType;
+}
+
 /** Parameters for encryption */
 export interface EncryptParams {
-  values: bigint[];
+  /** Typed inputs for encryption. Each value must specify its FHE type. */
+  values: EncryptInput[];
   contractAddress: Address;
   userAddress: Address;
 }
+
+/**
+ * Union of possible decrypted value types.
+ * - `bigint` for euintN types
+ * - `boolean` for ebool
+ * - `` `0x${string}` `` for eaddress
+ */
+export type DecryptedValue = bigint | boolean | `0x${string}`;
 
 /** Parameters for user decryption */
 export interface UserDecryptParams {

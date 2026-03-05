@@ -8,7 +8,7 @@
  */
 
 // Provider
-export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
+export { ZamaProvider, useZamaSDK, useOptionalZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt, encryptMutationOptions } from "./relayer/use-encrypt";
@@ -35,6 +35,15 @@ export {
   type PublicParamsData,
   type PublicParamsResult,
 } from "./relayer/use-public-params";
+
+// Orchestration hooks
+export {
+  useUserDecryptFlow,
+  type DecryptHandle,
+  type UserDecryptFlowParams,
+  type UserDecryptFlowCallbacks,
+  type UseUserDecryptFlowConfig,
+} from "./relayer/use-user-decrypt-flow";
 
 // Read hooks (cached lookups)
 export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";
@@ -69,6 +78,9 @@ export type {
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
+  EncryptInput,
+  FheType,
+  DecryptedValue,
   UserDecryptParams,
   PublicDecryptResult,
   FHEKeypair,
@@ -80,6 +92,8 @@ export type {
   BatchTransferData,
   StoredCredentials,
   UnshieldCallbacks,
+  ShieldCallbacks,
+  TransferCallbacks,
   CredentialsManagerConfig,
   ZamaSDKEventType,
   ZamaSDKEvent,
