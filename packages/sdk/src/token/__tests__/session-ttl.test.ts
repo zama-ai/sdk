@@ -98,7 +98,7 @@ describe("Session TTL", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
   });
 
-  it("TTL expiry does not clear decrypt keys in persistent storage", async () => {
+  it("TTL expiry does not clear FHE keypair in persistent storage", async () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
     const manager = createManager(3600);
     await manager.allow("0xtoken" as Address);
@@ -111,7 +111,7 @@ describe("Session TTL", () => {
     vi.advanceTimersByTime(3601 * 1000);
     await manager.allow("0xtoken" as Address);
 
-    // Persistent storage should still have the decrypt keys
+    // Persistent storage should still have the FHE keypair
     const storedAfter = await store.get(storeKey);
     expect(storedAfter).not.toBeNull();
     // keypair should NOT have been regenerated
@@ -167,23 +167,6 @@ describe("Session TTL", () => {
     // Old session should still be valid (uses its recorded 3600s TTL)
     await manager2.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
-  });
-
-  it("backward compat: bare string in session storage triggers re-sign", async () => {
-    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    const manager = createManager(3600);
-
-    // Seed persistent storage with valid encrypted credentials via a normal allow
-    await manager.allow("0xtoken" as Address);
-    expect(signer.signTypedData).toHaveBeenCalledOnce();
-
-    // Overwrite session storage with a bare string (old format)
-    const storeKey = await computeStoreKey("0xuser", 31337);
-    await sessionStore.set(storeKey, "0xoldsignature");
-
-    // Bare string is migrated to { signature, createdAt: 0, ttl: 0 }
-    // ttl: 0 means immediately expired, so isAllowed returns false
-    expect(await manager.isAllowed()).toBe(false);
   });
 
   it("chain switch with active TTL: independent sessions unaffected", async () => {

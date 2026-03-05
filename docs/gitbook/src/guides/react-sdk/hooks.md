@@ -160,7 +160,7 @@ If you need to control each step separately:
 
 ### `useAllow`
 
-Pre-authorize decrypt keys for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually. Automatically invalidates `isAllowed` queries on success.
+Pre-authorize FHE keypair for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually. Automatically invalidates `isAllowed` queries on success.
 
 ```tsx
 const { mutateAsync: allow } = useAllow();
@@ -208,7 +208,7 @@ revokeSession();
 
 ### Session management
 
-Decrypt keys require a wallet signature once per page session. Use the hooks above or `useToken` for direct control:
+The FHE keypair requires a wallet signature once per page session. Use the hooks above or `useToken` for direct control:
 
 ```tsx
 const tokenA = useToken({ tokenAddress: "0xTokenA" });

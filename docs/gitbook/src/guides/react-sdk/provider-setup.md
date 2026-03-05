@@ -164,17 +164,17 @@ export function TokenBalance({ address }: { address: string }) {
 }
 ```
 
-## Decrypt key lifecycle
+## FHE keypair lifecycle
 
 When a user first decrypts a balance, the SDK:
 
-1. Generates a decrypt keypair
+1. Generates an FHE keypair
 2. Creates EIP-712 typed data and prompts the wallet to sign
 3. Encrypts the private key with AES-GCM (key derived from the signature via PBKDF2)
-4. Stores the encrypted decrypt key in your storage backend
+4. Stores the encrypted FHE keypair in your storage backend
 5. Caches the wallet signature **in memory only** for the session
 
-The wallet signature is never written to disk — only the encrypted decrypt key is persisted. On subsequent page loads, the user must re-sign once to authorize their decrypt keys for the session.
+The wallet signature is never written to disk — only the encrypted FHE keypair is persisted. On subsequent page loads, the user must re-sign once to authorize their FHE keypair for the session.
 
 ### Session flow
 
@@ -197,6 +197,6 @@ await allow(allTokenAddresses);
 // All balance decrypts reuse the cached session signature
 ```
 
-Decrypt keys expire after `keypairTTL` (default: `86400` = 1 day). After expiry, fresh keys are generated and the wallet is prompted again.
+The FHE keypair expires after `keypairTTL` (default: `86400` = 1 day). After expiry, a fresh keypair is generated and the wallet is prompted again.
 
-Session signatures can also be time-limited via `sessionTTL`. When a session expires, the user re-signs once to unlock their existing decrypt keys — no keypair regeneration. See [Session TTL](../sdk/configuration.md#session-ttl) for details.
+Session signatures can also be time-limited via `sessionTTL`. When a session expires, the user re-signs once to unlock their existing FHE keypair — no keypair regeneration. See [Session TTL](../sdk/configuration.md#session-ttl) for details.
