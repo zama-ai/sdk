@@ -7,7 +7,7 @@ import {
   USER_DECRYPT_EIP712,
 } from "../eip712";
 
-describe("eip712", () => {
+describe("pre-built EIP-712 type definitions", () => {
   it("INPUT_VERIFICATION_EIP712 typehash matches spec definition", () => {
     const inputTypes = {
       CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification.map(

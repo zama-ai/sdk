@@ -1,26 +1,31 @@
 import {
   BrowserProvider,
-  Contract,
+  Interface,
   hexlify,
   JsonRpcProvider,
   SigningKey,
   type Eip1193Provider,
   type Provider,
 } from "ethers";
+import { ConfigurationError, NotSupportedError } from "../token/errors";
 import {
   cleartextPublicDecrypt,
   cleartextUserDecrypt,
+  cleartextDelegatedUserDecrypt,
   type CleartextACL,
   type DecryptionSigningContext,
 } from "./cleartext-decrypt";
 import { CleartextExecutor } from "./cleartext-executor";
 import { createCleartextEncryptedInput } from "./cleartext-input";
+import { KEYPAIR_PRIVATE_KEY_BYTES, KEYPAIR_PUBLIC_KEY_BYTES, MOCK_KEY_BYTES } from "./constants";
 import type { CleartextInstanceConfig } from "./types";
 
 const ACL_ABI = [
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
+  "function isHandleDelegatedForUserDecryption(address delegator, address delegate, address contractAddress, bytes32 handle) view returns (bool)",
 ] as const;
+const ACL_IFACE = new Interface(ACL_ABI);
 
 /** Resolve a network config value into an ethers Provider. */
 function resolveProvider(network: Eip1193Provider | string): Provider {
@@ -62,11 +67,11 @@ function resolveProvider(network: Eip1193Provider | string): Provider {
  * Hoodi (560048) is intentionally NOT listed here — it is a cleartext-enabled
  * development testnet with a CleartextFHEVMExecutor contract deployed.
  */
-const FHEVM_CHAIN_IDS = new Set([1, 11155111]); // Mainnet, Sepolia
+const FORBIDDEN_CHAIN_IDS = new Set([1, 11155111]); // Mainnet, Sepolia
 
-export async function createCleartextInstance(config: CleartextInstanceConfig) {
-  if (FHEVM_CHAIN_IDS.has(config.chainId)) {
-    throw new Error(
+export function createCleartextInstance(config: CleartextInstanceConfig) {
+  if (FORBIDDEN_CHAIN_IDS.has(config.chainId)) {
+    throw new ConfigurationError(
       `Cleartext mode is not allowed on chain ${config.chainId}. ` +
         `Cleartext stores values in plaintext — use RelayerWeb or RelayerNode for fhevm networks.`,
     );
@@ -87,12 +92,23 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
     executorAddress: cleartextExecutorAddress,
     provider,
   });
-  const aclContract = new Contract(aclContractAddress, ACL_ABI, provider);
-  const isAllowedForDecryption = aclContract.getFunction("isAllowedForDecryption");
-  const persistAllowed = aclContract.getFunction("persistAllowed");
+
+  async function aclCall<T>(method: string, args: unknown[]): Promise<T> {
+    const data = ACL_IFACE.encodeFunctionData(method, args);
+    const result = await provider.call({ to: aclContractAddress, data });
+    return ACL_IFACE.decodeFunctionResult(method, result)[0] as T;
+  }
+
   const acl: CleartextACL = {
-    isAllowedForDecryption: (handle) => isAllowedForDecryption(handle),
-    persistAllowed: (handle, account) => persistAllowed(handle, account),
+    isAllowedForDecryption: (handle) => aclCall<boolean>("isAllowedForDecryption", [handle]),
+    persistAllowed: (handle, account) => aclCall<boolean>("persistAllowed", [handle, account]),
+    isHandleDelegatedForUserDecryption: (delegator, delegate, contractAddress, handle) =>
+      aclCall<boolean>("isHandleDelegatedForUserDecryption", [
+        delegator,
+        delegate,
+        contractAddress,
+        handle,
+      ]),
   };
 
   return {
@@ -116,21 +132,16 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
 
     /** Not supported in cleartext mode — always throws. Use `createEncryptedInput().encrypt()`. */
     async requestZKProofVerification(): Promise<never> {
-      throw new Error(
+      throw new NotSupportedError(
         "requestZKProofVerification is not supported in cleartext mode. Use createEncryptedInput().encrypt() instead.",
       );
     },
 
     /** Generate a random (non-FHE) keypair for signature flows. */
     generateKeypair() {
-      const pub = new Uint8Array(800);
-      const priv = new Uint8Array(1632);
-      crypto.getRandomValues(pub);
-      crypto.getRandomValues(priv);
-      return {
-        publicKey: hexlify(pub),
-        privateKey: hexlify(priv),
-      };
+      const pub = crypto.getRandomValues(new Uint8Array(KEYPAIR_PUBLIC_KEY_BYTES));
+      const priv = crypto.getRandomValues(new Uint8Array(KEYPAIR_PRIVATE_KEY_BYTES));
+      return { publicKey: hexlify(pub), privateKey: hexlify(priv) };
     },
 
     /** Build EIP-712 typed data for a user decrypt request signature. */
@@ -223,9 +234,9 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
     },
 
     /**
-     * Decrypt handles on behalf of a delegator. ACL checks use the delegator's
-     * address (not the delegate's) because the on-chain ACL grants persistAllowed
-     * to the data owner, and the delegate merely executes the call on their behalf.
+     * Decrypt handles on behalf of a delegator. ACL checks use the delegation
+     * check (`isHandleDelegatedForUserDecryption`) to verify that the delegator
+     * has granted the delegate access to each handle.
      */
     async delegatedUserDecrypt(
       handleContractPairs: { handle: string | Uint8Array; contractAddress: string }[],
@@ -234,20 +245,30 @@ export async function createCleartextInstance(config: CleartextInstanceConfig) {
       _signature: string,
       _contractAddresses: string[],
       delegatorAddress: string,
-      _delegateAddress: string,
+      delegateAddress: string,
       _startTimestamp: number,
       _durationDays: number,
     ) {
-      return cleartextUserDecrypt(handleContractPairs, delegatorAddress, executor, acl);
+      return cleartextDelegatedUserDecrypt(
+        handleContractPairs,
+        delegatorAddress,
+        delegateAddress,
+        executor,
+        acl,
+      );
     },
 
     /** Returns mock public key data in cleartext mode. */
     getPublicKey() {
-      return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array(32) };
+      return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array(MOCK_KEY_BYTES) };
     },
+
     /** Returns mock public params data in cleartext mode. */
     getPublicParams() {
-      return { publicParamsId: "mock-public-params-id", publicParams: new Uint8Array(32) };
+      return {
+        publicParamsId: "mock-public-params-id",
+        publicParams: new Uint8Array(MOCK_KEY_BYTES),
+      };
     },
   };
 }

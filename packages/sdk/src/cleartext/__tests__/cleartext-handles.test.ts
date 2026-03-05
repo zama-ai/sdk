@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { computeCleartextHandles, parseHandle, BITS_TO_FHE_TYPE } from "../cleartext-handles";
+import { computeCleartextHandles, parseHandle } from "../cleartext-handles";
+import { BITS_TO_FHE_TYPE } from "../constants";
 
 const ACL_ADDRESS = "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D";
 const CHAIN_ID = 31337;
@@ -36,7 +37,7 @@ describe("computeCleartextHandles", () => {
     const result2 = computeCleartextHandles(params);
 
     expect(result1.handles[0]).not.toBe(result2.handles[0]);
-    expect(result1.fakeCiphertext).not.toEqual(result2.fakeCiphertext);
+    expect(result1.mockCiphertexts).not.toEqual(result2.mockCiphertexts);
   });
 
   it("different values produce different handles", () => {

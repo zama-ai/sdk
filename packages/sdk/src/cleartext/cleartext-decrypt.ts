@@ -9,9 +9,10 @@
  * @module
  */
 
-import { getBytes, hexlify, keccak256, concat, toUtf8Bytes, type SigningKey } from "ethers";
+import { hexlify, keccak256, concat, toUtf8Bytes, type SigningKey } from "ethers";
+import { ConfigurationError, DecryptionFailedError } from "../token/errors";
 import type { CleartextExecutor } from "./cleartext-executor";
-import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712-utils";
+import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712";
 
 /** Decrypted value — `boolean` for ebool, `bigint` for all other FHE types. */
 type ClearValue = bigint | boolean;
@@ -27,6 +28,12 @@ type ClearValue = bigint | boolean;
 export interface CleartextACL {
   isAllowedForDecryption(handle: string): Promise<boolean>;
   persistAllowed(handle: string, account: string): Promise<boolean>;
+  isHandleDelegatedForUserDecryption(
+    delegator: string,
+    delegate: string,
+    contractAddress: string,
+    handle: string,
+  ): Promise<boolean>;
 }
 
 /** EIP-712 signing context for the KMS decryption verification. */
@@ -36,9 +43,9 @@ export interface DecryptionSigningContext {
   verifyingContract: string;
 }
 
-/** Extract fheTypeId from byte 30 of a bytes32 handle. */
+/** Extract fheTypeId from byte 30 of a bytes32 handle (chars 62-63 of 0x-prefixed hex). */
 function getFheTypeId(handleHex: string): number {
-  return getBytes(handleHex)[30]!;
+  return parseInt(handleHex.slice(62, 64), 16);
 }
 
 /** Map fheTypeId to the Solidity ABI type for encoding. */
@@ -46,6 +53,8 @@ function fheTypeToSolidity(fheTypeId: number) {
   switch (fheTypeId) {
     case 0:
       return "bool"; // ebool
+    case 1:
+      return "uint256"; // euint4
     case 2:
       return "uint256"; // euint8
     case 3:
@@ -61,7 +70,7 @@ function fheTypeToSolidity(fheTypeId: number) {
     case 8:
       return "uint256"; // euint256
     default:
-      throw new Error(`Unsupported FHE type ID in cleartext mode: ${fheTypeId}`);
+      throw new ConfigurationError(`Unsupported FHE type ID in cleartext mode: ${fheTypeId}`);
   }
 }
 
@@ -161,16 +170,15 @@ export async function cleartextPublicDecrypt(
   const handlesHex = handles.map((h) => (typeof h === "string" ? h : hexlify(h)));
   const fheTypes = handlesHex.map((h) => getFheTypeId(h));
 
-  // Check ACL permissions in parallel
-  await Promise.all(
-    handlesHex.map(async (h) => {
+  // ACL checks and plaintext reads are independent — run in parallel
+  const [rawValues] = await Promise.all([
+    executor.getPlaintexts(handlesHex),
+    ...handlesHex.map(async (h) => {
       if (!(await acl.isAllowedForDecryption(h))) {
-        throw new Error(`Handle ${h} is not allowed for decryption`);
+        throw new DecryptionFailedError(`Handle ${h} is not allowed for decryption`);
       }
     }),
-  );
-
-  const rawValues = await executor.getPlaintexts(handlesHex);
+  ]);
 
   const clearValues: Record<string, ClearValue> = {};
   handlesHex.forEach((h, i) => {
@@ -204,6 +212,68 @@ export async function cleartextPublicDecrypt(
  *
  * @throws {Error} If the user or contract is not authorized for any handle.
  */
+/**
+ * Decrypt handles on behalf of a delegator via delegation ACL.
+ *
+ * Verifies that each handle has been delegated for user decryption using
+ * `acl.isHandleDelegatedForUserDecryption`, then reads and formats
+ * the plaintext values.
+ *
+ * @throws {Error} If any handle is not delegated for user decryption.
+ */
+export async function cleartextDelegatedUserDecrypt(
+  handleContractPairs: { handle: Uint8Array | string; contractAddress: string }[],
+  delegatorAddress: string,
+  delegateAddress: string,
+  executor: CleartextExecutor,
+  acl: CleartextACL,
+): Promise<Record<string, ClearValue>> {
+  const handlesHex = handleContractPairs.map((p) =>
+    typeof p.handle === "string" ? p.handle : hexlify(p.handle),
+  );
+
+  const fheTypes = handlesHex.map((h) => getFheTypeId(h));
+
+  // ACL checks and plaintext reads are independent — run in parallel
+  const [rawValues] = await Promise.all([
+    executor.getPlaintexts(handlesHex),
+    ...handlesHex.map(async (h, i) => {
+      const contract = handleContractPairs[i]!.contractAddress;
+      if (
+        !(await acl.isHandleDelegatedForUserDecryption(
+          delegatorAddress,
+          delegateAddress,
+          contract,
+          h,
+        ))
+      ) {
+        throw new DecryptionFailedError(
+          `Handle ${h} is not delegated for user decryption (delegator=${delegatorAddress}, delegate=${delegateAddress}, contract=${contract})`,
+        );
+      }
+    }),
+  ]);
+
+  const results: Record<string, ClearValue> = {};
+  handlesHex.forEach((h, i) => {
+    results[h] = formatPlaintext(rawValues[i]!, fheTypes[i]!);
+  });
+
+  return results;
+}
+
+/**
+ * Decrypt handles scoped to a specific user.
+ *
+ * Verifies that both the user and the originating contract have
+ * `persistAllowed` permission for each handle, then reads and formats
+ * the plaintext values.
+ *
+ * **Note:** See {@link cleartextPublicDecrypt} for the TOCTOU caveat on
+ * non-atomic ACL checks vs plaintext reads.
+ *
+ * @throws {Error} If the user or contract is not authorized for any handle.
+ */
 export async function cleartextUserDecrypt(
   handleContractPairs: { handle: Uint8Array | string; contractAddress: string }[],
   userAddress: string,
@@ -216,22 +286,27 @@ export async function cleartextUserDecrypt(
 
   const fheTypes = handlesHex.map((h) => getFheTypeId(h));
 
-  // Check ACL: both user and contract must have persistAllowed (parallel across handles and checks)
-  await Promise.all(
-    handlesHex.flatMap((h, i) => {
+  // ACL checks and plaintext reads are independent — run in parallel
+  const [rawValues] = await Promise.all([
+    executor.getPlaintexts(handlesHex),
+    ...handlesHex.flatMap((h, i) => {
       const contract = handleContractPairs[i]!.contractAddress;
       return [
         acl.persistAllowed(h, userAddress).then((ok) => {
-          if (!ok) throw new Error(`User ${userAddress} is not authorized to decrypt handle ${h}`);
+          if (!ok)
+            throw new DecryptionFailedError(
+              `User ${userAddress} is not authorized to decrypt handle ${h}`,
+            );
         }),
         acl.persistAllowed(h, contract).then((ok) => {
-          if (!ok) throw new Error(`Contract ${contract} is not authorized to decrypt handle ${h}`);
+          if (!ok)
+            throw new DecryptionFailedError(
+              `Contract ${contract} is not authorized to decrypt handle ${h}`,
+            );
         }),
       ];
     }),
-  );
-
-  const rawValues = await executor.getPlaintexts(handlesHex);
+  ]);
 
   const results: Record<string, ClearValue> = {};
   handlesHex.forEach((h, i) => {

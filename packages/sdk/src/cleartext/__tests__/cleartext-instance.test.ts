@@ -1,31 +1,34 @@
 import { describe, it, expect, vi } from "vitest";
+import { AbiCoder } from "ethers";
 
-// Mock ethers Contract and providers
+const coder = AbiCoder.defaultAbiCoder();
+const ENCODED_TRUE = coder.encode(["bool"], [true]);
+const ENCODED_42 = coder.encode(["uint256"], [42n]);
+
+// Mock ethers providers — provider.call returns ABI-encoded results
 vi.mock("ethers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("ethers")>();
 
   class MockJsonRpcProvider {
     getNetwork = vi.fn().mockResolvedValue({ chainId: 31337n });
+    call = vi.fn().mockImplementation(({ data }: { data: string }) => {
+      // plaintexts(bytes32) selector = 0xf7c21ff0
+      if (data.startsWith("0xf7c21ff0")) {
+        return Promise.resolve(actual.AbiCoder.defaultAbiCoder().encode(["uint256"], [42n]));
+      }
+      // ACL functions return true
+      return Promise.resolve(actual.AbiCoder.defaultAbiCoder().encode(["bool"], [true]));
+    });
   }
   class MockBrowserProvider {
     getNetwork = vi.fn().mockResolvedValue({ chainId: 31337n });
-  }
-  class MockContract {
-    plaintexts = vi.fn().mockResolvedValue(42n);
-    isAllowedForDecryption = vi.fn().mockResolvedValue(true);
-    persistAllowed = vi.fn().mockResolvedValue(true);
-    getFunction = vi.fn().mockImplementation((name: string) => {
-      if (name === "isAllowedForDecryption") return this.isAllowedForDecryption;
-      if (name === "persistAllowed") return this.persistAllowed;
-      return vi.fn();
-    });
+    call = vi.fn().mockResolvedValue(actual.AbiCoder.defaultAbiCoder().encode(["bool"], [true]));
   }
 
   return {
     ...actual,
     JsonRpcProvider: MockJsonRpcProvider,
     BrowserProvider: MockBrowserProvider,
-    Contract: MockContract,
   };
 });
 
@@ -46,8 +49,8 @@ const CONFIG = {
 };
 
 describe("createCleartextInstance", () => {
-  it("returns an object with all required methods", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+  it("returns an object with all required methods", () => {
+    const instance = createCleartextInstance(CONFIG);
 
     expect(instance.createEncryptedInput).toBeTypeOf("function");
     expect(instance.generateKeypair).toBeTypeOf("function");
@@ -58,8 +61,8 @@ describe("createCleartextInstance", () => {
     expect(instance.getPublicParams).toBeTypeOf("function");
   });
 
-  it("generateKeypair returns public and private keys", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+  it("generateKeypair returns public and private keys", () => {
+    const instance = createCleartextInstance(CONFIG);
     const kp = instance.generateKeypair();
     expect(kp.publicKey).toBeTypeOf("string");
     expect(kp.privateKey).toBeTypeOf("string");
@@ -67,8 +70,8 @@ describe("createCleartextInstance", () => {
     expect(kp.privateKey.length).toBeGreaterThan(0);
   });
 
-  it("createEncryptedInput returns a builder", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+  it("createEncryptedInput returns a builder", () => {
+    const instance = createCleartextInstance(CONFIG);
     const input = instance.createEncryptedInput(
       CONFIG.cleartextExecutorAddress,
       "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -77,29 +80,29 @@ describe("createCleartextInstance", () => {
     expect(input.encrypt).toBeTypeOf("function");
   });
 
-  it("getPublicKey returns mock data", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+  it("getPublicKey returns mock data", () => {
+    const instance = createCleartextInstance(CONFIG);
     const result = instance.getPublicKey();
     expect(result).not.toBeNull();
     expect(result!.publicKeyId).toBe("mock-public-key-id");
   });
 
   it("requestZKProofVerification throws", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+    const instance = createCleartextInstance(CONFIG);
     await expect(instance.requestZKProofVerification()).rejects.toThrow(
       "not supported in cleartext mode",
     );
   });
 
-  it("getPublicParams returns mock data", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+  it("getPublicParams returns mock data", () => {
+    const instance = createCleartextInstance(CONFIG);
     const result = instance.getPublicParams();
     expect(result).not.toBeNull();
     expect(result!.publicParamsId).toBe("mock-public-params-id");
   });
 
-  it("createEIP712 returns correct EIP712 structure", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+  it("createEIP712 returns correct EIP712 structure", () => {
+    const instance = createCleartextInstance(CONFIG);
     const pubKey = "0xabcd";
     const contracts = ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"];
     const result = instance.createEIP712(pubKey, contracts, 1000, 30);
@@ -116,8 +119,8 @@ describe("createCleartextInstance", () => {
     expect(result.message.extraData).toBe("0x00");
   });
 
-  it("createDelegatedUserDecryptEIP712 returns correct structure", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+  it("createDelegatedUserDecryptEIP712 returns correct structure", () => {
+    const instance = createCleartextInstance(CONFIG);
     const pubKey = "0xabcd";
     const contracts = ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"];
     const delegator = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
@@ -133,8 +136,7 @@ describe("createCleartextInstance", () => {
   });
 
   it("publicDecrypt delegates to cleartextPublicDecrypt", async () => {
-    const instance = await createCleartextInstance(CONFIG);
-    // The mock Contract returns 42n for plaintexts and true for ACL checks
+    const instance = createCleartextInstance(CONFIG);
     const handle = "0x" + "00".repeat(32);
     const result = await instance.publicDecrypt([handle]);
     // handle byte 30 = 0x00 → fheTypeId 0 (ebool), mock returns 42n → formatPlaintext(42n, 0) → false
@@ -145,7 +147,7 @@ describe("createCleartextInstance", () => {
   });
 
   it("userDecrypt delegates to cleartextUserDecrypt", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+    const instance = createCleartextInstance(CONFIG);
     const handle = "0x" + "00".repeat(32);
     const contract = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
     const user = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
@@ -163,18 +165,18 @@ describe("createCleartextInstance", () => {
     expect(result[handle]).toBe(false);
   });
 
-  it("rejects production chain IDs", async () => {
-    await expect(createCleartextInstance({ ...CONFIG, chainId: 1 })).rejects.toThrow(
+  it("rejects production chain IDs", () => {
+    expect(() => createCleartextInstance({ ...CONFIG, chainId: 1 })).toThrow(
       "Cleartext mode is not allowed on chain 1",
     );
-    await expect(createCleartextInstance({ ...CONFIG, chainId: 11155111 })).rejects.toThrow(
+    expect(() => createCleartextInstance({ ...CONFIG, chainId: 11155111 })).toThrow(
       "Cleartext mode is not allowed on chain 11155111",
     );
   });
 
-  it("resolves BrowserProvider when network is an object (Eip1193Provider)", async () => {
+  it("resolves BrowserProvider when network is an object (Eip1193Provider)", () => {
     const eip1193Mock = { request: vi.fn() }; // mimics Eip1193Provider
-    const instance = await createCleartextInstance({
+    const instance = createCleartextInstance({
       ...CONFIG,
       network: eip1193Mock as never,
     });
@@ -182,8 +184,8 @@ describe("createCleartextInstance", () => {
     expect(instance.createEncryptedInput).toBeTypeOf("function");
   });
 
-  it("delegatedUserDecrypt delegates to cleartextUserDecrypt", async () => {
-    const instance = await createCleartextInstance(CONFIG);
+  it("delegatedUserDecrypt delegates to cleartextDelegatedUserDecrypt", async () => {
+    const instance = createCleartextInstance(CONFIG);
     const handle = "0x" + "00".repeat(32);
     const contract = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
     const delegator = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";

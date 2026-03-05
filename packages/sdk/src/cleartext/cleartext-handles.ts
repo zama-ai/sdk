@@ -4,48 +4,36 @@
  * Each handle is a 32-byte value encoding a hash prefix, index, chainId,
  * FHE type identifier, and version byte — matching the on-chain layout
  * expected by the CleartextFHEVM executor.
+ *
+ * Uses `solidityPackedKeccak256` + bitwise OR for fast handle assembly.
  */
 
-import { keccak256, concat, toBeHex, zeroPadValue, getBytes, hexlify, randomBytes } from "ethers";
-import { abiCoder } from "./eip712-utils";
+import {
+  concat,
+  getBytes,
+  hexlify,
+  keccak256,
+  randomBytes,
+  solidityPackedKeccak256,
+  toBeHex,
+  toUtf8Bytes,
+  zeroPadValue,
+} from "ethers";
+import { EncryptionFailedError } from "../token/errors";
+import {
+  BITS_TO_FHE_TYPE,
+  FHE_BIT_WIDTHS,
+  HANDLE_VERSION,
+  PREHANDLE_MASK,
+  type FheType,
+} from "./constants";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Domain separator for raw ciphertext hashing. */
-const RAW_CT_HASH_DOMAIN_SEPARATOR = "ZK-w_rct";
-
-/** Domain separator for handle hashing. */
-const HANDLE_HASH_DOMAIN_SEPARATOR = "ZK-w_hdl";
-
-/** Current handle version byte. */
-const HANDLE_VERSION = 0;
-
-/**
- * Maps encryption bit-width to the on-chain FHE type identifier.
- *
- * | bits | type      | id |
- * |------|-----------|----|
- * |    2 | ebool     |  0 |
- * |    8 | euint8    |  2 |
- * |   16 | euint16   |  3 |
- * |   32 | euint32   |  4 |
- * |   64 | euint64   |  5 |
- * |  128 | euint128  |  6 |
- * |  160 | eaddress  |  7 |
- * |  256 | euint256  |  8 |
- */
-export const BITS_TO_FHE_TYPE: Record<number, number> = {
-  2: 0,
-  8: 2,
-  16: 3,
-  32: 4,
-  64: 5,
-  128: 6,
-  160: 7,
-  256: 8,
-};
+const RAW_CT_HASH_DOMAIN_SEPARATOR = toUtf8Bytes("ZK-w_rct");
+const HANDLE_HASH_DOMAIN_SEPARATOR = toUtf8Bytes("ZK-w_hdl");
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -65,8 +53,8 @@ export interface ComputeCleartextHandlesParams {
 export interface ComputeCleartextHandlesResult {
   /** One bytes32 handle per value, hex-encoded with 0x prefix. */
   handles: string[];
-  /** The fake ciphertext blob used to derive the blob hash. */
-  fakeCiphertext: Uint8Array;
+  /** The mock ciphertext hashes used to derive handles. */
+  mockCiphertexts: string[];
 }
 
 export interface ParsedHandle {
@@ -78,93 +66,61 @@ export interface ParsedHandle {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Convert an ASCII string to a hex-encoded string (0x-prefixed).
- * Avoids TextEncoder which may produce non-standard Uint8Array in some environments.
- */
-function asciiToHex(str: string): string {
-  let hex = "0x";
-  for (let i = 0; i < str.length; i++) {
-    hex += str.charCodeAt(i).toString(16).padStart(2, "0");
-  }
-  return hex;
-}
-
-/**
- * Encode a chainId as an 8-byte big-endian hex string.
- */
-function chainIdHex(chainId: number): string {
-  return zeroPadValue(toBeHex(chainId), 8);
-}
-
-// ---------------------------------------------------------------------------
 // Core implementation
 // ---------------------------------------------------------------------------
 
 /**
- * Build a fake ciphertext blob from the plaintext values.
+ * Compute a mock ciphertext hash for a single value.
  *
- * Layout: `"CLEARTEXT" || nonce(32) || ABI.encode(uint256[])(values)`
- *
- * The 32-byte random nonce ensures that encrypting the same value twice
- * produces different handles — matching production FHE behavior where
- * entropy injection prevents handle collisions across users.
+ * Layout: `keccak256("ZK-w_rct" || keccak256(fheType || cleartextBytes || random32))`
  */
-function buildFakeCiphertext(values: bigint[]): Uint8Array {
-  const prefix = asciiToHex("CLEARTEXT");
-  const nonce = randomBytes(32);
-  const encoded = abiCoder.encode(["uint256[]"], [values]);
-  return getBytes(concat([prefix, nonce, encoded]));
+function computeMockCiphertext(fheType: number, cleartext: bigint, random32: Uint8Array): string {
+  const bitWidth = FHE_BIT_WIDTHS[fheType as FheType];
+  if (bitWidth === undefined) {
+    throw new Error(`Unknown FheType: ${fheType}`);
+  }
+  const byteLength = Math.ceil(bitWidth / 8);
+  const clearBytes = getBytes(zeroPadValue(toBeHex(cleartext), byteLength));
+
+  const inner = keccak256(concat([new Uint8Array([fheType]), clearBytes, random32]));
+  return keccak256(concat([RAW_CT_HASH_DOMAIN_SEPARATOR, inner]));
 }
 
 /**
- * Compute a single handle.
+ * Compute a single handle using `solidityPackedKeccak256` + bitwise OR.
  *
+ * Handle byte layout:
  * ```
- * [bytes 0-20]   hash21  = keccak256("ZK-w_hdl" + blobHash + index + aclAddr + chainId)[0:21]
- * [byte 21]      index   (position within the encrypted input: 0, 1, 2, …)
+ * [bytes 0-20]   hash prefix (from PREHANDLE_MASK)
+ * [byte 21]      index
  * [bytes 22-29]  chainId (uint64 big-endian)
  * [byte 30]      fheTypeId
- * [byte 31]      version (0)
+ * [byte 31]      version
  * ```
  */
-function computeSingleHandle(
-  blobHash: string,
+function computeInputHandle(
+  ciphertextBlob: string,
   index: number,
-  aclContractAddress: string,
-  chainId: number,
   fheTypeId: number,
-): Uint8Array {
-  const chainHex = chainIdHex(chainId);
+  aclAddress: string,
+  chainId: bigint,
+): string {
+  const blobHash = keccak256(concat([RAW_CT_HASH_DOMAIN_SEPARATOR, ciphertextBlob]));
 
-  // hash input = domain || blobHash || index(1 byte) || aclAddr(20 bytes) || chainId(8 bytes)
-  const indexHex = hexlify(Uint8Array.from([index]));
-  const hashInput = concat([
-    asciiToHex(HANDLE_HASH_DOMAIN_SEPARATOR),
-    blobHash,
-    indexHex,
-    aclContractAddress,
-    chainHex,
-  ]);
-  const fullHash = getBytes(keccak256(hashInput));
+  const handleHash = solidityPackedKeccak256(
+    ["bytes", "bytes32", "uint8", "address", "uint256"],
+    [HANDLE_HASH_DOMAIN_SEPARATOR, blobHash, index, aclAddress, chainId],
+  );
 
-  // Assemble the 32-byte handle
-  const handle = new Uint8Array(32);
-  // bytes 0-20: first 21 bytes of hash
-  handle.set(fullHash.slice(0, 21), 0);
-  // byte 21: index
-  handle[21] = index;
-  // bytes 22-29: chainId big-endian
-  handle.set(getBytes(chainHex), 22);
-  // byte 30: fheTypeId
-  handle[30] = fheTypeId;
-  // byte 31: version
-  handle[31] = HANDLE_VERSION;
+  const chainId64 = chainId & 0xffff_ffff_ffff_ffffn;
+  const handle =
+    (BigInt(handleHash) & PREHANDLE_MASK) |
+    (BigInt(index) << 80n) |
+    (chainId64 << 16n) |
+    (BigInt(fheTypeId) << 8n) |
+    BigInt(HANDLE_VERSION);
 
-  return handle;
+  return toBeHex(handle, 32);
 }
 
 // ---------------------------------------------------------------------------
@@ -183,7 +139,7 @@ export function computeCleartextHandles(
   const { values, encryptionBits, aclContractAddress, chainId } = params;
 
   if (values.length !== encryptionBits.length) {
-    throw new Error(
+    throw new EncryptionFailedError(
       `Length mismatch: ${values.length} values vs ${encryptionBits.length} encryptionBits`,
     );
   }
@@ -191,19 +147,29 @@ export function computeCleartextHandles(
     throw new Error(`Cannot generate more than 255 handles (got ${values.length})`);
   }
 
-  const fakeCiphertext = buildFakeCiphertext(values);
-  const blobHash = keccak256(concat([asciiToHex(RAW_CT_HASH_DOMAIN_SEPARATOR), fakeCiphertext]));
-
-  const handles: string[] = values.map((_, i) => {
-    const bits = encryptionBits[i]!;
-    const fheTypeId = BITS_TO_FHE_TYPE[bits];
-    if (fheTypeId === undefined) {
+  // Generate per-value mock ciphertexts with individual random entropy
+  const fheTypeIds = encryptionBits.map((bits) => {
+    const id = BITS_TO_FHE_TYPE[bits];
+    if (id === undefined) {
       throw new Error(`Unsupported encryption bit-width: ${bits}`);
     }
-    return hexlify(computeSingleHandle(blobHash, i, aclContractAddress, chainId, fheTypeId));
+    return id;
   });
 
-  return { handles, fakeCiphertext };
+  const random32List = values.map(() => randomBytes(32));
+  const mockCiphertexts = values.map((value, i) =>
+    computeMockCiphertext(fheTypeIds[i]!, value, random32List[i]!),
+  );
+
+  // Combine all mock ciphertexts into a single blob hash
+  const ciphertextBlob = keccak256(concat(mockCiphertexts));
+
+  const chainIdBig = BigInt(chainId);
+  const handles = fheTypeIds.map((fheTypeId, i) =>
+    computeInputHandle(ciphertextBlob, i, fheTypeId, aclContractAddress, chainIdBig),
+  );
+
+  return { handles, mockCiphertexts };
 }
 
 /**
@@ -211,28 +177,18 @@ export function computeCleartextHandles(
  * Useful for testing and debugging.
  */
 export function parseHandle(handleHex: string): ParsedHandle {
+  const handle = BigInt(handleHex);
+
   const bytes = getBytes(handleHex);
   if (bytes.length !== 32) {
     throw new Error(`Expected 32 bytes, got ${bytes.length}`);
   }
 
-  // bytes 0-20: hash21 (21 bytes)
   const hash21 = hexlify(bytes.slice(0, 21));
-
-  // byte 21: index
-  const index = bytes[21]!;
-
-  // bytes 22-29: chainId (uint64 big-endian)
-  let chainId = 0n;
-  for (let i = 22; i < 30; i++) {
-    chainId = (chainId << 8n) | BigInt(bytes[i]!);
-  }
-
-  // byte 30: fheTypeId
-  const fheTypeId = bytes[30]!;
-
-  // byte 31: version
-  const version = bytes[31]!;
+  const index = Number((handle >> 80n) & 0xffn);
+  const chainId = (handle >> 16n) & 0xffff_ffff_ffff_ffffn;
+  const fheTypeId = Number((handle >> 8n) & 0xffn);
+  const version = Number(handle & 0xffn);
 
   return { hash21, index, chainId, fheTypeId, version };
 }
