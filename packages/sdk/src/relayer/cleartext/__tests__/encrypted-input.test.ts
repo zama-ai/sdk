@@ -6,16 +6,10 @@ import { CLEAR_TEXT_MOCK_CONFIG, CONTRACT_ADDRESS, USER_ADDRESS } from "./fixtur
 
 describe("CleartextEncryptedInput", () => {
   const createInput = () =>
-    new CleartextEncryptedInput(
-      CONTRACT_ADDRESS,
-      USER_ADDRESS,
-      CLEAR_TEXT_MOCK_CONFIG,
-    );
+    new CleartextEncryptedInput(CONTRACT_ADDRESS, USER_ADDRESS, CLEAR_TEXT_MOCK_CONFIG);
 
   it("encrypt produces proof bytes with expected layout", async () => {
-    const input = createInput()
-      .add8(42n)
-      .add8(99n);
+    const input = createInput().add8(42n).add8(99n);
 
     const { handles, inputProof } = await input.encrypt();
 
@@ -62,10 +56,7 @@ describe("CleartextEncryptedInput", () => {
   });
 
   it("returned handles match handles embedded in proof", async () => {
-    const input = createInput()
-      .add8(7n)
-      .add16(11n)
-      .add32(13n);
+    const input = createInput().add8(7n).add16(11n).add32(13n);
 
     const { handles, inputProof } = await input.encrypt();
     const numHandles = inputProof[0] ?? 0;
@@ -92,20 +83,13 @@ describe("CleartextEncryptedInput", () => {
     const encodedTypes: number[] = [];
 
     for (const value of validValues) {
-      const { handles } = await createInput()
-        .addBool(value)
-        .encrypt();
+      const { handles } = await createInput().addBool(value).encrypt();
 
       expect(handles).toHaveLength(1);
       encodedTypes.push(handles[0]![30]!);
     }
 
-    expect(encodedTypes).toEqual([
-      FheType.Bool,
-      FheType.Bool,
-      FheType.Bool,
-      FheType.Bool,
-    ]);
+    expect(encodedTypes).toEqual([FheType.Bool, FheType.Bool, FheType.Bool, FheType.Bool]);
   });
 
   it("addAddress rejects invalid address strings", () => {
