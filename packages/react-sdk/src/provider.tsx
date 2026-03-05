@@ -105,7 +105,7 @@ export function useZamaSDK(): ZamaSDK {
   if (!context) {
     throw new Error(
       "useZamaSDK requires a connected signer. " +
-        "Either pass a `signer` prop to <ZamaProvider> or use useOptionalZamaSDK() for read-only mode.",
+        "Either pass a `signer` prop to <ZamaProvider> or use useReadonlyZamaSDK() for read-only mode.",
     );
   }
 

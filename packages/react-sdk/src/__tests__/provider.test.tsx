@@ -93,7 +93,7 @@ describe("ZamaProvider & useZamaSDK", () => {
   });
 
   // SDK-18: Optional signer / read-only mode
-  it("useOptionalZamaSDK returns null when no signer is provided", () => {
+  it("useReadonlyZamaSDK returns null when no signer is provided", () => {
     const relayer = createMockRelayer();
     const storage = createMockStorage();
     const queryClient = new QueryClient({
@@ -112,7 +112,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current).toBeNull();
   });
 
-  it("useOptionalZamaSDK returns SDK when signer is provided", () => {
+  it("useReadonlyZamaSDK returns SDK when signer is provided", () => {
     const { result } = renderWithProviders(() => useReadonlyZamaSDK());
     expect(result.current).not.toBeNull();
     expect(result.current).toBeDefined();

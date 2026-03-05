@@ -1352,7 +1352,7 @@ export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOption
 export function useMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
-export function useOptionalZamaSDK(): ZamaSDK | null;
+export function useReadonlyZamaSDK(): ZamaSDK | null;
 
 // @public
 export function usePublicDecrypt(): _tanstack_react_query.UseMutationResult<PublicDecryptResult, Error, string[], unknown>;
