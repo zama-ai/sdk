@@ -1,16 +1,19 @@
 import { test, expect } from "../fixtures";
+import { parseUnits } from "viem";
 
 test("should show shield and transfer events with decrypted amounts", async ({
   page,
   contracts,
   formatUnits,
   readErc20Balance,
-  initialBalances,
   computeFee,
+  confidentialBalances,
 }) => {
   const shieldAmount = 200n;
   const transferAmount = 50n;
   const recipient = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+  const cUSDTBefore = confidentialBalances.cUSDT;
+  const usdtBefore = await readErc20Balance(contracts.USDT);
 
   // Step 1: Shield USDT (generates Wrapped event)
   await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
@@ -51,13 +54,12 @@ test("should show shield and transfer events with decrypted amounts", async ({
 
   // Cross-check: on-chain ERC-20 balance should match shield deduction
   const onChainUsdt = await readErc20Balance(contracts.USDT);
-  expect(onChainUsdt).toBe(initialBalances.USDT - shieldAmount);
+  expect(onChainUsdt).toBe(usdtBefore - shieldAmount);
 
   // Cross-check: navigate to wallet and verify revealed balance accounts for shield + transfer
   await page.goto("/wallet");
   await page.getByTestId("reveal-button").click();
-  const expectedBalance =
-    initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount) - transferAmount;
+  const expectedBalance = cUSDTBefore + shieldAmount - computeFee(shieldAmount) - transferAmount;
   await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
     formatUnits(expectedBalance, 6),
   );

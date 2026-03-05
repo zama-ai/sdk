@@ -14,3 +14,4 @@ export { ResumeUnshieldForm } from "./resume-unshield-form";
 export { BatchTransferForm } from "./batch-transfer-form";
 export { ActivityFeedPanel } from "./activity-feed-panel";
 export { Sidebar } from "./sidebar";
+export { burner } from "./burner-connector";
