@@ -37,9 +37,11 @@ The examples below use a backend proxy (`relayerUrl`) to keep your API key serve
 ```bash
 # Core SDK (vanilla TypeScript)
 pnpm add @zama-fhe/sdk
+# or: npm install @zama-fhe/sdk / yarn add @zama-fhe/sdk
 
 # React hooks
 pnpm add @zama-fhe/react-sdk @tanstack/react-query
+# or: npm install @zama-fhe/react-sdk @tanstack/react-query / yarn add @zama-fhe/react-sdk @tanstack/react-query
 ```
 
 ### Read extended documentation
