@@ -1,5 +1,6 @@
 import type {
   Address,
+  DecryptedValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -32,7 +33,7 @@ export interface RelayerSDK {
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
   /** Decrypt FHE ciphertext handles using the user's own credentials. */
-  userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>>;
+  userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>>;
 
   /** Decrypt FHE handles using the network public key (no credential needed). */
   publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
@@ -47,7 +48,7 @@ export interface RelayerSDK {
   ): Promise<KmsDelegatedUserDecryptEIP712Type>;
 
   /** Decrypt FHE handles using delegated user credentials. */
-  delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>>;
+  delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, DecryptedValue>>;
 
   /** Submit a ZK proof for on-chain verification. */
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;

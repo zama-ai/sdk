@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi } from "vitest";
+import { test as base, describe, expect } from "../test-fixtures";
 import type { Address } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 
@@ -23,26 +24,31 @@ vi.mock("wagmi/actions", () => ({
 
 import { WagmiSigner } from "../wagmi/wagmi-signer";
 
-describe("WagmiSigner.subscribe", () => {
-  let signer: WagmiSigner;
+interface WagmiFixtures {
+  wagmiSigner: WagmiSigner;
+}
 
-  beforeEach(() => {
+const wit = base.extend<WagmiFixtures>({
+  // eslint-disable-next-line no-empty-pattern
+  wagmiSigner: async ({}, use) => {
     capturedOnChange = undefined;
     mockUnsubscribe.mockClear();
-    signer = new WagmiSigner({ config: {} as unknown as Config });
-  });
+    await use(new WagmiSigner({ config: {} as unknown as Config }));
+  },
+});
 
-  it("calls watchConnection and returns unsubscribe function", () => {
+describe("WagmiSigner.subscribe", () => {
+  wit("calls watchConnection and returns unsubscribe function", ({ wagmiSigner }) => {
     const onDisconnect = vi.fn();
-    const unsubscribe = signer.subscribe({ onDisconnect });
+    const unsubscribe = wagmiSigner.subscribe({ onDisconnect });
 
     expect(capturedOnChange).toBeDefined();
     expect(unsubscribe).toBe(mockUnsubscribe);
   });
 
-  it("fires onDisconnect when status becomes disconnected", () => {
+  wit("fires onDisconnect when status becomes disconnected", ({ wagmiSigner }) => {
     const onDisconnect = vi.fn();
-    signer.subscribe({ onDisconnect });
+    wagmiSigner.subscribe({ onDisconnect });
 
     capturedOnChange!(
       { status: "disconnected" },
@@ -51,17 +57,17 @@ describe("WagmiSigner.subscribe", () => {
     expect(onDisconnect).toHaveBeenCalledOnce();
   });
 
-  it("does not fire onDisconnect when already disconnected", () => {
+  wit("does not fire onDisconnect when already disconnected", ({ wagmiSigner }) => {
     const onDisconnect = vi.fn();
-    signer.subscribe({ onDisconnect });
+    wagmiSigner.subscribe({ onDisconnect });
 
     capturedOnChange!({ status: "disconnected" }, { status: "disconnected" });
     expect(onDisconnect).not.toHaveBeenCalled();
   });
 
-  it("fires onAccountChange when address changes", () => {
+  wit("fires onAccountChange when address changes", ({ wagmiSigner }) => {
     const onAccountChange = vi.fn();
-    signer.subscribe({ onAccountChange });
+    wagmiSigner.subscribe({ onAccountChange });
 
     capturedOnChange!(
       { status: "connected", address: "0xbbb" as Address },
@@ -71,9 +77,9 @@ describe("WagmiSigner.subscribe", () => {
     expect(onAccountChange).toHaveBeenCalledWith("0xbbb");
   });
 
-  it("does not fire onAccountChange when address is unchanged", () => {
+  wit("does not fire onAccountChange when address is unchanged", ({ wagmiSigner }) => {
     const onAccountChange = vi.fn();
-    signer.subscribe({ onAccountChange });
+    wagmiSigner.subscribe({ onAccountChange });
 
     capturedOnChange!(
       { status: "connected", address: "0xaaa" as Address },

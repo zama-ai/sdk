@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { eip1193Subscribe } from "../eip1193-subscribe";
+/* eslint-disable no-empty-pattern */
 import type { Address } from "../../relayer/relayer-sdk.types";
+import { test as base, describe, expect, vi } from "../../test-fixtures";
+import { eip1193Subscribe } from "../eip1193-subscribe";
 
 const ADDR_A = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" as Address;
 
@@ -23,57 +24,71 @@ function createFakeProvider() {
   };
 }
 
+interface EipFixtures {
+  provider: ReturnType<typeof createFakeProvider>;
+  onDisconnect: ReturnType<typeof vi.fn>;
+  onAccountChange: ReturnType<typeof vi.fn>;
+}
+
+const eit = base.extend<EipFixtures>({
+  provider: async ({}, use) => {
+    await use(createFakeProvider());
+  },
+  onDisconnect: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
+    await use(vi.fn());
+  },
+  onAccountChange: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
+    await use(vi.fn());
+  },
+});
+
 describe("eip1193Subscribe", () => {
-  let provider: ReturnType<typeof createFakeProvider>;
-  let onDisconnect: ReturnType<typeof vi.fn>;
-  let onAccountChange: ReturnType<typeof vi.fn>;
+  eit(
+    "fires onAccountChange after disconnect+reconnect with same account",
+    async ({ provider, onDisconnect, onAccountChange }) => {
+      // Subscribe with initial address A
+      eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
+        onDisconnect: onDisconnect as () => void,
+        onAccountChange: onAccountChange as (a: Address) => void,
+      });
+      // Let the getAddress() promise resolve so currentAddress is set
+      await vi.waitFor(() => {});
 
-  beforeEach(() => {
-    provider = createFakeProvider();
-    onDisconnect = vi.fn();
-    onAccountChange = vi.fn();
-  });
+      // 1. Disconnect (empty accounts)
+      provider.emit("accountsChanged", []);
+      expect(onDisconnect).toHaveBeenCalledTimes(1);
 
-  it("fires onAccountChange after disconnect+reconnect with same account", async () => {
-    // Subscribe with initial address A
-    eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
-      onDisconnect: onDisconnect as () => void,
-      onAccountChange: onAccountChange as (a: Address) => void,
-    });
-    // Let the getAddress() promise resolve so currentAddress is set
-    await vi.waitFor(() => {});
+      // 2. Reconnect with same account A
+      provider.emit("accountsChanged", [ADDR_A]);
+      // Because currentAddress was cleared on disconnect,
+      // this should fire onAccountChange even though the address is the same
+      // as the original — the identity tracking was reset.
+      expect(onAccountChange).toHaveBeenCalledTimes(1);
+      expect(onAccountChange).toHaveBeenCalledWith(ADDR_A);
+    },
+  );
 
-    // 1. Disconnect (empty accounts)
-    provider.emit("accountsChanged", []);
-    expect(onDisconnect).toHaveBeenCalledTimes(1);
+  eit(
+    "revokes on repeated lock/unlock cycles with same account",
+    async ({ provider, onDisconnect, onAccountChange }) => {
+      eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
+        onDisconnect: onDisconnect as () => void,
+        onAccountChange: onAccountChange as (a: Address) => void,
+      });
+      await vi.waitFor(() => {});
 
-    // 2. Reconnect with same account A
-    provider.emit("accountsChanged", [ADDR_A]);
-    // Because currentAddress was cleared on disconnect,
-    // this should fire onAccountChange even though the address is the same
-    // as the original — the identity tracking was reset.
-    expect(onAccountChange).toHaveBeenCalledTimes(1);
-    expect(onAccountChange).toHaveBeenCalledWith(ADDR_A);
-  });
+      // Cycle 1: lock then unlock
+      provider.emit("accountsChanged", []);
+      expect(onDisconnect).toHaveBeenCalledTimes(1);
+      provider.emit("accountsChanged", [ADDR_A]);
+      expect(onAccountChange).toHaveBeenCalledTimes(1);
 
-  it("revokes on repeated lock/unlock cycles with same account", async () => {
-    eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
-      onDisconnect: onDisconnect as () => void,
-      onAccountChange: onAccountChange as (a: Address) => void,
-    });
-    await vi.waitFor(() => {});
-
-    // Cycle 1: lock then unlock
-    provider.emit("accountsChanged", []);
-    expect(onDisconnect).toHaveBeenCalledTimes(1);
-    provider.emit("accountsChanged", [ADDR_A]);
-    expect(onAccountChange).toHaveBeenCalledTimes(1);
-
-    // Cycle 2: lock then unlock again
-    provider.emit("accountsChanged", []);
-    expect(onDisconnect).toHaveBeenCalledTimes(2);
-    provider.emit("accountsChanged", [ADDR_A]);
-    // Without the fix, onAccountChange would still be 1 (not fired)
-    expect(onAccountChange).toHaveBeenCalledTimes(2);
-  });
+      // Cycle 2: lock then unlock again
+      provider.emit("accountsChanged", []);
+      expect(onDisconnect).toHaveBeenCalledTimes(2);
+      provider.emit("accountsChanged", [ADDR_A]);
+      // Without the fix, onAccountChange would still be 1 (not fired)
+      expect(onAccountChange).toHaveBeenCalledTimes(2);
+    },
+  );
 });
