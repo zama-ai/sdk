@@ -23,8 +23,12 @@ export interface ZamaSDKConfig {
    * implementation for web extensions so signatures survive service worker restarts.
    */
   sessionStorage?: GenericStorage;
-  /** Number of days FHE credentials remain valid. Default: `1`. Set `0` to require a wallet signature on every decrypt (high-security mode). */
-  credentialDurationDays?: number;
+  /**
+   * How long the ML-KEM re-encryption keypair remains valid, in seconds.
+   * Default: `86400` (1 day). Must be a positive number — `0` is rejected
+   * because the keypair is required to establish the relayer connection.
+   */
+  keypairTTL?: number;
   /**
    * Controls how long session signatures (EIP-712 wallet signatures) remain valid.
    * - `"persistent"` (default): no time-based expiry, sessions last until revocation or storage clear.
@@ -63,7 +67,11 @@ export class ZamaSDK {
       signer: this.signer,
       storage: this.storage,
       sessionStorage: this.sessionStorage,
-      durationDays: config.credentialDurationDays ?? 1,
+      durationDays: (() => {
+        const ttl = config.keypairTTL ?? 86400;
+        if (ttl <= 0) throw new Error("keypairTTL must be a positive number (seconds)");
+        return ttl / 86400;
+      })(),
       sessionTTL: config.sessionTTL ?? "persistent",
       onEvent: this.#onEvent,
     });
