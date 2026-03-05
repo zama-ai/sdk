@@ -46,6 +46,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
@@ -71,7 +72,7 @@ jobs:
       - name: Semantic release
         run: pnpm release:ci 2>&1 | tee /tmp/release-output.txt
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
           NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public
 
       - name: Verify release was published
