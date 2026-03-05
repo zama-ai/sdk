@@ -1,12 +1,7 @@
 import { createCleartextInstance } from "../cleartext/cleartext-instance";
 import { convertToBigIntRecord } from "../utils/convert";
 import type { CleartextInstanceConfig } from "../cleartext/types";
-import {
-  ZamaError,
-  EncryptionFailedError,
-  ConfigurationError,
-  NotSupportedError,
-} from "../token/errors";
+import { EncryptionFailedError, ConfigurationError, NotSupportedError } from "../token/errors";
 import { assertNonNullable } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
@@ -24,7 +19,7 @@ import type {
 } from "./relayer-sdk.types";
 import { buildEIP712DomainType, DefaultConfigs } from "./relayer-utils";
 
-type CleartextInstance = Awaited<ReturnType<typeof createCleartextInstance>>;
+type CleartextInstance = ReturnType<typeof createCleartextInstance>;
 
 export interface RelayerCleartextMultiConfig {
   /** Resolve the current chain ID. Called lazily before each operation. */
@@ -49,6 +44,31 @@ function isMultiConfig(config: RelayerCleartextConfig): config is RelayerClearte
   );
 }
 
+function buildInstance(
+  chainId: number,
+  transports: Record<number, Partial<CleartextInstanceConfig>>,
+): CleartextInstance {
+  const overrides = transports[chainId];
+  if (!overrides) {
+    throw new ConfigurationError(`No cleartext transport config for chainId: ${chainId}`);
+  }
+
+  const base = DefaultConfigs[chainId];
+  const config = { ...base, ...overrides } as CleartextInstanceConfig;
+  try {
+    assertNonNullable(config.network, `network`);
+    assertNonNullable(config.cleartextExecutorAddress, `cleartextExecutorAddress`);
+    assertNonNullable(config.coprocessorSignerPrivateKey, `coprocessorSignerPrivateKey`);
+    assertNonNullable(config.kmsSignerPrivateKey, `kmsSignerPrivateKey`);
+  } catch (error) {
+    throw new ConfigurationError(`Incomplete cleartext config for chainId: ${chainId}`, {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+
+  return createCleartextInstance(config);
+}
+
 /**
  * RelayerCleartext — cleartext encryption/decryption layer for development and testing.
  * No WASM, no workers. Reads plaintext values from a CleartextFHEVMExecutor contract.
@@ -71,14 +91,14 @@ function isMultiConfig(config: RelayerCleartextConfig): config is RelayerClearte
  * ```
  */
 export class RelayerCleartext implements RelayerSDK {
-  readonly #config: RelayerCleartextMultiConfig;
-  #initPromise: Promise<CleartextInstance> | null = null;
-  #terminated = false;
+  readonly #multi: RelayerCleartextMultiConfig | null;
+  #instance: CleartextInstance | null;
   #resolvedChainId: number | null = null;
 
   constructor(config: RelayerCleartextConfig) {
     if (isMultiConfig(config)) {
-      this.#config = config;
+      this.#multi = config;
+      this.#instance = null;
     } else {
       const chainId = config.chainId;
       if (chainId == null) {
@@ -86,74 +106,28 @@ export class RelayerCleartext implements RelayerSDK {
           "Single-transport config must include a chainId, or use the multi-transport form with getChainId.",
         );
       }
-      this.#config = {
-        transports: { [chainId]: config },
-        getChainId: async () => chainId,
-      };
+      this.#multi = null;
+      this.#instance = buildInstance(chainId, { [chainId]: config });
+      this.#resolvedChainId = chainId;
     }
   }
 
-  async #ensureInstance(): Promise<CleartextInstance> {
-    // Auto-restart after terminate() — discard stale state so a fresh init
-    // runs. Clear #terminated here so that #initInstance's post-init guard
-    // only fires if terminate() is called *during* an in-flight init.
-    if (this.#terminated) {
-      this.#terminated = false;
-      this.#initPromise = null;
-      this.#resolvedChainId = null;
-    }
+  async #getInstance(): Promise<CleartextInstance> {
+    if (!this.#multi) return this.#instance!;
 
-    const chainId = await this.#config.getChainId();
+    const chainId = await this.#multi.getChainId();
 
-    // Chain changed → discard old instance, re-init
+    // Chain changed → discard old instance
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#initPromise = null;
+      this.#instance = null;
     }
-
     this.#resolvedChainId = chainId;
 
-    if (!this.#initPromise) {
-      this.#initPromise = this.#initInstance(chainId).catch((error) => {
-        this.#initPromise = null;
-        throw error instanceof ZamaError
-          ? error
-          : new EncryptionFailedError("Failed to initialize cleartext instance", {
-              cause: error instanceof Error ? error : undefined,
-            });
-      });
-    }
-    return this.#initPromise;
-  }
-
-  async #initInstance(chainId: number): Promise<CleartextInstance> {
-    const overrides = this.#config.transports[chainId];
-    if (!overrides) {
-      throw new ConfigurationError(`No cleartext transport config for chainId: ${chainId}`);
+    if (!this.#instance) {
+      this.#instance = buildInstance(chainId, this.#multi.transports);
     }
 
-    const base = DefaultConfigs[chainId];
-    const config = { ...base, ...overrides } as CleartextInstanceConfig;
-    try {
-      assertNonNullable(config.network, `network`);
-      assertNonNullable(config.cleartextExecutorAddress, `cleartextExecutorAddress`);
-      assertNonNullable(config.coprocessorSignerPrivateKey, `coprocessorSignerPrivateKey`);
-      assertNonNullable(config.kmsSignerPrivateKey, `kmsSignerPrivateKey`);
-    } catch (error) {
-      throw new ConfigurationError(`Incomplete cleartext config for chainId: ${chainId}`, {
-        cause: error instanceof Error ? error : undefined,
-      });
-    }
-
-    const instance = await createCleartextInstance(config);
-
-    // If terminate() was called while createCleartextInstance was in flight,
-    // discard the freshly created instance — the caller will get an error and
-    // the next operation will trigger a clean re-init.
-    if (this.#terminated) {
-      throw new Error("RelayerCleartext was terminated during initialization");
-    }
-
-    return instance;
+    return this.#instance;
   }
 
   /**
@@ -162,14 +136,13 @@ export class RelayerCleartext implements RelayerSDK {
    * operation to support React StrictMode's unmount→remount cycle and HMR.
    */
   terminate(): void {
-    this.#terminated = true;
-    this.#initPromise = null;
+    this.#instance = null;
+    this.#resolvedChainId = null;
   }
 
   async generateKeypair(): Promise<FHEKeypair> {
-    const instance = await this.#ensureInstance();
-    const result = instance.generateKeypair();
-    return { publicKey: result.publicKey, privateKey: result.privateKey };
+    const instance = await this.#getInstance();
+    return instance.generateKeypair();
   }
 
   async createEIP712(
@@ -178,7 +151,7 @@ export class RelayerCleartext implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
-    const instance = await this.#ensureInstance();
+    const instance = await this.#getInstance();
     const result = instance.createEIP712(
       publicKey,
       contractAddresses,
@@ -200,21 +173,18 @@ export class RelayerCleartext implements RelayerSDK {
         UserDecryptRequestVerification: [...result.types.UserDecryptRequestVerification],
       },
       message: {
-        publicKey: String(result.message.publicKey),
-        contractAddresses: [...result.message.contractAddresses] as string[],
-        startTimestamp: BigInt(result.message.startTimestamp),
-        durationDays: BigInt(result.message.durationDays),
-        extraData: String(result.message.extraData),
+        publicKey: result.message.publicKey,
+        contractAddresses: [...result.message.contractAddresses],
+        startTimestamp: result.message.startTimestamp,
+        durationDays: result.message.durationDays,
+        extraData: result.message.extraData,
       },
     };
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    const instance = await this.#ensureInstance();
+    const instance = await this.#getInstance();
     const input = instance.createEncryptedInput(params.contractAddress, params.userAddress);
-    // TODO: support all FHE types (addBool, add8, add16, add32, add128, add256, addAddress)
-    // Currently defaults to add64 — callers needing other types should use
-    // createCleartextInstance() and the low-level add* methods directly.
     for (const value of params.values) {
       try {
         input.add64(value);
@@ -231,7 +201,7 @@ export class RelayerCleartext implements RelayerSDK {
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
-    const instance = await this.#ensureInstance();
+    const instance = await this.#getInstance();
     const handleContractPairs = params.handles.map((handle) => ({
       handle,
       contractAddress: params.contractAddress,
@@ -250,7 +220,7 @@ export class RelayerCleartext implements RelayerSDK {
   }
 
   async publicDecrypt(handles: string[]): Promise<PublicDecryptResult> {
-    const instance = await this.#ensureInstance();
+    const instance = await this.#getInstance();
     const result = await instance.publicDecrypt(handles);
     return {
       clearValues: convertToBigIntRecord(result.clearValues),
@@ -266,9 +236,7 @@ export class RelayerCleartext implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const instance = await this.#ensureInstance();
-    // Cast needed: our plain `string` types don't satisfy the external lib's
-    // branded `0x${string}` / ChecksummedAddress types, but values are correct.
+    const instance = await this.#getInstance();
     return instance.createDelegatedUserDecryptEIP712(
       publicKey,
       contractAddresses,
@@ -279,7 +247,7 @@ export class RelayerCleartext implements RelayerSDK {
   }
 
   async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
-    const instance = await this.#ensureInstance();
+    const instance = await this.#getInstance();
     const handleContractPairs = params.handles.map((handle) => ({
       handle,
       contractAddress: params.contractAddress,

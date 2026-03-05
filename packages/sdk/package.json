@@ -17,6 +17,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./cleartext": {
+      "types": "./dist/cleartext/index.d.ts",
+      "import": "./dist/cleartext/index.js"
+    },
     "./viem": {
       "types": "./dist/viem/index.d.ts",
       "import": "./dist/viem/index.js"
@@ -28,10 +32,6 @@
     "./node": {
       "types": "./dist/node/index.d.ts",
       "import": "./dist/node/index.js"
-    },
-    "./cleartext": {
-      "types": "./dist/cleartext/index.d.ts",
-      "import": "./dist/cleartext/index.js"
     }
   },
   "files": [

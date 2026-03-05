@@ -14,11 +14,11 @@ import {
   buildDomainSeparator,
   eip712Digest,
   packSignature,
-} from "../eip712-utils";
+} from "../eip712";
 
 const coder = AbiCoder.defaultAbiCoder();
 
-describe("eip712-utils", () => {
+describe("eip712", () => {
   describe("EIP712_DOMAIN_TYPEHASH", () => {
     it("equals keccak256 of the canonical EIP-712 domain type string", () => {
       const expected = keccak256(

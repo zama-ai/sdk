@@ -52,3 +52,14 @@ export { CleartextExecutor } from "./cleartext-executor";
 
 /** Configuration type for cleartext instances. */
 export type { CleartextInstanceConfig } from "./types";
+
+/** FHE type enum and deployment constants. */
+export { FheType, FHE_BIT_WIDTHS, GATEWAY_CHAIN_ID } from "./constants";
+
+/** Pre-built EIP-712 type definitions. */
+export {
+  INPUT_VERIFICATION_EIP712,
+  KMS_DECRYPTION_EIP712,
+  USER_DECRYPT_EIP712,
+  DELEGATED_USER_DECRYPT_EIP712,
+} from "./eip712";

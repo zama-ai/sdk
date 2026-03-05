@@ -5,7 +5,6 @@ import { createTestClient, formatUnits, http, publicActions, walletActions } fro
 import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
-
 const privateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
 
 const account = privateKeyToAccount(privateKey);
@@ -121,16 +120,10 @@ export const test = base.extend<TestFixtures>({
 
     await use(page);
 
-    // Wait for in-flight route handlers (userDecrypt/publicDecrypt) to finish
-    // before reverting — they mine blocks on the Hardhat node, and concurrent
-    // mining + revert causes chain state to leak between tests.
+    // Wait for in-flight route handlers to finish before reverting.
     await page.unrouteAll({ behavior: "wait" });
 
     await viemClient.revert({ id });
-    // Mine blocks so the chain advances past the Hardhat coprocessor's stale
-    // BlockLogCursor — evm_revert doesn't reset the coprocessor cursor, so
-    // without this it skips blocks where new handles are created in later tests.
-    await viemClient.mine({ blocks: 100 });
   },
 });
 

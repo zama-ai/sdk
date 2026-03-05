@@ -3,6 +3,7 @@ import { SigningKey } from "ethers";
 import {
   cleartextPublicDecrypt,
   cleartextUserDecrypt,
+  cleartextDelegatedUserDecrypt,
   type DecryptionSigningContext,
 } from "../cleartext-decrypt";
 
@@ -35,10 +36,17 @@ function mockExecutor(map: Map<string, bigint>) {
   };
 }
 
-function mockAcl(opts: { publicAllowed?: boolean; persistAllowed?: boolean } = {}) {
+function mockAcl(
+  opts: {
+    publicAllowed?: boolean;
+    persistAllowed?: boolean;
+    delegated?: boolean;
+  } = {},
+) {
   return {
     isAllowedForDecryption: vi.fn().mockResolvedValue(opts.publicAllowed ?? true),
     persistAllowed: vi.fn().mockResolvedValue(opts.persistAllowed ?? true),
+    isHandleDelegatedForUserDecryption: vi.fn().mockResolvedValue(opts.delegated ?? true),
   };
 }
 
@@ -297,6 +305,73 @@ describe("cleartextUserDecrypt", () => {
     const result = await cleartextUserDecrypt(
       [],
       "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      executor as never,
+      acl as never,
+    );
+    expect(result).toEqual({});
+  });
+});
+
+const DELEGATE = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+
+describe("cleartextDelegatedUserDecrypt", () => {
+  it("returns formatted results when delegation is valid", async () => {
+    const executor = mockExecutor(new Map([[HANDLE_EUINT32, 100n]]));
+    const acl = mockAcl({ delegated: true });
+
+    const result = await cleartextDelegatedUserDecrypt(
+      [{ handle: HANDLE_EUINT32, contractAddress: CONTRACT }],
+      USER,
+      DELEGATE,
+      executor as never,
+      acl as never,
+    );
+    expect(result[HANDLE_EUINT32]).toBe(100n);
+    expect(acl.isHandleDelegatedForUserDecryption).toHaveBeenCalledWith(
+      USER,
+      DELEGATE,
+      CONTRACT,
+      HANDLE_EUINT32,
+    );
+  });
+
+  it("throws when delegation check returns false", async () => {
+    const executor = mockExecutor(new Map([[HANDLE_EUINT32, 100n]]));
+    const acl = mockAcl({ delegated: false });
+
+    await expect(
+      cleartextDelegatedUserDecrypt(
+        [{ handle: HANDLE_EUINT32, contractAddress: CONTRACT }],
+        USER,
+        DELEGATE,
+        executor as never,
+        acl as never,
+      ),
+    ).rejects.toThrow("not delegated for user decryption");
+  });
+
+  it("converts ebool correctly", async () => {
+    const executor = mockExecutor(new Map([[HANDLE_EBOOL, 1n]]));
+    const acl = mockAcl({ delegated: true });
+
+    const result = await cleartextDelegatedUserDecrypt(
+      [{ handle: HANDLE_EBOOL, contractAddress: CONTRACT }],
+      USER,
+      DELEGATE,
+      executor as never,
+      acl as never,
+    );
+    expect(result[HANDLE_EBOOL]).toBe(true);
+  });
+
+  it("handles empty handles array", async () => {
+    const executor = mockExecutor(new Map());
+    const acl = mockAcl();
+
+    const result = await cleartextDelegatedUserDecrypt(
+      [],
+      USER,
+      DELEGATE,
       executor as never,
       acl as never,
     );

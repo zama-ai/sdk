@@ -1,0 +1,133 @@
+/**
+ * Shared EIP-712 utilities and pre-built type definitions for cleartext signing operations.
+ *
+ * @module
+ */
+
+import { getBytes, AbiCoder, keccak256, concat, toUtf8Bytes, type Signature } from "ethers";
+
+export const abiCoder = AbiCoder.defaultAbiCoder();
+
+export const EIP712_DOMAIN_TYPEHASH = keccak256(
+  toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+);
+
+const VERSION_HASH = keccak256(toUtf8Bytes("1"));
+
+/** Pre-computed name hashes for the two signing domains. */
+const NAME_HASH_CACHE: Record<string, string> = {};
+function getNameHash(name: string): string {
+  return (NAME_HASH_CACHE[name] ??= keccak256(toUtf8Bytes(name)));
+}
+
+/**
+ * Build an EIP-712 domain separator.
+ *
+ * @param name - The signing domain name (e.g. "Decryption", "InputVerification")
+ * @param chainId - Chain ID for the domain
+ * @param verifyingContract - Address of the verifying contract
+ */
+export function buildDomainSeparator(
+  name: string,
+  chainId: number,
+  verifyingContract: string,
+): string {
+  return keccak256(
+    abiCoder.encode(
+      ["bytes32", "bytes32", "bytes32", "uint256", "address"],
+      [EIP712_DOMAIN_TYPEHASH, getNameHash(name), VERSION_HASH, chainId, verifyingContract],
+    ),
+  );
+}
+
+/**
+ * Compute a full EIP-712 digest from a domain separator and struct hash.
+ */
+export function eip712Digest(domainSeparator: string, structHash: string): string {
+  return keccak256(concat(["0x1901", domainSeparator, structHash]));
+}
+
+/**
+ * Pack a signature as r[32] + s[32] + v[1] (65 bytes).
+ */
+export function packSignature(sig: Signature): Uint8Array {
+  const sigBytes = new Uint8Array(65);
+  sigBytes.set(getBytes(sig.r), 0);
+  sigBytes.set(getBytes(sig.s), 32);
+  sigBytes[64] = sig.v;
+  return sigBytes;
+}
+
+// ---------------------------------------------------------------------------
+// Pre-built EIP-712 type definitions for all four signing flows.
+// ---------------------------------------------------------------------------
+
+type DomainFactory = (
+  chainId: number | bigint,
+  verifyingContract: string,
+) => { name: string; version: string; chainId: number | bigint; verifyingContract: string };
+
+const inputDomain: DomainFactory = (chainId, verifyingContract) => ({
+  name: "InputVerification",
+  version: "1",
+  chainId,
+  verifyingContract,
+});
+
+const decryptionDomain: DomainFactory = (chainId, verifyingContract) => ({
+  name: "Decryption",
+  version: "1",
+  chainId,
+  verifyingContract,
+});
+
+export const INPUT_VERIFICATION_EIP712 = {
+  domain: inputDomain,
+  types: {
+    CiphertextVerification: [
+      { name: "ctHandles", type: "bytes32[]" },
+      { name: "userAddress", type: "address" },
+      { name: "contractAddress", type: "address" },
+      { name: "contractChainId", type: "uint256" },
+      { name: "extraData", type: "bytes" },
+    ],
+  },
+} as const;
+
+export const KMS_DECRYPTION_EIP712 = {
+  domain: decryptionDomain,
+  types: {
+    PublicDecryptVerification: [
+      { name: "ctHandles", type: "bytes32[]" },
+      { name: "decryptedResult", type: "bytes" },
+      { name: "extraData", type: "bytes" },
+    ],
+  },
+} as const;
+
+export const USER_DECRYPT_EIP712 = {
+  domain: decryptionDomain,
+  types: {
+    UserDecryptRequestVerification: [
+      { name: "publicKey", type: "bytes" },
+      { name: "contractAddresses", type: "address[]" },
+      { name: "startTimestamp", type: "uint256" },
+      { name: "durationDays", type: "uint256" },
+      { name: "extraData", type: "bytes" },
+    ],
+  },
+} as const;
+
+export const DELEGATED_USER_DECRYPT_EIP712 = {
+  domain: decryptionDomain,
+  types: {
+    DelegatedUserDecryptRequestVerification: [
+      { name: "publicKey", type: "bytes" },
+      { name: "contractAddresses", type: "address[]" },
+      { name: "delegatorAddress", type: "address" },
+      { name: "startTimestamp", type: "uint256" },
+      { name: "durationDays", type: "uint256" },
+      { name: "extraData", type: "bytes" },
+    ],
+  },
+} as const;

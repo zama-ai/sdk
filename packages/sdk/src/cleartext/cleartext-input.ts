@@ -22,8 +22,9 @@
  */
 
 import { getAddress, getBytes, SigningKey, keccak256, concat, toUtf8Bytes } from "ethers";
+import { EncryptionFailedError } from "../token/errors";
 import { computeCleartextHandles } from "./cleartext-handles";
-import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712-utils";
+import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712";
 
 /**
  * Fluent builder interface for cleartext encrypted inputs.
@@ -35,6 +36,7 @@ import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./e
  */
 export interface CleartextEncryptedInput {
   addBool(value: boolean | number | bigint): CleartextEncryptedInput;
+  add4(value: number | bigint): CleartextEncryptedInput;
   add8(value: number | bigint): CleartextEncryptedInput;
   add16(value: number | bigint): CleartextEncryptedInput;
   add32(value: number | bigint): CleartextEncryptedInput;
@@ -63,14 +65,16 @@ const CIPHERTEXT_VERIFICATION_TYPEHASH = keccak256(
 );
 
 function checkValue(value: number | bigint, bits: number): void {
-  if (value == null) throw new Error("Missing value");
+  if (value == null) throw new EncryptionFailedError("Missing value");
   const v = BigInt(value);
   if (v < 0n) {
-    throw new Error(`The value must be non-negative for ${bits}bits integer.`);
+    throw new EncryptionFailedError(`The value must be non-negative for ${bits}bits integer.`);
   }
   const limit = bits >= 8 ? BigInt(`0x${"ff".repeat(bits / 8)}`) : BigInt(2 ** bits - 1);
   if (v > limit) {
-    throw new Error(`The value exceeds the limit for ${bits}bits integer (${limit}).`);
+    throw new EncryptionFailedError(
+      `The value exceeds the limit for ${bits}bits integer (${limit}).`,
+    );
   }
 }
 
@@ -171,8 +175,8 @@ function buildInputProof(
  * @param params.signingContext - EIP-712 signing context for coprocessor verification
  */
 export function createCleartextEncryptedInput(params: {
-  aclContractAddress: string;
   chainId: number;
+  aclContractAddress: string;
   contractAddress: string;
   userAddress: string;
   signingContext: InputSigningContext;
@@ -184,10 +188,12 @@ export function createCleartextEncryptedInput(params: {
 
   const checkLimit = (added: number): void => {
     if (totalBits + added > 2048) {
-      throw new Error("Packing more than 2048 bits in a single input ciphertext is unsupported");
+      throw new EncryptionFailedError(
+        "Packing more than 2048 bits in a single input ciphertext is unsupported",
+      );
     }
     if (bits.length + 1 > 255) {
-      throw new Error(
+      throw new EncryptionFailedError(
         "Packing more than 255 variables in a single input ciphertext is unsupported",
       );
     }
@@ -203,8 +209,13 @@ export function createCleartextEncryptedInput(params: {
   const self: CleartextEncryptedInput = {
     addBool(value) {
       const v = BigInt(value);
-      if (v !== 0n && v !== 1n) throw new Error("The value must be 0 or 1.");
+      if (v !== 0n && v !== 1n) throw new EncryptionFailedError("The value must be 0 or 1.");
       pushValue(v, 2);
+      return self;
+    },
+    add4(value) {
+      checkValue(value, 4);
+      pushValue(BigInt(value), 4);
       return self;
     },
     add8(value) {
@@ -246,7 +257,8 @@ export function createCleartextEncryptedInput(params: {
       return [...bits];
     },
     async encrypt() {
-      if (bits.length === 0) throw new Error("Encrypted input must contain at least one value");
+      if (bits.length === 0)
+        throw new EncryptionFailedError("Encrypted input must contain at least one value");
       const { handles } = computeCleartextHandles({
         values,
         encryptionBits: bits,
