@@ -15,7 +15,7 @@
     "@fhevm/mock-utils": "0.4.2",
     "@playwright/test": "^1.58.2",
     "ethers": "^6.16.0",
-    "viem": "^2.46.3"
+    "viem": "^2.47.0"
   },
   "devDependencies": {
     "@types/node": "^22.19.13"
