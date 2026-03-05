@@ -153,11 +153,12 @@ export function createCleartextInstance(config: CleartextInstanceConfig) {
     ) {
       return {
         domain: {
-          name: "Decryption",
-          version: "1",
+          name: "Decryption" as const,
+          version: "1" as const,
           chainId: BigInt(config.gatewayChainId),
           verifyingContract: config.verifyingContractAddressDecryption,
         },
+        primaryType: "UserDecryptRequestVerification" as const,
         types: {
           UserDecryptRequestVerification: [
             { name: "publicKey", type: "bytes" },
@@ -214,7 +215,7 @@ export function createCleartextInstance(config: CleartextInstanceConfig) {
       };
     },
 
-    /** Decrypt handles marked for public decryption. Checks ACL permissions first. */
+    /** Decrypt handles marked for public decryption. Checks ACL permissions and reads plaintexts in parallel. */
     async publicDecrypt(handles: (string | Uint8Array)[]) {
       return cleartextPublicDecrypt(handles, executor, acl, decryptionSigningCtx);
     },

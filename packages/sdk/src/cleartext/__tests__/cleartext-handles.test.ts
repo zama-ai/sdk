@@ -7,7 +7,7 @@ const CHAIN_ID = 31337;
 
 describe("computeCleartextHandles", () => {
   it("produces handles with correct fheTypeId for each bit-width", () => {
-    const bitWidths = [2, 8, 16, 32, 64, 128, 160, 256];
+    const bitWidths = [2, 4, 8, 16, 32, 64, 128, 160, 256];
     const values = bitWidths.map((_, i) => BigInt(i));
 
     const { handles } = computeCleartextHandles({
