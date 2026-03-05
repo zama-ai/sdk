@@ -2,7 +2,13 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import { vi } from "vitest";
-import type { GenericSigner, GenericStorage, RelayerSDK } from "@zama-fhe/sdk";
+import type {
+  GenericSigner,
+  GenericStorage,
+  RelayerSDK,
+  ZamaSDKEventListener,
+} from "@zama-fhe/sdk";
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { ZamaProvider } from "../provider";
 
 const USER = "0x2222222222222222222222222222222222222222" as `0x${string}`;
@@ -72,13 +78,26 @@ export function createMockStorage(): GenericStorage {
 }
 
 interface WrapperOverrides {
-  signer?: GenericSigner;
+  /** Pass `null` to omit the signer (read-only mode). */
+  signer?: GenericSigner | null;
   relayer?: RelayerSDK;
   storage?: GenericStorage;
+  credentialDurationDays?: number;
+  onEvent?: ZamaSDKEventListener;
+}
+
+export function createMockSDK(
+  overrides?: Pick<WrapperOverrides, "signer" | "relayer" | "storage">,
+) {
+  const signer = overrides?.signer ?? createMockSigner();
+  const relayer = overrides?.relayer ?? createMockRelayer();
+  const storage = overrides?.storage ?? createMockStorage();
+  return new ZamaSDK({ relayer, signer: signer!, storage });
 }
 
 export function createWrapper(overrides?: WrapperOverrides) {
-  const signer = overrides?.signer ?? createMockSigner();
+  // `null` means intentionally no signer (read-only mode); `undefined` means use default mock.
+  const signer = overrides?.signer === null ? undefined : (overrides?.signer ?? createMockSigner());
   const relayer = overrides?.relayer ?? createMockRelayer();
   const storage = overrides?.storage ?? createMockStorage();
   const queryClient = new QueryClient({
@@ -88,7 +107,13 @@ export function createWrapper(overrides?: WrapperOverrides) {
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
+        <ZamaProvider
+          relayer={relayer}
+          signer={signer}
+          storage={storage}
+          credentialDurationDays={overrides?.credentialDurationDays}
+          onEvent={overrides?.onEvent}
+        >
           {children}
         </ZamaProvider>
       </QueryClientProvider>

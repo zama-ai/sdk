@@ -1,15 +1,8 @@
-import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
-import { useReadonlyZamaSDK, useZamaSDK, ZamaProvider } from "../provider";
-import {
-  createMockRelayer,
-  createMockSigner,
-  createMockStorage,
-  renderWithProviders,
-} from "./test-utils";
+import { useReadonlyZamaSDK, useZamaSDK } from "../provider";
+import { createMockRelayer, createWrapper, renderWithProviders } from "./test-utils";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaSDKConfig[] = [];
@@ -50,29 +43,13 @@ describe("ZamaProvider & useZamaSDK", () => {
   it("passes credentialDurationDays and onEvent to ZamaSDK", () => {
     tokenSDKConstructorArgs.length = 0;
 
-    const relayer = createMockRelayer();
-    const signer = createMockSigner();
-    const storage = createMockStorage();
     const onEvent: ZamaSDKEventListener = vi.fn();
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
+    const { Wrapper, signer, relayer } = createWrapper({
+      credentialDurationDays: 7,
+      onEvent,
     });
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        <ZamaProvider
-          relayer={relayer}
-          signer={signer}
-          storage={storage}
-          credentialDurationDays={7}
-          onEvent={onEvent}
-        >
-          {children}
-        </ZamaProvider>
-      </QueryClientProvider>
-    );
-
-    const { result } = renderHook(() => useZamaSDK(), { wrapper });
+    const { result } = renderHook(() => useZamaSDK(), { wrapper: Wrapper });
 
     expect(result.current).toBeDefined();
     expect(result.current.signer).toBe(signer);
@@ -94,21 +71,9 @@ describe("ZamaProvider & useZamaSDK", () => {
 
   // SDK-18: Optional signer / read-only mode
   it("useReadonlyZamaSDK returns null when no signer is provided", () => {
-    const relayer = createMockRelayer();
-    const storage = createMockStorage();
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const { Wrapper } = createWrapper({ signer: null });
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} storage={storage}>
-          {children}
-        </ZamaProvider>
-      </QueryClientProvider>
-    );
-
-    const { result } = renderHook(() => useReadonlyZamaSDK(), { wrapper });
+    const { result } = renderHook(() => useReadonlyZamaSDK(), { wrapper: Wrapper });
     expect(result.current).toBeNull();
   });
 
@@ -119,21 +84,9 @@ describe("ZamaProvider & useZamaSDK", () => {
   });
 
   it("useZamaSDK throws descriptive error when no signer", () => {
-    const relayer = createMockRelayer();
-    const storage = createMockStorage();
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const { Wrapper } = createWrapper({ signer: null });
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} storage={storage}>
-          {children}
-        </ZamaProvider>
-      </QueryClientProvider>
-    );
-
-    expect(() => renderHook(() => useZamaSDK(), { wrapper })).toThrow(
+    expect(() => renderHook(() => useZamaSDK(), { wrapper: Wrapper })).toThrow(
       "useZamaSDK requires a connected signer",
     );
   });

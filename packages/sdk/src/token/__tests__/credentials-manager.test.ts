@@ -6,43 +6,7 @@ import { ZamaError, ZamaErrorCode } from "../token.types";
 import { CredentialExpiredError } from "../errors";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
-
-function createMockSdk() {
-  return {
-    generateKeypair: vi.fn().mockResolvedValue({
-      publicKey: "0xpub123",
-      privateKey: "0xpriv456",
-    }),
-    createEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { UserDecryptRequestVerification: [] },
-      message: {
-        publicKey: "0xpub123",
-        contractAddresses: ["0xtoken"],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    }),
-  } as unknown as RelayerSDK;
-}
-
-function createMockSigner(address: Address = "0xuser" as Address): GenericSigner {
-  return {
-    getAddress: vi.fn().mockResolvedValue(address),
-    signTypedData: vi.fn().mockResolvedValue("0xsig789"),
-    writeContract: vi.fn(),
-    readContract: vi.fn(),
-    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-    getChainId: vi.fn().mockResolvedValue(31337),
-    subscribe: vi.fn().mockReturnValue(() => {}),
-  };
-}
+import { createMockRelayer, createMockSigner } from "./test-utils";
 
 /** Compute the truncated SHA-256 store key used by CredentialManager. */
 async function computeStoreKey(address: string, chainId: number = 31337): Promise<string> {
@@ -57,15 +21,20 @@ async function computeStoreKey(address: string, chainId: number = 31337): Promis
 }
 
 describe("CredentialsManager", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
+  let sdk: ReturnType<typeof createMockRelayer>;
   let signer: GenericSigner;
   let store: MemoryStorage;
   let manager: CredentialsManager;
   let storeKey: string;
 
   beforeEach(async () => {
-    sdk = createMockSdk();
-    signer = createMockSigner();
+    sdk = createMockRelayer();
+    vi.mocked(sdk.generateKeypair).mockResolvedValue({
+      publicKey: "0xpub123",
+      privateKey: "0xpriv456",
+    });
+    signer = createMockSigner("0xuser" as Address);
+    vi.mocked(signer.signTypedData).mockResolvedValue("0xsig789");
     store = new MemoryStorage();
     manager = new CredentialsManager({
       relayer: sdk as unknown as RelayerSDK,
@@ -391,13 +360,13 @@ describe("CredentialsManager", () => {
 });
 
 describe("session allow/revoke", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
+  let sdk: ReturnType<typeof createMockRelayer>;
   let signer: GenericSigner;
   let store: MemoryStorage;
   let manager: CredentialsManager;
 
   beforeEach(async () => {
-    sdk = createMockSdk();
+    sdk = createMockRelayer();
     signer = createMockSigner();
     store = new MemoryStorage();
     manager = new CredentialsManager({

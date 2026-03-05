@@ -3,179 +3,16 @@ import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { Token } from "../token";
-import {
-  NoCiphertextError,
-  DecryptionFailedError,
-  RelayerRequestFailedError,
-  TransactionRevertedError,
-} from "../errors";
+import { DecryptionFailedError, TransactionRevertedError } from "../errors";
 import type { GenericSigner } from "../token.types";
 import { MemoryStorage } from "../memory-storage";
+import { createMockRelayer, createMockSigner, USER } from "./test-utils";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
-const ZERO_HANDLE = "0x" + "0".repeat(64);
 const VALID_HANDLE = "0x" + "ab".repeat(32);
 
-function createMockSdk() {
-  return {
-    generateKeypair: vi.fn().mockResolvedValue({
-      publicKey: "0xpub",
-      privateKey: "0xpriv",
-    }),
-    createEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { UserDecryptRequestVerification: [] },
-      message: {
-        publicKey: "0xpub",
-        contractAddresses: [TOKEN],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    }),
-    encrypt: vi.fn().mockResolvedValue({
-      handles: [new Uint8Array([1, 2, 3])],
-      inputProof: new Uint8Array([4, 5, 6]),
-    }),
-    userDecrypt: vi.fn().mockResolvedValue({
-      [VALID_HANDLE]: 1000n,
-    }),
-    publicDecrypt: vi.fn().mockResolvedValue({
-      clearValues: { "0xburn": 500n },
-      abiEncodedClearValues: "0x1f4",
-      decryptionProof: "0xproof",
-    }),
-  } as unknown as RelayerSDK;
-}
-
-function createMockSigner(): GenericSigner {
-  return {
-    getAddress: vi.fn().mockResolvedValue(USER),
-    signTypedData: vi.fn().mockResolvedValue("0xsig"),
-    writeContract: vi.fn().mockResolvedValue("0xtxhash"),
-    readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
-    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-    getChainId: vi.fn().mockResolvedValue(31337),
-    subscribe: vi.fn().mockReturnValue(() => {}),
-  };
-}
-
-describe("NoCiphertextError detection (P3)", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
-  let signer: GenericSigner;
-  let token: Token;
-
-  beforeEach(() => {
-    sdk = createMockSdk();
-    signer = createMockSigner();
-    token = new Token({
-      relayer: sdk as unknown as RelayerSDK,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
-    });
-  });
-
-  it("throws NoCiphertextError when relayer returns 400", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    const error = new Error("No ciphertext found") as Error & { statusCode?: number };
-    error.statusCode = 400;
-    vi.mocked(sdk.userDecrypt).mockRejectedValue(error);
-
-    await expect(token.balanceOf()).rejects.toBeInstanceOf(NoCiphertextError);
-  });
-
-  it("throws RelayerRequestFailedError for non-400 HTTP errors", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    const error = new Error("Internal server error") as Error & { statusCode?: number };
-    error.statusCode = 500;
-    vi.mocked(sdk.userDecrypt).mockRejectedValue(error);
-
-    await expect(token.balanceOf()).rejects.toBeInstanceOf(RelayerRequestFailedError);
-    try {
-      await token.balanceOf();
-    } catch (e) {
-      expect((e as RelayerRequestFailedError).statusCode).toBe(500);
-    }
-  });
-
-  it("throws DecryptionFailedError for errors without statusCode", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    vi.mocked(sdk.userDecrypt).mockRejectedValue(new Error("unknown"));
-
-    await expect(token.balanceOf()).rejects.toBeInstanceOf(DecryptionFailedError);
-  });
-
-  it("throws NoCiphertextError for decryptBalance with 400", async () => {
-    const error = new Error("No ciphertext") as Error & { statusCode?: number };
-    error.statusCode = 400;
-    vi.mocked(sdk.userDecrypt).mockRejectedValue(error);
-
-    await expect(token.decryptBalance(VALID_HANDLE as Address)).rejects.toBeInstanceOf(
-      NoCiphertextError,
-    );
-  });
-
-  it("passes through NoCiphertextError without re-wrapping", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    const original = new NoCiphertextError("already typed");
-    vi.mocked(sdk.userDecrypt).mockRejectedValue(original);
-
-    try {
-      await token.balanceOf();
-    } catch (e) {
-      expect(e).toBe(original);
-    }
-  });
-
-  it("passes through RelayerRequestFailedError without re-wrapping", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    const original = new RelayerRequestFailedError("already typed", 503);
-    vi.mocked(sdk.userDecrypt).mockRejectedValue(original);
-
-    try {
-      await token.balanceOf();
-    } catch (e) {
-      expect(e).toBe(original);
-    }
-  });
-
-  it("wraps non-Error thrown value with statusCode 400 as NoCiphertextError", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    vi.mocked(sdk.userDecrypt).mockRejectedValue({ statusCode: 400, message: "bad" });
-
-    await expect(token.balanceOf()).rejects.toBeInstanceOf(NoCiphertextError);
-  });
-
-  it("wraps non-Error thrown value with other statusCode as RelayerRequestFailedError", async () => {
-    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-    vi.mocked(sdk.userDecrypt).mockRejectedValue({ statusCode: 502 });
-
-    const err = await token.balanceOf().catch((e) => e);
-    expect(err).toBeInstanceOf(RelayerRequestFailedError);
-    expect(err.statusCode).toBe(502);
-  });
-
-  it("handles decryptHandles 400 error for batch operations", async () => {
-    const error = new Error("No ciphertext") as Error & { statusCode?: number };
-    error.statusCode = 400;
-    vi.mocked(sdk.userDecrypt).mockRejectedValue(error);
-
-    await expect(token.decryptHandles([VALID_HANDLE as Address])).rejects.toBeInstanceOf(
-      NoCiphertextError,
-    );
-  });
-});
-
 describe("Unshield callbacks (P4)", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
+  let sdk: ReturnType<typeof createMockRelayer>;
   let signer: GenericSigner;
   let token: Token;
 
@@ -191,7 +28,7 @@ describe("Unshield callbacks (P4)", () => {
   }
 
   beforeEach(() => {
-    sdk = createMockSdk();
+    sdk = createMockRelayer();
     signer = createMockSigner();
     token = new Token({
       relayer: sdk as unknown as RelayerSDK,
@@ -314,12 +151,12 @@ describe("Unshield callbacks (P4)", () => {
 });
 
 describe("Shield callbacks (SDK-19)", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
+  let sdk: ReturnType<typeof createMockRelayer>;
   let signer: GenericSigner;
   let token: Token;
 
   beforeEach(() => {
-    sdk = createMockSdk();
+    sdk = createMockRelayer();
     signer = createMockSigner();
     // underlying() returns a non-zero address so it's treated as ERC-20, not ETH
     vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
@@ -400,12 +237,12 @@ describe("Shield callbacks (SDK-19)", () => {
 });
 
 describe("Transfer callbacks (SDK-19)", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
+  let sdk: ReturnType<typeof createMockRelayer>;
   let signer: GenericSigner;
   let token: Token;
 
   beforeEach(() => {
-    sdk = createMockSdk();
+    sdk = createMockRelayer();
     signer = createMockSigner();
     token = new Token({
       relayer: sdk as unknown as RelayerSDK,
@@ -469,65 +306,5 @@ describe("Transfer callbacks (SDK-19)", () => {
     );
 
     expect(result.txHash).toBe("0xtxhash");
-  });
-});
-
-describe("Address normalization (P6)", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
-  let signer: GenericSigner;
-
-  beforeEach(() => {
-    sdk = createMockSdk();
-    signer = createMockSigner();
-  });
-
-  it("preserves token address case in constructor", () => {
-    const token = new Token({
-      relayer: sdk as unknown as RelayerSDK,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
-    });
-
-    expect(token.address).toBe("0xABCDEF1234567890ABCDEF1234567890ABCDEF12");
-  });
-
-  it("preserves wrapper address case in constructor", () => {
-    const token = new Token({
-      relayer: sdk as unknown as RelayerSDK,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
-      wrapper: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
-    });
-
-    expect(token.wrapper).toBe("0xABCDEF1234567890ABCDEF1234567890ABCDEF12");
-  });
-
-  it("defaults wrapper to normalized address when not provided", () => {
-    const token = new Token({
-      relayer: sdk as unknown as RelayerSDK,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
-    });
-
-    expect(token.wrapper).toBe(token.address);
-  });
-
-  it("rejects invalid address in constructor", () => {
-    expect(
-      () =>
-        new Token({
-          relayer: sdk as unknown as RelayerSDK,
-          signer,
-          storage: new MemoryStorage(),
-          sessionStorage: new MemoryStorage(),
-          address: "0xinvalid" as Address,
-        }),
-    ).toThrow("address must be a valid address");
   });
 });

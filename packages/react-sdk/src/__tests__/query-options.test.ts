@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ReadonlyToken, Token, Address } from "@zama-fhe/sdk";
-import { ZamaSDK } from "@zama-fhe/sdk";
 import { metadataQueryOptions } from "../token/use-metadata";
 import { isConfidentialQueryOptions, isWrapperQueryOptions } from "../token/use-is-confidential";
 import { totalSupplyQueryOptions } from "../token/use-total-supply";
@@ -16,7 +15,7 @@ import {
 } from "../token/use-fees";
 import { publicKeyQueryOptions } from "../relayer/use-public-key";
 import { publicParamsQueryOptions } from "../relayer/use-public-params";
-import { createMockSigner, createMockRelayer, createMockStorage } from "./test-utils";
+import { createMockSigner, createMockRelayer, createMockSDK } from "./test-utils";
 
 const TOKEN_ADDR = "0x1111111111111111111111111111111111111111" as Address;
 const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
@@ -237,11 +236,7 @@ describe("query options factories", () => {
 
   describe("publicKeyQueryOptions", () => {
     it("returns correct queryKey and staleTime Infinity", () => {
-      const sdk = new ZamaSDK({
-        relayer: createMockRelayer(),
-        signer: createMockSigner(),
-        storage: createMockStorage(),
-      });
+      const sdk = createMockSDK();
       const opts = publicKeyQueryOptions(sdk);
 
       expect(opts.queryKey).toEqual(["publicKey"]);
@@ -250,11 +245,7 @@ describe("query options factories", () => {
 
     it("queryFn calls relayer.getPublicKey", async () => {
       const relayer = createMockRelayer();
-      const sdk = new ZamaSDK({
-        relayer,
-        signer: createMockSigner(),
-        storage: createMockStorage(),
-      });
+      const sdk = createMockSDK({ relayer });
       const opts = publicKeyQueryOptions(sdk);
       const result = await opts.queryFn();
 
@@ -265,11 +256,7 @@ describe("query options factories", () => {
 
   describe("publicParamsQueryOptions", () => {
     it("queryKey includes bits", () => {
-      const sdk = new ZamaSDK({
-        relayer: createMockRelayer(),
-        signer: createMockSigner(),
-        storage: createMockStorage(),
-      });
+      const sdk = createMockSDK();
       const opts = publicParamsQueryOptions(sdk, 2048);
 
       expect(opts.queryKey).toEqual(["publicParams", 2048]);
@@ -278,11 +265,7 @@ describe("query options factories", () => {
 
     it("queryFn calls relayer.getPublicParams", async () => {
       const relayer = createMockRelayer();
-      const sdk = new ZamaSDK({
-        relayer,
-        signer: createMockSigner(),
-        storage: createMockStorage(),
-      });
+      const sdk = createMockSDK({ relayer });
       const opts = publicParamsQueryOptions(sdk, 2048);
       const result = await opts.queryFn();
 

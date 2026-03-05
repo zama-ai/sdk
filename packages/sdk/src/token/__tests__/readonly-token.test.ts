@@ -7,60 +7,23 @@ import { ZamaErrorCode } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import { DecryptionFailedError } from "../errors";
+import { createMockRelayer, createMockSigner, USER } from "./test-utils";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
 
-function createMockSdk() {
-  return {
-    generateKeypair: vi.fn().mockResolvedValue({
-      publicKey: "0xpub",
-      privateKey: "0xpriv",
-    }),
-    createEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { UserDecryptRequestVerification: [] },
-      message: {
-        publicKey: "0xpub",
-        contractAddresses: [TOKEN],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    }),
-    userDecrypt: vi.fn().mockResolvedValue({
-      [VALID_HANDLE]: 1000n,
-      [VALID_HANDLE2]: 2000n,
-    }),
-  } as unknown as RelayerSDK;
-}
-
-function createMockSigner(): GenericSigner {
-  return {
-    getAddress: vi.fn().mockResolvedValue(USER),
-    signTypedData: vi.fn().mockResolvedValue("0xsig"),
-    writeContract: vi.fn().mockResolvedValue("0xtxhash"),
-    readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
-    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-    getChainId: vi.fn().mockResolvedValue(31337),
-    subscribe: vi.fn().mockReturnValue(() => {}),
-  };
-}
-
 describe("ReadonlyToken", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
+  let sdk: ReturnType<typeof createMockRelayer>;
   let signer: GenericSigner;
   let token: ReadonlyToken;
 
   beforeEach(() => {
-    sdk = createMockSdk();
+    sdk = createMockRelayer();
+    vi.mocked(sdk.userDecrypt).mockResolvedValue({
+      [VALID_HANDLE]: 1000n,
+      [VALID_HANDLE2]: 2000n,
+    } as never);
     signer = createMockSigner();
     token = new ReadonlyToken({
       relayer: sdk as unknown as RelayerSDK,
@@ -357,7 +320,7 @@ describe("ReadonlyToken", () => {
 
 describe("ZamaSDK token factory", () => {
   it("creates ReadonlyToken with correct address", () => {
-    const sdk = createMockSdk();
+    const sdk = createMockRelayer();
     const signer = createMockSigner();
     const token = new ReadonlyToken({
       relayer: sdk as unknown as RelayerSDK,
