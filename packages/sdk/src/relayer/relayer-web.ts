@@ -66,7 +66,17 @@ export class RelayerWeb implements RelayerSDK {
 
   async #getWorkerConfig(): Promise<WorkerClientConfig> {
     const chainId = await this.#config.getChainId();
-    const { transports, security } = this.#config;
+    const { transports, security, threads } = this.#config;
+
+    if (threads !== undefined && (!Number.isInteger(threads) || threads < 1)) {
+      throw new Error(`Invalid thread count: ${threads}. Must be a positive integer.`);
+    }
+
+    if (threads !== undefined && typeof globalThis.SharedArrayBuffer === "undefined") {
+      this.#config.logger?.warn(
+        "threads option requires SharedArrayBuffer (COOP/COEP headers). Falling back to single-threaded.",
+      );
+    }
 
     return {
       cdnUrl: CDN_URL,
@@ -74,6 +84,9 @@ export class RelayerWeb implements RelayerSDK {
       csrfToken: security?.getCsrfToken?.() ?? "",
       integrity: security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
       logger: this.#config.logger,
+      // Public API uses `threads` (plural, "how many threads"); upstream
+      // `initSDK` expects `thread` (singular) — rename at the boundary.
+      thread: threads,
     };
   }
 
