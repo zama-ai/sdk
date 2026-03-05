@@ -1,134 +1,138 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { test as base, describe, expect } from "../../test-fixtures";
 import { IndexedDBStorage } from "../indexeddb-storage";
 
 // fake-indexeddb/auto is loaded via vitest.setup.ts, providing a global
 // IndexedDB implementation in the jsdom environment.
 
+interface IdbFixtures {
+  idbStorage: IndexedDBStorage;
+}
+
+const iit = base.extend<IdbFixtures>({
+  // eslint-disable-next-line no-empty-pattern
+  idbStorage: async ({}, use) => {
+    await use(new IndexedDBStorage(`TestDB-${Date.now()}-${Math.random()}`));
+  },
+});
+
 describe("IndexedDBStorage", () => {
-  let storage: IndexedDBStorage;
-
-  beforeEach(() => {
-    // Use a unique DB name per test to avoid cross-test contamination
-    storage = new IndexedDBStorage(`TestDB-${Date.now()}-${Math.random()}`);
-  });
-
   describe("setItem / getItem", () => {
-    it("stores and retrieves a string value", async () => {
-      await storage.set("wallet-0x1", "encrypted-creds-json");
+    iit("stores and retrieves a string value", async ({ idbStorage }) => {
+      await idbStorage.set("wallet-0x1", "encrypted-creds-json");
 
-      const result = await storage.get("wallet-0x1");
+      const result = await idbStorage.get("wallet-0x1");
       expect(result).toBe("encrypted-creds-json");
     });
 
-    it("returns null for a key that does not exist", async () => {
-      const result = await storage.get("nonexistent");
+    iit("returns null for a key that does not exist", async ({ idbStorage }) => {
+      const result = await idbStorage.get("nonexistent");
       expect(result).toBeNull();
     });
 
-    it("overwrites an existing value with put semantics", async () => {
-      await storage.set("key", "value-1");
-      await storage.set("key", "value-2");
+    iit("overwrites an existing value with put semantics", async ({ idbStorage }) => {
+      await idbStorage.set("key", "value-1");
+      await idbStorage.set("key", "value-2");
 
-      const result = await storage.get("key");
+      const result = await idbStorage.get("key");
       expect(result).toBe("value-2");
     });
 
-    it("stores multiple keys independently", async () => {
-      await storage.set("a", "alpha");
-      await storage.set("b", "bravo");
+    iit("stores multiple keys independently", async ({ idbStorage }) => {
+      await idbStorage.set("a", "alpha");
+      await idbStorage.set("b", "bravo");
 
-      expect(await storage.get("a")).toBe("alpha");
-      expect(await storage.get("b")).toBe("bravo");
+      expect(await idbStorage.get("a")).toBe("alpha");
+      expect(await idbStorage.get("b")).toBe("bravo");
     });
 
-    it("handles empty string values", async () => {
-      await storage.set("empty", "");
+    iit("handles empty string values", async ({ idbStorage }) => {
+      await idbStorage.set("empty", "");
 
-      const result = await storage.get("empty");
+      const result = await idbStorage.get("empty");
       expect(result).toBe("");
     });
 
-    it("handles large string values", async () => {
+    iit("handles large string values", async ({ idbStorage }) => {
       const largeValue = "x".repeat(100_000);
-      await storage.set("large", largeValue);
+      await idbStorage.set("large", largeValue);
 
-      const result = await storage.get("large");
+      const result = await idbStorage.get("large");
       expect(result).toBe(largeValue);
     });
   });
 
   describe("removeItem", () => {
-    it("removes an existing key", async () => {
-      await storage.set("key", "value");
-      await storage.delete("key");
+    iit("removes an existing key", async ({ idbStorage }) => {
+      await idbStorage.set("key", "value");
+      await idbStorage.delete("key");
 
-      const result = await storage.get("key");
+      const result = await idbStorage.get("key");
       expect(result).toBeNull();
     });
 
-    it("does not throw when removing a nonexistent key", async () => {
-      await expect(storage.delete("nonexistent")).resolves.toBeUndefined();
+    iit("does not throw when removing a nonexistent key", async ({ idbStorage }) => {
+      await expect(idbStorage.delete("nonexistent")).resolves.toBeUndefined();
     });
 
-    it("does not affect other keys", async () => {
-      await storage.set("a", "alpha");
-      await storage.set("b", "bravo");
+    iit("does not affect other keys", async ({ idbStorage }) => {
+      await idbStorage.set("a", "alpha");
+      await idbStorage.set("b", "bravo");
 
-      await storage.delete("a");
+      await idbStorage.delete("a");
 
-      expect(await storage.get("a")).toBeNull();
-      expect(await storage.get("b")).toBe("bravo");
+      expect(await idbStorage.get("a")).toBeNull();
+      expect(await idbStorage.get("b")).toBe("bravo");
     });
   });
 
   describe("clear", () => {
-    it("removes all entries", async () => {
-      await storage.set("a", "alpha");
-      await storage.set("b", "bravo");
-      await storage.set("c", "charlie");
+    iit("removes all entries", async ({ idbStorage }) => {
+      await idbStorage.set("a", "alpha");
+      await idbStorage.set("b", "bravo");
+      await idbStorage.set("c", "charlie");
 
-      await storage.clear();
+      await idbStorage.clear();
 
-      expect(await storage.get("a")).toBeNull();
-      expect(await storage.get("b")).toBeNull();
-      expect(await storage.get("c")).toBeNull();
+      expect(await idbStorage.get("a")).toBeNull();
+      expect(await idbStorage.get("b")).toBeNull();
+      expect(await idbStorage.get("c")).toBeNull();
     });
 
-    it("does not throw on an already-empty store", async () => {
-      await expect(storage.clear()).resolves.toBeUndefined();
+    iit("does not throw on an already-empty store", async ({ idbStorage }) => {
+      await expect(idbStorage.clear()).resolves.toBeUndefined();
     });
 
-    it("allows storing new items after clear", async () => {
-      await storage.set("key", "before");
-      await storage.clear();
-      await storage.set("key", "after");
+    iit("allows storing new items after clear", async ({ idbStorage }) => {
+      await idbStorage.set("key", "before");
+      await idbStorage.clear();
+      await idbStorage.set("key", "after");
 
-      expect(await storage.get("key")).toBe("after");
+      expect(await idbStorage.get("key")).toBe("after");
     });
   });
 
   describe("lazy initialization via #getDB()", () => {
-    it("initializes the database on first operation", async () => {
+    iit("initializes the database on first operation", async ({ idbStorage }) => {
       // The DB is not opened until the first method call
-      const result = await storage.get("key");
+      const result = await idbStorage.get("key");
       expect(result).toBeNull();
     });
 
-    it("reuses the same database connection across operations", async () => {
-      await storage.set("a", "1");
-      await storage.set("b", "2");
-      const a = await storage.get("a");
-      const b = await storage.get("b");
+    iit("reuses the same database connection across operations", async ({ idbStorage }) => {
+      await idbStorage.set("a", "1");
+      await idbStorage.set("b", "2");
+      const a = await idbStorage.get("a");
+      const b = await idbStorage.get("b");
 
       expect(a).toBe("1");
       expect(b).toBe("2");
     });
 
-    it("concurrent operations share a single init promise", async () => {
+    iit("concurrent operations share a single init promise", async ({ idbStorage }) => {
       const results = await Promise.all([
-        storage.set("a", "1"),
-        storage.set("b", "2"),
-        storage.get("a"),
+        idbStorage.set("a", "1"),
+        idbStorage.set("b", "2"),
+        idbStorage.get("a"),
       ]);
 
       // setItem returns undefined, getItem may return null or "1" depending on timing
@@ -138,9 +142,9 @@ describe("IndexedDBStorage", () => {
   });
 
   describe("version change and close events", () => {
-    it("recovers after the database is closed externally", async () => {
+    iit("recovers after the database is closed externally", async ({ idbStorage }) => {
       // Perform an operation to open the DB
-      await storage.set("key", "value");
+      await idbStorage.set("key", "value");
 
       // Simulate closing the DB by opening a higher version,
       // which triggers the onversionchange event on the existing connection
@@ -172,13 +176,13 @@ describe("IndexedDBStorage", () => {
   });
 
   describe("custom DB name and version", () => {
-    it("uses the provided database name", async () => {
+    iit("uses the provided database name", async () => {
       const custom = new IndexedDBStorage("CustomName");
       await custom.set("key", "value");
       expect(await custom.get("key")).toBe("value");
     });
 
-    it("uses the default name and version when none provided", async () => {
+    iit("uses the default name and version when none provided", async () => {
       const defaultStorage = new IndexedDBStorage();
       await defaultStorage.set("test", "value");
       expect(await defaultStorage.get("test")).toBe("value");

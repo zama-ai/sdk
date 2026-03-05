@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { useMetadata } from "../token/use-metadata";
@@ -14,23 +14,16 @@ import {
 } from "../token/use-fees";
 import { usePublicKey } from "../relayer/use-public-key";
 import { usePublicParams } from "../relayer/use-public-params";
-import { renderWithProviders, createMockSigner } from "./test-utils";
-
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 
 describe("query hooks", () => {
   describe("useMetadata", () => {
-    it("returns name, symbol, decimals", async () => {
-      const signer = createMockSigner();
-      // readContract is called for name(), symbol(), decimals() by ReadonlyToken
-      // Since the hook creates a ReadonlyToken internally, we mock signer.readContract
-      // to return different values for sequential calls
+    it("returns name, symbol, decimals", async ({ signer, tokenAddress, renderWithProviders }) => {
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce("TestToken")
         .mockResolvedValueOnce("TT")
         .mockResolvedValueOnce(18);
 
-      const { result } = renderWithProviders(() => useMetadata(TOKEN), { signer });
+      const { result } = renderWithProviders(() => useMetadata(tokenAddress), { signer });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });
@@ -38,11 +31,12 @@ describe("query hooks", () => {
   });
 
   describe("useIsConfidential", () => {
-    it("returns boolean result", async () => {
-      const signer = createMockSigner();
+    it("returns boolean result", async ({ signer, tokenAddress, renderWithProviders }) => {
       vi.mocked(signer.readContract).mockResolvedValue(true);
 
-      const { result } = renderWithProviders(() => useIsConfidential(TOKEN), { signer });
+      const { result } = renderWithProviders(() => useIsConfidential(tokenAddress), {
+        signer,
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(true);
@@ -50,11 +44,10 @@ describe("query hooks", () => {
   });
 
   describe("useIsWrapper", () => {
-    it("returns boolean result", async () => {
-      const signer = createMockSigner();
+    it("returns boolean result", async ({ signer, tokenAddress, renderWithProviders }) => {
       vi.mocked(signer.readContract).mockResolvedValue(false);
 
-      const { result } = renderWithProviders(() => useIsWrapper(TOKEN), { signer });
+      const { result } = renderWithProviders(() => useIsWrapper(tokenAddress), { signer });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(false);
@@ -62,11 +55,10 @@ describe("query hooks", () => {
   });
 
   describe("useTotalSupply", () => {
-    it("returns bigint result", async () => {
-      const signer = createMockSigner();
+    it("returns bigint result", async ({ signer, tokenAddress, renderWithProviders }) => {
       vi.mocked(signer.readContract).mockResolvedValue(42000n);
 
-      const { result } = renderWithProviders(() => useTotalSupply(TOKEN), { signer });
+      const { result } = renderWithProviders(() => useTotalSupply(tokenAddress), { signer });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(42000n);
@@ -74,9 +66,9 @@ describe("query hooks", () => {
   });
 
   describe("useConfidentialIsApproved", () => {
-    it("stays idle when spender is undefined", () => {
+    it("stays idle when spender is undefined", ({ tokenAddress, renderWithProviders }) => {
       const { result } = renderWithProviders(() =>
-        useConfidentialIsApproved({ tokenAddress: TOKEN, spender: undefined }),
+        useConfidentialIsApproved({ tokenAddress, spender: undefined }),
       );
 
       // With skipToken, the query should not fetch
@@ -84,14 +76,17 @@ describe("query hooks", () => {
       expect(result.current.data).toBeUndefined();
     });
 
-    it("executes when spender is provided", async () => {
-      const signer = createMockSigner();
+    it("executes when spender is provided", async ({
+      signer,
+      tokenAddress,
+      renderWithProviders,
+    }) => {
       vi.mocked(signer.readContract).mockResolvedValue(true);
 
       const { result } = renderWithProviders(
         () =>
           useConfidentialIsApproved({
-            tokenAddress: TOKEN,
+            tokenAddress,
             spender: "0x3333333333333333333333333333333333333333" as Address,
           }),
         { signer },
@@ -100,20 +95,45 @@ describe("query hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(true);
     });
+
+    // SDK-25: holder parameter
+    it("executes with holder parameter", async ({ signer, tokenAddress, renderWithProviders }) => {
+      vi.mocked(signer.readContract).mockResolvedValue(false);
+
+      const { result } = renderWithProviders(
+        () =>
+          useConfidentialIsApproved({
+            tokenAddress,
+            spender: "0x3333333333333333333333333333333333333333" as Address,
+            holder: "0x5555555555555555555555555555555555555555" as Address,
+          }),
+        { signer },
+      );
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toBe(false);
+      expect(signer.readContract).toHaveBeenCalled();
+    });
   });
 
   describe("useWrapperDiscovery", () => {
-    it("stays idle when coordinatorAddress is undefined", () => {
+    it("stays idle when coordinatorAddress is undefined", ({
+      tokenAddress,
+      renderWithProviders,
+    }) => {
       const { result } = renderWithProviders(() =>
-        useWrapperDiscovery({ tokenAddress: TOKEN, coordinatorAddress: undefined }),
+        useWrapperDiscovery({ tokenAddress, coordinatorAddress: undefined }),
       );
 
       expect(result.current.isFetching).toBe(false);
       expect(result.current.data).toBeUndefined();
     });
 
-    it("executes when coordinator is provided", async () => {
-      const signer = createMockSigner();
+    it("executes when coordinator is provided", async ({
+      signer,
+      tokenAddress,
+      renderWithProviders,
+    }) => {
       vi.mocked(signer.readContract).mockResolvedValue(
         "0x4444444444444444444444444444444444444444" as Address,
       );
@@ -121,7 +141,7 @@ describe("query hooks", () => {
       const { result } = renderWithProviders(
         () =>
           useWrapperDiscovery({
-            tokenAddress: TOKEN,
+            tokenAddress,
             coordinatorAddress: "0x5555555555555555555555555555555555555555" as Address,
           }),
         { signer },
@@ -139,29 +159,30 @@ describe("query hooks", () => {
       to: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
     };
 
-    it("useShieldFee calls signer.readContract", async () => {
-      const signer = createMockSigner();
+    it("useShieldFee calls signer.readContract", async ({ signer, renderWithProviders }) => {
       vi.mocked(signer.readContract).mockResolvedValue(50n);
 
-      const { result } = renderWithProviders(() => useShieldFee(feeConfig), { signer });
+      const { result } = renderWithProviders(() => useShieldFee(feeConfig), {
+        signer,
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(50n);
       expect(signer.readContract).toHaveBeenCalled();
     });
 
-    it("useUnshieldFee calls signer.readContract", async () => {
-      const signer = createMockSigner();
+    it("useUnshieldFee calls signer.readContract", async ({ signer, renderWithProviders }) => {
       vi.mocked(signer.readContract).mockResolvedValue(25n);
 
-      const { result } = renderWithProviders(() => useUnshieldFee(feeConfig), { signer });
+      const { result } = renderWithProviders(() => useUnshieldFee(feeConfig), {
+        signer,
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(25n);
     });
 
-    it("useBatchTransferFee calls signer.readContract", async () => {
-      const signer = createMockSigner();
+    it("useBatchTransferFee calls signer.readContract", async ({ signer, renderWithProviders }) => {
       vi.mocked(signer.readContract).mockResolvedValue(10n);
 
       const { result } = renderWithProviders(
@@ -175,8 +196,7 @@ describe("query hooks", () => {
       expect(result.current.data).toBe(10n);
     });
 
-    it("useFeeRecipient calls signer.readContract", async () => {
-      const signer = createMockSigner();
+    it("useFeeRecipient calls signer.readContract", async ({ signer, renderWithProviders }) => {
       vi.mocked(signer.readContract).mockResolvedValue("0xrecipient");
 
       const { result } = renderWithProviders(
@@ -192,7 +212,7 @@ describe("query hooks", () => {
   });
 
   describe("usePublicKey", () => {
-    it("returns public key data from relayer", async () => {
+    it("returns public key data from relayer", async ({ renderWithProviders }) => {
       const { result } = renderWithProviders(() => usePublicKey());
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -204,7 +224,7 @@ describe("query hooks", () => {
   });
 
   describe("usePublicParams", () => {
-    it("returns public params data from relayer", async () => {
+    it("returns public params data from relayer", async ({ renderWithProviders }) => {
       const { result } = renderWithProviders(() => usePublicParams(2048));
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));

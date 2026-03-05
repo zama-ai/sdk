@@ -158,7 +158,7 @@ export class ReadonlyToken {
       });
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
-      const value = result[handle] ?? BigInt(0);
+      const value = (result[handle] as bigint | undefined) ?? BigInt(0);
       await saveCachedBalance({
         storage: this.#storage,
         tokenAddress: this.address,
@@ -323,7 +323,7 @@ export class ReadonlyToken {
             durationDays: creds.durationDays,
           })
           .then(async (result) => {
-            const value = result[handle] ?? BigInt(0);
+            const value = (result[handle] as bigint | undefined) ?? BigInt(0);
             results.set(token.address, value);
             await saveCachedBalance({
               storage: tokenStorage,
@@ -583,7 +583,7 @@ export class ReadonlyToken {
       });
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
-      const value = result[handle] ?? BigInt(0);
+      const value = (result[handle] as bigint | undefined) ?? BigInt(0);
       await saveCachedBalance({
         storage: this.#storage,
         tokenAddress: this.address,
@@ -644,7 +644,7 @@ export class ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
       for (const handle of nonZeroHandles) {
-        results.set(handle, decrypted[handle] ?? BigInt(0));
+        results.set(handle, (decrypted[handle] as bigint | undefined) ?? BigInt(0));
       }
     } catch (error) {
       this.emit({

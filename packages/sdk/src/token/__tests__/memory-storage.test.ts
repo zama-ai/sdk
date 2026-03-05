@@ -1,34 +1,28 @@
-import { describe, it, expect } from "vitest";
-import { MemoryStorage } from "../memory-storage";
+import { describe, it, expect } from "../../test-fixtures";
 
 describe("MemoryStore", () => {
-  it("returns null for missing keys", async () => {
-    const store = new MemoryStorage();
-    expect(await store.get("missing")).toBeNull();
+  it("returns null for missing keys", async ({ storage }) => {
+    expect(await storage.get("missing")).toBeNull();
   });
 
-  it("stores and retrieves values", async () => {
-    const store = new MemoryStorage();
-    await store.set("key", "value");
-    expect(await store.get("key")).toBe("value");
+  it("stores and retrieves values", async ({ storage }) => {
+    await storage.set("key", "value");
+    expect(await storage.get("key")).toBe("value");
   });
 
-  it("overwrites existing values", async () => {
-    const store = new MemoryStorage();
-    await store.set("key", "old");
-    await store.set("key", "new");
-    expect(await store.get("key")).toBe("new");
+  it("overwrites existing values", async ({ storage }) => {
+    await storage.set("key", "old");
+    await storage.set("key", "new");
+    expect(await storage.get("key")).toBe("new");
   });
 
-  it("deletes values", async () => {
-    const store = new MemoryStorage();
-    await store.set("key", "value");
-    await store.delete("key");
-    expect(await store.get("missing")).toBeNull();
+  it("deletes values", async ({ storage }) => {
+    await storage.set("key", "value");
+    await storage.delete("key");
+    expect(await storage.get("missing")).toBeNull();
   });
 
-  it("removeItem is a no-op for missing keys", async () => {
-    const store = new MemoryStorage();
-    await expect(store.delete("missing")).resolves.not.toThrow();
+  it("removeItem is a no-op for missing keys", async ({ storage }) => {
+    await expect(storage.delete("missing")).resolves.not.toThrow();
   });
 });

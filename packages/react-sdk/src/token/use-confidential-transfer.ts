@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
+import type { Address, Token, TransactionResult, TransferCallbacks } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -16,6 +16,8 @@ export interface ConfidentialTransferParams {
   to: Address;
   /** Amount to transfer (plaintext — encrypted automatically). */
   amount: bigint;
+  /** Optional progress callbacks for the multi-step transfer flow. */
+  callbacks?: TransferCallbacks;
 }
 
 /** Configuration for {@link useConfidentialTransfer}. */
@@ -37,8 +39,8 @@ export interface UseConfidentialTransferConfig extends UseZamaConfig {
 export function confidentialTransferMutationOptions(token: Token) {
   return {
     mutationKey: ["confidentialTransfer", token.address] as const,
-    mutationFn: ({ to, amount }: ConfidentialTransferParams) =>
-      token.confidentialTransfer(to, amount),
+    mutationFn: ({ to, amount, callbacks }: ConfidentialTransferParams) =>
+      token.confidentialTransfer(to, amount, callbacks),
   };
 }
 
@@ -81,7 +83,7 @@ export function useConfidentialTransfer(
 
   return useMutation<TransactionResult, Error, ConfidentialTransferParams, Address>({
     mutationKey: ["confidentialTransfer", config.tokenAddress],
-    mutationFn: ({ to, amount }) => token.confidentialTransfer(to, amount),
+    mutationFn: ({ to, amount, callbacks }) => token.confidentialTransfer(to, amount, callbacks),
     ...options,
     onMutate: config.optimistic
       ? async (variables, mutationContext) => {

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "../test-fixtures";
 import { act, waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { useConfidentialTransferFrom } from "../token/use-confidential-transfer-from";
@@ -7,7 +7,6 @@ import { useUnshield } from "../token/use-unshield";
 import { useUnshieldAll } from "../token/use-unshield-all";
 import { useUnwrap } from "../token/use-unwrap";
 import { useUnwrapAll } from "../token/use-unwrap-all";
-import { useShield } from "../token/use-shield";
 import { useShieldETH } from "../token/use-shield-eth";
 import { useActivityFeed } from "../token/use-activity-feed";
 import { useConfidentialBalance } from "../token/use-confidential-balance";
@@ -18,48 +17,29 @@ import {
   confidentialHandleQueryKeys,
   confidentialHandlesQueryKeys,
 } from "../token/balance-query-keys";
-import { renderWithProviders, createMockSigner, createMockRelayer } from "./test-utils";
-
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
-
-/**
- * Creates a mock relayer whose publicDecrypt returns a value
- * that BigInt() can parse (the default mock returns "0x" which
- * is not a valid BigInt literal).
- */
-function createRelayerWithValidDecrypt() {
-  const relayer = createMockRelayer();
-  vi.mocked(relayer.publicDecrypt).mockResolvedValue({
-    clearValues: {},
-    abiEncodedClearValues: "0x0",
-    decryptionProof: "0xproof",
-  } as never);
-  return relayer;
-}
 
 // ---------------------------------------------------------------------------
 // Mutation hooks
 // ---------------------------------------------------------------------------
 
 describe("useConfidentialTransferFrom", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useConfidentialTransferFrom({ tokenAddress: TOKEN }),
-    );
+  it("provides mutate function", ({ tokenAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useConfidentialTransferFrom({ tokenAddress }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.confidentialTransferFrom on mutateAsync", async () => {
-    const signer = createMockSigner();
+  it("calls token.confidentialTransferFrom on mutateAsync", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(
-      () => useConfidentialTransferFrom({ tokenAddress: TOKEN }),
-      { signer },
-    );
+    const { result } = renderWithProviders(() => useConfidentialTransferFrom({ tokenAddress }), {
+      signer,
+    });
 
     await act(async () => {
       result.current.mutate({
@@ -73,12 +53,15 @@ describe("useConfidentialTransferFrom", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
-  it("invalidates balance caches on success", async () => {
-    const signer = createMockSigner();
+  it("invalidates balance caches on success", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(
-      () => useConfidentialTransferFrom({ tokenAddress: TOKEN }),
+      () => useConfidentialTransferFrom({ tokenAddress }),
       { signer },
     );
 
@@ -97,7 +80,7 @@ describe("useConfidentialTransferFrom", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: confidentialHandleQueryKeys.token(tokenAddress),
       }),
     );
     expect(invalidateSpy).toHaveBeenCalledWith(
@@ -107,7 +90,7 @@ describe("useConfidentialTransferFrom", () => {
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: confidentialBalanceQueryKeys.token(tokenAddress),
       }),
     );
     expect(invalidateSpy).toHaveBeenCalledWith(
@@ -119,19 +102,27 @@ describe("useConfidentialTransferFrom", () => {
 });
 
 describe("useFinalizeUnwrap", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() => useFinalizeUnwrap({ tokenAddress: TOKEN }));
+  it("provides mutate function", ({ tokenAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useFinalizeUnwrap({ tokenAddress }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.finalizeUnwrap on mutate", async () => {
-    const signer = createMockSigner();
-    const relayer = createRelayerWithValidDecrypt();
+  it("calls token.finalizeUnwrap on mutate", async ({
+    signer,
+    relayer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    vi.mocked(relayer.publicDecrypt).mockResolvedValue({
+      clearValues: {},
+      abiEncodedClearValues: "0x0",
+      decryptionProof: "0xproof",
+    } as never);
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useFinalizeUnwrap({ tokenAddress: TOKEN }), {
+    const { result } = renderWithProviders(() => useFinalizeUnwrap({ tokenAddress }), {
       signer,
       relayer,
     });
@@ -145,15 +136,23 @@ describe("useFinalizeUnwrap", () => {
     expect(relayer.publicDecrypt).toHaveBeenCalled();
   });
 
-  it("invalidates balance caches on success", async () => {
-    const signer = createMockSigner();
-    const relayer = createRelayerWithValidDecrypt();
+  it("invalidates balance caches on success", async ({
+    signer,
+    relayer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    vi.mocked(relayer.publicDecrypt).mockResolvedValue({
+      clearValues: {},
+      abiEncodedClearValues: "0x0",
+      decryptionProof: "0xproof",
+    } as never);
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result, queryClient } = renderWithProviders(
-      () => useFinalizeUnwrap({ tokenAddress: TOKEN }),
-      { signer, relayer },
-    );
+    const { result, queryClient } = renderWithProviders(() => useFinalizeUnwrap({ tokenAddress }), {
+      signer,
+      relayer,
+    });
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const resetSpy = vi.spyOn(queryClient, "resetQueries");
@@ -166,30 +165,31 @@ describe("useFinalizeUnwrap", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: confidentialHandleQueryKeys.token(tokenAddress),
       }),
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: confidentialBalanceQueryKeys.token(tokenAddress),
       }),
     );
   });
 });
 
 describe("useUnwrap", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() => useUnwrap({ tokenAddress: TOKEN }));
+  it("provides mutate function", ({ tokenAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnwrap({ tokenAddress }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.unwrap on mutate", async () => {
-    const signer = createMockSigner();
+  it("calls token.unwrap on mutate", async ({ signer, tokenAddress, renderWithProviders }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useUnwrap({ tokenAddress: TOKEN }), { signer });
+    const { result } = renderWithProviders(() => useUnwrap({ tokenAddress }), {
+      signer,
+    });
 
     await act(async () => {
       result.current.mutate({ amount: 500n });
@@ -199,11 +199,14 @@ describe("useUnwrap", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
-  it("invalidates balance caches on success", async () => {
-    const signer = createMockSigner();
+  it("invalidates balance caches on success", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result, queryClient } = renderWithProviders(() => useUnwrap({ tokenAddress: TOKEN }), {
+    const { result, queryClient } = renderWithProviders(() => useUnwrap({ tokenAddress }), {
       signer,
     });
 
@@ -218,30 +221,37 @@ describe("useUnwrap", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: confidentialHandleQueryKeys.token(tokenAddress),
       }),
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: confidentialBalanceQueryKeys.token(tokenAddress),
       }),
     );
   });
 });
 
 describe("useUnwrapAll", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() => useUnwrapAll({ tokenAddress: TOKEN }));
+  it("provides mutate function", ({ tokenAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnwrapAll({ tokenAddress }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.unwrapAll on mutate", async () => {
-    const signer = createMockSigner();
+  it("calls token.unwrapAll on mutate", async ({
+    signer,
+    handle,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useUnwrapAll({ tokenAddress: TOKEN }), { signer });
+    const { result } = renderWithProviders(() => useUnwrapAll({ tokenAddress }), {
+      signer,
+    });
 
     await act(async () => {
       result.current.mutate();
@@ -251,14 +261,18 @@ describe("useUnwrapAll", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
-  it("invalidates balance caches on success", async () => {
-    const signer = createMockSigner();
+  it("invalidates balance caches on success", async ({
+    signer,
+    handle,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result, queryClient } = renderWithProviders(
-      () => useUnwrapAll({ tokenAddress: TOKEN }),
-      { signer },
-    );
+    const { result, queryClient } = renderWithProviders(() => useUnwrapAll({ tokenAddress }), {
+      signer,
+    });
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const resetSpy = vi.spyOn(queryClient, "resetQueries");
@@ -271,39 +285,37 @@ describe("useUnwrapAll", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: confidentialHandleQueryKeys.token(tokenAddress),
       }),
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: confidentialBalanceQueryKeys.token(tokenAddress),
       }),
     );
   });
 });
 
 describe("useUnshield", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useUnshield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
+  it("provides mutate function", ({ tokenAddress, wrapperAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnshield({ tokenAddress, wrapperAddress }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("reports error when receipt has no UnwrapRequested event", async () => {
-    // useUnshield orchestrates: unwrap -> waitForTransactionReceipt -> findUnwrapRequested -> finalizeUnwrap.
-    // With the default mock returning { logs: [] }, findUnwrapRequested returns undefined,
-    // causing a TransactionRevertedError.
-    const signer = createMockSigner();
+  it("reports error when receipt has no UnwrapRequested event", async ({
+    signer,
+    tokenAddress,
+    wrapperAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
-    const { result } = renderWithProviders(
-      () => useUnshield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-      { signer },
-    );
+    const { result } = renderWithProviders(() => useUnshield({ tokenAddress, wrapperAddress }), {
+      signer,
+    });
 
     await act(async () => {
       result.current.mutate({ amount: 300n });
@@ -315,25 +327,27 @@ describe("useUnshield", () => {
 });
 
 describe("useUnshieldAll", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useUnshieldAll({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
+  it("provides mutate function", ({ tokenAddress, wrapperAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnshieldAll({ tokenAddress, wrapperAddress }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("reports error when receipt has no UnwrapRequested event", async () => {
-    // Same orchestration flow as useUnshield: unwrapAll -> receipt -> findUnwrapRequested -> finalizeUnwrap.
-    const signer = createMockSigner();
+  it("reports error when receipt has no UnwrapRequested event", async ({
+    signer,
+    handle,
+    tokenAddress,
+    wrapperAddress,
+    renderWithProviders,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
-    const { result } = renderWithProviders(
-      () => useUnshieldAll({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-      { signer },
-    );
+    const { result } = renderWithProviders(() => useUnshieldAll({ tokenAddress, wrapperAddress }), {
+      signer,
+    });
 
     await act(async () => {
       result.current.mutate();
@@ -345,23 +359,24 @@ describe("useUnshieldAll", () => {
 });
 
 describe("useShieldETH", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
+  it("provides mutate function", ({ tokenAddress, wrapperAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useShieldETH({ tokenAddress, wrapperAddress }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
   });
 
-  it("calls token.shieldETH on mutate", async () => {
-    const signer = createMockSigner();
+  it("calls token.shieldETH on mutate", async ({
+    signer,
+    tokenAddress,
+    wrapperAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(
-      () => useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-      { signer },
-    );
+    const { result } = renderWithProviders(() => useShieldETH({ tokenAddress, wrapperAddress }), {
+      signer,
+    });
 
     await act(async () => {
       result.current.mutate({ amount: 1000000000000000000n });
@@ -371,14 +386,17 @@ describe("useShieldETH", () => {
     expect(signer.writeContract).toHaveBeenCalled();
   });
 
-  it("accepts optional value parameter", async () => {
-    const signer = createMockSigner();
+  it("accepts optional value parameter", async ({
+    signer,
+    tokenAddress,
+    wrapperAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(
-      () => useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-      { signer },
-    );
+    const { result } = renderWithProviders(() => useShieldETH({ tokenAddress, wrapperAddress }), {
+      signer,
+    });
 
     await act(async () => {
       result.current.mutate({
@@ -390,12 +408,16 @@ describe("useShieldETH", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
-  it("invalidates balance caches on success", async () => {
-    const signer = createMockSigner();
+  it("invalidates balance caches on success", async ({
+    signer,
+    tokenAddress,
+    wrapperAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(
-      () => useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+      () => useShieldETH({ tokenAddress, wrapperAddress }),
       { signer },
     );
 
@@ -410,12 +432,12 @@ describe("useShieldETH", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialHandleQueryKeys.token(TOKEN),
+        queryKey: confidentialHandleQueryKeys.token(tokenAddress),
       }),
     );
     expect(resetSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: confidentialBalanceQueryKeys.token(TOKEN),
+        queryKey: confidentialBalanceQueryKeys.token(tokenAddress),
       }),
     );
   });
@@ -426,11 +448,14 @@ describe("useShieldETH", () => {
 // ---------------------------------------------------------------------------
 
 describe("useConfidentialBalance", () => {
-  it("resolves the handle via phase 1 polling", async () => {
-    const signer = createMockSigner();
+  it("resolves the handle via phase 1 polling", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.readContract).mockResolvedValue("0xbalancehandle" as Address);
 
-    const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }), {
+    const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress }), {
       signer,
     });
 
@@ -438,52 +463,60 @@ describe("useConfidentialBalance", () => {
     expect(result.current.handleQuery.data).toBe("0xbalancehandle");
   });
 
-  it("disables downstream queries when getAddress fails", async () => {
-    const signer = createMockSigner();
+  it("disables downstream queries when getAddress fails", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.getAddress).mockRejectedValue(new Error("no wallet"));
 
-    const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }), {
+    const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress }), {
       signer,
     });
 
-    // Wait for the address query to settle in error state
     await waitFor(() => expect(result.current.handleQuery.isFetching).toBe(false));
-    // The handle and balance queries should stay disabled since signerAddress is undefined
     expect(result.current.handleQuery.data).toBeUndefined();
     expect(result.current.data).toBeUndefined();
   });
 
-  it("does not fetch when signer address is unavailable", () => {
-    const signer = createMockSigner();
+  it("does not fetch when signer address is unavailable", ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.getAddress).mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }), {
+    const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress }), {
       signer,
     });
 
     expect(result.current.handleQuery.isFetching).toBe(false);
   });
 
-  it("balance query stays disabled when handle is not yet resolved", () => {
-    const signer = createMockSigner();
-    // readContract never resolves, so handle stays undefined
+  it("balance query stays disabled when handle is not yet resolved", ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.readContract).mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress: TOKEN }), {
+    const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress }), {
       signer,
     });
 
-    // The balance (phase 2) query should not be fetching without a handle
     expect(result.current.isFetching).toBe(false);
   });
 });
 
 describe("useConfidentialBalances", () => {
-  it("resolves handles for multiple tokens", async () => {
-    const signer = createMockSigner();
+  it("resolves handles for multiple tokens", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.readContract).mockResolvedValue("0xhandle" as Address);
 
-    const tokens = [TOKEN, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address];
+    const tokens = [tokenAddress, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address];
 
     const { result } = renderWithProviders(
       () => useConfidentialBalances({ tokenAddresses: tokens }),
@@ -494,9 +527,7 @@ describe("useConfidentialBalances", () => {
     expect(result.current.handlesQuery.data).toHaveLength(2);
   });
 
-  it("stays idle when tokenAddresses is empty", () => {
-    const signer = createMockSigner();
-
+  it("stays idle when tokenAddresses is empty", ({ signer, renderWithProviders }) => {
     const { result } = renderWithProviders(() => useConfidentialBalances({ tokenAddresses: [] }), {
       signer,
     });
@@ -504,28 +535,32 @@ describe("useConfidentialBalances", () => {
     expect(result.current.handlesQuery.isFetching).toBe(false);
   });
 
-  it("disables downstream queries when getAddress fails", async () => {
-    const signer = createMockSigner();
+  it("disables downstream queries when getAddress fails", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.getAddress).mockRejectedValue(new Error("disconnected"));
 
     const { result } = renderWithProviders(
-      () => useConfidentialBalances({ tokenAddresses: [TOKEN] }),
+      () => useConfidentialBalances({ tokenAddresses: [tokenAddress] }),
       { signer },
     );
 
-    // Wait for the address query to settle in error state
     await waitFor(() => expect(result.current.handlesQuery.isFetching).toBe(false));
-    // The handles and balances queries should stay disabled since signerAddress is undefined
     expect(result.current.handlesQuery.data).toBeUndefined();
     expect(result.current.data).toBeUndefined();
   });
 
-  it("does not fetch when signer address is unavailable", () => {
-    const signer = createMockSigner();
+  it("does not fetch when signer address is unavailable", ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.getAddress).mockReturnValue(new Promise(() => {}));
 
     const { result } = renderWithProviders(
-      () => useConfidentialBalances({ tokenAddresses: [TOKEN] }),
+      () => useConfidentialBalances({ tokenAddresses: [tokenAddress] }),
       { signer },
     );
 
@@ -534,11 +569,11 @@ describe("useConfidentialBalances", () => {
 });
 
 describe("useActivityFeed", () => {
-  it("stays idle when logs is undefined", () => {
+  it("stays idle when logs is undefined", ({ tokenAddress, userAddress, renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
       useActivityFeed({
-        tokenAddress: TOKEN,
-        userAddress: "0x2222222222222222222222222222222222222222" as Address,
+        tokenAddress,
+        userAddress,
         logs: undefined,
       }),
     );
@@ -547,10 +582,10 @@ describe("useActivityFeed", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it("stays idle when userAddress is undefined", () => {
+  it("stays idle when userAddress is undefined", ({ tokenAddress, renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
       useActivityFeed({
-        tokenAddress: TOKEN,
+        tokenAddress,
         userAddress: undefined,
         logs: [],
       }),
@@ -560,14 +595,17 @@ describe("useActivityFeed", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it("returns empty array when logs is empty", async () => {
-    const signer = createMockSigner();
-
+  it("returns empty array when logs is empty", async ({
+    signer,
+    tokenAddress,
+    userAddress,
+    renderWithProviders,
+  }) => {
     const { result } = renderWithProviders(
       () =>
         useActivityFeed({
-          tokenAddress: TOKEN,
-          userAddress: "0x2222222222222222222222222222222222222222" as Address,
+          tokenAddress,
+          userAddress,
           logs: [],
         }),
       { signer },
@@ -577,14 +615,17 @@ describe("useActivityFeed", () => {
     expect(result.current.data).toEqual([]);
   });
 
-  it("is enabled when both userAddress and logs are provided", async () => {
-    const signer = createMockSigner();
-
+  it("is enabled when both userAddress and logs are provided", async ({
+    signer,
+    tokenAddress,
+    userAddress,
+    renderWithProviders,
+  }) => {
     const { result } = renderWithProviders(
       () =>
         useActivityFeed({
-          tokenAddress: TOKEN,
-          userAddress: "0x2222222222222222222222222222222222222222" as Address,
+          tokenAddress,
+          userAddress,
           logs: [],
           decrypt: false,
         }),
