@@ -56,6 +56,8 @@ export interface RelayerWebConfig {
    * When omitted, the relayer SDK uses its default (single-threaded).
    */
   threads?: number;
+  /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
+  onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
 }
 
 /** Result from encryption operation */
