@@ -100,6 +100,26 @@ describe("query hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toBe(true);
     });
+
+    // SDK-25: holder parameter
+    it("executes with holder parameter", async () => {
+      const signer = createMockSigner();
+      vi.mocked(signer.readContract).mockResolvedValue(false);
+
+      const { result } = renderWithProviders(
+        () =>
+          useConfidentialIsApproved({
+            tokenAddress: TOKEN,
+            spender: "0x3333333333333333333333333333333333333333" as Address,
+            holder: "0x5555555555555555555555555555555555555555" as Address,
+          }),
+        { signer },
+      );
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toBe(false);
+      expect(signer.readContract).toHaveBeenCalled();
+    });
   });
 
   describe("useWrapperDiscovery", () => {

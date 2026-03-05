@@ -414,7 +414,7 @@ describe("Token", () => {
       );
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
-        values: [100n],
+        values: [{ value: 100n, type: "euint64" }],
         contractAddress: TOKEN,
         userAddress: USER,
       });
@@ -497,7 +497,7 @@ describe("Token", () => {
       const result = await token.unwrap(50n);
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
-        values: [50n],
+        values: [{ value: 50n, type: "euint64" }],
         contractAddress: TOKEN,
         userAddress: USER,
       });
@@ -723,7 +723,7 @@ describe("Token", () => {
       const result = await token.confidentialTransferFrom(from, to, 200n);
 
       expect(sdk.encrypt).toHaveBeenCalledWith({
-        values: [200n],
+        values: [{ value: 200n, type: "euint64" }],
         contractAddress: TOKEN,
         userAddress: from,
       });

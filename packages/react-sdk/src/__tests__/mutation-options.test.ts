@@ -45,7 +45,7 @@ it("confidentialTransferMutationOptions", async () => {
 
   expect(opts.mutationKey).toEqual(["confidentialTransfer", TOKEN_ADDR]);
   await opts.mutationFn({ to: "0xto" as Address, amount: 100n });
-  expect(token.confidentialTransfer).toHaveBeenCalledWith("0xto", 100n);
+  expect(token.confidentialTransfer).toHaveBeenCalledWith("0xto", 100n, undefined);
 });
 
 it("confidentialTransferFromMutationOptions", async () => {
@@ -54,7 +54,7 @@ it("confidentialTransferFromMutationOptions", async () => {
 
   expect(opts.mutationKey).toEqual(["confidentialTransferFrom", TOKEN_ADDR]);
   await opts.mutationFn({ from: "0xfrom" as Address, to: "0xto" as Address, amount: 100n });
-  expect(token.confidentialTransferFrom).toHaveBeenCalledWith("0xfrom", "0xto", 100n);
+  expect(token.confidentialTransferFrom).toHaveBeenCalledWith("0xfrom", "0xto", 100n, undefined);
 });
 
 it("confidentialApproveMutationOptions", async () => {
@@ -175,7 +175,7 @@ it("encryptMutationOptions", async () => {
 
   expect(opts.mutationKey).toEqual(["encrypt"]);
   const params = {
-    values: [1000n],
+    values: [{ value: 1000n, type: "euint64" as const }],
     contractAddress: "0xtoken" as Address,
     userAddress: "0xuser" as Address,
   };

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
-import { useZamaSDK, ZamaProvider } from "../provider";
+import { useReadonlyZamaSDK, useZamaSDK, ZamaProvider } from "../provider";
 import {
   createMockRelayer,
   createMockSigner,
@@ -28,9 +28,7 @@ vi.mock("@zama-fhe/sdk", async (importOriginal) => {
 
 describe("ZamaProvider & useZamaSDK", () => {
   it("throws when used outside provider", () => {
-    expect(() => renderHook(() => useZamaSDK())).toThrow(
-      "useZamaSDK must be used within a ZamaProvider",
-    );
+    expect(() => renderHook(() => useZamaSDK())).toThrow("useZamaSDK requires a connected signer");
   });
 
   it("returns a ZamaSDK instance inside provider", () => {
@@ -92,5 +90,51 @@ describe("ZamaProvider & useZamaSDK", () => {
     const wrappedOnEvent = tokenSDKConstructorArgs[0]!.onEvent!;
     wrappedOnEvent({ type: "credentials:loading", timestamp: 1, contractAddresses: [] } as never);
     expect(onEvent).toHaveBeenCalledTimes(1);
+  });
+
+  // SDK-18: Optional signer / read-only mode
+  it("useOptionalZamaSDK returns null when no signer is provided", () => {
+    const relayer = createMockRelayer();
+    const storage = createMockStorage();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <ZamaProvider relayer={relayer} storage={storage}>
+          {children}
+        </ZamaProvider>
+      </QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useReadonlyZamaSDK(), { wrapper });
+    expect(result.current).toBeNull();
+  });
+
+  it("useOptionalZamaSDK returns SDK when signer is provided", () => {
+    const { result } = renderWithProviders(() => useReadonlyZamaSDK());
+    expect(result.current).not.toBeNull();
+    expect(result.current).toBeDefined();
+  });
+
+  it("useZamaSDK throws descriptive error when no signer", () => {
+    const relayer = createMockRelayer();
+    const storage = createMockStorage();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <ZamaProvider relayer={relayer} storage={storage}>
+          {children}
+        </ZamaProvider>
+      </QueryClientProvider>
+    );
+
+    expect(() => renderHook(() => useZamaSDK(), { wrapper })).toThrow(
+      "useZamaSDK requires a connected signer",
+    );
   });
 });

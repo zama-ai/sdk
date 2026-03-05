@@ -131,7 +131,7 @@ describe("query options factories", () => {
       const token = createMockToken();
       const opts = confidentialIsApprovedQueryOptions(token as unknown as Token, SPENDER);
 
-      expect(opts.queryKey).toEqual(["confidentialIsApproved", TOKEN_ADDR, SPENDER]);
+      expect(opts.queryKey).toEqual(["confidentialIsApproved", TOKEN_ADDR, SPENDER, ""]);
     });
 
     it("queryFn calls token.isApproved", async () => {
@@ -139,7 +139,7 @@ describe("query options factories", () => {
       const opts = confidentialIsApprovedQueryOptions(token as unknown as Token, SPENDER);
       const result = await opts.queryFn();
 
-      expect(token.isApproved).toHaveBeenCalledWith(SPENDER);
+      expect(token.isApproved).toHaveBeenCalledWith(SPENDER, undefined);
       expect(result).toBe(true);
     });
   });

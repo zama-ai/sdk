@@ -151,7 +151,7 @@ export function TokenTable({
             <TokenRow
               key={addr}
               address={addr}
-              balance={balances?.get(addr)}
+              balance={balances?.balances.get(addr)}
               revealed={revealed}
               isDecrypting={revealed && isFetching}
               LinkComponent={LinkComponent}

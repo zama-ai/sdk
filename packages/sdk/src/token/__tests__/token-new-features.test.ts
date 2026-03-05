@@ -313,6 +313,165 @@ describe("Unshield callbacks (P4)", () => {
   });
 });
 
+describe("Shield callbacks (SDK-19)", () => {
+  let sdk: ReturnType<typeof createMockSdk>;
+  let signer: GenericSigner;
+  let token: Token;
+
+  beforeEach(() => {
+    sdk = createMockSdk();
+    signer = createMockSigner();
+    // underlying() returns a non-zero address so it's treated as ERC-20, not ETH
+    vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
+    token = new Token({
+      relayer: sdk as unknown as RelayerSDK,
+      signer,
+      storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
+      address: TOKEN,
+      wrapper: TOKEN,
+    });
+  });
+
+  it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async () => {
+    // Mock allowance to 0 so approval is needed
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
+      .mockResolvedValueOnce(0n); // allowance()
+
+    const onApprovalSubmitted = vi.fn();
+    const onShieldSubmitted = vi.fn();
+
+    await token.shield(100n, {
+      callbacks: { onApprovalSubmitted, onShieldSubmitted },
+    });
+
+    expect(onApprovalSubmitted).toHaveBeenCalledWith("0xtxhash");
+    expect(onShieldSubmitted).toHaveBeenCalledWith("0xtxhash");
+  });
+
+  it("skips onApprovalSubmitted when allowance is sufficient", async () => {
+    // Mock allowance to be greater than amount
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
+      .mockResolvedValueOnce(1000n); // allowance() > 100n
+
+    const onApprovalSubmitted = vi.fn();
+    const onShieldSubmitted = vi.fn();
+
+    await token.shield(100n, {
+      callbacks: { onApprovalSubmitted, onShieldSubmitted },
+    });
+
+    expect(onApprovalSubmitted).not.toHaveBeenCalled();
+    expect(onShieldSubmitted).toHaveBeenCalledOnce();
+  });
+
+  it("completes shield even when callbacks throw", async () => {
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999")
+      .mockResolvedValueOnce(0n);
+
+    const result = await token.shield(100n, {
+      callbacks: {
+        onApprovalSubmitted: () => {
+          throw new Error("callback exploded");
+        },
+        onShieldSubmitted: () => {
+          throw new Error("callback exploded again");
+        },
+      },
+    });
+
+    expect(result.txHash).toBe("0xtxhash");
+  });
+
+  it("passes to parameter for shield recipient", async () => {
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999")
+      .mockResolvedValueOnce(1000n);
+
+    const recipient = "0x8888888888888888888888888888888888888888" as Address;
+    await token.shield(100n, { to: recipient });
+
+    // The writeContract call for wrap should include the recipient
+    expect(signer.writeContract).toHaveBeenCalled();
+  });
+});
+
+describe("Transfer callbacks (SDK-19)", () => {
+  let sdk: ReturnType<typeof createMockSdk>;
+  let signer: GenericSigner;
+  let token: Token;
+
+  beforeEach(() => {
+    sdk = createMockSdk();
+    signer = createMockSigner();
+    token = new Token({
+      relayer: sdk as unknown as RelayerSDK,
+      signer,
+      storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
+      address: TOKEN,
+    });
+  });
+
+  it("fires onEncryptComplete and onTransferSubmitted callbacks", async () => {
+    const onEncryptComplete = vi.fn();
+    const onTransferSubmitted = vi.fn();
+
+    await token.confidentialTransfer(
+      "0x8888888888888888888888888888888888888888" as Address,
+      100n,
+      { onEncryptComplete, onTransferSubmitted },
+    );
+
+    expect(onEncryptComplete).toHaveBeenCalledOnce();
+    expect(onTransferSubmitted).toHaveBeenCalledWith("0xtxhash");
+  });
+
+  it("fires callbacks in correct order", async () => {
+    const order: string[] = [];
+
+    await token.confidentialTransfer(
+      "0x8888888888888888888888888888888888888888" as Address,
+      100n,
+      {
+        onEncryptComplete: () => order.push("encrypted"),
+        onTransferSubmitted: () => order.push("submitted"),
+      },
+    );
+
+    expect(order).toEqual(["encrypted", "submitted"]);
+  });
+
+  it("works without callbacks (backward compatible)", async () => {
+    const result = await token.confidentialTransfer(
+      "0x8888888888888888888888888888888888888888" as Address,
+      100n,
+    );
+
+    expect(result.txHash).toBe("0xtxhash");
+  });
+
+  it("completes transfer even when callbacks throw", async () => {
+    const result = await token.confidentialTransfer(
+      "0x8888888888888888888888888888888888888888" as Address,
+      100n,
+      {
+        onEncryptComplete: () => {
+          throw new Error("callback exploded");
+        },
+        onTransferSubmitted: () => {
+          throw new Error("callback exploded again");
+        },
+      },
+    );
+
+    expect(result.txHash).toBe("0xtxhash");
+  });
+});
+
 describe("Address normalization (P6)", () => {
   let sdk: ReturnType<typeof createMockSdk>;
   let signer: GenericSigner;

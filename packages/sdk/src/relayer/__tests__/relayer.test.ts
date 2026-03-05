@@ -272,7 +272,7 @@ describe("RelayerWeb", () => {
       });
 
       await relayer.encrypt({
-        values: [100n],
+        values: [{ value: 100n, type: "euint64" as const }],
         contractAddress: "0xContract" as `0x${string}`,
         userAddress: "0xUser" as `0x${string}`,
       });
@@ -288,7 +288,7 @@ describe("RelayerWeb", () => {
       });
 
       await relayer.encrypt({
-        values: [100n],
+        values: [{ value: 100n, type: "euint64" as const }],
         contractAddress: "0xContract" as `0x${string}`,
         userAddress: "0xUser" as `0x${string}`,
       });
@@ -305,7 +305,7 @@ describe("RelayerWeb", () => {
       });
 
       await relayer.encrypt({
-        values: [100n],
+        values: [{ value: 100n, type: "euint64" as const }],
         contractAddress: "0xContract" as `0x${string}`,
         userAddress: "0xUser" as `0x${string}`,
       });
@@ -355,7 +355,7 @@ describe("RelayerWeb", () => {
       mockWorkerClient.encrypt.mockResolvedValue({ handles, inputProof });
 
       const result = await relayer.encrypt({
-        values: [42n],
+        values: [{ value: 42n, type: "euint64" as const }],
         contractAddress: "0xC" as `0x${string}`,
         userAddress: "0xU" as `0x${string}`,
       });
@@ -487,6 +487,45 @@ describe("RelayerWeb", () => {
 
       expect(result).toEqual(pp);
       expect(mockWorkerClient.getPublicParams).toHaveBeenCalledWith(2048);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // SDK-17: Status tracking
+  // -------------------------------------------------------------------------
+
+  describe("status tracking", () => {
+    it("starts in idle state", () => {
+      const relayer = createWebRelayer();
+      expect(relayer.status).toBe("idle");
+      expect(relayer.initError).toBeUndefined();
+    });
+
+    it("transitions to ready after successful init", async () => {
+      const onStatusChange = vi.fn();
+      const relayer = createWebRelayer({ onStatusChange });
+      mockWorkerClient.generateKeypair.mockResolvedValue({
+        publicKey: "pk",
+        privateKey: "sk",
+      });
+
+      await relayer.generateKeypair();
+
+      expect(relayer.status).toBe("ready");
+      expect(onStatusChange).toHaveBeenCalledWith("initializing", undefined);
+      expect(onStatusChange).toHaveBeenCalledWith("ready", undefined);
+    });
+
+    it("transitions to error when init fails", async () => {
+      const onStatusChange = vi.fn();
+      const relayer = createWebRelayer({ onStatusChange });
+      mockWorkerClient.initWorker.mockRejectedValue(new Error("WASM failed"));
+
+      await expect(relayer.generateKeypair()).rejects.toThrow("Failed to initialize FHE worker");
+
+      expect(relayer.status).toBe("error");
+      expect(relayer.initError).toBeInstanceOf(Error);
+      expect(onStatusChange).toHaveBeenCalledWith("error", expect.any(Error));
     });
   });
 });
@@ -664,7 +703,7 @@ describe("RelayerNode", () => {
       mockPool.encrypt.mockResolvedValue({ handles, inputProof });
 
       const result = await relayer.encrypt({
-        values: [42n],
+        values: [{ value: 42n, type: "euint64" as const }],
         contractAddress: "0xC" as `0x${string}`,
         userAddress: "0xU" as `0x${string}`,
       });

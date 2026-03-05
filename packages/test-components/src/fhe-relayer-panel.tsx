@@ -117,7 +117,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
         <button
           onClick={() =>
             encrypt.mutate({
-              values: [42n],
+              values: [{ value: 42n, type: "euint64" as const }],
               contractAddress: tokenAddresses[0]!,
               userAddress: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as Address,
             })
