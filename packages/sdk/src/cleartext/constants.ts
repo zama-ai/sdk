@@ -1,14 +1,15 @@
-export enum FheType {
-  Bool = 0,
-  Uint4 = 1,
-  Uint8 = 2,
-  Uint16 = 3,
-  Uint32 = 4,
-  Uint64 = 5,
-  Uint128 = 6,
-  Uint160 = 7,
-  Uint256 = 8,
-}
+export const FheType = {
+  Bool: 0,
+  Uint4: 1,
+  Uint8: 2,
+  Uint16: 3,
+  Uint32: 4,
+  Uint64: 5,
+  Uint128: 6,
+  Uint160: 7,
+  Uint256: 8,
+} as const;
+export type FheType = (typeof FheType)[keyof typeof FheType];
 
 export const FHE_BIT_WIDTHS: Record<FheType, number> = {
   [FheType.Bool]: 1,
