@@ -38,6 +38,8 @@ export interface ZamaSDKConfig {
   sessionTTL?: number;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
+  /** ACL contract address. Required for delegation methods on tokens created by this SDK. */
+  aclAddress?: Address;
 }
 
 /**
@@ -51,6 +53,7 @@ export class ZamaSDK {
   readonly sessionStorage: GenericStorage;
   readonly credentials: CredentialsManager;
   readonly #onEvent: ZamaSDKEventListener;
+  readonly #aclAddress: Address | undefined;
   #unsubscribeSigner?: () => void;
   #identityReady: Promise<void>;
   #lastAddress: string | null = null;
@@ -62,6 +65,9 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.#onEvent = config.onEvent ?? function () {};
+    this.#aclAddress = config.aclAddress
+      ? normalizeAddress(config.aclAddress, "aclAddress")
+      : undefined;
     this.credentials = new CredentialsManager({
       relayer: this.relayer,
       signer: this.signer,
@@ -138,6 +144,7 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
       address: normalizeAddress(address, "address"),
+      aclAddress: this.#aclAddress,
       onEvent: this.#onEvent,
     });
   }
@@ -158,6 +165,7 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
       address: normalizeAddress(address, "address"),
+      aclAddress: this.#aclAddress,
       wrapper: wrapper ? normalizeAddress(wrapper, "wrapper") : undefined,
       onEvent: this.#onEvent,
     });

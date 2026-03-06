@@ -3,8 +3,10 @@ import {
   approveContract,
   confidentialTransferContract,
   confidentialTransferFromContract,
+  delegateForUserDecryptionContract,
   finalizeUnwrapContract,
   isOperatorContract,
+  revokeDelegationContract,
   setOperatorContract,
   underlyingContract,
   unwrapContract,
@@ -673,6 +675,50 @@ export class Token extends ReadonlyToken {
       });
       if (error instanceof ZamaError) throw error;
       throw new ApprovalFailedError("ERC-20 approval failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+  }
+
+  // DELEGATION OPERATIONS
+
+  async delegateDecryption(
+    delegate: Address,
+    options?: { expirationDate?: Date },
+  ): Promise<TransactionResult> {
+    const acl = this.requireAclAddress();
+    const normalizedDelegate = normalizeAddress(delegate, "delegate");
+    const expirationDate = options?.expirationDate
+      ? BigInt(Math.floor(options.expirationDate.getTime() / 1000))
+      : 2n ** 64n - 1n;
+
+    try {
+      const txHash = await this.signer.writeContract(
+        delegateForUserDecryptionContract(acl, normalizedDelegate, this.address, expirationDate),
+      );
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
+    } catch (error) {
+      if (error instanceof ZamaError) throw error;
+      throw new TransactionRevertedError("Delegation transaction failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+  }
+
+  async revokeDelegation(delegate: Address): Promise<TransactionResult> {
+    const acl = this.requireAclAddress();
+    const normalizedDelegate = normalizeAddress(delegate, "delegate");
+
+    try {
+      const txHash = await this.signer.writeContract(
+        revokeDelegationContract(acl, normalizedDelegate, this.address),
+      );
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
+    } catch (error) {
+      if (error instanceof ZamaError) throw error;
+      throw new TransactionRevertedError("Revoke delegation transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
     }

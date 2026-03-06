@@ -10,12 +10,18 @@ import {
   underlyingContract,
   wrapperExistsContract,
   getWrapperContract,
+  getDelegationExpiryContract,
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address, Handle } from "../relayer/relayer-sdk.types";
 import { normalizeAddress, normalizeHandle, pLimit } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
-import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
+import {
+  ConfigurationError,
+  DecryptionFailedError,
+  NoCiphertextError,
+  RelayerRequestFailedError,
+} from "./errors";
 import { CredentialsManager } from "./credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
@@ -62,6 +68,8 @@ export interface ReadonlyTokenConfig {
   credentials?: CredentialsManager;
   /** Address of the confidential token contract. */
   address: Address;
+  /** ACL contract address. Required for delegation methods. */
+  aclAddress?: Address;
   /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
   keypairTTL?: number;
   /** Optional structured event listener for debugging and telemetry. */
@@ -78,6 +86,7 @@ export class ReadonlyToken {
   protected readonly sdk: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
+  protected readonly aclAddress: Address | undefined;
   readonly #storage: GenericStorage;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
@@ -96,6 +105,9 @@ export class ReadonlyToken {
     this.sdk = config.relayer;
     this.signer = config.signer;
     this.address = address;
+    this.aclAddress = config.aclAddress
+      ? normalizeAddress(config.aclAddress, "aclAddress")
+      : undefined;
     this.#storage = config.storage;
     this.#onEvent = config.onEvent;
   }
@@ -507,6 +519,29 @@ export class ReadonlyToken {
     if (tokens.length === 0) return;
     const allAddresses = tokens.map((t) => t.address);
     await tokens[0]!.credentials.allow(...allAddresses);
+  }
+
+  protected requireAclAddress(): Address {
+    if (!this.aclAddress) {
+      throw new ConfigurationError(
+        "aclAddress is required for delegation operations. Pass it in the token config or ZamaSDKConfig.",
+      );
+    }
+    return this.aclAddress;
+  }
+
+  async isDelegated(delegator: Address, delegate: Address): Promise<boolean> {
+    const expiry = await this.getDelegationExpiry(delegator, delegate);
+    return expiry > 0n && expiry >= BigInt(Math.floor(Date.now() / 1000));
+  }
+
+  async getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint> {
+    const acl = this.requireAclAddress();
+    const normalizedDelegator = normalizeAddress(delegator, "delegator");
+    const normalizedDelegate = normalizeAddress(delegate, "delegate");
+    return this.signer.readContract(
+      getDelegationExpiryContract(acl, normalizedDelegator, normalizedDelegate, this.address),
+    );
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
