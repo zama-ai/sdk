@@ -177,6 +177,7 @@ import { sortByBlockNumber } from '@zama-fhe/sdk';
 import { StoredCredentials } from '@zama-fhe/sdk';
 import { supportsInterfaceContract } from '@zama-fhe/sdk';
 import { symbolContract } from '@zama-fhe/sdk';
+import * as _tanstack_query_core from '@tanstack/query-core';
 import * as _tanstack_react_query from '@tanstack/react-query';
 import { Token } from '@zama-fhe/sdk';
 import { TOKEN_TOPICS } from '@zama-fhe/sdk';
@@ -710,7 +711,7 @@ export { UnwrapRequestedEvent }
 export { UnwrapSubmittedEvent }
 
 // @public
-export function useActivityFeed(config: UseActivityFeedConfig): _tanstack_react_query.UseQueryResult<_zama_fhe_sdk.ActivityItem[], Error>;
+export function useActivityFeed(config: UseActivityFeedConfig): _tanstack_react_query.UseQueryResult<ActivityItem[], Error>;
 
 // @public
 export interface UseActivityFeedConfig {
@@ -758,8 +759,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -786,8 +787,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -814,8 +815,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -842,8 +843,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -870,8 +871,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -898,8 +899,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 };
 
@@ -938,8 +939,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -966,8 +967,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -994,8 +995,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -1022,8 +1023,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -1050,8 +1051,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -1078,8 +1079,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 };
 
@@ -1094,7 +1095,7 @@ export interface UseConfidentialBalancesConfig {
 export type UseConfidentialBalancesOptions = Omit<UseQueryOptions<ConfidentialBalancesData, Error>, "queryKey" | "queryFn">;
 
 // @public
-export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<boolean, Error>;
+export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<unknown, Error>;
 
 // @public
 export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
@@ -1157,7 +1158,7 @@ export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOp
 export function useGenerateKeypair(): _tanstack_react_query.UseMutationResult<KeypairType<string>, Error, void, unknown>;
 
 // @public
-export function useIsAllowed(): _tanstack_react_query.UseQueryResult<boolean, Error>;
+export function useIsAllowed(): _tanstack_react_query.UseQueryResult<unknown, Error>;
 
 // @public
 export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<boolean, Error>;

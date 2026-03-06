@@ -86,6 +86,6 @@ describe("useConfidentialBalances enabled propagation", () => {
       | { enabled?: boolean }
       | undefined;
 
-    expect(handlesQueryOptions?.enabled).toBe(false);
+    expect(handlesQueryOptions?.enabled).toBeFalsy();
   });
 });

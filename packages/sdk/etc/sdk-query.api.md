@@ -15,7 +15,10 @@ import { Hex as Hex_2 } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { QueryKey } from '@tanstack/query-core';
+import { QueryObserverOptions } from '@tanstack/query-core';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
+import { skipToken } from '@tanstack/query-core';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
@@ -50,7 +53,7 @@ export interface ActivityFeedQueryConfig {
 }
 
 // @public
-export function activityFeedQueryOptions(token: ReadonlyToken, config: ActivityFeedConfig, queryConfig?: ActivityFeedQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.activityFeed.scope>, ActivityItem[]>;
+export function activityFeedQueryOptions(token: ReadonlyToken, config: ActivityFeedConfig, queryConfig?: ActivityFeedQueryConfig): QueryFactoryOptions<ActivityItem[], Error, ActivityItem[], ReturnType<typeof zamaQueryKeys.activityFeed.scope>>;
 
 // @public
 export interface ActivityItem {
@@ -121,7 +124,7 @@ export interface BatchDecryptOptions {
 }
 
 // @public (undocumented)
-export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress: Address, config?: FeeQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>, bigint>;
+export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress: Address, config?: FeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>>;
 
 // @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
@@ -145,7 +148,7 @@ export interface ConfidentialBalanceQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialBalanceQueryOptions(token: ReadonlyToken, config?: ConfidentialBalanceQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>, bigint>;
+export function confidentialBalanceQueryOptions(token: ReadonlyToken, config?: ConfidentialBalanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
 
 // @public
 export interface ConfidentialBalancesData {
@@ -169,7 +172,7 @@ export interface ConfidentialBalancesQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>, ConfidentialBalancesData>;
+export function confidentialBalancesQueryOptions(tokens: ReadonlyToken[], config?: ConfidentialBalancesQueryConfig): QueryFactoryOptions<ConfidentialBalancesData, Error, ConfidentialBalancesData, ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>>;
 
 // @public (undocumented)
 export interface ConfidentialHandleQueryConfig {
@@ -182,7 +185,7 @@ export interface ConfidentialHandleQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialHandleQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: ConfidentialHandleQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>, Hex_2>;
+export function confidentialHandleQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: ConfidentialHandleQueryConfig): QueryFactoryOptions<Hex_2, Error, Hex_2, ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>>;
 
 // @public (undocumented)
 export interface ConfidentialHandlesQueryConfig {
@@ -195,7 +198,7 @@ export interface ConfidentialHandlesQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialHandlesQueryOptions(signer: GenericSigner, tokenAddresses: Address[], config?: ConfidentialHandlesQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>, Hex_2[]>;
+export function confidentialHandlesQueryOptions(signer: GenericSigner, tokenAddresses: Address[], config?: ConfidentialHandlesQueryConfig): QueryFactoryOptions<Hex_2[], Error, Hex_2[], ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>>;
 
 // @public (undocumented)
 export interface ConfidentialIsApprovedQueryConfig {
@@ -208,7 +211,7 @@ export interface ConfidentialIsApprovedQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialIsApprovedQueryOptions(signer: GenericSigner, tokenAddress: Address, config: ConfidentialIsApprovedQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>, boolean>;
+export function confidentialIsApprovedQueryOptions(signer: GenericSigner, tokenAddress: Address, config: ConfidentialIsApprovedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>>;
 
 // @public
 export interface ConfidentialTransferEvent {
@@ -459,7 +462,7 @@ export interface FeeQueryConfig {
 }
 
 // @public (undocumented)
-export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddress: Address, config?: FeeQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.fees.feeRecipient>, Address>;
+export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddress: Address, config?: FeeQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.fees.feeRecipient>>;
 
 // @public
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(options: TOptions): Omit<TOptions, StrippedQueryOptionKeys>;
@@ -551,7 +554,7 @@ export interface IsAllowedQueryConfig {
 }
 
 // @public (undocumented)
-export function isAllowedQueryOptions(sdk: ZamaSDK, config: IsAllowedQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isAllowed.scope>, boolean>;
+export function isAllowedQueryOptions(sdk: ZamaSDK, config: IsAllowedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>>;
 
 // @public (undocumented)
 export interface IsConfidentialQueryConfig {
@@ -560,10 +563,10 @@ export interface IsConfidentialQueryConfig {
 }
 
 // @public (undocumented)
-export function isConfidentialQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isConfidential.token>, boolean>;
+export function isConfidentialQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isConfidential.token>>;
 
 // @public (undocumented)
-export function isWrapperQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isWrapper.token>, boolean>;
+export function isWrapperQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
 // @public (undocumented)
 export interface MutationFactoryOptions<TMutationKey extends readonly unknown[], TVariables, TData> {
@@ -591,10 +594,13 @@ export interface PublicKeyQueryConfig {
 }
 
 // @public (undocumented)
-export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<typeof zamaQueryKeys.publicKey.all, {
+export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<{
     publicKeyId: string;
     publicKey: Uint8Array;
-} | null>;
+} | null, Error, {
+    publicKeyId: string;
+    publicKey: Uint8Array;
+} | null, typeof zamaQueryKeys.publicKey.all>;
 
 // @public (undocumented)
 export interface PublicParamsQueryConfig {
@@ -603,10 +609,13 @@ export interface PublicParamsQueryConfig {
 }
 
 // @public (undocumented)
-export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.publicParams.bits>, {
+export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<{
     publicParams: Uint8Array;
     publicParamsId: string;
-} | null>;
+} | null, Error, {
+    publicParams: Uint8Array;
+    publicParamsId: string;
+} | null, ReturnType<typeof zamaQueryKeys.publicParams.bits>>;
 
 // @public (undocumented)
 export interface QueryClientLike {
@@ -616,25 +625,12 @@ export interface QueryClientLike {
     removeQueries(filters: QueryFilterLike): void;
 }
 
+// Warning: (ae-forgotten-export) The symbol "RequiredBy" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export interface QueryContext<TQueryKey extends readonly unknown[]> {
-    // (undocumented)
-    queryKey: TQueryKey;
-}
-
-// @public (undocumented)
-export interface QueryFactoryOptions<TQueryKey extends readonly unknown[], TData> {
-    // (undocumented)
-    enabled?: boolean;
-    // (undocumented)
-    queryFn: (context: QueryContext<TQueryKey>) => Promise<TData>;
-    // (undocumented)
-    queryKey: TQueryKey;
-    // (undocumented)
-    refetchInterval?: number;
-    // (undocumented)
-    staleTime?: number;
-}
+export type QueryFactoryOptions<TQueryFnData = unknown, TError = Error, TData = TQueryFnData, TQueryKey extends QueryKey = QueryKey> = Omit<RequiredBy<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>, "queryKey">, "queryFn" | "queryHash" | "queryKeyHashFn" | "throwOnError"> & {
+    queryFn: Exclude<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>["queryFn"], typeof skipToken | undefined>;
+};
 
 // @public (undocumented)
 export interface QueryFilterLike {
@@ -774,7 +770,7 @@ export interface ShieldFeeQueryConfig extends FeeQueryConfig {
 }
 
 // @public (undocumented)
-export function shieldFeeQueryOptions(signer: GenericSigner, config: ShieldFeeQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.fees.shieldFee>, bigint>;
+export function shieldFeeQueryOptions(signer: GenericSigner, config: ShieldFeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.shieldFee>>;
 
 // @public (undocumented)
 export function shieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult>;
@@ -806,7 +802,7 @@ export interface SignerAddressQueryConfig {
 }
 
 // @public (undocumented)
-export function signerAddressQueryOptions(signer: GenericSigner, config?: SignerAddressQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.signerAddress.scope>, Address>;
+export function signerAddressQueryOptions(signer: GenericSigner, config?: SignerAddressQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.signerAddress.scope>>;
 
 // @public
 export interface SignerLifecycleCallbacks {
@@ -877,7 +873,7 @@ export interface TokenMetadataQueryConfig {
 }
 
 // @public (undocumented)
-export function tokenMetadataQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: TokenMetadataQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.tokenMetadata.token>, TokenMetadata>;
+export function tokenMetadataQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: TokenMetadataQueryConfig): QueryFactoryOptions<TokenMetadata, Error, TokenMetadata, ReturnType<typeof zamaQueryKeys.tokenMetadata.token>>;
 
 // @public (undocumented)
 export interface TotalSupplyQueryConfig {
@@ -886,7 +882,7 @@ export interface TotalSupplyQueryConfig {
 }
 
 // @public (undocumented)
-export function totalSupplyQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: TotalSupplyQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.totalSupply.token>, bigint>;
+export function totalSupplyQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: TotalSupplyQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.totalSupply.token>>;
 
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
@@ -940,7 +936,7 @@ export interface UnderlyingAllowanceQueryConfig {
 }
 
 // @public (undocumented)
-export function underlyingAllowanceQueryOptions(signer: GenericSigner, tokenAddress: Address, config: UnderlyingAllowanceQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.underlyingAllowance.scope>, bigint>;
+export function underlyingAllowanceQueryOptions(signer: GenericSigner, tokenAddress: Address, config: UnderlyingAllowanceQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.underlyingAllowance.scope>>;
 
 // @public (undocumented)
 export function unshieldAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshieldAll", Address], UnshieldAllParams | void, TransactionResult>;
@@ -971,7 +967,7 @@ export interface UnshieldFeeQueryConfig extends FeeQueryConfig {
 }
 
 // @public (undocumented)
-export function unshieldFeeQueryOptions(signer: GenericSigner, config: UnshieldFeeQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.fees.unshieldFee>, bigint>;
+export function unshieldFeeQueryOptions(signer: GenericSigner, config: UnshieldFeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.unshieldFee>>;
 
 // @public (undocumented)
 export function unshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult>;
@@ -1102,7 +1098,7 @@ export interface WrapperDiscoveryQueryConfig {
 }
 
 // @public (undocumented)
-export function wrapperDiscoveryQueryOptions(signer: GenericSigner, tokenAddress: Address, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>, Address | null>;
+export function wrapperDiscoveryQueryOptions(signer: GenericSigner, tokenAddress: Address, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<Address | null, Error, Address | null, ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>>;
 
 // @public
 export const zamaQueryKeys: {
