@@ -328,7 +328,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     );
   }
 
-  async #persistAllowed(handle: `0x${string}`, account: Address): Promise<boolean> {
+  async #persistAllowed(handle: Handle, account: Address): Promise<boolean> {
     return this.#client.readContract({
       address: this.#config.contracts.acl,
       abi: ACL_ABI,
@@ -337,7 +337,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     });
   }
 
-  async #isAllowedForDecryption(handle: `0x${string}`): Promise<boolean> {
+  async #isAllowedForDecryption(handle: Handle): Promise<boolean> {
     return this.#client.readContract({
       address: this.#config.contracts.acl,
       abi: ACL_ABI,
@@ -350,7 +350,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     delegator: Address,
     delegate: Address,
     contractAddress: Address,
-    handle: `0x${string}`,
+    handle: Handle,
   ): Promise<boolean> {
     return this.#client.readContract({
       address: this.#config.contracts.acl,
@@ -360,7 +360,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     });
   }
 
-  async #readPlaintext(handle: `0x${string}`): Promise<bigint> {
+  async #readPlaintext(handle: Handle): Promise<bigint> {
     return this.#client.readContract({
       address: this.#config.contracts.executor,
       abi: EXECUTOR_ABI,
