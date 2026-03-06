@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
 import { ZamaError, ZamaErrorCode } from "../token.types";
-import { CredentialExpiredError } from "../errors";
+import { KeypairExpiredError } from "../errors";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { GenericSigner } from "../token.types";
+import { ZamaSDKEvents } from "../../events";
 
 /** Compute the truncated SHA-256 store key used by CredentialManager. */
 async function computeStoreKey(address: string, chainId: number = 31337): Promise<string> {
@@ -114,7 +115,7 @@ describe("CredentialsManager", () => {
       signer,
       storage,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
     });
 
     await manager.allow("0xtoken" as Address);
@@ -125,7 +126,7 @@ describe("CredentialsManager", () => {
       signer,
       storage,
       sessionStorage: createMockStorage(),
-      durationDays: 7,
+      keypairTTL: 604800,
     });
     await manager2.allow("0xtoken" as Address);
 
@@ -147,7 +148,7 @@ describe("CredentialsManager", () => {
       signer,
       storage,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
     });
     const storeKey = await computeStoreKey(await signer.getAddress());
 
@@ -167,7 +168,7 @@ describe("CredentialsManager", () => {
       signer,
       storage,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
     });
     const creds2 = await manager2.allow("0xtoken" as Address);
 
@@ -184,7 +185,7 @@ describe("CredentialsManager", () => {
       signer,
       storage,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
     });
     const storeKey = await computeStoreKey(await signer.getAddress());
 
@@ -204,7 +205,7 @@ describe("CredentialsManager", () => {
       signer,
       storage,
       sessionStorage: createMockStorage(),
-      durationDays: 7,
+      keypairTTL: 604800,
     });
     const creds = await manager2.allow("0xtoken" as Address);
 
@@ -368,14 +369,14 @@ describe("CredentialsManager", () => {
       signer,
       storage,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
     });
     const storeKey = await computeStoreKey(await signer.getAddress());
 
     await manager.allow("0xtoken" as Address);
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
 
-    // Set startTimestamp to exactly durationDays ago (expired at boundary)
+    // Set startTimestamp to exactly keypairTTL ago (expired at boundary)
     const stored = await storage.get(storeKey);
     const parsed = { ...(stored as Record<string, unknown>) };
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 1 * 86400; // exactly 1 day ago
@@ -387,7 +388,7 @@ describe("CredentialsManager", () => {
       signer,
       storage,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
     });
     await manager2.allow("0xtoken" as Address);
 
@@ -426,7 +427,7 @@ describe("CredentialsManager", () => {
         signer,
         storage,
         sessionStorage: createMockStorage(),
-        durationDays: 1,
+        keypairTTL: 86400,
       });
       const storeKey = await computeStoreKey(await signer.getAddress());
 
@@ -443,7 +444,7 @@ describe("CredentialsManager", () => {
         signer,
         storage,
         sessionStorage: createMockStorage(),
-        durationDays: 1,
+        keypairTTL: 86400,
       });
       expect(await manager2.isExpired()).toBe(true);
     });
@@ -460,7 +461,7 @@ describe("CredentialsManager", () => {
         signer,
         storage,
         sessionStorage: createMockStorage(),
-        durationDays: 1,
+        keypairTTL: 86400,
       });
 
       await manager.allow("0xtoken" as Address);
@@ -470,7 +471,7 @@ describe("CredentialsManager", () => {
         signer,
         storage,
         sessionStorage: createMockStorage(),
-        durationDays: 1,
+        keypairTTL: 86400,
       });
       expect(await manager2.isExpired("0xother" as Address)).toBe(true);
     });
@@ -585,22 +586,22 @@ describe("session allow/revoke", () => {
       signer,
       storage,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent: (e) => events.push(e.type),
     });
 
     await manager2.allow("0xtoken" as Address);
     await manager2.revoke();
 
-    expect(events).toContain("credentials:revoked");
+    expect(events).toContain(ZamaSDKEvents.CredentialsRevoked);
   });
 });
 
-describe("CredentialExpiredError", () => {
+describe("KeypairExpiredError", () => {
   it("has the correct error code", () => {
-    const error = new CredentialExpiredError("credentials expired");
-    expect(error.code).toBe(ZamaErrorCode.CredentialExpired);
-    expect(error.name).toBe("CredentialExpiredError");
+    const error = new KeypairExpiredError("credentials expired");
+    expect(error.code).toBe(ZamaErrorCode.KeypairExpired);
+    expect(error.name).toBe("KeypairExpiredError");
     expect(error).toBeInstanceOf(ZamaError);
   });
 });

@@ -4,7 +4,7 @@ import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
-import { CredentialsManager, computeStoreKey } from "./credentials-manager";
+import { CredentialsManager } from "./credentials-manager";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
@@ -23,8 +23,19 @@ export interface ZamaSDKConfig {
    * implementation for web extensions so signatures survive service worker restarts.
    */
   sessionStorage?: GenericStorage;
-  /** Number of days FHE credentials remain valid. Default: `1`. Set `0` to require a wallet signature on every decrypt (high-security mode). */
-  credentialDurationDays?: number;
+  /**
+   * How long the ML-KEM re-encryption keypair remains valid, in seconds.
+   * Default: `86400` (1 day). Must be a positive number — `0` is rejected
+   * because the keypair is required to establish the relayer connection.
+   */
+  keypairTTL?: number;
+  /**
+   * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
+   * Default: `2592000` (30 days).
+   * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
+   * - Positive number: seconds until the session signature expires and requires re-authentication.
+   */
+  sessionTTL?: number;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -56,7 +67,12 @@ export class ZamaSDK {
       signer: this.signer,
       storage: this.storage,
       sessionStorage: this.sessionStorage,
-      durationDays: config.credentialDurationDays ?? 1,
+      keypairTTL: (() => {
+        const ttl = config.keypairTTL ?? 86400;
+        if (ttl <= 0) throw new Error("keypairTTL must be a positive number (seconds)");
+        return ttl;
+      })(),
+      sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: this.#onEvent,
     });
     this.#identityReady = this.#initIdentity();
@@ -99,7 +115,7 @@ export class ZamaSDK {
   async #revokeByTrackedIdentity(): Promise<void> {
     await this.#identityReady;
     if (this.#lastAddress == null || this.#lastChainId == null) return;
-    const storeKey = await computeStoreKey(this.#lastAddress, this.#lastChainId);
+    const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
     await this.sessionStorage.delete(storeKey);
     this.#onEvent?.({
       type: ZamaSDKEvents.CredentialsRevoked,
@@ -194,7 +210,7 @@ export class ZamaSDK {
     await this.#identityReady;
     const address = this.#lastAddress ?? (await this.signer.getAddress()).toLowerCase();
     const chainId = this.#lastChainId ?? (await this.signer.getChainId());
-    const storeKey = await computeStoreKey(address, chainId);
+    const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.sessionStorage.delete(storeKey);
     this.#onEvent?.({
       type: ZamaSDKEvents.CredentialsRevoked,

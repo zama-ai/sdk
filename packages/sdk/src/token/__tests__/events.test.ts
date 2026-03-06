@@ -38,8 +38,8 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.UnshieldPhase2Submitted).toBe("unshield:phase2_submitted");
   });
 
-  it("has exactly 24 event types", () => {
-    expect(Object.keys(ZamaSDKEvents)).toHaveLength(24);
+  it("has exactly 25 event types", () => {
+    expect(Object.keys(ZamaSDKEvents)).toHaveLength(25);
   });
 
   it("has unique event values", () => {
@@ -1033,7 +1033,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage,
       sessionStorage,
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
@@ -1054,7 +1054,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage: store,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
@@ -1083,23 +1083,17 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage: store,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
     await manager.allow("0xtoken" as Address);
 
     // Tamper stored data to simulate expiration
-    const address = (await signer.getAddress()).toLowerCase();
-    const chainId = await signer.getChainId();
-    const hash = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(`${address}:${chainId}`),
+    const storeKey = await CredentialsManager.computeStoreKey(
+      (await signer.getAddress()).toLowerCase(),
+      await signer.getChainId(),
     );
-    const hex = Array.from(new Uint8Array(hash))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    const storeKey = hex.slice(0, 32);
     const stored = await store.get(storeKey);
     const parsed = { ...(stored as Record<string, unknown>) };
     parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
@@ -1113,7 +1107,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage: store,
       sessionStorage: createMockStorage(),
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
     await manager2.allow("0xtoken" as Address);
@@ -1137,7 +1131,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage,
       sessionStorage,
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
@@ -1168,7 +1162,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage,
       sessionStorage,
-      durationDays: 1,
+      keypairTTL: 86400,
       onEvent,
     });
 
@@ -1190,7 +1184,7 @@ describe("CredentialsManager event emissions", () => {
       signer,
       storage,
       sessionStorage,
-      durationDays: 1,
+      keypairTTL: 86400,
     });
 
     const creds = await manager.allow("0xtoken" as Address);
