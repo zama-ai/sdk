@@ -16,12 +16,12 @@ export function wrapUnshieldCallbacks(
 ): UnshieldCallbacks {
   return {
     onUnwrapSubmitted: (txHash: Hex) => {
-      savePendingUnshield(storage, scope, txHash).catch(() => {});
+      savePendingUnshield(storage, scope, txHash);
       callbacks?.onUnwrapSubmitted?.(txHash);
     },
     onFinalizing: () => callbacks?.onFinalizing?.(),
     onFinalizeSubmitted: (txHash: Hex) => {
-      clearPendingUnshield(storage, scope).catch(() => {});
+      clearPendingUnshield(storage, scope);
       callbacks?.onFinalizeSubmitted?.(txHash);
     },
   };

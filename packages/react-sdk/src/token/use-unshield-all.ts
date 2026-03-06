@@ -17,6 +17,10 @@ import { wrapUnshieldCallbacks } from "./unshield-storage";
 /**
  * TanStack Query mutation options factory for unshield-all.
  *
+ * Note: unlike {@link useUnshieldAll}, this factory does **not** auto-persist
+ * the pending unshield state. Use `savePendingUnshield`/`clearPendingUnshield`
+ * manually if you need resumability.
+ *
  * @param token - A `Token` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */

@@ -25,6 +25,10 @@ export interface UnshieldParams {
 /**
  * TanStack Query mutation options factory for unshield.
  *
+ * Note: unlike {@link useUnshield}, this factory does **not** auto-persist
+ * the pending unshield state. Use `savePendingUnshield`/`clearPendingUnshield`
+ * manually if you need resumability.
+ *
  * @param token - A `Token` instance.
  * @returns Mutation options with `mutationKey` and `mutationFn`.
  */

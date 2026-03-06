@@ -1,14 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "../test-fixtures";
 import type { GenericStorage, Hex, PendingUnshieldScope } from "@zama-fhe/sdk";
 import { wrapUnshieldCallbacks } from "../token/unshield-storage";
-
-function createMockStorage(): GenericStorage {
-  return {
-    get: vi.fn().mockResolvedValue(null),
-    set: vi.fn().mockResolvedValue(undefined),
-    delete: vi.fn().mockResolvedValue(undefined),
-  };
-}
 
 const SCOPE: PendingUnshieldScope = {
   accountAddress: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -18,7 +10,7 @@ const SCOPE: PendingUnshieldScope = {
 const TX_HASH = "0xdeadbeef" as Hex;
 
 describe("wrapUnshieldCallbacks", () => {
-  it("saves pending unshield on onUnwrapSubmitted", async () => {
+  it("saves pending unshield on onUnwrapSubmitted", async ({ createMockStorage }) => {
     const storage = createMockStorage();
     const wrapped = wrapUnshieldCallbacks(storage, SCOPE);
 
@@ -33,7 +25,7 @@ describe("wrapUnshieldCallbacks", () => {
     });
   });
 
-  it("storage key includes account and chainId", async () => {
+  it("storage key includes account and chainId", async ({ createMockStorage }) => {
     const storage = createMockStorage();
     const wrapped = wrapUnshieldCallbacks(storage, SCOPE);
 
@@ -48,7 +40,7 @@ describe("wrapUnshieldCallbacks", () => {
     });
   });
 
-  it("clears pending unshield on onFinalizeSubmitted", async () => {
+  it("clears pending unshield on onFinalizeSubmitted", async ({ createMockStorage }) => {
     const storage = createMockStorage();
     const wrapped = wrapUnshieldCallbacks(storage, SCOPE);
 
@@ -61,7 +53,7 @@ describe("wrapUnshieldCallbacks", () => {
     });
   });
 
-  it("forwards callbacks to user-provided handlers", () => {
+  it("forwards callbacks to user-provided handlers", ({ createMockStorage }) => {
     const storage = createMockStorage();
     const userCallbacks = {
       onUnwrapSubmitted: vi.fn(),
