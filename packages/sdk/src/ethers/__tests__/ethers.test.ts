@@ -391,6 +391,80 @@ describe("EthersSigner", () => {
   });
 });
 
+// ── Read-only mode ({ provider } config) ────────────────────
+
+describe("EthersSigner read-only mode ({ provider })", () => {
+  eit("readContract works with provider-only config", async ({ tokenAddress, userAddress }) => {
+    mockContractMethod.mockResolvedValue(42n);
+    const mockProvider = {
+      getNetwork: vi.fn().mockResolvedValue({ chainId: 1n }),
+    };
+    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
+
+    const result = await ethersSigner.readContract({
+      address: tokenAddress,
+      abi: [{ name: "balanceOf" }],
+      functionName: "balanceOf",
+      args: [userAddress],
+    });
+    expect(result).toBe(42n);
+  });
+
+  eit("getChainId works with provider-only config", async () => {
+    const mockProvider = {
+      getNetwork: vi.fn().mockResolvedValue({ chainId: 8009n }),
+    };
+    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
+
+    const chainId = await ethersSigner.getChainId();
+    expect(chainId).toBe(8009);
+  });
+
+  eit("getAddress throws with provider-only config", async () => {
+    const mockProvider = { getNetwork: vi.fn() };
+    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
+
+    await expect(ethersSigner.getAddress()).rejects.toThrow("No signer configured");
+  });
+
+  eit("signTypedData throws with provider-only config", async () => {
+    const mockProvider = { getNetwork: vi.fn() };
+    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
+
+    const typedData = {
+      domain: {},
+      types: { EIP712Domain: [], Transfer: [{ name: "to", type: "address" }] },
+      message: {},
+    };
+    await expect(ethersSigner.signTypedData(typedData as never)).rejects.toThrow(
+      "No signer configured",
+    );
+  });
+
+  eit("writeContract throws with provider-only config", async ({ tokenAddress }) => {
+    const mockProvider = { getNetwork: vi.fn() };
+    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
+
+    await expect(
+      ethersSigner.writeContract({
+        address: tokenAddress,
+        abi: [],
+        functionName: "transfer",
+        args: [],
+      }),
+    ).rejects.toThrow("No signer configured");
+  });
+
+  eit("subscribe returns no-op with provider-only config", () => {
+    const mockProvider = { getNetwork: vi.fn() };
+    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
+
+    const unsub = ethersSigner.subscribe({ onDisconnect: vi.fn(), onAccountChange: vi.fn() });
+    expect(typeof unsub).toBe("function");
+    unsub(); // should not throw
+  });
+});
+
 // ── contracts.ts read helpers ────────────────────────────────
 
 describe("ethers read contract helpers", () => {

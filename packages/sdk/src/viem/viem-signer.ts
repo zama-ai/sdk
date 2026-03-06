@@ -1,4 +1,4 @@
-import type { EIP1193Provider, PublicClient, WalletClient } from "viem";
+import type { Account, EIP1193Provider, PublicClient, WalletClient } from "viem";
 import { writeContract } from "viem/actions";
 import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
@@ -23,7 +23,8 @@ import { eip1193Subscribe } from "../token/eip1193-subscribe";
  * wallet lifecycle handling, consider using `WagmiSigner` instead.
  */
 export interface ViemSignerConfig {
-  walletClient: WalletClient;
+  /** Wallet client for signing and write operations. Optional — omit for read-only usage. */
+  walletClient?: WalletClient;
   publicClient: PublicClient;
   ethereum?: EIP1193Provider;
 }
@@ -34,33 +35,39 @@ export interface ViemSignerConfig {
  * @param config - {@link ViemSignerConfig} with walletClient and publicClient
  */
 export class ViemSigner implements GenericSigner {
-  private readonly walletClient: WalletClient;
-  private readonly publicClient: PublicClient;
-  private readonly ethereum?: EIP1193Provider;
+  readonly #walletClient?: WalletClient;
+  readonly #publicClient: PublicClient;
+  readonly #ethereum?: EIP1193Provider;
 
   constructor(config: ViemSignerConfig) {
-    this.walletClient = config.walletClient;
-    this.publicClient = config.publicClient;
-    this.ethereum = config.ethereum;
+    this.#walletClient = config.walletClient;
+    this.#publicClient = config.publicClient;
+    this.#ethereum = config.ethereum;
+  }
+
+  #requireWalletClient(): WalletClient {
+    if (!this.#walletClient) throw new TypeError("No walletClient configured — read-only mode");
+    return this.#walletClient;
+  }
+
+  #requireWalletAndAccount(): { walletClient: WalletClient; account: Account } {
+    const walletClient = this.#requireWalletClient();
+    if (!walletClient.account) throw new TypeError("WalletClient has no account");
+    return { walletClient, account: walletClient.account };
   }
 
   async getChainId(): Promise<number> {
-    return this.publicClient.getChainId();
+    return this.#publicClient.getChainId();
   }
 
   async getAddress(): Promise<Address> {
-    const account = this.walletClient.account;
-    if (!account) {
-      throw new TypeError("Invalid address");
-    }
-    return account.address;
+    return this.#requireWalletAndAccount().account.address;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const account = this.walletClient.account;
-    if (!account) throw new TypeError("WalletClient has no account");
+    const { walletClient, account } = this.#requireWalletAndAccount();
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
-    return this.walletClient.signTypedData({
+    return walletClient.signTypedData({
       account,
       primaryType: Object.keys(sigTypes)[0]!,
       types: sigTypes,
@@ -70,24 +77,24 @@ export class ViemSigner implements GenericSigner {
   }
 
   async writeContract<C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<Hex> {
-    const account = this.walletClient.account;
-    if (!account) throw new TypeError("WalletClient has no account");
-    return this.walletClient.writeContract({
-      chain: this.walletClient.chain,
+    const { walletClient, account } = this.#requireWalletAndAccount();
+    return walletClient.writeContract({
+      chain: walletClient.chain,
       account,
       ...config,
     } as Parameters<typeof writeContract>[1]);
   }
 
   async readContract<T, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T> {
-    return this.publicClient.readContract(config) as Promise<T>;
+    return this.#publicClient.readContract(config) as Promise<T>;
   }
 
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
-    return this.publicClient.waitForTransactionReceipt({ hash });
+    return this.#publicClient.waitForTransactionReceipt({ hash });
   }
 
   subscribe(callbacks: SignerLifecycleCallbacks): () => void {
-    return eip1193Subscribe(this.ethereum, () => this.getAddress(), callbacks);
+    if (!this.#walletClient) return () => {};
+    return eip1193Subscribe(this.#ethereum, () => this.getAddress(), callbacks);
   }
 }

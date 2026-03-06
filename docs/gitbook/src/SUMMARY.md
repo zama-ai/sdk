@@ -19,4 +19,4 @@
 - [Provider Setup](guides/react-sdk/provider-setup.md)
 - [Hooks](guides/react-sdk/hooks.md)
 - [Choosing the Right Hook](guides/react-sdk/hook-disambiguation.md)
-- [Library Adapters (Advanced)](guides/react-sdk/library-adapters.md)
+- [Library Adapters](guides/react-sdk/library-adapters.md)

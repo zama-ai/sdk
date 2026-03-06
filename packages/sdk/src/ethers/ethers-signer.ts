@@ -19,15 +19,21 @@ function toHex(s: string): Hex {
 /**
  * Configuration for {@link EthersSigner}.
  *
- * Two variants:
+ * Three variants:
  *
  * - **Browser** — `{ ethereum }`: pass the raw EIP-1193 provider (e.g. `window.ethereum`).
  *   A `BrowserProvider` is created internally and `subscribe()` works automatically.
  *
  * - **Node / direct signer** — `{ signer }`: pass an ethers `Signer` (e.g. `Wallet`).
  *   `subscribe()` is not available since there is no EIP-1193 provider.
+ *
+ * - **Read-only** — `{ provider }`: pass an ethers `Provider` for read-only contract calls.
+ *   Signing and write operations will throw at runtime.
  */
-export type EthersSignerConfig = { ethereum: EIP1193Provider } | { signer: Signer };
+export type EthersSignerConfig =
+  | { ethereum: EIP1193Provider }
+  | { signer: Signer }
+  | { provider: ethers.Provider };
 
 /**
  * GenericSigner backed by ethers.
@@ -39,33 +45,46 @@ export type EthersSignerConfig = { ethereum: EIP1193Provider } | { signer: Signe
  * @param config - {@link EthersSignerConfig}
  */
 export class EthersSigner implements GenericSigner {
-  private signerPromise: Promise<Signer>;
-  private readonly provider?: EIP1193Provider;
+  #signerPromise?: Promise<Signer>;
+  readonly #readProvider?: ethers.Provider;
+  readonly #eip1193?: EIP1193Provider;
 
   constructor(config: EthersSignerConfig) {
     if ("ethereum" in config) {
-      this.signerPromise = new BrowserProvider(config.ethereum).getSigner();
-      this.provider = config.ethereum;
+      const browserProvider = new BrowserProvider(config.ethereum);
+      this.#signerPromise = browserProvider.getSigner();
+      this.#readProvider = browserProvider;
+      this.#eip1193 = config.ethereum;
+    } else if ("signer" in config) {
+      this.#signerPromise = Promise.resolve(config.signer);
+      this.#readProvider = config.signer.provider ?? undefined;
     } else {
-      this.signerPromise = Promise.resolve(config.signer);
+      this.#readProvider = config.provider;
     }
   }
 
+  async #requireSigner(): Promise<Signer> {
+    if (!this.#signerPromise) throw new TypeError("No signer configured — read-only mode");
+    return this.#signerPromise;
+  }
+
+  #requireProvider(): ethers.Provider {
+    if (!this.#readProvider) throw new TypeError("Signer has no provider");
+    return this.#readProvider;
+  }
+
   async getChainId(): Promise<number> {
-    const signer = await this.signerPromise;
-    const provider = signer.provider;
-    if (!provider) throw new TypeError("Signer has no provider");
-    const network = await provider.getNetwork();
+    const network = await this.#requireProvider().getNetwork();
     return Number(network.chainId);
   }
 
   async getAddress(): Promise<Address> {
-    const signer = await this.signerPromise;
+    const signer = await this.#requireSigner();
     return toHex(await signer.getAddress()) as Address;
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const signer = await this.signerPromise;
+    const signer = await this.#requireSigner();
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
     const sig = await signer.signTypedData(domain, sigTypes, message);
@@ -73,7 +92,7 @@ export class EthersSigner implements GenericSigner {
   }
 
   async writeContract<C extends ContractCallConfig>(config: C): Promise<Hex> {
-    const signer = await this.signerPromise;
+    const signer = await this.#requireSigner();
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
     const overrides: Record<string, unknown> = {};
     if (config.value !== undefined) overrides.value = config.value;
@@ -82,16 +101,17 @@ export class EthersSigner implements GenericSigner {
   }
 
   async readContract<T, C extends ContractCallConfig>(config: C): Promise<T> {
-    const signer = await this.signerPromise;
-    const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
+    const provider = this.#requireProvider();
+    const contract = new ethers.Contract(
+      config.address,
+      config.abi as ethers.InterfaceAbi,
+      provider,
+    );
     return contract[config.functionName]!(...config.args) as Promise<T>;
   }
 
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
-    const signer = await this.signerPromise;
-    const provider = signer.provider;
-    if (!provider) throw new TypeError("Signer has no provider");
-    const receipt = await provider.waitForTransaction(hash);
+    const receipt = await this.#requireProvider().waitForTransaction(hash);
     if (!receipt) throw new Error("Transaction receipt not found");
     return {
       logs: receipt.logs.map((log) => ({
@@ -102,6 +122,6 @@ export class EthersSigner implements GenericSigner {
   }
 
   subscribe(callbacks: SignerLifecycleCallbacks): () => void {
-    return eip1193Subscribe(this.provider, () => this.getAddress(), callbacks);
+    return eip1193Subscribe(this.#eip1193, () => this.getAddress(), callbacks);
   }
 }

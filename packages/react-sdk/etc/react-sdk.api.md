@@ -1390,9 +1390,6 @@ export { UserDecryptParams }
 export function useReadonlyToken(address: Address): _zama_fhe_sdk.ReadonlyToken;
 
 // @public
-export function useReadonlyZamaSDK(): ZamaSDK | null;
-
-// @public
 export function useRequestZKProofVerification(): _tanstack_react_query.UseMutationResult<Readonly<{
     handles: Uint8Array[];
     inputProof: Uint8Array;
@@ -1542,7 +1539,7 @@ export interface ZamaProviderProps extends PropsWithChildren {
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
     sessionTTL?: number;
-    signer?: GenericSigner;
+    signer: GenericSigner;
     storage: GenericStorage;
 }
 
