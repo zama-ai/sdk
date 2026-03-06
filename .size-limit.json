@@ -2,7 +2,7 @@
   {
     "name": "@zama-fhe/sdk (all JS)",
     "path": "packages/sdk/dist/**/*.js",
-    "limit": "40 KB"
+    "limit": "42 KB"
   },
   {
     "name": "@zama-fhe/react-sdk (all JS)",

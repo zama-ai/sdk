@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "1.0.0-alpha.14",
+  "version": "1.0.0-alpha.15",
   "description": "TypeScript SDK for Zama confidential ERC-20 tokens (fhEVM)",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
@@ -20,6 +20,10 @@
     "./cleartext": {
       "types": "./dist/cleartext/index.d.ts",
       "import": "./dist/cleartext/index.js"
+    },
+    "./query": {
+      "types": "./dist/query/index.d.ts",
+      "import": "./dist/query/index.js"
     },
     "./viem": {
       "types": "./dist/viem/index.d.ts",
@@ -65,15 +69,23 @@
   },
   "devDependencies": {
     "@zama-fhe/relayer-sdk": "0.4.1",
+    "@tanstack/query-core": "^5.90.20",
     "tsup": "^8.5.1"
   },
   "peerDependencies": {
+    "@tanstack/query-core": ">=5",
     "viem": ">=2",
     "ethers": ">=6",
     "@zama-fhe/relayer-sdk": "~0.4.1"
   },
   "sideEffects": false,
   "peerDependenciesMeta": {
+    "@tanstack/query-core": {
+      "optional": true
+    },
+    "viem": {
+      "optional": true
+    },
     "ethers": {
       "optional": true
     },

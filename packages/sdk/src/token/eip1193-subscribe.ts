@@ -15,7 +15,7 @@ import type { SignerLifecycleCallbacks } from "./token.types";
 export function eip1193Subscribe(
   provider: Pick<EIP1193Provider, "on" | "removeListener"> | undefined,
   getAddress: () => Promise<Address>,
-  { onDisconnect = () => {}, onAccountChange = () => {} }: SignerLifecycleCallbacks,
+  { onDisconnect = () => {}, onAccountChange = () => {}, onChainChange }: SignerLifecycleCallbacks,
 ): () => void {
   if (!provider) return () => {};
 
@@ -40,12 +40,27 @@ export function eip1193Subscribe(
     currentAddress = accounts[0];
   };
   const handleDisconnect: EIP1193EventMap["disconnect"] = () => onDisconnect();
+  const handleChainChanged = onChainChange
+    ? (chainId: string) => onChainChange(Number.parseInt(chainId, 16))
+    : undefined;
 
   provider.on("accountsChanged", handleAccountsChanged);
   provider.on("disconnect", handleDisconnect);
+  if (handleChainChanged) {
+    (provider as EIP1193Provider).on(
+      "chainChanged",
+      handleChainChanged as EIP1193EventMap["chainChanged"],
+    );
+  }
 
   return () => {
     provider.removeListener("accountsChanged", handleAccountsChanged);
     provider.removeListener("disconnect", handleDisconnect);
+    if (handleChainChanged) {
+      (provider as EIP1193Provider).removeListener(
+        "chainChanged",
+        handleChainChanged as EIP1193EventMap["chainChanged"],
+      );
+    }
   };
 }

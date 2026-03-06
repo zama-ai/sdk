@@ -1,6 +1,6 @@
 import type { Address } from "../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import { normalizeAddress } from "../utils";
+import { validateAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
@@ -8,6 +8,11 @@ import { CredentialsManager } from "./credentials-manager";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
+import type { SignerLifecycleCallbacks } from "./token.types";
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -40,6 +45,8 @@ export interface ZamaSDKConfig {
   onEvent?: ZamaSDKEventListener;
   /** ACL contract address. Required for delegation methods on tokens created by this SDK. */
   aclAddress?: Address;
+  /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
+  signerLifecycleCallbacks?: SignerLifecycleCallbacks;
 }
 
 /**
@@ -84,21 +91,48 @@ export class ZamaSDK {
     this.#identityReady = this.#initIdentity();
 
     if (this.signer.subscribe) {
+      const lifecycleCallbacks = config.signerLifecycleCallbacks;
+      const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
+        void effect().catch((error) => {
+          this.#onEvent?.({
+            type: ZamaSDKEvents.TransactionError,
+            operation,
+            error: toError(error),
+            timestamp: Date.now(),
+          });
+        });
+      };
       this.#unsubscribeSigner = this.signer.subscribe({
         onDisconnect: () => {
-          void this.#revokeByTrackedIdentity().then(() => {
+          runLifecycleEffect("signerDisconnect", async () => {
+            await this.#revokeByTrackedIdentity();
             this.#lastAddress = null;
             this.#lastChainId = null;
+            lifecycleCallbacks?.onDisconnect?.();
           });
         },
         onAccountChange: (newAddress: Address) => {
-          void this.#revokeByTrackedIdentity().then(async () => {
+          runLifecycleEffect("signerAccountChange", async () => {
+            await this.#revokeByTrackedIdentity();
             this.#lastAddress = newAddress.toLowerCase();
             try {
               this.#lastChainId = await this.signer.getChainId();
             } catch {
               // Signer may not be ready — keep previous chainId
             }
+            lifecycleCallbacks?.onAccountChange?.(newAddress);
+          });
+        },
+        onChainChange: (newChainId: number) => {
+          runLifecycleEffect("signerChainChange", async () => {
+            await this.#revokeByTrackedIdentity();
+            this.#lastChainId = newChainId;
+            try {
+              this.#lastAddress = (await this.signer.getAddress()).toLowerCase();
+            } catch {
+              // Signer may not be ready — keep previous address
+            }
+            lifecycleCallbacks?.onChainChange?.(newChainId);
           });
         },
       });
@@ -143,7 +177,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
-      address: normalizeAddress(address, "address"),
+      address: validateAddress(address, "address"),
       aclAddress: this.#aclAddress,
       onEvent: this.#onEvent,
     });
@@ -164,9 +198,9 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
-      address: normalizeAddress(address, "address"),
+      address: validateAddress(address, "address"),
       aclAddress: this.#aclAddress,
-      wrapper: wrapper ? normalizeAddress(wrapper, "wrapper") : undefined,
+      wrapper: wrapper ? validateAddress(wrapper, "wrapper") : undefined,
       onEvent: this.#onEvent,
     });
   }

@@ -17,7 +17,7 @@ import {
 import { hexToBigInt } from "viem";
 import { findUnwrapRequested } from "../events/onchain-events";
 import type { Address, Handle, Hex } from "../relayer/relayer-sdk.types";
-import { normalizeAddress } from "../utils";
+import { validateAddress } from "../utils";
 import {
   ZamaError,
   EncryptionFailedError,
@@ -61,7 +61,7 @@ export class Token extends ReadonlyToken {
 
   constructor(config: TokenConfig) {
     super(config);
-    this.wrapper = config.wrapper ? normalizeAddress(config.wrapper, "wrapper") : this.address;
+    this.wrapper = config.wrapper ? validateAddress(config.wrapper, "wrapper") : this.address;
   }
 
   async #getUnderlying(): Promise<Address> {
@@ -104,7 +104,7 @@ export class Token extends ReadonlyToken {
     amount: bigint,
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
-    const normalizedTo = normalizeAddress(to, "to");
+    const normalizedTo = validateAddress(to, "to");
 
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
@@ -177,8 +177,8 @@ export class Token extends ReadonlyToken {
     amount: bigint,
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
-    const normalizedFrom = normalizeAddress(from, "from");
-    const normalizedTo = normalizeAddress(to, "to");
+    const normalizedFrom = validateAddress(from, "from");
+    const normalizedTo = validateAddress(to, "to");
 
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
@@ -250,7 +250,7 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async approve(spender: Address, until?: number): Promise<TransactionResult> {
-    const normalizedSpender = normalizeAddress(spender, "spender");
+    const normalizedSpender = validateAddress(spender, "spender");
     try {
       const txHash = await this.signer.writeContract(
         setOperatorContract(this.address, normalizedSpender, until),
@@ -288,9 +288,9 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async isApproved(spender: Address, holder?: Address): Promise<boolean> {
-    const normalizedSpender = normalizeAddress(spender, "spender");
+    const normalizedSpender = validateAddress(spender, "spender");
     const resolvedHolder = holder
-      ? normalizeAddress(holder, "holder")
+      ? validateAddress(holder, "holder")
       : await this.signer.getAddress();
     return this.signer.readContract(
       isOperatorContract(this.address, resolvedHolder, normalizedSpender),
@@ -339,7 +339,7 @@ export class Token extends ReadonlyToken {
 
     try {
       const recipient = options?.to
-        ? normalizeAddress(options.to, "to")
+        ? validateAddress(options.to, "to")
         : await this.signer.getAddress();
       const txHash = await this.signer.writeContract(wrapContract(this.wrapper, recipient, amount));
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });

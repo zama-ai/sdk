@@ -598,7 +598,7 @@ function useConfidentialIsApproved(
 
 #### `useUnderlyingAllowance`
 
-Read the ERC-20 allowance of the underlying token for the wrapper.
+Read the underlying ERC-20 allowance granted to the wrapper.
 
 ```ts
 function useUnderlyingAllowance(
@@ -794,46 +794,36 @@ const { data: value } = useUserDecryptedValue("0xHandleHash");
 
 ## Query Keys
 
-Exported query key factories for manual cache management (invalidation, prefetching, removal).
+Use `zamaQueryKeys` for manual cache management (invalidation, prefetching, removal).
 
 ```ts
-import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-  isAllowedQueryKeys,
-  underlyingAllowanceQueryKeys,
-  activityFeedQueryKeys,
-  feeQueryKeys,
-  decryptionKeys,
-} from "@zama-fhe/react-sdk";
+import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 ```
 
-| Factory                         | Keys                                                                                     | Description                         |
-| ------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
-| `confidentialBalanceQueryKeys`  | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token decrypted balance.     |
-| `confidentialBalancesQueryKeys` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
-| `confidentialHandleQueryKeys`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
-| `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
-| `isAllowedQueryKeys`            | `.all`, `.token(address)`                                                                | Session signature status.           |
-| `underlyingAllowanceQueryKeys`  | `.all`, `.token(address, wrapper)`                                                       | Underlying ERC-20 allowance.        |
-| `activityFeedQueryKeys`         | `.all`, `.token(address)`                                                                | Activity feed items.                |
-| `feeQueryKeys`                  | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
-| `decryptionKeys`                | `.value(handle)`                                                                         | Individual decrypted handle values. |
+| Factory                              | Keys                                                                                     | Description                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------- |
+| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token decrypted balance.     |
+| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
+| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
+| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
+| `zamaQueryKeys.isAllowed`            | `.all`                                                                                   | Session signature status.           |
+| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                             | Underlying ERC-20 allowance.        |
+| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)`              | Activity feed items.                |
+| `zamaQueryKeys.fees`                 | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
+| `decryptionKeys`                     | `.value(handle)`                                                                         | Individual decrypted handle values. |
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { confidentialBalanceQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/react-sdk";
 
 const queryClient = useQueryClient();
 
 // Invalidate all balances
-queryClient.invalidateQueries({ queryKey: confidentialBalanceQueryKeys.all });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 // Invalidate a specific token's balance
 queryClient.invalidateQueries({
-  queryKey: confidentialBalanceQueryKeys.token("0xTokenAddress"),
+  queryKey: zamaQueryKeys.confidentialBalance.token("0xTokenAddress"),
 });
 ```
 
@@ -984,7 +974,7 @@ To force a refresh:
 
 ```tsx
 const queryClient = useQueryClient();
-queryClient.invalidateQueries({ queryKey: confidentialBalanceQueryKeys.all });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 ```
 
 ## Re-exports from Core SDK

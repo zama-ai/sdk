@@ -100,6 +100,8 @@ export interface SignerLifecycleCallbacks {
   onDisconnect?: () => void;
   /** Called when the active account changes. */
   onAccountChange?: (newAddress: Address) => void;
+  /** Called when the connected chain changes. */
+  onChainChange?: (newChainId: number) => void;
 }
 
 /**
@@ -133,7 +135,7 @@ export interface GenericSigner {
   /** Wait for a transaction to be mined and return its receipt. */
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   /**
-   * Subscribe to wallet lifecycle events (disconnect, account change).
+   * Subscribe to wallet lifecycle events (disconnect, account change, chain change).
    * Returns an unsubscribe function. When no EIP-1193 provider is available,
    * returns a no-op unsubscribe.
    *

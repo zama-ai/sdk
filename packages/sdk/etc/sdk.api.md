@@ -22717,6 +22717,7 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 // @public
 export interface SignerLifecycleCallbacks {
     onAccountChange?: (newAddress: Address) => void;
+    onChainChange?: (newChainId: number) => void;
     onDisconnect?: () => void;
 }
 
@@ -33398,6 +33399,7 @@ export interface ZamaSDKConfig {
     sessionStorage?: GenericStorage;
     sessionTTL?: number;
     signer: GenericSigner;
+    signerLifecycleCallbacks?: SignerLifecycleCallbacks;
     storage: GenericStorage;
 }
 
