@@ -143,7 +143,7 @@ export {
   DecryptionFailedError,
   ApprovalFailedError,
   TransactionRevertedError,
-  InvalidCredentialsError,
+  InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
 } from "./errors";

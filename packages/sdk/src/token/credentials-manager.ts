@@ -18,12 +18,7 @@ interface EncryptedCredentials extends Omit<StoredCredentials, "privateKey" | "s
   encryptedPrivateKey: EncryptedData;
 }
 
-/** Legacy format that included the signature in persisted data (pre-migration). */
-interface LegacyEncryptedCredentials extends EncryptedCredentials {
-  signature: string;
-}
-
-/** Structured session entry stored in session storage (replaces bare signature string). */
+/** Structured session entry stored in session storage. */
 interface SessionEntry {
   signature: string;
   /** Epoch seconds when the session was created. */
@@ -130,48 +125,32 @@ export class CredentialsManager {
         const encrypted = stored as unknown;
         this.#assertEncryptedCredentials(encrypted);
 
-        // Migration: if legacy format has signature, use it and cache in session
-        if (this.#hasLegacySignature(encrypted)) {
-          const creds = await this.#decryptCredentials(encrypted, encrypted.signature);
-          if (this.#isValid(creds, contractAddresses)) {
-            await this.#setSessionEntry(storeKey, encrypted.signature);
-            // Re-persist without signature (migration)
-            const migrated = await this.#encryptCredentials(creds);
-            await this.#storage.set(storeKey, migrated).catch(() => {});
-            this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
-            this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
-            return creds;
-          }
-          this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
-        } else {
-          // New format: check session storage
-          const sessionEntry = await this.#getSessionEntry(storeKey);
-          if (sessionEntry) {
-            if (this.#isSessionExpired(sessionEntry)) {
-              // Session TTL expired — clear and emit, then fall through to re-sign
-              await this.#sessionStorage.delete(storeKey);
-              this.#emit({ type: ZamaSDKEvents.SessionExpired, reason: "ttl" });
-            } else {
-              const creds = await this.#decryptCredentials(encrypted, sessionEntry.signature);
-              if (this.#isValid(creds, contractAddresses)) {
-                this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
-                this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
-                return creds;
-              }
-              this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
+        const sessionEntry = await this.#getSessionEntry(storeKey);
+        if (sessionEntry) {
+          if (this.#isSessionExpired(sessionEntry)) {
+            // Session TTL expired — clear and emit, then fall through to re-sign
+            await this.#sessionStorage.delete(storeKey);
+            this.#emit({ type: ZamaSDKEvents.SessionExpired, reason: "ttl" });
+          } else {
+            const creds = await this.#decryptCredentials(encrypted, sessionEntry.signature);
+            if (this.#isValid(creds, contractAddresses)) {
+              this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+              this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
+              return creds;
             }
+            this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
           }
-          // No session signature or TTL expired — need to re-sign
-          if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
-            const signature = await this.#sign(encrypted);
-            await this.#setSessionEntry(storeKey, signature);
-            const creds = await this.#decryptCredentials(encrypted, signature);
-            this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
-            this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
-            return creds;
-          }
-          this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
         }
+        // No session signature or TTL expired — need to re-sign
+        if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
+          const signature = await this.#sign(encrypted);
+          await this.#setSessionEntry(storeKey, signature);
+          const creds = await this.#decryptCredentials(encrypted, signature);
+          this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+          this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
+          return creds;
+        }
+        this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
       }
     } catch {
       try {
@@ -335,10 +314,6 @@ export class CredentialsManager {
     assertObject(data.encryptedPrivateKey, "credentials.encryptedPrivateKey");
     assertString(data.encryptedPrivateKey.iv, "encryptedPrivateKey.iv");
     assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
-  }
-
-  #hasLegacySignature(data: EncryptedCredentials): data is LegacyEncryptedCredentials {
-    return "signature" in data && typeof (data as Record<string, unknown>).signature === "string";
   }
 
   #isValid(creds: StoredCredentials, requiredContracts: Address[]): boolean {

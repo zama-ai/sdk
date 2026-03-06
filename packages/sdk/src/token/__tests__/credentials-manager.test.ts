@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
 import { ZamaError, ZamaErrorCode } from "../token.types";
-import { CredentialExpiredError } from "../errors";
+import { KeypairExpiredError } from "../errors";
 import type { Address } from "../../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { GenericSigner } from "../token.types";
@@ -597,11 +597,11 @@ describe("session allow/revoke", () => {
   });
 });
 
-describe("CredentialExpiredError", () => {
+describe("KeypairExpiredError", () => {
   it("has the correct error code", () => {
-    const error = new CredentialExpiredError("credentials expired");
-    expect(error.code).toBe(ZamaErrorCode.CredentialExpired);
-    expect(error.name).toBe("CredentialExpiredError");
+    const error = new KeypairExpiredError("credentials expired");
+    expect(error.code).toBe(ZamaErrorCode.KeypairExpired);
+    expect(error.name).toBe("KeypairExpiredError");
     expect(error).toBeInstanceOf(ZamaError);
   });
 });
