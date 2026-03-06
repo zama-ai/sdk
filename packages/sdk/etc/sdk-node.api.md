@@ -84,8 +84,10 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     //
     // (undocumented)
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData>;
+    // Warning: (ae-forgotten-export) The symbol "relayer_sdk_types_d_exports" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
+    requestZKProofVerification(zkProof: relayer_sdk_types_d_exports.ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
     // (undocumented)
     protected sendRequest<T>(type: WorkerRequestType, payload: WorkerRequest["payload"], timeoutMs?: number): Promise<T>;
     // (undocumented)
@@ -385,8 +387,8 @@ export interface InitRequest extends BaseRequest {
     payload: {
         cdnUrl: string;
         fhevmConfig: FhevmInstanceConfig;
-        csrfToken: string;
-        integrity?: string;
+        csrfToken: string; /** Expected SHA-384 hex digest for integrity verification. */
+        integrity?: string; /** Number of WASM threads for parallel FHE operations. */
         thread?: number;
     };
     // (undocumented)
@@ -443,7 +445,7 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker_2, NodeWorkerClien
 // @public (undocumented)
 export interface NodeWorkerClientConfig {
     // (undocumented)
-    fhevmConfig: FhevmInstanceConfig;
+    fhevmConfig: relayer_sdk_types_d_exports.FhevmInstanceConfig;
     logger?: GenericLogger;
 }
 
@@ -471,7 +473,7 @@ export class NodeWorkerPool {
     // (undocumented)
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData>;
     // (undocumented)
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
+    requestZKProofVerification(zkProof: relayer_sdk_types_d_exports.ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
     // (undocumented)
     terminate(): void;
     // (undocumented)
