@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from "vitest";
-import { SigningKey } from "ethers";
 import {
   cleartextPublicDecrypt,
   cleartextUserDecrypt,
@@ -25,7 +24,7 @@ const USER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 const CONTRACT = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
 
 const mockSigningCtx: DecryptionSigningContext = {
-  signingKey: new SigningKey("0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91"),
+  privateKey: "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91",
   gatewayChainId: 10901,
   verifyingContract: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
 };

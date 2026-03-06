@@ -1,4 +1,3 @@
-import { SigningKey } from "ethers";
 import { describe, it, expect } from "vitest";
 import { createCleartextEncryptedInput } from "../cleartext-input";
 
@@ -7,8 +6,8 @@ const CONTRACT = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
 const USER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 const CHAIN_ID = 31337;
 
-const MOCK_SIGNER_PK = "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901";
-const signingKey = new SigningKey(MOCK_SIGNER_PK);
+const MOCK_SIGNER_PK =
+  "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901" as const;
 
 function makeInput(overrides?: { contractAddress?: string; userAddress?: string }) {
   return createCleartextEncryptedInput({
@@ -17,7 +16,7 @@ function makeInput(overrides?: { contractAddress?: string; userAddress?: string 
     contractAddress: overrides?.contractAddress ?? CONTRACT,
     userAddress: overrides?.userAddress ?? USER,
     signingContext: {
-      signingKey,
+      signingKey: MOCK_SIGNER_PK,
       gatewayChainId: 10901,
       verifyingContract: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
       contractAddress: overrides?.contractAddress ?? CONTRACT,

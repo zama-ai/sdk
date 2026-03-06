@@ -21,10 +21,11 @@
  * @module
  */
 
-import { getAddress, getBytes, SigningKey, keccak256, concat, toUtf8Bytes } from "ethers";
+import { getAddress, keccak256, concat, toBytes, hexToBytes, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { EncryptionFailedError } from "../token/errors";
 import { computeCleartextHandles } from "./cleartext-handles";
-import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712";
+import { abiCoder, buildDomainSeparator, eip712Digest } from "./eip712";
 
 /**
  * Fluent builder interface for cleartext encrypted inputs.
@@ -50,7 +51,7 @@ export interface CleartextEncryptedInput {
 
 /** EIP-712 signing context for the coprocessor input verification. */
 export interface InputSigningContext {
-  signingKey: SigningKey;
+  signingKey: Hex;
   gatewayChainId: number;
   verifyingContract: string;
   contractAddress: string;
@@ -59,7 +60,7 @@ export interface InputSigningContext {
 }
 
 const CIPHERTEXT_VERIFICATION_TYPEHASH = keccak256(
-  toUtf8Bytes(
+  toBytes(
     "CiphertextVerification(bytes32[] ctHandles,address userAddress,address contractAddress,uint256 contractChainId,bytes extraData)",
   ),
 );
@@ -83,7 +84,7 @@ function buildExtraData(values: bigint[]): Uint8Array {
   const extraData = new Uint8Array(values.length * 32);
   for (let i = 0; i < values.length; i++) {
     const hex = values[i]!.toString(16).padStart(64, "0");
-    const bytes = getBytes("0x" + hex);
+    const bytes = hexToBytes(`0x${hex}`);
     extraData.set(bytes, i * 32);
   }
   return extraData;
@@ -93,11 +94,11 @@ function buildExtraData(values: bigint[]): Uint8Array {
  * Sign the CiphertextVerification struct using EIP-712.
  * Returns a 65-byte compact signature (r[32] + s[32] + v[1]).
  */
-function signCiphertextVerification(
-  handleHexes: string[],
+async function signCiphertextVerification(
+  handleHexes: Hex[],
   extraData: Uint8Array,
   ctx: InputSigningContext,
-): Uint8Array {
+): Promise<Uint8Array> {
   const domainSeparator = buildDomainSeparator(
     "InputVerification",
     ctx.gatewayChainId,
@@ -126,8 +127,9 @@ function signCiphertextVerification(
   );
 
   const digest = eip712Digest(domainSeparator, structHash);
-  const sig = ctx.signingKey.sign(digest);
-  return packSignature(sig);
+  const account = privateKeyToAccount(ctx.signingKey);
+  const sigHex = await account.sign({ hash: digest });
+  return hexToBytes(sigHex);
 }
 
 /**
@@ -140,19 +142,19 @@ function signCiphertextVerification(
  *   [65*m bytes] signatures
  *   [remaining]  extraData: 32-byte padded plaintext per value
  */
-function buildInputProof(
-  handleHexes: string[],
+async function buildInputProof(
+  handleHexes: Hex[],
   values: bigint[],
   ctx: InputSigningContext,
-): Uint8Array {
+): Promise<Uint8Array> {
   const numHandles = handleHexes.length;
   const extraData = buildExtraData(values);
-  const signature = signCiphertextVerification(handleHexes, extraData, ctx);
+  const signature = await signCiphertextVerification(handleHexes, extraData, ctx);
 
   const header = new Uint8Array([numHandles, 1]); // numHandles, numSigners=1
   const handlesBytes = new Uint8Array(numHandles * 32);
   for (let i = 0; i < numHandles; i++) {
-    handlesBytes.set(getBytes(handleHexes[i]!), i * 32);
+    handlesBytes.set(hexToBytes(handleHexes[i]!), i * 32);
   }
 
   const result = new Uint8Array(
@@ -265,9 +267,9 @@ export function createCleartextEncryptedInput(params: {
         aclContractAddress,
         chainId,
       });
-      const inputProof = buildInputProof(handles, values, signingContext);
+      const inputProof = await buildInputProof(handles as Hex[], values, signingContext);
       return {
-        handles: handles.map((h) => getBytes(h)),
+        handles: handles.map((h) => hexToBytes(h as Hex)),
         inputProof,
       };
     },

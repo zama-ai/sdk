@@ -1,4 +1,4 @@
-import type { Eip1193Provider } from "ethers";
+import type { EIP1193Provider } from "viem";
 
 /**
  * Configuration for a cleartext FHEVM instance.
@@ -13,7 +13,7 @@ import type { Eip1193Provider } from "ethers";
  */
 export interface CleartextInstanceConfig {
   /** JSON-RPC URL string or EIP-1193 provider (e.g. MetaMask's `window.ethereum`). */
-  network: Eip1193Provider | string;
+  network: EIP1193Provider | string;
   /** Chain ID of the target network. */
   chainId: number;
   /** Chain ID of the gateway network (used for EIP-712 domain). */

@@ -1,29 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 
-// Mock ethers providers — provider.call returns ABI-encoded results
-vi.mock("ethers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("ethers")>();
-
-  class MockJsonRpcProvider {
-    getNetwork = vi.fn().mockResolvedValue({ chainId: 31337n });
-    call = vi.fn().mockImplementation(({ data }: { data: string }) => {
-      // plaintexts(bytes32) selector = 0xf7c21ff0
-      if (data.startsWith("0xf7c21ff0")) {
-        return Promise.resolve(actual.AbiCoder.defaultAbiCoder().encode(["uint256"], [42n]));
-      }
-      // ACL functions return true
-      return Promise.resolve(actual.AbiCoder.defaultAbiCoder().encode(["bool"], [true]));
-    });
-  }
-  class MockBrowserProvider {
-    getNetwork = vi.fn().mockResolvedValue({ chainId: 31337n });
-    call = vi.fn().mockResolvedValue(actual.AbiCoder.defaultAbiCoder().encode(["bool"], [true]));
-  }
+// Mock viem — createPublicClient returns a mock client with readContract
+vi.mock("viem", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("viem")>();
 
   return {
     ...actual,
-    JsonRpcProvider: MockJsonRpcProvider,
-    BrowserProvider: MockBrowserProvider,
+    createPublicClient: vi.fn(() => ({
+      readContract: vi.fn(async ({ functionName }: { functionName: string }) => {
+        // plaintexts(bytes32) → returns 42n
+        if (functionName === "plaintexts") return 42n;
+        // ACL functions → return true
+        return true;
+      }),
+    })),
   };
 });
 
@@ -178,13 +168,13 @@ describe("createCleartextInstance", () => {
     );
   });
 
-  it("resolves BrowserProvider when network is an object (Eip1193Provider)", () => {
-    const eip1193Mock = { request: vi.fn() }; // mimics Eip1193Provider
+  it("resolves custom transport when network is an object (EIP1193Provider)", () => {
+    const eip1193Mock = { request: vi.fn() };
     const instance = createCleartextInstance({
       ...CONFIG,
       network: eip1193Mock as never,
     });
-    // If it didn't throw, BrowserProvider path was taken
+    // If it didn't throw, custom transport path was taken
     expect(instance.createEncryptedInput).toBeTypeOf("function");
   });
 

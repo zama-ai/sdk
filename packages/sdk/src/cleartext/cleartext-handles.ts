@@ -5,20 +5,10 @@
  * FHE type identifier, and version byte — matching the on-chain layout
  * expected by the CleartextFHEVM executor.
  *
- * Uses `solidityPackedKeccak256` + bitwise OR for fast handle assembly.
+ * Uses `keccak256(encodePacked(...))` + bitwise OR for fast handle assembly.
  */
 
-import {
-  concat,
-  getBytes,
-  hexlify,
-  keccak256,
-  randomBytes,
-  solidityPackedKeccak256,
-  toBeHex,
-  toUtf8Bytes,
-  zeroPadValue,
-} from "ethers";
+import { concat, encodePacked, Hex, keccak256, pad, toBytes, toHex } from "viem";
 import { EncryptionFailedError } from "../token/errors";
 import {
   BITS_TO_FHE_TYPE,
@@ -32,8 +22,8 @@ import {
 // Constants
 // ---------------------------------------------------------------------------
 
-const RAW_CT_HASH_DOMAIN_SEPARATOR = toUtf8Bytes("ZK-w_rct");
-const HANDLE_HASH_DOMAIN_SEPARATOR = toUtf8Bytes("ZK-w_hdl");
+const RAW_CT_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_rct");
+const HANDLE_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_hdl");
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -74,16 +64,18 @@ export interface ParsedHandle {
  *
  * Layout: `keccak256("ZK-w_rct" || keccak256(fheType || cleartextBytes || random32))`
  */
-function computeMockCiphertext(fheType: number, cleartext: bigint, random32: Uint8Array): string {
+function computeMockCiphertext(fheType: number, cleartext: bigint, random32: Uint8Array): Hex {
   const bitWidth = FHE_BIT_WIDTHS[fheType as FheType];
   if (bitWidth === undefined) {
     throw new EncryptionFailedError(`Unknown FheType: ${fheType}`);
   }
   const byteLength = Math.ceil(bitWidth / 8);
-  const clearBytes = getBytes(zeroPadValue(toBeHex(cleartext), byteLength));
+  const clearBytes = toBytes(pad(toHex(cleartext), { size: byteLength }));
 
-  const inner = keccak256(concat([new Uint8Array([fheType]), clearBytes, random32]));
-  return keccak256(concat([RAW_CT_HASH_DOMAIN_SEPARATOR, inner]));
+  const inner = keccak256(
+    concat([toHex(new Uint8Array([fheType])), toHex(clearBytes), toHex(random32)]),
+  );
+  return keccak256(concat([toHex(RAW_CT_HASH_DOMAIN_SEPARATOR), inner]));
 }
 
 /**
@@ -104,12 +96,22 @@ function computeInputHandle(
   fheTypeId: number,
   aclAddress: string,
   chainId: bigint,
-): string {
-  const blobHash = keccak256(concat([RAW_CT_HASH_DOMAIN_SEPARATOR, ciphertextBlob]));
+): Hex {
+  const blobHash = keccak256(
+    concat([toHex(RAW_CT_HASH_DOMAIN_SEPARATOR), ciphertextBlob as `0x${string}`]),
+  );
 
-  const handleHash = solidityPackedKeccak256(
-    ["bytes", "bytes32", "uint8", "address", "uint256"],
-    [HANDLE_HASH_DOMAIN_SEPARATOR, blobHash, index, aclAddress, chainId],
+  const handleHash = keccak256(
+    encodePacked(
+      ["bytes", "bytes32", "uint8", "address", "uint256"],
+      [
+        toHex(HANDLE_HASH_DOMAIN_SEPARATOR),
+        blobHash as `0x${string}`,
+        index,
+        aclAddress as `0x${string}`,
+        chainId,
+      ],
+    ),
   );
 
   const chainId64 = chainId & 0xffff_ffff_ffff_ffffn;
@@ -120,7 +122,7 @@ function computeInputHandle(
     (BigInt(fheTypeId) << 8n) |
     BigInt(HANDLE_VERSION);
 
-  return toBeHex(handle, 32);
+  return toHex(handle, { size: 32 });
 }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +158,7 @@ export function computeCleartextHandles(
     return id;
   });
 
-  const random32List = values.map(() => randomBytes(32));
+  const random32List = values.map(() => crypto.getRandomValues(new Uint8Array(32)));
   const mockCiphertexts = values.map((value, i) =>
     computeMockCiphertext(fheTypeIds[i]!, value, random32List[i]!),
   );
@@ -179,12 +181,12 @@ export function computeCleartextHandles(
 export function parseHandle(handleHex: string): ParsedHandle {
   const handle = BigInt(handleHex);
 
-  const bytes = getBytes(handleHex);
+  const bytes = toBytes(handleHex as `0x${string}`);
   if (bytes.length !== 32) {
     throw new EncryptionFailedError(`Expected 32 bytes, got ${bytes.length}`);
   }
 
-  const hash21 = hexlify(bytes.slice(0, 21));
+  const hash21 = toHex(bytes.slice(0, 21));
   const index = Number((handle >> 80n) & 0xffn);
   const chainId = (handle >> 16n) & 0xffff_ffff_ffff_ffffn;
   const fheTypeId = Number((handle >> 8n) & 0xffn);

@@ -4,20 +4,38 @@
  * @module
  */
 
-import { getBytes, AbiCoder, keccak256, concat, toUtf8Bytes, type Signature } from "ethers";
+import {
+  keccak256,
+  concat,
+  toBytes,
+  toHex,
+  hexToBytes,
+  encodeAbiParameters,
+  type Hex,
+  type TypedDataDomain,
+} from "viem";
 
-export const abiCoder = AbiCoder.defaultAbiCoder();
+/**
+ * Drop-in replacement for ethers' `AbiCoder.defaultAbiCoder()`.
+ * Exposes an `encode(types, values)` method backed by viem's `encodeAbiParameters`.
+ */
+export const abiCoder = {
+  encode(types: string[], values: unknown[]): Hex {
+    const params = types.map((t) => ({ type: t }));
+    return encodeAbiParameters(params, values);
+  },
+};
 
 export const EIP712_DOMAIN_TYPEHASH = keccak256(
-  toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+  toBytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
 );
 
-const VERSION_HASH = keccak256(toUtf8Bytes("1"));
+const VERSION_HASH = keccak256(toBytes("1"));
 
 /** Pre-computed name hashes for the two signing domains. */
-const NAME_HASH_CACHE: Record<string, string> = {};
-function getNameHash(name: string): string {
-  return (NAME_HASH_CACHE[name] ??= keccak256(toUtf8Bytes(name)));
+const NAME_HASH_CACHE: Record<string, Hex> = {};
+function getNameHash(name: string): Hex {
+  return (NAME_HASH_CACHE[name] ??= keccak256(toBytes(name)));
 }
 
 /**
@@ -31,7 +49,7 @@ export function buildDomainSeparator(
   name: string,
   chainId: number,
   verifyingContract: string,
-): string {
+): Hex {
   return keccak256(
     abiCoder.encode(
       ["bytes32", "bytes32", "bytes32", "uint256", "address"],
@@ -43,42 +61,36 @@ export function buildDomainSeparator(
 /**
  * Compute a full EIP-712 digest from a domain separator and struct hash.
  */
-export function eip712Digest(domainSeparator: string, structHash: string): string {
-  return keccak256(concat(["0x1901", domainSeparator, structHash]));
+export function eip712Digest(domainSeparator: string, structHash: string): Hex {
+  return keccak256(concat([toHex(0x1901, { size: 2 }), domainSeparator as Hex, structHash as Hex]));
 }
 
 /**
- * Pack a signature as r[32] + s[32] + v[1] (65 bytes).
+ * Convert a 65-byte hex signature (r[32] || s[32] || v[1]) returned by
+ * viem's `sign()` into a Uint8Array.
  */
-export function packSignature(sig: Signature): Uint8Array {
-  const sigBytes = new Uint8Array(65);
-  sigBytes.set(getBytes(sig.r), 0);
-  sigBytes.set(getBytes(sig.s), 32);
-  sigBytes[64] = sig.v;
-  return sigBytes;
+export function packSignature(sigHex: Hex): Uint8Array {
+  return hexToBytes(sigHex);
 }
 
 // ---------------------------------------------------------------------------
 // Pre-built EIP-712 type definitions for all four signing flows.
 // ---------------------------------------------------------------------------
 
-type DomainFactory = (
-  chainId: number | bigint,
-  verifyingContract: string,
-) => { name: string; version: string; chainId: number | bigint; verifyingContract: string };
+type DomainFactory = (chainId: number | bigint, verifyingContract: string) => TypedDataDomain;
 
 const inputDomain: DomainFactory = (chainId, verifyingContract) => ({
   name: "InputVerification",
   version: "1",
-  chainId,
-  verifyingContract,
+  chainId: Number(chainId),
+  verifyingContract: verifyingContract as `0x${string}`,
 });
 
 const decryptionDomain: DomainFactory = (chainId, verifyingContract) => ({
   name: "Decryption",
   version: "1",
-  chainId,
-  verifyingContract,
+  chainId: Number(chainId),
+  verifyingContract: verifyingContract as `0x${string}`,
 });
 
 export const INPUT_VERIFICATION_EIP712 = {

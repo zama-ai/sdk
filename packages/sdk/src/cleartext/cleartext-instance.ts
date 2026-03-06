@@ -1,13 +1,13 @@
 import {
-  BrowserProvider,
-  Interface,
-  hexlify,
-  JsonRpcProvider,
-  SigningKey,
-  zeroPadValue,
-  type Eip1193Provider,
-  type Provider,
-} from "ethers";
+  createPublicClient,
+  custom,
+  hexToBigInt,
+  http,
+  parseAbi,
+  toHex,
+  type Hex,
+  type PublicClient,
+} from "viem";
 import { ConfigurationError, EncryptionFailedError, NotSupportedError } from "../token/errors";
 import {
   cleartextPublicDecrypt,
@@ -38,12 +38,11 @@ import type {
   ZKProofLike,
 } from "../relayer/relayer-sdk.types";
 
-const ACL_ABI = [
+const ACL_ABI = parseAbi([
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
   "function isHandleDelegatedForUserDecryption(address delegator, address delegate, address contractAddress, bytes32 handle) view returns (bool)",
-] as const;
-const ACL_IFACE = new Interface(ACL_ABI);
+]);
 
 /** EIP-712 Domain type entries for structured data signing. */
 const EIP712_DOMAIN_TYPE = [
@@ -53,20 +52,22 @@ const EIP712_DOMAIN_TYPE = [
   { name: "verifyingContract", type: "address" },
 ];
 
-/** Resolve a network config value into an ethers Provider. */
-function resolveProvider(network: Eip1193Provider | string): Provider {
+/** Resolve a network config value into a viem PublicClient. */
+function resolveClient(
+  network: { request: (...args: unknown[]) => Promise<unknown> } | string,
+): PublicClient {
   if (typeof network === "string") {
-    return new JsonRpcProvider(network);
+    return createPublicClient({ transport: http(network) });
   }
-  return new BrowserProvider(network);
+  return createPublicClient({ transport: custom(network) });
 }
 
 /**
  * Normalize a handle hex string to zero-padded 32 bytes.
  * Ensures consistent key format in result records regardless of input format.
  */
-function normalizeHandle(handle: string): string {
-  return zeroPadValue(handle, 32);
+function normalizeHandle(handle: string): Hex {
+  return toHex(hexToBigInt(handle as Hex), { size: 32 });
 }
 
 /**
@@ -115,38 +116,46 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
     );
   }
 
-  const provider = resolveProvider(config.network);
+  const client = resolveClient(
+    config.network as string | { request: (...args: unknown[]) => Promise<unknown> },
+  );
   const { aclContractAddress, chainId, cleartextExecutorAddress } = config;
-  const coprocessorSigningKey = new SigningKey(config.coprocessorSignerPrivateKey);
-  const kmsSigningKey = new SigningKey(config.kmsSignerPrivateKey);
+  const coprocessorPrivateKey = config.coprocessorSignerPrivateKey as Hex;
+  const kmsPrivateKey = config.kmsSignerPrivateKey as Hex;
 
   const decryptionSigningCtx: DecryptionSigningContext = {
-    signingKey: kmsSigningKey,
+    privateKey: kmsPrivateKey,
     gatewayChainId: config.gatewayChainId,
     verifyingContract: config.verifyingContractAddressDecryption,
   };
 
   const executor = new CleartextExecutor({
-    executorAddress: cleartextExecutorAddress,
-    provider,
+    executorAddress: cleartextExecutorAddress as Hex,
+    client,
   });
 
-  async function aclCall<T>(method: string, args: unknown[]): Promise<T> {
-    const data = ACL_IFACE.encodeFunctionData(method, args);
-    const result = await provider.call({ to: aclContractAddress, data });
-    return ACL_IFACE.decodeFunctionResult(method, result)[0] as T;
-  }
-
   const acl: CleartextACL = {
-    isAllowedForDecryption: (handle) => aclCall<boolean>("isAllowedForDecryption", [handle]),
-    persistAllowed: (handle, account) => aclCall<boolean>("persistAllowed", [handle, account]),
+    isAllowedForDecryption: (handle) =>
+      client.readContract({
+        address: aclContractAddress as Hex,
+        abi: ACL_ABI,
+        functionName: "isAllowedForDecryption",
+        args: [handle as Hex],
+      }),
+    persistAllowed: (handle, account) =>
+      client.readContract({
+        address: aclContractAddress as Hex,
+        abi: ACL_ABI,
+        functionName: "persistAllowed",
+        args: [handle as Hex, account as Hex],
+      }),
     isHandleDelegatedForUserDecryption: (delegator, delegate, contractAddress, handle) =>
-      aclCall<boolean>("isHandleDelegatedForUserDecryption", [
-        delegator,
-        delegate,
-        contractAddress,
-        handle,
-      ]),
+      client.readContract({
+        address: aclContractAddress as Hex,
+        abi: ACL_ABI,
+        functionName: "isHandleDelegatedForUserDecryption",
+        args: [delegator as Hex, delegate as Hex, contractAddress as Hex, handle as Hex],
+      }),
   };
 
   const instance: CleartextInstance = {
@@ -157,7 +166,7 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
         contractAddress,
         userAddress,
         signingContext: {
-          signingKey: coprocessorSigningKey,
+          signingKey: coprocessorPrivateKey,
           gatewayChainId: config.gatewayChainId,
           verifyingContract: config.verifyingContractAddressInputVerification,
           contractAddress,
@@ -216,7 +225,7 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
     async generateKeypair(): Promise<FHEKeypair> {
       const pub = crypto.getRandomValues(new Uint8Array(KEYPAIR_PUBLIC_KEY_BYTES));
       const priv = crypto.getRandomValues(new Uint8Array(KEYPAIR_PRIVATE_KEY_BYTES));
-      return { publicKey: hexlify(pub), privateKey: hexlify(priv) };
+      return { publicKey: toHex(pub), privateKey: toHex(priv) };
     },
 
     async createEIP712(

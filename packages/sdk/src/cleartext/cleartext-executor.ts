@@ -1,7 +1,7 @@
-import { Interface, type Provider } from "ethers";
+import type { PublicClient } from "viem";
+import { parseAbi } from "viem";
 
-const EXECUTOR_ABI = ["function plaintexts(bytes32 handle) view returns (uint256)"] as const;
-const EXECUTOR_IFACE = new Interface(EXECUTOR_ABI);
+const EXECUTOR_ABI = parseAbi(["function plaintexts(bytes32 handle) view returns (uint256)"]);
 
 /** Minimal callable shape for testing with mocks. */
 export interface PlaintextReader {
@@ -15,23 +15,26 @@ export interface PlaintextReader {
  * their bytes32 handle. This class wraps the `plaintexts(bytes32)` view call
  * to retrieve those values.
  *
- * Uses raw `provider.call` + `Interface` encode/decode for minimal overhead.
+ * Uses viem's `readContract` for type-safe, minimal-overhead contract reads.
  *
  * Accepts either a pre-built reader (useful for testing with mocks) or an
- * `{ executorAddress, provider }` pair for production use.
+ * `{ executorAddress, client }` pair for production use.
  */
 export class CleartextExecutor {
   readonly #read: (handle: string) => Promise<bigint>;
 
   constructor(reader: PlaintextReader);
-  constructor(params: { executorAddress: string; provider: Provider });
-  constructor(arg: PlaintextReader | { executorAddress: string; provider: Provider }) {
+  constructor(params: { executorAddress: `0x${string}`; client: PublicClient });
+  constructor(arg: PlaintextReader | { executorAddress: `0x${string}`; client: PublicClient }) {
     if ("executorAddress" in arg) {
-      const { executorAddress, provider } = arg;
+      const { executorAddress, client } = arg;
       this.#read = async function read(handle: string) {
-        const data = EXECUTOR_IFACE.encodeFunctionData("plaintexts", [handle]);
-        const result = await provider.call({ to: executorAddress, data });
-        return EXECUTOR_IFACE.decodeFunctionResult("plaintexts", result)[0] as bigint;
+        return client.readContract({
+          address: executorAddress,
+          abi: EXECUTOR_ABI,
+          functionName: "plaintexts",
+          args: [handle as `0x${string}`],
+        });
       };
     } else {
       this.#read = function read(handle: string) {

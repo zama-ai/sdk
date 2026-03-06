@@ -9,10 +9,11 @@
  * @module
  */
 
-import { hexlify, keccak256, concat, toUtf8Bytes, type SigningKey } from "ethers";
+import { keccak256, concat, toBytes, toHex, hexToBytes, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { DecryptionFailedError } from "../token/errors";
 import type { CleartextExecutor } from "./cleartext-executor";
-import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712";
+import { abiCoder, buildDomainSeparator, eip712Digest } from "./eip712";
 import { FheType } from "./constants";
 
 /** Decrypted value — `boolean` for ebool, `bigint` for all other FHE types. */
@@ -39,7 +40,7 @@ export interface CleartextACL {
 
 /** EIP-712 signing context for the KMS decryption verification. */
 export interface DecryptionSigningContext {
-  signingKey: SigningKey;
+  privateKey: Hex;
   gatewayChainId: number;
   verifyingContract: string;
 }
@@ -84,20 +85,18 @@ function formatPlaintext(value: bigint, fheTypeId: number): ClearValue {
 }
 
 const PUBLIC_DECRYPT_TYPEHASH = keccak256(
-  toUtf8Bytes(
-    "PublicDecryptVerification(bytes32[] ctHandles,bytes decryptedResult,bytes extraData)",
-  ),
+  toBytes("PublicDecryptVerification(bytes32[] ctHandles,bytes decryptedResult,bytes extraData)"),
 );
 
 /**
  * Sign a PublicDecryptVerification struct using EIP-712.
  * Returns a 65-byte compact signature (r[32] + s[32] + v[1]).
  */
-function signDecryptionProof(
+async function signDecryptionProof(
   handleHexes: string[],
   abiEncodedClearValues: string,
   ctx: DecryptionSigningContext,
-): Uint8Array {
+): Promise<Uint8Array> {
   const domainSeparator = buildDomainSeparator(
     "Decryption",
     ctx.gatewayChainId,
@@ -105,10 +104,10 @@ function signDecryptionProof(
   );
 
   // Hash the ctHandles array: keccak256(abi.encodePacked(handles))
-  const ctHandlesHash = keccak256(concat(handleHexes));
+  const ctHandlesHash = keccak256(concat(handleHexes as Hex[]));
 
   // Hash the decryptedResult
-  const decryptedResultHash = keccak256(abiEncodedClearValues);
+  const decryptedResultHash = keccak256(abiEncodedClearValues as Hex);
 
   // Empty extraData
   const extraDataHash = keccak256("0x");
@@ -122,20 +121,21 @@ function signDecryptionProof(
   );
 
   const digest = eip712Digest(domainSeparator, structHash);
-  const sig = ctx.signingKey.sign(digest);
-  return packSignature(sig);
+  const account = privateKeyToAccount(ctx.privateKey);
+  const sigHex = await account.sign({ hash: digest });
+  return hexToBytes(sigHex);
 }
 
 /**
  * Build a decryption proof: numSigners (1 byte) + signatures (65 * numSigners).
  * No extraData appended.
  */
-function buildDecryptionProof(
+async function buildDecryptionProof(
   handleHexes: string[],
   abiEncodedClearValues: string,
   ctx: DecryptionSigningContext,
-): Uint8Array {
-  const signature = signDecryptionProof(handleHexes, abiEncodedClearValues, ctx);
+): Promise<Uint8Array> {
+  const signature = await signDecryptionProof(handleHexes, abiEncodedClearValues, ctx);
   const proof = new Uint8Array(1 + 65);
   proof[0] = 1; // numSigners = 1
   proof.set(signature, 1);
@@ -168,7 +168,7 @@ export async function cleartextPublicDecrypt(
   abiEncodedClearValues: string;
   decryptionProof: string;
 }> {
-  const handlesHex = handles.map((h) => (typeof h === "string" ? h : hexlify(h)));
+  const handlesHex = handles.map((h) => (typeof h === "string" ? h : toHex(h)));
   const fheTypes = handlesHex.map((h) => getFheTypeId(h));
 
   // ACL checks and plaintext reads are independent — run in parallel
@@ -195,8 +195,12 @@ export async function cleartextPublicDecrypt(
   });
   const abiEncodedClearValues = abiCoder.encode(abiTypes, abiValues);
 
-  const proofBytes = buildDecryptionProof(handlesHex, abiEncodedClearValues, decryptionSigningCtx);
-  const decryptionProof = hexlify(proofBytes);
+  const proofBytes = await buildDecryptionProof(
+    handlesHex,
+    abiEncodedClearValues,
+    decryptionSigningCtx,
+  );
+  const decryptionProof = toHex(proofBytes);
 
   return { clearValues, abiEncodedClearValues, decryptionProof };
 }
@@ -218,7 +222,7 @@ export async function cleartextDelegatedUserDecrypt(
   acl: CleartextACL,
 ): Promise<Record<string, ClearValue>> {
   const handlesHex = handleContractPairs.map((p) =>
-    typeof p.handle === "string" ? p.handle : hexlify(p.handle),
+    typeof p.handle === "string" ? p.handle : toHex(p.handle),
   );
 
   const fheTypes = handlesHex.map((h) => getFheTypeId(h));
@@ -270,7 +274,7 @@ export async function cleartextUserDecrypt(
   acl: CleartextACL,
 ): Promise<Record<string, ClearValue>> {
   const handlesHex = handleContractPairs.map((p) =>
-    typeof p.handle === "string" ? p.handle : hexlify(p.handle),
+    typeof p.handle === "string" ? p.handle : toHex(p.handle),
   );
 
   const fheTypes = handlesHex.map((h) => getFheTypeId(h));
