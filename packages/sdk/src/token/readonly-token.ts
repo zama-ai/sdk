@@ -12,8 +12,8 @@ import {
   getWrapperContract,
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Address } from "../relayer/relayer-sdk.types";
-import { normalizeAddress, pLimit } from "../utils";
+import type { Address, Handle } from "../relayer/relayer-sdk.types";
+import { normalizeAddress, normalizeHandle, pLimit } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credentials-manager";
@@ -28,7 +28,7 @@ export const ZERO_HANDLE =
 /** Options for {@link ReadonlyToken.batchDecryptBalances}. */
 export interface BatchDecryptOptions {
   /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
-  handles?: Address[];
+  handles?: Handle[];
   /** Balance owner address. Defaults to the connected signer. */
   owner?: Address;
   /**
@@ -188,7 +188,7 @@ export class ReadonlyToken {
    * const handle = await token.confidentialBalanceOf();
    * ```
    */
-  async confidentialBalanceOf(owner?: Address): Promise<Address> {
+  async confidentialBalanceOf(owner?: Address): Promise<Handle> {
     const ownerAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
     return this.readConfidentialBalanceOf(ownerAddress);
   }
@@ -373,11 +373,9 @@ export class ReadonlyToken {
    */
   async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
     const coordinator = normalizeAddress(coordinatorAddress, "coordinatorAddress");
-    const exists = await this.signer.readContract<boolean>(
-      wrapperExistsContract(coordinator, this.address),
-    );
+    const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
     if (!exists) return null;
-    return this.signer.readContract<Address>(getWrapperContract(coordinator, this.address));
+    return this.signer.readContract(getWrapperContract(coordinator, this.address));
   }
 
   /**
@@ -391,7 +389,7 @@ export class ReadonlyToken {
    * ```
    */
   async underlyingToken(): Promise<Address> {
-    return this.signer.readContract<Address>(underlyingContract(this.address));
+    return this.signer.readContract(underlyingContract(this.address));
   }
 
   /**
@@ -408,13 +406,9 @@ export class ReadonlyToken {
    */
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
     const normalizedWrapper = normalizeAddress(wrapper, "wrapper");
-    const underlying = await this.signer.readContract<Address>(
-      underlyingContract(normalizedWrapper),
-    );
+    const underlying = await this.signer.readContract(underlyingContract(normalizedWrapper));
     const userAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
-    return this.signer.readContract<bigint>(
-      allowanceContract(underlying, userAddress, normalizedWrapper),
-    );
+    return this.signer.readContract(allowanceContract(underlying, userAddress, normalizedWrapper));
   }
 
   /**
@@ -428,7 +422,7 @@ export class ReadonlyToken {
    * ```
    */
   async name(): Promise<string> {
-    return this.signer.readContract<string>(nameContract(this.address));
+    return this.signer.readContract(nameContract(this.address));
   }
 
   /**
@@ -442,7 +436,7 @@ export class ReadonlyToken {
    * ```
    */
   async symbol(): Promise<string> {
-    return this.signer.readContract<string>(symbolContract(this.address));
+    return this.signer.readContract(symbolContract(this.address));
   }
 
   /**
@@ -456,7 +450,7 @@ export class ReadonlyToken {
    * ```
    */
   async decimals(): Promise<number> {
-    return this.signer.readContract<number>(decimalsContract(this.address));
+    return this.signer.readContract(decimalsContract(this.address));
   }
 
   /**
@@ -515,21 +509,10 @@ export class ReadonlyToken {
     await tokens[0]!.credentials.allow(...allAddresses);
   }
 
-  protected async readConfidentialBalanceOf(owner: Address): Promise<Address> {
-    const result = await this.signer.readContract(
-      confidentialBalanceOfContract(this.address, owner),
+  protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
+    return normalizeHandle(
+      await this.signer.readContract(confidentialBalanceOfContract(this.address, owner)),
     );
-    return this.normalizeHandle(result);
-  }
-
-  protected normalizeHandle(value: unknown): Address {
-    if (typeof value === "string" && value.startsWith("0x")) {
-      return value as Address;
-    }
-    if (typeof value === "bigint") {
-      return `0x${value.toString(16).padStart(64, "0")}`;
-    }
-    return ZERO_HANDLE;
   }
 
   isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {
@@ -551,7 +534,7 @@ export class ReadonlyToken {
    * const value = await token.decryptBalance(handle);
    * ```
    */
-  async decryptBalance(handle: Address, owner?: Address): Promise<bigint> {
+  async decryptBalance(handle: Handle, owner?: Address): Promise<bigint> {
     if (this.isZeroHandle(handle)) return BigInt(0);
 
     const signerAddress = owner ?? (await this.signer.getAddress());
@@ -611,9 +594,9 @@ export class ReadonlyToken {
    * @returns A Map from handle to decrypted bigint value.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    */
-  async decryptHandles(handles: Address[], owner?: Address): Promise<Map<Address, bigint>> {
-    const results = new Map<Address, bigint>();
-    const nonZeroHandles: Address[] = [];
+  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>> {
+    const results = new Map<Handle, bigint>();
+    const nonZeroHandles: Handle[] = [];
 
     for (const handle of handles) {
       if (this.isZeroHandle(handle)) {

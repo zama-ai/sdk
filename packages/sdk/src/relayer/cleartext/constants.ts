@@ -1,3 +1,5 @@
+import { HardhatConfig } from "../relayer-utils";
+
 export enum FheType {
   Bool = 0,
   Uint4 = 1,
@@ -33,8 +35,8 @@ export const MOCK_KMS_SIGNER_PK =
   "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91";
 
 export const VERIFYING_CONTRACTS = {
-  inputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-  decryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
+  inputVerification: HardhatConfig.verifyingContractAddressInputVerification,
+  decryption: HardhatConfig.verifyingContractAddressDecryption,
 } as const;
 
 export const GATEWAY_CHAIN_ID = 10_901;

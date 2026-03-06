@@ -126,6 +126,8 @@ const MOCK_EIP712 = {
   },
 };
 
+const HANDLE = ("0x" + "11".repeat(32)) as `0x${string}`;
+
 // ===========================================================================
 // RelayerWeb
 // ===========================================================================
@@ -366,11 +368,11 @@ describe("RelayerWeb", () => {
 
     it("userDecrypt delegates to worker and returns clearValues", async () => {
       const relayer = createWebRelayer();
-      const clearValues = { handle1: 100n };
+      const clearValues = { [HANDLE]: 100n };
       mockWorkerClient.userDecrypt.mockResolvedValue({ clearValues });
 
       const params = {
-        handles: ["h1"],
+        handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "sk",
@@ -382,23 +384,26 @@ describe("RelayerWeb", () => {
       };
       const result = await relayer.userDecrypt(params);
 
-      expect(result).toEqual({ handle1: 100n });
+      expect(result).toEqual(clearValues);
       expect(mockWorkerClient.userDecrypt).toHaveBeenCalledWith(params);
     });
 
     it("publicDecrypt delegates to worker and returns structured result", async () => {
       const relayer = createWebRelayer();
       const mockResult = {
-        clearValues: { h1: 50n },
+        clearValues: {
+          [HANDLE]: "0x1111111111111111111111111111111111111111",
+          [("0x" + "22".repeat(32)) as `0x${string}`]: true,
+        },
         abiEncodedClearValues: "0xencoded",
         decryptionProof: "0xproof" as `0x${string}`,
       };
       mockWorkerClient.publicDecrypt.mockResolvedValue(mockResult);
 
-      const result = await relayer.publicDecrypt(["h1"]);
+      const result = await relayer.publicDecrypt([HANDLE]);
 
       expect(result).toEqual(mockResult);
-      expect(mockWorkerClient.publicDecrypt).toHaveBeenCalledWith(["h1"]);
+      expect(mockWorkerClient.publicDecrypt).toHaveBeenCalledWith([HANDLE]);
     });
 
     it("createDelegatedUserDecryptEIP712 delegates to worker", async () => {
@@ -427,11 +432,11 @@ describe("RelayerWeb", () => {
     it("delegatedUserDecrypt delegates to worker and returns clearValues", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.delegatedUserDecrypt.mockResolvedValue({
-        clearValues: { h1: 200n },
+        clearValues: { [HANDLE]: 200n },
       });
 
       const params = {
-        handles: ["h1"],
+        handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "sk",
@@ -444,7 +449,7 @@ describe("RelayerWeb", () => {
       };
       const result = await relayer.delegatedUserDecrypt(params);
 
-      expect(result).toEqual({ h1: 200n });
+      expect(result).toEqual({ [HANDLE]: 200n });
     });
 
     it("requestZKProofVerification delegates to worker", async () => {
@@ -714,11 +719,11 @@ describe("RelayerNode", () => {
 
     it("userDecrypt delegates to pool and returns clearValues", async () => {
       const relayer = createNodeRelayer();
-      const clearValues = { handle1: 100n };
+      const clearValues = { [HANDLE]: 100n };
       mockPool.userDecrypt.mockResolvedValue({ clearValues });
 
       const params = {
-        handles: ["h1"],
+        handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "sk",
@@ -730,23 +735,26 @@ describe("RelayerNode", () => {
       };
       const result = await relayer.userDecrypt(params);
 
-      expect(result).toEqual({ handle1: 100n });
+      expect(result).toEqual(clearValues);
       expect(mockPool.userDecrypt).toHaveBeenCalledWith(params);
     });
 
     it("publicDecrypt delegates to pool and returns structured result", async () => {
       const relayer = createNodeRelayer();
       const mockResult = {
-        clearValues: { h1: 50n },
+        clearValues: {
+          [HANDLE]: "0x1111111111111111111111111111111111111111",
+          [("0x" + "22".repeat(32)) as `0x${string}`]: true,
+        },
         abiEncodedClearValues: "0xencoded",
         decryptionProof: "0xproof" as `0x${string}`,
       };
       mockPool.publicDecrypt.mockResolvedValue(mockResult);
 
-      const result = await relayer.publicDecrypt(["h1"]);
+      const result = await relayer.publicDecrypt([HANDLE]);
 
       expect(result).toEqual(mockResult);
-      expect(mockPool.publicDecrypt).toHaveBeenCalledWith(["h1"]);
+      expect(mockPool.publicDecrypt).toHaveBeenCalledWith([HANDLE]);
     });
 
     it("createDelegatedUserDecryptEIP712 delegates to pool", async () => {
@@ -775,11 +783,11 @@ describe("RelayerNode", () => {
     it("delegatedUserDecrypt delegates to pool and returns clearValues", async () => {
       const relayer = createNodeRelayer();
       mockPool.delegatedUserDecrypt.mockResolvedValue({
-        clearValues: { h1: 200n },
+        clearValues: { [HANDLE]: 200n },
       });
 
       const params = {
-        handles: ["h1"],
+        handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
         privateKey: "sk",
@@ -792,7 +800,7 @@ describe("RelayerNode", () => {
       };
       const result = await relayer.delegatedUserDecrypt(params);
 
-      expect(result).toEqual({ h1: 200n });
+      expect(result).toEqual({ [HANDLE]: 200n });
     });
 
     it("requestZKProofVerification delegates to pool", async () => {

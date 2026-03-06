@@ -1,9 +1,9 @@
 /**
  * Framework-agnostic event decoders for confidential token contracts.
- * No viem/ethers dependency — works with raw log data from any provider.
+ * Works with raw log data from any provider.
  */
 
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Handle } from "../relayer/relayer-sdk.types";
 
 // ---------------------------------------------------------------------------
 // Generic log shape
@@ -50,7 +50,7 @@ export interface ConfidentialTransferEvent {
   /** Receiver address. */
   readonly to: string;
   /** FHE ciphertext handle for the transferred amount. */
-  readonly encryptedAmountHandle: string;
+  readonly encryptedAmountHandle: Handle;
 }
 
 /** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
@@ -74,14 +74,14 @@ export interface UnwrapRequestedEvent {
   /** Address that will receive the unwrapped ERC-20 tokens. */
   readonly receiver: string;
   /** FHE ciphertext handle for the requested unshield amount. */
-  readonly encryptedAmount: Address;
+  readonly encryptedAmount: Handle;
 }
 
 /** Decoded `UnwrappedFinalized` event — an unshield completed on-chain. */
 export interface UnwrappedFinalizedEvent {
   readonly eventName: "UnwrappedFinalized";
   /** FHE handle of the burnt confidential balance. */
-  readonly burntAmountHandle: string;
+  readonly burntAmountHandle: Handle;
   /** Whether the finalization succeeded. */
   readonly finalizeSuccess: boolean;
   /** Whether the fee transfer succeeded. */
@@ -110,9 +110,9 @@ export interface UnwrappedStartedEvent {
   /** Refund address (if applicable). */
   readonly refund: string;
   /** FHE handle of the requested amount. */
-  readonly requestedAmount: string;
+  readonly requestedAmount: Handle;
   /** FHE handle of the burn amount. */
-  readonly burnAmount: string;
+  readonly burnAmount: Handle;
 }
 
 /** Union of all decoded confidential token event types. */
@@ -135,9 +135,9 @@ function topicToBigInt(topic: string): bigint {
   return BigInt(topic);
 }
 
-function topicToBytes32(topic: string): string {
-  // topics are already 32-byte hex values with 0x prefix
-  return topic;
+function topicToBytes32(topic: string): Handle {
+  // EVM topics are already 32-byte 0x-prefixed hex — cast directly
+  return topic as Handle;
 }
 
 function wordAt(data: string, index: number): string {
@@ -159,8 +159,9 @@ function wordToBool(data: string, index: number): boolean {
   return BigInt("0x" + wordAt(data, index)) !== 0n;
 }
 
-function wordToBytes32(data: string, index: number): Address {
-  return `0x${wordAt(data, index)}`;
+function wordToBytes32(data: string, index: number): Handle {
+  // wordAt returns exactly 64 hex chars — prefix and cast directly
+  return `0x${wordAt(data, index)}` as Handle;
 }
 
 // ---------------------------------------------------------------------------

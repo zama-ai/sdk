@@ -76,12 +76,12 @@ export function confidentialTransferMutationOptions(token: Token) {
  */
 export function useConfidentialTransfer(
   config: UseConfidentialTransferConfig,
-  options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams>,
 ) {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<TransactionResult, Error, ConfidentialTransferParams, Address>({
+  return useMutation<TransactionResult, Error, ConfidentialTransferParams>({
     mutationKey: ["confidentialTransfer", config.tokenAddress],
     mutationFn: ({ to, amount, callbacks }) => token.confidentialTransfer(to, amount, callbacks),
     ...options,
@@ -95,8 +95,7 @@ export function useConfidentialTransfer(
               queryClient.setQueryData(key, value - variables.amount);
             }
           }
-          return (options?.onMutate?.(variables, mutationContext) ??
-            config.tokenAddress) as Address;
+          return options?.onMutate?.(variables, mutationContext);
         }
       : options?.onMutate,
     onError: (error, variables, onMutateResult, context) => {

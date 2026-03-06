@@ -1,20 +1,23 @@
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
+import type {
+  ClearValueType,
+  FhevmInstanceConfig,
+  InputProofBytesType,
+  KeypairType,
+  KmsDelegatedUserDecryptEIP712Type,
+  ZKProofLike,
+} from "@zama-fhe/relayer-sdk/node";
 import type { RelayerSDK } from "./relayer-sdk";
 import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
 import { ZamaError, EncryptionFailedError } from "../token/errors";
 import type {
   Address,
-  DecryptedValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  FHEKeypair,
-  InputProofBytesType,
-  KmsDelegatedUserDecryptEIP712Type,
+  Handle,
   PublicDecryptResult,
   UserDecryptParams,
-  ZKProofLike,
 } from "./relayer-sdk.types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 
@@ -120,7 +123,7 @@ export class RelayerNode implements RelayerSDK {
     this.#ensureLock = null;
   }
 
-  async generateKeypair(): Promise<FHEKeypair> {
+  async generateKeypair(): Promise<KeypairType<string>> {
     const pool = await this.#ensurePool();
     const result = await pool.generateKeypair();
     return {
@@ -174,7 +177,7 @@ export class RelayerNode implements RelayerSDK {
     });
   }
 
-  async userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>> {
+  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
     return withRetry(async () => {
       const pool = await this.#ensurePool();
       const result = await pool.userDecrypt(params);
@@ -182,7 +185,7 @@ export class RelayerNode implements RelayerSDK {
     });
   }
 
-  async publicDecrypt(handles: string[]): Promise<PublicDecryptResult> {
+  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
     return withRetry(async () => {
       const pool = await this.#ensurePool();
       const result = await pool.publicDecrypt(handles);
@@ -213,7 +216,7 @@ export class RelayerNode implements RelayerSDK {
 
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Record<string, DecryptedValue>> {
+  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
     return withRetry(async () => {
       const pool = await this.#ensurePool();
       const result = await pool.delegatedUserDecrypt(params);

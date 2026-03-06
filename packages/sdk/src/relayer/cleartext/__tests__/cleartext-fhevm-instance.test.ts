@@ -13,6 +13,7 @@ import {
 import type { PublicClient } from "viem";
 import { describe, expect, it } from "vitest";
 import { CleartextFhevmInstance } from "../cleartext-fhevm-instance";
+import type { Handle } from "../../relayer-sdk.types";
 import {
   CLEAR_TEXT_MOCK_CONFIG,
   CONTRACT_ADDRESS,
@@ -41,6 +42,7 @@ type MockClientOptions = {
 };
 type MockCall = { method: string; params: unknown[] };
 type UserDecryptParams = Parameters<CleartextFhevmInstance["userDecrypt"]>[0];
+const asHandle = (value: string): Handle => value as Handle;
 
 function createMockClient(options: MockClientOptions = {}) {
   const calls: MockCall[] = [];
@@ -133,11 +135,11 @@ function createMockClient(options: MockClientOptions = {}) {
 }
 
 function createUserDecryptParams(
-  overrides: Partial<UserDecryptParams> & Pick<UserDecryptParams, "handles">,
+  overrides: Omit<Partial<UserDecryptParams>, "handles"> & { handles: string[] },
 ): UserDecryptParams {
   const { handles, ...rest } = overrides;
   return {
-    handles,
+    handles: handles as Handle[],
     contractAddress: CONTRACT_ADDRESS,
     signedContractAddresses: [CONTRACT_ADDRESS],
     privateKey: "0x" + "01".repeat(32),
@@ -288,7 +290,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("userDecrypt throws when ACL.persistAllowed returns false", async () => {
-    const handle = "0x" + "12".repeat(32);
+    const handle = asHandle("0x" + "12".repeat(32));
     const { client } = createMockClient({
       persistAllowed: () => false,
     });
@@ -304,8 +306,8 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("userDecrypt returns cleartext values when ACL allows access", async () => {
-    const handleA = "0x" + "01".repeat(32);
-    const handleB = "0x" + "02".repeat(32);
+    const handleA = asHandle("0x" + "01".repeat(32));
+    const handleB = asHandle("0x" + "02".repeat(32));
     const { client, calls } = createMockClient({
       persistAllowed: () => true,
       plaintexts: {
@@ -335,8 +337,8 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("userDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
-    const handleA = "0x" + "aa".repeat(32);
-    const handleB = "0x" + "bb".repeat(32);
+    const handleA = asHandle("0x" + "aa".repeat(32));
+    const handleB = asHandle("0x" + "bb".repeat(32));
     const normalizedB = toHex(hexToBigInt(handleB as `0x${string}`), { size: 32 });
 
     const { client, calls } = createMockClient({
@@ -361,7 +363,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("userDecrypt checks ACL against signerAddress not contractAddress", async () => {
-    const handle = "0x" + "cc".repeat(32);
+    const handle = asHandle("0x" + "cc".repeat(32));
     const persistAllowedAccounts: string[] = [];
 
     const { client } = createMockClient({
@@ -386,7 +388,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("userDecrypt normalizes uppercase hex handles to lowercase 0x-prefixed 66-char keys", async () => {
-    const handleUpper = "0x" + "AB".repeat(32);
+    const handleUpper = asHandle("0x" + "AB".repeat(32));
     const normalizedHandle = toHex(hexToBigInt(handleUpper as `0x${string}`), { size: 32 });
 
     const { client } = createMockClient({
@@ -404,11 +406,11 @@ describe("CleartextFhevmInstance", () => {
     const keys = Object.keys(result);
     expect(keys).toHaveLength(1);
     expect(keys[0]).toMatch(/^0x[0-9a-f]{64}$/);
-    expect(result[keys[0]!]).toBe(55n);
+    expect(result[keys[0]! as Handle]).toBe(55n);
   });
 
   it("userDecrypt decodes ebool handle as boolean", async () => {
-    const boolHandle = "0x" + "01".repeat(30) + "00" + "00";
+    const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
     const { client } = createMockClient({
       persistAllowed: () => true,
       plaintexts: { [boolHandle.toLowerCase()]: 1n },
@@ -421,7 +423,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("userDecrypt decodes ebool handle with value 0 as false", async () => {
-    const boolHandle = "0x" + "01".repeat(30) + "00" + "00";
+    const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
     const { client } = createMockClient({
       persistAllowed: () => true,
       plaintexts: { [boolHandle.toLowerCase()]: 0n },
@@ -434,7 +436,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("userDecrypt decodes eaddress handle as hex string", async () => {
-    const addressHandle = "0x" + "01".repeat(30) + "07" + "00";
+    const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
     const addressValue = BigInt("0x1000000000000000000000000000000000000001");
     const { client } = createMockClient({
       persistAllowed: () => true,
@@ -450,7 +452,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("publicDecrypt throws when ACL.isAllowedForDecryption returns false", async () => {
-    const handle = "0x" + "34".repeat(32);
+    const handle = asHandle("0x" + "34".repeat(32));
     const { client } = createMockClient({
       isAllowedForDecryption: () => false,
     });
@@ -460,8 +462,8 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("publicDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
-    const handleA = "0x" + "dd".repeat(32);
-    const handleB = "0x" + "ee".repeat(32);
+    const handleA = asHandle("0x" + "dd".repeat(32));
+    const handleB = asHandle("0x" + "ee".repeat(32));
     const normalizedB = toHex(hexToBigInt(handleB as `0x${string}`), { size: 32 });
 
     const { client, calls } = createMockClient({
@@ -480,8 +482,8 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("publicDecrypt proof layout is [numSigners=1][kmsSignature]", async () => {
-    const handleA = "0x" + "56".repeat(32);
-    const handleB = "0x" + "78".repeat(32);
+    const handleA = asHandle("0x" + "56".repeat(32));
+    const handleB = asHandle("0x" + "78".repeat(32));
 
     const { client } = createMockClient({
       isAllowedForDecryption: () => true,
@@ -542,7 +544,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("delegatedUserDecrypt throws when delegation check returns false", async () => {
-    const handle = "0x" + "12".repeat(32);
+    const handle = asHandle("0x" + "12".repeat(32));
     const normalizedHandle = toHex(hexToBigInt(handle as `0x${string}`), { size: 32 });
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
@@ -574,8 +576,8 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("delegatedUserDecrypt calls isHandleDelegatedForUserDecryption for each handle", async () => {
-    const handleA = "0x" + "01".repeat(32);
-    const handleB = "0x" + "02".repeat(32);
+    const handleA = asHandle("0x" + "01".repeat(32));
+    const handleB = asHandle("0x" + "02".repeat(32));
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
     const delegationCalls: Array<{
@@ -660,8 +662,8 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("delegatedUserDecrypt partial delegation failure throws with second handle and makes exactly 2 delegation calls", async () => {
-    const handleA = "0x" + "a1".repeat(32);
-    const handleB = "0x" + "b2".repeat(32);
+    const handleA = asHandle("0x" + "a1".repeat(32));
+    const handleB = asHandle("0x" + "b2".repeat(32));
     const normalizedB = toHex(hexToBigInt(handleB as `0x${string}`), { size: 32 });
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
@@ -703,8 +705,8 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("delegatedUserDecrypt returns cleartext values when delegation is valid", async () => {
-    const handleA = "0x" + "01".repeat(32);
-    const handleB = "0x" + "02".repeat(32);
+    const handleA = asHandle("0x" + "01".repeat(32));
+    const handleB = asHandle("0x" + "02".repeat(32));
     const { client } = createMockClient({
       isHandleDelegatedForUserDecryption: () => true,
       plaintexts: {
@@ -732,8 +734,8 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("delegatedUserDecrypt decodes ebool and eaddress handles", async () => {
-    const boolHandle = "0x" + "01".repeat(30) + "00" + "00";
-    const addressHandle = "0x" + "01".repeat(30) + "07" + "00";
+    const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
+    const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
     const addressValue = BigInt("0x1000000000000000000000000000000000000001");
 
     const { client } = createMockClient({

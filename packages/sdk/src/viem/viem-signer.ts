@@ -1,12 +1,22 @@
-import type { Account, EIP1193Provider, PublicClient, WalletClient } from "viem";
+import type {
+  Account,
+  Abi,
+  ContractFunctionArgs,
+  ContractFunctionName,
+  ContractFunctionReturnType,
+  EIP1193Provider,
+  PublicClient,
+  WalletClient,
+} from "viem";
 import { writeContract } from "viem/actions";
 import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
-  ContractCallConfig,
   GenericSigner,
   Hex,
+  ReadContractConfig,
   SignerLifecycleCallbacks,
   TransactionReceipt,
+  WriteContractConfig,
 } from "../token/token.types";
 import { eip1193Subscribe } from "../token/eip1193-subscribe";
 
@@ -76,8 +86,13 @@ export class ViemSigner implements GenericSigner {
     });
   }
 
-  async writeContract<C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<Hex> {
+  async writeContract<
+    const TAbi extends Abi | readonly unknown[],
+    TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,
+    const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
+  >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
     const { walletClient, account } = this.#requireWalletAndAccount();
+    if (!account) throw new TypeError("WalletClient has no account");
     return walletClient.writeContract({
       chain: walletClient.chain,
       account,
@@ -85,8 +100,14 @@ export class ViemSigner implements GenericSigner {
     } as Parameters<typeof writeContract>[1]);
   }
 
-  async readContract<T, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T> {
-    return this.#publicClient.readContract(config) as Promise<T>;
+  async readContract<
+    const TAbi extends Abi | readonly unknown[],
+    TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">,
+    const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>,
+  >(
+    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
+  ): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>> {
+    return this.#publicClient.readContract(config);
   }
 
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {

@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "1.0.0-alpha.13",
+  "version": "1.0.0-alpha.14",
   "description": "TypeScript SDK for Zama confidential ERC-20 tokens (fhEVM)",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
@@ -74,9 +74,6 @@
   },
   "sideEffects": false,
   "peerDependenciesMeta": {
-    "viem": {
-      "optional": true
-    },
     "ethers": {
       "optional": true
     },

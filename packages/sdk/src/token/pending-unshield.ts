@@ -35,7 +35,7 @@ export async function loadPendingUnshield(
   storage: GenericStorage,
   scope: PendingUnshieldScope,
 ): Promise<Hex | null> {
-  return (await storage.get(storageKey(scope))) as Hex | null;
+  return storage.get<Hex>(storageKey(scope));
 }
 
 /**

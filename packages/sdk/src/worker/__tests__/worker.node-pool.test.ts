@@ -4,6 +4,8 @@ import type { NodeWorkerPoolConfig } from "../worker.node-pool";
 import { NodeWorkerPool } from "../worker.node-pool";
 import type { ZKProofLike } from "../../relayer/relayer-sdk.types";
 
+const HANDLE = ("0x" + "11".repeat(32)) as `0x${string}`;
+
 vi.mock("../worker.node-client", () => {
   const NodeWorkerClient = vi.fn().mockImplementation(function () {
     return {
@@ -149,7 +151,7 @@ describe("NodeWorkerPool", () => {
     });
 
     await pool.userDecrypt({
-      handles: ["h1"],
+      handles: [HANDLE],
       contractAddress: "0xC",
       signedContractAddresses: ["0xS"],
       privateKey: "sk",
@@ -161,8 +163,8 @@ describe("NodeWorkerPool", () => {
     });
     expect(instance.userDecrypt).toHaveBeenCalled();
 
-    await pool.publicDecrypt(["h1"]);
-    expect(instance.publicDecrypt).toHaveBeenCalledWith(["h1"]);
+    await pool.publicDecrypt([HANDLE]);
+    expect(instance.publicDecrypt).toHaveBeenCalledWith([HANDLE]);
 
     await pool.createDelegatedUserDecryptEIP712({
       publicKey: "pk",
@@ -174,7 +176,7 @@ describe("NodeWorkerPool", () => {
     expect(instance.createDelegatedUserDecryptEIP712).toHaveBeenCalled();
 
     await pool.delegatedUserDecrypt({
-      handles: ["h1"],
+      handles: [HANDLE],
       contractAddress: "0xC",
       signedContractAddresses: ["0xS"],
       privateKey: "sk",

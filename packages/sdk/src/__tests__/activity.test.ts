@@ -6,13 +6,14 @@ import {
   sortByBlockNumber,
   type ActivityItem,
 } from "../activity";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import { Topics, type RawLog } from "../events";
 
 // Helpers (matching events.test.ts conventions)
 const addr = (hex: string) => "0x" + hex.padStart(40, "0");
 const topic = (hex: string) => "0x" + hex.padStart(64, "0");
 const word = (hex: string) => hex.padStart(64, "0");
-const bytes32 = (hex: string) => "0x" + hex.padStart(64, "0");
+const bytes32 = (hex: string) => ("0x" + hex.padStart(64, "0")) as Handle;
 
 const USER = addr("aaa1");
 const OTHER = addr("bbb2");
@@ -262,7 +263,7 @@ describe("applyDecryptedValues", () => {
   it("populates decryptedValue on matching encrypted amounts", () => {
     const handle = bytes32("aa".repeat(32));
     const items = parseActivityFeed([transferLog(USER, OTHER, handle)], USER);
-    const decryptedMap = new Map([[handle, 42n]]);
+    const decryptedMap = new Map<Handle, bigint>([[handle, 42n]]);
     const result = applyDecryptedValues(items, decryptedMap);
 
     expect(result[0]!.amount).toEqual({

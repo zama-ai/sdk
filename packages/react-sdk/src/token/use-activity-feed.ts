@@ -79,7 +79,7 @@ export function useActivityFeed(
       const handles = extractEncryptedHandles(items);
       if (handles.length === 0) return items;
 
-      const decryptedMap = await token.decryptHandles(handles as Address[], userAddress);
+      const decryptedMap = await token.decryptHandles(handles, userAddress);
 
       return applyDecryptedValues(items, decryptedMap);
     },

@@ -30,7 +30,7 @@ export const totalSupplyQueryKeys = {
 export function totalSupplyQueryOptions(token: ReadonlyToken) {
   return {
     queryKey: totalSupplyQueryKeys.token(token.address),
-    queryFn: () => token.signer.readContract<bigint>(totalSupplyContract(token.address)),
+    queryFn: () => token.signer.readContract(totalSupplyContract(token.address)),
     staleTime: 30_000,
   } as const;
 }

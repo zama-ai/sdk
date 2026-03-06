@@ -1,4 +1,4 @@
-import type { ZKProofLike } from "../relayer/relayer-sdk.types";
+import type { Handle, ZKProofLike } from "../relayer/relayer-sdk.types";
 import type {
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
@@ -251,7 +251,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     return this.sendRequest<UserDecryptResponseData>("USER_DECRYPT", params);
   }
 
-  async publicDecrypt(handles: string[]): Promise<PublicDecryptResponseData> {
+  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData> {
     return this.sendRequest<PublicDecryptResponseData>("PUBLIC_DECRYPT", { handles });
   }
 
