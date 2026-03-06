@@ -3,6 +3,7 @@ import type { Address, GenericSigner } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
+import { QueryFunctionContext } from "@tanstack/query-core";
 
 export interface WrapperDiscoveryQueryConfig {
   coordinatorAddress: Address;

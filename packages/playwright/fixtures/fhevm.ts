@@ -14,10 +14,10 @@ const hardhat = {
   gatewayChainId: GATEWAY_CHAIN_ID,
   rpcUrl: "http://127.0.0.1:8545",
   contracts: {
-    acl: deployments.fhevm.acl,
-    executor: deployments.fhevm.executor,
-    inputVerifier: deployments.fhevm.inputVerifier,
-    kmsVerifier: deployments.fhevm.kmsVerifier,
+    acl: deployments.fhevm.acl as `0x${string}`,
+    executor: deployments.fhevm.executor as `0x${string}`,
+    inputVerifier: deployments.fhevm.inputVerifier as `0x${string}`,
+    kmsVerifier: deployments.fhevm.kmsVerifier as `0x${string}`,
     verifyingInputVerifier: VERIFYING_CONTRACTS.inputVerification,
     verifyingDecryption: VERIFYING_CONTRACTS.decryption,
   },
@@ -158,21 +158,18 @@ export async function mockRelayerSdk(page: Page, baseURL: string) {
   await page.route(`${baseURL}/delegatedUserDecrypt`, async (route) => {
     const body = route.request().postDataJSON();
     try {
-      const handleContractPairs = body.handles.map((handle: string) => ({
-        handle,
+      const result = await fhevm.delegatedUserDecrypt({
+        handles: body.handles,
         contractAddress: body.contractAddress,
-      }));
-      const result = await fhevm.delegatedUserDecrypt(
-        handleContractPairs,
-        body.privateKey,
-        body.publicKey,
-        body.signature,
-        body.signedContractAddresses,
-        body.delegatorAddress,
-        body.delegateAddress,
-        body.startTimestamp,
-        body.durationDays,
-      );
+        privateKey: body.privateKey,
+        publicKey: body.publicKey,
+        signature: body.signature,
+        signedContractAddresses: body.signedContractAddresses,
+        delegatorAddress: body.delegatorAddress,
+        delegateAddress: body.delegateAddress,
+        startTimestamp: body.startTimestamp,
+        durationDays: body.durationDays,
+      });
 
       const serialized: Record<string, string> = {};
       for (const [key, value] of Object.entries(result)) {
