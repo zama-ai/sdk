@@ -7171,6 +7171,11 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
 };
 
 // @public
+export class ConfigurationError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export interface ContractCallConfig {
     readonly abi: readonly unknown[];
     readonly address: Address;
@@ -8884,6 +8889,8 @@ export interface EIP712TypedData {
         durationDays: bigint;
         extraData: string;
     };
+    // (undocumented)
+    primaryType?: string;
     // (undocumented)
     types: {
         [key: string]: Array<{
@@ -33005,6 +33012,7 @@ export const ZamaErrorCode: {
     readonly InvalidKeypair: "INVALID_KEYPAIR";
     readonly NoCiphertext: "NO_CIPHERTEXT";
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
+    readonly Configuration: "CONFIGURATION";
 };
 
 // @public
