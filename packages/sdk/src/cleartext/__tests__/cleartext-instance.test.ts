@@ -96,17 +96,17 @@ describe("createCleartextInstance", () => {
 
     expect(result.domain.name).toBe("Decryption");
     expect(result.domain.version).toBe("1");
-    expect(result.domain.chainId).toBe(CONFIG.gatewayChainId);
+    expect(result.domain.chainId).toBe(CONFIG.chainId);
     expect(result.domain.verifyingContract).toBe(CONFIG.verifyingContractAddressDecryption);
     expect(result.types.UserDecryptRequestVerification).toBeDefined();
     expect(result.message.publicKey).toBe(pubKey);
     expect(result.message.contractAddresses).toEqual(contracts);
     expect(result.message.startTimestamp).toBe(1000n);
     expect(result.message.durationDays).toBe(30n);
-    expect(result.message.extraData).toBe("0x");
+    expect(result.message.extraData).toBe("0x00");
   });
 
-  it("createDelegatedUserDecryptEIP712 returns correct structure", async () => {
+  it("createDelegatedUserDecryptEIP712 returns correct EIP712 structure", async () => {
     const instance = createCleartextInstance(CONFIG);
     const pubKey = "0xabcd";
     const contracts = ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as Address];
@@ -120,12 +120,16 @@ describe("createCleartextInstance", () => {
     );
 
     expect(result.domain.name).toBe("Decryption");
-    expect(result.domain.chainId).toBe(CONFIG.gatewayChainId);
+    expect(result.domain.version).toBe("1");
+    expect(result.domain.chainId).toBe(CONFIG.chainId);
+    expect(result.domain.verifyingContract).toBe(CONFIG.verifyingContractAddressDecryption);
     expect(result.types.DelegatedUserDecryptRequestVerification).toBeDefined();
     expect(result.message.publicKey).toBe(pubKey);
+    expect(result.message.contractAddresses).toEqual(contracts);
     expect(result.message.delegatorAddress).toBe(delegator);
     expect(result.message.startTimestamp).toBe(2000n);
     expect(result.message.durationDays).toBe(7n);
+    expect(result.message.extraData).toBe("0x00");
   });
 
   it("publicDecrypt returns bigint clearValues and decryption proof", async () => {

@@ -248,7 +248,7 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
       const domain = {
         name: "Decryption",
         version: "1",
-        chainId: config.gatewayChainId,
+        chainId: config.chainId,
         verifyingContract: config.verifyingContractAddressDecryption as Address,
       };
       return {
@@ -265,7 +265,7 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
           contractAddresses,
           startTimestamp: BigInt(startTimestamp),
           durationDays: BigInt(durationDays),
-          extraData: "0x",
+          extraData: "0x00",
         },
       };
     },
@@ -281,7 +281,7 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
         domain: {
           name: "Decryption",
           version: "1",
-          chainId: config.gatewayChainId,
+          chainId: config.chainId,
           verifyingContract: config.verifyingContractAddressDecryption,
         },
         types: {
@@ -297,7 +297,7 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
           delegatorAddress,
           startTimestamp: BigInt(startTimestamp),
           durationDays: BigInt(durationDays),
-          extraData: "0x",
+          extraData: "0x00",
         },
       } as unknown as KmsDelegatedUserDecryptEIP712Type;
     },
