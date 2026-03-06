@@ -1,21 +1,13 @@
 import type { EIP1193Provider } from "viem";
-import type { Address } from "../relayer-sdk.types";
 
-export interface CleartextContracts {
-  acl: Address;
-  executor: Address;
-  inputVerifier: Address;
-  kmsVerifier: Address;
-  verifyingInputVerifier: Address;
-  verifyingDecryption: Address;
-}
-
-export interface CleartextConfig {
-  chainId: bigint;
+export interface CleartextInstanceConfig {
+  network: EIP1193Provider | string;
+  chainId: number;
   gatewayChainId: number;
-  contracts: CleartextContracts;
-}
-
-export interface CleartextChainConfig extends CleartextConfig {
-  rpcUrl: string | EIP1193Provider;
+  aclContractAddress: string;
+  kmsContractAddress?: string;
+  inputVerifierContractAddress?: string;
+  verifyingContractAddressDecryption: string;
+  verifyingContractAddressInputVerification: string;
+  cleartextExecutorAddress: string;
 }

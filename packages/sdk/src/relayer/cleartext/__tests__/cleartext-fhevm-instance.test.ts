@@ -24,7 +24,6 @@ import {
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
-  "function isHandleDelegatedForUserDecryption(address delegator, address delegate, address contractAddress, bytes32 handle) view returns (bool)",
 ]);
 
 const EXECUTOR_ABI = parseAbi(["function plaintexts(bytes32 handle) view returns (uint256)"]);
@@ -32,12 +31,6 @@ const EXECUTOR_ABI = parseAbi(["function plaintexts(bytes32 handle) view returns
 type MockClientOptions = {
   persistAllowed?: (handle: string, account: string) => boolean;
   isAllowedForDecryption?: (handle: string) => boolean;
-  isHandleDelegatedForUserDecryption?: (
-    delegator: string,
-    delegate: string,
-    contractAddress: string,
-    handle: string,
-  ) => boolean;
   plaintexts?: Record<string, bigint>;
 };
 type MockCall = { method: string; params: unknown[] };
@@ -87,23 +80,6 @@ function createMockClient(options: MockClientOptions = {}) {
                 abi: ACL_ABI,
                 functionName: "isAllowedForDecryption",
                 result: allowed,
-              });
-            }
-
-            if (parsed.functionName === "isHandleDelegatedForUserDecryption") {
-              const [delegator, delegate, contractAddress, handle] = parsed.args;
-              const isDelegated = options.isHandleDelegatedForUserDecryption
-                ? options.isHandleDelegatedForUserDecryption(
-                    String(delegator),
-                    String(delegate),
-                    String(contractAddress),
-                    String(handle),
-                  )
-                : true;
-              return encodeFunctionResult({
-                abi: ACL_ABI,
-                functionName: "isHandleDelegatedForUserDecryption",
-                result: isDelegated,
               });
             }
           }
@@ -169,7 +145,7 @@ describe("CleartextFhevmInstance", () => {
       () =>
         new CleartextFhevmInstance(client, {
           ...CLEAR_TEXT_MOCK_CONFIG,
-          chainId: 1n,
+          chainId: 1,
         }),
     ).toThrow(/not allowed on chain 1/);
   });
@@ -181,7 +157,7 @@ describe("CleartextFhevmInstance", () => {
       () =>
         new CleartextFhevmInstance(client, {
           ...CLEAR_TEXT_MOCK_CONFIG,
-          chainId: 11155111n,
+          chainId: 11155111,
         }),
     ).toThrow(/not allowed on chain 11155111/);
   });
@@ -218,8 +194,8 @@ describe("CleartextFhevmInstance", () => {
     expect(typedData.domain).toEqual({
       name: "Decryption",
       version: "1",
-      chainId: Number(CLEAR_TEXT_MOCK_CONFIG.chainId),
-      verifyingContract: CLEAR_TEXT_MOCK_CONFIG.contracts.verifyingDecryption,
+      chainId: CLEAR_TEXT_MOCK_CONFIG.chainId,
+      verifyingContract: CLEAR_TEXT_MOCK_CONFIG.verifyingContractAddressDecryption,
     });
     expect(typedData.types.UserDecryptRequestVerification!.map((field) => field.name)).toEqual([
       "publicKey",
@@ -332,7 +308,7 @@ describe("CleartextFhevmInstance", () => {
     const persistAllowedCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.acl);
     const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
 
-    expect(persistAllowedCalls).toHaveLength(2);
+    expect(persistAllowedCalls).toHaveLength(4);
     expect(plaintextCalls).toHaveLength(2);
   });
 
@@ -362,7 +338,7 @@ describe("CleartextFhevmInstance", () => {
     expect(plaintextCalls).toHaveLength(0);
   });
 
-  it("userDecrypt checks ACL against signerAddress not contractAddress", async () => {
+  it("userDecrypt checks ACL against both signerAddress and contractAddress", async () => {
     const handle = asHandle("0x" + "cc".repeat(32));
     const persistAllowedAccounts: string[] = [];
 
@@ -381,10 +357,43 @@ describe("CleartextFhevmInstance", () => {
       }),
     );
 
-    expect(persistAllowedAccounts.length).toBeGreaterThan(0);
-    for (const account of persistAllowedAccounts) {
-      expect(account.toLowerCase()).toBe(USER_ADDRESS.toLowerCase());
-    }
+    expect(persistAllowedAccounts).toHaveLength(2);
+    const normalized = persistAllowedAccounts.map((a) => a.toLowerCase());
+    expect(normalized).toContain(USER_ADDRESS.toLowerCase());
+    expect(normalized).toContain(CONTRACT_ADDRESS.toLowerCase());
+  });
+
+  it("userDecrypt throws when contract is not authorized", async () => {
+    const handle = asHandle("0x" + "cc".repeat(32));
+    const { client } = createMockClient({
+      persistAllowed: (_handle, account) =>
+        account.toLowerCase() !== CONTRACT_ADDRESS.toLowerCase(),
+      plaintexts: { [handle.toLowerCase()]: 42n },
+    });
+    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+
+    await expect(fhevm.userDecrypt(createUserDecryptParams({ handles: [handle] }))).rejects.toThrow(
+      /Contract.*not authorized/i,
+    );
+  });
+
+  it("userDecrypt throws when signer equals contract", async () => {
+    const handle = asHandle("0x" + "cc".repeat(32));
+    const { client } = createMockClient({
+      persistAllowed: () => true,
+      plaintexts: { [handle.toLowerCase()]: 42n },
+    });
+    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+
+    await expect(
+      fhevm.userDecrypt(
+        createUserDecryptParams({
+          handles: [handle],
+          signerAddress: CONTRACT_ADDRESS,
+          contractAddress: CONTRACT_ADDRESS,
+        }),
+      ),
+    ).rejects.toThrow(/must not equal contract address/i);
   });
 
   it("userDecrypt normalizes uppercase hex handles to lowercase 0x-prefixed 66-char keys", async () => {
@@ -534,7 +543,7 @@ describe("CleartextFhevmInstance", () => {
     );
 
     expect(typedData.domain.verifyingContract).toBe(
-      CLEAR_TEXT_MOCK_CONFIG.contracts.verifyingDecryption,
+      CLEAR_TEXT_MOCK_CONFIG.verifyingContractAddressDecryption,
     );
     expect(typedData.domain.name).toBe("Decryption");
     expect(typedData.domain.version).toBe("1");
@@ -543,17 +552,96 @@ describe("CleartextFhevmInstance", () => {
     expect(typedData.message.contractAddresses).toEqual([CONTRACT_ADDRESS]);
   });
 
-  it("delegatedUserDecrypt throws when delegation check returns false", async () => {
+  it("delegatedUserDecrypt throws when delegator is not authorized", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const normalizedHandle = toHex(hexToBigInt(handle as `0x${string}`), { size: 32 });
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
     const { client, calls } = createMockClient({
-      isHandleDelegatedForUserDecryption: () => false,
+      persistAllowed: () => false,
     });
     const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
-    const promise = fhevm.delegatedUserDecrypt({
+    await expect(
+      fhevm.delegatedUserDecrypt({
+        handles: [handle],
+        contractAddress: CONTRACT_ADDRESS,
+        signedContractAddresses: [CONTRACT_ADDRESS],
+        privateKey: "0x" + "01".repeat(32),
+        publicKey: "0x" + "02".repeat(32),
+        signature: "0x" + "03".repeat(65),
+        delegatorAddress,
+        delegateAddress,
+        startTimestamp: 1,
+        durationDays: 1,
+      }),
+    ).rejects.toThrow(/Delegator.*not authorized/i);
+
+    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
+    expect(plaintextCalls).toHaveLength(0);
+  });
+
+  it("delegatedUserDecrypt throws when contract is not authorized", async () => {
+    const handle = asHandle("0x" + "12".repeat(32));
+    const delegatorAddress = USER_ADDRESS;
+    const delegateAddress = "0x3000000000000000000000000000000000000003";
+    const { client } = createMockClient({
+      persistAllowed: (_handle, account) =>
+        account.toLowerCase() !== CONTRACT_ADDRESS.toLowerCase(),
+    });
+    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+
+    await expect(
+      fhevm.delegatedUserDecrypt({
+        handles: [handle],
+        contractAddress: CONTRACT_ADDRESS,
+        signedContractAddresses: [CONTRACT_ADDRESS],
+        privateKey: "0x" + "01".repeat(32),
+        publicKey: "0x" + "02".repeat(32),
+        signature: "0x" + "03".repeat(65),
+        delegatorAddress,
+        delegateAddress,
+        startTimestamp: 1,
+        durationDays: 1,
+      }),
+    ).rejects.toThrow(/Contract.*not authorized/i);
+  });
+
+  it("delegatedUserDecrypt throws when delegator equals contract", async () => {
+    const handle = asHandle("0x" + "12".repeat(32));
+    const delegateAddress = "0x3000000000000000000000000000000000000003";
+    const { client } = createMockClient({
+      persistAllowed: () => true,
+    });
+    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+
+    await expect(
+      fhevm.delegatedUserDecrypt({
+        handles: [handle],
+        contractAddress: CONTRACT_ADDRESS,
+        signedContractAddresses: [CONTRACT_ADDRESS],
+        privateKey: "0x" + "01".repeat(32),
+        publicKey: "0x" + "02".repeat(32),
+        signature: "0x" + "03".repeat(65),
+        delegatorAddress: CONTRACT_ADDRESS,
+        delegateAddress,
+        startTimestamp: 1,
+        durationDays: 1,
+      }),
+    ).rejects.toThrow(/must not equal contract address/i);
+  });
+
+  it("delegatedUserDecrypt succeeds even when delegate is not authorized (delegate not checked)", async () => {
+    const handle = asHandle("0x" + "12".repeat(32));
+    const delegatorAddress = USER_ADDRESS;
+    const delegateAddress = "0x3000000000000000000000000000000000000003";
+    const { client } = createMockClient({
+      persistAllowed: (_handle, account) => account.toLowerCase() !== delegateAddress.toLowerCase(),
+      plaintexts: { [handle.toLowerCase()]: 42n },
+    });
+    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+
+    const result = await fhevm.delegatedUserDecrypt({
       handles: [handle],
       contractAddress: CONTRACT_ADDRESS,
       signedContractAddresses: [CONTRACT_ADDRESS],
@@ -566,30 +654,19 @@ describe("CleartextFhevmInstance", () => {
       durationDays: 1,
     });
 
-    await expect(promise).rejects.toThrow(normalizedHandle);
-    await expect(promise).rejects.toThrow(delegatorAddress);
-    await expect(promise).rejects.toThrow(delegateAddress);
-    await expect(promise).rejects.toThrow(CONTRACT_ADDRESS);
-
-    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
-    expect(plaintextCalls).toHaveLength(0);
+    expect(result[handle]).toBe(42n);
   });
 
-  it("delegatedUserDecrypt calls isHandleDelegatedForUserDecryption for each handle", async () => {
+  it("delegatedUserDecrypt checks persistAllowed for delegator and contract per handle", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const delegationCalls: Array<{
-      delegator: string;
-      delegate: string;
-      contractAddress: string;
-      handle: string;
-    }> = [];
+    const persistAllowedCalls: Array<{ handle: string; account: string }> = [];
 
     const { client, calls } = createMockClient({
-      isHandleDelegatedForUserDecryption: (delegator, delegate, contractAddress, handle) => {
-        delegationCalls.push({ delegator, delegate, contractAddress, handle });
+      persistAllowed: (handle, account) => {
+        persistAllowedCalls.push({ handle, account });
         return true;
       },
       plaintexts: {
@@ -599,7 +676,7 @@ describe("CleartextFhevmInstance", () => {
     });
     const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
-    await fhevm.delegatedUserDecrypt({
+    const result = await fhevm.delegatedUserDecrypt({
       handles: [handleA, handleB],
       contractAddress: CONTRACT_ADDRESS,
       signedContractAddresses: [CONTRACT_ADDRESS],
@@ -612,25 +689,14 @@ describe("CleartextFhevmInstance", () => {
       durationDays: 1,
     });
 
-    expect(delegationCalls).toHaveLength(2);
-    expect(delegationCalls.map((call) => call.handle.toLowerCase())).toEqual([
-      handleA.toLowerCase(),
-      handleB.toLowerCase(),
-    ]);
-    expect(delegationCalls).toEqual([
-      {
-        delegator: delegatorAddress,
-        delegate: delegateAddress,
-        contractAddress: CONTRACT_ADDRESS,
-        handle: handleA.toLowerCase(),
-      },
-      {
-        delegator: delegatorAddress,
-        delegate: delegateAddress,
-        contractAddress: CONTRACT_ADDRESS,
-        handle: handleB.toLowerCase(),
-      },
-    ]);
+    expect(result[handleA]).toBe(7n);
+    expect(result[handleB]).toBe(11n);
+
+    // 2 handles × 2 checks (delegator + contract) = 4 persistAllowed calls
+    expect(persistAllowedCalls).toHaveLength(4);
+    const accounts = persistAllowedCalls.map((c) => c.account.toLowerCase());
+    expect(accounts.filter((a) => a === delegatorAddress.toLowerCase())).toHaveLength(2);
+    expect(accounts.filter((a) => a === CONTRACT_ADDRESS.toLowerCase())).toHaveLength(2);
 
     const callNames = calls
       .filter((call) => call.method === "eth_call")
@@ -654,61 +720,20 @@ describe("CleartextFhevmInstance", () => {
         return "unknown";
       });
     expect(callNames).toEqual([
-      "isHandleDelegatedForUserDecryption",
-      "isHandleDelegatedForUserDecryption",
+      "persistAllowed",
+      "persistAllowed",
+      "persistAllowed",
+      "persistAllowed",
       "plaintexts",
       "plaintexts",
     ]);
   });
 
-  it("delegatedUserDecrypt partial delegation failure throws with second handle and makes exactly 2 delegation calls", async () => {
-    const handleA = asHandle("0x" + "a1".repeat(32));
-    const handleB = asHandle("0x" + "b2".repeat(32));
-    const normalizedB = toHex(hexToBigInt(handleB as `0x${string}`), { size: 32 });
-    const delegatorAddress = USER_ADDRESS;
-    const delegateAddress = "0x3000000000000000000000000000000000000003";
-
-    const { client, calls } = createMockClient({
-      isHandleDelegatedForUserDecryption: (_delegator, _delegate, _contractAddress, handle) =>
-        handle.toLowerCase() !== normalizedB.toLowerCase(),
-      plaintexts: {
-        [handleA.toLowerCase()]: 7n,
-        [handleB.toLowerCase()]: 11n,
-      },
-    });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
-
-    await expect(
-      fhevm.delegatedUserDecrypt({
-        handles: [handleA, handleB],
-        contractAddress: CONTRACT_ADDRESS,
-        signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: "0x" + "01".repeat(32),
-        publicKey: "0x" + "02".repeat(32),
-        signature: "0x" + "03".repeat(65),
-        delegatorAddress,
-        delegateAddress,
-        startTimestamp: 1,
-        durationDays: 1,
-      }),
-    ).rejects.toThrow(new RegExp(normalizedB));
-
-    const delegationCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.acl).filter((call) => {
-      const tx = call.params[0] as { data: string };
-      const parsed = decodeFunctionData({ abi: ACL_ABI, data: tx.data as `0x${string}` });
-      return parsed?.functionName === "isHandleDelegatedForUserDecryption";
-    });
-    expect(delegationCalls).toHaveLength(2);
-
-    const executorCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
-    expect(executorCalls).toHaveLength(0);
-  });
-
-  it("delegatedUserDecrypt returns cleartext values when delegation is valid", async () => {
+  it("delegatedUserDecrypt returns cleartext values when both delegator and contract are authorized", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
     const { client } = createMockClient({
-      isHandleDelegatedForUserDecryption: () => true,
+      persistAllowed: () => true,
       plaintexts: {
         [handleA.toLowerCase()]: 7n,
         [handleB.toLowerCase()]: 11n,
@@ -739,7 +764,7 @@ describe("CleartextFhevmInstance", () => {
     const addressValue = BigInt("0x1000000000000000000000000000000000000001");
 
     const { client } = createMockClient({
-      isHandleDelegatedForUserDecryption: () => true,
+      persistAllowed: () => true,
       plaintexts: {
         [boolHandle.toLowerCase()]: 1n,
         [addressHandle.toLowerCase()]: addressValue,

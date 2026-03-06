@@ -5,7 +5,7 @@ import { FHE_BIT_WIDTHS, FheType } from "./constants";
 import { INPUT_VERIFICATION_EIP712 } from "./eip712";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
 import { MOCK_INPUT_SIGNER_PK } from "./constants";
-import type { CleartextConfig } from "./types";
+import type { CleartextInstanceConfig } from "./types";
 import { EncryptionFailedError } from "../../token/errors";
 
 const INPUT_SIGNER = privateKeyToAccount(MOCK_INPUT_SIGNER_PK);
@@ -18,10 +18,10 @@ type AddedValue = {
 export class CleartextEncryptedInput {
   readonly #contractAddress: Address;
   readonly #userAddress: Address;
-  readonly #config: CleartextConfig;
+  readonly #config: CleartextInstanceConfig;
   readonly #values: AddedValue[] = [];
 
-  constructor(contractAddress: Address, userAddress: Address, config: CleartextConfig) {
+  constructor(contractAddress: Address, userAddress: Address, config: CleartextInstanceConfig) {
     this.#contractAddress = getAddress(contractAddress);
     this.#userAddress = getAddress(userAddress);
     this.#config = config;
@@ -93,13 +93,15 @@ export class CleartextEncryptedInput {
 
     const ciphertextBlob = keccak256(mockCiphertexts.length > 0 ? concat(mockCiphertexts) : "0x");
 
+    const chainIdBigInt = BigInt(this.#config.chainId);
+
     const handles = this.#values.map(({ fheType }, index) =>
       computeInputHandle(
         ciphertextBlob,
         index,
         fheType,
-        this.#config.contracts.acl,
-        this.#config.chainId,
+        this.#config.aclContractAddress as Address,
+        chainIdBigInt,
       ),
     );
 
@@ -109,7 +111,7 @@ export class CleartextEncryptedInput {
     const signature = await INPUT_SIGNER.signTypedData({
       domain: INPUT_VERIFICATION_EIP712.domain(
         this.#config.gatewayChainId,
-        this.#config.contracts.verifyingInputVerifier,
+        this.#config.verifyingContractAddressInputVerification,
       ),
       types: {
         CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
@@ -119,7 +121,7 @@ export class CleartextEncryptedInput {
         ctHandles: handles,
         userAddress: this.#userAddress,
         contractAddress: this.#contractAddress,
-        contractChainId: this.#config.chainId,
+        contractChainId: chainIdBigInt,
         extraData: cleartextBytes,
       },
     });

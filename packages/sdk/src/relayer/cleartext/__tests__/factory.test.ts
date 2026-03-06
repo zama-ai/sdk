@@ -13,7 +13,7 @@ describe("createCleartextRelayer", () => {
     expect(publicKey).not.toBe(privateKey);
   });
 
-  it("accepts an Eip1193Provider value in rpcUrl", () => {
+  it("accepts an Eip1193Provider value in network", () => {
     const mockEip1193Provider = {
       request: async () => null,
       on: () => {},
@@ -22,7 +22,7 @@ describe("createCleartextRelayer", () => {
 
     const relayer = createCleartextRelayer({
       ...hoodi,
-      rpcUrl: mockEip1193Provider,
+      network: mockEip1193Provider,
     });
 
     expect(relayer).toBeDefined();
@@ -34,19 +34,19 @@ describe("createCleartextRelayer", () => {
   });
 
   it("rejects mainnet chain ID", () => {
-    expect(() => createCleartextRelayer({ ...hoodi, chainId: 1n })).toThrow(
+    expect(() => createCleartextRelayer({ ...hoodi, chainId: 1 })).toThrow(
       /not allowed on chain 1/,
     );
   });
 
   it("rejects Sepolia chain ID", () => {
-    expect(() => createCleartextRelayer({ ...hoodi, chainId: 11155111n })).toThrow(
+    expect(() => createCleartextRelayer({ ...hoodi, chainId: 11155111 })).toThrow(
       /not allowed on chain 11155111/,
     );
   });
 
   it("allows chain ID 0 for local development", async () => {
-    const relayer = createCleartextRelayer({ ...hoodi, chainId: 0n });
+    const relayer = createCleartextRelayer({ ...hoodi, chainId: 0 });
     const { publicKey, privateKey } = await relayer.generateKeypair();
 
     expect(publicKey).toMatch(/^0x[0-9a-f]{64}$/i);
