@@ -10,9 +10,10 @@
  */
 
 import { hexlify, keccak256, concat, toUtf8Bytes, type SigningKey } from "ethers";
-import { ConfigurationError, DecryptionFailedError } from "../token/errors";
+import { DecryptionFailedError } from "../token/errors";
 import type { CleartextExecutor } from "./cleartext-executor";
 import { abiCoder, buildDomainSeparator, eip712Digest, packSignature } from "./eip712";
+import { FheType } from "./constants";
 
 /** Decrypted value — `boolean` for ebool, `bigint` for all other FHE types. */
 type ClearValue = bigint | boolean;
@@ -51,34 +52,34 @@ function getFheTypeId(handleHex: string): number {
 /** Map fheTypeId to the Solidity ABI type for encoding. */
 function fheTypeToSolidity(fheTypeId: number) {
   switch (fheTypeId) {
-    case 0:
+    case FheType.Bool:
       return "bool"; // ebool
-    case 1:
+    case FheType.Uint4:
       return "uint256"; // euint4
-    case 2:
+    case FheType.Uint8:
       return "uint256"; // euint8
-    case 3:
+    case FheType.Uint16:
       return "uint256"; // euint16
-    case 4:
+    case FheType.Uint32:
       return "uint256"; // euint32
-    case 5:
+    case FheType.Uint64:
       return "uint256"; // euint64
-    case 6:
+    case FheType.Uint128:
       return "uint256"; // euint128
-    case 7:
+    case FheType.Uint160:
       return "address"; // eaddress
-    case 8:
+    case FheType.Uint256:
       return "uint256"; // euint256
     default:
-      throw new ConfigurationError(`Unsupported FHE type ID in cleartext mode: ${fheTypeId}`);
+      throw new Error(`Unsupported FHE type ID in cleartext mode: ${fheTypeId}`);
   }
 }
 
 /** Format a raw bigint plaintext based on the handle's FHE type. */
 function formatPlaintext(value: bigint, fheTypeId: number): ClearValue {
-  if (fheTypeId === 0) return value === 1n; // ebool
+  if (fheTypeId === FheType.Bool) return value === 1n; // ebool
   // eaddress: return as bigint (matching the RelayerSDK interface which types clearValues as Record<string, bigint>)
-  if (fheTypeId === 7) return value;
+  if (fheTypeId === FheType.Uint160) return value;
   return value; // euint*
 }
 
@@ -188,8 +189,8 @@ export async function cleartextPublicDecrypt(
   const abiTypes = fheTypes.map((t) => fheTypeToSolidity(t));
   const abiValues = handlesHex.map((_, i) => {
     const fheType = fheTypes[i]!;
-    if (fheType === 0) return rawValues[i]! === 1n; // bool
-    if (fheType === 7) return "0x" + rawValues[i]!.toString(16).padStart(40, "0"); // address
+    if (fheType === FheType.Bool) return rawValues[i]! === 1n; // bool
+    if (fheType === FheType.Uint160) return "0x" + rawValues[i]!.toString(16).padStart(40, "0"); // address
     return rawValues[i]!;
   });
   const abiEncodedClearValues = abiCoder.encode(abiTypes, abiValues);
