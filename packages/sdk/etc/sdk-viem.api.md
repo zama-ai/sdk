@@ -33,9 +33,6 @@ export interface BatchTransferData {
 export type ContractAbi = Abi | readonly unknown[];
 
 // @public
-export type ContractCallConfig = ReadContractConfig | WriteContractConfig;
-
-// @public
 export interface EIP712TypedData {
     // (undocumented)
     domain: {

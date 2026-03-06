@@ -36,9 +36,6 @@ export interface BatchTransferData {
 // @public (undocumented)
 export type ContractAbi = Abi | readonly unknown[];
 
-// @public
-export type ContractCallConfig = ReadContractConfig | WriteContractConfig;
-
 export { EIP1193EventMap }
 
 export { EIP1193Events }

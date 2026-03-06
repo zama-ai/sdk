@@ -32,7 +32,6 @@ import { confidentialTransferContract } from '@zama-fhe/sdk';
 import { ConfidentialTransferEvent } from '@zama-fhe/sdk';
 import { confidentialTransferFromContract } from '@zama-fhe/sdk';
 import { ContractAbi } from '@zama-fhe/sdk';
-import { ContractCallConfig } from '@zama-fhe/sdk';
 import { CredentialsAllowedEvent } from '@zama-fhe/sdk';
 import { CredentialsCachedEvent } from '@zama-fhe/sdk';
 import { CredentialsCreatedEvent } from '@zama-fhe/sdk';
@@ -362,8 +361,6 @@ export interface ConfidentialTransferParams {
 }
 
 export { ContractAbi }
-
-export { ContractCallConfig }
 
 // @public
 export interface CreateDelegatedUserDecryptEIP712Params {

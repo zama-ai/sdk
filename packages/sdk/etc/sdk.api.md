@@ -7188,9 +7188,6 @@ export class ConfigurationError extends ZamaError {
 // @public (undocumented)
 export type ContractAbi = Abi | readonly unknown[];
 
-// @public
-export type ContractCallConfig = ReadContractConfig | WriteContractConfig;
-
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
     contractAddresses?: Address[];
