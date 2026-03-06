@@ -6,9 +6,10 @@ Every SDK setup has three required pieces and two optional ones:
 const sdk = new ZamaSDK({
   relayer,                       // required — handles encryption & decryption
   signer,                        // required — wallet interface
-  storage,                       // required — persists encrypted decrypt keys
+  storage,                       // required — persists encrypted FHE keypair
   sessionStorage,                // optional — wallet signature storage (default: in-memory)
-  credentialDurationDays: 1,     // optional (default: 1 day)
+  keypairTTL: 86400,             // optional (default: 86400 = 1 day, in seconds)
+  sessionTTL: 2592000,            // optional — session signature lifetime in seconds (default: 2592000 = 30 days)
   onEvent: (event) => { ... },   // optional — lifecycle events for debugging
 });
 ```
@@ -174,14 +175,14 @@ If your signer has access to wallet lifecycle events, implement `subscribe` so t
 
 ## Storage
 
-Decrypt keys (a keypair used to decrypt confidential balances) and decrypted balances are cached so users don't get a wallet popup on every decrypt or a loading spinner on page reload. You choose where to store them:
+The FHE keypair (used to decrypt confidential balances) and decrypted balances are cached so users don't get a wallet popup on every decrypt or a loading spinner on page reload. You choose where to store them:
 
-| Storage             | When to use                                                                                               |
-| ------------------- | --------------------------------------------------------------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                  |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                                                                        |
-| `asyncLocalStorage` | Node.js servers — isolate decrypt keys per request ([example below](#per-request-storage-nodejs-servers)) |
-| Custom              | Implement `GenericStorage` (3 async methods: `get`, `set`, `delete`)                                      |
+| Storage             | When to use                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions                                                 |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                                                                       |
+| `asyncLocalStorage` | Node.js servers — isolate FHE keypair per request ([example below](#per-request-storage-nodejs-servers)) |
+| Custom              | Implement `GenericStorage` (3 async methods: `get`, `set`, `delete`)                                     |
 
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
@@ -199,7 +200,7 @@ By default, wallet signatures live in an in-memory store that's lost on page rel
 
 ### Per-request storage (Node.js servers)
 
-For servers where each request has its own user context, use `asyncLocalStorage` from the `/node` sub-path. It uses Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to isolate decrypt keys per request:
+For servers where each request has its own user context, use `asyncLocalStorage` from the `/node` sub-path. It uses Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to isolate FHE keypair per request:
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
@@ -207,7 +208,7 @@ import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
     const sdk = new ZamaSDK({ relayer, signer, storage: asyncLocalStorage });
-    // decrypt keys are scoped to this request
+    // FHE keypair is scoped to this request
     await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
@@ -286,32 +287,56 @@ const transports = {
 // auth: { __type: "BearerToken", token: "your-bearer-token" }
 ```
 
-## Decrypt key duration
+## FHE keypair duration
 
-Decrypt keys require a wallet signature to create. By default, they're valid for 1 day. You can change this:
+The FHE keypair requires a wallet signature to create. By default, it's valid for 1 day. You can change this:
 
 ```ts
 const sdk = new ZamaSDK({
   relayer,
   signer,
   storage,
-  credentialDurationDays: 7, // re-sign once a week
-});
-
-// For high-security apps: require a signature on every decrypt
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage,
-  credentialDurationDays: 0,
+  keypairTTL: 604800, // 7 days in seconds — re-sign once a week
 });
 ```
 
+## Session TTL
+
+By default, session signatures expire after 30 days. You can control this with `sessionTTL`:
+
+| Value               | Behavior                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `2592000` (default) | Session signatures expire after 30 days. The user must re-sign once to unlock their FHE keypair.                |
+| Duration in seconds | Session signatures expire after the specified duration. The user must re-sign once to unlock their FHE keypair. |
+| `0`                 | Never persist. Every operation triggers a signing prompt. Useful for maximum-security contexts.                 |
+
+```ts
+// Default (30 days) — sessions expire after 30 days
+const sdk = new ZamaSDK({ relayer, signer, storage });
+
+// 1-hour session — wallet re-signs after 60 minutes
+const sdk = new ZamaSDK({ relayer, signer, storage, sessionTTL: 3600 });
+
+// High-security — sign on every operation
+const sdk = new ZamaSDK({ relayer, signer, storage, sessionTTL: 0 });
+```
+
+**What happens on expiry:**
+
+- The session signature is cleared from session storage
+- A `session:expired` event is emitted (subscribe via `onEvent`)
+- The next decrypt operation prompts a single wallet re-sign
+- FHE keypair in persistent storage are **not** affected — no keypair regeneration
+
+**Interaction with disconnect/account change:** TTL expiry and wallet lifecycle revocation are independent. Whichever fires first clears the session. They don't conflict.
+
+**Per-session recording:** Each session entry records the TTL at creation time. If you change the `sessionTTL` config between sessions, existing sessions use their original TTL — not the new value.
+
 ## Session management
 
-Decrypt keys are encrypted before being persisted to `storage`. The wallet signature used to unlock them lives in `sessionStorage` (in-memory by default). This means:
+FHE keypair is encrypted before being persisted to `storage`. The wallet signature used to unlock them lives in `sessionStorage` (in-memory by default). This means:
 
-- On page load, the user must re-sign once to unlock their decrypt keys for the session
+- On page load, the user must re-sign once to unlock their FHE keypair for the session
 - Closing the tab (or calling `await sdk.revokeSession()`) clears the signature from memory
 - The encrypted keys survive across sessions in `storage`; only the allow step repeats
 - In web extensions, you can use `chromeSessionStorage` so the signature survives service worker restarts ([see below](#web-extensions))
@@ -438,7 +463,7 @@ const sdk = new ZamaSDK({
 });
 ```
 
-Events include: credential lifecycle (`credentials:loading`, `credentials:created`, `credentials:revoked`, `credentials:allowed`, ...), encryption/decryption timing (`encrypt:start`, `decrypt:end`, ...), transaction confirmations (`transfer:submitted`, `shield:submitted`, ...), and errors.
+Events include: credential lifecycle (`credentials:loading`, `credentials:created`, `credentials:revoked`, `credentials:allowed`, ...), session expiry (`session:expired` with `reason: "ttl"`), encryption/decryption timing (`encrypt:start`, `decrypt:end`, ...), transaction confirmations (`transfer:submitted`, `shield:submitted`, ...), and errors.
 
 ## Cleanup
 

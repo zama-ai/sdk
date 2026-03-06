@@ -7185,11 +7185,6 @@ export interface ContractCallConfig {
     readonly value?: bigint;
 }
 
-// @public
-export class CredentialExpiredError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
-}
-
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
     contractAddresses?: Address[];
@@ -7237,6 +7232,8 @@ export class CredentialsManager {
     constructor(config: CredentialsManagerConfig);
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
     clear(): Promise<void>;
+    // (undocumented)
+    static computeStoreKey(address: string, chainId: number): Promise<string>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
     isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
@@ -7245,10 +7242,11 @@ export class CredentialsManager {
 
 // @public
 export interface CredentialsManagerConfig {
-    durationDays: number;
+    keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage: GenericStorage;
+    sessionTTL?: number;
     signer: GenericSigner;
     storage: GenericStorage;
 }
@@ -14751,7 +14749,7 @@ export const indexedDBStorage: IndexedDBStorage;
 export { InputProofBytesType }
 
 // @public
-export class InvalidCredentialsError extends ZamaError {
+export class InvalidKeypairError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
@@ -17741,6 +17739,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
 
+// @public
+export class KeypairExpiredError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
 export { KmsDelegatedUserDecryptEIP712Type }
 
 // @public
@@ -19345,7 +19348,7 @@ export class ReadonlyToken {
 export interface ReadonlyTokenConfig {
     address: Address;
     credentials?: CredentialsManager;
-    durationDays?: number;
+    keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage: GenericStorage;
@@ -19429,6 +19432,13 @@ export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Add
 
 // @public
 export const SepoliaConfig: FhevmInstanceConfig;
+
+// @public (undocumented)
+export interface SessionExpiredEvent extends BaseEvent {
+    reason: "ttl";
+    // (undocumented)
+    type: typeof ZamaSDKEvents.SessionExpired;
+}
 
 // @public
 export function setFinalizeUnwrapOperatorContract(tokenAddress: Address, operator: Address, timestamp?: number): {
@@ -32998,8 +33008,8 @@ export const ZamaErrorCode: {
     readonly DecryptionFailed: "DECRYPTION_FAILED";
     readonly ApprovalFailed: "APPROVAL_FAILED";
     readonly TransactionReverted: "TRANSACTION_REVERTED";
-    readonly CredentialExpired: "CREDENTIAL_EXPIRED";
-    readonly InvalidCredentials: "INVALID_CREDENTIALS";
+    readonly KeypairExpired: "KEYPAIR_EXPIRED";
+    readonly InvalidKeypair: "INVALID_KEYPAIR";
     readonly NoCiphertext: "NO_CIPHERTEXT";
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
     readonly Configuration: "CONFIGURATION";
@@ -33033,16 +33043,17 @@ export class ZamaSDK {
 
 // @public
 export interface ZamaSDKConfig {
-    credentialDurationDays?: number;
+    keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
+    sessionTTL?: number;
     signer: GenericSigner;
     storage: GenericStorage;
 }
 
 // @public
-export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -33059,6 +33070,7 @@ export const ZamaSDKEvents: {
     readonly CredentialsCreated: "credentials:created";
     readonly CredentialsRevoked: "credentials:revoked";
     readonly CredentialsAllowed: "credentials:allowed";
+    readonly SessionExpired: "session:expired";
     readonly EncryptStart: "encrypt:start";
     readonly EncryptEnd: "encrypt:end";
     readonly EncryptError: "encrypt:error";

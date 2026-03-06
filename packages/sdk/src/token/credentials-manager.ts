@@ -3,7 +3,7 @@ import type { Address } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
 import { MemoryStorage } from "./memory-storage";
 import { SigningRejectedError, SigningFailedError } from "./errors";
-import { assertObject, assertString, assertArray } from "../utils";
+import { assertObject, assertString, assertArray, assertCondition } from "../utils";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 
@@ -18,9 +18,13 @@ interface EncryptedCredentials extends Omit<StoredCredentials, "privateKey" | "s
   encryptedPrivateKey: EncryptedData;
 }
 
-/** Legacy format that included the signature in persisted data (pre-migration). */
-interface LegacyEncryptedCredentials extends EncryptedCredentials {
+/** Structured session entry stored in session storage. */
+interface SessionEntry {
   signature: string;
+  /** Epoch seconds when the session was created. */
+  createdAt: number;
+  /** TTL at creation time (not current config). */
+  ttl: number;
 }
 
 /**
@@ -40,25 +44,12 @@ export interface CredentialsManagerConfig {
   storage: GenericStorage;
   /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
   sessionStorage: GenericStorage;
-  /** Number of days generated credentials remain valid. */
-  durationDays: number;
+  /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day) */
+  keypairTTL?: number;
+  /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). */
+  sessionTTL?: number;
   /** Optional structured event listener. */
   onEvent?: ZamaSDKEventListener;
-}
-
-/**
- * Compute the storage key for a given address and chainId.
- * Returns a truncated SHA-256 hex hash to avoid leaking raw addresses in storage keys.
- */
-export async function computeStoreKey(address: string, chainId: number): Promise<string> {
-  const hash = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(`${address.toLowerCase()}:${chainId}`),
-  );
-  const hex = Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hex.slice(0, 32);
 }
 
 export class CredentialsManager {
@@ -66,18 +57,31 @@ export class CredentialsManager {
   #signer: GenericSigner;
   #storage: GenericStorage;
   #sessionStorage: GenericStorage;
-  #durationDays: number;
+  #keypairTTL: number;
+  #sessionTTL: number;
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
+
+  static async computeStoreKey(address: string, chainId: number): Promise<string> {
+    const hash = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(`${address.toLowerCase()}:${chainId}`),
+    );
+    const hex = Array.from(new Uint8Array(hash))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return hex.slice(0, 32);
+  }
 
   constructor(config: CredentialsManagerConfig) {
     this.#relayer = config.relayer;
     this.#signer = config.signer;
     this.#storage = config.storage;
     this.#sessionStorage = config.sessionStorage;
-    this.#durationDays = config.durationDays;
     this.#onEvent = config.onEvent ?? Boolean;
+    this.#keypairTTL = config.keypairTTL ?? 86400;
+    this.#sessionTTL = config.sessionTTL ?? 2592000;
 
     // Warn when using in-memory session storage inside a Chrome extension context
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -117,36 +121,15 @@ export class CredentialsManager {
         const encrypted = stored as unknown;
         this.#assertEncryptedCredentials(encrypted);
 
-        // Migration: if legacy format has signature, use it and cache in session
-        if (this.#hasLegacySignature(encrypted)) {
-          const creds = await this.#decryptCredentials(encrypted, encrypted.signature);
-          if (this.#isValid(creds, contractAddresses)) {
-            await this.#sessionStorage.set(storeKey, encrypted.signature);
-            // Re-persist without signature (migration)
-            const migrated = await this.#encryptCredentials(creds);
-            await this.#storage.set(storeKey, migrated).catch(() => {});
-            this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
-            this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
-            return creds;
-          }
-          this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
-        } else {
-          // New format: check session storage
-          const sessionSig = await this.#sessionStorage.get(storeKey);
-          if (sessionSig) {
-            const creds = await this.#decryptCredentials(encrypted, sessionSig as string);
-            if (this.#isValid(creds, contractAddresses)) {
-              this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
-              this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
-              return creds;
-            }
-            this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
+        const sessionEntry = await this.#getSessionEntry(storeKey);
+        if (sessionEntry) {
+          if (this.#isSessionExpired(sessionEntry)) {
+            // Session TTL expired — clear and emit, then fall through to re-sign
+            await this.#sessionStorage.delete(storeKey);
+            this.#emit({ type: ZamaSDKEvents.SessionExpired, reason: "ttl" });
           } else {
-            // No session signature — need to re-sign
-            if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
-              const signature = await this.#sign(encrypted);
-              await this.#sessionStorage.set(storeKey, signature);
-              const creds = await this.#decryptCredentials(encrypted, signature);
+            const creds = await this.#decryptCredentials(encrypted, sessionEntry.signature);
+            if (this.#isValid(creds, contractAddresses)) {
               this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
               this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
               return creds;
@@ -154,6 +137,16 @@ export class CredentialsManager {
             this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
           }
         }
+        // No session signature or TTL expired — need to re-sign
+        if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
+          const signature = await this.#sign(encrypted);
+          await this.#setSessionEntry(storeKey, signature);
+          const creds = await this.#decryptCredentials(encrypted, signature);
+          this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+          this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
+          return creds;
+        }
+        this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
       }
     } catch {
       try {
@@ -245,7 +238,9 @@ export class CredentialsManager {
    */
   async isAllowed(): Promise<boolean> {
     const storeKey = await this.#storeKey();
-    return (await this.#sessionStorage.get(storeKey)) !== null;
+    const entry = await this.#getSessionEntry(storeKey);
+    if (entry === null) return false;
+    return !this.#isSessionExpired(entry);
   }
 
   /**
@@ -270,7 +265,40 @@ export class CredentialsManager {
   async #storeKey(): Promise<string> {
     const address = (await this.#signer.getAddress()).toLowerCase();
     const chainId = await this.#signer.getChainId();
-    return computeStoreKey(address, chainId);
+    return CredentialsManager.computeStoreKey(address, chainId);
+  }
+
+  /** Check if a session entry has expired based on its recorded TTL. */
+  #isSessionExpired(entry: SessionEntry): boolean {
+    if (entry.ttl === 0) return true;
+    return Math.floor(Date.now() / 1000) - entry.createdAt >= entry.ttl;
+  }
+
+  async #getSessionEntry(storeKey: string): Promise<SessionEntry | null> {
+    const raw = await this.#sessionStorage.get(storeKey);
+    if (raw === null) return null;
+    this.#assertSessionEntry(raw);
+    return raw;
+  }
+
+  #assertSessionEntry(data: unknown): asserts data is SessionEntry {
+    assertObject(data, "Session entry");
+    assertString(data.signature, "session.signature");
+    assertCondition(
+      typeof data.createdAt === "number",
+      `Expected session.createdAt to be a number`,
+    );
+    assertCondition(typeof data.ttl === "number", `Expected session.ttl to be a number`);
+  }
+
+  /** Create and store a session entry with current TTL config. */
+  async #setSessionEntry(storeKey: string, signature: string): Promise<void> {
+    const entry: SessionEntry = {
+      signature,
+      createdAt: Math.floor(Date.now() / 1000),
+      ttl: this.#sessionTTL,
+    };
+    await this.#sessionStorage.set(storeKey, entry);
   }
 
   // ── Validation ──────────────────────────────────────────────
@@ -282,10 +310,6 @@ export class CredentialsManager {
     assertObject(data.encryptedPrivateKey, "credentials.encryptedPrivateKey");
     assertString(data.encryptedPrivateKey.iv, "encryptedPrivateKey.iv");
     assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
-  }
-
-  #hasLegacySignature(data: EncryptedCredentials): data is LegacyEncryptedCredentials {
-    return "signature" in data && typeof (data as Record<string, unknown>).signature === "string";
   }
 
   #isValid(creds: StoredCredentials, requiredContracts: Address[]): boolean {
@@ -333,15 +357,17 @@ export class CredentialsManager {
       const keypair = await this.#relayer.generateKeypair();
       const startTimestamp = Math.floor(Date.now() / 1000);
 
+      const durationDays = Math.ceil(this.#keypairTTL / 86400);
+
       const eip712 = await this.#relayer.createEIP712(
         keypair.publicKey,
         contractAddresses,
         startTimestamp,
-        this.#durationDays,
+        durationDays,
       );
 
       const signature = await this.#signer.signTypedData(eip712);
-      await this.#sessionStorage.set(storeKey, signature);
+      await this.#setSessionEntry(storeKey, signature);
 
       const creds: StoredCredentials = {
         publicKey: keypair.publicKey,
@@ -349,7 +375,7 @@ export class CredentialsManager {
         signature,
         contractAddresses,
         startTimestamp,
-        durationDays: this.#durationDays,
+        durationDays,
       };
 
       try {
@@ -377,7 +403,7 @@ export class CredentialsManager {
     }
   }
 
-  // ── AES-GCM encryption (ported from KeypairDB) ─────────────
+  // ── AES-GCM encryption  ─────────────
 
   async #encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials> {
     const address = (await this.#signer.getAddress()).toLowerCase();
