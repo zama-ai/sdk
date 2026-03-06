@@ -148,8 +148,9 @@ import { EthersSigner } from "@zama-fhe/sdk/ethers";
 // Browser — pass the raw EIP-1193 provider; subscribe() works automatically
 const signer = new EthersSigner({ ethereum: window.ethereum! });
 
-// Node.js — pass an ethers Signer directly (no subscribe support)
-// const signer = new EthersSigner({ signer: wallet });
+// Node.js — pass an ethers Signer directly
+// const provider = new ethers.JsonRpcProvider(rpcUrl);
+// const signer = new EthersSigner({ signer: new ethers.Wallet(privateKey, provider) });
 
 // Read-only mode — pass a Provider for chain reads without a wallet
 // const signer = new EthersSigner({ provider: new ethers.JsonRpcProvider(rpcUrl) });

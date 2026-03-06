@@ -120,12 +120,17 @@ yarn add @zama-fhe/sdk viem
 ```
 
 ```ts
+import { createPublicClient, createWalletClient, custom, http } from "viem";
+import { sepolia } from "viem/chains";
 import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
-import { sepolia } from "viem/chains";
 
-// walletClient and publicClient come from your viem setup
-// (walletClient is optional — omit it for read-only chain queries)
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
+});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
+// walletClient is optional — omit it for read-only chain queries
 const signer = new ViemSigner({ walletClient, publicClient });
 
 const sdk = new ZamaSDK({
@@ -180,7 +185,8 @@ import { EthersSigner } from "@zama-fhe/sdk/ethers";
 // Browser — pass the raw EIP-1193 provider
 const signer = new EthersSigner({ ethereum: window.ethereum! });
 // Node.js — pass an ethers Signer directly
-// const signer = new EthersSigner({ signer: wallet });
+// const provider = new ethers.JsonRpcProvider(rpcUrl);
+// const signer = new EthersSigner({ signer: new ethers.Wallet(privateKey, provider) });
 // Read-only — pass a Provider (no signing, chain reads only)
 // const signer = new EthersSigner({ provider: new ethers.JsonRpcProvider(rpcUrl) });
 
