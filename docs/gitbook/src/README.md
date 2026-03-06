@@ -45,7 +45,7 @@ const sdk = new ZamaSDK({
       },
     },
   }),
-  signer: new ViemSigner({ walletClient, publicClient }),
+  signer: new ViemSigner({ walletClient, publicClient }), // walletClient is optional for read-only
   storage: new IndexedDBStorage(),
 });
 

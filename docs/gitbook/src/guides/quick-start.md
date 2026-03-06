@@ -125,6 +125,7 @@ import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { sepolia } from "viem/chains";
 
 // walletClient and publicClient come from your viem setup
+// (walletClient is optional — omit it for read-only chain queries)
 const signer = new ViemSigner({ walletClient, publicClient });
 
 const sdk = new ZamaSDK({
@@ -176,8 +177,12 @@ yarn add @zama-fhe/sdk ethers
 import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-// Pass the raw EIP-1193 provider — BrowserProvider is created internally
+// Browser — pass the raw EIP-1193 provider
 const signer = new EthersSigner({ ethereum: window.ethereum! });
+// Node.js — pass an ethers Signer directly
+// const signer = new EthersSigner({ signer: wallet });
+// Read-only — pass a Provider (no signing, chain reads only)
+// const signer = new EthersSigner({ provider: new ethers.JsonRpcProvider(rpcUrl) });
 
 const sdk = new ZamaSDK({
   relayer: new RelayerWeb({

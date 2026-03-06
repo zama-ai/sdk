@@ -131,8 +131,14 @@ The signer is how the SDK interacts with the user's wallet — signing transacti
 ```ts
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
+// Full mode — signing + read
 const signer = new ViemSigner({ walletClient, publicClient });
+
+// Read-only mode — omit walletClient for chain reads without a wallet
+const readOnlySigner = new ViemSigner({ publicClient });
 ```
+
+When `walletClient` is omitted, methods that require signing (`getAddress`, `signTypedData`, `writeContract`) throw at runtime. Read methods (`readContract`, `getChainId`, `waitForTransactionReceipt`) work normally.
 
 ### ethers
 
@@ -144,6 +150,9 @@ const signer = new EthersSigner({ ethereum: window.ethereum! });
 
 // Node.js — pass an ethers Signer directly (no subscribe support)
 // const signer = new EthersSigner({ signer: wallet });
+
+// Read-only mode — pass a Provider for chain reads without a wallet
+// const signer = new EthersSigner({ provider: new ethers.JsonRpcProvider(rpcUrl) });
 ```
 
 ### wagmi (React only)
