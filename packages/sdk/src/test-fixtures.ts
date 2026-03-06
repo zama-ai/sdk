@@ -8,10 +8,14 @@ import { Token, TokenConfig } from "./token/token";
 import type { GenericSigner, GenericStorage, TransactionResult } from "./token/token.types";
 import { ZamaSDK, ZamaSDKConfig } from "./token/zama-sdk";
 import { ZamaSDKEvents } from "./events/sdk-events";
+import { ReadonlyToken, ReadonlyTokenConfig } from "./token/readonly-token";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
+const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 const USER = "0x2222222222222222222222222222222222222222" as Address;
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 
@@ -67,10 +71,14 @@ interface SdkFixtures {
   userAddress: typeof USER;
   tokenAddress: typeof TOKEN;
   wrapperAddress: typeof WRAPPER;
+  aclAddress: typeof ACL;
+  delegatorAddress: typeof DELEGATOR;
+  delegateAddress: typeof DELEGATE;
   handle: typeof VALID_HANDLE;
   relayer: RelayerSDK;
   signer: GenericSigner;
   token: Token;
+  readonlyToken: ReadonlyToken;
   credentialManager: CredentialsManager;
   storage: GenericStorage;
   sessionStorage: GenericStorage;
@@ -84,6 +92,7 @@ interface SdkFixtures {
   }) => Token;
   createCredentialManager: (config: CredentialsManagerConfig) => CredentialsManager;
   createToken: (config: TokenConfig) => Token;
+  createReadonlyToken: (config: ReadonlyTokenConfig) => ReadonlyToken;
   sdk: ZamaSDK;
   createSDK: (overrides?: Partial<ZamaSDKConfig>) => ZamaSDK;
   events: typeof ZamaSDKEvents;
@@ -93,6 +102,9 @@ export const test = base.extend<SdkFixtures>({
   userAddress: USER,
   tokenAddress: TOKEN,
   wrapperAddress: WRAPPER,
+  aclAddress: ACL,
+  delegatorAddress: DELEGATOR,
+  delegateAddress: DELEGATE,
   handle: VALID_HANDLE,
   // Per-test instances — fresh mocks for each test
   relayer: async ({}, use) => {
@@ -134,7 +146,7 @@ export const test = base.extend<SdkFixtures>({
   sessionStorage: async ({}, use) => {
     await use(new MemoryStorage());
   },
-  token: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, use) => {
+  token: async ({ relayer, signer, storage, sessionStorage, tokenAddress, aclAddress }, use) => {
     await use(
       new Token({
         relayer,
@@ -142,6 +154,22 @@ export const test = base.extend<SdkFixtures>({
         storage,
         sessionStorage,
         address: tokenAddress,
+        aclAddress,
+      }),
+    );
+  },
+  readonlyToken: async (
+    { relayer, signer, storage, sessionStorage, tokenAddress, aclAddress },
+    use,
+  ) => {
+    await use(
+      new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        address: tokenAddress,
+        aclAddress,
       }),
     );
   },
@@ -201,6 +229,12 @@ export const test = base.extend<SdkFixtures>({
       return new Token(config);
     }
     await use(createToken);
+  },
+  createReadonlyToken: async ({}, use) => {
+    function createReadonlyToken(config: ReadonlyTokenConfig) {
+      return new ReadonlyToken(config);
+    }
+    await use(createReadonlyToken);
   },
   createMockToken: async ({ tokenAddress, signer }, use) => {
     function createMockToken({
