@@ -231,3 +231,79 @@ describe("decryptBalanceAs", () => {
     );
   });
 });
+
+describe("batch delegation", () => {
+  const TOKEN2 = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" as Address;
+
+  it("delegateDecryptionBatch calls delegateDecryption on each token", async ({
+    signer,
+    relayer,
+  }) => {
+    const token1 = new Token({
+      relayer,
+      signer,
+      storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
+      address: TOKEN_ADDR,
+      aclAddress: ACL,
+    });
+    const token2 = new Token({
+      relayer,
+      signer,
+      storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
+      address: TOKEN2,
+      aclAddress: ACL,
+    });
+
+    const results = await Token.delegateDecryptionBatch([token1, token2], DELEGATE);
+
+    expect(results.size).toBe(2);
+    expect(results.get(TOKEN_ADDR)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
+    expect(results.get(TOKEN2)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
+  });
+
+  it("delegateDecryptionBatch captures per-token errors", async ({ signer, relayer }) => {
+    vi.mocked(signer.writeContract)
+      .mockResolvedValueOnce("0xtxhash")
+      .mockRejectedValueOnce(new Error("revert"));
+
+    const token1 = new Token({
+      relayer,
+      signer,
+      storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
+      address: TOKEN_ADDR,
+      aclAddress: ACL,
+    });
+    const token2 = new Token({
+      relayer,
+      signer,
+      storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
+      address: TOKEN2,
+      aclAddress: ACL,
+    });
+
+    const results = await Token.delegateDecryptionBatch([token1, token2], DELEGATE);
+
+    expect(results.get(TOKEN_ADDR)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
+    expect(results.get(TOKEN2)).toBeInstanceOf(Error);
+  });
+
+  it("revokeDelegationBatch works", async ({ signer, relayer }) => {
+    const token1 = new Token({
+      relayer,
+      signer,
+      storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
+      address: TOKEN_ADDR,
+      aclAddress: ACL,
+    });
+
+    const results = await Token.revokeDelegationBatch([token1], DELEGATE);
+
+    expect(results.size).toBe(1);
+    expect(results.get(TOKEN_ADDR)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
+  });
+});

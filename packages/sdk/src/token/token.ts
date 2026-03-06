@@ -724,6 +724,57 @@ export class Token extends ReadonlyToken {
     }
   }
 
+  // BATCH DELEGATION
+
+  static async delegateDecryptionBatch(
+    tokens: Token[],
+    delegate: Address,
+    options?: { expirationDate?: Date },
+  ): Promise<Map<Address, TransactionResult | ZamaError>> {
+    const results = new Map<Address, TransactionResult | ZamaError>();
+    const settled = await Promise.allSettled(
+      tokens.map((t) => t.delegateDecryption(delegate, options)),
+    );
+    for (let i = 0; i < tokens.length; i++) {
+      const outcome = settled[i]!;
+      if (outcome.status === "fulfilled") {
+        results.set(tokens[i]!.address, outcome.value);
+      } else {
+        const err =
+          outcome.reason instanceof ZamaError
+            ? outcome.reason
+            : new TransactionRevertedError("Delegation failed", {
+                cause: outcome.reason instanceof Error ? outcome.reason : undefined,
+              });
+        results.set(tokens[i]!.address, err);
+      }
+    }
+    return results;
+  }
+
+  static async revokeDelegationBatch(
+    tokens: Token[],
+    delegate: Address,
+  ): Promise<Map<Address, TransactionResult | ZamaError>> {
+    const results = new Map<Address, TransactionResult | ZamaError>();
+    const settled = await Promise.allSettled(tokens.map((t) => t.revokeDelegation(delegate)));
+    for (let i = 0; i < tokens.length; i++) {
+      const outcome = settled[i]!;
+      if (outcome.status === "fulfilled") {
+        results.set(tokens[i]!.address, outcome.value);
+      } else {
+        const err =
+          outcome.reason instanceof ZamaError
+            ? outcome.reason
+            : new TransactionRevertedError("Revoke delegation failed", {
+                cause: outcome.reason instanceof Error ? outcome.reason : undefined,
+              });
+        results.set(tokens[i]!.address, err);
+      }
+    }
+    return results;
+  }
+
   // PRIVATE HELPERS
 
   async #waitAndFinalizeUnshield(

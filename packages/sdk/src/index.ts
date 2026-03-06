@@ -46,6 +46,7 @@ export { FEE_MANAGER_ABI } from "./abi/fee-manager.abi";
 export { TRANSFER_BATCHER_ABI } from "./abi/transfer-batch.abi";
 export { WRAPPER_ABI } from "./abi/wrapper.abi";
 export { BATCH_SWAP_ABI } from "./abi/batch-swap.abi";
+export { ACL_ABI } from "./abi/acl.abi";
 
 // ERC-165 interface IDs
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
@@ -217,6 +218,9 @@ export {
   getUnwrapFeeContract,
   getBatchTransferFeeContract,
   getFeeRecipientContract,
+  delegateForUserDecryptionContract,
+  revokeDelegationContract,
+  getDelegationExpiryContract,
   FHE_GAS_LIMIT,
 } from "./contracts";
 export type { BatchTransferData } from "./contracts";
