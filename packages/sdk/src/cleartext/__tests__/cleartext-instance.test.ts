@@ -1,9 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
-import { AbiCoder } from "ethers";
-
-const coder = AbiCoder.defaultAbiCoder();
-const ENCODED_TRUE = coder.encode(["bool"], [true]);
-const ENCODED_42 = coder.encode(["uint256"], [42n]);
+import { describe, expect, it, vi } from "vitest";
 
 // Mock ethers providers — provider.call returns ABI-encoded results
 vi.mock("ethers", async (importOriginal) => {
@@ -32,8 +27,8 @@ vi.mock("ethers", async (importOriginal) => {
   };
 });
 
-import { createCleartextInstance } from "../cleartext-instance";
 import type { Address } from "../../relayer/relayer-sdk.types";
+import { createCleartextInstance } from "../cleartext-instance";
 
 const CONFIG = {
   network: "http://127.0.0.1:8545",
