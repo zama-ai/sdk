@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.0-alpha.12](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.11...v1.0.0-alpha.12) (2026-03-06)
+
+### Features
+
+- read-only signer mode & gitbook import audit ([#65](https://github.com/zama-ai/sdk/issues/65)) ([03366c2](https://github.com/zama-ai/sdk/commit/03366c265ed51e4e9fa86355196ca935a576d586))
+
 ## [1.0.0-alpha.11](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.10...v1.0.0-alpha.11) (2026-03-06)
 
 ### Features
