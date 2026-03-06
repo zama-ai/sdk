@@ -28,8 +28,10 @@ export function confidentialBalancesQueryOptions(
   tokens: ReadonlyToken[],
   config?: ConfidentialBalancesQueryConfig,
 ): QueryFactoryOptions<
-  ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>,
-  ConfidentialBalancesData
+  ConfidentialBalancesData,
+  Error,
+  ConfidentialBalancesData,
+  ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>
 > {
   const tokenAddresses = tokens.map((token) => token.address);
   const resultAddresses = config?.resultAddresses ?? tokenAddresses;

@@ -1,9 +1,9 @@
 "use client";
 
-import { skipToken, useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "../utils/query";
+import { skipToken } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import {
-  hashFn,
   isAllowedQueryOptions,
   signerAddressQueryOptions,
   zamaQueryKeys,
@@ -21,9 +21,8 @@ import { useZamaSDK } from "../provider";
  */
 export function useIsAllowed() {
   const sdk = useZamaSDK();
-  const addressQuery = useQuery({
+  const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(sdk.signer),
-    queryKeyHashFn: hashFn,
   });
   const account = addressQuery.data as Address | undefined;
   const baseOpts = account
@@ -37,6 +36,5 @@ export function useIsAllowed() {
   return useQuery({
     ...baseOpts,
     enabled: factoryEnabled,
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<boolean, Error>);
+  });
 }

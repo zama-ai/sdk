@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { tokenMetadataQueryOptions } from "../token-metadata";
 
 describe("tokenMetadataQueryOptions", () => {
@@ -23,7 +23,7 @@ describe("tokenMetadataQueryOptions", () => {
       "zama.tokenMetadata",
       { tokenAddress: "0x2222222222222222222222222222222222222222" },
     ] as const;
-    const result = await options.queryFn({ queryKey: otherKey });
+    const result = await options.queryFn(mockQueryContext(otherKey));
 
     expect(result).toEqual({ name: "Name", symbol: "SYM", decimals: 18 });
     expect(vi.mocked(signer.readContract).mock.calls[0]?.[0]).toMatchObject({

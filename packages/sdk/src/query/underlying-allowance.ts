@@ -14,7 +14,12 @@ export function underlyingAllowanceQueryOptions(
   signer: GenericSigner,
   tokenAddress: Address,
   config: UnderlyingAllowanceQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.underlyingAllowance.scope>, bigint> {
+): QueryFactoryOptions<
+  bigint,
+  Error,
+  bigint,
+  ReturnType<typeof zamaQueryKeys.underlyingAllowance.scope>
+> {
   const ownerKey = config.owner ?? "";
   const queryKey = zamaQueryKeys.underlyingAllowance.scope(
     tokenAddress,

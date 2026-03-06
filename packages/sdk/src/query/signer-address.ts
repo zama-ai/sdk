@@ -21,7 +21,12 @@ export interface SignerAddressQueryConfig {
 export function signerAddressQueryOptions(
   signer: GenericSigner,
   config?: SignerAddressQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.signerAddress.scope>, Address> {
+): QueryFactoryOptions<
+  Address,
+  Error,
+  Address,
+  ReturnType<typeof zamaQueryKeys.signerAddress.scope>
+> {
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey: zamaQueryKeys.signerAddress.scope(getSignerScope(signer)),

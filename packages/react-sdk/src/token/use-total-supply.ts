@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "../utils/query";
+import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { hashFn, totalSupplyQueryOptions } from "@zama-fhe/sdk/query";
+import { totalSupplyQueryOptions } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
 
 export { totalSupplyQueryOptions };
@@ -26,11 +27,10 @@ export function useTotalSupply(
 ) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useQuery({
+  return useQuery<bigint>({
     ...totalSupplyQueryOptions(token.signer, tokenAddress),
     ...options,
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<bigint, Error>);
+  });
 }
 
 /**
@@ -48,8 +48,7 @@ export function useTotalSupply(
 export function useTotalSupplySuspense(tokenAddress: Address) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery({
+  return useSuspenseQuery<bigint>({
     ...totalSupplyQueryOptions(token.signer, tokenAddress),
-    queryKeyHashFn: hashFn,
   });
 }

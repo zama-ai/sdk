@@ -17,7 +17,12 @@ export function confidentialHandlesQueryOptions(
   signer: GenericSigner,
   tokenAddresses: Address[],
   config?: ConfidentialHandlesQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>, Hex[]> {
+): QueryFactoryOptions<
+  Hex[],
+  Error,
+  Hex[],
+  ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>
+> {
   const ownerKey = config?.owner ?? "";
   const queryKey = zamaQueryKeys.confidentialHandles.tokens(tokenAddresses, ownerKey);
 

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "../../test-fixtures";
+import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
 import { signerAddressQueryOptions } from "../signer-address";
 
 describe("signerAddressQueryOptions", () => {
@@ -7,7 +7,7 @@ describe("signerAddressQueryOptions", () => {
 
     expect(options.queryKey).toEqual(["zama.signerAddress", { scope: expect.any(Number) }]);
 
-    await options.queryFn({ queryKey: options.queryKey });
+    await options.queryFn(mockQueryContext(options.queryKey));
     expect(signer.getAddress).toHaveBeenCalled();
   });
 

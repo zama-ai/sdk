@@ -41,7 +41,12 @@ export function activityFeedQueryOptions(
   token: ReadonlyToken,
   config: ActivityFeedConfig,
   queryConfig?: ActivityFeedQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.activityFeed.scope>, ActivityItem[]> {
+): QueryFactoryOptions<
+  ActivityItem[],
+  Error,
+  ActivityItem[],
+  ReturnType<typeof zamaQueryKeys.activityFeed.scope>
+> {
   const userAddress = config.userAddress ?? "";
   const logsKey = config.logsKey ?? "";
   const decrypt = config.decrypt ?? true;

@@ -20,7 +20,12 @@ export function tokenMetadataQueryOptions(
   signer: GenericSigner,
   tokenAddress: Address,
   config?: TokenMetadataQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.tokenMetadata.token>, TokenMetadata> {
+): QueryFactoryOptions<
+  TokenMetadata,
+  Error,
+  TokenMetadata,
+  ReturnType<typeof zamaQueryKeys.tokenMetadata.token>
+> {
   const queryKey = zamaQueryKeys.tokenMetadata.token(tokenAddress);
 
   return {

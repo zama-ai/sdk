@@ -12,7 +12,12 @@ export function isConfidentialQueryOptions(
   signer: GenericSigner,
   tokenAddress: Address,
   config?: IsConfidentialQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isConfidential.token>, boolean> {
+): QueryFactoryOptions<
+  boolean,
+  Error,
+  boolean,
+  ReturnType<typeof zamaQueryKeys.isConfidential.token>
+> {
   const queryKey = zamaQueryKeys.isConfidential.token(tokenAddress);
   return {
     ...filterQueryOptions(config?.query ?? {}),
@@ -30,7 +35,7 @@ export function isWrapperQueryOptions(
   signer: GenericSigner,
   tokenAddress: Address,
   config?: IsConfidentialQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isWrapper.token>, boolean> {
+): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>> {
   const queryKey = zamaQueryKeys.isWrapper.token(tokenAddress);
   return {
     ...filterQueryOptions(config?.query ?? {}),

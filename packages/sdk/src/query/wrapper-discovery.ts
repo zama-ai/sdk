@@ -13,7 +13,12 @@ export function wrapperDiscoveryQueryOptions(
   signer: GenericSigner,
   tokenAddress: Address,
   config: WrapperDiscoveryQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>, Address | null> {
+): QueryFactoryOptions<
+  Address | null,
+  Error,
+  Address | null,
+  ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>
+> {
   const queryKey = zamaQueryKeys.wrapperDiscovery.token(tokenAddress, config.coordinatorAddress);
 
   return {

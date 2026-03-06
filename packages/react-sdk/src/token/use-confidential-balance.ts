@@ -1,11 +1,11 @@
 "use client";
 
-import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "../utils/query";
+import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address, Hex } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryOptions,
   confidentialHandleQueryOptions,
-  hashFn,
   signerAddressQueryOptions,
 } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
@@ -48,9 +48,8 @@ export function useConfidentialBalance(
   const userEnabled = options?.enabled;
   const token = useReadonlyToken(tokenAddress);
 
-  const addressQuery = useQuery({
+  const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(token.signer),
-    queryKeyHashFn: hashFn,
   });
 
   const owner = addressQuery.data as Address | undefined;
@@ -61,11 +60,10 @@ export function useConfidentialBalance(
     pollingInterval: handleRefetchInterval,
   });
   const handleFactoryEnabled = baseHandleQueryOptions.enabled ?? true;
-  const handleQuery = useQuery({
+  const handleQuery = useQuery<Hex>({
     ...baseHandleQueryOptions,
     enabled: handleFactoryEnabled && (userEnabled ?? true),
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<Hex, Error>);
+  });
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
   const handle = handleQuery.data as Hex | undefined;
@@ -75,12 +73,11 @@ export function useConfidentialBalance(
   });
   const factoryEnabled = baseBalanceQueryOptions.enabled ?? true;
 
-  const balanceQuery = useQuery({
+  const balanceQuery = useQuery<bigint>({
     ...baseBalanceQueryOptions,
     ...options,
     enabled: factoryEnabled && (userEnabled ?? true),
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<bigint, Error>);
+  });
 
   return { ...balanceQuery, handleQuery };
 }

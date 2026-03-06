@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "../utils/query";
+import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address, Hex } from "@zama-fhe/sdk";
 import {
   confidentialBalancesQueryOptions,
   confidentialHandlesQueryOptions,
-  hashFn,
   signerAddressQueryOptions,
   type ConfidentialBalancesData,
 } from "@zama-fhe/sdk/query";
@@ -61,9 +61,8 @@ export function useConfidentialBalances(
   const userEnabled = options?.enabled;
   const sdk = useZamaSDK();
 
-  const addressQuery = useQuery({
+  const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(sdk.signer),
-    queryKeyHashFn: hashFn,
   });
 
   const owner = addressQuery.data as Address | undefined;
@@ -79,11 +78,10 @@ export function useConfidentialBalances(
     pollingInterval: handleRefetchInterval,
   });
   const handlesFactoryEnabled = baseHandlesQueryOptions.enabled ?? true;
-  const handlesQuery = useQuery({
+  const handlesQuery = useQuery<Hex[]>({
     ...baseHandlesQueryOptions,
     enabled: handlesFactoryEnabled && (userEnabled ?? true),
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<Hex[], Error>);
+  });
 
   // Phase 2: Batch decrypt only when any handle changes
   const handles = handlesQuery.data as Hex[] | undefined;
@@ -96,12 +94,11 @@ export function useConfidentialBalances(
   });
   const factoryEnabled = baseBalancesQueryOptions.enabled ?? true;
 
-  const balancesQuery = useQuery({
+  const balancesQuery = useQuery<ConfidentialBalancesData>({
     ...baseBalancesQueryOptions,
     ...options,
     enabled: factoryEnabled && handlesReady && (userEnabled ?? true),
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<ConfidentialBalancesData, Error>);
+  });
 
   return { ...balancesQuery, handlesQuery };
 }

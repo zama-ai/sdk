@@ -34,7 +34,7 @@ function parseAmount(value?: string): bigint | undefined {
 export function shieldFeeQueryOptions(
   signer: GenericSigner,
   config: ShieldFeeQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.fees.shieldFee>, bigint> {
+): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.shieldFee>> {
   const amountString = config.amount?.toString();
   const queryKey = zamaQueryKeys.fees.shieldFee(
     config.feeManagerAddress,
@@ -67,7 +67,7 @@ export function shieldFeeQueryOptions(
 export function unshieldFeeQueryOptions(
   signer: GenericSigner,
   config: UnshieldFeeQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.fees.unshieldFee>, bigint> {
+): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.unshieldFee>> {
   const amountString = config.amount?.toString();
   const queryKey = zamaQueryKeys.fees.unshieldFee(
     config.feeManagerAddress,
@@ -101,7 +101,12 @@ export function batchTransferFeeQueryOptions(
   signer: GenericSigner,
   feeManagerAddress: Address,
   config?: FeeQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>, bigint> {
+): QueryFactoryOptions<
+  bigint,
+  Error,
+  bigint,
+  ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>
+> {
   const queryKey = zamaQueryKeys.fees.batchTransferFee(feeManagerAddress);
 
   return {
@@ -120,7 +125,12 @@ export function feeRecipientQueryOptions(
   signer: GenericSigner,
   feeManagerAddress: Address,
   config?: FeeQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.fees.feeRecipient>, Address> {
+): QueryFactoryOptions<
+  Address,
+  Error,
+  Address,
+  ReturnType<typeof zamaQueryKeys.fees.feeRecipient>
+> {
   const queryKey = zamaQueryKeys.fees.feeRecipient(feeManagerAddress);
 
   return {

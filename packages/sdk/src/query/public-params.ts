@@ -12,8 +12,10 @@ export function publicParamsQueryOptions(
   bits: number,
   config?: PublicParamsQueryConfig,
 ): QueryFactoryOptions<
-  ReturnType<typeof zamaQueryKeys.publicParams.bits>,
-  { publicParams: Uint8Array; publicParamsId: string } | null
+  { publicParams: Uint8Array; publicParamsId: string } | null,
+  Error,
+  { publicParams: Uint8Array; publicParamsId: string } | null,
+  ReturnType<typeof zamaQueryKeys.publicParams.bits>
 > {
   const queryKey = zamaQueryKeys.publicParams.bits(bits);
 

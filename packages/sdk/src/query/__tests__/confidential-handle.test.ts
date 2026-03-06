@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { confidentialHandleQueryOptions } from "../confidential-handle";
 
 describe("confidentialHandleQueryOptions", () => {
@@ -40,7 +40,7 @@ describe("confidentialHandleQueryOptions", () => {
       },
     ] as const;
 
-    await options.queryFn({ queryKey });
+    await options.queryFn(mockQueryContext(queryKey));
 
     expect(vi.mocked(signer.readContract).mock.calls[0]?.[0]).toMatchObject({
       address: "0x3333333333333333333333333333333333333333",
@@ -68,7 +68,7 @@ describe("confidentialHandleQueryOptions", () => {
       { owner: "0x2222222222222222222222222222222222222222" },
     );
 
-    const result = await options.queryFn({ queryKey: options.queryKey });
+    const result = await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(result).toBe("0x000000000000000000000000000000000000000000000000000000000000002a");
   });

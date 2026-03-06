@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { ReadonlyToken } from "../../token/readonly-token";
 import { DecryptionFailedError } from "../../token/errors";
 import type { Address } from "../../token/token.types";
@@ -87,7 +87,7 @@ describe("confidentialBalancesQueryOptions", () => {
       maxConcurrency: 3,
     });
 
-    const result = await options.queryFn({ queryKey: options.queryKey });
+    const result = await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(batchSpy).toHaveBeenCalledWith(
       [t1, t2],
@@ -124,7 +124,7 @@ describe("confidentialBalancesQueryOptions", () => {
       "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     ]);
 
-    await options.queryFn({ queryKey: key });
+    await options.queryFn(mockQueryContext(key));
 
     expect(batchSpy).toHaveBeenCalledWith(
       [t1],
@@ -164,7 +164,7 @@ describe("confidentialBalancesQueryOptions", () => {
       ],
     });
 
-    const result = await options.queryFn({ queryKey: options.queryKey });
+    const result = await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(result.balances.get(tokenA as Address)).toBe(10n);
     expect(result.balances.has(tokenB as Address)).toBe(false);
@@ -201,7 +201,7 @@ describe("confidentialBalancesQueryOptions", () => {
       ],
     });
 
-    await expect(options.queryFn({ queryKey: options.queryKey })).rejects.toThrow(
+    await expect(options.queryFn(mockQueryContext(options.queryKey))).rejects.toThrow(
       DecryptionFailedError,
     );
 

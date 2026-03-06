@@ -14,7 +14,12 @@ export function confidentialIsApprovedQueryOptions(
   signer: GenericSigner,
   tokenAddress: Address,
   config: ConfidentialIsApprovedQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>, boolean> {
+): QueryFactoryOptions<
+  boolean,
+  Error,
+  boolean,
+  ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>
+> {
   const queryKey = zamaQueryKeys.confidentialIsApproved.scope(
     tokenAddress,
     config.holder,

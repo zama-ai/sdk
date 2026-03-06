@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import type { Address, RawLog, ActivityLogMetadata } from "@zama-fhe/sdk";
-import { activityFeedQueryOptions, hashFn } from "@zama-fhe/sdk/query";
+import { useQuery } from "../utils/query";
+import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/sdk";
+import { activityFeedQueryOptions } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
 
 /** Configuration for {@link useActivityFeed}. */
@@ -44,13 +44,12 @@ export function useActivityFeed(config: UseActivityFeedConfig) {
   const logsKey =
     logs?.map((log) => `${log.transactionHash ?? ""}:${log.logIndex ?? ""}`).join(",") ?? "";
 
-  return useQuery({
+  return useQuery<ActivityItem[]>({
     ...activityFeedQueryOptions(token, {
       userAddress,
       logs,
       decrypt,
       logsKey,
     }),
-    queryKeyHashFn: hashFn,
   });
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useQuery, useSuspenseQuery, skipToken, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "../utils/query";
+import { skipToken, type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import {
   confidentialIsApprovedQueryOptions,
-  hashFn,
   signerAddressQueryOptions,
   zamaQueryKeys,
 } from "@zama-fhe/sdk/query";
@@ -51,10 +51,9 @@ export function useConfidentialIsApproved(
   const { spender, holder, ...tokenConfig } = config;
   const userEnabled = options?.enabled;
   const token = useToken(tokenConfig);
-  const holderQuery = useQuery({
+  const holderQuery = useQuery<Address>({
     ...signerAddressQueryOptions(token.signer),
     enabled: holder === undefined,
-    queryKeyHashFn: hashFn,
   });
   const resolvedHolder = holder ?? (holderQuery.data as Address | undefined);
 
@@ -74,8 +73,7 @@ export function useConfidentialIsApproved(
     ...baseOpts,
     ...options,
     enabled: factoryEnabled && (userEnabled ?? true),
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<boolean, Error>);
+  });
 }
 
 /**
@@ -97,17 +95,15 @@ export function useConfidentialIsApproved(
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
   const { spender, holder, ...tokenConfig } = config;
   const token = useToken(tokenConfig);
-  const addressQuery = useSuspenseQuery({
+  const addressQuery = useSuspenseQuery<Address>({
     ...signerAddressQueryOptions(token.signer),
-    queryKeyHashFn: hashFn,
   });
   const resolvedHolder = holder ?? (addressQuery.data as Address);
 
-  return useSuspenseQuery({
+  return useSuspenseQuery<boolean>({
     ...confidentialIsApprovedQueryOptions(token.signer, token.address, {
       holder: resolvedHolder,
       spender,
     }),
-    queryKeyHashFn: hashFn,
   });
 }

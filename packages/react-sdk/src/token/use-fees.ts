@@ -1,11 +1,11 @@
 "use client";
 
-import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "../utils/query";
+import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import {
   batchTransferFeeQueryOptions,
   feeRecipientQueryOptions,
-  hashFn,
   shieldFeeQueryOptions,
   unshieldFeeQueryOptions,
 } from "@zama-fhe/sdk/query";
@@ -53,11 +53,10 @@ export function useShieldFee(
 ) {
   const sdk = useZamaSDK();
 
-  return useQuery({
+  return useQuery<bigint>({
     ...shieldFeeQueryOptions(sdk.signer, config),
     ...options,
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<bigint, Error>);
+  });
 }
 
 /**
@@ -83,11 +82,10 @@ export function useUnshieldFee(
 ) {
   const sdk = useZamaSDK();
 
-  return useQuery({
+  return useQuery<bigint>({
     ...unshieldFeeQueryOptions(sdk.signer, config),
     ...options,
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<bigint, Error>);
+  });
 }
 
 /**
@@ -108,11 +106,10 @@ export function useBatchTransferFee(
 ) {
   const sdk = useZamaSDK();
 
-  return useQuery({
+  return useQuery<bigint>({
     ...batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress),
     ...options,
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<bigint, Error>);
+  });
 }
 
 /**
@@ -133,9 +130,8 @@ export function useFeeRecipient(
 ) {
   const sdk = useZamaSDK();
 
-  return useQuery({
+  return useQuery<Address>({
     ...feeRecipientQueryOptions(sdk.signer, feeManagerAddress),
     ...options,
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<Address, Error>);
+  });
 }

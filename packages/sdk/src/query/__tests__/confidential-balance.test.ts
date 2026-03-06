@@ -1,4 +1,4 @@
-import { describe, expect, test } from "../../test-fixtures";
+import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
 import { confidentialBalanceQueryOptions } from "../confidential-balance";
 
 describe("confidentialBalanceQueryOptions", () => {
@@ -45,7 +45,7 @@ describe("confidentialBalanceQueryOptions", () => {
       },
     ] as const;
 
-    await options.queryFn({ queryKey: key });
+    await options.queryFn(mockQueryContext(key));
     expect(token.decryptBalance).toHaveBeenCalledWith(
       "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "0x2222222222222222222222222222222222222222",

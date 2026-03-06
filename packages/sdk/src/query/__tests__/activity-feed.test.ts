@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import type { RawLog } from "../../events/onchain-events";
 import { Topics } from "../../events/onchain-events";
 import type { Address } from "../../token/token.types";
@@ -66,8 +66,8 @@ describe("activityFeedQueryOptions", () => {
     const missingLogs = activityFeedQueryOptions(token, { userAddress: USER });
     const missingUser = activityFeedQueryOptions(token, { logs: [] });
 
-    await expect(missingLogs.queryFn({ queryKey: missingLogs.queryKey })).resolves.toEqual([]);
-    await expect(missingUser.queryFn({ queryKey: missingUser.queryKey })).resolves.toEqual([]);
+    await expect(missingLogs.queryFn(mockQueryContext(missingLogs.queryKey))).resolves.toEqual([]);
+    await expect(missingUser.queryFn(mockQueryContext(missingUser.queryKey))).resolves.toEqual([]);
   });
 
   test("queryFn parses, decrypts handles, applies decrypted values, and sorts", async ({
@@ -102,7 +102,7 @@ describe("activityFeedQueryOptions", () => {
       logsKey: "pipeline",
     });
 
-    const result = await options.queryFn({ queryKey: options.queryKey });
+    const result = await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(token.decryptHandles).toHaveBeenCalledWith([handleA, handleB], USER);
     expect(result).toHaveLength(2);
@@ -132,7 +132,7 @@ describe("activityFeedQueryOptions", () => {
       logsKey: "no-decrypt",
     });
 
-    const result = await options.queryFn({ queryKey: options.queryKey });
+    const result = await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(token.decryptHandles).not.toHaveBeenCalled();
     expect(result).toEqual([

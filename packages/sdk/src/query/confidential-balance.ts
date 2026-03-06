@@ -16,7 +16,12 @@ export interface ConfidentialBalanceQueryConfig {
 export function confidentialBalanceQueryOptions(
   token: ReadonlyToken,
   config?: ConfidentialBalanceQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>, bigint> {
+): QueryFactoryOptions<
+  bigint,
+  Error,
+  bigint,
+  ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>
+> {
   const ownerKey = config?.owner ?? "";
   const handleKey = config?.handle === undefined ? undefined : normalizeHandle(config.handle);
   const queryKey = zamaQueryKeys.confidentialBalance.owner(token.address, ownerKey, handleKey);

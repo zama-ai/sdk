@@ -1,14 +1,24 @@
-export interface QueryContext<TQueryKey extends readonly unknown[]> {
-  queryKey: TQueryKey;
-}
+import type { QueryKey, QueryObserverOptions, skipToken } from "@tanstack/query-core";
 
-export interface QueryFactoryOptions<TQueryKey extends readonly unknown[], TData> {
-  queryKey: TQueryKey;
-  queryFn: (context: QueryContext<TQueryKey>) => Promise<TData>;
-  enabled?: boolean;
-  staleTime?: number;
-  refetchInterval?: number;
-}
+type RequiredBy<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
+
+export type QueryFactoryOptions<
+  TQueryFnData = unknown,
+  TError = Error,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+> = Omit<
+  RequiredBy<
+    QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>,
+    "queryKey"
+  >,
+  "queryFn" | "queryHash" | "queryKeyHashFn" | "throwOnError"
+> & {
+  queryFn: Exclude<
+    QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>["queryFn"],
+    typeof skipToken | undefined
+  >;
+};
 
 export interface MutationFactoryOptions<
   TMutationKey extends readonly unknown[],

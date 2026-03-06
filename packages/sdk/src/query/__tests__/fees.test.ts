@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import {
   batchTransferFeeQueryOptions,
   feeRecipientQueryOptions,
@@ -54,7 +54,7 @@ describe("fee query options", () => {
       feeManagerAddress: "0x1111111111111111111111111111111111111111",
     });
 
-    expect(await options.queryFn({ queryKey: options.queryKey })).toBe(0n);
+    expect(await options.queryFn(mockQueryContext(options.queryKey))).toBe(0n);
   });
 
   test("unshield fee reads contract when params provided", async ({ signer }) => {
@@ -67,7 +67,7 @@ describe("fee query options", () => {
       to: "0x3333333333333333333333333333333333333333",
     });
 
-    expect(await options.queryFn({ queryKey: options.queryKey })).toBe(77n);
+    expect(await options.queryFn(mockQueryContext(options.queryKey))).toBe(77n);
   });
 
   test("shield fee reads contract for a zero amount", async ({ signer }) => {
@@ -80,7 +80,7 @@ describe("fee query options", () => {
       to: "0x3333333333333333333333333333333333333333",
     });
 
-    expect(await options.queryFn({ queryKey: options.queryKey })).toBe(5n);
+    expect(await options.queryFn(mockQueryContext(options.queryKey))).toBe(5n);
     expect(signer.readContract).toHaveBeenCalledOnce();
   });
 
@@ -98,8 +98,8 @@ describe("fee query options", () => {
       "0x1111111111111111111111111111111111111111",
     );
 
-    expect(await batchOptions.queryFn({ queryKey: batchOptions.queryKey })).toBe(5n);
-    expect(await recipientOptions.queryFn({ queryKey: recipientOptions.queryKey })).toBe(
+    expect(await batchOptions.queryFn(mockQueryContext(batchOptions.queryKey))).toBe(5n);
+    expect(await recipientOptions.queryFn(mockQueryContext(recipientOptions.queryKey))).toBe(
       "0x4444444444444444444444444444444444444444",
     );
   });

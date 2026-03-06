@@ -1,12 +1,9 @@
 "use client";
 
-import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "../utils/query";
+import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import {
-  hashFn,
-  signerAddressQueryOptions,
-  underlyingAllowanceQueryOptions,
-} from "@zama-fhe/sdk/query";
+import { signerAddressQueryOptions, underlyingAllowanceQueryOptions } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
 
 export { underlyingAllowanceQueryOptions };
@@ -42,9 +39,8 @@ export function useUnderlyingAllowance(
   const { tokenAddress, wrapperAddress } = config;
   const userEnabled = options?.enabled;
   const token = useReadonlyToken(tokenAddress);
-  const addressQuery = useQuery({
+  const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(token.signer),
-    queryKeyHashFn: hashFn,
   });
   const owner = addressQuery.data as Address | undefined;
 
@@ -54,12 +50,11 @@ export function useUnderlyingAllowance(
   });
   const factoryEnabled = baseOpts.enabled ?? true;
 
-  return useQuery({
+  return useQuery<bigint>({
     ...baseOpts,
     ...options,
     enabled: factoryEnabled && (userEnabled ?? true),
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<bigint, Error>);
+  });
 }
 
 /**
@@ -80,17 +75,15 @@ export function useUnderlyingAllowance(
 export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceConfig) {
   const { tokenAddress, wrapperAddress } = config;
   const token = useReadonlyToken(tokenAddress);
-  const addressQuery = useSuspenseQuery({
+  const addressQuery = useSuspenseQuery<Address>({
     ...signerAddressQueryOptions(token.signer),
-    queryKeyHashFn: hashFn,
   });
   const owner = addressQuery.data as Address;
 
-  return useSuspenseQuery({
+  return useSuspenseQuery<bigint>({
     ...underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
       owner,
       wrapperAddress,
     }),
-    queryKeyHashFn: hashFn,
   });
 }

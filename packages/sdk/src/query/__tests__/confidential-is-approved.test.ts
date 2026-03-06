@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { getAddress } from "viem";
 import { confidentialIsApprovedQueryOptions } from "../confidential-is-approved";
 import { zamaQueryKeys } from "../query-keys";
@@ -29,7 +29,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
       },
     );
 
-    const isApproved = await options.queryFn({ queryKey: options.queryKey });
+    const isApproved = await options.queryFn(mockQueryContext(options.queryKey));
     expect(isApproved).toBe(true);
   });
 
@@ -73,7 +73,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
       "0xcccccccccccccccccccccccccccccccccccccccc",
     );
 
-    await options.queryFn({ queryKey: key });
+    await options.queryFn(mockQueryContext(key));
 
     expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -99,7 +99,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
       },
     );
 
-    await options.queryFn({ queryKey: options.queryKey });
+    await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(signer.getAddress).not.toHaveBeenCalled();
     expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
@@ -125,7 +125,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
       },
     );
 
-    await options.queryFn({ queryKey: options.queryKey });
+    await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(signer.getAddress).not.toHaveBeenCalled();
     expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(

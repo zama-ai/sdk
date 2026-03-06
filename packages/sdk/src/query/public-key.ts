@@ -11,8 +11,10 @@ export function publicKeyQueryOptions(
   sdk: ZamaSDK,
   config?: PublicKeyQueryConfig,
 ): QueryFactoryOptions<
-  typeof zamaQueryKeys.publicKey.all,
-  { publicKeyId: string; publicKey: Uint8Array } | null
+  { publicKeyId: string; publicKey: Uint8Array } | null,
+  Error,
+  { publicKeyId: string; publicKey: Uint8Array } | null,
+  typeof zamaQueryKeys.publicKey.all
 > {
   const queryKey = zamaQueryKeys.publicKey.all;
 

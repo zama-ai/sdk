@@ -1,4 +1,4 @@
-import { describe, expect, test } from "../../test-fixtures";
+import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
 import { ZamaSDK } from "../../token/zama-sdk";
 import { publicParamsQueryOptions } from "../public-params";
 
@@ -11,7 +11,7 @@ describe("publicParamsQueryOptions", () => {
     });
 
     const options = publicParamsQueryOptions(sdk, 2048);
-    const result = await options.queryFn({ queryKey: options.queryKey });
+    const result = await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(options.queryKey).toEqual(["zama.publicParams", { bits: 2048 }]);
     expect(result).toEqual({ publicParamsId: "pp-1", publicParams: new Uint8Array([2]) });

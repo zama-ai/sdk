@@ -12,7 +12,7 @@ export function totalSupplyQueryOptions(
   signer: GenericSigner,
   tokenAddress: Address,
   config?: TotalSupplyQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.totalSupply.token>, bigint> {
+): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.totalSupply.token>> {
   const queryKey = zamaQueryKeys.totalSupply.token(tokenAddress);
 
   return {

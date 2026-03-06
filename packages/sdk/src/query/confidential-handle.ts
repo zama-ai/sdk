@@ -17,7 +17,7 @@ export function confidentialHandleQueryOptions(
   signer: GenericSigner,
   tokenAddress: Address,
   config?: ConfidentialHandleQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>, Hex> {
+): QueryFactoryOptions<Hex, Error, Hex, ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>> {
   const ownerKey = config?.owner ?? "";
   const queryKey = zamaQueryKeys.confidentialHandle.owner(tokenAddress, ownerKey);
 

@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { confidentialHandlesQueryOptions } from "../confidential-handles";
 import { zamaQueryKeys } from "../query-keys";
 
@@ -61,7 +61,7 @@ describe("confidentialHandlesQueryOptions", () => {
       "0x4444444444444444444444444444444444444444",
     );
 
-    await options.queryFn({ queryKey: key });
+    await options.queryFn(mockQueryContext(key));
 
     const calls = vi.mocked(signer.readContract).mock.calls;
     expect(calls).toHaveLength(2);
@@ -81,7 +81,7 @@ describe("confidentialHandlesQueryOptions", () => {
     vi.mocked(signer.readContract).mockResolvedValueOnce(1n).mockResolvedValueOnce(2n);
 
     const options = confidentialHandlesQueryOptions(signer, [tokenA, tokenB], { owner });
-    const result = await options.queryFn({ queryKey: options.queryKey });
+    const result = await options.queryFn(mockQueryContext(options.queryKey));
 
     expect(result).toEqual([
       "0x0000000000000000000000000000000000000000000000000000000000000001",

@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery, useSuspenseQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "../utils/query";
+import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { hashFn, tokenMetadataQueryOptions, type TokenMetadata } from "@zama-fhe/sdk/query";
+import { tokenMetadataQueryOptions, type TokenMetadata } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
 
 export { type TokenMetadata };
@@ -27,11 +28,10 @@ export function useMetadata(
 ) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useQuery({
+  return useQuery<TokenMetadata>({
     ...tokenMetadataQueryOptions(token.signer, tokenAddress),
     ...options,
-    queryKeyHashFn: hashFn,
-  } as unknown as UseQueryOptions<TokenMetadata, Error>);
+  });
 }
 
 /**
@@ -49,8 +49,7 @@ export function useMetadata(
 export function useMetadataSuspense(tokenAddress: Address) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery({
+  return useSuspenseQuery<TokenMetadata>({
     ...tokenMetadataQueryOptions(token.signer, tokenAddress),
-    queryKeyHashFn: hashFn,
   });
 }

@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { wrapperDiscoveryQueryOptions } from "../wrapper-discovery";
 
 describe("wrapperDiscoveryQueryOptions", () => {
@@ -31,7 +31,7 @@ describe("wrapperDiscoveryQueryOptions", () => {
       },
     );
 
-    const wrapper = await options.queryFn({ queryKey: options.queryKey });
+    const wrapper = await options.queryFn(mockQueryContext(options.queryKey));
     expect(wrapper).toBeNull();
   });
 
@@ -48,7 +48,7 @@ describe("wrapperDiscoveryQueryOptions", () => {
       },
     );
 
-    const wrapper = await options.queryFn({ queryKey: options.queryKey });
+    const wrapper = await options.queryFn(mockQueryContext(options.queryKey));
     expect(wrapper).toBe("0x4444444444444444444444444444444444444444");
   });
 
@@ -71,7 +71,7 @@ describe("wrapperDiscoveryQueryOptions", () => {
       },
     ] as const;
 
-    await options.queryFn({ queryKey });
+    await options.queryFn(mockQueryContext(queryKey));
 
     expect(vi.mocked(signer.readContract).mock.calls[0]?.[0]).toMatchObject({
       address: "0x5555555555555555555555555555555555555555",

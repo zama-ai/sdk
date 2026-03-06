@@ -12,7 +12,7 @@ export interface IsAllowedQueryConfig {
 export function isAllowedQueryOptions(
   sdk: ZamaSDK,
   config: IsAllowedQueryConfig,
-): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isAllowed.scope>, boolean> {
+): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>> {
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey: zamaQueryKeys.isAllowed.scope(config.account),
