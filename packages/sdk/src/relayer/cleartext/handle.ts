@@ -1,5 +1,6 @@
 import { concat, encodePacked, keccak256, pad, toBytes, toHex } from "viem";
 import { FHE_BIT_WIDTHS, FheType, HANDLE_VERSION, PREHANDLE_MASK } from "./constants";
+import { EncryptionFailedError } from "../../token/errors";
 
 const RAW_CT_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_rct");
 const HANDLE_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_hdl");
@@ -15,7 +16,7 @@ export function computeMockCiphertext(
   random32: Uint8Array,
 ): string {
   if (random32.length !== 32) {
-    throw new Error("random32 must be exactly 32 bytes");
+    throw new EncryptionFailedError("random32 must be exactly 32 bytes");
   }
 
   const clearBytes = cleartextToBytes(cleartext, fheType);
@@ -34,7 +35,7 @@ export function computeInputHandle(
   chainId: bigint,
 ): string {
   if (!Number.isInteger(index) || index < 0 || index > 255) {
-    throw new Error("index must be an integer between 0 and 255");
+    throw new EncryptionFailedError("index must be an integer between 0 and 255");
   }
 
   const blobHash = keccak256(

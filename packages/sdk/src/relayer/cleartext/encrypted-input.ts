@@ -5,6 +5,7 @@ import { INPUT_VERIFICATION_EIP712 } from "./eip712";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
 import { MOCK_INPUT_SIGNER_PK } from "./constants";
 import type { CleartextConfig } from "./types";
+import { EncryptionFailedError } from "../../token/errors";
 
 const INPUT_SIGNER = privateKeyToAccount(MOCK_INPUT_SIGNER_PK as `0x${string}`);
 
@@ -27,13 +28,15 @@ export class CleartextEncryptedInput {
 
   #addValue(fheType: FheType, value: bigint): this {
     if (value < 0n) {
-      throw new Error("Only non-negative cleartext values are supported");
+      throw new EncryptionFailedError("Only non-negative cleartext values are supported");
     }
 
     const bitWidth = FHE_BIT_WIDTHS[fheType];
     const maxValue = (1n << BigInt(bitWidth)) - 1n;
     if (value > maxValue) {
-      throw new Error(`Value ${value} exceeds max ${maxValue} for FheType ${fheType}`);
+      throw new EncryptionFailedError(
+        `Value ${value} exceeds max ${maxValue} for FheType ${fheType}`,
+      );
     }
 
     this.#values.push({ fheType, value });
@@ -43,7 +46,7 @@ export class CleartextEncryptedInput {
   addBool(value: boolean | bigint): this {
     const normalized = typeof value === "boolean" ? (value ? 1n : 0n) : value;
     if (normalized !== 0n && normalized !== 1n) {
-      throw new Error("Bool value must be 0, 1, true, or false");
+      throw new EncryptionFailedError("Bool value must be 0, 1, true, or false");
     }
     return this.#addValue(FheType.Bool, normalized);
   }

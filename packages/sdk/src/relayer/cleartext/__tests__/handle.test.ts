@@ -43,6 +43,25 @@ describe("handle", () => {
     expect((handle >> 80n) & 0xffn).toBe(5n);
   });
 
+  it("computeInputHandle works for euint4 (4-bit) type", () => {
+    const random32 = toBytes(("0x" + "55".repeat(32)) as `0x${string}`);
+    const mockCiphertext = computeMockCiphertext(FheType.Uint4, 15n, random32);
+
+    const handleHex = computeInputHandle(
+      mockCiphertext,
+      0,
+      FheType.Uint4,
+      TEST_FHEVM_ADDRESSES.acl,
+      31_337n,
+    );
+
+    const handle = BigInt(handleHex);
+    expect(handle & 0xffn).toBe(BigInt(HANDLE_VERSION));
+    expect((handle >> 8n) & 0xffn).toBe(BigInt(FheType.Uint4));
+    expect((handle >> 16n) & 0xffff_ffff_ffff_ffffn).toBe(31_337n);
+    expect((handle >> 80n) & 0xffn).toBe(0n);
+  });
+
   it("computeMockCiphertext matches a precomputed test vector", () => {
     const random32 = toBytes(("0x" + "33".repeat(32)) as `0x${string}`);
     const result = computeMockCiphertext(FheType.Uint16, 0x1234n, random32);

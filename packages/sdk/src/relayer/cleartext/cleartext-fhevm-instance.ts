@@ -26,6 +26,11 @@ import {
 import { CleartextEncryptedInput } from "./encrypted-input";
 import { FheType, MOCK_KMS_SIGNER_PK } from "./constants";
 import type { CleartextConfig } from "./types";
+import {
+  ConfigurationError,
+  DecryptionFailedError,
+  EncryptionFailedError,
+} from "../../token/errors";
 
 const KMS_SIGNER = privateKeyToAccount(MOCK_KMS_SIGNER_PK as `0x${string}`);
 
@@ -77,7 +82,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
 
   constructor(client: PublicClient, config: CleartextConfig) {
     if (CleartextFhevmInstance.#FORBIDDEN_CHAIN_IDS.has(config.chainId)) {
-      throw new Error(
+      throw new ConfigurationError(
         `Cleartext mode is not allowed on chain ${config.chainId}. ` +
           `It is intended for local development and testing only.`,
       );
@@ -113,6 +118,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     return {
       domain,
       types: USER_DECRYPT_TYPES,
+      primaryType: "UserDecryptRequestVerification",
       message: {
         publicKey,
         contractAddresses,
@@ -158,7 +164,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
           input.add256(value as bigint);
           break;
         default:
-          throw new Error(`Unsupported FHE type: ${type satisfies never}`);
+          throw new EncryptionFailedError(`Unsupported FHE type: ${type satisfies never}`);
       }
     }
 
@@ -174,7 +180,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     );
     const unauthorizedIndex = allowedResults.findIndex((isAllowed) => !isAllowed);
     if (unauthorizedIndex !== -1) {
-      throw new Error(
+      throw new DecryptionFailedError(
         `Handle ${normalizedHandles[unauthorizedIndex]!} is not authorized for user decrypt`,
       );
     }
@@ -190,7 +196,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     );
     const unauthorizedIndex = allowedResults.findIndex((isAllowed) => !isAllowed);
     if (unauthorizedIndex !== -1) {
-      throw new Error(
+      throw new DecryptionFailedError(
         `Handle ${normalizedHandles[unauthorizedIndex]!} is not allowed for public decryption`,
       );
     }
@@ -281,7 +287,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     );
     const unauthorizedIndex = delegatedResults.findIndex((isDelegated) => !isDelegated);
     if (unauthorizedIndex !== -1) {
-      throw new Error(
+      throw new DecryptionFailedError(
         `Handle ${normalizedHandles[unauthorizedIndex]!} is not delegated for user decryption (delegator=${params.delegatorAddress}, delegate=${params.delegateAddress}, contract=${params.contractAddress})`,
       );
     }
@@ -290,7 +296,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
   }
 
   async requestZKProofVerification(_zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    throw new Error("Not implemented in cleartext mode");
+    throw new ConfigurationError("Not implemented in cleartext mode");
   }
 
   async getPublicKey(): Promise<{ publicKeyId: string; publicKey: Uint8Array } | null> {
