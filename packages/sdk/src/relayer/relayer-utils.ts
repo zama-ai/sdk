@@ -1,5 +1,7 @@
-import type { CleartextInstanceConfig } from "../cleartext/types";
 import type { EIP712TypedData, FhevmInstanceConfig } from "./relayer-sdk.types";
+import { mergeFhevmConfig } from "./relayer-configs";
+
+export { mergeFhevmConfig };
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
@@ -46,81 +48,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Mainnet network configuration (chainId 1). */
-export const MainnetConfig = {
-  chainId: 1,
-  gatewayChainId: 261131,
-  relayerUrl: "https://relayer.mainnet.zama.org/v2",
-  network: "https://ethereum-rpc.publicnode.com",
-  aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6",
-  kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03",
-  inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2",
-  verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
-  verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
-} as const satisfies FhevmInstanceConfig;
-
-/** Sepolia testnet network configuration (chainId 11155111). */
-export const SepoliaConfig = {
-  chainId: 11155111,
-  gatewayChainId: 10901,
-  relayerUrl: "https://relayer.testnet.zama.org/v2",
-  network: "https://ethereum-sepolia-rpc.publicnode.com",
-  aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D",
-  kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
-  inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0",
-  verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
-  verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-} as const satisfies FhevmInstanceConfig;
-
-/**
- * Hardhat local network configuration (chainId 31337).
- * Deterministic addresses from `@fhevm/solidity` ZamaConfig._getLocalConfig().
- *
- * **WARNING:** `coprocessorSignerPrivateKey` and `kmsSignerPrivateKey` are
- * well-known Hardhat default keys. **Never use them on a real network.**
- */
-export const HardhatConfig = {
-  chainId: 31337,
-  gatewayChainId: 10901,
-  network: "http://127.0.0.1:8545",
-  aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
-  inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
-  kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
-  verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
-  verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-  cleartextExecutorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
-  coprocessorSignerPrivateKey: "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901",
-  kmsSignerPrivateKey: "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91",
-} as const satisfies CleartextInstanceConfig;
-
-/**
- * Hoodi testnet cleartext configuration (chainId 560048).
- *
- * **WARNING:** `coprocessorSignerPrivateKey` and `kmsSignerPrivateKey` are
- * shared insecure defaults for development only. **Never use them on a
- * production network.**
- */
-export const HoodiConfig = {
-  chainId: 560048,
-  gatewayChainId: 10901,
-  network: "https://rpc.hoodi.ethpandaops.io",
-  aclContractAddress: "0xe56F2576BF3f4E2C929064CBd11C0f806EEfA4A3",
-  kmsContractAddress: "0xd30087aE7F79c72eb78f458130369879cbf7b3fC",
-  inputVerifierContractAddress: "0x963928f4a3861239ae4E3b1C53691eaf8065Bf28",
-  verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
-  verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-  cleartextExecutorAddress: "0x5Be76f3C86886827047430884a5a295348967682",
-  coprocessorSignerPrivateKey: "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901",
-  kmsSignerPrivateKey: "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91",
-} as const satisfies CleartextInstanceConfig;
-
-export const DefaultConfigs: Record<number, FhevmInstanceConfig | CleartextInstanceConfig> = {
-  [1]: MainnetConfig,
-  [11155111]: SepoliaConfig,
-  [31337]: HardhatConfig,
-  [560048]: HoodiConfig,
-} as const;
-
 /** EIP-712 domain field → Solidity type. Order follows the EIP-712 spec. */
 const DOMAIN_FIELD_TYPES: Record<string, string> = {
   name: "string",
@@ -140,18 +67,4 @@ export function buildEIP712DomainType(
   return Object.keys(DOMAIN_FIELD_TYPES)
     .filter((k) => k in domain)
     .map((k) => ({ name: k, type: DOMAIN_FIELD_TYPES[k]! }));
-}
-
-/**
- * Merge user overrides on top of SDK defaults for a given chain.
- */
-export function mergeFhevmConfig(
-  chainId: number,
-  overrides?: Partial<FhevmInstanceConfig>,
-): FhevmInstanceConfig {
-  const base = DefaultConfigs[chainId];
-  if (!base && (!overrides || Object.keys(overrides).length === 0)) {
-    throw new Error(`No config for chainId: ${chainId}`);
-  }
-  return { ...base, ...overrides } as FhevmInstanceConfig;
 }

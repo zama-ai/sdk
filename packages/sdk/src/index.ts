@@ -32,7 +32,12 @@ export type {
 export type { GenericLogger } from "./worker/worker.types";
 
 // Network preset configs
-export { HardhatConfig, HoodiConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
+export {
+  HardhatConfig,
+  HoodiConfig,
+  MainnetConfig,
+  SepoliaConfig,
+} from "./relayer/relayer-configs";
 
 // ABIs
 export { ERC20_ABI, ERC20_METADATA_ABI } from "./abi/erc20.abi";

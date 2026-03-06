@@ -5,7 +5,7 @@ import {
   HardhatConfig,
   DefaultConfigs,
   mergeFhevmConfig,
-} from "../relayer-utils";
+} from "../relayer-configs";
 
 describe("Config constants", () => {
   it("MainnetConfig has chainId 1", () => {

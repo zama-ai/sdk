@@ -67,4 +67,4 @@ export { asyncLocalStorage, AsyncLocalMapStorage } from "../token/async-local-st
 export type { GenericStorage } from "../token/token.types";
 
 // Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
+export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-configs";

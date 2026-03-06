@@ -17,7 +17,8 @@ import type {
   UserDecryptParams,
   ZKProofLike,
 } from "./relayer-sdk.types";
-import { buildEIP712DomainType, DefaultConfigs } from "./relayer-utils";
+import { DefaultConfigs } from "./relayer-configs";
+import { buildEIP712DomainType } from "./relayer-utils";
 
 type CleartextInstance = ReturnType<typeof createCleartextInstance>;
 
