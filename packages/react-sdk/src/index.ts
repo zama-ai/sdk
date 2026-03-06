@@ -124,6 +124,7 @@ export type {
   CredentialsCreatedEvent,
   CredentialsRevokedEvent,
   CredentialsAllowedEvent,
+  SessionExpiredEvent,
 } from "@zama-fhe/sdk";
 
 // Re-export pending-unshield persistence utilities
@@ -385,8 +386,8 @@ export {
   DecryptionFailedError,
   ApprovalFailedError,
   TransactionRevertedError,
-  CredentialExpiredError,
-  InvalidCredentialsError,
+  KeypairExpiredError,
+  InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
   matchZamaError,

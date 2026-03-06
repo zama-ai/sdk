@@ -58,12 +58,12 @@ export interface ReadonlyTokenConfig {
   storage: GenericStorage;
   /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
   sessionStorage: GenericStorage;
-  /** Shared CredentialsManager instance. When provided, storage/sessionStorage/durationDays/onEvent are ignored for credential creation. */
+  /** Shared CredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for credential creation. */
   credentials?: CredentialsManager;
   /** Address of the confidential token contract. */
   address: Address;
-  /** Number of days FHE credentials remain valid. Default: `1`. */
-  durationDays?: number;
+  /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
+  keypairTTL?: number;
   /** Optional structured event listener for debugging and telemetry. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -90,7 +90,7 @@ export class ReadonlyToken {
         signer: config.signer,
         storage: config.storage,
         sessionStorage: config.sessionStorage,
-        durationDays: config.durationDays ?? 1,
+        keypairTTL: config.keypairTTL ?? 86400,
         onEvent: config.onEvent,
       });
     this.sdk = config.relayer;

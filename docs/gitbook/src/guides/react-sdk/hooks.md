@@ -160,7 +160,7 @@ If you need to control each step separately:
 
 ### `useAllow`
 
-Pre-authorize decrypt keys for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually. Automatically invalidates `isAllowed` queries on success.
+Pre-authorize FHE keypair for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually. Automatically invalidates `isAllowed` queries on success.
 
 ```tsx
 const { mutateAsync: allow } = useAllow();
@@ -171,7 +171,7 @@ await allow(["0xTokenA", "0xTokenB", "0xTokenC"]);
 
 ### `useIsAllowed`
 
-Check whether a session signature is cached for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt.
+Check whether a session signature is cached and valid for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt. Returns `false` once the `sessionTTL` has expired (default: 30 days).
 
 ```tsx
 import { useIsAllowed } from "@zama-fhe/react-sdk";
@@ -208,7 +208,7 @@ revokeSession();
 
 ### Session management
 
-Decrypt keys require a wallet signature once per page session. Use the hooks above or `useToken` for direct control:
+The FHE keypair requires a wallet signature once per page session. Use the hooks above or `useToken` for direct control:
 
 ```tsx
 const tokenA = useToken({ tokenAddress: "0xTokenA" });

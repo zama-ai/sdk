@@ -44,12 +44,12 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(relayer.terminate).not.toHaveBeenCalled();
   });
 
-  it("passes credentialDurationDays and onEvent to ZamaSDK", ({ createWrapper }) => {
+  it("passes keypairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {
     tokenSDKConstructorArgs.length = 0;
 
     const onEvent: ZamaSDKEventListener = vi.fn();
     const { Wrapper, signer, relayer } = createWrapper({
-      credentialDurationDays: 7,
+      keypairTTL: 604800,
       onEvent,
     });
 
@@ -59,11 +59,11 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.signer).toBe(signer);
     expect(result.current.relayer).toBe(relayer);
 
-    // Verify ZamaSDK was constructed with credentialDurationDays
+    // Verify ZamaSDK was constructed with keypairTTL (7 days in seconds)
     expect(tokenSDKConstructorArgs).toHaveLength(1);
     expect(tokenSDKConstructorArgs[0]).toEqual(
       expect.objectContaining({
-        credentialDurationDays: 7,
+        keypairTTL: 604800,
       }),
     );
 

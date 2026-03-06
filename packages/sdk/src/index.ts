@@ -110,6 +110,7 @@ export type {
   CredentialsCreatedEvent,
   CredentialsRevokedEvent,
   CredentialsAllowedEvent,
+  SessionExpiredEvent,
 } from "./events/sdk-events";
 export {
   ZamaError,
@@ -120,10 +121,11 @@ export {
   DecryptionFailedError,
   ApprovalFailedError,
   TransactionRevertedError,
-  CredentialExpiredError,
-  InvalidCredentialsError,
+  KeypairExpiredError,
+  InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  ConfigurationError,
   matchZamaError,
 } from "./token/errors";
 
