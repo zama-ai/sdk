@@ -136,6 +136,64 @@ export async function mockRelayerSdk(page: Page, baseURL: string) {
     }
   });
 
+  await page.route(`${baseURL}/createDelegatedEIP712`, async (route) => {
+    const body = route.request().postDataJSON();
+    const result = fhevm.createDelegatedUserDecryptEIP712(
+      body.publicKey,
+      body.contractAddresses,
+      body.delegatorAddress,
+      body.startTimestamp,
+      body.durationDays,
+    );
+    const serialized = JSON.stringify(result, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value,
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: serialized,
+    });
+  });
+
+  await page.route(`${baseURL}/delegatedUserDecrypt`, async (route) => {
+    const body = route.request().postDataJSON();
+    try {
+      const handleContractPairs = body.handles.map((handle: string) => ({
+        handle,
+        contractAddress: body.contractAddress,
+      }));
+      const result = await fhevm.delegatedUserDecrypt(
+        handleContractPairs,
+        body.privateKey,
+        body.publicKey,
+        body.signature,
+        body.signedContractAddresses,
+        body.delegatorAddress,
+        body.delegateAddress,
+        body.startTimestamp,
+        body.durationDays,
+      );
+
+      const serialized: Record<string, string> = {};
+      for (const [key, value] of Object.entries(result)) {
+        serialized[key] = String(value);
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(serialized),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: message }),
+      });
+    }
+  });
+
   // Intercept the CDN SDK request and return a mock script
   await page.route("**/cdn.zama.org/relayer-sdk-js/**/*.cjs", async (route) => {
     const fixturesDir = path.resolve(__dirname);
