@@ -25,3 +25,5 @@ export const DEFAULTS = {
 };
 
 export const TRANSFER_BATCHER_ADDRESS = deployments.transferBatcher;
+
+export const ACL_ADDRESS = deployments.fhevm.acl;

@@ -8,6 +8,7 @@ export const CONTRACTS = {
   cUSDC: deployments.cToken as Address,
   feeManager: deployments.feeManager as Address,
   transferBatcher: deployments.transferBatcher as Address,
+  acl: deployments.fhevm.acl as Address,
 } as const;
 
 export const CONFIDENTIAL_TOKEN_ADDRESSES: Address[] = [

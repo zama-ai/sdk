@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  Address,
   GenericSigner,
   GenericStorage,
   RelayerSDK,
@@ -43,6 +44,8 @@ export interface ZamaProviderProps extends PropsWithChildren {
    * - Positive number: seconds until the session signature expires and requires re-authentication.
    */
   sessionTTL?: number;
+  /** ACL contract address (required for delegation operations). */
+  aclAddress?: Address;
   /** Callback invoked on SDK lifecycle events. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -66,6 +69,7 @@ export function ZamaProvider({
   storage,
   sessionStorage,
   keypairTTL,
+  aclAddress,
   sessionTTL,
   onEvent,
 }: ZamaProviderProps) {
@@ -96,12 +100,22 @@ export function ZamaProvider({
         signer,
         storage,
         sessionStorage,
+        aclAddress,
         keypairTTL,
         sessionTTL,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,
       }),
-    [relayer, signer, storage, sessionStorage, keypairTTL, sessionTTL, signerLifecycleCallbacks],
+    [
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      aclAddress,
+      keypairTTL,
+      sessionTTL,
+      signerLifecycleCallbacks,
+    ],
   );
 
   // Clean up signer subscriptions on unmount without terminating the

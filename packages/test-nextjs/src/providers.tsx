@@ -8,6 +8,7 @@ import { createConfig, http, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
+import { CONTRACTS } from "@/constants";
 
 const isHardhat = process.env.NEXT_PUBLIC_NETWORK === "hardhat";
 
@@ -51,7 +52,12 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <ZamaProvider relayer={relayer} storage={storage} signer={signer}>
+        <ZamaProvider
+          relayer={relayer}
+          storage={storage}
+          signer={signer}
+          aclAddress={CONTRACTS.acl}
+        >
           {children}
         </ZamaProvider>
       </WagmiProvider>
