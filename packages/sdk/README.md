@@ -277,14 +277,15 @@ const sdk = new ZamaSDK({
 
 ### `ZamaSDKConfig`
 
-| Field                    | Type                   | Description                                                                                                                            |
-| ------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `relayer`                | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                               |
-| `signer`                 | `GenericSigner`        | Wallet signer interface.                                                                                                               |
-| `storage`                | `GenericStorage`       | Credential storage backend.                                                                                                            |
-| `sessionStorage`         | `GenericStorage`       | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
-| `credentialDurationDays` | `number`               | Optional. Days FHE credentials remain valid. Default: 1. Set `0` to require a wallet signature on every decrypt (high-security mode).  |
-| `onEvent`                | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                     |
+| Field            | Type                   | Description                                                                                                                            |
+| ---------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `relayer`        | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                               |
+| `signer`         | `GenericSigner`        | Wallet signer interface.                                                                                                               |
+| `storage`        | `GenericStorage`       | Credential storage backend.                                                                                                            |
+| `sessionStorage` | `GenericStorage`       | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
+| `keypairTTL`     | `number`               | Optional. Seconds the ML-KEM re-encryption keypair remains valid. Default: `86400` (1 day). Must be positive.                          |
+| `sessionTTL`     | `number`               | Optional. Seconds the session signature remains valid. Default: `2592000` (30 days). `0` = re-sign every operation.                    |
+| `onEvent`        | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                     |
 
 #### Structured Event Listener
 
@@ -717,7 +718,7 @@ try {
 | `DecryptionFailedError`     | `DECRYPTION_FAILED`      | FHE decryption operation failed.                                          |
 | `ApprovalFailedError`       | `APPROVAL_FAILED`        | ERC-20 approval transaction failed.                                       |
 | `TransactionRevertedError`  | `TRANSACTION_REVERTED`   | On-chain transaction reverted.                                            |
-| `InvalidCredentialsError`   | `INVALID_CREDENTIALS`    | Relayer rejected credentials (stale or expired).                          |
+| `InvalidKeypairError`       | `INVALID_KEYPAIR`        | Relayer rejected FHE keypair (stale or expired).                          |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No FHE ciphertext exists for this account (e.g. never shielded).          |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP error. Carries a `statusCode` property with the HTTP status. |
 | `ConfigurationError`        | `CONFIGURATION_ERROR`    | SDK configuration is invalid or incomplete.                               |

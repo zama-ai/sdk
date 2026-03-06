@@ -56,6 +56,12 @@ export function assertNonNullable<T>(value: T, context: string): asserts value i
   }
 }
 
+export function assertCondition(condition: boolean, message: string): asserts condition {
+  if (!condition) {
+    throw new TypeError(message);
+  }
+}
+
 // ── Concurrency helper ──────────────────────────────────────
 
 /**

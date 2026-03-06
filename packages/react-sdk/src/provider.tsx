@@ -33,8 +33,18 @@ export interface ZamaProviderProps extends PropsWithChildren {
    * Pass a `chrome.storage.session`-backed store for web extensions.
    */
   sessionStorage?: GenericStorage;
-  /** Number of days credentials remain valid (default: relayer default). */
-  credentialDurationDays?: number;
+  /**
+   * How long the ML-KEM re-encryption keypair remains valid, in seconds.
+   * Default: `86400` (1 day). Must be positive — `0` is rejected.
+   */
+  keypairTTL?: number;
+  /**
+   * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
+   * Default: `2592000` (30 days).
+   * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
+   * - Positive number: seconds until the session signature expires and requires re-authentication.
+   */
+  sessionTTL?: number;
   /** Callback invoked on SDK lifecycle events. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -58,7 +68,8 @@ export function ZamaProvider({
   signer,
   storage,
   sessionStorage,
-  credentialDurationDays,
+  keypairTTL,
+  sessionTTL,
   onEvent,
 }: ZamaProviderProps) {
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
@@ -75,11 +86,12 @@ export function ZamaProvider({
             signer,
             storage,
             sessionStorage,
-            credentialDurationDays,
+            keypairTTL,
+            sessionTTL,
             onEvent: onEventRef.current,
           })
         : null,
-    [relayer, signer, storage, sessionStorage, credentialDurationDays],
+    [relayer, signer, storage, sessionStorage, keypairTTL, sessionTTL],
   );
 
   // Clean up signer subscriptions on unmount without terminating the

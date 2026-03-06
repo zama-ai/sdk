@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.0-alpha.10](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.9...v1.0.0-alpha.10) (2026-03-06)
+
+### Features
+
+- add cleartext fhEVM feature ([#51](https://github.com/zama-ai/sdk/issues/51)) ([f951673](https://github.com/zama-ai/sdk/commit/f951673a86e975c06dcd41527c5401c365a7d2d5))
+
 ## [1.0.0-alpha.9](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.8...v1.0.0-alpha.9) (2026-03-06)
 
 ### Bug Fixes
