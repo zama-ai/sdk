@@ -125,6 +125,7 @@ export {
   InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  ConfigurationError,
   matchZamaError,
 } from "./token/errors";
 
