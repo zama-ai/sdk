@@ -20,10 +20,10 @@ export interface CleartextInstanceConfig {
   gatewayChainId: number;
   /** Address of the ACL contract (EIP-55 checksummed). */
   aclContractAddress: string;
-  /** Address of the KMS contract. */
-  kmsContractAddress: string;
-  /** Address of the InputVerifier contract. */
-  inputVerifierContractAddress: string;
+  /** Address of the KMS contract (unused by cleartext, accepted for preset compat). */
+  kmsContractAddress?: string;
+  /** Address of the InputVerifier contract (unused by cleartext, accepted for preset compat). */
+  inputVerifierContractAddress?: string;
   /** Address of the KMSVerifier contract used for decryption EIP-712 domains. */
   verifyingContractAddressDecryption: string;
   /** Address of the InputVerifier contract used for input verification EIP-712 domains. */
