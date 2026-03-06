@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.0-alpha.11](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.10...v1.0.0-alpha.11) (2026-03-06)
+
+### Features
+
+- **sdk:** add configurable session TTL for wallet sessions [SDK-11] ([#56](https://github.com/zama-ai/sdk/issues/56)) ([f6655d0](https://github.com/zama-ai/sdk/commit/f6655d0376d20c87388db4a70653bd36e8b52c19)), closes [#hasLegacySignature](https://github.com/zama-ai/sdk/issues/hasLegacySignature)
+
 ## [1.0.0-alpha.10](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.9...v1.0.0-alpha.10) (2026-03-06)
 
 ### Features
