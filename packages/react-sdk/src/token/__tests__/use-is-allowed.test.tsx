@@ -1,0 +1,33 @@
+import { useQuery } from "@tanstack/react-query";
+import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { describe, expect, test } from "../../test-fixtures";
+import { vi } from "vitest";
+import { useIsAllowed } from "../use-is-allowed";
+
+vi.mock("@tanstack/react-query", async () => {
+  const actual =
+    await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+  return { ...actual, useQuery: vi.fn(() => ({ data: true })) };
+});
+
+describe("useIsAllowed", () => {
+  test("passes the shared queryKeyHashFn", ({ renderWithProviders }) => {
+    vi.mocked(useQuery)
+      .mockReturnValueOnce({ data: "0x1111111111111111111111111111111111111111" } as never)
+      .mockReturnValueOnce({ data: true } as never);
+
+    renderWithProviders(() => useIsAllowed());
+
+    expect(vi.mocked(useQuery)).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ queryKeyHashFn: hashFn }),
+    );
+    expect(vi.mocked(useQuery)).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        queryKeyHashFn: hashFn,
+        queryKey: zamaQueryKeys.isAllowed.scope("0x1111111111111111111111111111111111111111"),
+      }),
+    );
+  });
+});

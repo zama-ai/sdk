@@ -28,6 +28,7 @@ interface EipFixtures {
   provider: ReturnType<typeof createFakeProvider>;
   onDisconnect: ReturnType<typeof vi.fn>;
   onAccountChange: ReturnType<typeof vi.fn>;
+  onChainChange: ReturnType<typeof vi.fn>;
 }
 
 const eit = base.extend<EipFixtures>({
@@ -38,6 +39,9 @@ const eit = base.extend<EipFixtures>({
     await use(vi.fn());
   },
   onAccountChange: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
+    await use(vi.fn());
+  },
+  onChainChange: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
     await use(vi.fn());
   },
 });
@@ -91,4 +95,15 @@ describe("eip1193Subscribe", () => {
       expect(onAccountChange).toHaveBeenCalledTimes(2);
     },
   );
+
+  eit("fires onChainChange with normalized chain id", async ({ provider, onChainChange }) => {
+    eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
+      onChainChange: onChainChange as (chainId: number) => void,
+    });
+
+    provider.emit("chainChanged", "0x1");
+
+    expect(onChainChange).toHaveBeenCalledOnce();
+    expect(onChainChange).toHaveBeenCalledWith(1);
+  });
 });

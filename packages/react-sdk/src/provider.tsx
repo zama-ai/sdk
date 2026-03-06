@@ -7,6 +7,8 @@ import type {
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
+import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
   type PropsWithChildren,
@@ -67,11 +69,25 @@ export function ZamaProvider({
   sessionTTL,
   onEvent,
 }: ZamaProviderProps) {
+  const queryClient = useQueryClient();
+
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
   const onEventRef = useRef(onEvent);
   useEffect(() => {
     onEventRef.current = onEvent;
   });
+
+  const signerLifecycleCallbacks = useMemo(
+    () =>
+      signer?.subscribe
+        ? {
+            onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
+            onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
+            onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
+          }
+        : undefined,
+    [queryClient, signer],
+  );
 
   const sdk = useMemo(
     () =>
@@ -83,8 +99,9 @@ export function ZamaProvider({
         keypairTTL,
         sessionTTL,
         onEvent: onEventRef.current,
+        signerLifecycleCallbacks,
       }),
-    [relayer, signer, storage, sessionStorage, keypairTTL, sessionTTL],
+    [relayer, signer, storage, sessionStorage, keypairTTL, sessionTTL, signerLifecycleCallbacks],
   );
 
   // Clean up signer subscriptions on unmount without terminating the

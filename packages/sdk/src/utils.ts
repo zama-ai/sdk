@@ -16,7 +16,7 @@ export function assertAddress(value: string, name: string): asserts value is Add
  * Addresses are preserved exactly as provided.
  * Use `getAddress()` from viem when you need canonical EIP-55 checksumming.
  */
-export function normalizeAddress(addr: string, name: string): Address {
+export function validateAddress(addr: string, name: string): Address {
   assertAddress(addr, name);
   return addr;
 }
@@ -27,7 +27,7 @@ export function normalizeHandle(handle: string | bigint): Handle {
     return toHex(handle, { size: 32 }) as Handle;
   }
   if (!isHex(handle)) {
-    throw new TypeError(`Handle must be a hex string, got: ${handle}`);
+    throw new TypeError(`Handle must be a hex string or bigint, got: ${handle}`);
   }
   return toHex(hexToBigInt(handle), { size: 32 }) as Handle;
 }

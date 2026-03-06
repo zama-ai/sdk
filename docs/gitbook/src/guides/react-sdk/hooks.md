@@ -37,17 +37,15 @@ Mutations automatically invalidate balance caches, but if you need manual contro
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { confidentialBalanceQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/react-sdk";
 
 const queryClient = useQueryClient();
 
 // Invalidate everything
-queryClient.invalidateQueries({ queryKey: confidentialBalanceQueryKeys.all });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 // Invalidate one token
-queryClient.invalidateQueries({
-  queryKey: confidentialBalanceQueryKeys.token("0xToken"),
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
 ```
 
 ## Transfers
@@ -365,14 +363,14 @@ function ErrorMessage({ error }: { error: Error | null }) {
 
 For manual cache control (prefetching, invalidation, removal):
 
-| Factory                         | Keys                                                                                   | What it controls               |
-| ------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------ |
-| `confidentialBalanceQueryKeys`  | `.all`, `.token(addr)`, `.owner(addr, owner)`                                          | Single-token decrypted balance |
-| `confidentialBalancesQueryKeys` | `.all`, `.tokens(addrs, owner)`                                                        | Multi-token batch balances     |
-| `confidentialHandleQueryKeys`   | `.all`, `.token(addr)`, `.owner(addr, owner)`                                          | Single-token encrypted handle  |
-| `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addrs, owner)`                                                        | Multi-token batch handles      |
-| `isAllowedQueryKeys`            | `.all`, `.token(addr)`                                                                 | Session signature status       |
-| `underlyingAllowanceQueryKeys`  | `.all`, `.token(addr, wrapper)`                                                        | ERC-20 allowance               |
-| `activityFeedQueryKeys`         | `.all`, `.token(addr)`                                                                 | Activity feed                  |
-| `feeQueryKeys`                  | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(...)`, `.feeRecipient(...)` | Fee queries                    |
-| `decryptionKeys`                | `.value(handle)`                                                                       | Cached decrypted values        |
+| Factory                              | Keys                                                                                   | What it controls               |
+| ------------------------------------ | -------------------------------------------------------------------------------------- | ------------------------------ |
+| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(addr)`, `.owner(addr, owner)`                                          | Single-token decrypted balance |
+| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addrs, owner)`                                                        | Multi-token batch balances     |
+| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(addr)`, `.owner(addr, owner)`                                          | Single-token encrypted handle  |
+| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addrs, owner)`                                                        | Multi-token batch handles      |
+| `zamaQueryKeys.isAllowed`            | `.all`                                                                                 | Session signature status       |
+| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(addr)`, `.scope(addr, owner, wrapper)`                                 | ERC-20 allowance               |
+| `zamaQueryKeys.activityFeed`         | `.all`, `.token(addr)`, `.scope(addr, userAddress, logsKey, decrypt)`                  | Activity feed                  |
+| `zamaQueryKeys.fees`                 | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(...)`, `.feeRecipient(...)` | Fee queries                    |
+| `decryptionKeys`                     | `.value(handle)`                                                                       | Cached decrypted values        |

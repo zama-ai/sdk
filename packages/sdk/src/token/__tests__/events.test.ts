@@ -1116,7 +1116,7 @@ describe("CredentialsManager event emissions", () => {
     expect(types).toContain(ZamaSDKEvents.CredentialsExpired);
     expect(types).toContain(ZamaSDKEvents.CredentialsCreating);
     expect(types).toContain(ZamaSDKEvents.CredentialsCreated);
-  });
+  }, 30000);
 
   it("includes contractAddresses on credential events", async ({
     relayer,

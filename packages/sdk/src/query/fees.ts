@@ -1,0 +1,146 @@
+import {
+  getBatchTransferFeeContract,
+  getFeeRecipientContract,
+  getUnwrapFeeContract,
+  getWrapFeeContract,
+} from "../contracts";
+import type { Address, GenericSigner } from "../token/token.types";
+import type { QueryFactoryOptions } from "./factory-types";
+import { filterQueryOptions } from "./utils";
+import { zamaQueryKeys } from "./query-keys";
+
+export interface FeeQueryConfig {
+  query?: Record<string, unknown>;
+}
+
+export interface ShieldFeeQueryConfig extends FeeQueryConfig {
+  feeManagerAddress: Address;
+  amount?: bigint;
+  from?: Address;
+  to?: Address;
+}
+
+export interface UnshieldFeeQueryConfig extends FeeQueryConfig {
+  feeManagerAddress: Address;
+  amount?: bigint;
+  from?: Address;
+  to?: Address;
+}
+
+function parseAmount(value?: string): bigint | undefined {
+  return value === undefined ? undefined : BigInt(value);
+}
+
+export function shieldFeeQueryOptions(
+  signer: GenericSigner,
+  config: ShieldFeeQueryConfig,
+): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.shieldFee>> {
+  const amountString = config.amount?.toString();
+  const queryKey = zamaQueryKeys.fees.shieldFee(
+    config.feeManagerAddress,
+    amountString,
+    config.from,
+    config.to,
+  );
+
+  return {
+    ...filterQueryOptions(config.query ?? {}),
+    queryKey,
+    queryFn: async (context) => {
+      const [, params] = context.queryKey;
+      const amount = parseAmount(params.amount);
+      if (amount === undefined || !params.from || !params.to) return 0n;
+      return signer.readContract(
+        getWrapFeeContract(
+          params.feeManagerAddress as Address,
+          amount,
+          params.from as Address,
+          params.to as Address,
+        ),
+      );
+    },
+    staleTime: 30_000,
+    enabled: Boolean(config.feeManagerAddress) && config.query?.enabled !== false,
+  };
+}
+
+export function unshieldFeeQueryOptions(
+  signer: GenericSigner,
+  config: UnshieldFeeQueryConfig,
+): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.unshieldFee>> {
+  const amountString = config.amount?.toString();
+  const queryKey = zamaQueryKeys.fees.unshieldFee(
+    config.feeManagerAddress,
+    amountString,
+    config.from,
+    config.to,
+  );
+
+  return {
+    ...filterQueryOptions(config.query ?? {}),
+    queryKey,
+    queryFn: async (context) => {
+      const [, params] = context.queryKey;
+      const amount = parseAmount(params.amount);
+      if (amount === undefined || !params.from || !params.to) return 0n;
+      return signer.readContract(
+        getUnwrapFeeContract(
+          params.feeManagerAddress as Address,
+          amount,
+          params.from as Address,
+          params.to as Address,
+        ),
+      );
+    },
+    staleTime: 30_000,
+    enabled: Boolean(config.feeManagerAddress) && config.query?.enabled !== false,
+  };
+}
+
+export function batchTransferFeeQueryOptions(
+  signer: GenericSigner,
+  feeManagerAddress: Address,
+  config?: FeeQueryConfig,
+): QueryFactoryOptions<
+  bigint,
+  Error,
+  bigint,
+  ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>
+> {
+  const queryKey = zamaQueryKeys.fees.batchTransferFee(feeManagerAddress);
+
+  return {
+    ...filterQueryOptions(config?.query ?? {}),
+    queryKey,
+    queryFn: async (context) => {
+      const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
+      return signer.readContract(getBatchTransferFeeContract(keyFeeManagerAddress as Address));
+    },
+    staleTime: 30_000,
+    enabled: Boolean(feeManagerAddress) && config?.query?.enabled !== false,
+  };
+}
+
+export function feeRecipientQueryOptions(
+  signer: GenericSigner,
+  feeManagerAddress: Address,
+  config?: FeeQueryConfig,
+): QueryFactoryOptions<
+  Address,
+  Error,
+  Address,
+  ReturnType<typeof zamaQueryKeys.fees.feeRecipient>
+> {
+  const queryKey = zamaQueryKeys.fees.feeRecipient(feeManagerAddress);
+
+  return {
+    ...filterQueryOptions(config?.query ?? {}),
+    queryKey,
+    queryFn: async (context) => {
+      const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
+      return signer.readContract(getFeeRecipientContract(keyFeeManagerAddress as Address));
+    },
+    staleTime: 30_000,
+    enabled: Boolean(feeManagerAddress) && config?.query?.enabled !== false,
+  };
+}

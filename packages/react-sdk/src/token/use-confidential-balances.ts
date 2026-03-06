@@ -1,10 +1,16 @@
 "use client";
 
-import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { DecryptionFailedError, ReadonlyToken, type Address, type Handle } from "@zama-fhe/sdk";
 import { useMemo } from "react";
+import { useQuery } from "../utils/query";
+import { type UseQueryOptions } from "@tanstack/react-query";
+import type { Address, Hex } from "@zama-fhe/sdk";
+import {
+  confidentialBalancesQueryOptions,
+  confidentialHandlesQueryOptions,
+  signerAddressQueryOptions,
+  type ConfidentialBalancesData,
+} from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { confidentialBalancesQueryKeys, confidentialHandlesQueryKeys } from "./balance-query-keys";
 
 /** Configuration for {@link useConfidentialBalances}. */
 export interface UseConfidentialBalancesConfig {
@@ -16,23 +22,13 @@ export interface UseConfidentialBalancesConfig {
   maxConcurrency?: number;
 }
 
-/** Result type for the decrypt phase of {@link useConfidentialBalances}. */
-export interface ConfidentialBalancesData {
-  /** Successfully decrypted balances (address → balance). */
-  balances: Map<Address, bigint>;
-  /** Per-token errors for tokens that failed to decrypt. */
-  errors: Map<Address, Error>;
-  /** `true` if some but not all tokens failed. */
-  isPartialError: boolean;
-}
+export type { ConfidentialBalancesData };
 
 /** Query options for the decrypt phase of {@link useConfidentialBalances}. */
 export type UseConfidentialBalancesOptions = Omit<
   UseQueryOptions<ConfidentialBalancesData, Error>,
   "queryKey" | "queryFn"
 >;
-
-const DEFAULT_HANDLE_REFETCH_INTERVAL = 10_000;
 
 /**
  * Declarative hook to read multiple confidential token balances in batch.
@@ -62,15 +58,14 @@ export function useConfidentialBalances(
   options?: UseConfidentialBalancesOptions,
 ) {
   const { tokenAddresses, handleRefetchInterval, maxConcurrency } = config;
+  const userEnabled = options?.enabled;
   const sdk = useZamaSDK();
 
-  const addressQuery = useQuery<Address, Error>({
-    queryKey: ["zama", "signer-address"],
-    queryFn: () => sdk.signer.getAddress(),
+  const addressQuery = useQuery<Address>({
+    ...signerAddressQueryOptions(sdk.signer),
   });
 
-  const signerAddress = addressQuery.data;
-  const ownerKey = signerAddress ?? "";
+  const owner = addressQuery.data as Address | undefined;
 
   const tokens = useMemo(
     () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
@@ -78,64 +73,31 @@ export function useConfidentialBalances(
   );
 
   // Phase 1: Poll all encrypted handles (cheap RPC reads)
-  const handlesQuery = useQuery<Handle[], Error>({
-    queryKey: confidentialHandlesQueryKeys.tokens(tokenAddresses, ownerKey),
-    queryFn: () => Promise.all(tokens.map((t) => t.confidentialBalanceOf())),
-    enabled: tokenAddresses.length > 0 && !!signerAddress,
-    refetchInterval: handleRefetchInterval ?? DEFAULT_HANDLE_REFETCH_INTERVAL,
+  const baseHandlesQueryOptions = confidentialHandlesQueryOptions(sdk.signer, tokenAddresses, {
+    owner,
+    pollingInterval: handleRefetchInterval,
+  });
+  const handlesFactoryEnabled = baseHandlesQueryOptions.enabled ?? true;
+  const handlesQuery = useQuery<Hex[]>({
+    ...baseHandlesQueryOptions,
+    enabled: handlesFactoryEnabled && (userEnabled ?? true),
   });
 
-  const handles = handlesQuery.data;
-  const handlesKey = handles?.join(",") ?? "";
-
   // Phase 2: Batch decrypt only when any handle changes
-  const balancesQuery = useQuery<ConfidentialBalancesData, Error>({
-    queryKey: [...confidentialBalancesQueryKeys.tokens(tokenAddresses, ownerKey), handlesKey],
-    queryFn: async () => {
-      const perTokenErrors = new Map<Address, Error>();
+  const handles = handlesQuery.data as Hex[] | undefined;
+  const handlesReady = Array.isArray(handles) && handles.length === tokenAddresses.length;
+  const baseBalancesQueryOptions = confidentialBalancesQueryOptions(tokens, {
+    owner,
+    handles,
+    maxConcurrency,
+    resultAddresses: tokenAddresses,
+  });
+  const factoryEnabled = baseBalancesQueryOptions.enabled ?? true;
 
-      const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
-        handles: handles!,
-        maxConcurrency,
-        onError: (error, address) => {
-          perTokenErrors.set(address, error);
-          return 0n; // fallback so the batch continues
-        },
-      });
-
-      // Re-key the Map with the caller's original addresses so lookups
-      // work regardless of address casing (tokens normalize to lowercase).
-      const balances = new Map<Address, bigint>();
-      const errors = new Map<Address, Error>();
-      for (let i = 0; i < tokens.length; i++) {
-        const tokenAddr = tokens[i]!.address;
-        const originalAddr = tokenAddresses[i]!;
-        const tokenError = perTokenErrors.get(tokenAddr);
-        if (tokenError) {
-          errors.set(originalAddr, tokenError);
-        } else {
-          const balance = raw.get(tokenAddr);
-          if (balance !== undefined) balances.set(originalAddr, balance);
-        }
-      }
-
-      // If ALL tokens failed, throw so isError is true
-      if (errors.size === tokens.length && tokens.length > 0) {
-        throw (
-          errors.values().next().value ??
-          new DecryptionFailedError("All token balance decryptions failed")
-        );
-      }
-
-      return {
-        balances,
-        errors,
-        isPartialError: errors.size > 0,
-      };
-    },
-    enabled: tokenAddresses.length > 0 && !!signerAddress && !!handles,
-    staleTime: Infinity,
+  const balancesQuery = useQuery<ConfidentialBalancesData>({
+    ...baseBalancesQueryOptions,
     ...options,
+    enabled: factoryEnabled && handlesReady && (userEnabled ?? true),
   });
 
   return { ...balancesQuery, handlesQuery };
