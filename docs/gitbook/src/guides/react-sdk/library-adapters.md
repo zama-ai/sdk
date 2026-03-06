@@ -1,12 +1,8 @@
-# Library Adapters (Advanced)
+# Library Adapters
 
-> **Most apps don't need this.** If you're using `ZamaProvider`, the [main hooks](hooks.md) handle encryption, approvals, and caching automatically. This page is for when you need direct contract-level control — custom transaction pipelines, composing with other contract hooks, or building without a provider.
-
-The React SDK provides library-specific sub-paths that give you thin hooks over raw contract calls.
+The SDK provides signer adapters for each major Web3 library. Each adapter implements the `GenericSigner` interface so the SDK can sign transactions, read from contracts, and respond to wallet lifecycle events.
 
 ## Signer adapters
-
-Each sub-path re-exports its signer adapter:
 
 ```ts
 import { ViemSigner } from "@zama-fhe/sdk/viem";
@@ -14,116 +10,78 @@ import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 ```
 
-## viem hooks
+### wagmi (React)
 
-### Read hooks
+```ts
+import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 
-Pass a `PublicClient`. All read hooks have `*Suspense` variants for React Suspense.
-
-```tsx
-import { useConfidentialBalanceOf } from "@zama-fhe/react-sdk";
-
-const { data: handle } = useConfidentialBalanceOf(publicClient, tokenAddress, userAddress);
+const signer = new WagmiSigner({ config: wagmiConfig });
 ```
 
-Available: `useConfidentialBalanceOf`, `useWrapperForToken`, `useUnderlyingToken`, `useWrapperExists`, `useSupportsInterface`.
+Auto-revokes the session on disconnect and account change via wagmi's `watchConnection`.
 
-### Write hooks
+### viem
 
-Mutation params include `client: WalletClient`.
+```ts
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 
-```tsx
-import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
+// Full mode — signing + read
+const signer = new ViemSigner({ walletClient, publicClient });
 
-const { mutateAsync: transfer } = useConfidentialTransfer();
-
-await transfer({
-  client: walletClient,
-  token: tokenAddress,
-  to: recipient,
-  handle: encryptedHandle,
-  inputProof: proof,
-});
+// Read-only mode — omit walletClient for chain reads without a wallet
+const readOnlySigner = new ViemSigner({ publicClient });
 ```
 
-Available: `useConfidentialTransfer`, `useConfidentialBatchTransfer`, `useUnwrap`, `useUnwrapFromBalance`, `useFinalizeUnwrap`, `useSetOperator`, `useShield`, `useShieldETH`.
+When `walletClient` is omitted, methods that require signing throw at runtime. Read methods work normally.
 
-## ethers hooks
+### ethers
 
-Same set as viem. Read hooks take `Provider | Signer`, write hooks take `Signer`.
+```ts
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-```tsx
-import { useConfidentialBalanceOf, useConfidentialTransfer } from "@zama-fhe/react-sdk";
+// Browser — pass the raw EIP-1193 provider (subscribe() works automatically)
+const signer = new EthersSigner({ ethereum: window.ethereum! });
 
-const { data: handle } = useConfidentialBalanceOf(provider, tokenAddress, userAddress);
+// Node.js — pass an ethers Signer directly
+// const provider = new ethers.JsonRpcProvider(rpcUrl);
+// const signer = new EthersSigner({ signer: new ethers.Wallet(privateKey, provider) });
 
-const { mutateAsync: transfer } = useConfidentialTransfer();
-await transfer({ signer, token: tokenAddress, to: recipient, handle, inputProof: proof });
+// Read-only — pass a Provider (no signing, chain reads only)
+// const signer = new EthersSigner({ provider: new ethers.JsonRpcProvider(rpcUrl) });
 ```
 
-## wagmi hooks
+## Contract call builders
 
-Wrap wagmi's `useReadContract` and `useWriteContract` directly. No client/signer parameters needed — wagmi's `Config` handles that.
+For direct contract-level control without the high-level `Token` abstraction, the SDK exports contract call builders and library-specific helpers.
 
-### Read hooks
+### Generic builders (any signer)
 
-Enabled only when required parameters are defined. All have `*Suspense` variants.
+Return `{ address, abi, functionName, args }` objects you can pass to any signer's `writeContract` or `readContract`:
 
-| Hook                                         | What it reads                                         |
-| -------------------------------------------- | ----------------------------------------------------- |
-| `useBalanceOf(token, user?)`                 | ERC-20 balance with symbol, decimals, formatted value |
-| `useConfidentialBalanceOf(token?, user?)`    | Encrypted balance handle                              |
-| `useWrapperForToken(coordinator?, token?)`   | Wrapper address for a token                           |
-| `useUnderlyingToken(wrapper?)`               | Underlying ERC-20 address                             |
-| `useWrapperExists(coordinator?, token?)`     | Whether a wrapper exists                              |
-| `useSupportsInterface(token?, interfaceId?)` | ERC-165 support                                       |
+```ts
+import { wrapContract, confidentialTransferContract } from "@zama-fhe/sdk";
+```
 
-### Write hooks
+See [Contract Call Builders](../sdk/contract-builders.md) for the full list.
 
-Return wagmi's `useWriteContract` mutation shape.
+### viem helpers
 
-| Hook                             | Mutation parameters                              |
-| -------------------------------- | ------------------------------------------------ |
-| `useConfidentialTransfer()`      | `(token, to, handle, inputProof)`                |
-| `useConfidentialBatchTransfer()` | `(batcher, token, from, transfers, fees)`        |
-| `useUnwrap()`                    | `(token, from, to, encryptedAmount, inputProof)` |
-| `useUnwrapFromBalance()`         | `(token, from, to, encryptedBalance)`            |
-| `useFinalizeUnwrap()`            | `(wrapper, burntAmount, cleartext, proof)`       |
-| `useSetOperator()`               | `(token, spender, timestamp?)`                   |
-| `useShield()`                    | `(wrapper, to, amount)`                          |
-| `useShieldETH()`                 | `(wrapper, to, amount, value)`                   |
+Thin wrappers that call viem's `readContract` / `writeContract` directly:
 
-## Low-level FHE hooks
+```ts
+import { readConfidentialBalanceOfContract, writeWrapContract } from "@zama-fhe/sdk/viem";
 
-These require `ZamaProvider` and expose raw relayer operations as React Query mutations. Use them when building custom flows that need fine-grained FHE control.
+const handle = await readConfidentialBalanceOfContract(publicClient, tokenAddress, userAddress);
+const hash = await writeWrapContract(walletClient, wrapperAddress, toAddress, amount);
+```
 
-### Encryption and decryption
+### ethers helpers
 
-| Hook                        | What it does                            |
-| --------------------------- | --------------------------------------- |
-| `useEncrypt()`              | Encrypt values for smart contract calls |
-| `useUserDecrypt()`          | Decrypt with user's FHE private key     |
-| `usePublicDecrypt()`        | Public decryption                       |
-| `useDelegatedUserDecrypt()` | Decrypt via delegation                  |
+Same API, backed by ethers `Contract`:
 
-### Key management
+```ts
+import { readConfidentialBalanceOfContract, writeWrapContract } from "@zama-fhe/sdk/ethers";
 
-| Hook                                    | What it does                                        |
-| --------------------------------------- | --------------------------------------------------- |
-| `useGenerateKeypair()`                  | Generate an FHE keypair                             |
-| `useCreateEIP712()`                     | Create EIP-712 typed data for decrypt authorization |
-| `useCreateDelegatedUserDecryptEIP712()` | Create EIP-712 for delegated decryption             |
-| `useRequestZKProofVerification()`       | Submit a ZK proof for verification                  |
-
-### Reading from the decryption cache
-
-`useUserDecrypt` and `usePublicDecrypt` populate a shared cache. Read from it without triggering new decryptions:
-
-```tsx
-// Single handle
-const { data: value } = useUserDecryptedValue("0xHandleHash");
-
-// Multiple handles
-const { data } = useUserDecryptedValues(["0xHandle1", "0xHandle2"]);
-// data["0xHandle1"] → bigint | undefined
+const handle = await readConfidentialBalanceOfContract(provider, tokenAddress, userAddress);
+const hash = await writeWrapContract(signer, wrapperAddress, toAddress, amount);
 ```
