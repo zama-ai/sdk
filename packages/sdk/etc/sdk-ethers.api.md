@@ -6,6 +6,7 @@
 
 import { Address } from '@zama-fhe/relayer-sdk/bundle';
 import { Eip1193Provider } from 'ethers';
+import { ethers } from 'ethers';
 import { Provider } from 'ethers';
 import { Signer } from 'ethers';
 
@@ -109,6 +110,8 @@ export type EthersSignerConfig = {
     ethereum: EIP1193Provider;
 } | {
     signer: Signer;
+} | {
+    provider: ethers.Provider;
 };
 
 // @public

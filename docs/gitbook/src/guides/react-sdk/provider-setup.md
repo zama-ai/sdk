@@ -74,6 +74,7 @@ import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk"
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 // walletClient and publicClient from your viem setup
+// (walletClient is optional — omit it for read-only chain queries)
 const signer = new ViemSigner({ walletClient, publicClient });
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
@@ -105,9 +106,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 
-// Pass the raw EIP-1193 provider — BrowserProvider is created internally
-// and subscribe() works automatically for wallet lifecycle events
+/**
+ * Browser — pass the raw EIP-1193 provider (subscribe() works automatically)
+ * const signer = new EthersSigner({ ethereum: window.ethereum! });
+ * Node.js — pass an ethers Signer directly
+ * const provider = new ethers.JsonRpcProvider(rpcUrl);
+ * const signer = new EthersSigner({ signer: new ethers.Wallet(privateKey, provider) });
+ * Read-only — pass a Provider (no signing, chain reads only)
+ * const signer = new EthersSigner({ provider: new ethers.JsonRpcProvider(rpcUrl) });
+ */
 const signer = new EthersSigner({ ethereum: window.ethereum! });
+
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
