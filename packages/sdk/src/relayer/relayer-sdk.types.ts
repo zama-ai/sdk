@@ -140,6 +140,7 @@ export interface EIP712TypedData {
       type: string;
     }>;
   };
+  primaryType?: string;
   message: {
     publicKey: string;
     contractAddresses: string[];

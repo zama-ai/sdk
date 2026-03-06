@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.0-alpha.9](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.8...v1.0.0-alpha.9) (2026-03-06)
+
+### Bug Fixes
+
+- **release:** remove registry-url to fix npm trusted publishing ([aa515ee](https://github.com/zama-ai/sdk/commit/aa515ee4329e83347049513aa1435f89d8a13df8))
+
 ## [1.0.0-alpha.8](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.7...v1.0.0-alpha.8) (2026-03-05)
 
 ### Features
