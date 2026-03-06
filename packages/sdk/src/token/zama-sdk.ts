@@ -73,7 +73,7 @@ export class ZamaSDK {
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.#onEvent = config.onEvent ?? function () {};
     this.#aclAddress = config.aclAddress
-      ? normalizeAddress(config.aclAddress, "aclAddress")
+      ? validateAddress(config.aclAddress, "aclAddress")
       : undefined;
     this.credentials = new CredentialsManager({
       relayer: this.relayer,

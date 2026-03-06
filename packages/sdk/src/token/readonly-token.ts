@@ -106,7 +106,7 @@ export class ReadonlyToken {
     this.signer = config.signer;
     this.address = address;
     this.aclAddress = config.aclAddress
-      ? normalizeAddress(config.aclAddress, "aclAddress")
+      ? validateAddress(config.aclAddress, "aclAddress")
       : undefined;
     this.#storage = config.storage;
     this.#onEvent = config.onEvent;
@@ -542,8 +542,8 @@ export class ReadonlyToken {
 
   async getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint> {
     const acl = this.requireAclAddress();
-    const normalizedDelegator = normalizeAddress(delegator, "delegator");
-    const normalizedDelegate = normalizeAddress(delegate, "delegate");
+    const normalizedDelegator = validateAddress(delegator, "delegator");
+    const normalizedDelegate = validateAddress(delegate, "delegate");
     return this.signer.readContract(
       getDelegationExpiryContract(acl, normalizedDelegator, normalizedDelegate, this.address),
     );
@@ -576,8 +576,8 @@ export class ReadonlyToken {
    * ```
    */
   async decryptBalanceAs(delegator: Address, options?: { owner?: Address }): Promise<bigint> {
-    const normalizedDelegator = normalizeAddress(delegator, "delegator");
-    const owner = options?.owner ? normalizeAddress(options.owner, "owner") : normalizedDelegator;
+    const normalizedDelegator = validateAddress(delegator, "delegator");
+    const owner = options?.owner ? validateAddress(options.owner, "owner") : normalizedDelegator;
 
     const handle = await this.readConfidentialBalanceOf(owner);
     if (this.isZeroHandle(handle)) return 0n;

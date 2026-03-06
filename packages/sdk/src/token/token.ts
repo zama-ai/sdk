@@ -1,3 +1,4 @@
+import { hexToBigInt } from "viem";
 import {
   allowanceContract,
   approveContract,
@@ -14,24 +15,23 @@ import {
   wrapContract,
   wrapETHContract,
 } from "../contracts";
-import { hexToBigInt } from "viem";
 import { findUnwrapRequested } from "../events/onchain-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Address, Handle, Hex } from "../relayer/relayer-sdk.types";
 import { validateAddress } from "../utils";
 import {
-  ZamaError,
-  EncryptionFailedError,
   ApprovalFailedError,
-  TransactionRevertedError,
   DecryptionFailedError,
+  EncryptionFailedError,
+  TransactionRevertedError,
+  ZamaError,
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
-import { ZamaSDKEvents } from "../events/sdk-events";
 import type {
-  TransactionResult,
-  UnshieldCallbacks,
   ShieldCallbacks,
+  TransactionResult,
   TransferCallbacks,
+  UnshieldCallbacks,
 } from "./token.types";
 
 /** Coerce an unknown caught value to an Error instance. */
@@ -691,7 +691,7 @@ export class Token extends ReadonlyToken {
     options?: { expirationDate?: Date },
   ): Promise<TransactionResult> {
     const acl = this.requireAclAddress();
-    const normalizedDelegate = normalizeAddress(delegate, "delegate");
+    const normalizedDelegate = validateAddress(delegate, "delegate");
     // uint64 max → no practical expiry
     const expirationDate = options?.expirationDate
       ? BigInt(Math.floor(options.expirationDate.getTime() / 1000))
@@ -713,7 +713,7 @@ export class Token extends ReadonlyToken {
 
   async revokeDelegation(delegate: Address): Promise<TransactionResult> {
     const acl = this.requireAclAddress();
-    const normalizedDelegate = normalizeAddress(delegate, "delegate");
+    const normalizedDelegate = validateAddress(delegate, "delegate");
 
     try {
       const txHash = await this.signer.writeContract(
