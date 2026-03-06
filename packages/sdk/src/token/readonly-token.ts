@@ -555,6 +555,110 @@ export class ReadonlyToken {
   }
 
   /**
+   * Decrypt the balance of a delegator using delegated decryption credentials.
+   * The connected signer acts as the delegate who has been granted permission
+   * by the delegator to decrypt their balance.
+   *
+   * @param delegator - The address of the account that delegated decryption rights.
+   * @param options - Optional configuration.
+   * @param options.owner - The balance owner address. Defaults to the delegator.
+   * @returns The decrypted plaintext balance as a bigint.
+   * @throws {@link DecryptionFailedError} if delegated decryption fails.
+   *
+   * @example
+   * ```ts
+   * const balance = await token.decryptBalanceAs("0xDelegator");
+   * ```
+   */
+  async decryptBalanceAs(delegator: Address, options?: { owner?: Address }): Promise<bigint> {
+    const normalizedDelegator = normalizeAddress(delegator, "delegator");
+    const owner = options?.owner ? normalizeAddress(options.owner, "owner") : normalizedDelegator;
+
+    const handle = await this.readConfidentialBalanceOf(owner);
+    if (this.isZeroHandle(handle)) return 0n;
+
+    // Check persistent cache keyed by delegator.
+    const cached = await loadCachedBalance({
+      storage: this.storage,
+      tokenAddress: this.address,
+      owner: normalizedDelegator,
+      handle,
+    });
+    if (cached !== null) return cached;
+
+    const t0 = Date.now();
+    try {
+      this.emit({ type: ZamaSDKEvents.DecryptStart });
+
+      // Generate a fresh keypair for the delegated decrypt request.
+      const { publicKey, privateKey } = await this.sdk.generateKeypair();
+      const delegateAddress = await this.signer.getAddress();
+      const startTimestamp = Math.floor(Date.now() / 1000);
+      const durationDays = 1;
+
+      // Create delegated EIP-712 typed data.
+      const delegatedEIP712 = await this.sdk.createDelegatedUserDecryptEIP712(
+        publicKey,
+        [this.address],
+        normalizedDelegator,
+        startTimestamp,
+        durationDays,
+      );
+
+      // Sign the delegated EIP-712 with the delegate's signer.
+      // Convert KMS types (bigint chainId, string timestamps) to EIP712TypedData format.
+      const signature = await this.signer.signTypedData({
+        domain: {
+          ...delegatedEIP712.domain,
+          chainId: Number(delegatedEIP712.domain.chainId),
+        },
+        types: delegatedEIP712.types,
+        message: {
+          ...delegatedEIP712.message,
+          startTimestamp: BigInt(delegatedEIP712.message.startTimestamp),
+          durationDays: BigInt(delegatedEIP712.message.durationDays),
+        },
+      });
+
+      // Perform delegated decryption.
+      const result = await this.sdk.delegatedUserDecrypt({
+        handles: [handle],
+        contractAddress: this.address,
+        signedContractAddresses: [this.address],
+        privateKey,
+        publicKey,
+        signature,
+        delegatorAddress: normalizedDelegator,
+        delegateAddress,
+        startTimestamp,
+        durationDays,
+      });
+
+      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
+
+      const value = (result[handle] as bigint | undefined) ?? 0n;
+
+      // Cache keyed by delegator.
+      await saveCachedBalance({
+        storage: this.storage,
+        tokenAddress: this.address,
+        owner: normalizedDelegator,
+        handle,
+        value,
+      });
+
+      return value;
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.DecryptError,
+        error: toError(error),
+        durationMs: Date.now() - t0,
+      });
+      throw wrapDecryptError(error, "Failed to decrypt delegated balance");
+    }
+  }
+
+  /**
    * Decrypt a single encrypted handle into a plaintext bigint.
    * Returns `0n` for zero handles without calling the relayer.
    *

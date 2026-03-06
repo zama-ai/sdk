@@ -6,6 +6,9 @@ import type { Address, GenericSigner } from "../token.types";
 import { ConfigurationError } from "../errors";
 import { MemoryStorage } from "../memory-storage";
 
+const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
+const ZERO_HANDLE = "0x" + "0".repeat(64);
+
 const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const TOKEN_ADDR = "0x1111111111111111111111111111111111111111" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -152,6 +155,79 @@ describe("delegation write methods", () => {
 
     await expect(token.delegateDecryption(DELEGATE)).rejects.toThrow(
       expect.objectContaining({ code: "TRANSACTION_REVERTED" }),
+    );
+  });
+});
+
+describe("decryptBalanceAs", () => {
+  function createTokenWithAcl(signer: GenericSigner, relayer: RelayerSDK) {
+    return new ReadonlyToken({
+      relayer,
+      signer,
+      storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
+      address: TOKEN_ADDR,
+      aclAddress: ACL,
+    });
+  }
+
+  it("returns 0n for zero handle without calling relayer", async ({ signer, relayer }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    const token = createTokenWithAcl(signer, relayer);
+
+    const balance = await token.decryptBalanceAs(DELEGATOR);
+
+    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(balance).toBe(0n);
+  });
+
+  it("calls delegatedUserDecrypt with correct params", async ({ signer, relayer }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
+      domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
+      types: { DelegatedUserDecryptRequestVerification: [] },
+      message: {
+        publicKey: "0xpub",
+        contractAddresses: [TOKEN_ADDR],
+        delegatorAddress: DELEGATOR,
+        startTimestamp: "1000",
+        durationDays: "1",
+        extraData: "0x",
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({
+      [VALID_HANDLE]: 500n,
+    });
+    const token = createTokenWithAcl(signer, relayer);
+
+    const balance = await token.decryptBalanceAs(DELEGATOR);
+
+    expect(balance).toBe(500n);
+    expect(relayer.generateKeypair).toHaveBeenCalled();
+    expect(relayer.createDelegatedUserDecryptEIP712).toHaveBeenCalledWith(
+      "0xpub",
+      [TOKEN_ADDR],
+      DELEGATOR,
+      expect.any(Number),
+      expect.any(Number),
+    );
+    expect(relayer.delegatedUserDecrypt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        handles: [VALID_HANDLE],
+        contractAddress: TOKEN_ADDR,
+        delegatorAddress: DELEGATOR,
+      }),
+    );
+  });
+
+  it("wraps errors as DecryptionFailedError", async ({ signer, relayer }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
+    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockRejectedValue(new Error("fail"));
+    const token = createTokenWithAcl(signer, relayer);
+
+    await expect(token.decryptBalanceAs(DELEGATOR)).rejects.toThrow(
+      expect.objectContaining({ code: "DECRYPTION_FAILED" }),
     );
   });
 });
