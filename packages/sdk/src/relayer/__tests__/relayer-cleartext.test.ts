@@ -9,6 +9,7 @@ const { mockInstance, mockCreateCleartextInstance } = vi.hoisted(() => {
   const mockInstance = {
     generateKeypair: vi.fn(),
     createEncryptedInput: vi.fn(),
+    encrypt: vi.fn(),
     createEIP712: vi.fn(),
     createDelegatedUserDecryptEIP712: vi.fn(),
     publicDecrypt: vi.fn(),
@@ -17,6 +18,7 @@ const { mockInstance, mockCreateCleartextInstance } = vi.hoisted(() => {
     requestZKProofVerification: vi.fn(),
     getPublicKey: vi.fn(),
     getPublicParams: vi.fn(),
+    terminate: vi.fn(),
   };
 
   const mockCreateCleartextInstance = vi.fn().mockResolvedValue(mockInstance);
@@ -85,11 +87,7 @@ describe("RelayerCleartext", () => {
   // -----------------------------------------------------------------------
   describe("lazy init", () => {
     it("initialises only once when encrypt() is called concurrently", async () => {
-      const mockInput = {
-        add64: vi.fn(),
-        encrypt: vi.fn().mockResolvedValue({ handles: ["0xh1"], inputProof: "0xproof" }),
-      };
-      mockInstance.createEncryptedInput.mockReturnValue(mockInput);
+      mockInstance.encrypt.mockResolvedValue({ handles: ["0xh1"], inputProof: "0xproof" });
 
       const relayer = new RelayerCleartext(makeConfig());
 
@@ -146,11 +144,7 @@ describe("RelayerCleartext", () => {
   // -----------------------------------------------------------------------
   describe("terminate + auto-restart", () => {
     it("auto-restarts after terminate() when encrypt() is called", async () => {
-      const mockInput = {
-        add64: vi.fn(),
-        encrypt: vi.fn().mockResolvedValue({ handles: ["0xh1"], inputProof: "0xproof" }),
-      };
-      mockInstance.createEncryptedInput.mockReturnValue(mockInput);
+      mockInstance.encrypt.mockResolvedValue({ handles: ["0xh1"], inputProof: "0xproof" });
 
       const relayer = new RelayerCleartext(makeConfig());
 
@@ -218,14 +212,10 @@ describe("RelayerCleartext", () => {
   // 6. encrypt() wraps add64 overflow in descriptive error
   // -----------------------------------------------------------------------
   describe("encrypt() add64 overflow", () => {
-    it("throws a descriptive error when value exceeds uint64 max", async () => {
-      const mockInput = {
-        add64: vi.fn().mockImplementation(() => {
-          throw new Error("value out of range");
-        }),
-        encrypt: vi.fn(),
-      };
-      mockInstance.createEncryptedInput.mockReturnValue(mockInput);
+    it("throws EncryptionFailedError when instance.encrypt rejects", async () => {
+      mockInstance.encrypt.mockRejectedValue(
+        new EncryptionFailedError("The value exceeds the limit for 64bits integer"),
+      );
 
       const relayer = new RelayerCleartext(makeConfig());
 
@@ -233,9 +223,7 @@ describe("RelayerCleartext", () => {
       const input: EncryptInput = { value: tooBig, type: "euint64" };
 
       await expect(relayer.encrypt(encryptParams([input]))).rejects.toThrow(EncryptionFailedError);
-      await expect(relayer.encrypt(encryptParams([input]))).rejects.toThrow(
-        /failed for type "euint64"/,
-      );
+      await expect(relayer.encrypt(encryptParams([input]))).rejects.toThrow(/exceeds the limit/);
     });
   });
 

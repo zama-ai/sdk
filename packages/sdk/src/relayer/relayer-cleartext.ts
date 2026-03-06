@@ -1,7 +1,7 @@
 import { createCleartextInstance } from "../cleartext/cleartext-instance";
 import { convertToBigIntRecord } from "../utils/convert";
 import type { CleartextInstanceConfig } from "../cleartext/types";
-import { EncryptionFailedError, ConfigurationError, NotSupportedError } from "../token/errors";
+import { ConfigurationError, NotSupportedError } from "../token/errors";
 import { assertNonNullable } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
@@ -18,7 +18,6 @@ import type {
   ZKProofLike,
 } from "./relayer-sdk.types";
 import { DefaultConfigs } from "./relayer-configs";
-import { buildEIP712DomainType } from "./relayer-utils";
 
 type CleartextInstance = ReturnType<typeof createCleartextInstance>;
 
@@ -153,113 +152,23 @@ export class RelayerCleartext implements RelayerSDK {
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
     const instance = await this.#getInstance();
-    const result = instance.createEIP712(
-      publicKey,
-      contractAddresses,
-      startTimestamp,
-      durationDays,
-    );
-
-    const domain = {
-      name: result.domain.name as string,
-      version: result.domain.version as string,
-      chainId: Number(result.domain.chainId),
-      verifyingContract: result.domain.verifyingContract as Address,
-    };
-
-    return {
-      domain,
-      types: {
-        EIP712Domain: buildEIP712DomainType(domain),
-        UserDecryptRequestVerification: [...result.types.UserDecryptRequestVerification],
-      },
-      message: {
-        publicKey: result.message.publicKey,
-        contractAddresses: [...result.message.contractAddresses],
-        startTimestamp: result.message.startTimestamp,
-        durationDays: result.message.durationDays,
-        extraData: result.message.extraData,
-      },
-    };
+    return instance.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays);
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const instance = await this.#getInstance();
-    const input = instance.createEncryptedInput(params.contractAddress, params.userAddress);
-    for (const { type, value } of params.values) {
-      try {
-        if (type === "ebool") {
-          input.addBool(value);
-        } else if (type === "eaddress") {
-          input.addAddress(String(value));
-        } else {
-          // All euintN types expect number | bigint
-          const n = typeof value === "boolean" ? BigInt(value) : value;
-          switch (type) {
-            case "euint4":
-              input.add4(n);
-              break;
-            case "euint8":
-              input.add8(n);
-              break;
-            case "euint16":
-              input.add16(n);
-              break;
-            case "euint32":
-              input.add32(n);
-              break;
-            case "euint64":
-              input.add64(n);
-              break;
-            case "euint128":
-              input.add128(n);
-              break;
-            case "euint256":
-              input.add256(n);
-              break;
-            default:
-              throw new Error(`Unsupported FHE type: ${type as string}`);
-          }
-        }
-      } catch (error) {
-        if (error instanceof EncryptionFailedError) throw error;
-        throw new EncryptionFailedError(
-          `RelayerCleartext.encrypt() failed for type "${type}": ${error instanceof Error ? error.message : String(error)}`,
-          { cause: error instanceof Error ? error : undefined },
-        );
-      }
-    }
-    const encrypted = await input.encrypt();
-    return { handles: encrypted.handles, inputProof: encrypted.inputProof };
+    return instance.encrypt(params);
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
     const instance = await this.#getInstance();
-    const handleContractPairs = params.handles.map((handle) => ({
-      handle,
-      contractAddress: params.contractAddress,
-    }));
-    const result = await instance.userDecrypt(
-      handleContractPairs,
-      params.privateKey,
-      params.publicKey,
-      params.signature,
-      params.signedContractAddresses,
-      params.signerAddress,
-      params.startTimestamp,
-      params.durationDays,
-    );
+    const result = await instance.userDecrypt(params);
     return convertToBigIntRecord(result);
   }
 
   async publicDecrypt(handles: string[]): Promise<PublicDecryptResult> {
     const instance = await this.#getInstance();
-    const result = await instance.publicDecrypt(handles);
-    return {
-      clearValues: convertToBigIntRecord(result.clearValues),
-      abiEncodedClearValues: result.abiEncodedClearValues as `0x${string}`,
-      decryptionProof: result.decryptionProof as `0x${string}`,
-    };
+    return instance.publicDecrypt(handles);
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -276,26 +185,12 @@ export class RelayerCleartext implements RelayerSDK {
       delegatorAddress,
       startTimestamp,
       durationDays,
-    ) as unknown as KmsDelegatedUserDecryptEIP712Type;
+    );
   }
 
   async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
     const instance = await this.#getInstance();
-    const handleContractPairs = params.handles.map((handle) => ({
-      handle,
-      contractAddress: params.contractAddress,
-    }));
-    const result = await instance.delegatedUserDecrypt(
-      handleContractPairs,
-      params.privateKey,
-      params.publicKey,
-      params.signature,
-      params.signedContractAddresses,
-      params.delegatorAddress,
-      params.delegateAddress,
-      params.startTimestamp,
-      params.durationDays,
-    );
+    const result = await instance.delegatedUserDecrypt(params);
     return convertToBigIntRecord(result);
   }
 
@@ -314,6 +209,6 @@ export class RelayerCleartext implements RelayerSDK {
     _bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const instance = await this.#getInstance();
-    return instance.getPublicParams();
+    return instance.getPublicParams(_bits);
   }
 }

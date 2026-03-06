@@ -44,8 +44,9 @@ export type {
   RelayerCleartextMultiConfig,
 } from "../relayer/relayer-cleartext";
 
-/** Low-level cleartext instance factory — mirrors the production FhevmInstance API. */
+/** Low-level cleartext instance factory implementing the {@link RelayerSDK} interface. */
 export { createCleartextInstance } from "./cleartext-instance";
+export type { CleartextInstance } from "./cleartext-instance";
 
 /** On-chain plaintext reader for the CleartextFHEVMExecutor contract. */
 export { CleartextExecutor } from "./cleartext-executor";
