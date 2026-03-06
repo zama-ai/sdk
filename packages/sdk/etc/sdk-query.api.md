@@ -27,7 +27,7 @@ export type ActivityAmount = {
     readonly value: bigint;
 } | {
     readonly type: "encrypted";
-    readonly handle: Handle;
+    readonly handle: Handle; /** Populated after batch decryption via {@link applyDecryptedValues}. */
     readonly decryptedValue?: bigint;
 };
 
@@ -836,8 +836,8 @@ export class Token extends ReadonlyToken {
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
-        fees?: bigint;
-        to?: Address;
+        fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
+        to?: Address; /** Progress callbacks for the multi-step shield flow. */
         callbacks?: ShieldCallbacks;
     }): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
@@ -1341,7 +1341,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/activity-D9PfoRJX.d.ts:918:5 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/activity-CmR2x4Bb.d.ts:912:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

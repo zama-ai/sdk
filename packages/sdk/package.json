@@ -63,14 +63,15 @@
     "url": "https://github.com/zama-ai/sdk/issues"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@zama-fhe/relayer-sdk": "0.4.1",
     "@tanstack/query-core": "^5.90.20",
-    "tsup": "^8.5.1"
+    "@zama-fhe/relayer-sdk": "0.4.1",
+    "rolldown": "^1.0.0-rc.6",
+    "rolldown-plugin-dts": "^0.22.3"
   },
   "peerDependencies": {
     "@tanstack/query-core": ">=5",
