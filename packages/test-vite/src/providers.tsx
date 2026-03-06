@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage, RelayerWeb, ZamaProvider } from "@zama-fhe/react-sdk";
+import { MemoryStorage, HardhatConfig, ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import { type ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
+import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import deployments from "../../../hardhat/deployments.json" with { type: "json" };
 
 const isHardhat = import.meta.env.VITE_NETWORK === "hardhat";
 
@@ -27,14 +29,12 @@ const wagmiConfig = createConfig({
 
 const signer = new WagmiSigner({ config: wagmiConfig });
 
-const relayer = new RelayerWeb({
-  getChainId: async () => signer.getChainId(),
-  transports: {
-    [hardhat.id]: {
-      network: hardhat.rpcUrls.default.http[0],
-    },
-  },
-  security: { integrityCheck: !isHardhat },
+const relayer = new RelayerCleartext({
+  ...HardhatConfig,
+  aclContractAddress: deployments.fhevm.acl,
+  inputVerifierContractAddress: deployments.fhevm.inputVerifier,
+  kmsContractAddress: deployments.fhevm.kmsVerifier,
+  cleartextExecutorAddress: deployments.fhevm.executor,
 });
 
 const storage = new MemoryStorage();

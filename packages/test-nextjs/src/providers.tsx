@@ -1,13 +1,15 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage, RelayerWeb, ZamaProvider } from "@zama-fhe/react-sdk";
+import { MemoryStorage, HardhatConfig, ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
-import { useMemo, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
+import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import deployments from "../../../hardhat/deployments.json" with { type: "json" };
 
 const isHardhat = process.env.NEXT_PUBLIC_NETWORK === "hardhat";
 
@@ -30,24 +32,17 @@ const wagmiConfig = createConfig({
 const signer = new WagmiSigner({ config: wagmiConfig });
 const storage = new MemoryStorage();
 
+const relayer = new RelayerCleartext({
+  ...HardhatConfig,
+  aclContractAddress: deployments.fhevm.acl,
+  inputVerifierContractAddress: deployments.fhevm.inputVerifier,
+  kmsContractAddress: deployments.fhevm.kmsVerifier,
+  cleartextExecutorAddress: deployments.fhevm.executor,
+});
+
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
-  const relayer = useMemo(
-    () =>
-      new RelayerWeb({
-        getChainId: () => signer.getChainId(),
-        transports: {
-          [hardhat.id]: {
-            network: hardhat.rpcUrls.default.http[0],
-          },
-        },
-        threads: Math.min(navigator.hardwareConcurrency ?? 4, 8),
-        security: { integrityCheck: !isHardhat },
-      }),
-    [],
-  );
-
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>

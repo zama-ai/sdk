@@ -10,7 +10,6 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
-import { mockRelayerSdk } from "./fhevm";
 import { TEST_PRIVATE_KEY, MINTED } from "./constants";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
 import type { Address } from "viem";
@@ -139,15 +138,13 @@ export const test = base.extend<TestFixtures>({
 
     const id = await viemClient.snapshot();
 
-    await mockRelayerSdk(page, baseURL);
-
     // Inject wallet private key for the burner-connector
     await page.addInitScript((pk) => {
       window.localStorage.setItem("burnerWallet.pk", pk);
     }, privateKey);
 
-    // Navigate to home and ensure wallet is connected
-    await page.goto("/");
+    // Navigate to wallet page and ensure wallet is connected
+    await page.goto("/wallet");
     const connectButton = page.getByRole("button", {
       name: "Connect Wallet",
     });
@@ -165,9 +162,6 @@ export const test = base.extend<TestFixtures>({
     }
 
     await use(page);
-
-    // Wait for in-flight route handlers to finish before reverting.
-    await page.unrouteAll({ behavior: "wait" });
 
     await viemClient.revert({ id });
   },
