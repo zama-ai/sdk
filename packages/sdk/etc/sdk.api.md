@@ -7180,11 +7180,6 @@ export interface ContractCallConfig {
     readonly value?: bigint;
 }
 
-// @public
-export class CredentialExpiredError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
-}
-
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
     contractAddresses?: Address[];
@@ -7232,6 +7227,8 @@ export class CredentialsManager {
     constructor(config: CredentialsManagerConfig);
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
     clear(): Promise<void>;
+    // (undocumented)
+    static computeStoreKey(address: string, chainId: number): Promise<string>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
     isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
@@ -14745,7 +14742,7 @@ export const indexedDBStorage: IndexedDBStorage;
 export { InputProofBytesType }
 
 // @public
-export class InvalidCredentialsError extends ZamaError {
+export class InvalidKeypairError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
@@ -17734,6 +17731,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
     readonly functionName: "isOperator";
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
+
+// @public
+export class KeypairExpiredError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
 
 export { KmsDelegatedUserDecryptEIP712Type }
 
@@ -32999,8 +33001,8 @@ export const ZamaErrorCode: {
     readonly DecryptionFailed: "DECRYPTION_FAILED";
     readonly ApprovalFailed: "APPROVAL_FAILED";
     readonly TransactionReverted: "TRANSACTION_REVERTED";
-    readonly CredentialExpired: "CREDENTIAL_EXPIRED";
-    readonly InvalidCredentials: "INVALID_CREDENTIALS";
+    readonly KeypairExpired: "KEYPAIR_EXPIRED";
+    readonly InvalidKeypair: "INVALID_KEYPAIR";
     readonly NoCiphertext: "NO_CIPHERTEXT";
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
 };

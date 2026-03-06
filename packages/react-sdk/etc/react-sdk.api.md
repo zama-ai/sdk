@@ -31,7 +31,6 @@ import { confidentialTransferContract } from '@zama-fhe/sdk';
 import { ConfidentialTransferEvent } from '@zama-fhe/sdk';
 import { confidentialTransferFromContract } from '@zama-fhe/sdk';
 import { ContractCallConfig } from '@zama-fhe/sdk';
-import { CredentialExpiredError } from '@zama-fhe/sdk';
 import { CredentialsAllowedEvent } from '@zama-fhe/sdk';
 import { CredentialsCachedEvent } from '@zama-fhe/sdk';
 import { CredentialsCreatedEvent } from '@zama-fhe/sdk';
@@ -92,11 +91,12 @@ import { Hex } from '@zama-fhe/sdk';
 import { IndexedDBStorage } from '@zama-fhe/sdk';
 import { indexedDBStorage } from '@zama-fhe/sdk';
 import { InputProofBytesType } from '@zama-fhe/sdk';
-import { InvalidCredentialsError } from '@zama-fhe/sdk';
+import { InvalidKeypairError } from '@zama-fhe/sdk';
 import { isConfidentialTokenContract } from '@zama-fhe/sdk';
 import { isConfidentialWrapperContract } from '@zama-fhe/sdk';
 import { isFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
 import { isOperatorContract } from '@zama-fhe/sdk';
+import { KeypairExpiredError } from '@zama-fhe/sdk';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/sdk';
 import { loadPendingUnshield } from '@zama-fhe/sdk';
 import { MainnetConfig } from '@zama-fhe/sdk';
@@ -369,8 +369,6 @@ export interface CreateEIP712Params {
     startTimestamp: number;
 }
 
-export { CredentialExpiredError }
-
 export { CredentialsAllowedEvent }
 
 export { CredentialsCachedEvent }
@@ -536,7 +534,7 @@ export { indexedDBStorage }
 
 export { InputProofBytesType }
 
-export { InvalidCredentialsError }
+export { InvalidKeypairError }
 
 // @public (undocumented)
 export const isAllowedQueryKeys: {
@@ -582,6 +580,8 @@ export function isWrapperQueryOptions(token: ReadonlyToken): {
     readonly queryFn: () => Promise<boolean>;
     readonly staleTime: number;
 };
+
+export { KeypairExpiredError }
 
 export { KmsDelegatedUserDecryptEIP712Type }
 
