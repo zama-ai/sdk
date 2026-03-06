@@ -1,17 +1,10 @@
-import type { Address } from "./relayer/relayer-sdk.types";
-
-/** Convert a Uint8Array to a hex string prefixed with `0x`. */
-export function toHex(bytes: Uint8Array): Address {
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-  return `0x${hex}`;
-}
+import { hexToBigInt, isAddress, isHex, toHex } from "viem";
+import type { Address, Handle } from "./relayer/relayer-sdk.types";
 
 // ── Runtime type assertion helpers ───────────────────────────
 
-const ADDRESS_REGEX = /^0x[0-9a-fA-F]{40}$/;
-
 export function assertAddress(value: string, name: string): asserts value is Address {
-  if (!ADDRESS_REGEX.test(value)) {
+  if (!isAddress(value, { strict: false })) {
     throw new TypeError(`${name} must be a valid address (0x + 40 hex chars), got: ${value}`);
   }
 }
@@ -20,13 +13,23 @@ export function assertAddress(value: string, name: string): asserts value is Add
  * Validate an address and return it unchanged.
  * Call at public API entry points so invalid addresses are caught early.
  *
- * Addresses are **not** lowercased — the relayer SDK requires EIP-55
- * checksummed addresses for encrypt / decrypt calls.
- * Use case-insensitive comparison (`.toLowerCase()`) when comparing addresses.
+ * Addresses are preserved exactly as provided.
+ * Use `getAddress()` from viem when you need canonical EIP-55 checksumming.
  */
 export function normalizeAddress(addr: string, name: string): Address {
   assertAddress(addr, name);
-  return addr as Address;
+  return addr;
+}
+
+/** Normalize a ciphertext handle or handle-like bigint into canonical 32-byte hex. */
+export function normalizeHandle(handle: string | bigint): Handle {
+  if (typeof handle === "bigint") {
+    return toHex(handle, { size: 32 }) as Handle;
+  }
+  if (!isHex(handle)) {
+    throw new TypeError(`Handle must be a hex string, got: ${handle}`);
+  }
+  return toHex(hexToBigInt(handle), { size: 32 }) as Handle;
 }
 
 export function assertObject(

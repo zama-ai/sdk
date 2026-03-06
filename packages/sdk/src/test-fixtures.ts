@@ -7,7 +7,7 @@ import { MemoryStorage } from "./token/memory-storage";
 import { Token, TokenConfig } from "./token/token";
 import type { GenericSigner, GenericStorage, TransactionResult } from "./token/token.types";
 import { ZamaSDK, ZamaSDKConfig } from "./token/zama-sdk";
-import { ZamaSDKEvent, ZamaSDKEvents } from "./events";
+import { ZamaSDKEvents } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;

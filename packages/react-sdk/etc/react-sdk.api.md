@@ -24,13 +24,14 @@ import { BatchTransferData } from '@zama-fhe/sdk';
 import { ChromeSessionStorage } from '@zama-fhe/sdk';
 import { chromeSessionStorage } from '@zama-fhe/sdk';
 import { clearPendingUnshield } from '@zama-fhe/sdk';
+import { ClearValueType } from '@zama-fhe/sdk';
 import { confidentialBalanceOfContract } from '@zama-fhe/sdk';
 import { confidentialBatchTransferContract } from '@zama-fhe/sdk';
 import { confidentialTotalSupplyContract } from '@zama-fhe/sdk';
 import { confidentialTransferContract } from '@zama-fhe/sdk';
 import { ConfidentialTransferEvent } from '@zama-fhe/sdk';
 import { confidentialTransferFromContract } from '@zama-fhe/sdk';
-import { ContractCallConfig } from '@zama-fhe/sdk';
+import { ContractAbi } from '@zama-fhe/sdk';
 import { CredentialsAllowedEvent } from '@zama-fhe/sdk';
 import { CredentialsCachedEvent } from '@zama-fhe/sdk';
 import { CredentialsCreatedEvent } from '@zama-fhe/sdk';
@@ -48,7 +49,6 @@ import { decodeUnwrappedFinalized } from '@zama-fhe/sdk';
 import { decodeUnwrappedStarted } from '@zama-fhe/sdk';
 import { decodeUnwrapRequested } from '@zama-fhe/sdk';
 import { decodeWrapped } from '@zama-fhe/sdk';
-import { DecryptedValue } from '@zama-fhe/sdk';
 import { DecryptEndEvent } from '@zama-fhe/sdk';
 import { DecryptErrorEvent } from '@zama-fhe/sdk';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
@@ -72,8 +72,7 @@ import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
 import { extractEncryptedHandles } from '@zama-fhe/sdk';
 import { FEE_MANAGER_ABI } from '@zama-fhe/sdk';
-import { FHEKeypair } from '@zama-fhe/sdk';
-import { FheType } from '@zama-fhe/sdk';
+import { FheTypeName } from '@zama-fhe/sdk';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
 import { finalizeUnwrapContract } from '@zama-fhe/sdk';
 import { FinalizeUnwrapSubmittedEvent } from '@zama-fhe/sdk';
@@ -86,6 +85,7 @@ import { getFeeRecipientContract } from '@zama-fhe/sdk';
 import { getUnwrapFeeContract } from '@zama-fhe/sdk';
 import { getWrapFeeContract } from '@zama-fhe/sdk';
 import { getWrapperContract } from '@zama-fhe/sdk';
+import { Handle } from '@zama-fhe/sdk';
 import { HardhatConfig } from '@zama-fhe/sdk';
 import { Hex } from '@zama-fhe/sdk';
 import { IndexedDBStorage } from '@zama-fhe/sdk';
@@ -97,6 +97,7 @@ import { isConfidentialWrapperContract } from '@zama-fhe/sdk';
 import { isFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
 import { isOperatorContract } from '@zama-fhe/sdk';
 import { KeypairExpiredError } from '@zama-fhe/sdk';
+import { KeypairType } from '@zama-fhe/sdk';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/sdk';
 import { loadPendingUnshield } from '@zama-fhe/sdk';
 import { MainnetConfig } from '@zama-fhe/sdk';
@@ -112,6 +113,10 @@ import { PublicDecryptResult } from '@zama-fhe/sdk';
 import { rateContract } from '@zama-fhe/sdk';
 import { RawLog } from '@zama-fhe/sdk';
 import * as react_jsx_runtime from 'react/jsx-runtime';
+import { ReadContractArgs } from '@zama-fhe/sdk';
+import { ReadContractConfig } from '@zama-fhe/sdk';
+import { ReadContractReturnType } from '@zama-fhe/sdk';
+import { ReadFunctionName } from '@zama-fhe/sdk';
 import { ReadonlyToken } from '@zama-fhe/sdk';
 import { ReadonlyTokenConfig } from '@zama-fhe/sdk';
 import { RelayerRequestFailedError } from '@zama-fhe/sdk';
@@ -168,6 +173,9 @@ import { wrapETHContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
 import { WRAPPER_ABI } from '@zama-fhe/sdk';
 import { wrapperExistsContract } from '@zama-fhe/sdk';
+import { WriteContractArgs } from '@zama-fhe/sdk';
+import { WriteContractConfig } from '@zama-fhe/sdk';
+import { WriteFunctionName } from '@zama-fhe/sdk';
 import * as _zama_fhe_relayer_sdk_web from '@zama-fhe/relayer-sdk/web';
 import * as _zama_fhe_sdk from '@zama-fhe/sdk';
 import { ZamaError } from '@zama-fhe/sdk';
@@ -251,6 +259,8 @@ export { ChromeSessionStorage }
 export { chromeSessionStorage }
 
 export { clearPendingUnshield }
+
+export { ClearValueType }
 
 // @public
 export function confidentialApproveMutationOptions(token: Token): {
@@ -350,7 +360,7 @@ export interface ConfidentialTransferParams {
     to: Address;
 }
 
-export { ContractCallConfig }
+export { ContractAbi }
 
 // @public
 export interface CreateDelegatedUserDecryptEIP712Params {
@@ -403,8 +413,6 @@ export { decodeUnwrapRequested }
 
 export { decodeWrapped }
 
-export { DecryptedValue }
-
 export { DecryptEndEvent }
 
 export { DecryptErrorEvent }
@@ -414,14 +422,14 @@ export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
-    handle: string;
+    handle: Handle;
 }
 
 export { DecryptionFailedError }
 
 // @public
 export const decryptionKeys: {
-    value: (handle: string) => readonly ["decryptedValue", string];
+    value: (handle: Handle) => readonly ["decryptedValue", `0x${string}`];
 };
 
 export { DecryptStartEvent }
@@ -485,9 +493,7 @@ export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddres
     readonly staleTime: 30000;
 };
 
-export { FHEKeypair }
-
-export { FheType }
+export { FheTypeName }
 
 export { FhevmInstanceConfig }
 
@@ -501,7 +507,7 @@ export function finalizeUnwrapMutationOptions(token: Token): {
 
 // @public
 export interface FinalizeUnwrapParams {
-    burnAmountHandle: Address;
+    burnAmountHandle: Handle;
 }
 
 export { FinalizeUnwrapSubmittedEvent }
@@ -523,6 +529,8 @@ export { getUnwrapFeeContract }
 export { getWrapFeeContract }
 
 export { getWrapperContract }
+
+export { Handle }
 
 export { HardhatConfig }
 
@@ -582,6 +590,8 @@ export function isWrapperQueryOptions(token: ReadonlyToken): {
 };
 
 export { KeypairExpiredError }
+
+export { KeypairType }
 
 export { KmsDelegatedUserDecryptEIP712Type }
 
@@ -664,6 +674,14 @@ export type PublicParamsResult = PublicParamsData | null;
 export { rateContract }
 
 export { RawLog }
+
+export { ReadContractArgs }
+
+export { ReadContractConfig }
+
+export { ReadContractReturnType }
+
+export { ReadFunctionName }
 
 export { ReadonlyToken }
 
@@ -1296,7 +1314,7 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
 }
 
 // @public
-export function useConfidentialTransfer(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, `0x${string}`>;
+export function useConfidentialTransfer(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, unknown>;
 
 // @public
 export interface UseConfidentialTransferConfig extends UseZamaConfig {
@@ -1318,7 +1336,7 @@ export function useCreateDelegatedUserDecryptEIP712(): _tanstack_react_query.Use
 export function useCreateEIP712(): _tanstack_react_query.UseMutationResult<EIP712TypedData, Error, CreateEIP712Params, unknown>;
 
 // @public
-export function useDelegatedUserDecrypt(): _tanstack_react_query.UseMutationResult<Record<string, DecryptedValue>, Error, DelegatedUserDecryptParams, unknown>;
+export function useDelegatedUserDecrypt(): _tanstack_react_query.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptParams, unknown>;
 
 // @public
 export function useEncrypt(): _tanstack_react_query.UseMutationResult<EncryptResult, Error, EncryptParams, unknown>;
@@ -1338,7 +1356,7 @@ export function useFeeRecipient(feeManagerAddress: Address, options?: Omit<UseQu
 export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
 
 // @public
-export function useGenerateKeypair(): _tanstack_react_query.UseMutationResult<FHEKeypair, Error, void, unknown>;
+export function useGenerateKeypair(): _tanstack_react_query.UseMutationResult<KeypairType<string>, Error, void, unknown>;
 
 // @public
 export function useIsAllowed(): _tanstack_react_query.UseQueryResult<boolean, Error>;
@@ -1362,7 +1380,7 @@ export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOption
 export function useMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
-export function usePublicDecrypt(): _tanstack_react_query.UseMutationResult<PublicDecryptResult, Error, string[], unknown>;
+export function usePublicDecrypt(): _tanstack_react_query.UseMutationResult<PublicDecryptResult, Error, `0x${string}`[], unknown>;
 
 // @public
 export function usePublicKey(): _tanstack_react_query.UseQueryResult<PublicKeyResult, Error>;
@@ -1372,7 +1390,7 @@ export function usePublicParams(bits: number): _tanstack_react_query.UseQueryRes
 
 // @public
 export interface UserDecryptFlowCallbacks {
-    onDecrypted?: (values: Record<string, DecryptedValue>) => void;
+    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
     onEIP712Created?: () => void;
     onKeypairGenerated?: () => void;
     onSigned?: (signature: Hex) => void;
@@ -1405,7 +1423,7 @@ export function useRevoke(): _tanstack_react_query.UseMutationResult<void, Error
 export function useRevokeSession(): _tanstack_react_query.UseMutationResult<void, Error, void, unknown>;
 
 // @public
-export function useShield(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ShieldParams, `0x${string}`>;
+export function useShield(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ShieldParams, unknown>;
 
 // @public
 export interface UseShieldConfig extends UseZamaConfig {
@@ -1455,19 +1473,19 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(): _tanstack_react_query.UseMutationResult<Record<string, DecryptedValue>, Error, UserDecryptParams, unknown>;
+export function useUserDecrypt(): _tanstack_react_query.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, UserDecryptParams, unknown>;
 
 // @public
-export function useUserDecryptedValue(handle: string | undefined): _tanstack_react_query.UseQueryResult<DecryptedValue, Error>;
+export function useUserDecryptedValue(handle: Handle | undefined): _tanstack_react_query.UseQueryResult<ClearValueType, Error>;
 
 // @public
-export function useUserDecryptedValues(handles: string[]): {
-    data: Record<string, DecryptedValue | undefined>;
+export function useUserDecryptedValues(handles: Handle[]): {
+    data: Partial<Record<`0x${string}`, ClearValueType | undefined>>;
     results: _tanstack_react_query.UseQueryResult<never, Error>[];
 };
 
 // @public
-export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig): _tanstack_react_query.UseMutationResult<Record<string, DecryptedValue>, Error, UserDecryptFlowParams, unknown>;
+export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig): _tanstack_react_query.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, UserDecryptFlowParams, unknown>;
 
 // @public
 export interface UseUserDecryptFlowConfig {
@@ -1524,6 +1542,12 @@ export function wrapperDiscoveryQueryOptions(token: ReadonlyToken, coordinatorAd
 };
 
 export { wrapperExistsContract }
+
+export { WriteContractArgs }
+
+export { WriteContractConfig }
+
+export { WriteFunctionName }
 
 export { ZamaError }
 

@@ -58,9 +58,9 @@ export type {
   EncryptResult,
   UserDecryptParams,
   DelegatedUserDecryptParams,
-  FHEKeypair,
   PublicDecryptResult,
 } from "../relayer/relayer-sdk.types";
+export type { KeypairType } from "@zama-fhe/relayer-sdk/bundle";
 
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../token/async-local-storage";

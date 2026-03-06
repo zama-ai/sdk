@@ -7,6 +7,8 @@ import type {
   WorkerResponse,
 } from "../worker.types";
 
+const HANDLE = ("0x" + "11".repeat(32)) as `0x${string}`;
+
 // ---------------------------------------------------------------------------
 // TestWorkerClient — in-memory implementation for testing the base class
 // ---------------------------------------------------------------------------
@@ -310,7 +312,7 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
 
     const params = {
-      handles: ["h1"],
+      handles: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
       privateKey: "sk",
@@ -321,10 +323,10 @@ describe("BaseWorkerClient", () => {
       durationDays: 7,
     };
 
-    autoResolvePostMessage(client, { clearValues: { h1: 42n } });
+    autoResolvePostMessage(client, { clearValues: { [HANDLE]: 42n } });
 
     const result = await client.userDecrypt(params);
-    expect(result).toEqual({ clearValues: { h1: 42n } });
+    expect(result).toEqual({ clearValues: { [HANDLE]: 42n } });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
     expect(lastCall.type).toBe("USER_DECRYPT");

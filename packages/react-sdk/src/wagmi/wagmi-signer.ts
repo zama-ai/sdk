@@ -1,11 +1,18 @@
 import type {
   Address,
-  ContractCallConfig,
+  ContractAbi,
   EIP712TypedData,
   GenericSigner,
   Hex,
+  ReadContractArgs,
+  ReadContractConfig,
+  ReadContractReturnType,
+  ReadFunctionName,
   SignerLifecycleCallbacks,
   TransactionReceipt,
+  WriteContractArgs,
+  WriteFunctionName,
+  WriteContractConfig,
 } from "@zama-fhe/sdk";
 import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
@@ -58,12 +65,22 @@ export class WagmiSigner implements GenericSigner {
     });
   }
 
-  async writeContract<C extends ContractCallConfig>(config: C): Promise<Hex> {
+  async writeContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
     return writeContract(this.config, config as Parameters<typeof writeContract>[1]);
   }
 
-  async readContract<T, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T> {
-    return readContract(this.config, config) as Promise<T>;
+  async readContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends ReadFunctionName<TAbi>,
+    const TArgs extends ReadContractArgs<TAbi, TFunctionName>,
+  >(
+    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
+  ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>> {
+    return readContract(this.config, config);
   }
 
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {

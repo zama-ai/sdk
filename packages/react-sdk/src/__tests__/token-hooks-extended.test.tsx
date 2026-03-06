@@ -450,17 +450,18 @@ describe("useShieldETH", () => {
 describe("useConfidentialBalance", () => {
   it("resolves the handle via phase 1 polling", async ({
     signer,
+    handle,
     tokenAddress,
     renderWithProviders,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue("0xbalancehandle" as Address);
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
 
     const { result } = renderWithProviders(() => useConfidentialBalance({ tokenAddress }), {
       signer,
     });
 
     await waitFor(() => expect(result.current.handleQuery.isSuccess).toBe(true));
-    expect(result.current.handleQuery.data).toBe("0xbalancehandle");
+    expect(result.current.handleQuery.data).toBe(handle);
   });
 
   it("disables downstream queries when getAddress fails", async ({
@@ -511,10 +512,11 @@ describe("useConfidentialBalance", () => {
 describe("useConfidentialBalances", () => {
   it("resolves handles for multiple tokens", async ({
     signer,
+    handle,
     tokenAddress,
     renderWithProviders,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue("0xhandle" as Address);
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
 
     const tokens = [tokenAddress, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address];
 

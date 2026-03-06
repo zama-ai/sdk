@@ -1,13 +1,13 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Address, DecryptedValue, Hex } from "@zama-fhe/sdk";
+import type { Address, ClearValueType, Handle, Hex } from "@zama-fhe/sdk";
 import { decryptionKeys } from "./decryption-cache";
 import { useZamaSDK } from "../provider";
 
 /** A handle to decrypt, paired with its originating contract address. */
 export interface DecryptHandle {
-  handle: string;
+  handle: Handle;
   contractAddress: Address;
 }
 
@@ -28,7 +28,7 @@ export interface UserDecryptFlowCallbacks {
   /** Fired after the wallet signature is obtained. */
   onSigned?: (signature: Hex) => void;
   /** Fired after decryption completes. */
-  onDecrypted?: (values: Record<string, DecryptedValue>) => void;
+  onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
 }
 
 /** Configuration for {@link useUserDecryptFlow}. */
@@ -63,7 +63,7 @@ export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig) {
   const queryClient = useQueryClient();
   const callbacks = config?.callbacks;
 
-  return useMutation<Record<string, DecryptedValue>, Error, UserDecryptFlowParams>({
+  return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptFlowParams>({
     mutationKey: ["userDecryptFlow"],
     mutationFn: async ({ handles, durationDays = 1 }) => {
       // Step 1: Generate keypair
@@ -87,10 +87,10 @@ export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig) {
 
       // Step 4: Decrypt — group handles by contract address
       const signerAddress = await sdk.signer.getAddress();
-      const allResults: Record<string, DecryptedValue> = {};
+      const allResults: Partial<Record<Handle, ClearValueType>> = {};
 
       // Decrypt per contract address (the relayer requires handles from the same contract)
-      const handlesByContract = new Map<Address, string[]>();
+      const handlesByContract = new Map<Address, Handle[]>();
       for (const h of handles) {
         const list = handlesByContract.get(h.contractAddress) ?? [];
         list.push(h.handle);
@@ -112,12 +112,13 @@ export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig) {
         Object.assign(allResults, result);
       }
 
-      callbacks?.onDecrypted?.(allResults);
-      return allResults;
+      const results = allResults as Record<Handle, ClearValueType>;
+      callbacks?.onDecrypted?.(results);
+      return results;
     },
     onSuccess: (data) => {
       // Populate the shared decryption cache
-      for (const [handle, value] of Object.entries(data)) {
+      for (const [handle, value] of Object.entries(data) as [Handle, ClearValueType][]) {
         queryClient.setQueryData(decryptionKeys.value(handle), value);
       }
     },
