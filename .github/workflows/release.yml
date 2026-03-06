@@ -61,7 +61,29 @@ jobs:
         run: pnpm build
 
       - name: Semantic release
-        run: pnpm release:ci
+        id: release
+        run: |
+          pnpm release:ci 2>&1 | tee /tmp/release-output.txt
+          if grep -q "Published release" /tmp/release-output.txt; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
+
+      - name: Publish to npm
+        if: steps.release.outputs.released == 'true'
+        run: |
+          version=$(node -p "require('./packages/sdk/package.json').version")
+          if [[ "$version" == *-* ]]; then
+            npm_tag="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
+            npm_tag="${npm_tag%%.*}"   # e.g. "alpha"
+          else
+            npm_tag="latest"
+          fi
+          echo "Publishing v${version} with tag '${npm_tag}'"
+          cd packages/sdk
+          npm publish --access public --tag "${npm_tag}"
+          cd ../react-sdk
+          npm publish --access public --tag "${npm_tag}"
+        env:
           NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public
