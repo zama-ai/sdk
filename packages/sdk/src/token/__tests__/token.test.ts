@@ -1167,8 +1167,8 @@ describe("Token", () => {
     }) => {
       vi.mocked(relayer.publicDecrypt).mockResolvedValueOnce({
         clearValues: {},
-        abiEncodedClearValues: "not-a-number",
-        decryptionProof: "0xproof",
+        abiEncodedClearValues: "not-a-number" as never,
+        decryptionProof: "0x12",
       });
 
       await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toMatchObject({

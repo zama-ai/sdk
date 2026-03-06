@@ -74,9 +74,6 @@
   },
   "sideEffects": false,
   "peerDependenciesMeta": {
-    "viem": {
-      "optional": true
-    },
     "ethers": {
       "optional": true
     },

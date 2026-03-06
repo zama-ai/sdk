@@ -1,6 +1,7 @@
+import { toHex } from "viem";
 import { ENCRYPTION_ABI } from "../abi/encryption.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
-import { assertAddress, toHex } from "../utils";
+import type { Address, Handle } from "../relayer/relayer-sdk.types";
+import { assertAddress } from "../utils";
 import { FHE_GAS_LIMIT } from "./gas";
 
 /**
@@ -169,7 +170,7 @@ export function unwrapFromBalanceContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedBalance: Address,
+  encryptedBalance: Handle,
 ) {
   assertAddress(encryptedErc20, "encryptedErc20");
   assertAddress(from, "from");

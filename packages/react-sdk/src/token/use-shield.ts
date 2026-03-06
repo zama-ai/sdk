@@ -70,12 +70,12 @@ export function shieldMutationOptions(token: Token) {
  */
 export function useShield(
   config: UseShieldConfig,
-  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, ShieldParams>,
 ) {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<TransactionResult, Error, ShieldParams, Address>({
+  return useMutation<TransactionResult, Error, ShieldParams>({
     mutationKey: ["shield", config.tokenAddress],
     mutationFn: async ({ amount, fees, approvalStrategy, to, callbacks }) =>
       token.shield(amount, { fees, approvalStrategy, to, callbacks }),
@@ -90,8 +90,7 @@ export function useShield(
               queryClient.setQueryData(key, value + variables.amount);
             }
           }
-          return (options?.onMutate?.(variables, mutationContext) ??
-            config.tokenAddress) as Address;
+          return options?.onMutate?.(variables, mutationContext);
         }
       : options?.onMutate,
     onError: (error, variables, onMutateResult, context) => {

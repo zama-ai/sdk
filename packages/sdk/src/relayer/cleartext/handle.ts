@@ -1,4 +1,5 @@
-import { concat, encodePacked, keccak256, pad, toBytes, toHex } from "viem";
+import { concat, encodePacked, keccak256, pad, toBytes, toHex, type Hex } from "viem";
+import type { Address } from "../relayer-sdk.types";
 import { FHE_BIT_WIDTHS, FheType, HANDLE_VERSION, PREHANDLE_MASK } from "./constants";
 import { EncryptionFailedError } from "../../token/errors";
 
@@ -14,7 +15,7 @@ export function computeMockCiphertext(
   fheType: FheType,
   cleartext: bigint,
   random32: Uint8Array,
-): string {
+): Hex {
   if (random32.length !== 32) {
     throw new EncryptionFailedError("random32 must be exactly 32 bytes");
   }
@@ -28,29 +29,21 @@ export function computeMockCiphertext(
 }
 
 export function computeInputHandle(
-  mockCiphertext: string,
+  mockCiphertext: Hex,
   index: number,
   fheType: FheType,
-  aclAddress: string,
+  aclAddress: Address,
   chainId: bigint,
-): string {
+): Hex {
   if (!Number.isInteger(index) || index < 0 || index > 255) {
     throw new EncryptionFailedError("index must be an integer between 0 and 255");
   }
 
-  const blobHash = keccak256(
-    concat([toHex(RAW_CT_HASH_DOMAIN_SEPARATOR), mockCiphertext as `0x${string}`]),
-  );
+  const blobHash = keccak256(concat([toHex(RAW_CT_HASH_DOMAIN_SEPARATOR), mockCiphertext]));
   const handleHash = keccak256(
     encodePacked(
       ["bytes", "bytes32", "uint8", "address", "uint256"],
-      [
-        toHex(HANDLE_HASH_DOMAIN_SEPARATOR),
-        blobHash as `0x${string}`,
-        index,
-        aclAddress as `0x${string}`,
-        chainId,
-      ],
+      [toHex(HANDLE_HASH_DOMAIN_SEPARATOR), blobHash, index, aclAddress, chainId],
     ),
   );
 

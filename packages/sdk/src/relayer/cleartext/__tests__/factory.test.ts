@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { EIP1193Provider } from "viem";
+import { describe, expect, it } from "vitest";
 import { createCleartextRelayer } from "../factory";
 import { hoodi } from "../presets";
 
@@ -15,10 +15,10 @@ describe("createCleartextRelayer", () => {
 
   it("accepts an Eip1193Provider value in rpcUrl", () => {
     const mockEip1193Provider = {
-      request: async (_request: { method: string; params?: unknown[] }) => null,
+      request: async () => null,
       on: () => {},
       removeListener: () => {},
-    } as unknown as EIP1193Provider;
+    } as const as EIP1193Provider;
 
     const relayer = createCleartextRelayer({
       ...hoodi,

@@ -309,7 +309,7 @@ describe("ReadonlyToken", () => {
       expect(result).toBe("0x" + "ff".padStart(64, "0"));
     });
 
-    it("returns ZERO_HANDLE for unknown types", async ({
+    it("throws for non-handle values returned by signer.readContract", async ({
       relayer,
       signer,
       storage,
@@ -326,8 +326,7 @@ describe("ReadonlyToken", () => {
         handle,
       });
       vi.mocked(signer.readContract).mockResolvedValue(true);
-      const result = await token.confidentialBalanceOf();
-      expect(result).toBe(ZERO_HANDLE);
+      await expect(token.confidentialBalanceOf()).rejects.toThrow("Handle must be a hex string");
     });
   });
 

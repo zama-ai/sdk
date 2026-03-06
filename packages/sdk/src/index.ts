@@ -16,19 +16,22 @@ export type {
   EncryptResult,
   EncryptParams,
   EncryptInput,
-  FheType,
-  DecryptedValue,
+  Handle,
   UserDecryptParams,
   PublicDecryptResult,
-  FHEKeypair,
   EIP712TypedData,
   DelegatedUserDecryptParams,
   NetworkType,
+} from "./relayer/relayer-sdk.types";
+export type {
+  ClearValueType,
+  FheTypeName,
+  KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
   InputProofBytesType,
   FhevmInstanceConfig,
-} from "./relayer/relayer-sdk.types";
+} from "@zama-fhe/relayer-sdk/bundle";
 export type { GenericLogger } from "./worker/worker.types";
 
 // Network preset configs
@@ -73,6 +76,14 @@ export type {
   SignerLifecycleCallbacks,
   StoredCredentials,
   ContractCallConfig,
+  ContractAbi,
+  ReadContractConfig,
+  ReadContractArgs,
+  ReadContractReturnType,
+  ReadFunctionName,
+  WriteContractConfig,
+  WriteContractArgs,
+  WriteFunctionName,
   TransactionReceipt,
   TransactionResult,
   UnshieldCallbacks,

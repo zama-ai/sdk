@@ -1,20 +1,22 @@
 import { ethers, BrowserProvider, type Signer } from "ethers";
+import type {
+  Abi,
+  ContractFunctionArgs,
+  ContractFunctionName,
+  ContractFunctionReturnType,
+} from "viem";
+import { getAddress, isHex } from "viem";
 import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
-  ContractCallConfig,
   GenericSigner,
   Hex,
+  ReadContractConfig,
   SignerLifecycleCallbacks,
   TransactionReceipt,
+  WriteContractConfig,
 } from "../token/token.types";
 import { eip1193Subscribe } from "../token/eip1193-subscribe";
 import { EIP1193Provider } from "./ethers.types";
-
-/** Validate and narrow a string to the `Hex` branded type. */
-function toHex(s: string): Hex {
-  if (!s.startsWith("0x")) throw new TypeError(`Expected hex string, got: ${s}`);
-  return s as Hex;
-}
 
 /**
  * Configuration for {@link EthersSigner}.
@@ -80,34 +82,51 @@ export class EthersSigner implements GenericSigner {
 
   async getAddress(): Promise<Address> {
     const signer = await this.#requireSigner();
-    return toHex(await signer.getAddress()) as Address;
+    return getAddress(await signer.getAddress());
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const signer = await this.#requireSigner();
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
-    const sig = await signer.signTypedData(domain, sigTypes, message);
-    return toHex(sig);
+    const mutableSigTypes = Object.fromEntries(
+      Object.entries(sigTypes).map(([key, fields]) => [key, [...fields]]),
+    );
+    const sig = await signer.signTypedData(domain, mutableSigTypes, message);
+    if (!isHex(sig)) throw new TypeError(`Expected hex string, got: ${sig}`);
+    return sig;
   }
 
-  async writeContract<C extends ContractCallConfig>(config: C): Promise<Hex> {
+  async writeContract<
+    const TAbi extends Abi | readonly unknown[],
+    TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,
+    const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
+  >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
     const signer = await this.#requireSigner();
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
-    const overrides: Record<string, unknown> = {};
+    const overrides: { gasLimit?: bigint; value?: bigint } = {};
     if (config.value !== undefined) overrides.value = config.value;
-    const tx = await contract[config.functionName]!(...config.args, overrides);
-    return toHex(tx.hash);
+    if (config.gas !== undefined) overrides.gasLimit = config.gas;
+    const tx = await contract[config.functionName]!(
+      ...(config.args as readonly unknown[]),
+      overrides,
+    );
+    if (!isHex(tx.hash)) throw new TypeError(`Expected hex string, got: ${tx.hash}`);
+    return tx.hash;
   }
 
-  async readContract<T, C extends ContractCallConfig>(config: C): Promise<T> {
+  async readContract<
+    const TAbi extends Abi | readonly unknown[],
+    TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">,
+    const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>,
+  >(
+    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
+  ): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>> {
     const provider = this.#requireProvider();
-    const contract = new ethers.Contract(
-      config.address,
-      config.abi as ethers.InterfaceAbi,
-      provider,
-    );
-    return contract[config.functionName]!(...config.args) as Promise<T>;
+    const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, provider);
+    return contract[config.functionName]!(...(config.args as readonly unknown[])) as Promise<
+      ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>
+    >;
   }
 
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {

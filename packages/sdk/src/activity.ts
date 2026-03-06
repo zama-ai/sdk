@@ -17,6 +17,7 @@ import {
   type UnwrappedFinalizedEvent,
   type UnwrappedStartedEvent,
 } from "./events/onchain-events";
+import type { Handle } from "./relayer/relayer-sdk.types";
 import { ZERO_HANDLE } from "./token/readonly-token";
 
 // ---------------------------------------------------------------------------
@@ -39,7 +40,7 @@ export type ActivityAmount =
   | { readonly type: "clear"; readonly value: bigint }
   | {
       readonly type: "encrypted";
-      readonly handle: string;
+      readonly handle: Handle;
       /** Populated after batch decryption via {@link applyDecryptedValues}. */
       readonly decryptedValue?: bigint;
     };
@@ -228,8 +229,8 @@ export function parseActivityFeed(
 /**
  * Extract unique non-zero encrypted handles that need decryption.
  */
-export function extractEncryptedHandles(items: readonly ActivityItem[]): string[] {
-  const handles = new Set<string>();
+export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[] {
+  const handles = new Set<Handle>();
   for (const item of items) {
     if (item.amount.type === "encrypted" && item.amount.decryptedValue === undefined) {
       const h = item.amount.handle;
@@ -248,7 +249,7 @@ export function extractEncryptedHandles(items: readonly ActivityItem[]): string[
  */
 export function applyDecryptedValues(
   items: readonly ActivityItem[],
-  decryptedMap: ReadonlyMap<string, bigint>,
+  decryptedMap: ReadonlyMap<Handle, bigint>,
 ): ActivityItem[] {
   return items.map((item) => {
     if (item.amount.type !== "encrypted") return item;

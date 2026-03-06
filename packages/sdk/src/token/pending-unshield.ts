@@ -25,7 +25,7 @@ export async function loadPendingUnshield(
   storage: GenericStorage,
   wrapperAddress: Address,
 ): Promise<Hex | null> {
-  return (await storage.get(storageKey(wrapperAddress))) as Hex | null;
+  return storage.get<Hex>(storageKey(wrapperAddress));
 }
 
 /**

@@ -1,5 +1,5 @@
 import { WRAPPER_ABI } from "../abi/wrapper.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Address, Handle, Hex } from "../relayer/relayer-sdk.types";
 import { assertAddress } from "../utils";
 import { FHE_GAS_LIMIT } from "./gas";
 
@@ -15,9 +15,9 @@ import { FHE_GAS_LIMIT } from "./gas";
  */
 export function finalizeUnwrapContract(
   wrapper: Address,
-  burntAmount: Address,
+  burntAmount: Handle,
   burntAmountCleartext: bigint,
-  decryptionProof: Address,
+  decryptionProof: Hex,
 ) {
   assertAddress(wrapper, "wrapper");
   return {

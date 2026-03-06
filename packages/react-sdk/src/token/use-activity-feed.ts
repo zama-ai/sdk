@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/sdk";
+import type { Address, RawLog, ActivityLogMetadata, ActivityItem, Handle } from "@zama-fhe/sdk";
 import {
   parseActivityFeed,
   extractEncryptedHandles,
@@ -79,7 +79,7 @@ export function useActivityFeed(
       const handles = extractEncryptedHandles(items);
       if (handles.length === 0) return items;
 
-      const decryptedMap = await token.decryptHandles(handles as Address[], userAddress);
+      const decryptedMap = await token.decryptHandles(handles, userAddress);
 
       return applyDecryptedValues(items, decryptedMap);
     },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
+import type { Address, Handle, Token, TransactionResult } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -15,7 +15,7 @@ import { useToken, type UseZamaConfig } from "./use-token";
 /** Parameters passed to the `mutate` function of {@link useFinalizeUnwrap}. */
 export interface FinalizeUnwrapParams {
   /** Encrypted amount handle from the UnwrapRequested event. */
-  burnAmountHandle: Address;
+  burnAmountHandle: Handle;
 }
 
 /**

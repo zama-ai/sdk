@@ -1,11 +1,6 @@
+import type { EIP1193EventMap, EIP1193Provider } from "viem";
 import type { Address } from "../relayer/relayer-sdk.types";
 import type { SignerLifecycleCallbacks } from "./token.types";
-
-/** Minimal EIP-1193 provider shape needed for lifecycle subscriptions. */
-interface EIP1193Subscribable {
-  on(event: string, listener: (...args: never[]) => void): void;
-  removeListener(event: string, listener: (...args: never[]) => void): void;
-}
 
 /**
  * Subscribe to EIP-1193 wallet lifecycle events on a raw provider.
@@ -18,7 +13,7 @@ interface EIP1193Subscribable {
  * @returns An unsubscribe function (no-op when provider is undefined).
  */
 export function eip1193Subscribe(
-  provider: EIP1193Subscribable | undefined,
+  provider: Pick<EIP1193Provider, "on" | "removeListener"> | undefined,
   getAddress: () => Promise<Address>,
   { onDisconnect = () => {}, onAccountChange = () => {} }: SignerLifecycleCallbacks,
 ): () => void {
@@ -31,7 +26,7 @@ export function eip1193Subscribe(
     })
     .catch(() => {});
 
-  const handleAccountsChanged = (accounts: Address[]) => {
+  const handleAccountsChanged: EIP1193EventMap["accountsChanged"] = (accounts) => {
     if (accounts.length === 0) {
       currentAddress = undefined;
       return onDisconnect();
@@ -44,12 +39,13 @@ export function eip1193Subscribe(
     }
     currentAddress = accounts[0];
   };
+  const handleDisconnect: EIP1193EventMap["disconnect"] = () => onDisconnect();
 
   provider.on("accountsChanged", handleAccountsChanged);
-  provider.on("disconnect", onDisconnect);
+  provider.on("disconnect", handleDisconnect);
 
   return () => {
     provider.removeListener("accountsChanged", handleAccountsChanged);
-    provider.removeListener("disconnect", onDisconnect);
+    provider.removeListener("disconnect", handleDisconnect);
   };
 }

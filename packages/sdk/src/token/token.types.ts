@@ -1,6 +1,13 @@
 import type { RawLog } from "../events/onchain-events";
-import type { Address, EIP712TypedData, Hex } from "../relayer/relayer-sdk.types";
+import type { Address, EIP712TypedData, Handle, Hex } from "../relayer/relayer-sdk.types";
+import type {
+  Abi,
+  ContractFunctionArgs,
+  ContractFunctionName,
+  ContractFunctionReturnType,
+} from "viem";
 export type { Address } from "../relayer/relayer-sdk.types";
+export type { Handle } from "../relayer/relayer-sdk.types";
 export type { Hex } from "../relayer/relayer-sdk.types";
 
 /** Framework-agnostic transaction receipt (only the fields the SDK needs). */
@@ -17,24 +24,78 @@ export interface TransactionResult {
   receipt: TransactionReceipt;
 }
 
+export type ContractAbi = Abi | readonly unknown[];
+
+export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<
+  TAbi,
+  "pure" | "view"
+>;
+
+export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<
+  TAbi,
+  "nonpayable" | "payable"
+>;
+
+export type ReadContractArgs<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>,
+> = ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>;
+
+export type WriteContractArgs<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>,
+> = ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>;
+
+export type ReadContractReturnType<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>,
+  TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>,
+> = ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>;
+
 /**
- * Minimal contract call configuration.
- * Matches the shape returned by contract call builder functions in `src/contracts/`.
+ * Typed read-contract configuration.
+ * Matches the shape returned by read contract builders in `src/contracts/`.
  */
-export interface ContractCallConfig {
+export interface ReadContractConfig<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>,
+  TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>,
+> {
   /** Target contract address. */
   readonly address: Address;
   /** ABI fragment for the function being called. */
-  readonly abi: readonly unknown[];
+  readonly abi: TAbi;
   /** Solidity function name. */
-  readonly functionName: string;
-  /** Encoded function arguments. */
-  readonly args: readonly unknown[];
+  readonly functionName: TFunctionName;
+  /** Contract call arguments inferred from the ABI and function name. */
+  readonly args: TArgs;
+}
+
+/**
+ * Typed write-contract configuration.
+ * Matches the shape returned by write contract builders in `src/contracts/`.
+ */
+export interface WriteContractConfig<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>,
+  TArgs extends WriteContractArgs<TAbi, TFunctionName> = WriteContractArgs<TAbi, TFunctionName>,
+> {
+  /** Target contract address. */
+  readonly address: Address;
+  /** ABI fragment for the function being called. */
+  readonly abi: TAbi;
+  /** Solidity function name. */
+  readonly functionName: TFunctionName;
+  /** Contract call arguments inferred from the ABI and function name. */
+  readonly args: TArgs;
   /** Native value to send with the transaction (for payable functions). */
   readonly value?: bigint;
   /** Gas limit override. */
   readonly gas?: bigint;
 }
+
+/** Any contract config accepted by the signer abstraction. */
+export type ContractCallConfig = ReadContractConfig | WriteContractConfig;
 
 /** Callbacks for signer lifecycle events (wallet disconnect, account switch). */
 export interface SignerLifecycleCallbacks {
@@ -57,11 +118,21 @@ export interface GenericSigner {
   /** Sign EIP-712 typed data (used for decrypt authorization). */
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
   /** Send a write transaction and return the tx hash. */
-  writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
+  writeContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(
+    config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
+  ): Promise<Hex>;
   /** Execute a read-only call and return the decoded result. */
-  readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(
-    config: C,
-  ): Promise<T>;
+  readContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends ReadFunctionName<TAbi>,
+    const TArgs extends ReadContractArgs<TAbi, TFunctionName>,
+  >(
+    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
+  ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
   /** Wait for a transaction to be mined and return its receipt. */
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   /**
