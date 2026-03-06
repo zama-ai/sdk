@@ -49,4 +49,10 @@ export {
 
 export { confidentialBatchTransferContract, type BatchTransferData } from "./transfer-batcher";
 
+export {
+  delegateForUserDecryptionContract,
+  revokeDelegationContract,
+  getDelegationExpiryContract,
+} from "./acl";
+
 export { FHE_GAS_LIMIT } from "./gas";

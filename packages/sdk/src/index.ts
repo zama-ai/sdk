@@ -136,6 +136,10 @@ export {
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  DelegationSelfNotAllowedError,
+  DelegationCooldownError,
+  DelegationNotFoundError,
+  DelegationExpiredError,
   matchZamaError,
 } from "./token/errors";
 

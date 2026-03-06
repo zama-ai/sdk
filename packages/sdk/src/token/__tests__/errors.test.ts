@@ -105,3 +105,72 @@ describe("matchZamaError", () => {
     expect(result).toBe("caught: random");
   });
 });
+
+// --- Delegation errors ---
+
+import {
+  DelegationSelfNotAllowedError,
+  DelegationCooldownError,
+  DelegationNotFoundError,
+  DelegationExpiredError,
+} from "../errors";
+
+describe("DelegationSelfNotAllowedError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationSelfNotAllowedError("self");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationSelfNotAllowedError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationSelfNotAllowedError("self");
+    expect(err.code).toBe(ZamaErrorCode.DelegationSelfNotAllowed);
+    expect(err.name).toBe("DelegationSelfNotAllowedError");
+    expect(err.message).toBe("self");
+  });
+});
+
+describe("DelegationCooldownError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationCooldownError("cooldown");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationCooldownError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationCooldownError("cooldown");
+    expect(err.code).toBe(ZamaErrorCode.DelegationCooldown);
+    expect(err.name).toBe("DelegationCooldownError");
+    expect(err.message).toBe("cooldown");
+  });
+});
+
+describe("DelegationNotFoundError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationNotFoundError("not found");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationNotFoundError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationNotFoundError("not found");
+    expect(err.code).toBe(ZamaErrorCode.DelegationNotFound);
+    expect(err.name).toBe("DelegationNotFoundError");
+    expect(err.message).toBe("not found");
+  });
+});
+
+describe("DelegationExpiredError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationExpiredError("expired");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationExpiredError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationExpiredError("expired");
+    expect(err.code).toBe(ZamaErrorCode.DelegationExpired);
+    expect(err.name).toBe("DelegationExpiredError");
+    expect(err.message).toBe("expired");
+  });
+});

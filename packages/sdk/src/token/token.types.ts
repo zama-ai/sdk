@@ -214,4 +214,8 @@ export {
   InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  DelegationSelfNotAllowedError,
+  DelegationCooldownError,
+  DelegationNotFoundError,
+  DelegationExpiredError,
 } from "./errors";

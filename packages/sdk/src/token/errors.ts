@@ -36,6 +36,14 @@ export const ZamaErrorCode = {
   RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
   /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
   Configuration: "CONFIGURATION",
+  /** Delegation cannot target self (delegate === msg.sender). */
+  DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED",
+  /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
+  DelegationCooldown: "DELEGATION_COOLDOWN",
+  /** No active delegation found for this (delegator, delegate, contract) tuple. */
+  DelegationNotFound: "DELEGATION_NOT_FOUND",
+  /** The delegation has expired. */
+  DelegationExpired: "DELEGATION_EXPIRED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -146,6 +154,38 @@ export class ConfigurationError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
     super(ZamaErrorCode.Configuration, message, options);
     this.name = "ConfigurationError";
+  }
+}
+
+/** Delegation cannot target self (delegate === msg.sender). */
+export class DelegationSelfNotAllowedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationSelfNotAllowed, message, options);
+    this.name = "DelegationSelfNotAllowedError";
+  }
+}
+
+/** Only one delegate/revoke per (delegator, delegate, contract) per block. */
+export class DelegationCooldownError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationCooldown, message, options);
+    this.name = "DelegationCooldownError";
+  }
+}
+
+/** No active delegation found for this (delegator, delegate, contract) tuple. */
+export class DelegationNotFoundError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationNotFound, message, options);
+    this.name = "DelegationNotFoundError";
+  }
+}
+
+/** The delegation has expired. */
+export class DelegationExpiredError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationExpired, message, options);
+    this.name = "DelegationExpiredError";
   }
 }
 
