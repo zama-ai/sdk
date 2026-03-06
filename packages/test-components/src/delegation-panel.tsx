@@ -1,7 +1,11 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
-import { useToken, useReadonlyToken, useMetadata, type Address } from "@zama-fhe/react-sdk";
+import {
+  useDelegateDecryption,
+  useDecryptBalanceAs,
+  useMetadata,
+  type Address,
+} from "@zama-fhe/react-sdk";
 
 export function DelegationPanel({
   tokenAddress,
@@ -13,20 +17,8 @@ export function DelegationPanel({
   defaultDelegator?: Address;
 }) {
   const { data: metadata } = useMetadata(tokenAddress);
-  const token = useToken({ tokenAddress });
-  const readonlyToken = useReadonlyToken(tokenAddress);
-
-  const delegate = useMutation({
-    mutationFn: async (delegateAddress: Address) => {
-      return token.delegateDecryption(delegateAddress);
-    },
-  });
-
-  const decryptAs = useMutation({
-    mutationFn: async (delegator: Address) => {
-      return readonlyToken.decryptBalanceAs(delegator);
-    },
-  });
+  const delegate = useDelegateDecryption({ tokenAddress });
+  const decryptAs = useDecryptBalanceAs(tokenAddress);
 
   return (
     <div className="space-y-8">
@@ -35,7 +27,7 @@ export function DelegationPanel({
       {/* Section 1: Delegate */}
       <form
         action={(formData) => {
-          delegate.mutate(formData.get("delegate") as Address);
+          delegate.mutate({ delegate: formData.get("delegate") as Address });
         }}
         className="space-y-4"
       >
@@ -73,7 +65,7 @@ export function DelegationPanel({
       {/* Section 2: Decrypt as Delegate */}
       <form
         action={(formData) => {
-          decryptAs.mutate(formData.get("delegator") as Address);
+          decryptAs.mutate({ delegator: formData.get("delegator") as Address });
         }}
         className="space-y-4"
       >

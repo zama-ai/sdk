@@ -228,6 +228,8 @@ export {
 } from "./token/use-wrapper-discovery";
 export { useMetadata, useMetadataSuspense, type TokenMetadata } from "./token/use-metadata";
 export { useActivityFeed, type UseActivityFeedConfig } from "./token/use-activity-feed";
+export { useDelegateDecryption } from "./token/use-delegate-decryption";
+export { useDecryptBalanceAs } from "./token/use-decrypt-balance-as";
 export { useApproveUnderlying } from "./token/use-approve-underlying";
 export {
   useIsConfidential,
@@ -297,6 +299,10 @@ export {
   isAllowedQueryOptions,
   revokeMutationOptions,
   revokeSessionMutationOptions,
+  delegateDecryptionMutationOptions,
+  type DelegateDecryptionParams,
+  decryptBalanceAsMutationOptions,
+  type DecryptBalanceAsParams,
 } from "@zama-fhe/sdk/query";
 export type {
   OptimisticBalanceSnapshot,

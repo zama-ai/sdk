@@ -1,0 +1,25 @@
+import type { ReadonlyToken } from "../token/readonly-token";
+import type { Address } from "../token/token.types";
+import type { MutationFactoryOptions } from "./factory-types";
+
+/** Variables for {@link decryptBalanceAsMutationOptions}. */
+export interface DecryptBalanceAsParams {
+  delegator: Address;
+  options?: {
+    owner: Address;
+  };
+}
+
+export function decryptBalanceAsMutationOptions(
+  readonlyToken: ReadonlyToken,
+): MutationFactoryOptions<
+  readonly ["zama.decryptBalanceAs", Address],
+  DecryptBalanceAsParams,
+  bigint
+> {
+  return {
+    mutationKey: ["zama.decryptBalanceAs", readonlyToken.address] as const,
+    mutationFn: async ({ delegator, options }) =>
+      readonlyToken.decryptBalanceAs(delegator, options),
+  };
+}

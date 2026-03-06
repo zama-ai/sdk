@@ -98,6 +98,11 @@ export { allowMutationOptions } from "./allow";
 export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokeMutationOptions } from "./revoke";
 export { revokeSessionMutationOptions } from "./revoke-session";
+export {
+  delegateDecryptionMutationOptions,
+  type DelegateDecryptionParams,
+} from "./delegate-decryption";
+export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
 export type { ActivityItem, ActivityLogMetadata } from "../activity";
 export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";
