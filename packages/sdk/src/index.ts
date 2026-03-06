@@ -75,7 +75,6 @@ export type {
   GenericStorage,
   SignerLifecycleCallbacks,
   StoredCredentials,
-  ContractCallConfig,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,

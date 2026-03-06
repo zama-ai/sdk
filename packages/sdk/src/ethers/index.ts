@@ -34,7 +34,6 @@ export {
 export type {
   GenericSigner,
   SignerLifecycleCallbacks,
-  ContractCallConfig,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,

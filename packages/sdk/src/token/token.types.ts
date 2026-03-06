@@ -94,9 +94,6 @@ export interface WriteContractConfig<
   readonly gas?: bigint;
 }
 
-/** Any contract config accepted by the signer abstraction. */
-export type ContractCallConfig = ReadContractConfig | WriteContractConfig;
-
 /** Callbacks for signer lifecycle events (wallet disconnect, account switch). */
 export interface SignerLifecycleCallbacks {
   /** Called when the wallet disconnects. */

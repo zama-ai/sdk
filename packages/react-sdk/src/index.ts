@@ -374,7 +374,6 @@ export type {
   Hex,
   GenericSigner,
   GenericStorage,
-  ContractCallConfig,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,
