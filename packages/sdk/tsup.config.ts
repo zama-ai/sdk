@@ -20,6 +20,10 @@ export default defineConfig([
     treeshake: true,
     sourcemap: true,
     tsconfig: "tsconfig.build.json",
+    esbuildOptions(options) {
+      options.minifySyntax = true;
+      options.minifyWhitespace = true;
+    },
   },
   {
     entry: {
@@ -35,5 +39,9 @@ export default defineConfig([
     treeshake: true,
     sourcemap: true,
     tsconfig: "tsconfig.build.json",
+    esbuildOptions(options) {
+      options.minifySyntax = true;
+      options.minifyWhitespace = true;
+    },
   },
 ]);
