@@ -716,7 +716,7 @@ try {
 | `DecryptionFailedError`     | `DECRYPTION_FAILED`      | FHE decryption operation failed.                                          |
 | `ApprovalFailedError`       | `APPROVAL_FAILED`        | ERC-20 approval transaction failed.                                       |
 | `TransactionRevertedError`  | `TRANSACTION_REVERTED`   | On-chain transaction reverted.                                            |
-| `InvalidCredentialsError`   | `INVALID_CREDENTIALS`    | Relayer rejected credentials (stale or expired).                          |
+| `InvalidKeypairError`       | `INVALID_KEYPAIR`        | Relayer rejected FHE keypair (stale or expired).                          |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No FHE ciphertext exists for this account (e.g. never shielded).          |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP error. Carries a `statusCode` property with the HTTP status. |
 
