@@ -6,31 +6,48 @@
 
 import { ActivityAmount } from '@zama-fhe/sdk';
 import { ActivityDirection } from '@zama-fhe/sdk';
+import { activityFeedQueryOptions } from '@zama-fhe/sdk/query';
 import { ActivityItem } from '@zama-fhe/sdk';
 import { ActivityLogMetadata } from '@zama-fhe/sdk';
 import { ActivityType } from '@zama-fhe/sdk';
 import { Address } from '@zama-fhe/sdk';
 import { allowanceContract } from '@zama-fhe/sdk';
+import { allowMutationOptions } from '@zama-fhe/sdk/query';
 import { applyDecryptedValues } from '@zama-fhe/sdk';
 import { ApprovalFailedError } from '@zama-fhe/sdk';
 import { approveContract } from '@zama-fhe/sdk';
 import { ApproveSubmittedEvent } from '@zama-fhe/sdk';
+import { approveUnderlyingMutationOptions } from '@zama-fhe/sdk/query';
+import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
 import { ApproveUnderlyingSubmittedEvent } from '@zama-fhe/sdk';
 import { balanceOfContract } from '@zama-fhe/sdk';
 import { BaseEvent } from '@zama-fhe/sdk';
 import { BATCH_SWAP_ABI } from '@zama-fhe/sdk';
 import { BatchDecryptOptions } from '@zama-fhe/sdk';
 import { BatchTransferData } from '@zama-fhe/sdk';
+import { batchTransferFeeQueryOptions } from '@zama-fhe/sdk/query';
 import { ChromeSessionStorage } from '@zama-fhe/sdk';
 import { chromeSessionStorage } from '@zama-fhe/sdk';
 import { clearPendingUnshield } from '@zama-fhe/sdk';
 import { ClearValueType } from '@zama-fhe/sdk';
+import { confidentialApproveMutationOptions } from '@zama-fhe/sdk/query';
+import { ConfidentialApproveParams } from '@zama-fhe/sdk/query';
 import { confidentialBalanceOfContract } from '@zama-fhe/sdk';
+import { confidentialBalanceQueryOptions } from '@zama-fhe/sdk/query';
+import { ConfidentialBalancesData } from '@zama-fhe/sdk/query';
+import { confidentialBalancesQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialBatchTransferContract } from '@zama-fhe/sdk';
+import { confidentialHandleQueryOptions } from '@zama-fhe/sdk/query';
+import { confidentialHandlesQueryOptions } from '@zama-fhe/sdk/query';
+import { confidentialIsApprovedQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialTotalSupplyContract } from '@zama-fhe/sdk';
 import { confidentialTransferContract } from '@zama-fhe/sdk';
 import { ConfidentialTransferEvent } from '@zama-fhe/sdk';
 import { confidentialTransferFromContract } from '@zama-fhe/sdk';
+import { confidentialTransferFromMutationOptions } from '@zama-fhe/sdk/query';
+import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
+import { confidentialTransferMutationOptions } from '@zama-fhe/sdk/query';
+import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { ContractAbi } from '@zama-fhe/sdk';
 import { CredentialsAllowedEvent } from '@zama-fhe/sdk';
 import { CredentialsCachedEvent } from '@zama-fhe/sdk';
@@ -62,6 +79,7 @@ import { EncryptErrorEvent } from '@zama-fhe/sdk';
 import { EncryptInput } from '@zama-fhe/sdk';
 import { ENCRYPTION_ABI } from '@zama-fhe/sdk';
 import { EncryptionFailedError } from '@zama-fhe/sdk';
+import { encryptMutationOptions } from '@zama-fhe/sdk/query';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { EncryptStartEvent } from '@zama-fhe/sdk';
@@ -72,9 +90,13 @@ import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
 import { extractEncryptedHandles } from '@zama-fhe/sdk';
 import { FEE_MANAGER_ABI } from '@zama-fhe/sdk';
+import { feeRecipientQueryOptions } from '@zama-fhe/sdk/query';
 import { FheTypeName } from '@zama-fhe/sdk';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
+import { filterQueryOptions } from '@zama-fhe/sdk/query';
 import { finalizeUnwrapContract } from '@zama-fhe/sdk';
+import { finalizeUnwrapMutationOptions } from '@zama-fhe/sdk/query';
+import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { FinalizeUnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { findUnwrapRequested } from '@zama-fhe/sdk';
 import { findWrapped } from '@zama-fhe/sdk';
@@ -87,15 +109,19 @@ import { getWrapFeeContract } from '@zama-fhe/sdk';
 import { getWrapperContract } from '@zama-fhe/sdk';
 import { Handle } from '@zama-fhe/sdk';
 import { HardhatConfig } from '@zama-fhe/sdk';
+import { hashFn } from '@zama-fhe/sdk/query';
 import { Hex } from '@zama-fhe/sdk';
 import { IndexedDBStorage } from '@zama-fhe/sdk';
 import { indexedDBStorage } from '@zama-fhe/sdk';
 import { InputProofBytesType } from '@zama-fhe/sdk';
 import { InvalidKeypairError } from '@zama-fhe/sdk';
+import { isAllowedQueryOptions } from '@zama-fhe/sdk/query';
+import { isConfidentialQueryOptions } from '@zama-fhe/sdk/query';
 import { isConfidentialTokenContract } from '@zama-fhe/sdk';
 import { isConfidentialWrapperContract } from '@zama-fhe/sdk';
 import { isFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
 import { isOperatorContract } from '@zama-fhe/sdk';
+import { isWrapperQueryOptions } from '@zama-fhe/sdk/query';
 import { KeypairExpiredError } from '@zama-fhe/sdk';
 import { KeypairType } from '@zama-fhe/sdk';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/sdk';
@@ -110,6 +136,9 @@ import { OnChainEvent } from '@zama-fhe/sdk';
 import { parseActivityFeed } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { PublicDecryptResult } from '@zama-fhe/sdk';
+import { publicKeyQueryOptions } from '@zama-fhe/sdk/query';
+import { publicParamsQueryOptions } from '@zama-fhe/sdk/query';
+import { QueryKey } from '@tanstack/react-query';
 import { rateContract } from '@zama-fhe/sdk';
 import { RawLog } from '@zama-fhe/sdk';
 import * as react_jsx_runtime from 'react/jsx-runtime';
@@ -125,25 +154,39 @@ import { RelayerSDKStatus } from '@zama-fhe/sdk';
 import { RelayerWeb } from '@zama-fhe/sdk';
 import { RelayerWebConfig } from '@zama-fhe/sdk';
 import { RelayerWebSecurityConfig } from '@zama-fhe/sdk';
+import { resumeUnshieldMutationOptions } from '@zama-fhe/sdk/query';
+import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
+import { revokeMutationOptions } from '@zama-fhe/sdk/query';
+import { revokeSessionMutationOptions } from '@zama-fhe/sdk/query';
 import { savePendingUnshield } from '@zama-fhe/sdk';
 import { SepoliaConfig } from '@zama-fhe/sdk';
 import { SessionExpiredEvent } from '@zama-fhe/sdk';
 import { setFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
 import { setOperatorContract } from '@zama-fhe/sdk';
 import { ShieldCallbacks } from '@zama-fhe/sdk';
+import { shieldETHMutationOptions } from '@zama-fhe/sdk/query';
+import { ShieldETHParams } from '@zama-fhe/sdk/query';
+import { shieldFeeQueryOptions } from '@zama-fhe/sdk/query';
+import { shieldMutationOptions } from '@zama-fhe/sdk/query';
+import { ShieldParams } from '@zama-fhe/sdk/query';
 import { ShieldSubmittedEvent } from '@zama-fhe/sdk';
+import { signerAddressQueryOptions } from '@zama-fhe/sdk/query';
 import { SigningFailedError } from '@zama-fhe/sdk';
 import { SigningRejectedError } from '@zama-fhe/sdk';
 import { sortByBlockNumber } from '@zama-fhe/sdk';
 import { StoredCredentials } from '@zama-fhe/sdk';
 import { supportsInterfaceContract } from '@zama-fhe/sdk';
 import { symbolContract } from '@zama-fhe/sdk';
+import * as _tanstack_query_core from '@tanstack/query-core';
 import * as _tanstack_react_query from '@tanstack/react-query';
 import { Token } from '@zama-fhe/sdk';
 import { TOKEN_TOPICS } from '@zama-fhe/sdk';
 import { TokenConfig } from '@zama-fhe/sdk';
+import { TokenMetadata } from '@zama-fhe/sdk/query';
+import { tokenMetadataQueryOptions } from '@zama-fhe/sdk/query';
 import { Topics } from '@zama-fhe/sdk';
 import { totalSupplyContract } from '@zama-fhe/sdk';
+import { totalSupplyQueryOptions } from '@zama-fhe/sdk/query';
 import { TransactionErrorEvent } from '@zama-fhe/sdk';
 import { TransactionReceipt } from '@zama-fhe/sdk';
 import { TransactionResult } from '@zama-fhe/sdk';
@@ -152,26 +195,34 @@ import { TRANSFER_BATCHER_ABI } from '@zama-fhe/sdk';
 import { TransferCallbacks } from '@zama-fhe/sdk';
 import { TransferFromSubmittedEvent } from '@zama-fhe/sdk';
 import { TransferSubmittedEvent } from '@zama-fhe/sdk';
+import { underlyingAllowanceQueryOptions } from '@zama-fhe/sdk/query';
 import { underlyingContract } from '@zama-fhe/sdk';
+import { unshieldAllMutationOptions } from '@zama-fhe/sdk/query';
+import { UnshieldAllParams } from '@zama-fhe/sdk/query';
 import { UnshieldCallbacks } from '@zama-fhe/sdk';
+import { unshieldFeeQueryOptions } from '@zama-fhe/sdk/query';
+import { unshieldMutationOptions } from '@zama-fhe/sdk/query';
+import { UnshieldParams } from '@zama-fhe/sdk/query';
 import { UnshieldPhase1SubmittedEvent } from '@zama-fhe/sdk';
 import { UnshieldPhase2StartedEvent } from '@zama-fhe/sdk';
 import { UnshieldPhase2SubmittedEvent } from '@zama-fhe/sdk';
+import { unwrapAllMutationOptions } from '@zama-fhe/sdk/query';
 import { unwrapContract } from '@zama-fhe/sdk';
 import { unwrapFromBalanceContract } from '@zama-fhe/sdk';
+import { unwrapMutationOptions } from '@zama-fhe/sdk/query';
+import { UnwrapParams } from '@zama-fhe/sdk/query';
 import { UnwrappedFinalizedEvent } from '@zama-fhe/sdk';
 import { UnwrappedStartedEvent } from '@zama-fhe/sdk';
 import { UnwrapRequestedEvent } from '@zama-fhe/sdk';
 import { UnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
-import { UseQueryResult } from '@tanstack/react-query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
-import { UseSuspenseQueryResult } from '@tanstack/react-query';
 import { wrapContract } from '@zama-fhe/sdk';
 import { wrapETHContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
 import { WRAPPER_ABI } from '@zama-fhe/sdk';
+import { wrapperDiscoveryQueryOptions } from '@zama-fhe/sdk/query';
 import { wrapperExistsContract } from '@zama-fhe/sdk';
 import { WriteContractArgs } from '@zama-fhe/sdk';
 import { WriteContractConfig } from '@zama-fhe/sdk';
@@ -180,6 +231,7 @@ import * as _zama_fhe_relayer_sdk_web from '@zama-fhe/relayer-sdk/web';
 import * as _zama_fhe_sdk from '@zama-fhe/sdk';
 import { ZamaError } from '@zama-fhe/sdk';
 import { ZamaErrorCode } from '@zama-fhe/sdk';
+import { zamaQueryKeys } from '@zama-fhe/sdk/query';
 import { ZamaSDK } from '@zama-fhe/sdk';
 import { ZamaSDKConfig } from '@zama-fhe/sdk';
 import { ZamaSDKEvent } from '@zama-fhe/sdk';
@@ -194,11 +246,7 @@ export { ActivityAmount }
 
 export { ActivityDirection }
 
-// @public
-export const activityFeedQueryKeys: {
-    readonly all: readonly ["activityFeed"];
-    readonly token: (tokenAddress: string) => readonly ["activityFeed", string];
-};
+export { activityFeedQueryOptions }
 
 export { ActivityItem }
 
@@ -210,11 +258,7 @@ export { Address }
 
 export { allowanceContract }
 
-// @public
-export function allowMutationOptions(sdk: ZamaSDK): {
-    mutationKey: readonly ["allow"];
-    mutationFn: (tokenAddresses: Address[]) => Promise<void>;
-};
+export { allowMutationOptions }
 
 export { applyDecryptedValues }
 
@@ -224,16 +268,9 @@ export { approveContract }
 
 export { ApproveSubmittedEvent }
 
-// @public
-export function approveUnderlyingMutationOptions(token: Token): {
-    mutationKey: readonly ["approveUnderlying", `0x${string}`];
-    mutationFn: (input: ApproveUnderlyingParams) => Promise<TransactionResult>;
-};
+export { approveUnderlyingMutationOptions }
 
-// @public
-export interface ApproveUnderlyingParams {
-    amount?: bigint;
-}
+export { ApproveUnderlyingParams }
 
 export { ApproveUnderlyingSubmittedEvent }
 
@@ -247,12 +284,7 @@ export { BatchDecryptOptions }
 
 export { BatchTransferData }
 
-// @public
-export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress: Address): {
-    readonly queryKey: readonly ["batchTransferFee", string];
-    readonly queryFn: () => Promise<bigint>;
-    readonly staleTime: 30000;
-};
+export { batchTransferFeeQueryOptions }
 
 export { ChromeSessionStorage }
 
@@ -262,68 +294,25 @@ export { clearPendingUnshield }
 
 export { ClearValueType }
 
-// @public
-export function confidentialApproveMutationOptions(token: Token): {
-    mutationKey: readonly ["confidentialApprove", `0x${string}`];
-    mutationFn: (input: ConfidentialApproveParams) => Promise<TransactionResult>;
-};
+export { confidentialApproveMutationOptions }
 
-// @public
-export interface ConfidentialApproveParams {
-    spender: Address;
-    until?: number;
-}
+export { ConfidentialApproveParams }
 
 export { confidentialBalanceOfContract }
 
-// @public
-export const confidentialBalanceQueryKeys: {
-    readonly all: readonly ["confidentialBalance"];
-    readonly token: (tokenAddress: string) => readonly ["confidentialBalance", string];
-    readonly owner: (tokenAddress: string, owner: string) => readonly ["confidentialBalance", string, string];
-};
+export { confidentialBalanceQueryOptions }
 
-// @public
-export interface ConfidentialBalancesData {
-    balances: Map<Address, bigint>;
-    errors: Map<Address, Error>;
-    isPartialError: boolean;
-}
+export { ConfidentialBalancesData }
 
-// @public
-export const confidentialBalancesQueryKeys: {
-    readonly all: readonly ["confidentialBalances"];
-    readonly tokens: (tokenAddresses: string[], owner: string) => readonly ["confidentialBalances", string[], string];
-};
+export { confidentialBalancesQueryOptions }
 
 export { confidentialBatchTransferContract }
 
-// @public
-export const confidentialHandleQueryKeys: {
-    readonly all: readonly ["confidentialHandle"];
-    readonly token: (tokenAddress: string) => readonly ["confidentialHandle", string];
-    readonly owner: (tokenAddress: string, owner: string) => readonly ["confidentialHandle", string, string];
-};
+export { confidentialHandleQueryOptions }
 
-// @public
-export const confidentialHandlesQueryKeys: {
-    readonly all: readonly ["confidentialHandles"];
-    readonly tokens: (tokenAddresses: string[], owner: string) => readonly ["confidentialHandles", string[], string];
-};
+export { confidentialHandlesQueryOptions }
 
-// @public
-export const confidentialIsApprovedQueryKeys: {
-    readonly all: readonly ["confidentialIsApproved"];
-    readonly token: (tokenAddress: string) => readonly ["confidentialIsApproved", string];
-    readonly spender: (tokenAddress: string, spender: string, holder?: string) => readonly ["confidentialIsApproved", string, string, string];
-};
-
-// @public
-export function confidentialIsApprovedQueryOptions(token: Token, spender: Address, holder?: Address): {
-    readonly queryKey: readonly ["confidentialIsApproved", string, string, string];
-    readonly queryFn: () => Promise<boolean>;
-    readonly staleTime: 30000;
-};
+export { confidentialIsApprovedQueryOptions }
 
 export { confidentialTotalSupplyContract }
 
@@ -333,32 +322,13 @@ export { ConfidentialTransferEvent }
 
 export { confidentialTransferFromContract }
 
-// @public
-export function confidentialTransferFromMutationOptions(token: Token): {
-    mutationKey: readonly ["confidentialTransferFrom", `0x${string}`];
-    mutationFn: (input: ConfidentialTransferFromParams) => Promise<TransactionResult>;
-};
+export { confidentialTransferFromMutationOptions }
 
-// @public
-export interface ConfidentialTransferFromParams {
-    amount: bigint;
-    callbacks?: TransferCallbacks;
-    from: Address;
-    to: Address;
-}
+export { ConfidentialTransferFromParams }
 
-// @public
-export function confidentialTransferMutationOptions(token: Token): {
-    mutationKey: readonly ["confidentialTransfer", `0x${string}`];
-    mutationFn: (input: ConfidentialTransferParams) => Promise<TransactionResult>;
-};
+export { confidentialTransferMutationOptions }
 
-// @public
-export interface ConfidentialTransferParams {
-    amount: bigint;
-    callbacks?: TransferCallbacks;
-    to: Address;
-}
+export { ConfidentialTransferParams }
 
 export { ContractAbi }
 
@@ -429,7 +399,10 @@ export { DecryptionFailedError }
 
 // @public
 export const decryptionKeys: {
-    value: (handle: Handle) => readonly ["decryptedValue", `0x${string}`];
+    value: (handle: string, contractAddress?: string) => readonly ["zama.decryption", {
+        readonly contractAddress?: `0x${string}` | undefined;
+        readonly handle: string;
+    }];
 };
 
 export { DecryptStartEvent }
@@ -452,11 +425,7 @@ export { ENCRYPTION_ABI }
 
 export { EncryptionFailedError }
 
-// @public
-export function encryptMutationOptions(sdk: ZamaSDK): {
-    mutationKey: readonly ["encrypt"];
-    mutationFn: (params: EncryptParams) => Promise<EncryptResult>;
-};
+export { encryptMutationOptions }
 
 export { EncryptParams }
 
@@ -478,37 +447,19 @@ export { extractEncryptedHandles }
 
 export { FEE_MANAGER_ABI }
 
-// @public
-export const feeQueryKeys: {
-    readonly shieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) => readonly ["shieldFee", string, ...(string | undefined)[]];
-    readonly unshieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) => readonly ["unshieldFee", string, ...(string | undefined)[]];
-    readonly batchTransferFee: (feeManagerAddress: string) => readonly ["batchTransferFee", string];
-    readonly feeRecipient: (feeManagerAddress: string) => readonly ["feeRecipient", string];
-};
-
-// @public
-export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddress: Address): {
-    readonly queryKey: readonly ["feeRecipient", string];
-    readonly queryFn: () => Promise<`0x${string}`>;
-    readonly staleTime: 30000;
-};
+export { feeRecipientQueryOptions }
 
 export { FheTypeName }
 
 export { FhevmInstanceConfig }
 
+export { filterQueryOptions }
+
 export { finalizeUnwrapContract }
 
-// @public
-export function finalizeUnwrapMutationOptions(token: Token): {
-    mutationKey: readonly ["finalizeUnwrap", `0x${string}`];
-    mutationFn: (input: FinalizeUnwrapParams) => Promise<TransactionResult>;
-};
+export { finalizeUnwrapMutationOptions }
 
-// @public
-export interface FinalizeUnwrapParams {
-    burnAmountHandle: Handle;
-}
+export { FinalizeUnwrapParams }
 
 export { FinalizeUnwrapSubmittedEvent }
 
@@ -534,6 +485,8 @@ export { Handle }
 
 export { HardhatConfig }
 
+export { hashFn }
+
 export { Hex }
 
 export { IndexedDBStorage }
@@ -544,29 +497,9 @@ export { InputProofBytesType }
 
 export { InvalidKeypairError }
 
-// @public (undocumented)
-export const isAllowedQueryKeys: {
-    all: readonly ["zama", "isAllowed"];
-};
+export { isAllowedQueryOptions }
 
-// @public (undocumented)
-export function isAllowedQueryOptions(sdk: ZamaSDK): {
-    queryKey: readonly ["zama", "isAllowed"];
-    queryFn: () => Promise<boolean>;
-};
-
-// @public
-export const isConfidentialQueryKeys: {
-    readonly all: readonly ["isConfidential"];
-    readonly token: (tokenAddress: string) => readonly ["isConfidential", string];
-};
-
-// @public
-export function isConfidentialQueryOptions(token: ReadonlyToken): {
-    readonly queryKey: readonly ["isConfidential", string];
-    readonly queryFn: () => Promise<boolean>;
-    readonly staleTime: number;
-};
+export { isConfidentialQueryOptions }
 
 export { isConfidentialTokenContract }
 
@@ -576,18 +509,7 @@ export { isFinalizeUnwrapOperatorContract }
 
 export { isOperatorContract }
 
-// @public
-export const isWrapperQueryKeys: {
-    readonly all: readonly ["isWrapper"];
-    readonly token: (tokenAddress: string) => readonly ["isWrapper", string];
-};
-
-// @public
-export function isWrapperQueryOptions(token: ReadonlyToken): {
-    readonly queryKey: readonly ["isWrapper", string];
-    readonly queryFn: () => Promise<boolean>;
-    readonly staleTime: number;
-};
+export { isWrapperQueryOptions }
 
 export { KeypairExpiredError }
 
@@ -603,19 +525,6 @@ export { matchZamaError }
 
 export { MemoryStorage }
 
-// @public
-export const metadataQueryKeys: {
-    readonly all: readonly ["tokenMetadata"];
-    readonly token: (tokenAddress: string) => readonly ["tokenMetadata", string];
-};
-
-// @public
-export function metadataQueryOptions(token: ReadonlyToken): {
-    readonly queryKey: readonly ["tokenMetadata", string];
-    readonly queryFn: () => Promise<TokenMetadata>;
-    readonly staleTime: number;
-};
-
 export { nameContract }
 
 export { NetworkType }
@@ -623,6 +532,17 @@ export { NetworkType }
 export { NoCiphertextError }
 
 export { OnChainEvent }
+
+// @public (undocumented)
+export type OptimisticBalanceSnapshot = Array<[QueryKey, bigint | undefined]>;
+
+// @public
+export interface OptimisticMutateContext {
+    // (undocumented)
+    callerContext?: unknown;
+    // (undocumented)
+    snapshot: OptimisticBalanceSnapshot;
+}
 
 export { parseActivityFeed }
 
@@ -634,20 +554,7 @@ export interface PublicKeyData {
     publicKeyId: string;
 }
 
-// @public
-export const publicKeyQueryKeys: {
-    readonly all: readonly ["publicKey"];
-};
-
-// @public
-export function publicKeyQueryOptions(sdk: ZamaSDK): {
-    readonly queryKey: readonly ["publicKey"];
-    readonly queryFn: () => Promise<PublicKeyResult>;
-    readonly staleTime: number;
-};
-
-// @public (undocumented)
-export type PublicKeyResult = PublicKeyData | null;
+export { publicKeyQueryOptions }
 
 // @public
 export interface PublicParamsData {
@@ -655,21 +562,7 @@ export interface PublicParamsData {
     publicParamsId: string;
 }
 
-// @public
-export const publicParamsQueryKeys: {
-    readonly all: readonly ["publicParams"];
-    readonly bits: (bits: number) => readonly ["publicParams", number];
-};
-
-// @public
-export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number): {
-    readonly queryKey: readonly ["publicParams", number];
-    readonly queryFn: () => Promise<PublicParamsResult>;
-    readonly staleTime: number;
-};
-
-// @public (undocumented)
-export type PublicParamsResult = PublicParamsData | null;
+export { publicParamsQueryOptions }
 
 export { rateContract }
 
@@ -699,29 +592,13 @@ export { RelayerWebConfig }
 
 export { RelayerWebSecurityConfig }
 
-// @public
-export function resumeUnshieldMutationOptions(token: Token): {
-    mutationKey: readonly ["resumeUnshield", `0x${string}`];
-    mutationFn: (input: ResumeUnshieldParams) => Promise<TransactionResult>;
-};
+export { resumeUnshieldMutationOptions }
 
-// @public
-export interface ResumeUnshieldParams {
-    callbacks?: UnshieldCallbacks;
-    unwrapTxHash: Hex;
-}
+export { ResumeUnshieldParams }
 
-// @public
-export function revokeMutationOptions(sdk: ZamaSDK): {
-    mutationKey: readonly ["revoke"];
-    mutationFn: (tokenAddresses: Address[]) => Promise<void>;
-};
+export { revokeMutationOptions }
 
-// @public
-export function revokeSessionMutationOptions(sdk: ZamaSDK): {
-    mutationKey: readonly ["revokeSession"];
-    mutationFn: () => Promise<void>;
-};
+export { revokeSessionMutationOptions }
 
 export { savePendingUnshield }
 
@@ -735,41 +612,19 @@ export { setOperatorContract }
 
 export { ShieldCallbacks }
 
-// @public
-export function shieldETHMutationOptions(token: Token): {
-    mutationKey: readonly ["shieldETH", `0x${string}`];
-    mutationFn: (input: ShieldETHParams) => Promise<TransactionResult>;
-};
+export { shieldETHMutationOptions }
 
-// @public
-export interface ShieldETHParams {
-    amount: bigint;
-    value?: bigint;
-}
+export { ShieldETHParams }
 
-// @public
-export function shieldFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig): {
-    readonly queryKey: readonly ["shieldFee", string, ...(string | undefined)[]];
-    readonly queryFn: () => Promise<bigint>;
-    readonly staleTime: 30000;
-};
+export { shieldFeeQueryOptions }
 
-// @public
-export function shieldMutationOptions(token: Token): {
-    mutationKey: readonly ["shield", `0x${string}`];
-    mutationFn: (input: ShieldParams) => Promise<TransactionResult>;
-};
+export { shieldMutationOptions }
 
-// @public
-export interface ShieldParams {
-    amount: bigint;
-    approvalStrategy?: "max" | "exact" | "skip";
-    callbacks?: ShieldCallbacks;
-    fees?: bigint;
-    to?: Address;
-}
+export { ShieldParams }
 
 export { ShieldSubmittedEvent }
+
+export { signerAddressQueryOptions }
 
 export { SigningFailedError }
 
@@ -789,29 +644,15 @@ export { TOKEN_TOPICS }
 
 export { TokenConfig }
 
-// @public
-export interface TokenMetadata {
-    decimals: number;
-    name: string;
-    symbol: string;
-}
+export { TokenMetadata }
+
+export { tokenMetadataQueryOptions }
 
 export { Topics }
 
 export { totalSupplyContract }
 
-// @public
-export const totalSupplyQueryKeys: {
-    readonly all: readonly ["totalSupply"];
-    readonly token: (tokenAddress: string) => readonly ["totalSupply", string];
-};
-
-// @public
-export function totalSupplyQueryOptions(token: ReadonlyToken): {
-    readonly queryKey: readonly ["totalSupply", string];
-    readonly queryFn: () => Promise<bigint>;
-    readonly staleTime: 30000;
-};
+export { totalSupplyQueryOptions }
 
 export { TransactionErrorEvent }
 
@@ -829,52 +670,21 @@ export { TransferFromSubmittedEvent }
 
 export { TransferSubmittedEvent }
 
-// @public
-export const underlyingAllowanceQueryKeys: {
-    readonly all: readonly ["underlyingAllowance"];
-    readonly token: (tokenAddress: string, wrapper: string) => readonly ["underlyingAllowance", string, string];
-};
-
-// @public
-export function underlyingAllowanceQueryOptions(token: ReadonlyToken, wrapperAddress: Address): {
-    readonly queryKey: readonly ["underlyingAllowance", string, string];
-    readonly queryFn: () => Promise<bigint>;
-    readonly staleTime: 30000;
-};
+export { underlyingAllowanceQueryOptions }
 
 export { underlyingContract }
 
-// @public (undocumented)
-export function unshieldAllMutationOptions(token: Token): {
-    mutationKey: readonly ["unshieldAll", `0x${string}`];
-    mutationFn: (params?: UnshieldAllParams) => Promise<TransactionResult>;
-};
+export { unshieldAllMutationOptions }
 
-// @public
-export interface UnshieldAllParams {
-    callbacks?: UnshieldCallbacks;
-}
+export { UnshieldAllParams }
 
 export { UnshieldCallbacks }
 
-// @public
-export function unshieldFeeQueryOptions(signer: GenericSigner, config: UseFeeConfig): {
-    readonly queryKey: readonly ["unshieldFee", string, ...(string | undefined)[]];
-    readonly queryFn: () => Promise<bigint>;
-    readonly staleTime: 30000;
-};
+export { unshieldFeeQueryOptions }
 
-// @public
-export function unshieldMutationOptions(token: Token): {
-    mutationKey: readonly ["unshield", `0x${string}`];
-    mutationFn: (input: UnshieldParams) => Promise<TransactionResult>;
-};
+export { unshieldMutationOptions }
 
-// @public
-export interface UnshieldParams {
-    amount: bigint;
-    callbacks?: UnshieldCallbacks;
-}
+export { UnshieldParams }
 
 export { UnshieldPhase1SubmittedEvent }
 
@@ -882,26 +692,15 @@ export { UnshieldPhase2StartedEvent }
 
 export { UnshieldPhase2SubmittedEvent }
 
-// @public
-export function unwrapAllMutationOptions(token: Token): {
-    mutationKey: readonly ["unwrapAll", `0x${string}`];
-    mutationFn: () => Promise<TransactionResult>;
-};
+export { unwrapAllMutationOptions }
 
 export { unwrapContract }
 
 export { unwrapFromBalanceContract }
 
-// @public
-export function unwrapMutationOptions(token: Token): {
-    mutationKey: readonly ["unwrap", `0x${string}`];
-    mutationFn: (input: UnwrapParams) => Promise<TransactionResult>;
-};
+export { unwrapMutationOptions }
 
-// @public
-export interface UnwrapParams {
-    amount: bigint;
-}
+export { UnwrapParams }
 
 export { UnwrappedFinalizedEvent }
 
@@ -912,7 +711,7 @@ export { UnwrapRequestedEvent }
 export { UnwrapSubmittedEvent }
 
 // @public
-export function useActivityFeed(config: UseActivityFeedConfig): UseQueryResult<ActivityItem[], Error>;
+export function useActivityFeed(config: UseActivityFeedConfig): _tanstack_react_query.UseQueryResult<ActivityItem[], Error>;
 
 // @public
 export interface UseActivityFeedConfig {
@@ -923,13 +722,13 @@ export interface UseActivityFeedConfig {
 }
 
 // @public
-export function useAllow(): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
 
 // @public
-export function useBatchTransferFee(feeManagerAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
+export function useBatchTransferFee(feeManagerAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<bigint, Error>;
 
 // @public
 export function useConfidentialApprove(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialApproveParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ConfidentialApproveParams, `0x${string}`>;
@@ -960,8 +759,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -988,8 +787,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -1016,8 +815,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -1044,8 +843,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -1072,8 +871,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 } | {
     handleQuery: _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
@@ -1100,8 +899,8 @@ export function useConfidentialBalance(config: UseConfidentialBalanceConfig, opt
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<bigint, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<bigint, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<bigint>;
 };
 
@@ -1140,8 +939,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -1168,8 +967,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -1196,8 +995,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -1224,8 +1023,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -1252,8 +1051,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 } | {
     handlesQuery: _tanstack_react_query.UseQueryResult<`0x${string}`[], Error>;
@@ -1280,8 +1079,8 @@ export function useConfidentialBalances(config: UseConfidentialBalancesConfig, o
     isRefetching: boolean;
     isStale: boolean;
     isEnabled: boolean;
-    refetch: (options?: _tanstack_react_query.RefetchOptions) => Promise<_tanstack_react_query.QueryObserverResult<ConfidentialBalancesData, Error>>;
-    fetchStatus: _tanstack_react_query.FetchStatus;
+    refetch: (options?: _tanstack_query_core.RefetchOptions) => Promise<_tanstack_query_core.QueryObserverResult<ConfidentialBalancesData, Error>>;
+    fetchStatus: _tanstack_query_core.FetchStatus;
     promise: Promise<ConfidentialBalancesData>;
 };
 
@@ -1296,7 +1095,7 @@ export interface UseConfidentialBalancesConfig {
 export type UseConfidentialBalancesOptions = Omit<UseQueryOptions<ConfidentialBalancesData, Error>, "queryKey" | "queryFn">;
 
 // @public
-export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<boolean, Error>;
+export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<unknown, Error>;
 
 // @public
 export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
@@ -1314,7 +1113,7 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
 }
 
 // @public
-export function useConfidentialTransfer(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, unknown>;
+export function useConfidentialTransfer(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, OptimisticMutateContext>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, OptimisticMutateContext>;
 
 // @public
 export interface UseConfidentialTransferConfig extends UseZamaConfig {
@@ -1350,7 +1149,7 @@ export interface UseFeeConfig {
 }
 
 // @public
-export function useFeeRecipient(feeManagerAddress: Address, options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">): UseQueryResult<Address, Error>;
+export function useFeeRecipient(feeManagerAddress: Address, options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<`0x${string}`, Error>;
 
 // @public
 export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
@@ -1359,34 +1158,40 @@ export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOp
 export function useGenerateKeypair(): _tanstack_react_query.UseMutationResult<KeypairType<string>, Error, void, unknown>;
 
 // @public
-export function useIsAllowed(): _tanstack_react_query.UseQueryResult<boolean, Error>;
+export function useIsAllowed(): _tanstack_react_query.UseQueryResult<unknown, Error>;
 
 // @public
-export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
+export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<boolean, Error>;
 
 // @public
-export function useIsConfidentialSuspense(tokenAddress: Address): UseSuspenseQueryResult<boolean, Error>;
+export function useIsConfidentialSuspense(tokenAddress: Address): _tanstack_react_query.UseSuspenseQueryResult<boolean, Error>;
 
 // @public
-export function useIsWrapper(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
+export function useIsWrapper(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<boolean, Error>;
 
 // @public
-export function useIsWrapperSuspense(tokenAddress: Address): UseSuspenseQueryResult<boolean, Error>;
+export function useIsWrapperSuspense(tokenAddress: Address): _tanstack_react_query.UseSuspenseQueryResult<boolean, Error>;
 
 // @public
-export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">): UseQueryResult<TokenMetadata, Error>;
+export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<TokenMetadata, Error>;
 
 // @public
-export function useMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
+export function useMetadataSuspense(tokenAddress: Address): _tanstack_react_query.UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
 export function usePublicDecrypt(): _tanstack_react_query.UseMutationResult<PublicDecryptResult, Error, `0x${string}`[], unknown>;
 
 // @public
-export function usePublicKey(): _tanstack_react_query.UseQueryResult<PublicKeyResult, Error>;
+export function usePublicKey(): _tanstack_react_query.UseQueryResult<{
+    publicKeyId: string;
+    publicKey: Uint8Array;
+} | null, Error>;
 
 // @public
-export function usePublicParams(bits: number): _tanstack_react_query.UseQueryResult<PublicParamsResult, Error>;
+export function usePublicParams(bits: number): _tanstack_react_query.UseQueryResult<{
+    publicParams: Uint8Array;
+    publicParamsId: string;
+} | null, Error>;
 
 // @public
 export interface UserDecryptFlowCallbacks {
@@ -1417,13 +1222,13 @@ export function useRequestZKProofVerification(): _tanstack_react_query.UseMutati
 export function useResumeUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
 
 // @public
-export function useRevoke(): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useRevokeSession(): _tanstack_react_query.UseMutationResult<void, Error, void, unknown>;
+export function useRevokeSession(options?: UseMutationOptions<void, Error, void>): _tanstack_react_query.UseMutationResult<void, Error, void, unknown>;
 
 // @public
-export function useShield(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ShieldParams, unknown>;
+export function useShield(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, OptimisticMutateContext>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ShieldParams, OptimisticMutateContext>;
 
 // @public
 export interface UseShieldConfig extends UseZamaConfig {
@@ -1434,16 +1239,16 @@ export interface UseShieldConfig extends UseZamaConfig {
 export function useShieldETH(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, ShieldETHParams, `0x${string}`>;
 
 // @public
-export function useShieldFee(config: UseFeeConfig, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
+export function useShieldFee(config: UseFeeConfig, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<bigint, Error>;
 
 // @public
 export function useToken(config: UseZamaConfig): _zama_fhe_sdk.Token;
 
 // @public
-export function useTotalSupply(tokenAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
+export function useTotalSupply(tokenAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<bigint, Error>;
 
 // @public
-export function useTotalSupplySuspense(tokenAddress: Address): UseSuspenseQueryResult<bigint, Error>;
+export function useTotalSupplySuspense(tokenAddress: Address): _tanstack_react_query.UseSuspenseQueryResult<bigint, Error>;
 
 // @public
 export function useUnderlyingAllowance(config: UseUnderlyingAllowanceConfig, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<bigint, Error>;
@@ -1464,7 +1269,7 @@ export function useUnshield(config: UseZamaConfig, options?: UseMutationOptions<
 export function useUnshieldAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, void | UnshieldAllParams, `0x${string}`>;
 
 // @public
-export function useUnshieldFee(config: UseFeeConfig, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
+export function useUnshieldFee(config: UseFeeConfig, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<bigint, Error>;
 
 // @public
 export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>): _tanstack_react_query.UseMutationResult<TransactionResult, Error, UnwrapParams, `0x${string}`>;
@@ -1493,7 +1298,7 @@ export interface UseUserDecryptFlowConfig {
 }
 
 // @public
-export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?: Omit<UseQueryOptions<Address | null, Error>, "queryKey" | "queryFn">): UseQueryResult<Address | null, Error>;
+export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?: Omit<UseQueryOptions<Address | null, Error>, "queryKey" | "queryFn">): _tanstack_react_query.UseQueryResult<`0x${string}` | null, Error>;
 
 // @public
 export interface UseWrapperDiscoveryConfig {
@@ -1502,7 +1307,7 @@ export interface UseWrapperDiscoveryConfig {
 }
 
 // @public
-export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseConfig): UseSuspenseQueryResult<Address | null, Error>;
+export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseConfig): _tanstack_react_query.UseSuspenseQueryResult<`0x${string}` | null, Error>;
 
 // @public
 export interface UseWrapperDiscoverySuspenseConfig {
@@ -1527,19 +1332,7 @@ export { WrappedEvent }
 
 export { WRAPPER_ABI }
 
-// @public
-export const wrapperDiscoveryQueryKeys: {
-    readonly all: readonly ["wrapperDiscovery"];
-    readonly token: (tokenAddress: string) => readonly ["wrapperDiscovery", string];
-    readonly tokenCoordinator: (tokenAddress: string, coordinatorAddress: string) => readonly ["wrapperDiscovery", string, string];
-};
-
-// @public
-export function wrapperDiscoveryQueryOptions(token: ReadonlyToken, coordinatorAddress: Address): {
-    readonly queryKey: readonly ["wrapperDiscovery", string, string];
-    readonly queryFn: () => Promise<`0x${string}` | null>;
-    readonly staleTime: number;
-};
+export { wrapperDiscoveryQueryOptions }
 
 export { wrapperExistsContract }
 
@@ -1566,6 +1359,8 @@ export interface ZamaProviderProps extends PropsWithChildren {
     signer: GenericSigner;
     storage: GenericStorage;
 }
+
+export { zamaQueryKeys }
 
 export { ZamaSDK }
 

@@ -114,6 +114,7 @@ export function readWrapperForTokenContract(client: PublicClient, coordinator: A
 // @public
 export interface SignerLifecycleCallbacks {
     onAccountChange?: (newAddress: Address) => void;
+    onChainChange?: (newChainId: number) => void;
     onDisconnect?: () => void;
 }
 

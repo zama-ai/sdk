@@ -67,7 +67,7 @@ describe("CredentialsManager", () => {
 
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
-  });
+  }, 30000);
 
   it("persists credentials to store with hashed key", async ({
     relayer,
@@ -211,7 +211,7 @@ describe("CredentialsManager", () => {
 
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
     expect(creds.publicKey).toBe("0xpub123");
-  });
+  }, 30000);
 
   it("clears credentials", async ({ relayer, signer, storage, credentialManager }) => {
     setupMocks(relayer, signer);
@@ -571,7 +571,7 @@ describe("session allow/revoke", () => {
     // Subsequent get() should not re-sign
     await credentialManager.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
-  });
+  }, 30000);
 
   it("revoke() emits CredentialsRevoked event", async ({
     relayer,

@@ -1,27 +1,9 @@
 "use client";
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
-import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-} from "./balance-query-keys";
+import type { Address, TransactionResult } from "@zama-fhe/sdk";
+import { invalidateAfterUnwrap, unwrapAllMutationOptions } from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
-
-/**
- * TanStack Query mutation options factory for unwrap-all.
- *
- * @param token - A `Token` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function unwrapAllMutationOptions(token: Token) {
-  return {
-    mutationKey: ["unwrapAll", token.address] as const,
-    mutationFn: () => token.unwrapAll(),
-  };
-}
 
 /**
  * Request an unwrap for the entire confidential balance.
@@ -44,23 +26,11 @@ export function useUnwrapAll(
   const token = useToken(config);
 
   return useMutation<TransactionResult, Error, void, Address>({
-    mutationKey: ["unwrapAll", config.tokenAddress],
-    mutationFn: () => token.unwrapAll(),
+    ...unwrapAllMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      context.client.invalidateQueries({
-        queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialHandlesQueryKeys.all,
-      });
-      context.client.resetQueries({
-        queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialBalancesQueryKeys.all,
-      });
       options?.onSuccess?.(data, variables, onMutateResult, context);
+      invalidateAfterUnwrap(context.client, config.tokenAddress);
     },
   });
 }

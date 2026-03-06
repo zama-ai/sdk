@@ -5,6 +5,7 @@ export default defineConfig([
     entry: {
       index: "src/index.ts",
       "cleartext/index": "src/relayer/cleartext/index.ts",
+      "query/index": "src/query/index.ts",
       "viem/index": "src/viem/index.ts",
       "ethers/index": "src/ethers/index.ts",
       "node/index": "src/node/index.ts",
@@ -15,10 +16,14 @@ export default defineConfig([
     splitting: true,
     clean: true,
     outDir: "dist",
-    external: ["viem", "ethers", "@zama-fhe/relayer-sdk"],
+    external: ["viem", "ethers", "@zama-fhe/relayer-sdk", "@tanstack/query-core"],
     treeshake: true,
     sourcemap: true,
     tsconfig: "tsconfig.build.json",
+    esbuildOptions(options) {
+      options.minifySyntax = true;
+      options.minifyWhitespace = true;
+    },
   },
   {
     entry: {
@@ -34,5 +39,9 @@ export default defineConfig([
     treeshake: true,
     sourcemap: true,
     tsconfig: "tsconfig.build.json",
+    esbuildOptions(options) {
+      options.minifySyntax = true;
+      options.minifyWhitespace = true;
+    },
   },
 ]);
