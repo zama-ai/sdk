@@ -42,8 +42,6 @@ module.exports = {
       "@semantic-release/exec",
       {
         prepareCmd: "node scripts/release/prepare-lockstep.mjs ${nextRelease.version}",
-        publishCmd:
-          "bash scripts/release/publish-lockstep.sh ${nextRelease.version} ${nextRelease.channel}",
       },
     ],
     [
