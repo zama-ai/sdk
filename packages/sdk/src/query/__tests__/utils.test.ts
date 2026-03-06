@@ -142,9 +142,17 @@ describe("normalizeHandle", () => {
   });
 
   test("throws for non-bigint non-hex inputs", () => {
-    expect(() => normalizeHandle(null)).toThrow("Handle must be a hex string or bigint");
-    expect(() => normalizeHandle(undefined)).toThrow("Handle must be a hex string or bigint");
-    expect(() => normalizeHandle(42)).toThrow("Handle must be a hex string or bigint");
-    expect(() => normalizeHandle("not-hex")).toThrow("Handle must be a hex string or bigint");
+    expect(() => normalizeHandle(null as unknown as string | bigint)).toThrow(
+      "Handle must be a hex string or bigint",
+    );
+    expect(() => normalizeHandle(undefined as unknown as string | bigint)).toThrow(
+      "Handle must be a hex string or bigint",
+    );
+    expect(() => normalizeHandle(42 as unknown as string | bigint)).toThrow(
+      "Handle must be a hex string or bigint",
+    );
+    expect(() => normalizeHandle("not-hex" as unknown as string | bigint)).toThrow(
+      "Handle must be a hex string or bigint",
+    );
   });
 });

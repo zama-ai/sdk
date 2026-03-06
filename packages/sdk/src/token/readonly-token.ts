@@ -13,7 +13,7 @@ import {
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address, Handle } from "../relayer/relayer-sdk.types";
-import { normalizeAddress, normalizeHandle, pLimit } from "../utils";
+import { normalizeHandle, pLimit, validateAddress } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credentials-manager";
@@ -82,7 +82,7 @@ export class ReadonlyToken {
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
-    const address = normalizeAddress(config.address, "address");
+    const address = validateAddress(config.address, "address");
     this.credentials =
       config.credentials ??
       new CredentialsManager({
@@ -126,7 +126,7 @@ export class ReadonlyToken {
    * ```
    */
   async balanceOf(owner?: Address): Promise<bigint> {
-    const ownerAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
+    const ownerAddress = owner ? validateAddress(owner, "owner") : await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
 
     if (this.isZeroHandle(handle)) return BigInt(0);
@@ -189,7 +189,7 @@ export class ReadonlyToken {
    * ```
    */
   async confidentialBalanceOf(owner?: Address): Promise<Handle> {
-    const ownerAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
+    const ownerAddress = owner ? validateAddress(owner, "owner") : await this.signer.getAddress();
     return this.readConfidentialBalanceOf(ownerAddress);
   }
 
@@ -372,7 +372,7 @@ export class ReadonlyToken {
    * ```
    */
   async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
-    const coordinator = normalizeAddress(coordinatorAddress, "coordinatorAddress");
+    const coordinator = validateAddress(coordinatorAddress, "coordinatorAddress");
     const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
     if (!exists) return null;
     return this.signer.readContract(getWrapperContract(coordinator, this.address));
@@ -405,9 +405,9 @@ export class ReadonlyToken {
    * ```
    */
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
-    const normalizedWrapper = normalizeAddress(wrapper, "wrapper");
+    const normalizedWrapper = validateAddress(wrapper, "wrapper");
     const underlying = await this.signer.readContract(underlyingContract(normalizedWrapper));
-    const userAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
+    const userAddress = owner ? validateAddress(owner, "owner") : await this.signer.getAddress();
     return this.signer.readContract(allowanceContract(underlying, userAddress, normalizedWrapper));
   }
 

@@ -164,6 +164,8 @@ export interface ConfidentialBalancesQueryConfig {
     owner?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
+    // (undocumented)
+    resultAddresses?: Address[];
 }
 
 // @public (undocumented)
@@ -198,7 +200,7 @@ export function confidentialHandlesQueryOptions(signer: GenericSigner, tokenAddr
 // @public (undocumented)
 export interface ConfidentialIsApprovedQueryConfig {
     // (undocumented)
-    owner?: Address;
+    holder: Address;
     // (undocumented)
     query?: Record<string, unknown>;
     // (undocumented)
@@ -393,7 +395,7 @@ export interface EIP712TypedData {
 }
 
 // @public (undocumented)
-export type EncryptedBalanceHandle = Hex_2 | string;
+export type EncryptedBalanceHandle = Handle | bigint;
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -543,16 +545,13 @@ export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): 
 // @public (undocumented)
 export interface IsAllowedQueryConfig {
     // (undocumented)
+    account: Address;
+    // (undocumented)
     query?: Record<string, unknown>;
 }
 
 // @public (undocumented)
-export const isAllowedQueryKeys: {
-    readonly all: readonly ["zama.isAllowed"];
-};
-
-// @public (undocumented)
-export function isAllowedQueryOptions(sdk: ZamaSDK, config?: IsAllowedQueryConfig): QueryFactoryOptions<typeof zamaQueryKeys.isAllowed.all, boolean>;
+export function isAllowedQueryOptions(sdk: ZamaSDK, config: IsAllowedQueryConfig): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isAllowed.scope>, boolean>;
 
 // @public (undocumented)
 export interface IsConfidentialQueryConfig {
@@ -574,8 +573,8 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
     mutationKey: TMutationKey;
 }
 
-// @public (undocumented)
-export function normalizeHandle(value: unknown): Hex_2;
+// @public
+export function normalizeHandle(handle: string | bigint): Handle;
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
@@ -1131,8 +1130,8 @@ export const zamaQueryKeys: {
         readonly token: (tokenAddress: string) => readonly ["zama.confidentialBalance", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly owner: (tokenAddress: string, owner: string, handle?: string) => readonly ["zama.confidentialBalance", {
-            readonly handle?: string | undefined;
+        readonly owner: (tokenAddress: string, owner: string, handle?: Handle) => readonly ["zama.confidentialBalance", {
+            readonly handle?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
             readonly owner: string;
         }];
@@ -1146,8 +1145,8 @@ export const zamaQueryKeys: {
     };
     readonly confidentialBalances: {
         readonly all: readonly ["zama.confidentialBalances"];
-        readonly tokens: (tokenAddresses: string[], owner: string, handles?: string[]) => readonly ["zama.confidentialBalances", {
-            readonly handles?: string[] | undefined;
+        readonly tokens: (tokenAddresses: string[], owner: string, handles?: Handle[]) => readonly ["zama.confidentialBalances", {
+            readonly handles?: `0x${string}`[] | undefined;
             readonly tokenAddresses: string[];
             readonly owner: string;
         }];
@@ -1193,9 +1192,9 @@ export const zamaQueryKeys: {
         readonly token: (tokenAddress: string) => readonly ["zama.confidentialIsApproved", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly scope: (tokenAddress: string, owner: string, spender: string) => readonly ["zama.confidentialIsApproved", {
+        readonly scope: (tokenAddress: string, holder: string, spender: string) => readonly ["zama.confidentialIsApproved", {
             readonly tokenAddress: `0x${string}`;
-            readonly owner: string;
+            readonly holder: string;
             readonly spender: string;
         }];
     };
@@ -1244,6 +1243,9 @@ export const zamaQueryKeys: {
     };
     readonly isAllowed: {
         readonly all: readonly ["zama.isAllowed"];
+        readonly scope: (account: string) => readonly ["zama.isAllowed", {
+            readonly account: string;
+        }];
     };
     readonly publicKey: {
         readonly all: readonly ["zama.publicKey"];

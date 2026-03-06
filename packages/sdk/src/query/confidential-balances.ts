@@ -46,15 +46,11 @@ export function confidentialBalancesQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handles: keyHandles }] = context.queryKey;
-      const normalizedHandles = Array.isArray(keyHandles)
-        ? keyHandles.map((handle) => normalizeHandle(handle))
-        : undefined;
-
       const perTokenErrors = new Map<Address, Error>();
 
       const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
         owner: keyOwner as Address,
-        handles: normalizedHandles,
+        handles: keyHandles,
         maxConcurrency: config?.maxConcurrency,
         onError: (error, address) => {
           perTokenErrors.set(address, error);

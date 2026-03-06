@@ -1,4 +1,4 @@
-import { hexToBigInt, isHex, toHex, type Hex } from "viem";
+export { normalizeHandle } from "../utils";
 
 // Adapted from the wagmi codebase
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-wrapper-object-types
@@ -134,14 +134,4 @@ export function hashFn(queryKey: readonly unknown[]): string {
 
     return value;
   });
-}
-
-export function normalizeHandle(value: unknown): Hex {
-  if (typeof value === "bigint") {
-    return toHex(value, { size: 32 }) as Hex;
-  }
-  if (typeof value === "string" && isHex(value)) {
-    return toHex(hexToBigInt(value), { size: 32 }) as Hex;
-  }
-  throw new TypeError(`Handle must be a hex string or bigint, got: ${String(value)}`);
 }

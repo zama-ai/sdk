@@ -74,17 +74,20 @@ export function useConfidentialBalances(
   );
 
   // Phase 1: Poll all encrypted handles (cheap RPC reads)
-  const handlesQuery = useQuery({
-    ...confidentialHandlesQueryOptions(sdk.signer, tokenAddresses, {
-      owner,
-      pollingInterval: handleRefetchInterval,
-    }),
-    ...((userEnabled ?? true) ? {} : { enabled: false }),
-    queryKeyHashFn: hashFn,
+  const baseHandlesQueryOptions = confidentialHandlesQueryOptions(sdk.signer, tokenAddresses, {
+    owner,
+    pollingInterval: handleRefetchInterval,
   });
+  const handlesFactoryEnabled = baseHandlesQueryOptions.enabled ?? true;
+  const handlesQuery = useQuery({
+    ...baseHandlesQueryOptions,
+    enabled: handlesFactoryEnabled && (userEnabled ?? true),
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<Hex[], Error>);
 
   // Phase 2: Batch decrypt only when any handle changes
   const handles = handlesQuery.data as Hex[] | undefined;
+  const handlesReady = Array.isArray(handles) && handles.length === tokenAddresses.length;
   const baseBalancesQueryOptions = confidentialBalancesQueryOptions(tokens, {
     owner,
     handles,
@@ -92,7 +95,6 @@ export function useConfidentialBalances(
     resultAddresses: tokenAddresses,
   });
   const factoryEnabled = baseBalancesQueryOptions.enabled ?? true;
-  const handlesReady = Array.isArray(handles) && handles.length === tokenAddresses.length;
 
   const balancesQuery = useQuery({
     ...baseBalancesQueryOptions,

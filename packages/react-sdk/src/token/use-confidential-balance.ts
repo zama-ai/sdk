@@ -56,18 +56,21 @@ export function useConfidentialBalance(
   const owner = addressQuery.data as Address | undefined;
 
   // Phase 1: Poll the encrypted handle (cheap RPC read, no signing)
-  const handleQuery = useQuery({
-    ...confidentialHandleQueryOptions(token.signer, tokenAddress, {
-      owner,
-      pollingInterval: handleRefetchInterval,
-    }),
-    ...((userEnabled ?? true) ? {} : { enabled: false }),
-    queryKeyHashFn: hashFn,
+  const baseHandleQueryOptions = confidentialHandleQueryOptions(token.signer, tokenAddress, {
+    owner,
+    pollingInterval: handleRefetchInterval,
   });
+  const handleFactoryEnabled = baseHandleQueryOptions.enabled ?? true;
+  const handleQuery = useQuery({
+    ...baseHandleQueryOptions,
+    enabled: handleFactoryEnabled && (userEnabled ?? true),
+    queryKeyHashFn: hashFn,
+  } as unknown as UseQueryOptions<Hex, Error>);
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
+  const handle = handleQuery.data as Hex | undefined;
   const baseBalanceQueryOptions = confidentialBalanceQueryOptions(token, {
-    handle: handleQuery.data as Hex | undefined,
+    handle,
     owner,
   });
   const factoryEnabled = baseBalanceQueryOptions.enabled ?? true;

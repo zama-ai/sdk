@@ -18,7 +18,7 @@ export function confidentialBalanceQueryOptions(
   config?: ConfidentialBalanceQueryConfig,
 ): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>, bigint> {
   const ownerKey = config?.owner ?? "";
-  const handleKey = config?.handle === undefined ? "" : normalizeHandle(config.handle);
+  const handleKey = config?.handle === undefined ? undefined : normalizeHandle(config.handle);
   const queryKey = zamaQueryKeys.confidentialBalance.owner(token.address, ownerKey, handleKey);
 
   return {
@@ -26,7 +26,7 @@ export function confidentialBalanceQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
-      return token.decryptBalance(normalizeHandle(keyHandle), keyOwner as Address);
+      return token.decryptBalance(keyHandle as Handle, keyOwner as Address);
     },
     enabled: Boolean(ownerKey && handleKey) && config?.query?.enabled !== false,
     staleTime: Infinity,

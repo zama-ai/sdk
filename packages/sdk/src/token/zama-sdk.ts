@@ -1,6 +1,6 @@
 import type { Address } from "../relayer/relayer-sdk.types";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import { normalizeAddress } from "../utils";
+import { validateAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
@@ -171,7 +171,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
-      address: normalizeAddress(address, "address"),
+      address: validateAddress(address, "address"),
       onEvent: this.#onEvent,
     });
   }
@@ -191,8 +191,8 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
-      address: normalizeAddress(address, "address"),
-      wrapper: wrapper ? normalizeAddress(wrapper, "wrapper") : undefined,
+      address: validateAddress(address, "address"),
+      wrapper: wrapper ? validateAddress(wrapper, "wrapper") : undefined,
       onEvent: this.#onEvent,
     });
   }

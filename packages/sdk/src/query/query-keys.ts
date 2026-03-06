@@ -1,4 +1,5 @@
 import { getAddress } from "viem";
+import type { Handle } from "../relayer/relayer-sdk.types";
 
 const normalizeAddressIfPresent = (address: string): string => (address ? getAddress(address) : "");
 const normalizeAddresses = (addresses: string[]): string[] =>
@@ -39,7 +40,7 @@ export const zamaQueryKeys = {
     all: ["zama.confidentialBalance"] as const,
     token: (tokenAddress: string) =>
       ["zama.confidentialBalance", { tokenAddress: getAddress(tokenAddress) }] as const,
-    owner: (tokenAddress: string, owner: string, handle?: string) =>
+    owner: (tokenAddress: string, owner: string, handle?: Handle) =>
       [
         "zama.confidentialBalance",
         {
@@ -64,7 +65,7 @@ export const zamaQueryKeys = {
 
   confidentialBalances: {
     all: ["zama.confidentialBalances"] as const,
-    tokens: (tokenAddresses: string[], owner: string, handles?: string[]) =>
+    tokens: (tokenAddresses: string[], owner: string, handles?: Handle[]) =>
       [
         "zama.confidentialBalances",
         {
