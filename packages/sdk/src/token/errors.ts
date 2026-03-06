@@ -157,6 +157,9 @@ export class ConfigurationError extends ZamaError {
   }
 }
 
+// Delegation errors — mapped from ACL contract reverts by higher-level consumers.
+// The SDK exports them so dApp code can `instanceof`-check without hardcoding strings.
+
 /** Delegation cannot target self (delegate === msg.sender). */
 export class DelegationSelfNotAllowedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {

@@ -255,6 +255,41 @@ describe("decryptBalanceAs", () => {
       expect.objectContaining({ code: "DECRYPTION_FAILED" }),
     );
   });
+
+  it("caches by owner, not delegator, when options.owner differs", async ({
+    signer,
+    relayer,
+    readonlyToken,
+    handle,
+    tokenAddress,
+    delegatorAddress,
+    userAddress,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
+      domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
+      types: { DelegatedUserDecryptRequestVerification: [] },
+      message: {
+        publicKey: "0xpub",
+        contractAddresses: [tokenAddress],
+        delegatorAddress,
+        startTimestamp: "1000",
+        durationDays: "1",
+        extraData: "0x",
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [handle]: 42n });
+
+    // First call populates cache keyed by owner (userAddress), not delegator.
+    await readonlyToken.decryptBalanceAs(delegatorAddress, { owner: userAddress });
+    expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
+
+    // Second call with same owner should hit cache — no second decrypt call.
+    const balance = await readonlyToken.decryptBalanceAs(delegatorAddress, { owner: userAddress });
+    expect(balance).toBe(42n);
+    expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("batch delegation", () => {

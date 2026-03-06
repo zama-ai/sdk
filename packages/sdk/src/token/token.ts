@@ -682,12 +682,17 @@ export class Token extends ReadonlyToken {
 
   // DELEGATION OPERATIONS
 
+  /**
+   * @param options.expirationDate - When the delegation expires. Defaults to
+   *   `uint64.max` (≈ year 584 billion), i.e. no practical expiry.
+   */
   async delegateDecryption(
     delegate: Address,
     options?: { expirationDate?: Date },
   ): Promise<TransactionResult> {
     const acl = this.requireAclAddress();
     const normalizedDelegate = normalizeAddress(delegate, "delegate");
+    // uint64 max → no practical expiry
     const expirationDate = options?.expirationDate
       ? BigInt(Math.floor(options.expirationDate.getTime() / 1000))
       : 2n ** 64n - 1n;

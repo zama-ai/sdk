@@ -530,6 +530,11 @@ export class ReadonlyToken {
     return this.aclAddress;
   }
 
+  /**
+   * Client-side approximation — compares the on-chain expiry against the
+   * local clock.  For authoritative checks, read the expiry directly and
+   * compare against the block timestamp.
+   */
   async isDelegated(delegator: Address, delegate: Address): Promise<boolean> {
     const expiry = await this.getDelegationExpiry(delegator, delegate);
     return expiry > 0n && expiry >= BigInt(Math.floor(Date.now() / 1000));
@@ -577,11 +582,11 @@ export class ReadonlyToken {
     const handle = await this.readConfidentialBalanceOf(owner);
     if (this.isZeroHandle(handle)) return 0n;
 
-    // Check persistent cache keyed by delegator.
+    // Check persistent cache keyed by balance owner.
     const cached = await loadCachedBalance({
       storage: this.storage,
       tokenAddress: this.address,
-      owner: normalizedDelegator,
+      owner,
       handle,
     });
     if (cached !== null) return cached;
@@ -638,11 +643,11 @@ export class ReadonlyToken {
 
       const value = (result[handle] as bigint | undefined) ?? 0n;
 
-      // Cache keyed by delegator.
+      // Cache keyed by balance owner.
       await saveCachedBalance({
         storage: this.storage,
         tokenAddress: this.address,
-        owner: normalizedDelegator,
+        owner,
         handle,
         value,
       });
