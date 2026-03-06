@@ -15,11 +15,6 @@
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
     "target": "es2022",
-    "baseUrl": ".",
-    "paths": {
-      "@zama-fhe/sdk": ["../sdk/src/index.ts"],
-      "@zama-fhe/sdk/*": ["../sdk/src/*"]
-    }
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]

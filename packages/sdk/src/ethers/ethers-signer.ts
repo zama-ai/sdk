@@ -123,7 +123,11 @@ export class EthersSigner implements GenericSigner {
     config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>> {
     const provider = this.#requireProvider();
-    const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, provider);
+    const contract = new ethers.Contract(
+      config.address,
+      config.abi as ethers.InterfaceAbi,
+      provider,
+    );
     return contract[config.functionName]!(...(config.args as readonly unknown[])) as Promise<
       ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>
     >;

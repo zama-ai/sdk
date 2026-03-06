@@ -1,5 +1,5 @@
 import type { RawLog } from "../events/onchain-events";
-import type { Address, EIP712TypedData, Handle, Hex } from "../relayer/relayer-sdk.types";
+import type { Address, EIP712TypedData, Hex } from "../relayer/relayer-sdk.types";
 import type {
   Abi,
   ContractFunctionArgs,

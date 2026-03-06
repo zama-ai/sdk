@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import type { Address, RawLog, ActivityLogMetadata, ActivityItem, Handle } from "@zama-fhe/sdk";
+import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/sdk";
 import {
   parseActivityFeed,
   extractEncryptedHandles,

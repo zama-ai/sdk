@@ -12,6 +12,7 @@ import { ContractFunctionReturnType } from 'viem';
 import { EIP1193EventMap } from 'viem';
 import { EIP1193Events } from 'viem';
 import { EIP1193Provider } from 'viem';
+import { ethers } from 'ethers';
 import { Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { ProviderConnectInfo } from 'viem';
 import { ProviderMessage } from 'viem';

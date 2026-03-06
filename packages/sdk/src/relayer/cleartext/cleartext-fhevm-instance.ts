@@ -16,7 +16,6 @@ import type {
   Address,
   DelegatedUserDecryptParams,
   EIP712TypedData,
-  EncryptInput,
   EncryptParams,
   EncryptResult,
   Handle,
