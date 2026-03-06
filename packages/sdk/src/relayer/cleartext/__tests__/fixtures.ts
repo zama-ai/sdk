@@ -20,8 +20,6 @@ export const CLEAR_TEXT_MOCK_CONFIG: CleartextInstanceConfig = {
   gatewayChainId: GATEWAY_CHAIN_ID,
   aclContractAddress: TEST_FHEVM_ADDRESSES.acl,
   cleartextExecutorAddress: TEST_FHEVM_ADDRESSES.executor,
-  inputVerifierContractAddress: TEST_FHEVM_ADDRESSES.inputVerifier,
-  kmsContractAddress: TEST_FHEVM_ADDRESSES.kmsVerifier,
   verifyingContractAddressInputVerification: VERIFYING_CONTRACTS.inputVerification,
   verifyingContractAddressDecryption: VERIFYING_CONTRACTS.decryption,
 };

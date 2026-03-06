@@ -1,5 +1,8 @@
-export { createCleartextRelayer } from "./factory";
 export { RelayerCleartext } from "./relayer-cleartext";
-export { hoodi } from "./presets";
+export { HardhatCleartextChainConfig, hoodi } from "./presets";
 export { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "./constants";
-export type { CleartextInstanceConfig } from "./types";
+export type {
+  CleartextChainConfig,
+  CleartextTransportConfig,
+  RelayerCleartextConfig,
+} from "./types";

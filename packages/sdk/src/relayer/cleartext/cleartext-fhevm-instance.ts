@@ -7,6 +7,7 @@ import type {
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
+  KmsEIP712DomainType,
   KmsPublicDecryptEIP712Type,
   KmsUserDecryptEIP712Type,
   ZKProofLike,
@@ -110,15 +111,8 @@ export class CleartextFhevmInstance implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
-    const domain: EIP712TypedData["domain"] = {
-      name: "Decryption",
-      version: "1",
-      chainId: this.#config.chainId,
-      verifyingContract: this.#config.verifyingContractAddressDecryption as Address,
-    };
-
     return {
-      domain,
+      domain: this.#createUserDecryptionDomain(),
       types: USER_DECRYPT_TYPES,
       primaryType: "UserDecryptRequestVerification",
       message: {
@@ -176,37 +170,14 @@ export class CleartextFhevmInstance implements RelayerSDK {
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    const normalizedSignerAddress = getAddress(params.signerAddress);
-    const normalizedContractAddress = getAddress(params.contractAddress);
     const normalizedHandles = params.handles.map(normalizeHandle);
-
-    if (normalizedSignerAddress === normalizedContractAddress) {
-      throw new DecryptionFailedError(
-        `User address ${normalizedSignerAddress} must not equal contract address for user decrypt`,
-      );
-    }
-
-    const results = await Promise.all(
-      normalizedHandles.flatMap((handle) => [
-        this.#persistAllowed(handle, normalizedSignerAddress),
-        this.#persistAllowed(handle, normalizedContractAddress),
-      ]),
+    await this.#assertDecryptAuthorization(
+      normalizedHandles,
+      getAddress(params.signerAddress),
+      getAddress(params.contractAddress),
+      "User",
+      "user decrypt",
     );
-
-    for (let i = 0; i < normalizedHandles.length; i++) {
-      const userAllowed = results[i * 2];
-      const contractAllowed = results[i * 2 + 1];
-      if (!userAllowed) {
-        throw new DecryptionFailedError(
-          `User ${normalizedSignerAddress} is not authorized for user decrypt of handle ${normalizedHandles[i]!}`,
-        );
-      }
-      if (!contractAllowed) {
-        throw new DecryptionFailedError(
-          `Contract ${normalizedContractAddress} is not authorized for user decrypt of handle ${normalizedHandles[i]!}`,
-        );
-      }
-    }
 
     return this.#decryptHandles(normalizedHandles);
   }
@@ -266,12 +237,6 @@ export class CleartextFhevmInstance implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const domain: KmsDelegatedUserDecryptEIP712Type["domain"] = {
-      name: "Decryption",
-      version: "1",
-      chainId: this.#chainIdBigInt,
-      verifyingContract: this.#config.verifyingContractAddressDecryption as Address,
-    };
     const message: KmsDelegatedUserDecryptEIP712Type["message"] = {
       publicKey: publicKey as KmsDelegatedUserDecryptEIP712Type["message"]["publicKey"],
       contractAddresses,
@@ -282,7 +247,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     };
 
     return {
-      domain,
+      domain: this.#createKmsDecryptionDomain(),
       types: DELEGATED_USER_DECRYPT_TYPES,
       primaryType: "DelegatedUserDecryptRequestVerification",
       message,
@@ -293,36 +258,13 @@ export class CleartextFhevmInstance implements RelayerSDK {
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
     const normalizedHandles = params.handles.map(normalizeHandle);
-    const normalizedDelegator = getAddress(params.delegatorAddress);
-    const normalizedContract = getAddress(params.contractAddress);
-
-    if (normalizedDelegator === normalizedContract) {
-      throw new DecryptionFailedError(
-        `Delegator address ${normalizedDelegator} must not equal contract address for delegated decrypt`,
-      );
-    }
-
-    const results = await Promise.all(
-      normalizedHandles.flatMap((handle) => [
-        this.#persistAllowed(handle, normalizedDelegator),
-        this.#persistAllowed(handle, normalizedContract),
-      ]),
+    await this.#assertDecryptAuthorization(
+      normalizedHandles,
+      getAddress(params.delegatorAddress),
+      getAddress(params.contractAddress),
+      "Delegator",
+      "delegated decrypt",
     );
-
-    for (let i = 0; i < normalizedHandles.length; i++) {
-      const delegatorAllowed = results[i * 2];
-      const contractAllowed = results[i * 2 + 1];
-      if (!delegatorAllowed) {
-        throw new DecryptionFailedError(
-          `Delegator ${normalizedDelegator} is not authorized for delegated decrypt of handle ${normalizedHandles[i]!}`,
-        );
-      }
-      if (!contractAllowed) {
-        throw new DecryptionFailedError(
-          `Contract ${normalizedContract} is not authorized for delegated decrypt of handle ${normalizedHandles[i]!}`,
-        );
-      }
-    }
 
     return this.#decryptHandles(normalizedHandles);
   }
@@ -358,6 +300,60 @@ export class CleartextFhevmInstance implements RelayerSDK {
         decodeClearValueType(handle, values[index]!),
       ]),
     );
+  }
+
+  #createUserDecryptionDomain(): EIP712TypedData["domain"] {
+    return {
+      name: "Decryption",
+      version: "1",
+      chainId: this.#config.chainId,
+      verifyingContract: this.#config.verifyingContractAddressDecryption as Address,
+    };
+  }
+
+  #createKmsDecryptionDomain(): KmsEIP712DomainType {
+    return {
+      name: "Decryption",
+      version: "1",
+      chainId: this.#chainIdBigInt,
+      verifyingContract: this.#config.verifyingContractAddressDecryption as Address,
+    };
+  }
+
+  async #assertDecryptAuthorization(
+    normalizedHandles: Handle[],
+    actorAddress: Address,
+    contractAddress: Address,
+    actorLabel: "User" | "Delegator",
+    operationLabel: "user decrypt" | "delegated decrypt",
+  ): Promise<void> {
+    if (actorAddress === contractAddress) {
+      throw new DecryptionFailedError(
+        `${actorLabel} address ${actorAddress} must not equal contract address for ${operationLabel}`,
+      );
+    }
+
+    const results = await Promise.all(
+      normalizedHandles.flatMap((handle) => [
+        this.#persistAllowed(handle, actorAddress),
+        this.#persistAllowed(handle, contractAddress),
+      ]),
+    );
+
+    for (let i = 0; i < normalizedHandles.length; i++) {
+      const actorAllowed = results[i * 2];
+      const contractAllowed = results[i * 2 + 1];
+      if (!actorAllowed) {
+        throw new DecryptionFailedError(
+          `${actorLabel} ${actorAddress} is not authorized for ${operationLabel} of handle ${normalizedHandles[i]!}`,
+        );
+      }
+      if (!contractAllowed) {
+        throw new DecryptionFailedError(
+          `Contract ${contractAddress} is not authorized for ${operationLabel} of handle ${normalizedHandles[i]!}`,
+        );
+      }
+    }
   }
 
   async #persistAllowed(handle: Handle, account: Address): Promise<boolean> {

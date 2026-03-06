@@ -93,9 +93,7 @@ export const HardhatConfig = {
   kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-  /** Cleartext executor address for `RelayerCleartext`. */
-  cleartextExecutorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
-} as const satisfies FhevmInstanceConfig & { cleartextExecutorAddress: string };
+} as const satisfies FhevmInstanceConfig;
 
 export const DefaultConfigs: Record<number, FhevmInstanceConfig> = {
   [1]: MainnetConfig,

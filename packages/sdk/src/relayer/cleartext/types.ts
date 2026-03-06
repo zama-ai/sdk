@@ -1,13 +1,23 @@
-import type { EIP1193Provider } from "viem";
+import type { Address, EIP1193Provider } from "viem";
 
-export interface CleartextInstanceConfig {
+export interface CleartextTransportConfig {
   network: EIP1193Provider | string;
-  chainId: number;
+}
+
+export interface CleartextChainConfig {
   gatewayChainId: number;
-  aclContractAddress: string;
-  kmsContractAddress?: string;
-  inputVerifierContractAddress?: string;
-  verifyingContractAddressDecryption: string;
-  verifyingContractAddressInputVerification: string;
-  cleartextExecutorAddress: string;
+  aclContractAddress: Address;
+  verifyingContractAddressDecryption: Address;
+  verifyingContractAddressInputVerification: Address;
+  cleartextExecutorAddress: Address;
+}
+
+export interface CleartextInstanceConfig extends CleartextTransportConfig, CleartextChainConfig {
+  chainId: number;
+}
+
+export interface RelayerCleartextConfig {
+  transports: Record<number, CleartextTransportConfig>;
+  chainConfigs: Record<number, CleartextChainConfig>;
+  getChainId: () => Promise<number>;
 }

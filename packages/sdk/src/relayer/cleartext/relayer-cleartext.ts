@@ -16,81 +16,65 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "../relayer-sdk.types";
-import { createCleartextRelayer } from "./factory";
-import type { CleartextInstanceConfig } from "./types";
-import { ConfigurationError } from "../../token/errors";
+import { createCleartextRelayer, resolveCleartextConfig } from "./factory";
+import type { RelayerCleartextConfig } from "./types";
 
 /**
- * Public API wrapper around `CleartextFhevmInstance`.
- *
- * Accepts a single `CleartextInstanceConfig` or a
- * `Record<number, CleartextInstanceConfig>` (multi-transport) with a
- * `getChainId` resolver.
- *
- * All methods delegate to the underlying instance created via
- * `createCleartextRelayer()`. Lazy-initializes and caches per chain.
- * `terminate()` nullifies the instance (auto-restarts on next op,
- * supports React StrictMode).
+ * Cleartext relayer with the same transport/getChainId shape as the other SDK relayers.
+ * Resolves a chain-specific cleartext config lazily, rebuilds on chain switch,
+ * and auto-restarts after `terminate()` to support React StrictMode.
  */
 export class RelayerCleartext implements RelayerSDK {
   #instance: RelayerSDK | null = null;
+  #ensureLock: Promise<RelayerSDK> | null = null;
+  #terminated = false;
   #resolvedChainId: number | null = null;
-  readonly #singleConfig: CleartextInstanceConfig | null;
-  readonly #multiConfigs: Record<number, CleartextInstanceConfig> | null;
-  readonly #getChainId: (() => Promise<number>) | null;
+  readonly #config: RelayerCleartextConfig;
 
-  constructor(config: CleartextInstanceConfig);
-  constructor(config: {
-    transports: Record<number, CleartextInstanceConfig>;
-    getChainId: () => Promise<number>;
-  });
-  constructor(
-    config:
-      | CleartextInstanceConfig
-      | {
-          transports: Record<number, CleartextInstanceConfig>;
-          getChainId: () => Promise<number>;
-        },
-  ) {
-    if ("transports" in config) {
-      this.#singleConfig = null;
-      this.#multiConfigs = config.transports;
-      this.#getChainId = config.getChainId;
-    } else {
-      this.#singleConfig = config;
-      this.#multiConfigs = null;
-      this.#getChainId = null;
-    }
+  constructor(config: RelayerCleartextConfig) {
+    this.#config = config;
   }
 
   async #ensureInstance(): Promise<RelayerSDK> {
-    if (this.#singleConfig) {
-      if (!this.#instance) {
-        this.#instance = createCleartextRelayer(this.#singleConfig);
-      }
-      return this.#instance;
+    if (this.#ensureLock) return this.#ensureLock;
+    this.#ensureLock = this.#ensureInstanceInner();
+    try {
+      return await this.#ensureLock;
+    } finally {
+      this.#ensureLock = null;
+    }
+  }
+
+  async #ensureInstanceInner(): Promise<RelayerSDK> {
+    if (this.#terminated) {
+      this.#terminated = false;
+      this.#instance = null;
+      this.#resolvedChainId = null;
     }
 
-    const chainId = await this.#getChainId!();
+    const chainId = await this.#config.getChainId();
 
     if (this.#instance && this.#resolvedChainId === chainId) {
       return this.#instance;
     }
 
-    // Chain changed or first init
     this.#instance?.terminate();
-    const chainConfig = this.#multiConfigs![chainId];
-    if (!chainConfig) {
-      throw new ConfigurationError(`No cleartext config for chainId: ${chainId}`);
-    }
-    this.#instance = createCleartextRelayer(chainConfig);
+    this.#instance = createCleartextRelayer(
+      resolveCleartextConfig(
+        chainId,
+        this.#config.transports[chainId],
+        this.#config.chainConfigs[chainId],
+      ),
+    );
     this.#resolvedChainId = chainId;
     return this.#instance;
   }
 
   terminate(): void {
+    this.#terminated = true;
     this.#instance?.terminate();
     this.#instance = null;
+    this.#ensureLock = null;
     this.#resolvedChainId = null;
   }
 
