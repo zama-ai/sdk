@@ -65,6 +65,7 @@ export {
   loadPendingUnshield,
   clearPendingUnshield,
 } from "./token/pending-unshield";
+export type { PendingUnshieldScope } from "./token/pending-unshield";
 export type {
   Address,
   Hex,

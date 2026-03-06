@@ -2,6 +2,7 @@
 
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import type { Address, Hex, TransactionResult, UnshieldCallbacks, Token } from "@zama-fhe/sdk";
+import { clearPendingUnshield } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryKeys,
   confidentialBalancesQueryKeys,
@@ -11,6 +12,7 @@ import {
 } from "./balance-query-keys";
 import { underlyingAllowanceQueryKeys } from "./use-underlying-allowance";
 import { useToken, type UseZamaConfig } from "./use-token";
+import { useZamaSDK } from "../provider";
 
 /** Parameters passed to the `mutate` function of {@link useResumeUnshield}. */
 export interface ResumeUnshieldParams {
@@ -39,6 +41,9 @@ export function resumeUnshieldMutationOptions(token: Token) {
  * Useful when the user submitted the unwrap but the finalize step was
  * interrupted (e.g. page reload, network error).
  *
+ * Automatically clears the pending unshield state from storage on
+ * successful finalization.
+ *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link DecryptionFailedError} — public decryption failed during finalize
  * - {@link TransactionRevertedError} — on-chain transaction reverted
@@ -57,12 +62,19 @@ export function useResumeUnshield(
   options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>,
 ) {
   const token = useToken(config);
+  const sdk = useZamaSDK();
+  const wrapperAddress = config.wrapperAddress ?? config.tokenAddress;
 
   return useMutation<TransactionResult, Error, ResumeUnshieldParams, Address>({
     mutationKey: ["resumeUnshield", config.tokenAddress],
     mutationFn: ({ unwrapTxHash, callbacks }) => token.resumeUnshield(unwrapTxHash, callbacks),
     ...options,
-    onSuccess: (data, variables, onMutateResult, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
+      const [accountAddress, chainId] = await Promise.all([
+        sdk.signer.getAddress(),
+        sdk.signer.getChainId(),
+      ]);
+      await clearPendingUnshield(sdk.storage, { accountAddress, chainId, wrapperAddress });
       context.client.invalidateQueries({
         queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
       });

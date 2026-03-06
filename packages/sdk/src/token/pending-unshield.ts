@@ -2,8 +2,18 @@ import type { Address, GenericStorage, Hex } from "./token.types";
 
 const STORAGE_PREFIX = "zama:pending-unshield:";
 
-function storageKey(wrapperAddress: Address): string {
-  return `${STORAGE_PREFIX}${wrapperAddress.toLowerCase()}`;
+/** Identity scoping so pending-unshield state never collides across accounts/chains. */
+export interface PendingUnshieldScope {
+  /** Connected wallet address. */
+  accountAddress: Address;
+  /** Chain ID of the connected network. */
+  chainId: number;
+  /** Wrapper contract address. */
+  wrapperAddress: Address;
+}
+
+function storageKey({ chainId, accountAddress, wrapperAddress }: PendingUnshieldScope): string {
+  return `${STORAGE_PREFIX}${chainId}:${accountAddress.toLowerCase()}:${wrapperAddress.toLowerCase()}`;
 }
 
 /**
@@ -12,10 +22,10 @@ function storageKey(wrapperAddress: Address): string {
  */
 export async function savePendingUnshield(
   storage: GenericStorage,
-  wrapperAddress: Address,
+  scope: PendingUnshieldScope,
   unwrapTxHash: Hex,
 ): Promise<void> {
-  await storage.set(storageKey(wrapperAddress), unwrapTxHash);
+  await storage.set(storageKey(scope), unwrapTxHash);
 }
 
 /**
@@ -23,9 +33,9 @@ export async function savePendingUnshield(
  */
 export async function loadPendingUnshield(
   storage: GenericStorage,
-  wrapperAddress: Address,
+  scope: PendingUnshieldScope,
 ): Promise<Hex | null> {
-  return (await storage.get(storageKey(wrapperAddress))) as Hex | null;
+  return (await storage.get(storageKey(scope))) as Hex | null;
 }
 
 /**
@@ -33,7 +43,7 @@ export async function loadPendingUnshield(
  */
 export async function clearPendingUnshield(
   storage: GenericStorage,
-  wrapperAddress: Address,
+  scope: PendingUnshieldScope,
 ): Promise<void> {
-  await storage.delete(storageKey(wrapperAddress));
+  await storage.delete(storageKey(scope));
 }

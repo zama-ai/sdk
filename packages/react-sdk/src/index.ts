@@ -129,6 +129,7 @@ export type {
 
 // Re-export pending-unshield persistence utilities
 export { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+export type { PendingUnshieldScope } from "@zama-fhe/sdk";
 
 // Re-export event constants
 export { ZamaSDKEvents } from "@zama-fhe/sdk";
