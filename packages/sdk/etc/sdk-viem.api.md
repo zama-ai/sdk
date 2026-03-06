@@ -128,8 +128,7 @@ export interface ViemSignerConfig {
     ethereum?: EIP1193Provider;
     // (undocumented)
     publicClient: PublicClient;
-    // (undocumented)
-    walletClient: WalletClient;
+    walletClient?: WalletClient;
 }
 
 // @public (undocumented)
