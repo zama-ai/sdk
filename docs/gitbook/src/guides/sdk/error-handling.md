@@ -49,8 +49,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. If the error is
 | `DecryptionFailedError`     | `DECRYPTION_FAILED`      | FHE decryption failed                                                                 |
 | `ApprovalFailedError`       | `APPROVAL_FAILED`        | ERC-20 approval transaction failed                                                    |
 | `TransactionRevertedError`  | `TRANSACTION_REVERTED`   | On-chain transaction reverted                                                         |
-| `InvalidCredentialsError`   | `INVALID_CREDENTIALS`    | Relayer rejected decrypt keys (stale or malformed)                                    |
-| `CredentialExpiredError`    | `CREDENTIAL_EXPIRED`     | Decrypt keys expired — user needs to re-sign                                          |
+| `InvalidKeypairError`       | `INVALID_KEYPAIR`        | Relayer rejected FHE keypair (stale or malformed)                                     |
+| `KeypairExpiredError`       | `KEYPAIR_EXPIRED`        | FHE keypair expired — user needs to re-sign                                           |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No encrypted balance exists for this account (never shielded)                         |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP request failed (check `.statusCode`)                                     |
 

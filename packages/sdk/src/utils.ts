@@ -50,6 +50,12 @@ export function assertArray(value: unknown, context: string): asserts value is u
   }
 }
 
+export function assertCondition(condition: boolean, message: string): asserts condition {
+  if (!condition) {
+    throw new TypeError(message);
+  }
+}
+
 // ── Concurrency helper ──────────────────────────────────────
 
 /**

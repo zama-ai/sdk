@@ -54,7 +54,7 @@ self.relayerSDK = {
         const values = [];
         return {
           add64: function (value) {
-            values.push(value.toString());
+            values.push({ value: value.toString(), type: "euint64" });
             return this;
           },
           encrypt: async function () {

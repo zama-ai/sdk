@@ -26,10 +26,10 @@ export const ZamaErrorCode = {
   ApprovalFailed: "APPROVAL_FAILED",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
-  /** FHE credentials have expired and need regeneration. */
-  CredentialExpired: "CREDENTIAL_EXPIRED",
-  /** Relayer rejected credentials (stale, expired, or malformed). */
-  InvalidCredentials: "INVALID_CREDENTIALS",
+  /** FHE keypair has expired and needs regeneration. */
+  KeypairExpired: "KEYPAIR_EXPIRED",
+  /** Relayer rejected FHE keypair (stale, expired, or malformed). */
+  InvalidKeypair: "INVALID_KEYPAIR",
   /** No FHE ciphertext exists for this account (never shielded). */
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
@@ -105,19 +105,19 @@ export class TransactionRevertedError extends ZamaError {
   }
 }
 
-/** FHE credentials have expired and need regeneration. */
-export class CredentialExpiredError extends ZamaError {
+/** FHE keypair has expired and needs regeneration. */
+export class KeypairExpiredError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(ZamaErrorCode.CredentialExpired, message, options);
-    this.name = "CredentialExpiredError";
+    super(ZamaErrorCode.KeypairExpired, message, options);
+    this.name = "KeypairExpiredError";
   }
 }
 
-/** Relayer rejected credentials (stale, expired, or malformed). */
-export class InvalidCredentialsError extends ZamaError {
+/** Relayer rejected FHE keypair (stale, expired, or malformed). */
+export class InvalidKeypairError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(ZamaErrorCode.InvalidCredentials, message, options);
-    this.name = "InvalidCredentialsError";
+    super(ZamaErrorCode.InvalidKeypair, message, options);
+    this.name = "InvalidKeypairError";
   }
 }
 
