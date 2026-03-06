@@ -8,7 +8,7 @@
  */
 
 // Provider
-export { ZamaProvider, useZamaSDK, useReadonlyZamaSDK, type ZamaProviderProps } from "./provider";
+export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt, encryptMutationOptions } from "./relayer/use-encrypt";

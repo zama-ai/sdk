@@ -97,7 +97,7 @@ describe("ViemSigner", () => {
       async ({ createMockWalletClient, publicClient }) => {
         const noAccountClient = createMockWalletClient(false);
         const noAccountSigner = new ViemSigner({ walletClient: noAccountClient, publicClient });
-        await expect(noAccountSigner.getAddress()).rejects.toThrow("Invalid address");
+        await expect(noAccountSigner.getAddress()).rejects.toThrow("WalletClient has no account");
       },
     );
   });
@@ -213,6 +213,82 @@ describe("ViemSigner", () => {
         });
       },
     );
+  });
+});
+
+describe("ViemSigner read-only mode (no walletClient)", () => {
+  vit(
+    "readContract works without walletClient",
+    async ({ tokenAddress, userAddress, publicClient }) => {
+      const readOnlySigner = new ViemSigner({ publicClient });
+      const config = {
+        address: tokenAddress,
+        abi: [{ name: "balanceOf" }],
+        functionName: "balanceOf",
+        args: [userAddress],
+      };
+      const result = await readOnlySigner.readContract(config);
+      expect(result).toBe("0xresult");
+      expect(publicClient.readContract).toHaveBeenCalledWith(config);
+    },
+  );
+
+  vit("getChainId works without walletClient", async ({ publicClient }) => {
+    const readOnlySigner = new ViemSigner({ publicClient });
+    const chainId = await readOnlySigner.getChainId();
+    expect(chainId).toBe(1);
+  });
+
+  vit("waitForTransactionReceipt works without walletClient", async ({ publicClient }) => {
+    const readOnlySigner = new ViemSigner({ publicClient });
+    const receipt = await readOnlySigner.waitForTransactionReceipt(TX_HASH);
+    expect(receipt).toEqual({ logs: [] });
+  });
+
+  vit("getAddress throws without walletClient", async ({ publicClient }) => {
+    const readOnlySigner = new ViemSigner({ publicClient });
+    await expect(readOnlySigner.getAddress()).rejects.toThrow("No walletClient configured");
+  });
+
+  vit("signTypedData throws without walletClient", async ({ tokenAddress, publicClient }) => {
+    const readOnlySigner = new ViemSigner({ publicClient });
+    const typedData = {
+      domain: { name: "Test", version: "1", chainId: 1, verifyingContract: tokenAddress },
+      types: { Transfer: [{ name: "to", type: "address" }] },
+      message: {
+        publicKey: "0xkey",
+        contractAddresses: ["0x1"],
+        startTimestamp: 1000n,
+        durationDays: 1n,
+        extraData: "0x",
+      },
+    };
+    await expect(readOnlySigner.signTypedData(typedData)).rejects.toThrow(
+      "No walletClient configured",
+    );
+  });
+
+  vit(
+    "writeContract throws without walletClient",
+    async ({ tokenAddress, userAddress, publicClient }) => {
+      const readOnlySigner = new ViemSigner({ publicClient });
+      const config = {
+        address: tokenAddress,
+        abi: [{ name: "transfer" }],
+        functionName: "transfer",
+        args: [userAddress, 100n],
+      };
+      await expect(readOnlySigner.writeContract(config)).rejects.toThrow(
+        "No walletClient configured",
+      );
+    },
+  );
+
+  vit("subscribe returns no-op without walletClient", ({ publicClient }) => {
+    const readOnlySigner = new ViemSigner({ publicClient });
+    const unsub = readOnlySigner.subscribe({ onDisconnect: vi.fn(), onAccountChange: vi.fn() });
+    expect(typeof unsub).toBe("function");
+    unsub(); // should not throw
   });
 });
 
