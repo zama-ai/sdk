@@ -130,16 +130,6 @@ export class RelayerCleartext implements RelayerSDK {
     return this.#instance;
   }
 
-  /**
-   * Mark the instance as terminated. Unlike {@link RelayerNode} (which throws
-   * on use-after-terminate), RelayerCleartext auto-restarts on the next
-   * operation to support React StrictMode's unmount→remount cycle and HMR.
-   */
-  terminate(): void {
-    this.#instance = null;
-    this.#resolvedChainId = null;
-  }
-
   async generateKeypair(): Promise<FHEKeypair> {
     const instance = await this.#getInstance();
     return instance.generateKeypair();
@@ -210,5 +200,15 @@ export class RelayerCleartext implements RelayerSDK {
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const instance = await this.#getInstance();
     return instance.getPublicParams(_bits);
+  }
+
+  /**
+   * Mark the instance as terminated. Unlike {@link RelayerNode} (which throws
+   * on use-after-terminate), RelayerCleartext auto-restarts on the next
+   * operation to support React StrictMode's unmount→remount cycle and HMR.
+   */
+  terminate(): void {
+    this.#instance = null;
+    this.#resolvedChainId = null;
   }
 }

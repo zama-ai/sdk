@@ -3,18 +3,14 @@ import {
   keccak256,
   toBytes,
   toHex,
+  hexToBytes,
   concat,
   encodeAbiParameters,
   recoverAddress,
   type Hex,
 } from "viem";
 import { privateKeyToAccount, sign } from "viem/accounts";
-import {
-  EIP712_DOMAIN_TYPEHASH,
-  buildDomainSeparator,
-  eip712Digest,
-  packSignature,
-} from "../eip712";
+import { EIP712_DOMAIN_TYPEHASH, buildDomainSeparator, eip712Digest } from "../eip712";
 
 describe("eip712", () => {
   describe("EIP712_DOMAIN_TYPEHASH", () => {
@@ -72,7 +68,7 @@ describe("eip712", () => {
     });
   });
 
-  describe("packSignature", () => {
+  describe("sign + recover roundtrip", () => {
     it("produces a 65-byte signature recoverable with recoverAddress", async () => {
       const privateKey =
         "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91" as Hex;
@@ -83,9 +79,9 @@ describe("eip712", () => {
       // Create a known digest (any 32-byte hash will do)
       const digest = keccak256(toBytes("test-message-for-signing"));
 
-      // Sign and pack
+      // Sign and convert to bytes (same as production code does inline)
       const sigHex = await sign({ hash: digest, privateKey, to: "hex" });
-      const packed = packSignature(sigHex);
+      const packed = hexToBytes(sigHex);
 
       expect(packed).toHaveLength(65);
 

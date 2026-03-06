@@ -1,5 +1,5 @@
-import type { EIP712TypedData, FhevmInstanceConfig } from "./relayer-sdk.types";
 import { mergeFhevmConfig } from "./relayer-configs";
+import type { EIP712TypedData } from "./relayer-sdk.types";
 
 export { mergeFhevmConfig };
 

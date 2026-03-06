@@ -105,7 +105,7 @@ describe("createCleartextInstance", () => {
     expect(result.message.contractAddresses).toEqual(contracts);
     expect(result.message.startTimestamp).toBe(1000n);
     expect(result.message.durationDays).toBe(30n);
-    expect(result.message.extraData).toBe("0x00");
+    expect(result.message.extraData).toBe("0x");
   });
 
   it("createDelegatedUserDecryptEIP712 returns correct structure", async () => {
@@ -216,5 +216,22 @@ describe("createCleartextInstance", () => {
     });
     expect(result.handles).toHaveLength(2);
     expect(result.inputProof).toBeInstanceOf(Uint8Array);
+  });
+
+  it("encrypt supports eaddress type", async () => {
+    const instance = createCleartextInstance(CONFIG);
+    const result = await instance.encrypt({
+      contractAddress: CONTRACT,
+      userAddress: USER,
+      values: [{ type: "eaddress", value: USER } as never],
+    });
+    expect(result.handles).toHaveLength(1);
+    expect(result.inputProof).toBeInstanceOf(Uint8Array);
+  });
+
+  it("rejects invalid private key format", () => {
+    expect(() =>
+      createCleartextInstance({ ...CONFIG, coprocessorSignerPrivateKey: "not-a-key" }),
+    ).toThrow("Invalid private key");
   });
 });

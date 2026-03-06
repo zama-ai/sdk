@@ -70,7 +70,7 @@ function computeMockCiphertext(fheType: number, cleartext: bigint, random32: Uin
     throw new EncryptionFailedError(`Unknown FheType: ${fheType}`);
   }
   const byteLength = Math.ceil(bitWidth / 8);
-  const clearBytes = toBytes(pad(toHex(cleartext), { size: byteLength }));
+  const clearBytes = toBytes(toHex(cleartext, { size: byteLength }));
 
   const inner = keccak256(
     concat([toHex(new Uint8Array([fheType])), toHex(clearBytes), toHex(random32)]),

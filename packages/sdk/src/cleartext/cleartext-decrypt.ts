@@ -45,9 +45,10 @@ export interface DecryptionSigningContext {
   verifyingContract: string;
 }
 
-/** Extract fheTypeId from byte 30 of a bytes32 handle (chars 62-63 of 0x-prefixed hex). */
+/** Extract fheTypeId from byte 30 of a bytes32 handle (0x-prefixed, 66 chars). */
 function getFheTypeId(handleHex: string): number {
-  return parseInt(handleHex.slice(62, 64), 16);
+  const hex = handleHex.startsWith("0x") ? handleHex : `0x${handleHex}`;
+  return parseInt(hex.slice(62, 64), 16);
 }
 
 /** Map fheTypeId to the Solidity ABI type for encoding. */
@@ -171,15 +172,15 @@ export async function cleartextPublicDecrypt(
   const handlesHex = handles.map((h) => (typeof h === "string" ? h : toHex(h)));
   const fheTypes = handlesHex.map((h) => getFheTypeId(h));
 
-  // ACL checks and plaintext reads are independent — run in parallel
-  const [rawValues] = await Promise.all([
-    executor.getPlaintexts(handlesHex),
-    ...handlesHex.map(async (h) => {
+  // Verify ACL permissions first, then fetch plaintexts
+  await Promise.all(
+    handlesHex.map(async (h) => {
       if (!(await acl.isAllowedForDecryption(h))) {
         throw new DecryptionFailedError(`Handle ${h} is not allowed for decryption`);
       }
     }),
-  ]);
+  );
+  const rawValues = await executor.getPlaintexts(handlesHex);
 
   const clearValues: Record<string, ClearValue> = {};
   handlesHex.forEach((h, i) => {
@@ -227,10 +228,9 @@ export async function cleartextDelegatedUserDecrypt(
 
   const fheTypes = handlesHex.map((h) => getFheTypeId(h));
 
-  // ACL checks and plaintext reads are independent — run in parallel
-  const [rawValues] = await Promise.all([
-    executor.getPlaintexts(handlesHex),
-    ...handlesHex.map(async (h, i) => {
+  // Verify ACL permissions first, then fetch plaintexts
+  await Promise.all(
+    handlesHex.map(async (h, i) => {
       const contract = handleContractPairs[i]!.contractAddress;
       if (
         !(await acl.isHandleDelegatedForUserDecryption(
@@ -245,7 +245,8 @@ export async function cleartextDelegatedUserDecrypt(
         );
       }
     }),
-  ]);
+  );
+  const rawValues = await executor.getPlaintexts(handlesHex);
 
   const results: Record<string, ClearValue> = {};
   handlesHex.forEach((h, i) => {
@@ -279,10 +280,9 @@ export async function cleartextUserDecrypt(
 
   const fheTypes = handlesHex.map((h) => getFheTypeId(h));
 
-  // ACL checks and plaintext reads are independent — run in parallel
-  const [rawValues] = await Promise.all([
-    executor.getPlaintexts(handlesHex),
-    ...handlesHex.flatMap((h, i) => {
+  // Verify ACL permissions first, then fetch plaintexts
+  await Promise.all(
+    handlesHex.flatMap((h, i) => {
       const contract = handleContractPairs[i]!.contractAddress;
       return [
         acl.persistAllowed(h, userAddress).then((ok) => {
@@ -299,7 +299,8 @@ export async function cleartextUserDecrypt(
         }),
       ];
     }),
-  ]);
+  );
+  const rawValues = await executor.getPlaintexts(handlesHex);
 
   const results: Record<string, ClearValue> = {};
   handlesHex.forEach((h, i) => {

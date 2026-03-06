@@ -9,7 +9,6 @@ import {
   concat,
   toBytes,
   toHex,
-  hexToBytes,
   encodeAbiParameters,
   type Hex,
   type TypedDataDomain,
@@ -63,14 +62,6 @@ export function buildDomainSeparator(
  */
 export function eip712Digest(domainSeparator: string, structHash: string): Hex {
   return keccak256(concat([toHex(0x1901, { size: 2 }), domainSeparator as Hex, structHash as Hex]));
-}
-
-/**
- * Convert a 65-byte hex signature (r[32] || s[32] || v[1]) returned by
- * viem's `sign()` into a Uint8Array.
- */
-export function packSignature(sigHex: Hex): Uint8Array {
-  return hexToBytes(sigHex);
 }
 
 // ---------------------------------------------------------------------------

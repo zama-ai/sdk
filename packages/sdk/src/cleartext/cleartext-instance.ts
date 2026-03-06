@@ -37,6 +37,7 @@ import type {
   UserDecryptParams,
   ZKProofLike,
 } from "../relayer/relayer-sdk.types";
+import { convertToBigIntRecord } from "../utils/convert";
 
 const ACL_ABI = parseAbi([
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
@@ -51,6 +52,16 @@ const EIP712_DOMAIN_TYPE = [
   { name: "chainId", type: "uint256" },
   { name: "verifyingContract", type: "address" },
 ];
+
+/** Validate that a private key is a well-formed 0x-prefixed 32-byte hex string. */
+function validatePrivateKey(key: string): Hex {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(key)) {
+    throw new TypeError(
+      `Invalid private key: expected 0x-prefixed 32-byte hex string, got "${key.slice(0, 10)}..."`,
+    );
+  }
+  return key as Hex;
+}
 
 /** Resolve a network config value into a viem PublicClient. */
 function resolveClient(
@@ -120,8 +131,8 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
     config.network as string | { request: (...args: unknown[]) => Promise<unknown> },
   );
   const { aclContractAddress, chainId, cleartextExecutorAddress } = config;
-  const coprocessorPrivateKey = config.coprocessorSignerPrivateKey as Hex;
-  const kmsPrivateKey = config.kmsSignerPrivateKey as Hex;
+  const coprocessorPrivateKey = validatePrivateKey(config.coprocessorSignerPrivateKey);
+  const kmsPrivateKey = validatePrivateKey(config.kmsSignerPrivateKey);
 
   const decryptionSigningCtx: DecryptionSigningContext = {
     privateKey: kmsPrivateKey,
@@ -254,7 +265,7 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
           contractAddresses,
           startTimestamp: BigInt(startTimestamp),
           durationDays: BigInt(durationDays),
-          extraData: "0x00",
+          extraData: "0x",
         },
       };
     },
@@ -286,7 +297,7 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
           delegatorAddress,
           startTimestamp: BigInt(startTimestamp),
           durationDays: BigInt(durationDays),
-          extraData: "0x00",
+          extraData: "0x",
         },
       } as unknown as KmsDelegatedUserDecryptEIP712Type;
     },
@@ -294,13 +305,8 @@ export function createCleartextInstance(config: CleartextInstanceConfig): Cleart
     async publicDecrypt(handles: string[]): Promise<PublicDecryptResult> {
       const normalized = handles.map(normalizeHandle);
       const result = await cleartextPublicDecrypt(normalized, executor, acl, decryptionSigningCtx);
-      // Convert to bigint-only (PublicDecryptResult.clearValues is Record<string, bigint>)
-      const clearValues: Record<string, bigint> = {};
-      for (const [h, v] of Object.entries(result.clearValues)) {
-        clearValues[h] = typeof v === "boolean" ? (v ? 1n : 0n) : v;
-      }
       return {
-        clearValues,
+        clearValues: convertToBigIntRecord(result.clearValues),
         abiEncodedClearValues: result.abiEncodedClearValues,
         decryptionProof: result.decryptionProof as Address,
       };
