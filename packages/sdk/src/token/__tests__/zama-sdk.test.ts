@@ -2,7 +2,7 @@ import { describe, it, expect, vi, type Mock } from "../../test-fixtures";
 import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
-import { computeStoreKey } from "../credentials-manager";
+import { CredentialsManager } from "../credentials-manager";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "../token.types";
 import type { Address } from "../../relayer/relayer-sdk.types";
@@ -104,7 +104,7 @@ describe("ZamaSDK", () => {
     // the CredentialsManager uses.
     const address = (await signer.getAddress()).toLowerCase();
     const chainId = await signer.getChainId();
-    const storeKey = await computeStoreKey(address, chainId);
+    const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
 
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
@@ -124,7 +124,7 @@ describe("ZamaSDK", () => {
 
     const address = (await signer.getAddress()).toLowerCase();
     const chainId = await signer.getChainId();
-    const storeKey = await computeStoreKey(address, chainId);
+    const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
 
     await sessionStorage.set(storeKey, "0xsomeSignature");
     expect(await sessionStorage.get(storeKey)).toBe("0xsomeSignature");
@@ -154,12 +154,13 @@ describe("ZamaSDK", () => {
     it("onAccountChange revokes the PREVIOUS account session, not the new one", async ({
       createMockRelayer,
       createMockSigner,
+      userAddress,
       storage,
       sessionStorage,
     }) => {
       let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
-      const mockSigner = createMockSigner("0xuser" as Address);
+      const mockSigner = createMockSigner();
       const signer = {
         ...mockSigner,
         subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
@@ -176,7 +177,7 @@ describe("ZamaSDK", () => {
       });
 
       // Seed account A's session
-      const keyA = await computeStoreKey("0xuser", 31337);
+      const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
       await sessionStorage.set(keyA, "0xsigA");
 
       // Simulate account change: signer now reports account B
@@ -191,7 +192,7 @@ describe("ZamaSDK", () => {
       });
 
       // Account B's key should be untouched (it was never seeded)
-      const keyB = await computeStoreKey("0xnewuser", 31337);
+      const keyB = await CredentialsManager.computeStoreKey("0xnewuser", 31337);
       expect(await sessionStorage.get(keyB)).toBeNull();
 
       sdk.terminate();
@@ -200,12 +201,13 @@ describe("ZamaSDK", () => {
     it("A→B→A: both account sessions are revoked on their respective switches", async ({
       createMockRelayer,
       createMockSigner,
+      userAddress,
       storage,
       sessionStorage,
     }) => {
       let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
-      const mockSigner = createMockSigner("0xuser" as Address);
+      const mockSigner = createMockSigner();
       const signer = {
         ...mockSigner,
         subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
@@ -221,8 +223,8 @@ describe("ZamaSDK", () => {
         sessionStorage,
       });
 
-      const keyA = await computeStoreKey("0xuser", 31337);
-      const keyB = await computeStoreKey("0xnewuser", 31337);
+      const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
+      const keyB = await CredentialsManager.computeStoreKey("0xnewuser", 31337);
 
       // A has a session
       await sessionStorage.set(keyA, "0xsigA");
@@ -238,8 +240,8 @@ describe("ZamaSDK", () => {
       await sessionStorage.set(keyB, "0xsigB");
 
       // Switch B → A
-      (signer.getAddress as Mock).mockResolvedValue("0xuser");
-      subscribeCbs!.onAccountChange("0xuser");
+      (signer.getAddress as Mock).mockResolvedValue(userAddress);
+      subscribeCbs!.onAccountChange(userAddress);
       await vi.waitFor(async () => {
         expect(await sessionStorage.get(keyB)).toBeNull();
       });
@@ -250,12 +252,13 @@ describe("ZamaSDK", () => {
     it("onDisconnect revokes the current account session", async ({
       createMockRelayer,
       createMockSigner,
+      userAddress,
       storage,
       sessionStorage,
     }) => {
       let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
-      const mockSigner = createMockSigner("0xuser" as Address);
+      const mockSigner = createMockSigner();
       const signer = {
         ...mockSigner,
         subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
@@ -271,7 +274,7 @@ describe("ZamaSDK", () => {
         sessionStorage,
       });
 
-      const keyA = await computeStoreKey("0xuser", 31337);
+      const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
       await sessionStorage.set(keyA, "0xsigA");
 
       // Signer may throw on getAddress after disconnect

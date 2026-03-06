@@ -1,30 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CredentialsManager, computeStoreKey } from "../credentials-manager";
-import { MemoryStorage } from "../memory-storage";
-import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { Address } from "../../relayer/relayer-sdk.types";
-import { ZamaSDKEvents } from "../../events/sdk-events";
+import { afterEach, beforeEach, describe, expect, it, vi } from "../../test-fixtures";
+import { CredentialsManager } from "../credentials-manager";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
-import { createMockRelayer, createMockSigner } from "./test-helpers";
 
 describe("Session TTL", () => {
-  let sdk: RelayerSDK;
-  let signer: ReturnType<typeof createMockSigner>;
-  let store: MemoryStorage;
-  let sessionStore: MemoryStorage;
-  let events: ZamaSDKEvent[];
-
   beforeEach(() => {
-    sdk = createMockRelayer({
-      generateKeypair: vi.fn().mockResolvedValue({
-        publicKey: "0xpub123",
-        privateKey: "0xpriv456",
-      }),
-    });
-    signer = createMockSigner();
-    store = new MemoryStorage();
-    sessionStore = new MemoryStorage();
-    events = [];
     vi.useFakeTimers();
   });
 
@@ -32,33 +12,46 @@ describe("Session TTL", () => {
     vi.useRealTimers();
   });
 
-  function createManager(sessionTTL: number = 2592000, keypairTTL: number = 604800) {
-    return new CredentialsManager({
-      relayer: sdk,
-      signer,
-      storage: store,
-      sessionStorage: sessionStore,
-      keypairTTL,
-      sessionTTL,
-      onEvent: (e) => events.push(e),
-    });
-  }
-
-  it("default (30 days): no re-sign within TTL", async () => {
+  it("default (30 days): no re-sign within TTL", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    const manager = createManager();
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+    });
     await manager.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
-    // Advance 6 days — within default 30-day TTL and durationDays (7)
+    // Advance 6 days — within default 30-day TTL and keypairTTL (7 days)
     vi.advanceTimersByTime(6 * 86400 * 1000);
     await manager.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
-  it("numeric TTL: session valid before expiry", async () => {
+  it("numeric TTL: session valid before expiry", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    const manager = createManager(3600); // 1 hour
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: 3600,
+    });
     await manager.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
@@ -68,9 +61,25 @@ describe("Session TTL", () => {
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
-  it("numeric TTL: session expired after TTL triggers re-sign and event", async () => {
+  it("numeric TTL: session expired after TTL triggers re-sign and event", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    events,
+    createCredentialManager,
+  }) => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    const manager = createManager(3600); // 1 hour
+    const emitted: ZamaSDKEvent[] = [];
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: 3600,
+      onEvent: (e) => emitted.push(e),
+    });
     await manager.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
@@ -80,14 +89,27 @@ describe("Session TTL", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(2); // re-signed
 
     // SessionExpired event should have fired
-    const expiredEvents = events.filter((e) => e.type === ZamaSDKEvents.SessionExpired);
+    const expiredEvents = emitted.filter((e) => e.type === events.SessionExpired);
     expect(expiredEvents).toHaveLength(1);
     expect("reason" in expiredEvents[0]! && expiredEvents[0].reason).toBe("ttl");
   });
 
-  it("TTL 0: every operation triggers signing prompt", async () => {
+  it("TTL 0: every operation triggers signing prompt", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    const manager = createManager(0);
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: 0,
+    });
     await manager.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
@@ -98,13 +120,28 @@ describe("Session TTL", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
   });
 
-  it("TTL expiry does not clear FHE keypair in persistent storage", async () => {
+  it("TTL expiry does not clear FHE keypair in persistent storage", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    const manager = createManager(3600);
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: 3600,
+    });
     await manager.allow("0xtoken" as Address);
 
-    const storeKey = await computeStoreKey("0xuser", 31337);
-    const storedBefore = await store.get(storeKey);
+    const address = await signer.getAddress();
+    const chainId = await signer.getChainId();
+    const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
+    const storedBefore = await storage.get(storeKey);
     expect(storedBefore).not.toBeNull();
 
     // Expire the session
@@ -112,15 +149,28 @@ describe("Session TTL", () => {
     await manager.allow("0xtoken" as Address);
 
     // Persistent storage should still have the FHE keypair
-    const storedAfter = await store.get(storeKey);
+    const storedAfter = await storage.get(storeKey);
     expect(storedAfter).not.toBeNull();
     // keypair should NOT have been regenerated
-    expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
   });
 
-  it("disconnect before TTL expiry revokes session (existing behavior)", async () => {
+  it("disconnect before TTL expiry revokes session (existing behavior)", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    const manager = createManager(3600);
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: 3600,
+    });
     await manager.allow("0xtoken" as Address);
 
     // Disconnect (revoke) before TTL expires
@@ -131,12 +181,25 @@ describe("Session TTL", () => {
     // Next allow should re-sign (not regenerate)
     await manager.allow("0xtoken" as Address);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
-    expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
   });
 
-  it("isAllowed() returns false when session TTL expired", async () => {
+  it("isAllowed() returns false when session TTL expired", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    const manager = createManager(3600);
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: 3600,
+    });
     await manager.allow("0xtoken" as Address);
     expect(await manager.isAllowed()).toBe(true);
 
@@ -144,24 +207,37 @@ describe("Session TTL", () => {
     expect(await manager.isAllowed()).toBe(false);
   });
 
-  it("config change: old sessions use their recorded TTL", async () => {
+  it("config change: old sessions use their recorded TTL", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+
     // Create session with 1-hour TTL
-    const manager1 = createManager(3600);
+    const manager1 = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: 3600,
+    });
     await manager1.allow("0xtoken" as Address);
 
     // Advance 30 minutes
     vi.advanceTimersByTime(30 * 60 * 1000);
 
     // Create new manager with 10-second TTL (simulates config change)
-    const manager2 = new CredentialsManager({
-      relayer: sdk,
+    const manager2 = createCredentialManager({
+      relayer,
       signer,
-      storage: store,
-      sessionStorage: sessionStore, // same session storage
+      storage,
+      sessionStorage,
       keypairTTL: 604800,
       sessionTTL: 10, // shorter TTL
-      onEvent: (e) => events.push(e),
     });
 
     // Old session should still be valid (uses its recorded 3600s TTL)
@@ -169,28 +245,42 @@ describe("Session TTL", () => {
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
-  it("chain switch with active TTL: independent sessions unaffected", async () => {
+  it("chain switch with active TTL: independent sessions unaffected", async ({
+    relayer,
+    signer,
+    createMockSigner,
+    createCredentialManager,
+    storage,
+    sessionStorage,
+  }) => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    const manager = createManager(3600);
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: 3600,
+    });
     await manager.allow("0xtoken" as Address);
 
     // Switch chain — new signer returns different chainId
-    const signer2 = createMockSigner();
-    vi.mocked(signer2.getChainId).mockResolvedValue(1); // mainnet
-
-    const manager2 = new CredentialsManager({
-      relayer: sdk,
-      signer: signer2,
-      storage: store,
-      sessionStorage: sessionStore,
-      keypairTTL: 604800,
-      sessionTTL: 3600,
-      onEvent: (e) => events.push(e),
+    const signer2 = createMockSigner({
+      getChainId: vi.fn().mockResolvedValue(1),
     });
 
-    // Different chain — should generate new credentials
+    const manager2 = createCredentialManager({
+      relayer,
+      signer: signer2,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: 3600,
+    });
+
+    // Different chain — should generate new keypair
     await manager2.allow("0xtoken" as Address);
-    expect(sdk.generateKeypair).toHaveBeenCalledTimes(2);
+    expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
 
     // Original chain session should still be valid
     vi.advanceTimersByTime(30 * 60 * 1000);

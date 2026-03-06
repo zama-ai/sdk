@@ -5,7 +5,7 @@ import type { Address } from "../../relayer/relayer-sdk.types";
 import { ReadonlyToken } from "../readonly-token";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { ZamaSDKEvent, ZamaSDKEventListener } from "../../events/sdk-events";
-import { computeStoreKey, CredentialsManager } from "../credentials-manager";
+import { CredentialsManager } from "../credentials-manager";
 import type { GenericSigner, GenericStorage } from "../token.types";
 
 const ZERO_HANDLE = "0x" + "0".repeat(64);
@@ -1090,7 +1090,7 @@ describe("CredentialsManager event emissions", () => {
     await manager.allow("0xtoken" as Address);
 
     // Tamper stored data to simulate expiration
-    const storeKey = await computeStoreKey(
+    const storeKey = await CredentialsManager.computeStoreKey(
       (await signer.getAddress()).toLowerCase(),
       await signer.getChainId(),
     );

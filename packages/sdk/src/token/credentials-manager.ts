@@ -52,21 +52,6 @@ export interface CredentialsManagerConfig {
   onEvent?: ZamaSDKEventListener;
 }
 
-/**
- * Compute the storage key for a given address and chainId.
- * Returns a truncated SHA-256 hex hash to avoid leaking raw addresses in storage keys.
- */
-export async function computeStoreKey(address: string, chainId: number): Promise<string> {
-  const hash = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(`${address.toLowerCase()}:${chainId}`),
-  );
-  const hex = Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hex.slice(0, 32);
-}
-
 export class CredentialsManager {
   #relayer: RelayerSDK;
   #signer: GenericSigner;
@@ -77,6 +62,17 @@ export class CredentialsManager {
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
+
+  static async computeStoreKey(address: string, chainId: number): Promise<string> {
+    const hash = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(`${address.toLowerCase()}:${chainId}`),
+    );
+    const hex = Array.from(new Uint8Array(hash))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return hex.slice(0, 32);
+  }
 
   constructor(config: CredentialsManagerConfig) {
     this.#relayer = config.relayer;
@@ -269,7 +265,7 @@ export class CredentialsManager {
   async #storeKey(): Promise<string> {
     const address = (await this.#signer.getAddress()).toLowerCase();
     const chainId = await this.#signer.getChainId();
-    return computeStoreKey(address, chainId);
+    return CredentialsManager.computeStoreKey(address, chainId);
   }
 
   /** Check if a session entry has expired based on its recorded TTL. */
