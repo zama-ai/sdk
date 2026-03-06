@@ -158,7 +158,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
           input.add128(value as bigint);
           break;
         case "eaddress":
-          input.addAddress(value as string);
+          input.addAddress(value as unknown as string);
           break;
         case "euint256":
           input.add256(value as bigint);

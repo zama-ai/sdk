@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { EIP1193Provider } from "viem";
 import { createCleartextRelayer } from "../factory";
 import { hoodi } from "../presets";
 
@@ -17,7 +18,7 @@ describe("createCleartextRelayer", () => {
       request: async (_request: { method: string; params?: unknown[] }) => null,
       on: () => {},
       removeListener: () => {},
-    } as const;
+    } as unknown as EIP1193Provider;
 
     const relayer = createCleartextRelayer({
       ...hoodi,

@@ -221,6 +221,8 @@ export interface EIP712TypedData {
         extraData: string;
     };
     // (undocumented)
+    primaryType?: string;
+    // (undocumented)
     types: {
         [key: string]: Array<{
             name: string;
