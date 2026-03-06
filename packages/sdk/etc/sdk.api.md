@@ -82,7 +82,7 @@ export type ActivityAmount = {
     readonly value: bigint;
 } | {
     readonly type: "encrypted";
-    readonly handle: Handle;
+    readonly handle: Handle; /** Populated after batch decryption via {@link applyDecryptedValues}. */
     readonly decryptedValue?: bigint;
 };
 
@@ -22825,8 +22825,8 @@ export class Token extends ReadonlyToken {
     static revokeDelegationBatch(tokens: Token[], delegate: Address): Promise<Map<Address, TransactionResult | ZamaError>>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
-        fees?: bigint;
-        to?: Address;
+        fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
+        to?: Address; /** Progress callbacks for the multi-step shield flow. */
         callbacks?: ShieldCallbacks;
     }): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
@@ -22850,10 +22850,10 @@ export interface TokenConfig extends ReadonlyTokenConfig {
 
 // @public
 export const Topics: {
-    readonly ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9";
-    readonly Wrapped: "0x1f7907f4d84043abe0fb7c74e8865ee5fe93fe4f691c54a7b8fa9d6fb17c7cba";
-    readonly UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee";
-    readonly UnwrappedFinalized: "0xc64e7c81b18b674fc5b037d8a0041bfe3332d86c780a4688f404ee01fbabb152";
+    readonly ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9"; /** `Wrapped(uint64 mintAmount, uint256 amountIn, uint256 feeAmount, address indexed to_, uint256 indexed mintTxId)` */
+    readonly Wrapped: "0x1f7907f4d84043abe0fb7c74e8865ee5fe93fe4f691c54a7b8fa9d6fb17c7cba"; /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
+    readonly UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee"; /** `UnwrappedFinalized(bytes32 indexed burntAmountHandle, ...)` */
+    readonly UnwrappedFinalized: "0xc64e7c81b18b674fc5b037d8a0041bfe3332d86c780a4688f404ee01fbabb152"; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
     readonly UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806";
 };
 
@@ -33347,16 +33347,16 @@ export class ZamaError extends Error {
 
 // @public
 export const ZamaErrorCode: {
-    readonly SigningRejected: "SIGNING_REJECTED";
-    readonly SigningFailed: "SIGNING_FAILED";
-    readonly EncryptionFailed: "ENCRYPTION_FAILED";
-    readonly DecryptionFailed: "DECRYPTION_FAILED";
-    readonly ApprovalFailed: "APPROVAL_FAILED";
-    readonly TransactionReverted: "TRANSACTION_REVERTED";
-    readonly KeypairExpired: "KEYPAIR_EXPIRED";
-    readonly InvalidKeypair: "INVALID_KEYPAIR";
-    readonly NoCiphertext: "NO_CIPHERTEXT";
-    readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
+    readonly SigningRejected: "SIGNING_REJECTED"; /** Wallet signature failed for a reason other than rejection. */
+    readonly SigningFailed: "SIGNING_FAILED"; /** FHE encryption failed. */
+    readonly EncryptionFailed: "ENCRYPTION_FAILED"; /** FHE decryption failed. */
+    readonly DecryptionFailed: "DECRYPTION_FAILED"; /** ERC-20 approval transaction failed. */
+    readonly ApprovalFailed: "APPROVAL_FAILED"; /** On-chain transaction reverted. */
+    readonly TransactionReverted: "TRANSACTION_REVERTED"; /** FHE keypair has expired and needs regeneration. */
+    readonly KeypairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected FHE keypair (stale, expired, or malformed). */
+    readonly InvalidKeypair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
+    readonly NoCiphertext: "NO_CIPHERTEXT"; /** Relayer HTTP request failed. */
+    readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
     readonly Configuration: "CONFIGURATION";
     readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED";
     readonly DelegationCooldown: "DELEGATION_COOLDOWN";

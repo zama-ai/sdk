@@ -144,3 +144,5 @@ export interface DelegatedUserDecryptParams {
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
 export type * from "@zama-fhe/relayer-sdk/bundle";
+// Explicit re-exports needed for rolldown-plugin-dts namespace generation
+export type { Address, Hex } from "@zama-fhe/relayer-sdk/bundle";
