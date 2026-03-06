@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.0-alpha.13](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.12...v1.0.0-alpha.13) (2026-03-06)
+
+### Bug Fixes
+
+- **deps:** pin minimatch to 10.2.4 to resolve ReDoS vulnerabilities ([#69](https://github.com/zama-ai/sdk/issues/69)) ([3861748](https://github.com/zama-ai/sdk/commit/3861748d8fffd756cf76eab0dbc055f73e6181f5))
+
 ## [1.0.0-alpha.12](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.11...v1.0.0-alpha.12) (2026-03-06)
 
 ### Features
