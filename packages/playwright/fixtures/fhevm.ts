@@ -56,7 +56,10 @@ export async function mockRelayerSdk(page: Page, baseURL: string) {
   await page.route(`${baseURL}/encrypt`, async (route) => {
     const body = route.request().postDataJSON();
     const encrypted = await fhevm.encrypt({
-      values: body.values.map((value: string | number | bigint) => BigInt(value)),
+      values: body.values.map((item: { value: string; type: string }) => ({
+        value: BigInt(item.value),
+        type: item.type,
+      })),
       contractAddress: body.contractAddress,
       userAddress: body.userAddress,
     });
