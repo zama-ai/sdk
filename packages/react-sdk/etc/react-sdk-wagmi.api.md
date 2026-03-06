@@ -6,12 +6,19 @@
 
 import { Address } from '@zama-fhe/sdk';
 import { Config } from 'wagmi';
-import { ContractCallConfig } from '@zama-fhe/sdk';
+import { ContractAbi } from '@zama-fhe/sdk';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { Hex } from '@zama-fhe/sdk';
+import { ReadContractArgs } from '@zama-fhe/sdk';
+import { ReadContractConfig } from '@zama-fhe/sdk';
+import { ReadContractReturnType } from '@zama-fhe/sdk';
+import { ReadFunctionName } from '@zama-fhe/sdk';
 import { SignerLifecycleCallbacks } from '@zama-fhe/sdk';
 import { TransactionReceipt } from '@zama-fhe/sdk';
+import { WriteContractArgs } from '@zama-fhe/sdk';
+import { WriteContractConfig } from '@zama-fhe/sdk';
+import { WriteFunctionName } from '@zama-fhe/sdk';
 
 // @public
 export class WagmiSigner implements GenericSigner {
@@ -21,7 +28,7 @@ export class WagmiSigner implements GenericSigner {
     // (undocumented)
     getChainId(): Promise<number>;
     // (undocumented)
-    readContract<T, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
+    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     // (undocumented)
@@ -29,7 +36,7 @@ export class WagmiSigner implements GenericSigner {
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
     // (undocumented)
-    writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
+    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
 // @public

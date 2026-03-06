@@ -1,4 +1,4 @@
-import type { Address, GenericStorage } from "./token.types";
+import type { Address, GenericStorage, Handle } from "./token.types";
 
 const BALANCES_KEY = "zama:balances";
 
@@ -6,7 +6,7 @@ export interface BalanceCachePayload {
   storage: GenericStorage;
   tokenAddress: Address;
   owner: Address;
-  handle: Address;
+  handle: Handle;
 }
 
 /**
@@ -14,7 +14,7 @@ export interface BalanceCachePayload {
  * The handle is embedded in the key so a new on-chain handle automatically
  * invalidates the cache entry — no TTL needed.
  */
-function storageKey(tokenAddress: Address, owner: Address, handle: Address): string {
+function storageKey(tokenAddress: Address, owner: Address, handle: Handle): string {
   return `zama:balance:${tokenAddress.toLowerCase()}:${owner.toLowerCase()}:${handle.toLowerCase()}`;
 }
 

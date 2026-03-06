@@ -1,5 +1,6 @@
-import { concat, getAddress, keccak256, pad, toBytes, toHex } from "viem";
+import { concat, getAddress, keccak256, pad, toBytes, toHex, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import type { Address } from "../relayer-sdk.types";
 import { FHE_BIT_WIDTHS, FheType } from "./constants";
 import { INPUT_VERIFICATION_EIP712 } from "./eip712";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
@@ -7,7 +8,7 @@ import { MOCK_INPUT_SIGNER_PK } from "./constants";
 import type { CleartextConfig } from "./types";
 import { EncryptionFailedError } from "../../token/errors";
 
-const INPUT_SIGNER = privateKeyToAccount(MOCK_INPUT_SIGNER_PK as `0x${string}`);
+const INPUT_SIGNER = privateKeyToAccount(MOCK_INPUT_SIGNER_PK);
 
 type AddedValue = {
   fheType: FheType;
@@ -15,12 +16,12 @@ type AddedValue = {
 };
 
 export class CleartextEncryptedInput {
-  readonly #contractAddress: string;
-  readonly #userAddress: string;
+  readonly #contractAddress: Address;
+  readonly #userAddress: Address;
   readonly #config: CleartextConfig;
   readonly #values: AddedValue[] = [];
 
-  constructor(contractAddress: string, userAddress: string, config: CleartextConfig) {
+  constructor(contractAddress: Address, userAddress: Address, config: CleartextConfig) {
     this.#contractAddress = getAddress(contractAddress);
     this.#userAddress = getAddress(userAddress);
     this.#config = config;
@@ -90,8 +91,7 @@ export class CleartextEncryptedInput {
       computeMockCiphertext(fheType, value, random32List[index]!),
     );
 
-    const ciphertextParts = mockCiphertexts.map((ciphertext) => ciphertext as `0x${string}`);
-    const ciphertextBlob = keccak256(ciphertextParts.length > 0 ? concat(ciphertextParts) : "0x");
+    const ciphertextBlob = keccak256(mockCiphertexts.length > 0 ? concat(mockCiphertexts) : "0x");
 
     const handles = this.#values.map(({ fheType }, index) =>
       computeInputHandle(
@@ -104,7 +104,7 @@ export class CleartextEncryptedInput {
     );
 
     const cleartextParts = this.#values.map(({ value }) => pad(toHex(value), { size: 32 }));
-    const cleartextBytes: `0x${string}` = cleartextParts.length > 0 ? concat(cleartextParts) : "0x";
+    const cleartextBytes: Hex = cleartextParts.length > 0 ? concat(cleartextParts) : "0x";
 
     const signature = await INPUT_SIGNER.signTypedData({
       domain: INPUT_VERIFICATION_EIP712.domain(
@@ -112,13 +112,13 @@ export class CleartextEncryptedInput {
         this.#config.contracts.verifyingInputVerifier,
       ),
       types: {
-        CiphertextVerification: [...INPUT_VERIFICATION_EIP712.types.CiphertextVerification],
+        CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
       },
       primaryType: "CiphertextVerification",
       message: {
-        ctHandles: handles as `0x${string}`[],
-        userAddress: this.#userAddress as `0x${string}`,
-        contractAddress: this.#contractAddress as `0x${string}`,
+        ctHandles: handles,
+        userAddress: this.#userAddress,
+        contractAddress: this.#contractAddress,
         contractChainId: this.#config.chainId,
         extraData: cleartextBytes,
       },
@@ -128,14 +128,14 @@ export class CleartextEncryptedInput {
       concat([
         toHex(new Uint8Array([handles.length])),
         toHex(new Uint8Array([1])),
-        ...handles.map((handle) => handle as `0x${string}`),
+        ...handles,
         signature,
         cleartextBytes,
       ]),
     );
 
     return {
-      handles: handles.map((handle) => toBytes(handle as `0x${string}`)),
+      handles: handles.map((handle) => toBytes(handle)),
       inputProof,
     };
   }

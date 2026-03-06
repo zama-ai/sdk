@@ -12,8 +12,9 @@ import {
   wrapContract,
   wrapETHContract,
 } from "../contracts";
+import { hexToBigInt } from "viem";
 import { findUnwrapRequested } from "../events/onchain-events";
-import type { Address, Hex } from "../relayer/relayer-sdk.types";
+import type { Address, Handle, Hex } from "../relayer/relayer-sdk.types";
 import { normalizeAddress } from "../utils";
 import {
   ZamaError,
@@ -65,7 +66,7 @@ export class Token extends ReadonlyToken {
     if (this.#underlying !== undefined) return this.#underlying;
     if (!this.#underlyingPromise) {
       this.#underlyingPromise = this.signer
-        .readContract<Address>(underlyingContract(this.wrapper))
+        .readContract(underlyingContract(this.wrapper))
         .then((v) => {
           this.#underlying = v;
           this.#underlyingPromise = null;
@@ -289,7 +290,7 @@ export class Token extends ReadonlyToken {
     const resolvedHolder = holder
       ? normalizeAddress(holder, "holder")
       : await this.signer.getAddress();
-    return this.signer.readContract<boolean>(
+    return this.signer.readContract(
       isOperatorContract(this.address, resolvedHolder, normalizedSpender),
     );
   }
@@ -577,9 +578,9 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.finalizeUnwrap(event.encryptedAmount);
    * ```
    */
-  async finalizeUnwrap(burnAmountHandle: Address): Promise<TransactionResult> {
+  async finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult> {
     let clearValue: bigint;
-    let decryptionProof: Address;
+    let decryptionProof: Hex;
 
     const t0 = Date.now();
     try {
@@ -588,7 +589,7 @@ export class Token extends ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
       decryptionProof = result.decryptionProof;
       try {
-        clearValue = BigInt(result.abiEncodedClearValues);
+        clearValue = hexToBigInt(result.abiEncodedClearValues);
       } catch {
         throw new DecryptionFailedError(
           `Cannot parse decrypted value: ${result.abiEncodedClearValues}`,
@@ -649,7 +650,7 @@ export class Token extends ReadonlyToken {
     try {
       if (approvalAmount > 0n) {
         const userAddress = await this.signer.getAddress();
-        const currentAllowance = await this.signer.readContract<bigint>(
+        const currentAllowance = await this.signer.readContract(
           allowanceContract(underlying, userAddress, this.wrapper),
         );
 
@@ -718,7 +719,7 @@ export class Token extends ReadonlyToken {
     const underlying = await this.#getUnderlying();
 
     const userAddress = await this.signer.getAddress();
-    const allowance = await this.signer.readContract<bigint>(
+    const allowance = await this.signer.readContract(
       allowanceContract(underlying, userAddress, this.wrapper),
     );
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { PublicDecryptResult } from "@zama-fhe/sdk";
+import type { ClearValueType, Handle, PublicDecryptResult } from "@zama-fhe/sdk";
 import { decryptionKeys } from "./decryption-cache";
 import { useZamaSDK } from "../provider";
 
@@ -22,10 +22,13 @@ import { useZamaSDK } from "../provider";
 export function usePublicDecrypt() {
   const sdk = useZamaSDK();
   const queryClient = useQueryClient();
-  return useMutation<PublicDecryptResult, Error, string[]>({
+  return useMutation<PublicDecryptResult, Error, Handle[]>({
     mutationFn: (handles) => sdk.relayer.publicDecrypt(handles),
     onSuccess: (data) => {
-      for (const [handle, value] of Object.entries(data.clearValues)) {
+      for (const [handle, value] of Object.entries(data.clearValues) as [
+        Handle,
+        ClearValueType,
+      ][]) {
         queryClient.setQueryData(decryptionKeys.value(handle), value);
       }
     },

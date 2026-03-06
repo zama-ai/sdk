@@ -4,9 +4,17 @@
 
 ```ts
 
+import { Abi } from 'viem';
 import { Address } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
+import { ContractFunctionArgs } from 'viem';
+import { ContractFunctionName } from 'viem';
+import { ContractFunctionReturnType } from 'viem';
+import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
+import { Hex } from '@zama-fhe/relayer-sdk/bundle';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
+import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
@@ -17,7 +25,7 @@ export type ActivityAmount = {
     readonly value: bigint;
 } | {
     readonly type: "encrypted";
-    readonly handle: string;
+    readonly handle: Handle;
     readonly decryptedValue?: bigint;
 };
 
@@ -100,7 +108,7 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
 };
 
 // @public
-export function applyDecryptedValues(items: readonly ActivityItem[], decryptedMap: ReadonlyMap<string, bigint>): ActivityItem[];
+export function applyDecryptedValues(items: readonly ActivityItem[], decryptedMap: ReadonlyMap<Handle, bigint>): ActivityItem[];
 
 // @public
 export class ApprovalFailedError extends ZamaError {
@@ -1063,7 +1071,7 @@ export const BATCH_SWAP_ABI: readonly [{
 
 // @public
 export interface BatchDecryptOptions {
-    handles?: Address[];
+    handles?: Handle[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
     owner?: Address;
@@ -1072,9 +1080,9 @@ export interface BatchDecryptOptions {
 // @public
 export interface BatchTransferData {
     // (undocumented)
-    encryptedAmount: Address;
+    encryptedAmount: Handle;
     // (undocumented)
-    inputProof: Address;
+    inputProof: Hex;
     // (undocumented)
     retryFor: bigint;
     // (undocumented)
@@ -1096,6 +1104,8 @@ export const chromeSessionStorage: ChromeSessionStorage;
 
 // @public
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
+
+export { ClearValueType }
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -5691,7 +5701,7 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
 
 // @public
 export interface ConfidentialTransferEvent {
-    readonly encryptedAmountHandle: string;
+    readonly encryptedAmountHandle: Handle;
     // (undocumented)
     readonly eventName: "ConfidentialTransfer";
     readonly from: string;
@@ -7175,15 +7185,8 @@ export class ConfigurationError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// @public
-export interface ContractCallConfig {
-    readonly abi: readonly unknown[];
-    readonly address: Address;
-    readonly args: readonly unknown[];
-    readonly functionName: string;
-    readonly gas?: bigint;
-    readonly value?: bigint;
-}
+// @public (undocumented)
+export type ContractAbi = Abi | readonly unknown[];
 
 // @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
@@ -7315,9 +7318,6 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
 
-// @public
-export type DecryptedValue = bigint | boolean | `0x${string}`;
-
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -7357,7 +7357,7 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: string[];
+    handles: Handle[];
     // (undocumented)
     privateKey: string;
     // (undocumented)
@@ -8884,7 +8884,7 @@ export interface EIP712TypedData {
     // (undocumented)
     message: {
         publicKey: string;
-        contractAddresses: string[];
+        contractAddresses: readonly string[];
         startTimestamp: bigint;
         durationDays: bigint;
         extraData: string;
@@ -8893,9 +8893,9 @@ export interface EIP712TypedData {
     primaryType?: string;
     // (undocumented)
     types: {
-        [key: string]: Array<{
-            name: string;
-            type: string;
+        [key: string]: ReadonlyArray<{
+            readonly name: string;
+            readonly type: string;
         }>;
     };
 }
@@ -8918,12 +8918,16 @@ export interface EncryptErrorEvent extends BaseEvent {
 }
 
 // @public
-export interface EncryptInput {
-    // (undocumented)
-    type: FheType;
-    // (undocumented)
-    value: bigint | boolean;
-}
+export type EncryptInput = {
+    value: boolean | bigint;
+    type: "ebool";
+} | {
+    value: bigint;
+    type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
+} | {
+    value: Address;
+    type: "eaddress";
+};
 
 // @public (undocumented)
 export const ENCRYPTION_ABI: readonly [{
@@ -10518,7 +10522,7 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 export const ERC7984_WRAPPER_INTERFACE_ID: "0xd04584ba";
 
 // @public
-export function extractEncryptedHandles(items: readonly ActivityItem[]): string[];
+export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[];
 
 // @public (undocumented)
 export const FEE_MANAGER_ABI: readonly [{
@@ -11055,21 +11059,12 @@ export const FEE_MANAGER_ABI: readonly [{
 // @public
 export const FHE_GAS_LIMIT = 5000000n;
 
-// @public
-export interface FHEKeypair {
-    // (undocumented)
-    privateKey: string;
-    // (undocumented)
-    publicKey: string;
-}
-
-// @public
-export type FheType = "ebool" | "euint8" | "euint16" | "euint32" | "euint64" | "euint128" | "euint256" | "eaddress";
+export { FheTypeName }
 
 export { FhevmInstanceConfig }
 
 // @public
-export function finalizeUnwrapContract(wrapper: Address, burntAmount: Address, burntAmountCleartext: bigint, decryptionProof: Address): {
+export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -12523,11 +12518,11 @@ export interface GenericLogger {
 export interface GenericSigner {
     getAddress: () => Promise<Address>;
     getChainId(): Promise<number>;
-    readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T>;
+    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
+    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
 // @public
@@ -14725,10 +14720,22 @@ export function getWrapperContract(coordinator: Address, tokenAddress: Address):
 };
 
 // @public
-export const HardhatConfig: FhevmInstanceConfig;
+export type Handle = SDK.Bytes32Hex;
 
 // @public
-export type Hex = `0x${string}`;
+export const HardhatConfig: {
+    readonly chainId: 31337;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "";
+    readonly network: "http://127.0.0.1:8545";
+    readonly aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D";
+    readonly inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f";
+    readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
+    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
+    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+};
+
+export { Hex }
 
 // @public
 export class IndexedDBStorage implements GenericStorage {
@@ -17744,13 +17751,25 @@ export class KeypairExpiredError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
+export { KeypairType }
+
 export { KmsDelegatedUserDecryptEIP712Type }
 
 // @public
 export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
 
 // @public
-export const MainnetConfig: FhevmInstanceConfig;
+export const MainnetConfig: {
+    readonly chainId: 1;
+    readonly gatewayChainId: 261131;
+    readonly relayerUrl: "https://relayer.mainnet.zama.org/v2";
+    readonly network: "https://ethereum-rpc.publicnode.com";
+    readonly aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6";
+    readonly kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03";
+    readonly inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2";
+    readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
+    readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
+};
 
 // @public
 export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
@@ -17820,14 +17839,9 @@ export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequ
 export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMetadata>)[], userAddress: string): ActivityItem[];
 
 // @public
-export interface PublicDecryptResult {
-    // (undocumented)
-    abiEncodedClearValues: string;
-    // (undocumented)
-    clearValues: Record<string, bigint>;
-    // (undocumented)
-    decryptionProof: Address;
-}
+export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
+    clearValues: Readonly<Record<Handle, SDK.ClearValueType>>;
+};
 
 // @public
 export function rateContract(tokenAddress: Address): {
@@ -19306,6 +19320,23 @@ export interface RawLog {
     readonly topics: readonly string[];
 }
 
+// @public (undocumented)
+export type ReadContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>> = ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>;
+
+// @public
+export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>, TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>> {
+    readonly abi: TAbi;
+    readonly address: Address;
+    readonly args: TArgs;
+    readonly functionName: TFunctionName;
+}
+
+// @public (undocumented)
+export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>, TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>> = ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>;
+
+// @public (undocumented)
+export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
+
 // @public
 export class ReadonlyToken {
     constructor(config: ReadonlyTokenConfig);
@@ -19316,12 +19347,12 @@ export class ReadonlyToken {
     allowance(wrapper: Address, owner?: Address): Promise<bigint>;
     balanceOf(owner?: Address): Promise<bigint>;
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner?: Address): Promise<Address>;
+    confidentialBalanceOf(owner?: Address): Promise<Handle>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
     decimals(): Promise<number>;
-    decryptBalance(handle: Address, owner?: Address): Promise<bigint>;
-    decryptHandles(handles: Address[], owner?: Address): Promise<Map<Address, bigint>>;
+    decryptBalance(handle: Handle, owner?: Address): Promise<bigint>;
+    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
     discoverWrapper(coordinatorAddress: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
     isAllowed(): Promise<boolean>;
@@ -19331,9 +19362,7 @@ export class ReadonlyToken {
     isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x`;
     name(): Promise<string>;
     // (undocumented)
-    protected normalizeHandle(value: unknown): Address;
-    // (undocumented)
-    protected readConfidentialBalanceOf(owner: Address): Promise<Address>;
+    protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     protected readonly sdk: RelayerSDK;
@@ -19366,9 +19395,9 @@ export class RelayerRequestFailedError extends ZamaError {
 export interface RelayerSDK {
     createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, DecryptedValue>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<FHEKeypair>;
+    generateKeypair(): Promise<KeypairType<string>>;
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;
@@ -19377,10 +19406,10 @@ export interface RelayerSDK {
         publicParams: Uint8Array;
         publicParamsId: string;
     } | null>;
-    publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
+    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>>;
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
 
 // @public
@@ -19391,9 +19420,9 @@ export class RelayerWeb implements RelayerSDK {
     constructor(config: RelayerWebConfig);
     createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, DecryptedValue>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<FHEKeypair>;
+    generateKeypair(): Promise<KeypairType<string>>;
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;
@@ -19403,11 +19432,11 @@ export class RelayerWeb implements RelayerSDK {
         publicParamsId: string;
     } | null>;
     get initError(): Error | undefined;
-    publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
+    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     get status(): RelayerSDKStatus;
     terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>>;
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
 
 // @public
@@ -19431,7 +19460,17 @@ export interface RelayerWebSecurityConfig {
 export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
 
 // @public
-export const SepoliaConfig: FhevmInstanceConfig;
+export const SepoliaConfig: {
+    readonly chainId: 11155111;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "https://relayer.testnet.zama.org/v2";
+    readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
+    readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
+    readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
+    readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
+    readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+    readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+};
 
 // @public (undocumented)
 export interface SessionExpiredEvent extends BaseEvent {
@@ -22491,7 +22530,7 @@ export class Token extends ReadonlyToken {
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
-    finalizeUnwrap(burnAmountHandle: Address): Promise<TransactionResult>;
+    finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: {
@@ -27142,7 +27181,7 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
 };
 
 // @public
-export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address, to: Address, encryptedBalance: Address): {
+export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address, to: Address, encryptedBalance: Handle): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -28616,7 +28655,7 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 // @public
 export interface UnwrappedFinalizedEvent {
     readonly burnAmount: bigint;
-    readonly burntAmountHandle: string;
+    readonly burntAmountHandle: Handle;
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
     readonly feeAmount: bigint;
@@ -28628,11 +28667,11 @@ export interface UnwrappedFinalizedEvent {
 
 // @public
 export interface UnwrappedStartedEvent {
-    readonly burnAmount: string;
+    readonly burnAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrappedStarted";
     readonly refund: string;
-    readonly requestedAmount: string;
+    readonly requestedAmount: Handle;
     readonly requestId: bigint;
     readonly returnVal: boolean;
     readonly to: string;
@@ -28641,7 +28680,7 @@ export interface UnwrappedStartedEvent {
 
 // @public
 export interface UnwrapRequestedEvent {
-    readonly encryptedAmount: Address;
+    readonly encryptedAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: string;
@@ -28662,7 +28701,7 @@ export interface UserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: string[];
+    handles: Handle[];
     // (undocumented)
     privateKey: string;
     // (undocumented)
@@ -32993,6 +33032,22 @@ export function wrapperExistsContract(coordinator: Address, tokenAddress: Addres
     readonly functionName: "wrapperExists";
     readonly args: readonly [`0x${string}`];
 };
+
+// @public (undocumented)
+export type WriteContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>> = ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>;
+
+// @public
+export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>, TArgs extends WriteContractArgs<TAbi, TFunctionName> = WriteContractArgs<TAbi, TFunctionName>> {
+    readonly abi: TAbi;
+    readonly address: Address;
+    readonly args: TArgs;
+    readonly functionName: TFunctionName;
+    readonly gas?: bigint;
+    readonly value?: bigint;
+}
+
+// @public (undocumented)
+export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "nonpayable" | "payable">;
 
 // @public
 export class ZamaError extends Error {

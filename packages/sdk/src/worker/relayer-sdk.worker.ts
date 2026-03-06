@@ -9,7 +9,6 @@ import type {
   FhevmInstanceConfig,
   RelayerSDKGlobal,
 } from "../relayer/relayer-sdk.types";
-import { convertToBigIntRecord } from "../relayer/relayer-utils";
 import { assertObject, assertString } from "../utils";
 import type {
   CreateDelegatedEIP712Request,
@@ -400,9 +399,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
       payload.durationDays,
     );
 
-    const response: UserDecryptResponseData = {
-      clearValues: convertToBigIntRecord(result),
-    };
+    const response: UserDecryptResponseData = { clearValues: result };
 
     sendSuccess(id, type, response);
   } catch (error) {
@@ -444,11 +441,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
 
     const result = await sdkInstance.publicDecrypt(payload.handles);
 
-    const response: PublicDecryptResponseData = {
-      clearValues: convertToBigIntRecord(result.clearValues),
-      abiEncodedClearValues: result.abiEncodedClearValues,
-      decryptionProof: result.decryptionProof,
-    };
+    const response: PublicDecryptResponseData = { ...result };
 
     sendSuccess(id, type, response);
   } catch (error) {
@@ -589,9 +582,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
       payload.durationDays,
     );
 
-    const response: DelegatedUserDecryptResponseData = {
-      clearValues: convertToBigIntRecord(result),
-    };
+    const response: DelegatedUserDecryptResponseData = { clearValues: result };
 
     sendSuccess(id, type, response);
   } catch (error) {

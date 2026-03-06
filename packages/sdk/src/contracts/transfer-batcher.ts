@@ -1,13 +1,13 @@
 import { TRANSFER_BATCHER_ABI } from "../abi/transfer-batch.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { Address, Handle, Hex } from "../relayer/relayer-sdk.types";
 import { assertAddress } from "../utils";
 import { FHE_GAS_LIMIT } from "./gas";
 
 /** Batch transfer data for confidentialBatchTransfer. */
 export interface BatchTransferData {
   to: Address;
-  encryptedAmount: Address;
-  inputProof: Address;
+  encryptedAmount: Handle;
+  inputProof: Hex;
   retryFor: bigint;
 }
 

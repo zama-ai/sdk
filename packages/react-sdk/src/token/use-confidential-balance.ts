@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, Handle } from "@zama-fhe/sdk";
 import { useReadonlyToken } from "./use-readonly-token";
 import { confidentialBalanceQueryKeys, confidentialHandleQueryKeys } from "./balance-query-keys";
 
@@ -53,7 +53,7 @@ export function useConfidentialBalance(
   const ownerKey = signerAddress ?? "";
 
   // Phase 1: Poll the encrypted handle (cheap RPC read, no signing)
-  const handleQuery = useQuery<Address, Error>({
+  const handleQuery = useQuery<Handle, Error>({
     queryKey: confidentialHandleQueryKeys.owner(tokenAddress, ownerKey),
     queryFn: () => token.confidentialBalanceOf(),
     enabled: !!signerAddress,

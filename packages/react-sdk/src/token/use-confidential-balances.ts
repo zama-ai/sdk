@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { DecryptionFailedError, ReadonlyToken, type Address } from "@zama-fhe/sdk";
+import { DecryptionFailedError, ReadonlyToken, type Address, type Handle } from "@zama-fhe/sdk";
 import { useMemo } from "react";
 import { useZamaSDK } from "../provider";
 import { confidentialBalancesQueryKeys, confidentialHandlesQueryKeys } from "./balance-query-keys";
@@ -78,7 +78,7 @@ export function useConfidentialBalances(
   );
 
   // Phase 1: Poll all encrypted handles (cheap RPC reads)
-  const handlesQuery = useQuery<Address[], Error>({
+  const handlesQuery = useQuery<Handle[], Error>({
     queryKey: confidentialHandlesQueryKeys.tokens(tokenAddresses, ownerKey),
     queryFn: () => Promise.all(tokens.map((t) => t.confidentialBalanceOf())),
     enabled: tokenAddresses.length > 0 && !!signerAddress,

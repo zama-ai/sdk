@@ -1,18 +1,21 @@
 import type {
+  ClearValueType,
+  InputProofBytesType,
+  KeypairType,
+  KmsDelegatedUserDecryptEIP712Type,
+  ZKProofLike,
+} from "@zama-fhe/relayer-sdk/bundle";
+import type {
   Address,
-  DecryptedValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  FHEKeypair,
-  InputProofBytesType,
-  KmsDelegatedUserDecryptEIP712Type,
+  Handle,
   PublicDecryptResult,
   RelayerSDKStatus,
   RelayerWebConfig,
   UserDecryptParams,
-  ZKProofLike,
 } from "./relayer-sdk.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
@@ -214,7 +217,7 @@ export class RelayerWeb implements RelayerSDK {
   /**
    * Generate a keypair for FHE operations.
    */
-  async generateKeypair(): Promise<FHEKeypair> {
+  async generateKeypair(): Promise<KeypairType<string>> {
     const worker = await this.#ensureWorker();
     const result = await worker.generateKeypair();
     return {
@@ -282,7 +285,7 @@ export class RelayerWeb implements RelayerSDK {
    * Decrypt ciphertexts using user's private key.
    * Requires a valid EIP712 signature.
    */
-  async userDecrypt(params: UserDecryptParams): Promise<Record<string, DecryptedValue>> {
+  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
@@ -295,7 +298,7 @@ export class RelayerWeb implements RelayerSDK {
    * Public decryption - no authorization needed.
    * Used for publicly visible encrypted values.
    */
-  async publicDecrypt(handles: string[]): Promise<PublicDecryptResult> {
+  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
@@ -334,7 +337,7 @@ export class RelayerWeb implements RelayerSDK {
    */
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Record<string, DecryptedValue>> {
+  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();

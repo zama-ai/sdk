@@ -55,8 +55,7 @@ export function shieldFeeQueryOptions(signer: GenericSigner, config: UseFeeConfi
   const { feeManagerAddress, amount, from, to } = config;
   return {
     queryKey: feeQueryKeys.shieldFee(feeManagerAddress, amount.toString(), from, to),
-    queryFn: () =>
-      signer.readContract<bigint>(getWrapFeeContract(feeManagerAddress, amount, from, to)),
+    queryFn: () => signer.readContract(getWrapFeeContract(feeManagerAddress, amount, from, to)),
     staleTime: 30_000,
   } as const;
 }
@@ -72,8 +71,7 @@ export function unshieldFeeQueryOptions(signer: GenericSigner, config: UseFeeCon
   const { feeManagerAddress, amount, from, to } = config;
   return {
     queryKey: feeQueryKeys.unshieldFee(feeManagerAddress, amount.toString(), from, to),
-    queryFn: () =>
-      signer.readContract<bigint>(getUnwrapFeeContract(feeManagerAddress, amount, from, to)),
+    queryFn: () => signer.readContract(getUnwrapFeeContract(feeManagerAddress, amount, from, to)),
     staleTime: 30_000,
   } as const;
 }
@@ -88,7 +86,7 @@ export function unshieldFeeQueryOptions(signer: GenericSigner, config: UseFeeCon
 export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress: Address) {
   return {
     queryKey: feeQueryKeys.batchTransferFee(feeManagerAddress),
-    queryFn: () => signer.readContract<bigint>(getBatchTransferFeeContract(feeManagerAddress)),
+    queryFn: () => signer.readContract(getBatchTransferFeeContract(feeManagerAddress)),
     staleTime: 30_000,
   } as const;
 }
@@ -103,7 +101,7 @@ export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAd
 export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddress: Address) {
   return {
     queryKey: feeQueryKeys.feeRecipient(feeManagerAddress),
-    queryFn: () => signer.readContract<Address>(getFeeRecipientContract(feeManagerAddress)),
+    queryFn: () => signer.readContract(getFeeRecipientContract(feeManagerAddress)),
     staleTime: 30_000,
   } as const;
 }

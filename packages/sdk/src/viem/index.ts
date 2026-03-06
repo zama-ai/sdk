@@ -26,7 +26,14 @@ export {
 export type {
   GenericSigner,
   SignerLifecycleCallbacks,
-  ContractCallConfig,
+  ContractAbi,
+  ReadContractConfig,
+  ReadContractArgs,
+  ReadContractReturnType,
+  ReadFunctionName,
+  WriteContractConfig,
+  WriteContractArgs,
+  WriteFunctionName,
   TransactionReceipt,
   Hex,
 } from "../token/token.types";
