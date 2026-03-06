@@ -34,6 +34,8 @@ export const ZamaErrorCode = {
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
   RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
+  /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
+  Configuration: "CONFIGURATION",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -136,6 +138,14 @@ export class RelayerRequestFailedError extends ZamaError {
     super(ZamaErrorCode.RelayerRequestFailed, message, options);
     this.name = "RelayerRequestFailedError";
     this.statusCode = statusCode;
+  }
+}
+
+/** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
+export class ConfigurationError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.Configuration, message, options);
+    this.name = "ConfigurationError";
   }
 }
 
