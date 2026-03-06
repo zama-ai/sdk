@@ -49,7 +49,7 @@ export function shieldFeeQueryOptions(
     queryFn: async (context) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
-      if (!amount || !params.from || !params.to) return 0n;
+      if (amount === undefined || !params.from || !params.to) return 0n;
       return signer.readContract(
         getWrapFeeContract(
           params.feeManagerAddress as Address,
@@ -82,7 +82,7 @@ export function unshieldFeeQueryOptions(
     queryFn: async (context) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
-      if (!amount || !params.from || !params.to) return 0n;
+      if (amount === undefined || !params.from || !params.to) return 0n;
       return signer.readContract(
         getUnwrapFeeContract(
           params.feeManagerAddress as Address,

@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react";
-import { isAllowedQueryKeys } from "@zama-fhe/sdk/query";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { expectCacheInvalidated } from "../../test-helpers";
 import {
@@ -19,18 +19,18 @@ describe("useAllow", () => {
 
   test("cache: invalidates isAllowed query after allow", async ({ renderWithProviders }) => {
     const { result, queryClient } = renderWithProviders(() => useAllow());
-    queryClient.setQueryData(isAllowedQueryKeys.all, true);
+    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
 
-    expectCacheInvalidated(queryClient, isAllowedQueryKeys.all);
+    expectCacheInvalidated(queryClient, zamaQueryKeys.isAllowed.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
     let invalidatedDuringCallback: boolean | undefined;
     const onSuccess = vi.fn((_: void, variables: unknown) => {
       invalidatedDuringCallback =
-        queryClient.getQueryState(isAllowedQueryKeys.all)?.isInvalidated ?? false;
+        queryClient.getQueryState(zamaQueryKeys.isAllowed.all)?.isInvalidated ?? false;
       expect(variables).toEqual([TOKEN, OTHER_TOKEN]);
     });
     const { result, queryClient } = renderWithProviders(() =>
@@ -38,12 +38,12 @@ describe("useAllow", () => {
         onSuccess,
       }),
     );
-    queryClient.setQueryData(isAllowedQueryKeys.all, true);
+    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
 
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(invalidatedDuringCallback).toBe(false);
-    expectCacheInvalidated(queryClient, isAllowedQueryKeys.all);
+    expectCacheInvalidated(queryClient, zamaQueryKeys.isAllowed.all);
   });
 });

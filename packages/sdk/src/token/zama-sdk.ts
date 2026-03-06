@@ -10,6 +10,10 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "./token.types";
 
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
   /** FHE relayer backend (`RelayerWeb` for browser, `RelayerNode` for server). */
@@ -82,16 +86,28 @@ export class ZamaSDK {
 
     if (this.signer.subscribe) {
       const lifecycleCallbacks = config.signerLifecycleCallbacks;
+      const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
+        void effect().catch((error) => {
+          this.#onEvent?.({
+            type: ZamaSDKEvents.TransactionError,
+            operation,
+            error: toError(error),
+            timestamp: Date.now(),
+          });
+        });
+      };
       this.#unsubscribeSigner = this.signer.subscribe({
         onDisconnect: () => {
-          void this.#revokeByTrackedIdentity().then(() => {
+          runLifecycleEffect("signerDisconnect", async () => {
+            await this.#revokeByTrackedIdentity();
             this.#lastAddress = null;
             this.#lastChainId = null;
             lifecycleCallbacks?.onDisconnect?.();
           });
         },
         onAccountChange: (newAddress: Address) => {
-          void this.#revokeByTrackedIdentity().then(async () => {
+          runLifecycleEffect("signerAccountChange", async () => {
+            await this.#revokeByTrackedIdentity();
             this.#lastAddress = newAddress.toLowerCase();
             try {
               this.#lastChainId = await this.signer.getChainId();
@@ -102,7 +118,8 @@ export class ZamaSDK {
           });
         },
         onChainChange: (newChainId: number) => {
-          void this.#revokeByTrackedIdentity().then(async () => {
+          runLifecycleEffect("signerChainChange", async () => {
+            await this.#revokeByTrackedIdentity();
             this.#lastChainId = newChainId;
             try {
               this.#lastAddress = (await this.signer.getAddress()).toLowerCase();

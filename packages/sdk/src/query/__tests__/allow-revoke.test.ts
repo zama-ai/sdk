@@ -58,8 +58,13 @@ describe("isAllowedQueryOptions", () => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
     const isAllowedSpy = vi.spyOn(sdk, "isAllowed").mockResolvedValue(true);
 
-    const options = isAllowedQueryOptions(sdk);
-    expect(options.queryKey).toEqual(["zama.isAllowed"]);
+    const options = isAllowedQueryOptions(sdk, {
+      account: "0x1111111111111111111111111111111111111111",
+    });
+    expect(options.queryKey).toEqual([
+      "zama.isAllowed",
+      { account: "0x1111111111111111111111111111111111111111" },
+    ]);
 
     const result = await options.queryFn({
       queryKey: options.queryKey,
@@ -71,7 +76,9 @@ describe("isAllowedQueryOptions", () => {
   test("sets staleTime to Infinity", ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
 
-    const options = isAllowedQueryOptions(sdk);
+    const options = isAllowedQueryOptions(sdk, {
+      account: "0x1111111111111111111111111111111111111111",
+    });
 
     expect(options.staleTime).toBe(Infinity);
   });
@@ -80,6 +87,7 @@ describe("isAllowedQueryOptions", () => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
 
     const options = isAllowedQueryOptions(sdk, {
+      account: "0x1111111111111111111111111111111111111111",
       query: { enabled: false },
     });
 

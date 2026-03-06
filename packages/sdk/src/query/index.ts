@@ -95,7 +95,7 @@ export { unwrapAllMutationOptions } from "./unwrap-all";
 export { finalizeUnwrapMutationOptions, type FinalizeUnwrapParams } from "./finalize-unwrap";
 export { encryptMutationOptions } from "./encrypt";
 export { allowMutationOptions } from "./allow";
-export { isAllowedQueryKeys, isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
+export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokeMutationOptions } from "./revoke";
 export { revokeSessionMutationOptions } from "./revoke-session";
 export type { ActivityItem, ActivityLogMetadata } from "../activity";

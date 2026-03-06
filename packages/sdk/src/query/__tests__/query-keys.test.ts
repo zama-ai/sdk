@@ -231,6 +231,7 @@ describe("zamaQueryKeys", () => {
           getAddress(SPENDER_LOWER),
         ),
       ],
+      [zamaQueryKeys.isAllowed.scope(OWNER_LOWER), zamaQueryKeys.isAllowed.scope(OWNER_UPPER)],
       [zamaQueryKeys.totalSupply.token(TOKEN_LOWER), zamaQueryKeys.totalSupply.token(TOKEN_UPPER)],
       [
         zamaQueryKeys.fees.shieldFee(TOKEN_LOWER, "100", OWNER_LOWER, WRAPPER_LOWER),
@@ -254,6 +255,13 @@ describe("zamaQueryKeys", () => {
     for (const [lowerKey, upperKey] of keyPairs) {
       expect(lowerKey).toEqual(upperKey);
     }
+  });
+
+  test("isAllowed scope key includes account identity", () => {
+    expect(zamaQueryKeys.isAllowed.scope(OWNER_LOWER)).toEqual([
+      "zama.isAllowed",
+      { account: getAddress(OWNER_LOWER) },
+    ]);
   });
 
   test("fees keys type feeManagerAddress as string", () => {

@@ -2,7 +2,12 @@
 
 import { useQuery, useSuspenseQuery, skipToken, type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { confidentialIsApprovedQueryOptions, hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import {
+  confidentialIsApprovedQueryOptions,
+  hashFn,
+  signerAddressQueryOptions,
+  zamaQueryKeys,
+} from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
 
 export { confidentialIsApprovedQueryOptions };
@@ -46,13 +51,23 @@ export function useConfidentialIsApproved(
   const { spender, holder, ...tokenConfig } = config;
   const userEnabled = options?.enabled;
   const token = useToken(tokenConfig);
+  const holderQuery = useQuery({
+    ...signerAddressQueryOptions(token.signer),
+    enabled: holder === undefined,
+    queryKeyHashFn: hashFn,
+  });
+  const resolvedHolder = holder ?? (holderQuery.data as Address | undefined);
 
-  const baseOpts = spender
-    ? confidentialIsApprovedQueryOptions(token.signer, token.address, { owner: holder, spender })
-    : {
-        queryKey: zamaQueryKeys.confidentialIsApproved.token(config.tokenAddress),
-        queryFn: skipToken,
-      };
+  const baseOpts =
+    spender && resolvedHolder
+      ? confidentialIsApprovedQueryOptions(token.signer, token.address, {
+          holder: resolvedHolder,
+          spender,
+        })
+      : {
+          queryKey: zamaQueryKeys.confidentialIsApproved.token(config.tokenAddress),
+          queryFn: skipToken,
+        };
   const factoryEnabled = "enabled" in baseOpts ? (baseOpts.enabled ?? true) : true;
 
   return useQuery({
@@ -82,9 +97,17 @@ export function useConfidentialIsApproved(
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
   const { spender, holder, ...tokenConfig } = config;
   const token = useToken(tokenConfig);
+  const addressQuery = useSuspenseQuery({
+    ...signerAddressQueryOptions(token.signer),
+    queryKeyHashFn: hashFn,
+  });
+  const resolvedHolder = holder ?? (addressQuery.data as Address);
 
   return useSuspenseQuery({
-    ...confidentialIsApprovedQueryOptions(token.signer, token.address, { owner: holder, spender }),
+    ...confidentialIsApprovedQueryOptions(token.signer, token.address, {
+      holder: resolvedHolder,
+      spender,
+    }),
     queryKeyHashFn: hashFn,
   });
 }

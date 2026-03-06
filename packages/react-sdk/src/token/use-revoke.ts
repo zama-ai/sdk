@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient, type UseMutationOptions } from "@tanstack/react-query";
+import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { revokeMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
@@ -17,14 +17,13 @@ import { useZamaSDK } from "../provider";
  */
 export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>) {
   const sdk = useZamaSDK();
-  const queryClient = useQueryClient();
 
   return useMutation<void, Error, Address[]>({
     ...revokeMutationOptions(sdk),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      queryClient.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
+      context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
     },
   });
 }

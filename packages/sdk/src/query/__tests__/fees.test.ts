@@ -70,6 +70,20 @@ describe("fee query options", () => {
     expect(await options.queryFn({ queryKey: options.queryKey })).toBe(77n);
   });
 
+  test("shield fee reads contract for a zero amount", async ({ signer }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(5n);
+
+    const options = shieldFeeQueryOptions(signer, {
+      feeManagerAddress: "0x1111111111111111111111111111111111111111",
+      amount: 0n,
+      from: "0x2222222222222222222222222222222222222222",
+      to: "0x3333333333333333333333333333333333333333",
+    });
+
+    expect(await options.queryFn({ queryKey: options.queryKey })).toBe(5n);
+    expect(signer.readContract).toHaveBeenCalledOnce();
+  });
+
   test("batch transfer fee and recipient query contracts", async ({ signer }) => {
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(5n)

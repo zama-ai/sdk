@@ -124,12 +124,12 @@ export const zamaQueryKeys = {
     all: ["zama.confidentialIsApproved"] as const,
     token: (tokenAddress: string) =>
       ["zama.confidentialIsApproved", { tokenAddress: getAddress(tokenAddress) }] as const,
-    scope: (tokenAddress: string, owner: string, spender: string) =>
+    scope: (tokenAddress: string, holder: string, spender: string) =>
       [
         "zama.confidentialIsApproved",
         {
           tokenAddress: getAddress(tokenAddress),
-          owner: normalizeAddressIfPresent(owner),
+          holder: normalizeAddressIfPresent(holder),
           spender: normalizeAddressIfPresent(spender),
         },
       ] as const,
@@ -203,6 +203,8 @@ export const zamaQueryKeys = {
 
   isAllowed: {
     all: ["zama.isAllowed"] as const,
+    scope: (account: string) =>
+      ["zama.isAllowed", { account: normalizeAddressIfPresent(account) }] as const,
   },
 
   publicKey: {

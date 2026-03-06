@@ -5,7 +5,7 @@ import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 
 export interface ConfidentialIsApprovedQueryConfig {
-  owner?: Address;
+  holder: Address;
   spender: Address;
   query?: Record<string, unknown>;
 }
@@ -15,10 +15,9 @@ export function confidentialIsApprovedQueryOptions(
   tokenAddress: Address,
   config: ConfidentialIsApprovedQueryConfig,
 ): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>, boolean> {
-  const ownerKey = config.owner ?? "";
   const queryKey = zamaQueryKeys.confidentialIsApproved.scope(
     tokenAddress,
-    ownerKey,
+    config.holder,
     config.spender,
   );
 
@@ -26,11 +25,10 @@ export function confidentialIsApprovedQueryOptions(
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { tokenAddress: keyTokenAddress, owner: keyOwner, spender: keySpender }] =
+      const [, { tokenAddress: keyTokenAddress, holder: keyHolder, spender: keySpender }] =
         context.queryKey;
-      const owner = keyOwner ? (keyOwner as Address) : await signer.getAddress();
       return signer.readContract(
-        isOperatorContract(keyTokenAddress as Address, owner, keySpender as Address),
+        isOperatorContract(keyTokenAddress as Address, keyHolder as Address, keySpender as Address),
       );
     },
     staleTime: 30_000,

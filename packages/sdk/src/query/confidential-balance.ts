@@ -1,11 +1,11 @@
 import type { ReadonlyToken } from "../token/readonly-token";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { Address } from "../token/token.types";
-import type { Hex } from "viem";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions, normalizeHandle } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 
-export type EncryptedBalanceHandle = Hex | string;
+export type EncryptedBalanceHandle = Handle | bigint;
 
 export interface ConfidentialBalanceQueryConfig {
   owner?: Address;
@@ -18,7 +18,7 @@ export function confidentialBalanceQueryOptions(
   config?: ConfidentialBalanceQueryConfig,
 ): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>, bigint> {
   const ownerKey = config?.owner ?? "";
-  const handleKey = config?.handle ?? "";
+  const handleKey = config?.handle === undefined ? "" : normalizeHandle(config.handle);
   const queryKey = zamaQueryKeys.confidentialBalance.owner(token.address, ownerKey, handleKey);
 
   return {

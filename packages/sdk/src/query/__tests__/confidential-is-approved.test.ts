@@ -4,11 +4,14 @@ import { confidentialIsApprovedQueryOptions } from "../confidential-is-approved"
 import { zamaQueryKeys } from "../query-keys";
 
 describe("confidentialIsApprovedQueryOptions", () => {
-  test("stays enabled when owner is omitted", ({ signer }) => {
+  test("stays enabled with a resolved holder", ({ signer }) => {
     const options = confidentialIsApprovedQueryOptions(
       signer,
       "0x1111111111111111111111111111111111111111",
-      { spender: "0x3333333333333333333333333333333333333333" },
+      {
+        holder: "0x2222222222222222222222222222222222222222",
+        spender: "0x3333333333333333333333333333333333333333",
+      },
     );
 
     expect(options.enabled).toBe(true);
@@ -21,7 +24,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
       signer,
       "0x1111111111111111111111111111111111111111",
       {
-        owner: "0x2222222222222222222222222222222222222222",
+        holder: "0x2222222222222222222222222222222222222222",
         spender: "0x3333333333333333333333333333333333333333",
       },
     );
@@ -30,12 +33,12 @@ describe("confidentialIsApprovedQueryOptions", () => {
     expect(isApproved).toBe(true);
   });
 
-  test("includes owner and spender in queryKey", ({ signer }) => {
+  test("includes holder and spender in queryKey", ({ signer }) => {
     const options = confidentialIsApprovedQueryOptions(
       signer,
       "0x1111111111111111111111111111111111111111",
       {
-        owner: "0x2222222222222222222222222222222222222222",
+        holder: "0x2222222222222222222222222222222222222222",
         spender: "0x3333333333333333333333333333333333333333",
       },
     );
@@ -44,13 +47,13 @@ describe("confidentialIsApprovedQueryOptions", () => {
       "zama.confidentialIsApproved",
       {
         tokenAddress: "0x1111111111111111111111111111111111111111",
-        owner: "0x2222222222222222222222222222222222222222",
+        holder: "0x2222222222222222222222222222222222222222",
         spender: "0x3333333333333333333333333333333333333333",
       },
     ]);
   });
 
-  test("queryFn reads tokenAddress, owner, and spender from context.queryKey", async ({
+  test("queryFn reads tokenAddress, holder, and spender from context.queryKey", async ({
     signer,
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(true);
@@ -59,7 +62,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
       signer,
       "0x1111111111111111111111111111111111111111",
       {
-        owner: "0x2222222222222222222222222222222222222222",
+        holder: "0x2222222222222222222222222222222222222222",
         spender: "0x3333333333333333333333333333333333333333",
       },
     );
@@ -84,19 +87,21 @@ describe("confidentialIsApprovedQueryOptions", () => {
     );
   });
 
-  test("queryFn resolves the connected signer when owner is omitted", async ({ signer }) => {
-    vi.mocked(signer.getAddress).mockResolvedValue("0x2222222222222222222222222222222222222222");
+  test("queryFn uses the resolved holder without querying the signer", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue(true);
 
     const options = confidentialIsApprovedQueryOptions(
       signer,
       "0x1111111111111111111111111111111111111111",
-      { spender: "0x3333333333333333333333333333333333333333" },
+      {
+        holder: "0x2222222222222222222222222222222222222222",
+        spender: "0x3333333333333333333333333333333333333333",
+      },
     );
 
     await options.queryFn({ queryKey: options.queryKey });
 
-    expect(signer.getAddress).toHaveBeenCalledOnce();
+    expect(signer.getAddress).not.toHaveBeenCalled();
     expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
@@ -108,14 +113,14 @@ describe("confidentialIsApprovedQueryOptions", () => {
     );
   });
 
-  test("queryFn uses the explicit owner without resolving the signer", async ({ signer }) => {
+  test("queryFn uses the explicit holder without resolving the signer", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue(true);
 
     const options = confidentialIsApprovedQueryOptions(
       signer,
       "0x1111111111111111111111111111111111111111",
       {
-        owner: "0x2222222222222222222222222222222222222222",
+        holder: "0x2222222222222222222222222222222222222222",
         spender: "0x3333333333333333333333333333333333333333",
       },
     );

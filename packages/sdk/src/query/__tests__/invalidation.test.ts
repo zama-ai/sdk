@@ -250,15 +250,20 @@ describe("invalidation", () => {
     const qc = createQueryClient();
     const signerKey = zamaQueryKeys.signerAddress.all;
     const balanceKey = zamaQueryKeys.confidentialBalance.token(TOKEN);
+    const decryptionKey = zamaQueryKeys.decryption.handle(
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
 
     qc.setQueryData(signerKey, "0xuser");
     qc.setQueryData(balanceKey, { balance: 1n });
+    qc.setQueryData(decryptionKey, 123n);
     qc.setQueryData(wagmiBalanceKey, "balance");
 
     invalidateWalletLifecycleQueries(qc);
 
     expect(qc.getQueryData(signerKey)).toBeUndefined();
+    expect(qc.getQueryData(decryptionKey)).toBeUndefined();
     expect(qc.getQueryState(balanceKey)?.isInvalidated).toBe(true);
     expect(qc.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);
   });

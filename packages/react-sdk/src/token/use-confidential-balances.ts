@@ -89,6 +89,7 @@ export function useConfidentialBalances(
     owner,
     handles,
     maxConcurrency,
+    resultAddresses: tokenAddresses,
   });
   const factoryEnabled = baseBalancesQueryOptions.enabled ?? true;
   const handlesReady = Array.isArray(handles) && handles.length === tokenAddresses.length;

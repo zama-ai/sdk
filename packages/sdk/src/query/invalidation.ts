@@ -94,6 +94,7 @@ export function invalidateWagmiBalanceQueries(queryClient: QueryClientLike): voi
 
 export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): void {
   queryClient.removeQueries({ queryKey: zamaQueryKeys.signerAddress.all });
+  queryClient.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
   queryClient.invalidateQueries({ predicate: isZamaQuery });
   invalidateWagmiBalanceQueries(queryClient);
 }

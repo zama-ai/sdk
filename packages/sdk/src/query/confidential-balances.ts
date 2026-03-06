@@ -20,6 +20,7 @@ export interface ConfidentialBalancesQueryConfig {
   owner?: Address;
   handles?: EncryptedBalanceHandle[];
   maxConcurrency?: number;
+  resultAddresses?: Address[];
   query?: Record<string, unknown>;
 }
 
@@ -31,16 +32,14 @@ export function confidentialBalancesQueryOptions(
   ConfidentialBalancesData
 > {
   const tokenAddresses = tokens.map((token) => token.address);
+  const resultAddresses = config?.resultAddresses ?? tokenAddresses;
   const ownerKey = config?.owner ?? "";
+  const handleKeys = config?.handles?.map((handle) => normalizeHandle(handle));
   const handlesReady =
-    Array.isArray(config?.handles) &&
-    config.handles.length === tokens.length &&
-    config.handles.every((handle) => Boolean(handle));
-  const queryKey = zamaQueryKeys.confidentialBalances.tokens(
-    tokenAddresses,
-    ownerKey,
-    config?.handles,
-  );
+    Array.isArray(handleKeys) &&
+    handleKeys.length === tokens.length &&
+    handleKeys.every((handle) => Boolean(handle));
+  const queryKey = zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, ownerKey, handleKeys);
 
   return {
     ...filterQueryOptions(config?.query ?? {}),
@@ -68,7 +67,7 @@ export function confidentialBalancesQueryOptions(
       const errors = new Map<Address, Error>();
       for (let i = 0; i < tokens.length; i++) {
         const tokenAddr = tokens[i]!.address;
-        const originalAddr = tokenAddresses[i]!;
+        const originalAddr = resultAddresses[i]!;
         const tokenError = perTokenErrors.get(tokenAddr);
         if (tokenError) {
           errors.set(originalAddr, tokenError);
@@ -87,7 +86,11 @@ export function confidentialBalancesQueryOptions(
       return { balances, errors, isPartialError: errors.size > 0 };
     },
     enabled:
-      Boolean(ownerKey) && tokens.length > 0 && handlesReady && config?.query?.enabled !== false,
+      resultAddresses.length === tokens.length &&
+      Boolean(ownerKey) &&
+      tokens.length > 0 &&
+      handlesReady &&
+      config?.query?.enabled !== false,
     staleTime: Infinity,
   };
 }

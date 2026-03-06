@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react";
-import { isAllowedQueryKeys } from "@zama-fhe/sdk/query";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { expectCacheInvalidated } from "../../test-helpers";
 import { expectDefaultMutationState } from "../../__tests__/mutation-test-helpers";
@@ -17,24 +17,24 @@ describe("useRevokeSession", () => {
     renderWithProviders,
   }) => {
     const { result, queryClient } = renderWithProviders(() => useRevokeSession());
-    queryClient.setQueryData(isAllowedQueryKeys.all, true);
+    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync());
 
-    expectCacheInvalidated(queryClient, isAllowedQueryKeys.all);
+    expectCacheInvalidated(queryClient, zamaQueryKeys.isAllowed.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() => useRevokeSession({ onSuccess }));
-    queryClient.setQueryData(isAllowedQueryKeys.all, true);
+    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync());
 
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(onSuccess.mock.calls[0]?.[0]).toBeUndefined();
     expect(onSuccess.mock.calls[0]?.[1]).toBeUndefined();
-    expectCacheInvalidated(queryClient, isAllowedQueryKeys.all);
+    expectCacheInvalidated(queryClient, zamaQueryKeys.isAllowed.all);
   });
 });

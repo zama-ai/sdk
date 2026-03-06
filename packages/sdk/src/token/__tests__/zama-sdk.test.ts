@@ -152,6 +152,153 @@ describe("ZamaSDK", () => {
   });
 
   describe("lifecycle auto-revoke", () => {
+    it("onDisconnect emits TransactionError when the composed lifecycle callback throws", async ({
+      createMockRelayer,
+      createMockSigner,
+      storage,
+      sessionStorage,
+    }) => {
+      let subscribeCbs: Required<SignerLifecycleCallbacks>;
+      const events: { type: string; operation?: string }[] = [];
+
+      const mockSigner = createMockSigner();
+      const signer = {
+        ...mockSigner,
+        subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+          subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
+          return () => {};
+        }),
+      };
+
+      new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage,
+        sessionStorage,
+        onEvent: (event) => events.push(event),
+        signerLifecycleCallbacks: {
+          onDisconnect: () => {
+            throw new Error("disconnect callback failed");
+          },
+          onAccountChange: () => {
+            throw new Error("account callback failed");
+          },
+          onChainChange: () => {
+            throw new Error("chain callback failed");
+          },
+        },
+      });
+
+      subscribeCbs!.onDisconnect();
+
+      await vi.waitFor(() => {
+        expect(events).toContainEqual(
+          expect.objectContaining({
+            type: ZamaSDKEvents.TransactionError,
+            operation: "signerDisconnect",
+          }),
+        );
+      });
+    });
+
+    it("onAccountChange emits TransactionError when the composed lifecycle callback throws", async ({
+      createMockRelayer,
+      createMockSigner,
+      storage,
+      sessionStorage,
+    }) => {
+      let subscribeCbs: Required<SignerLifecycleCallbacks>;
+      const events: { type: string; operation?: string }[] = [];
+
+      const mockSigner = createMockSigner();
+      const signer = {
+        ...mockSigner,
+        subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+          subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
+          return () => {};
+        }),
+      };
+
+      new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage,
+        sessionStorage,
+        onEvent: (event) => events.push(event),
+        signerLifecycleCallbacks: {
+          onDisconnect: () => {
+            throw new Error("disconnect callback failed");
+          },
+          onAccountChange: () => {
+            throw new Error("account callback failed");
+          },
+          onChainChange: () => {
+            throw new Error("chain callback failed");
+          },
+        },
+      });
+
+      subscribeCbs!.onAccountChange("0xnewuser" as Address);
+
+      await vi.waitFor(() => {
+        expect(events).toContainEqual(
+          expect.objectContaining({
+            type: ZamaSDKEvents.TransactionError,
+            operation: "signerAccountChange",
+          }),
+        );
+      });
+    });
+
+    it("onChainChange emits TransactionError when the composed lifecycle callback throws", async ({
+      createMockRelayer,
+      createMockSigner,
+      storage,
+      sessionStorage,
+    }) => {
+      let subscribeCbs: Required<SignerLifecycleCallbacks>;
+      const events: { type: string; operation?: string }[] = [];
+
+      const mockSigner = createMockSigner();
+      const signer = {
+        ...mockSigner,
+        subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+          subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
+          return () => {};
+        }),
+      };
+
+      new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage,
+        sessionStorage,
+        onEvent: (event) => events.push(event),
+        signerLifecycleCallbacks: {
+          onDisconnect: () => {
+            throw new Error("disconnect callback failed");
+          },
+          onAccountChange: () => {
+            throw new Error("account callback failed");
+          },
+          onChainChange: () => {
+            throw new Error("chain callback failed");
+          },
+        },
+      });
+
+      subscribeCbs!.onChainChange(1);
+
+      await vi.waitFor(() => {
+        expect(events).toContainEqual(
+          expect.objectContaining({
+            type: ZamaSDKEvents.TransactionError,
+            operation: "signerChainChange",
+          }),
+        );
+      });
+    });
+
     it("onAccountChange revokes the PREVIOUS account session, not the new one", async ({
       createMockRelayer,
       createMockSigner,

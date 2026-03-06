@@ -30,6 +30,26 @@ describe("useConfidentialBalances", () => {
     );
   });
 
+  test("preserves the caller token address casing in result maps", async ({
+    renderWithProviders,
+    signer,
+    relayer,
+  }) => {
+    const mixedCaseToken = "0x52908400098527886E0F7030069857D2E4169EE7" as Address;
+    const handle = `0x${"dd".repeat(32)}` as Address;
+
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 33n });
+
+    const { result } = renderWithProviders(() =>
+      useConfidentialBalances({ tokenAddresses: [mixedCaseToken] }),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
+
+    expect(result.current.data?.balances.get(mixedCaseToken)).toBe(33n);
+  });
+
   test("behavior: disabled when user passes enabled=false", async ({
     renderWithProviders,
     signer,

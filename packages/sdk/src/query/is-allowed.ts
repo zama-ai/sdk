@@ -1,23 +1,23 @@
 import type { ZamaSDK } from "../token/zama-sdk";
+import type { Address } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 
-export const isAllowedQueryKeys = zamaQueryKeys.isAllowed;
-
 export interface IsAllowedQueryConfig {
+  account: Address;
   query?: Record<string, unknown>;
 }
 
 export function isAllowedQueryOptions(
   sdk: ZamaSDK,
-  config?: IsAllowedQueryConfig,
-): QueryFactoryOptions<typeof zamaQueryKeys.isAllowed.all, boolean> {
+  config: IsAllowedQueryConfig,
+): QueryFactoryOptions<ReturnType<typeof zamaQueryKeys.isAllowed.scope>, boolean> {
   return {
-    ...filterQueryOptions(config?.query ?? {}),
-    queryKey: isAllowedQueryKeys.all,
+    ...filterQueryOptions(config.query ?? {}),
+    queryKey: zamaQueryKeys.isAllowed.scope(config.account),
     queryFn: () => sdk.isAllowed(),
     staleTime: Infinity,
-    enabled: config?.query?.enabled !== false,
+    enabled: config.query?.enabled !== false,
   } as const;
 }

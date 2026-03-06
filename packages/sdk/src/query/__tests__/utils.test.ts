@@ -1,6 +1,6 @@
 import { describe, expect, test } from "../../test-fixtures";
 
-import { filterQueryOptions, hashFn, normalizeHandle, ZERO_HANDLE } from "../utils";
+import { filterQueryOptions, hashFn, normalizeHandle } from "../utils";
 
 describe("filterQueryOptions", () => {
   test("strips TanStack behavioral options and sdk query internals", () => {
@@ -141,10 +141,10 @@ describe("normalizeHandle", () => {
     expect(normalizeHandle(handle)).toBe(handle);
   });
 
-  test("returns ZERO_HANDLE for non-bigint non-hex inputs", () => {
-    expect(normalizeHandle(null)).toBe(ZERO_HANDLE);
-    expect(normalizeHandle(undefined)).toBe(ZERO_HANDLE);
-    expect(normalizeHandle(42)).toBe(ZERO_HANDLE);
-    expect(normalizeHandle("not-hex")).toBe(ZERO_HANDLE);
+  test("throws for non-bigint non-hex inputs", () => {
+    expect(() => normalizeHandle(null)).toThrow("Handle must be a hex string or bigint");
+    expect(() => normalizeHandle(undefined)).toThrow("Handle must be a hex string or bigint");
+    expect(() => normalizeHandle(42)).toThrow("Handle must be a hex string or bigint");
+    expect(() => normalizeHandle("not-hex")).toThrow("Handle must be a hex string or bigint");
   });
 });

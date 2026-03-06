@@ -4,6 +4,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { decryptionKeys } from "../relayer/decryption-cache";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaSDKConfig[] = [];
@@ -57,16 +58,21 @@ describe("ZamaProvider & useZamaSDK", () => {
     const balanceKey = zamaQueryKeys.confidentialBalance.token(
       "0x1111111111111111111111111111111111111111",
     );
+    const decryptionKey = decryptionKeys.value(
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
 
     queryClient.setQueryData(signerKey, "0xuser");
     queryClient.setQueryData(balanceKey, 1n);
+    queryClient.setQueryData(decryptionKey, 2n);
     queryClient.setQueryData(wagmiBalanceKey, 2n);
 
     lifecycle?.onChainChange?.(1);
 
     return waitFor(() => {
       expect(queryClient.getQueryData(signerKey)).toBeUndefined();
+      expect(queryClient.getQueryData(decryptionKey)).toBeUndefined();
       expect(queryClient.getQueryState(balanceKey)?.isInvalidated).toBe(true);
       expect(queryClient.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);
     });
