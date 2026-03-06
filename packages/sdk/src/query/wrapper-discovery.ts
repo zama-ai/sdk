@@ -22,11 +22,11 @@ export function wrapperDiscoveryQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, coordinatorAddress: keyCoordinatorAddress }] =
         context.queryKey;
-      const exists = await signer.readContract<boolean>(
+      const exists = await signer.readContract(
         wrapperExistsContract(keyCoordinatorAddress as Address, keyTokenAddress as Address),
       );
       if (!exists) return null;
-      return signer.readContract<Address>(
+      return signer.readContract(
         getWrapperContract(keyCoordinatorAddress as Address, keyTokenAddress as Address),
       );
     },

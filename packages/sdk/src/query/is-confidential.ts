@@ -19,7 +19,7 @@ export function isConfidentialQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
-      return signer.readContract<boolean>(isConfidentialTokenContract(keyTokenAddress as Address));
+      return signer.readContract(isConfidentialTokenContract(keyTokenAddress as Address));
     },
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,
@@ -37,9 +37,7 @@ export function isWrapperQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
-      return signer.readContract<boolean>(
-        isConfidentialWrapperContract(keyTokenAddress as Address),
-      );
+      return signer.readContract(isConfidentialWrapperContract(keyTokenAddress as Address));
     },
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,

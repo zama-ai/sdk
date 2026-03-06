@@ -56,7 +56,7 @@ export function createUnwrapRequestedLog(handle: Address) {
 export function mockPublicDecrypt(relayer: ReturnType<typeof createMockRelayer>) {
   vi.mocked(relayer.publicDecrypt).mockResolvedValue({
     clearValues: {},
-    abiEncodedClearValues: "1",
+    abiEncodedClearValues: "0x1",
     decryptionProof: DECRYPTION_PROOF,
   });
 }

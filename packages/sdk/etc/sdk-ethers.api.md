@@ -161,6 +161,7 @@ export function readWrapperForTokenContract(provider: EthersCallProvider, coordi
 // @public
 export interface SignerLifecycleCallbacks {
     onAccountChange?: (newAddress: Address) => void;
+    onChainChange?: (newChainId: number) => void;
     onDisconnect?: () => void;
 }
 

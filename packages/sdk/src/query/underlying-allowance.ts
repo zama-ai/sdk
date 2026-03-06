@@ -27,10 +27,10 @@ export function underlyingAllowanceQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, wrapperAddress: keyWrapperAddress }] = context.queryKey;
-      const underlying = await signer.readContract<Address>(
+      const underlying = await signer.readContract(
         underlyingContract(keyWrapperAddress as Address),
       );
-      return signer.readContract<bigint>(
+      return signer.readContract(
         allowanceContract(underlying, keyOwner as Address, keyWrapperAddress as Address),
       );
     },

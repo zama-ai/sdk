@@ -29,7 +29,7 @@ export function confidentialIsApprovedQueryOptions(
       const [, { tokenAddress: keyTokenAddress, owner: keyOwner, spender: keySpender }] =
         context.queryKey;
       const owner = keyOwner ? (keyOwner as Address) : await signer.getAddress();
-      return signer.readContract<boolean>(
+      return signer.readContract(
         isOperatorContract(keyTokenAddress as Address, owner, keySpender as Address),
       );
     },

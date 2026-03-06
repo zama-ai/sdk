@@ -29,11 +29,11 @@ export function tokenMetadataQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       const [name, symbol, decimals] = await Promise.all([
-        signer.readContract<string>(nameContract(keyTokenAddress as Address)),
-        signer.readContract<string>(symbolContract(keyTokenAddress as Address)),
-        signer.readContract<number>(decimalsContract(keyTokenAddress as Address)),
+        signer.readContract(nameContract(keyTokenAddress as Address)),
+        signer.readContract(symbolContract(keyTokenAddress as Address)),
+        signer.readContract(decimalsContract(keyTokenAddress as Address)),
       ]);
-      return { name, symbol, decimals };
+      return { name: name as string, symbol: symbol as string, decimals: decimals as number };
     },
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,

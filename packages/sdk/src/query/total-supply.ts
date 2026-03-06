@@ -20,7 +20,7 @@ export function totalSupplyQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
-      return signer.readContract<bigint>(totalSupplyContract(keyTokenAddress as Address));
+      return signer.readContract(totalSupplyContract(keyTokenAddress as Address));
     },
     staleTime: 30_000,
     enabled: config?.query?.enabled !== false,

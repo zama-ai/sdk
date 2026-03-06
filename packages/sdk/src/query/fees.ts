@@ -50,7 +50,7 @@ export function shieldFeeQueryOptions(
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
       if (!amount || !params.from || !params.to) return 0n;
-      return signer.readContract<bigint>(
+      return signer.readContract(
         getWrapFeeContract(
           params.feeManagerAddress as Address,
           amount,
@@ -83,7 +83,7 @@ export function unshieldFeeQueryOptions(
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
       if (!amount || !params.from || !params.to) return 0n;
-      return signer.readContract<bigint>(
+      return signer.readContract(
         getUnwrapFeeContract(
           params.feeManagerAddress as Address,
           amount,
@@ -109,9 +109,7 @@ export function batchTransferFeeQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
-      return signer.readContract<bigint>(
-        getBatchTransferFeeContract(keyFeeManagerAddress as Address),
-      );
+      return signer.readContract(getBatchTransferFeeContract(keyFeeManagerAddress as Address));
     },
     staleTime: 30_000,
     enabled: Boolean(feeManagerAddress) && config?.query?.enabled !== false,
@@ -130,7 +128,7 @@ export function feeRecipientQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
-      return signer.readContract<Address>(getFeeRecipientContract(keyFeeManagerAddress as Address));
+      return signer.readContract(getFeeRecipientContract(keyFeeManagerAddress as Address));
     },
     staleTime: 30_000,
     enabled: Boolean(feeManagerAddress) && config?.query?.enabled !== false,

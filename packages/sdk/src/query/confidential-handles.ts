@@ -28,7 +28,7 @@ export function confidentialHandlesQueryOptions(
       const [, { tokenAddresses: keyTokenAddresses, owner: keyOwner }] = context.queryKey;
       return Promise.all(
         keyTokenAddresses.map(async (tokenAddress) => {
-          const handle = await signer.readContract<Hex>(
+          const handle = await signer.readContract(
             confidentialBalanceOfContract(tokenAddress as Address, keyOwner as Address),
           );
           return normalizeHandle(handle);

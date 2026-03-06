@@ -4,6 +4,7 @@ import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { Address } from "./relayer/relayer-sdk.types";
 import { CredentialsManager, CredentialsManagerConfig } from "./token/credentials-manager";
 import { MemoryStorage } from "./token/memory-storage";
+import { ReadonlyToken } from "./token/readonly-token";
 import { Token, TokenConfig } from "./token/token";
 import type { GenericSigner, GenericStorage, TransactionResult } from "./token/token.types";
 import { ZamaSDK, ZamaSDKConfig } from "./token/zama-sdk";
@@ -15,7 +16,7 @@ const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 const USER = "0x2222222222222222222222222222222222222222" as Address;
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 
-function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
+export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
     generateKeypair: vi.fn().mockResolvedValue({
       publicKey: "0xpub",
@@ -63,6 +64,55 @@ function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   } as unknown as RelayerSDK;
 }
 
+export function createMockSigner(
+  address: Address = USER,
+  overrides: Partial<GenericSigner> = {},
+): GenericSigner {
+  return {
+    getAddress: vi.fn().mockResolvedValue(address),
+    signTypedData: vi.fn().mockResolvedValue("0xsig"),
+    writeContract: vi.fn().mockResolvedValue("0xtxhash"),
+    readContract: vi.fn(),
+    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
+    getChainId: vi.fn().mockResolvedValue(31337),
+    subscribe: vi.fn().mockReturnValue(() => {}),
+    ...overrides,
+  };
+}
+
+export function createMockStorage(): GenericStorage {
+  const store = new Map<string, unknown>();
+  return {
+    get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)) as GenericStorage["get"],
+    set: vi.fn((key: string, value: unknown) => {
+      store.set(key, value);
+      return Promise.resolve();
+    }),
+    delete: vi.fn((key: string) => {
+      store.delete(key);
+      return Promise.resolve();
+    }),
+  };
+}
+
+function createMockReadonlyToken(address: Address, signer: GenericSigner): ReadonlyToken {
+  return {
+    address,
+    signer,
+    decryptBalance: vi.fn().mockResolvedValue(123n),
+    decryptHandles: vi.fn().mockResolvedValue(new Map()),
+    confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Address),
+    name: vi.fn().mockResolvedValue("Test"),
+    symbol: vi.fn().mockResolvedValue("TST"),
+    decimals: vi.fn().mockResolvedValue(18),
+    isConfidential: vi.fn().mockResolvedValue(true),
+    isWrapper: vi.fn().mockResolvedValue(false),
+    allowance: vi.fn().mockResolvedValue(0n),
+    discoverWrapper: vi.fn().mockResolvedValue(null),
+    isApproved: vi.fn().mockResolvedValue(false),
+  } as unknown as ReadonlyToken;
+}
+
 interface SdkFixtures {
   userAddress: typeof USER;
   tokenAddress: typeof TOKEN;
@@ -71,17 +121,23 @@ interface SdkFixtures {
   relayer: RelayerSDK;
   signer: GenericSigner;
   token: Token;
+  mockToken: Token;
   credentialManager: CredentialsManager;
   storage: GenericStorage;
   sessionStorage: GenericStorage;
   createMockRelayer: typeof createMockRelayer;
-  createMockSigner: (overrides?: Partial<GenericSigner>) => GenericSigner;
-  createMockStorage: () => GenericStorage;
-  createMockToken: (args: {
-    address?: Address;
-    signer?: GenericSigner;
-    txResult: TransactionResult;
-  }) => Token;
+  createMockSigner: (addressOrOverrides?: Address | Partial<GenericSigner>) => GenericSigner;
+  createMockStorage: typeof createMockStorage;
+  createMockToken: (
+    addressOrArgs?:
+      | Address
+      | {
+          address?: Address;
+          signer?: GenericSigner;
+          txResult?: TransactionResult;
+        },
+  ) => Token;
+  createMockReadonlyToken: (address?: Address) => ReadonlyToken;
   createCredentialManager: (config: CredentialsManagerConfig) => CredentialsManager;
   createToken: (config: TokenConfig) => Token;
   sdk: ZamaSDK;
@@ -99,19 +155,7 @@ export const test = base.extend<SdkFixtures>({
     await use(createMockRelayer());
   },
   signer: async ({ userAddress }, use) => {
-    function createMockSigner(overrides: Partial<GenericSigner> = {}): GenericSigner {
-      return {
-        getAddress: vi.fn().mockResolvedValue(userAddress),
-        signTypedData: vi.fn().mockResolvedValue("0xsig"),
-        writeContract: vi.fn().mockResolvedValue("0xtxhash"),
-        readContract: vi.fn(),
-        waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-        getChainId: vi.fn().mockResolvedValue(31337),
-        subscribe: vi.fn().mockReturnValue(() => {}),
-        ...overrides,
-      };
-    }
-    await use(createMockSigner());
+    await use(createMockSigner(userAddress));
   },
   credentialManager: async (
     { relayer, signer, storage, sessionStorage, createCredentialManager },
@@ -145,45 +189,24 @@ export const test = base.extend<SdkFixtures>({
       }),
     );
   },
+  mockToken: async ({ createMockToken }, use) => {
+    await use(createMockToken());
+  },
   createMockRelayer: async ({}, use) => {
     await use(createMockRelayer);
   },
   createMockSigner: async ({ userAddress }, use) => {
-    function createMockSigner(overrides: Partial<GenericSigner> = {}): GenericSigner {
-      return {
-        getAddress: vi.fn().mockResolvedValue(userAddress),
-        signTypedData: vi.fn().mockResolvedValue("0xsig"),
-        writeContract: vi.fn().mockResolvedValue("0xtxhash"),
-        readContract: vi.fn(),
-        waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-        getChainId: vi.fn().mockResolvedValue(31337),
-        subscribe: vi.fn().mockReturnValue(() => {}),
-        ...overrides,
-      };
-    }
-    await use(createMockSigner);
+    await use((addressOrOverrides?: Address | Partial<GenericSigner>) => {
+      const address = typeof addressOrOverrides === "string" ? addressOrOverrides : userAddress;
+      const overrides = typeof addressOrOverrides === "object" ? addressOrOverrides : {};
+      return createMockSigner(address, overrides);
+    });
   },
   createMockStorage: async ({}, use) => {
-    function createMockStorage(): GenericStorage {
-      const store = new Map<string, unknown>();
-      return {
-        get: vi.fn((key: string) =>
-          Promise.resolve(store.get(key) ?? null),
-        ) as GenericStorage["get"],
-        set: vi.fn((key: string, value: unknown) => {
-          store.set(key, value);
-          return Promise.resolve();
-        }),
-        delete: vi.fn((key: string) => {
-          store.delete(key);
-          return Promise.resolve();
-        }),
-      };
-    }
     await use(createMockStorage);
   },
   createCredentialManager: async ({}, use) => {
-    function createCredentialManager(config: CredentialsManagerConfig) {
+    function factory(config: CredentialsManagerConfig) {
       return new CredentialsManager({
         relayer: config.relayer,
         signer: config.signer,
@@ -194,26 +217,33 @@ export const test = base.extend<SdkFixtures>({
         onEvent: config.onEvent,
       });
     }
-    await use(createCredentialManager);
+    await use(factory);
   },
   createToken: async ({}, use) => {
-    function createToken(config: TokenConfig) {
-      return new Token(config);
-    }
-    await use(createToken);
+    await use((config: TokenConfig) => new Token(config));
   },
   createMockToken: async ({ tokenAddress, signer }, use) => {
-    function createMockToken({
-      txResult,
-      ...overrides
-    }: {
-      address?: Address;
-      signer?: GenericSigner;
-      txResult: TransactionResult;
-    }) {
+    const defaultTxResult: TransactionResult = {
+      txHash: ("0x" + "11".repeat(32)) as Address,
+      receipt: { logs: [] },
+    };
+    function factory(
+      addressOrArgs?:
+        | Address
+        | { address?: Address; signer?: GenericSigner; txResult?: TransactionResult },
+    ) {
+      const addr =
+        typeof addressOrArgs === "string"
+          ? addressOrArgs
+          : (addressOrArgs?.address ?? tokenAddress);
+      const sig = typeof addressOrArgs === "object" ? (addressOrArgs?.signer ?? signer) : signer;
+      const txResult =
+        typeof addressOrArgs === "object"
+          ? (addressOrArgs?.txResult ?? defaultTxResult)
+          : defaultTxResult;
       return {
-        address: overrides.address ?? tokenAddress,
-        signer: overrides.signer ?? signer,
+        address: addr,
+        signer: sig,
         confidentialTransfer: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
         approve: vi.fn().mockResolvedValue(txResult),
@@ -228,7 +258,10 @@ export const test = base.extend<SdkFixtures>({
         resumeUnshield: vi.fn().mockResolvedValue(txResult),
       } as unknown as Token;
     }
-    await use(createMockToken);
+    await use(factory);
+  },
+  createMockReadonlyToken: async ({ tokenAddress, signer }, use) => {
+    await use((address?: Address) => createMockReadonlyToken(address ?? tokenAddress, signer));
   },
   sdk: async ({ relayer, signer, storage, sessionStorage }, use) => {
     await use(new ZamaSDK({ relayer, signer, storage, sessionStorage }));

@@ -111,12 +111,9 @@ export type {
 export type { OnChainEvent } from "../events/onchain-events";
 export type { EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
 export type {
-  DecryptedValue,
   DelegatedUserDecryptParams,
   EncryptInput,
   EIP712TypedData,
-  FHEKeypair,
-  FheType,
   PublicDecryptResult,
   UserDecryptParams,
 } from "../relayer/relayer-sdk.types";
@@ -130,7 +127,6 @@ export type { ZamaSDK } from "../token/zama-sdk";
 export type { CredentialsManager } from "../token/credentials-manager";
 export type { CredentialsManagerConfig } from "../token/credentials-manager";
 export type {
-  ContractCallConfig,
   GenericSigner,
   GenericStorage,
   Hex,
