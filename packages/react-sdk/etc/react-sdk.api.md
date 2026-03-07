@@ -11,6 +11,7 @@ import { ActivityItem } from '@zama-fhe/sdk';
 import { ActivityLogMetadata } from '@zama-fhe/sdk';
 import { ActivityType } from '@zama-fhe/sdk';
 import { Address } from '@zama-fhe/sdk';
+import { Address as Address_2 } from 'viem';
 import { allowanceContract } from '@zama-fhe/sdk';
 import { allowMutationOptions } from '@zama-fhe/sdk/query';
 import { applyDecryptedValues } from '@zama-fhe/sdk';
@@ -343,7 +344,7 @@ export interface CreateDelegatedUserDecryptEIP712Params {
 
 // @public
 export interface CreateEIP712Params {
-    contractAddresses: `0x${string}`[];
+    contractAddresses: Address_2[];
     durationDays?: number;
     publicKey: `0x${string}`;
     startTimestamp: number;
@@ -399,7 +400,7 @@ export { DecryptionFailedError }
 
 // @public
 export const decryptionKeys: {
-    value: (handle: `0x${string}`, contractAddress?: `0x${string}`) => readonly ["zama.decryption", {
+    value: (handle: Handle, contractAddress?: Address_2) => readonly ["zama.decryption", {
         readonly contractAddress?: `0x${string}` | undefined;
         readonly handle: string;
     }];

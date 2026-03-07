@@ -7236,7 +7236,7 @@ export class CredentialsManager {
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
     clear(): Promise<void>;
     // (undocumented)
-    static computeStoreKey(address: string, chainId: number): Promise<string>;
+    static computeStoreKey(address: Address, chainId: number): Promise<string>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
     isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
@@ -19452,7 +19452,7 @@ export interface RelayerWebConfig {
 
 // @public
 export interface RelayerWebSecurityConfig {
-    getCsrfToken?: () => string;
+    getCsrfToken?: () => string | undefined;
     integrityCheck?: boolean;
 }
 

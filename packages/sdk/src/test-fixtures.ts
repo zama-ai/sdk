@@ -115,10 +115,10 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
 }
 
 interface SdkFixtures {
-  userAddress: typeof USER;
-  tokenAddress: typeof TOKEN;
-  wrapperAddress: typeof WRAPPER;
-  handle: typeof VALID_HANDLE;
+  userAddress: Address;
+  tokenAddress: Address;
+  wrapperAddress: Address;
+  handle: Handle;
   relayer: RelayerSDK;
   signer: GenericSigner;
   token: Token;

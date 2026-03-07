@@ -295,7 +295,7 @@ export class CredentialsManager {
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
     clear(): Promise<void>;
     // (undocumented)
-    static computeStoreKey(address: string, chainId: number): Promise<string>;
+    static computeStoreKey(address: Address, chainId: number): Promise<string>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
     isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
@@ -1338,7 +1338,11 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
+<<<<<<< HEAD
 // dist/activity-DA4w1GcG.d.ts:913:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+=======
+// dist/activity-BCOqW492.d.ts:918:5 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+>>>>>>> b8b38c8 (refactor: update last missing Address typings)
 
 // (No @packageDocumentation comment for this package)
 
