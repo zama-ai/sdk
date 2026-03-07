@@ -1,11 +1,9 @@
 import { describe, expect, it, vi } from "../../test-fixtures";
-import { ReadonlyToken } from "../readonly-token";
+import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
 import type { Address } from "../token.types";
 import { ConfigurationError } from "../errors";
 import { MemoryStorage } from "../memory-storage";
-
-const ZERO_HANDLE = "0x" + "0".repeat(64);
 
 describe("delegation read methods", () => {
   it("getDelegationExpiry reads from ACL contract", async ({
