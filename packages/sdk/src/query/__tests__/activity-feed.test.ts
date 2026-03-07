@@ -66,14 +66,32 @@ describe("activityFeedQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
-  test("queryFn returns empty array when required runtime params are missing", async ({
-    token,
-  }) => {
+  test("derives distinct cache identity from logs when logsKey is omitted", ({ mockToken }) => {
+    const logA = { ...transferLog(USER, OTHER, bytes32("aa".repeat(32))), blockNumber: 1n };
+    const logB = { ...transferLog(USER, OTHER, bytes32("bb".repeat(32))), blockNumber: 1n };
+
+    const first = activityFeedQueryOptions(mockToken, {
+      userAddress: USER,
+      logs: [logA],
+    });
+    const second = activityFeedQueryOptions(mockToken, {
+      userAddress: USER,
+      logs: [logB],
+    });
+
+    expect(first.queryKey).not.toEqual(second.queryKey);
+  });
+
+  test("queryFn throws when required runtime params are missing", async ({ token }) => {
     const missingLogs = activityFeedQueryOptions(token, { userAddress: USER });
     const missingUser = activityFeedQueryOptions(token, { logs: [] });
 
-    await expect(missingLogs.queryFn(mockQueryContext(missingLogs.queryKey))).resolves.toEqual([]);
-    await expect(missingUser.queryFn(mockQueryContext(missingUser.queryKey))).resolves.toEqual([]);
+    await expect(missingLogs.queryFn(mockQueryContext(missingLogs.queryKey))).rejects.toThrow(
+      "logs are required",
+    );
+    await expect(missingUser.queryFn(mockQueryContext(missingUser.queryKey))).rejects.toThrow(
+      "userAddress is required",
+    );
   });
 
   test("queryFn parses, decrypts handles, applies decrypted values, and sorts", async ({

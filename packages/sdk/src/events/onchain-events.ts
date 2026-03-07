@@ -4,7 +4,8 @@
  */
 
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { Address, Hex } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
+import { prefixHex } from "../utils";
 
 // ---------------------------------------------------------------------------
 // Generic log shape
@@ -129,7 +130,7 @@ export type OnChainEvent =
 // ---------------------------------------------------------------------------
 
 function topicToAddress(topic: Hex): Address {
-  return ("0x" + topic.slice(-40)) as Address;
+  return getAddress(prefixHex(topic.slice(-40)));
 }
 
 function topicToBigInt(topic: Hex): bigint {
@@ -149,7 +150,7 @@ function wordAt(data: Hex, index: number): string {
 }
 
 function wordToAddress(data: Hex, index: number): Address {
-  return ("0x" + wordAt(data, index).slice(-40)) as Address;
+  return getAddress(prefixHex(wordAt(data, index).slice(-40)));
 }
 
 function wordToBigInt(data: Hex, index: number): bigint {
@@ -162,7 +163,7 @@ function wordToBool(data: Hex, index: number): boolean {
 
 function wordToBytes32(data: Hex, index: number): Handle {
   // wordAt returns exactly 64 hex chars — prefix and cast directly
-  return `0x${wordAt(data, index)}` as Handle;
+  return prefixHex(wordAt(data, index)) as Handle;
 }
 
 // ---------------------------------------------------------------------------

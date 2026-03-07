@@ -1,6 +1,5 @@
-import { type Address } from "viem";
+import { getAddress, type Address } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import { validateAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
@@ -171,7 +170,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
-      address: validateAddress(address, "address"),
+      address: getAddress(address),
       onEvent: this.#onEvent,
     });
   }
@@ -191,8 +190,8 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
-      address: validateAddress(address, "address"),
-      wrapper: wrapper ? validateAddress(wrapper, "wrapper") : undefined,
+      address: getAddress(address),
+      wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,
     });
   }

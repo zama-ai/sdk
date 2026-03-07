@@ -71,6 +71,7 @@ export {
 } from "./confidential-balances";
 export {
   activityFeedQueryOptions,
+  deriveActivityFeedLogsKey,
   type ActivityFeedConfig,
   type ActivityFeedQueryConfig,
 } from "./activity-feed";

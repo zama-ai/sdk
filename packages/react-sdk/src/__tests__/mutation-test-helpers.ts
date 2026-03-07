@@ -22,7 +22,7 @@ export const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address
 export const HANDLE = `0x${"11".repeat(32)}` as Address;
 export const BURN_AMOUNT_HANDLE = `0x${"22".repeat(32)}` as Address;
 export const DECRYPTION_PROOF = `0x${"33".repeat(32)}` as Address;
-export const UNDERLYING = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+export const UNDERLYING = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 export const UNWRAP_REQUESTED_TOPIC =
   "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee";
 export const TRANSFER_FROM = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" as Address;

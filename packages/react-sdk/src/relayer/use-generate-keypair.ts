@@ -1,6 +1,5 @@
 "use client";
 
-import type { KeypairType } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useZamaSDK } from "../provider";
 
@@ -19,7 +18,7 @@ import { useZamaSDK } from "../provider";
  */
 export function useGenerateKeypair() {
   const sdk = useZamaSDK();
-  return useMutation<KeypairType<string>, Error, void>({
+  return useMutation({
     mutationFn: () => sdk.relayer.generateKeypair(),
   });
 }

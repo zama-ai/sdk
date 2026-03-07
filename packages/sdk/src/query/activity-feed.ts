@@ -10,7 +10,7 @@ import type { RawLog } from "../events/onchain-events";
 import type { ReadonlyToken } from "../token/readonly-token";
 
 import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions } from "./utils";
+import { filterQueryOptions, hashFn } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 import type { Address } from "viem";
 
@@ -26,16 +26,40 @@ export interface ActivityFeedQueryConfig {
 }
 
 /**
+ * Derive a stable cache identity for a set of raw logs.
+ *
+ * @remarks
+ * Callers may pass an explicit `logsKey` when they already have a stable cache
+ * identity. When omitted, this helper hashes the raw log contents plus optional
+ * metadata so distinct log sets do not alias to the same query entry.
+ */
+export function deriveActivityFeedLogsKey(
+  logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[],
+): string | undefined {
+  if (!logs) return undefined;
+
+  return hashFn([
+    "zama.activityFeed.logs",
+    logs.map((log) => ({
+      topics: [...log.topics],
+      data: log.data,
+      transactionHash: log.transactionHash,
+      blockNumber: log.blockNumber,
+      logIndex: log.logIndex,
+    })),
+  ]);
+}
+
+/**
  * Build query options for a decrypted activity feed scoped to one render context.
  *
  * @remarks
- * - Closure deviation: this query function intentionally reads `logs` from
- *   closure state instead of reconstructing inputs from `context.queryKey`.
- * - External-key restriction: because `logs` are not encoded into the key
- *   payload, this factory is not compatible with `queryClient.fetchQuery`
- *   calls that only provide an externally-constructed key.
- * - Render-scope rationale: logs are derived in-component and intentionally
- *   kept out of cache identity to avoid query-key bloat for hook usage.
+ * `logs` are read from closure, not from `context.queryKey`, to avoid
+ * serializing potentially large log arrays into the cache key. The `logsKey`
+ * field provides stable cache identity instead.
+ *
+ * Because `logs` are not encoded into the key, this factory is not compatible
+ * with `queryClient.fetchQuery` calls that only provide an externally-constructed key.
  */
 export function activityFeedQueryOptions(
   token: ReadonlyToken,
@@ -47,28 +71,32 @@ export function activityFeedQueryOptions(
   ActivityItem[],
   ReturnType<typeof zamaQueryKeys.activityFeed.scope>
 > {
-  const userAddress = config.userAddress ?? "";
-  const logsKey = config.logsKey ?? "";
+  const userAddress = config.userAddress;
   const decrypt = config.decrypt ?? true;
+  const logs = config.logs;
+  const logsKey = config.logsKey ?? deriveActivityFeedLogsKey(logs);
+  const queryEnabled = queryConfig?.query?.enabled !== false;
 
   const queryKey = zamaQueryKeys.activityFeed.scope(token.address, userAddress, logsKey, decrypt);
 
   return {
     ...filterQueryOptions(queryConfig?.query ?? {}),
     queryKey,
-    queryFn: async (_context) => {
-      if (!config.logs || !config.userAddress) return [];
+    queryFn: async (context) => {
+      const [, { userAddress: keyUserAddress, decrypt: keyDecrypt }] = context.queryKey;
+      if (!keyUserAddress) throw new Error("userAddress is required");
+      if (!logs) throw new Error("logs are required");
 
-      const parsed = parseActivityFeed(config.logs, config.userAddress);
-      if (!decrypt) return sortByBlockNumber(parsed);
+      const parsed = parseActivityFeed(logs, keyUserAddress);
+      if (!keyDecrypt) return sortByBlockNumber(parsed);
 
       const handles = extractEncryptedHandles(parsed);
       if (handles.length === 0) return sortByBlockNumber(parsed);
 
-      const decrypted = await token.decryptHandles(handles, config.userAddress);
+      const decrypted = await token.decryptHandles(handles, keyUserAddress);
       return sortByBlockNumber(applyDecryptedValues(parsed, decrypted));
     },
     staleTime: Infinity,
-    enabled: Boolean(config.userAddress && config.logs) && queryConfig?.query?.enabled !== false,
+    enabled: Boolean(userAddress && logs) && queryEnabled,
   };
 }

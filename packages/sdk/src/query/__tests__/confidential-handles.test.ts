@@ -52,8 +52,8 @@ describe("confidentialHandlesQueryOptions", () => {
     signer,
   }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-      .mockResolvedValueOnce("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+      .mockResolvedValueOnce("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa")
+      .mockResolvedValueOnce("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb");
 
     const options = confidentialHandlesQueryOptions(signer, [tokenA], { owner });
     const key = zamaQueryKeys.confidentialHandles.tokens(

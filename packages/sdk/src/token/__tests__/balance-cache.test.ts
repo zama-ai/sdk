@@ -1,7 +1,7 @@
 import { describe, it, expect } from "../../test-fixtures";
 import { loadCachedBalance, saveCachedBalance, clearAllCachedBalances } from "../balance-cache";
 
-const OWNER = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const OWNER = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa";
 const HANDLE = "0x00000000000000000000000000000000000000000000000000000000000000ab";
 const HANDLE2 = "0x00000000000000000000000000000000000000000000000000000000000000cd";
 

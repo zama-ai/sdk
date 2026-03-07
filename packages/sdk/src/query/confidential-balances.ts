@@ -1,10 +1,11 @@
 import { ReadonlyToken } from "../token/readonly-token";
 import { DecryptionFailedError } from "../token/errors";
-import type { Address } from "../token/token.types";
+
 import type { EncryptedBalanceHandle } from "./confidential-balance";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
+import type { Address } from "viem";
 
 /** Result type for batch confidential balance queries with partial error support. */
 export interface ConfidentialBalancesData {
@@ -35,8 +36,9 @@ export function confidentialBalancesQueryOptions(
 > {
   const tokenAddresses = tokens.map((token) => token.address);
   const resultAddresses = config?.resultAddresses ?? tokenAddresses;
-  const ownerKey = config?.owner ?? "";
+  const ownerKey = config?.owner;
   const handleKeys = config?.handles;
+  const queryEnabled = config?.query?.enabled !== false;
   const handlesReady =
     Array.isArray(handleKeys) &&
     handleKeys.length === tokens.length &&
@@ -48,10 +50,12 @@ export function confidentialBalancesQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handles: keyHandles }] = context.queryKey;
+      if (!keyOwner) throw new Error("owner is required");
+      if (!keyHandles) throw new Error("handles are required");
       const perTokenErrors = new Map<Address, Error>();
 
       const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
-        owner: keyOwner as Address,
+        owner: keyOwner,
         handles: keyHandles,
         maxConcurrency: config?.maxConcurrency,
         onError: (error, address) => {
@@ -88,7 +92,7 @@ export function confidentialBalancesQueryOptions(
       Boolean(ownerKey) &&
       tokens.length > 0 &&
       handlesReady &&
-      config?.query?.enabled !== false,
+      queryEnabled,
     staleTime: Infinity,
   };
 }

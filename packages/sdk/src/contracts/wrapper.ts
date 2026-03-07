@@ -1,7 +1,6 @@
 import { WRAPPER_ABI } from "../abi/wrapper.abi";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { Address, Hex } from "viem";
-import { assertAddress } from "../utils";
 import { FHE_GAS_LIMIT } from "./gas";
 
 /**
@@ -20,7 +19,6 @@ export function finalizeUnwrapContract(
   burntAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
-  assertAddress(wrapper, "wrapper");
   return {
     address: wrapper,
     abi: WRAPPER_ABI,
@@ -39,7 +37,6 @@ export function finalizeUnwrapContract(
  * ```
  */
 export function underlyingContract(wrapperAddress: Address) {
-  assertAddress(wrapperAddress, "wrapperAddress");
   return {
     address: wrapperAddress,
     abi: WRAPPER_ABI,
@@ -59,8 +56,6 @@ export function underlyingContract(wrapperAddress: Address) {
  * ```
  */
 export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint) {
-  assertAddress(wrapperAddress, "wrapperAddress");
-  assertAddress(to, "to");
   return {
     address: wrapperAddress,
     abi: WRAPPER_ABI,
@@ -86,8 +81,6 @@ export function wrapETHContract(
   amount: bigint,
   value: bigint,
 ) {
-  assertAddress(wrapperAddress, "wrapperAddress");
-  assertAddress(to, "to");
   return {
     address: wrapperAddress,
     abi: WRAPPER_ABI,

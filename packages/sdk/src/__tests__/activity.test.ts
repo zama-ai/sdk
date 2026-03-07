@@ -7,14 +7,14 @@ import {
   type ActivityItem,
 } from "../activity";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { Hex } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import { Topics, type RawLog } from "../events";
 
-// Helpers (matching events.test.ts conventions)
-const addr = (hex: string): Hex => `0x${hex.padStart(40, "0")}`;
+// Helpers
+const addr = (hex: string): Address => getAddress(`0x${hex.padStart(40, "0")}`);
 const topic = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 const word = (hex: string) => hex.padStart(64, "0");
-const bytes32 = (hex: string): Handle => `0x${hex.padStart(64, "0")}`;
+const bytes32 = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 
 const USER = addr("aaa1");
 const OTHER = addr("bbb2");

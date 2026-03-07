@@ -22,7 +22,7 @@ import { ViemSigner } from "../viem-signer";
 
 // ── Constants ────────────────────────────────────────────
 
-const ACCOUNT_ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+const ACCOUNT_ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
 const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
 const BATCHER = "0x7777777777777777777777777777777777777777" as Address;

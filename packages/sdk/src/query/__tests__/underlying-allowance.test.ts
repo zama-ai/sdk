@@ -16,6 +16,18 @@ describe("underlyingAllowanceQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
+  test("enabled false when wrapperAddress is missing", ({ signer }) => {
+    const options = underlyingAllowanceQueryOptions(
+      signer,
+      "0x1111111111111111111111111111111111111111",
+      {
+        owner: "0x2222222222222222222222222222222222222222",
+      },
+    );
+
+    expect(options.enabled).toBe(false);
+  });
+
   test("queries allowance when owner exists", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(99n);
 
@@ -67,8 +79,8 @@ describe("underlyingAllowanceQueryOptions", () => {
     );
 
     const key = zamaQueryKeys.underlyingAllowance.scope(
-      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+      "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
       "0xcccccccccccccccccccccccccccccccccccccccc",
     );
 
@@ -88,10 +100,27 @@ describe("underlyingAllowanceQueryOptions", () => {
         address: getAddress(UNDERLYING),
         functionName: "allowance",
         args: [
-          getAddress("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+          getAddress("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"),
           getAddress("0xcccccccccccccccccccccccccccccccccccccccc"),
         ],
       }),
     );
+  });
+
+  test("queryFn throws when params are missing from context.queryKey", async ({ signer }) => {
+    const options = underlyingAllowanceQueryOptions(
+      signer,
+      "0x1111111111111111111111111111111111111111",
+      {
+        owner: "0x2222222222222222222222222222222222222222",
+        wrapperAddress: "0x3333333333333333333333333333333333333333",
+      },
+    );
+
+    await expect(
+      options.queryFn(
+        mockQueryContext(zamaQueryKeys.underlyingAllowance.scope(options.queryKey[1].tokenAddress)),
+      ),
+    ).rejects.toThrow("owner is required");
   });
 });

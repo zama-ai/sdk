@@ -60,11 +60,9 @@ export type {
   DelegatedUserDecryptParams,
   PublicDecryptResult,
 } from "../relayer/relayer-sdk.types";
-export type { KeypairType } from "@zama-fhe/relayer-sdk/bundle";
 
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../token/async-local-storage";
-export type { GenericStorage } from "../token/token.types";
 
 // Network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";

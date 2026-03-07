@@ -5,13 +5,12 @@
 ```ts
 
 import { Abi } from 'viem';
-import { Address } from '@zama-fhe/relayer-sdk/bundle';
+import { Address } from 'viem';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
-import { Hex } from '@zama-fhe/relayer-sdk/bundle';
-import { Hex as Hex_2 } from 'viem';
+import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
@@ -60,11 +59,11 @@ export interface ActivityItem {
     readonly amount: ActivityAmount;
     readonly direction: ActivityDirection;
     readonly fee?: bigint;
-    readonly from?: string;
+    readonly from?: Address;
     readonly metadata: ActivityLogMetadata;
     readonly rawEvent: OnChainEvent;
     readonly success?: boolean;
-    readonly to?: string;
+    readonly to?: Address;
     readonly type: ActivityType;
 }
 
@@ -72,7 +71,7 @@ export interface ActivityItem {
 export interface ActivityLogMetadata {
     readonly blockNumber?: bigint | number;
     readonly logIndex?: number;
-    readonly transactionHash?: string;
+    readonly transactionHash?: Hex;
 }
 
 // @public
@@ -124,7 +123,7 @@ export interface BatchDecryptOptions {
 }
 
 // @public (undocumented)
-export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress: Address, config?: FeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>>;
+export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress?: Address, config?: FeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>>;
 
 // @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
@@ -185,7 +184,7 @@ export interface ConfidentialHandleQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialHandleQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: ConfidentialHandleQueryConfig): QueryFactoryOptions<Hex_2, Error, Hex_2, ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>>;
+export function confidentialHandleQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: ConfidentialHandleQueryConfig): QueryFactoryOptions<Handle, Error, Handle, ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>>;
 
 // @public (undocumented)
 export interface ConfidentialHandlesQueryConfig {
@@ -198,16 +197,16 @@ export interface ConfidentialHandlesQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialHandlesQueryOptions(signer: GenericSigner, tokenAddresses: Address[], config?: ConfidentialHandlesQueryConfig): QueryFactoryOptions<Hex_2[], Error, Hex_2[], ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>>;
+export function confidentialHandlesQueryOptions(signer: GenericSigner, tokenAddresses: Address[], config?: ConfidentialHandlesQueryConfig): QueryFactoryOptions<Handle[], Error, Handle[], ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>>;
 
 // @public (undocumented)
 export interface ConfidentialIsApprovedQueryConfig {
     // (undocumented)
-    holder: Address;
+    holder?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
     // (undocumented)
-    spender: Address;
+    spender?: Address;
 }
 
 // @public (undocumented)
@@ -218,8 +217,8 @@ export interface ConfidentialTransferEvent {
     readonly encryptedAmountHandle: Handle;
     // (undocumented)
     readonly eventName: "ConfidentialTransfer";
-    readonly from: string;
-    readonly to: string;
+    readonly from: Address;
+    readonly to: Address;
 }
 
 // @public (undocumented)
@@ -358,16 +357,19 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     handles: Handle[];
     // (undocumented)
-    privateKey: string;
+    privateKey: Hex;
     // (undocumented)
-    publicKey: string;
+    publicKey: Hex;
     // (undocumented)
-    signature: string;
+    signature: Hex;
     // (undocumented)
     signedContractAddresses: Address[];
     // (undocumented)
     startTimestamp: number;
 }
+
+// @public
+export function deriveActivityFeedLogsKey(logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[]): string | undefined;
 
 // @public
 export interface EIP712TypedData {
@@ -380,11 +382,11 @@ export interface EIP712TypedData {
     };
     // (undocumented)
     message: {
-        publicKey: string;
-        contractAddresses: readonly string[];
+        publicKey: Hex;
+        contractAddresses: readonly Address[];
         startTimestamp: bigint;
         durationDays: bigint;
-        extraData: string;
+        extraData: Hex;
     };
     // (undocumented)
     primaryType?: string;
@@ -398,7 +400,7 @@ export interface EIP712TypedData {
 }
 
 // @public (undocumented)
-export type EncryptedBalanceHandle = Handle | bigint;
+export type EncryptedBalanceHandle = Handle;
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -462,7 +464,7 @@ export interface FeeQueryConfig {
 }
 
 // @public (undocumented)
-export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddress: Address, config?: FeeQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.fees.feeRecipient>>;
+export function feeRecipientQueryOptions(signer: GenericSigner, feeManagerAddress?: Address, config?: FeeQueryConfig): QueryFactoryOptions<Address, Error, Address, ReturnType<typeof zamaQueryKeys.fees.feeRecipient>>;
 
 // @public
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(options: TOptions): Omit<TOptions, StrippedQueryOptionKeys>;
@@ -516,28 +518,26 @@ export interface GenericStorage {
 // @public
 export function hashFn(queryKey: readonly unknown[]): string;
 
-export { Hex }
+// @public (undocumented)
+export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
-export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddress: string): void;
+export function invalidateAfterApproveUnderlying(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
-export function invalidateAfterApproveUnderlying(queryClient: QueryClientLike, tokenAddress: string): void;
+export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
-export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress: string): void;
+export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
-export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: string): void;
+export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
-export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: string): void;
+export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
-export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: string): void;
-
-// @public (undocumented)
-export function invalidateBalanceQueries(queryClient: QueryClientLike, tokenAddress: string): void;
+export function invalidateBalanceQueries(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
 export function invalidateWagmiBalanceQueries(queryClient: QueryClientLike): void;
@@ -575,9 +575,6 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
     // (undocumented)
     mutationKey: TMutationKey;
 }
-
-// @public
-export function normalizeHandle(handle: string | bigint): Handle;
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
@@ -648,8 +645,8 @@ export interface QueryLike {
 
 // @public
 export interface RawLog {
-    readonly data: string;
-    readonly topics: readonly string[];
+    readonly data: Hex;
+    readonly topics: readonly Hex[];
 }
 
 // @public
@@ -704,11 +701,11 @@ export interface ReadonlyTokenConfig {
 
 // @public
 export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<string>>;
+    generateKeypair(): Promise<KeypairType<Hex>>;
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;
@@ -762,7 +759,7 @@ export interface ShieldFeeQueryConfig extends FeeQueryConfig {
     // (undocumented)
     amount?: bigint;
     // (undocumented)
-    feeManagerAddress: Address;
+    feeManagerAddress?: Address;
     // (undocumented)
     from?: Address;
     // (undocumented)
@@ -815,9 +812,9 @@ export interface SignerLifecycleCallbacks {
 export interface StoredCredentials {
     contractAddresses: Address[];
     durationDays: number;
-    privateKey: string;
-    publicKey: string;
-    signature: string;
+    privateKey: Hex;
+    publicKey: Hex;
+    signature: Hex;
     startTimestamp: number;
 }
 
@@ -932,7 +929,7 @@ export interface UnderlyingAllowanceQueryConfig {
     // (undocumented)
     query?: Record<string, unknown>;
     // (undocumented)
-    wrapperAddress: Address;
+    wrapperAddress?: Address;
 }
 
 // @public (undocumented)
@@ -959,7 +956,7 @@ export interface UnshieldFeeQueryConfig extends FeeQueryConfig {
     // (undocumented)
     amount?: bigint;
     // (undocumented)
-    feeManagerAddress: Address;
+    feeManagerAddress?: Address;
     // (undocumented)
     from?: Address;
     // (undocumented)
@@ -1032,11 +1029,11 @@ export interface UnwrappedStartedEvent {
     readonly burnAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrappedStarted";
-    readonly refund: string;
+    readonly refund: Address;
     readonly requestedAmount: Handle;
     readonly requestId: bigint;
     readonly returnVal: boolean;
-    readonly to: string;
+    readonly to: Address;
     readonly txId: bigint;
 }
 
@@ -1045,7 +1042,7 @@ export interface UnwrapRequestedEvent {
     readonly encryptedAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrapRequested";
-    readonly receiver: string;
+    readonly receiver: Address;
 }
 
 // @public (undocumented)
@@ -1065,11 +1062,11 @@ export interface UserDecryptParams {
     // (undocumented)
     handles: Handle[];
     // (undocumented)
-    privateKey: string;
+    privateKey: Hex;
     // (undocumented)
-    publicKey: string;
+    publicKey: Hex;
     // (undocumented)
-    signature: string;
+    signature: Hex;
     // (undocumented)
     signedContractAddresses: Address[];
     // (undocumented)
@@ -1086,7 +1083,7 @@ export interface WrappedEvent {
     readonly feeAmount: bigint;
     readonly mintAmount: bigint;
     readonly mintTxId: bigint;
-    readonly to: string;
+    readonly to: Address;
 }
 
 // @public (undocumented)
@@ -1107,140 +1104,140 @@ export const zamaQueryKeys: {
         readonly scope: (scope: number) => readonly ["zama.signerAddress", {
             readonly scope: number;
         }];
-        readonly token: (tokenAddress: string) => readonly ["zama.signerAddress", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.signerAddress", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
     readonly confidentialHandle: {
         readonly all: readonly ["zama.confidentialHandle"];
-        readonly token: (tokenAddress: string) => readonly ["zama.confidentialHandle", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialHandle", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly owner: (tokenAddress: string, owner: string) => readonly ["zama.confidentialHandle", {
+        readonly owner: (tokenAddress: Address, owner?: Address) => readonly ["zama.confidentialHandle", {
+            readonly owner?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
-            readonly owner: string;
         }];
     };
     readonly confidentialBalance: {
         readonly all: readonly ["zama.confidentialBalance"];
-        readonly token: (tokenAddress: string) => readonly ["zama.confidentialBalance", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialBalance", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly owner: (tokenAddress: string, owner: string, handle?: Handle) => readonly ["zama.confidentialBalance", {
+        readonly owner: (tokenAddress: Address, owner?: Address, handle?: Handle) => readonly ["zama.confidentialBalance", {
             readonly handle?: `0x${string}` | undefined;
+            readonly owner?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
-            readonly owner: string;
         }];
     };
     readonly confidentialHandles: {
         readonly all: readonly ["zama.confidentialHandles"];
-        readonly tokens: (tokenAddresses: string[], owner: string) => readonly ["zama.confidentialHandles", {
-            readonly tokenAddresses: string[];
-            readonly owner: string;
+        readonly tokens: (tokenAddresses: Address[], owner?: Address) => readonly ["zama.confidentialHandles", {
+            readonly owner?: `0x${string}` | undefined;
+            readonly tokenAddresses: `0x${string}`[];
         }];
     };
     readonly confidentialBalances: {
         readonly all: readonly ["zama.confidentialBalances"];
-        readonly tokens: (tokenAddresses: string[], owner: string, handles?: Handle[]) => readonly ["zama.confidentialBalances", {
+        readonly tokens: (tokenAddresses: Address[], owner?: Address, handles?: Handle[]) => readonly ["zama.confidentialBalances", {
             readonly handles?: `0x${string}`[] | undefined;
-            readonly tokenAddresses: string[];
-            readonly owner: string;
+            readonly owner?: `0x${string}` | undefined;
+            readonly tokenAddresses: `0x${string}`[];
         }];
     };
     readonly tokenMetadata: {
         readonly all: readonly ["zama.tokenMetadata"];
-        readonly token: (tokenAddress: string) => readonly ["zama.tokenMetadata", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.tokenMetadata", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
     readonly isConfidential: {
         readonly all: readonly ["zama.isConfidential"];
-        readonly token: (tokenAddress: string) => readonly ["zama.isConfidential", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.isConfidential", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
     readonly isWrapper: {
         readonly all: readonly ["zama.isWrapper"];
-        readonly token: (tokenAddress: string) => readonly ["zama.isWrapper", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.isWrapper", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
     readonly wrapperDiscovery: {
         readonly all: readonly ["zama.wrapperDiscovery"];
-        readonly token: (tokenAddress: string, coordinatorAddress: string) => readonly ["zama.wrapperDiscovery", {
+        readonly token: (tokenAddress: Address, coordinatorAddress: Address) => readonly ["zama.wrapperDiscovery", {
             readonly tokenAddress: `0x${string}`;
             readonly coordinatorAddress: `0x${string}`;
         }];
     };
     readonly underlyingAllowance: {
         readonly all: readonly ["zama.underlyingAllowance"];
-        readonly token: (tokenAddress: string) => readonly ["zama.underlyingAllowance", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.underlyingAllowance", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly scope: (tokenAddress: string, owner: string, wrapperAddress: string) => readonly ["zama.underlyingAllowance", {
+        readonly scope: (tokenAddress: Address, owner?: Address, wrapperAddress?: Address) => readonly ["zama.underlyingAllowance", {
+            readonly wrapperAddress?: `0x${string}` | undefined;
+            readonly owner?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
-            readonly owner: string;
-            readonly wrapperAddress: string;
         }];
     };
     readonly confidentialIsApproved: {
         readonly all: readonly ["zama.confidentialIsApproved"];
-        readonly token: (tokenAddress: string) => readonly ["zama.confidentialIsApproved", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialIsApproved", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly scope: (tokenAddress: string, holder: string, spender: string) => readonly ["zama.confidentialIsApproved", {
+        readonly scope: (tokenAddress: Address, holder?: Address, spender?: Address) => readonly ["zama.confidentialIsApproved", {
+            readonly spender?: `0x${string}` | undefined;
+            readonly holder?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
-            readonly holder: string;
-            readonly spender: string;
         }];
     };
     readonly totalSupply: {
         readonly all: readonly ["zama.totalSupply"];
-        readonly token: (tokenAddress: string) => readonly ["zama.totalSupply", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.totalSupply", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
     readonly activityFeed: {
         readonly all: readonly ["zama.activityFeed"];
-        readonly token: (tokenAddress: string) => readonly ["zama.activityFeed", {
+        readonly token: (tokenAddress: Address) => readonly ["zama.activityFeed", {
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly scope: (tokenAddress: string, userAddress: string, logsKey: string, decrypt: boolean) => readonly ["zama.activityFeed", {
+        readonly scope: (tokenAddress: Address, userAddress?: Address, logsKey?: string, decrypt?: boolean) => readonly ["zama.activityFeed", {
+            readonly decrypt?: boolean | undefined;
+            readonly logsKey?: string | undefined;
+            readonly userAddress?: `0x${string}` | undefined;
             readonly tokenAddress: `0x${string}`;
-            readonly userAddress: string;
-            readonly logsKey: string;
-            readonly decrypt: boolean;
         }];
     };
     readonly fees: {
         readonly all: readonly ["zama.fees"];
-        readonly shieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) => readonly ["zama.fees", {
+        readonly shieldFee: (feeManagerAddress?: Address, amount?: string, from?: Address, to?: Address) => readonly ["zama.fees", {
+            readonly to?: `0x${string}` | undefined;
+            readonly from?: `0x${string}` | undefined;
             readonly amount?: string | undefined;
-            readonly from?: string | undefined;
-            readonly to?: string | undefined;
+            readonly feeManagerAddress?: `0x${string}` | undefined;
             readonly type: "shield";
-            readonly feeManagerAddress: string;
         }];
-        readonly unshieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) => readonly ["zama.fees", {
+        readonly unshieldFee: (feeManagerAddress?: Address, amount?: string, from?: Address, to?: Address) => readonly ["zama.fees", {
+            readonly to?: `0x${string}` | undefined;
+            readonly from?: `0x${string}` | undefined;
             readonly amount?: string | undefined;
-            readonly from?: string | undefined;
-            readonly to?: string | undefined;
+            readonly feeManagerAddress?: `0x${string}` | undefined;
             readonly type: "unshield";
-            readonly feeManagerAddress: string;
         }];
-        readonly batchTransferFee: (feeManagerAddress: string) => readonly ["zama.fees", {
+        readonly batchTransferFee: (feeManagerAddress?: Address) => readonly ["zama.fees", {
+            readonly feeManagerAddress?: `0x${string}` | undefined;
             readonly type: "batchTransfer";
-            readonly feeManagerAddress: string;
         }];
-        readonly feeRecipient: (feeManagerAddress: string) => readonly ["zama.fees", {
+        readonly feeRecipient: (feeManagerAddress?: Address) => readonly ["zama.fees", {
+            readonly feeManagerAddress?: `0x${string}` | undefined;
             readonly type: "feeRecipient";
-            readonly feeManagerAddress: string;
         }];
     };
     readonly isAllowed: {
         readonly all: readonly ["zama.isAllowed"];
-        readonly scope: (account: string) => readonly ["zama.isAllowed", {
-            readonly account: string;
+        readonly scope: (account: Address) => readonly ["zama.isAllowed", {
+            readonly account: `0x${string}`;
         }];
     };
     readonly publicKey: {
@@ -1254,7 +1251,7 @@ export const zamaQueryKeys: {
     };
     readonly decryption: {
         readonly all: readonly ["zama.decryption"];
-        readonly handle: (handle: string, contractAddress?: string) => readonly ["zama.decryption", {
+        readonly handle: (handle: string, contractAddress?: Address) => readonly ["zama.decryption", {
             readonly contractAddress?: `0x${string}` | undefined;
             readonly handle: string;
         }];
@@ -1341,7 +1338,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/activity-CmR2x4Bb.d.ts:912:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/activity-DA4w1GcG.d.ts:913:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

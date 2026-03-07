@@ -1,24 +1,14 @@
-import { isAddress } from "viem";
-import { type Address } from "viem";
+import { type Hex } from "viem";
 
-// ── Runtime type assertion helpers ───────────────────────────
-
-export function assertAddress(value: string, name: string): asserts value is Address {
-  if (!isAddress(value, { strict: false })) {
-    throw new TypeError(`${name} must be a valid address (0x + 40 hex chars), got: ${value}`);
-  }
+/** Normalize a un-prefixed hex payload to a 0x-prefixed `Hex` value. */
+export function prefixHex(value: string): Hex {
+  return (value.startsWith("0x") ? value : `0x${value}`) as Hex;
 }
 
-/**
- * Validate an address and return it unchanged.
- * Call at public API entry points so invalid addresses are caught early.
- *
- * Addresses are preserved exactly as provided.
- * Use `getAddress()` from viem when you need canonical EIP-55 checksumming.
- */
-export function validateAddress(addr: string, name: string): Address {
-  assertAddress(addr, name);
-  return addr;
+/** Convert a public `Hex` value back an unprefixed format. */
+export function unprefixHex(value: Hex): string {
+  assertCondition(value.startsWith("0x"), `Expected 0x-prefixed hex, got: ${value}`);
+  return value.slice(2);
 }
 
 export function assertObject(

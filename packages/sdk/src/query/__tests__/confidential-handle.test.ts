@@ -23,7 +23,7 @@ describe("confidentialHandleQueryOptions", () => {
 
   test("queryFn extracts owner + tokenAddress from context.queryKey", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue(
-      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
 
     const options = confidentialHandleQueryOptions(

@@ -14,8 +14,8 @@ const WRAPPER_UPPER = "0x27B1FDB04752BBC536007A920D24ACB045561C26";
 const SPENDER_LOWER = "0xdbf03b407c01e7cd3cbea99509d93f8dddc8c6fb";
 const COORDINATOR_LOWER = "0xd1220a0cf47c7b9be7a2e6ba89f429762e7b9adb";
 const TOKEN_B_LOWER = "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359";
-const HANDLE_A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const HANDLE_B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const HANDLE_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa";
+const HANDLE_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb";
 
 describe("zamaQueryKeys", () => {
   test.each([
@@ -265,15 +265,30 @@ describe("zamaQueryKeys", () => {
     ]);
   });
 
-  test("fees keys type feeManagerAddress as Address | empty string", () => {
+  test("omits absent optional address fields from query keys", () => {
+    expect(zamaQueryKeys.confidentialHandle.owner(TOKEN_LOWER)).toEqual([
+      "zama.confidentialHandle",
+      { tokenAddress: getAddress(TOKEN_LOWER) },
+    ]);
+    expect(zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER)).toEqual([
+      "zama.underlyingAllowance",
+      { tokenAddress: getAddress(TOKEN_LOWER) },
+    ]);
+    expect(zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER)).toEqual([
+      "zama.confidentialIsApproved",
+      { tokenAddress: getAddress(TOKEN_LOWER), holder: getAddress(OWNER_LOWER) },
+    ]);
+  });
+
+  test("fees keys type feeManagerAddress as Address | undefined", () => {
     const shieldFeeKey = zamaQueryKeys.fees.shieldFee(TOKEN_LOWER);
     const unshieldFeeKey = zamaQueryKeys.fees.unshieldFee(TOKEN_LOWER);
     const batchTransferFeeKey = zamaQueryKeys.fees.batchTransferFee(TOKEN_LOWER);
     const feeRecipientKey = zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER);
 
-    expectTypeOf(shieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | "">();
-    expectTypeOf(unshieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | "">();
-    expectTypeOf(batchTransferFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | "">();
-    expectTypeOf(feeRecipientKey[1].feeManagerAddress).toEqualTypeOf<Address | "">();
+    expectTypeOf(shieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
+    expectTypeOf(unshieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
+    expectTypeOf(batchTransferFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
+    expectTypeOf(feeRecipientKey[1].feeManagerAddress).toEqualTypeOf<Address | undefined>();
   });
 });

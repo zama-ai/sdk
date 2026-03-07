@@ -3,7 +3,7 @@ import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
 import { MemoryStorage } from "./memory-storage";
 import { SigningRejectedError, SigningFailedError } from "./errors";
-import { assertObject, assertString, assertArray, assertCondition } from "../utils";
+import { assertObject, assertString, assertArray, assertCondition, prefixHex } from "../utils";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import type { Address, Hex } from "viem";
@@ -481,6 +481,6 @@ export class CredentialsManager {
 
     const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
 
-    return new TextDecoder().decode(plaintext) as Hex;
+    return prefixHex(new TextDecoder().decode(plaintext));
   }
 }

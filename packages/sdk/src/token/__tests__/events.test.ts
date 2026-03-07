@@ -500,7 +500,7 @@ describe("Token event emissions", () => {
       );
       await token.confidentialTransferFrom(
         "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
-        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+        "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
         200n,
       );
 

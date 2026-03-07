@@ -1,6 +1,5 @@
 import { ERC165_ABI } from "../abi/erc165.abi";
 import { type Address } from "viem";
-import { assertAddress } from "../utils";
 
 /** ERC-165 interface ID for IERC7984 (confidential fungible token). */
 export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;
@@ -22,7 +21,6 @@ export const ERC7984_WRAPPER_INTERFACE_ID = "0xd04584ba" as const;
  * ```
  */
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address) {
-  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: tokenAddress,
     abi: ERC165_ABI,

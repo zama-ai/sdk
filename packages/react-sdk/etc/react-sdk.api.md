@@ -335,9 +335,9 @@ export { ContractAbi }
 // @public
 export interface CreateDelegatedUserDecryptEIP712Params {
     contractAddresses: Address[];
-    delegatorAddress: string;
+    delegatorAddress: Address;
     durationDays?: number;
-    publicKey: string;
+    publicKey: `0x${string}`;
     startTimestamp: number;
 }
 
@@ -345,7 +345,7 @@ export interface CreateDelegatedUserDecryptEIP712Params {
 export interface CreateEIP712Params {
     contractAddresses: `0x${string}`[];
     durationDays?: number;
-    publicKey: string;
+    publicKey: `0x${string}`;
     startTimestamp: number;
 }
 
@@ -399,7 +399,7 @@ export { DecryptionFailedError }
 
 // @public
 export const decryptionKeys: {
-    value: (handle: string, contractAddress?: string) => readonly ["zama.decryption", {
+    value: (handle: `0x${string}`, contractAddress?: `0x${string}`) => readonly ["zama.decryption", {
         readonly contractAddress?: `0x${string}` | undefined;
         readonly handle: string;
     }];
@@ -1155,7 +1155,7 @@ export function useFeeRecipient(feeManagerAddress: Address, options?: Omit<UseQu
 export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
 
 // @public
-export function useGenerateKeypair(): _tanstack_react_query0.UseMutationResult<KeypairType<string>, Error, void, unknown>;
+export function useGenerateKeypair(): _tanstack_react_query0.UseMutationResult<_zama_fhe_sdk0.KeypairType<`0x${string}`>, Error, void, unknown>;
 
 // @public
 export function useIsAllowed(): _tanstack_react_query0.UseQueryResult<unknown, Error>;

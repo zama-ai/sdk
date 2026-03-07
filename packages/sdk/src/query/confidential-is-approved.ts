@@ -1,12 +1,13 @@
 import { isOperatorContract } from "../contracts";
-import type { Address, GenericSigner } from "../token/token.types";
+import type { GenericSigner } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
+import type { Address } from "viem";
 
 export interface ConfidentialIsApprovedQueryConfig {
-  holder: Address;
-  spender: Address;
+  holder?: Address;
+  spender?: Address;
   query?: Record<string, unknown>;
 }
 
@@ -20,11 +21,10 @@ export function confidentialIsApprovedQueryOptions(
   boolean,
   ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>
 > {
-  const queryKey = zamaQueryKeys.confidentialIsApproved.scope(
-    tokenAddress,
-    config.holder,
-    config.spender,
-  );
+  const holderKey = config.holder;
+  const spenderKey = config.spender;
+  const queryEnabled = config.query?.enabled !== false;
+  const queryKey = zamaQueryKeys.confidentialIsApproved.scope(tokenAddress, holderKey, spenderKey);
 
   return {
     ...filterQueryOptions(config.query ?? {}),
@@ -32,11 +32,11 @@ export function confidentialIsApprovedQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, holder: keyHolder, spender: keySpender }] =
         context.queryKey;
-      return signer.readContract(
-        isOperatorContract(keyTokenAddress, keyHolder as Address, keySpender as Address),
-      );
+      if (!keyHolder) throw new Error("holder is required");
+      if (!keySpender) throw new Error("spender is required");
+      return signer.readContract(isOperatorContract(keyTokenAddress, keyHolder, keySpender));
     },
     staleTime: 30_000,
-    enabled: config.query?.enabled !== false,
+    enabled: Boolean(holderKey && spenderKey) && queryEnabled,
   };
 }

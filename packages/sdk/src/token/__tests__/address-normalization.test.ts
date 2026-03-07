@@ -4,12 +4,7 @@ import { Token } from "../token";
 import type { Address } from "viem";
 
 describe("Address normalization (P6)", () => {
-  it("preserves token address case in constructor", ({
-    relayer,
-    signer,
-    storage,
-    sessionStorage,
-  }) => {
+  it("checksummed token address in constructor", ({ relayer, signer, storage, sessionStorage }) => {
     const token = new Token({
       relayer,
       signer,
@@ -18,10 +13,10 @@ describe("Address normalization (P6)", () => {
       address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
-    expect(token.address).toBe("0xABCDEF1234567890ABCDEF1234567890ABCDEF12");
+    expect(token.address).toBe("0xabCDEF1234567890ABcDEF1234567890aBCDeF12");
   });
 
-  it("preserves wrapper address case in constructor", ({
+  it("checksummed wrapper address in constructor", ({
     relayer,
     signer,
     storage,
@@ -37,10 +32,10 @@ describe("Address normalization (P6)", () => {
       wrapper: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
-    expect(token.wrapper).toBe("0xABCDEF1234567890ABCDEF1234567890ABCDEF12");
+    expect(token.wrapper).toBe("0xabCDEF1234567890ABcDEF1234567890aBCDeF12");
   });
 
-  it("defaults wrapper to normalized address when not provided", ({
+  it("defaults wrapper to checksummed address when not provided", ({
     relayer,
     signer,
     storage,
@@ -54,7 +49,7 @@ describe("Address normalization (P6)", () => {
       address: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12" as Address,
     });
 
-    expect(token.wrapper).toBe(token.address);
+    expect(token.wrapper).toBe("0xabCDEF1234567890ABcDEF1234567890aBCDeF12");
   });
 
   it("rejects invalid address in constructor", ({ relayer, signer, storage, sessionStorage }) => {
@@ -67,6 +62,6 @@ describe("Address normalization (P6)", () => {
           sessionStorage,
           address: "0xinvalid" as Address,
         }),
-    ).toThrow("address must be a valid address");
+    ).toThrow('Address "0xinvalid" is invalid.');
   });
 });

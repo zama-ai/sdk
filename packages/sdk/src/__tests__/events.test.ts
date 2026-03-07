@@ -14,10 +14,10 @@ import {
   type RawLog,
 } from "../events";
 
-import { type Hex } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 
 // Helpers
-const addr = (hex: string): Hex => `0x${hex.padStart(40, "0")}`;
+const addr = (hex: string): Address => getAddress(`0x${hex.padStart(40, "0")}`);
 const topic = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 const word = (hex: string) => hex.padStart(64, "0");
 const bytes32 = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;

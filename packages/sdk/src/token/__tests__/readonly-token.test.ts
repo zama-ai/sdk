@@ -6,7 +6,7 @@ import type { GenericSigner, GenericStorage } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 
 import { DecryptionFailedError } from "../errors";
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
 
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
 
@@ -328,7 +328,7 @@ describe("ReadonlyToken", () => {
   });
 
   describe("batchDecryptBalances error paths", () => {
-    const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+    const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
     it("throws DecryptionFailedError by default when decryption fails", async ({
       relayer,
@@ -409,7 +409,7 @@ describe("ReadonlyToken", () => {
       });
 
       expect(result.get(tokenAddress)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(0n);
+      expect(result.get(getAddress(TOKEN2))).toBe(0n);
     });
 
     it("onError receives correct error and address", async ({
@@ -450,9 +450,9 @@ describe("ReadonlyToken", () => {
       });
 
       expect(result.get(tokenAddress)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(42n);
+      expect(result.get(getAddress(TOKEN2))).toBe(42n);
       expect(captured).toHaveLength(1);
-      expect(captured[0]!.address).toBe(TOKEN2);
+      expect(captured[0]!.address).toBe(getAddress(TOKEN2));
       expect(captured[0]!.error.message).toBe("decrypt failed");
     });
   });
@@ -528,7 +528,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+      const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
       const token2 = new ReadonlyToken({
         relayer,
         signer,
