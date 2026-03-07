@@ -19566,7 +19566,6 @@ export class ReadonlyToken {
     getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint>;
     isAllowed(): Promise<boolean>;
     isConfidential(): Promise<boolean>;
-    // (undocumented)
     isDelegated(delegator: Address, delegate: Address): Promise<boolean>;
     isWrapper(): Promise<boolean>;
     // (undocumented)
@@ -33357,10 +33356,10 @@ export const ZamaErrorCode: {
     readonly InvalidKeypair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
     readonly NoCiphertext: "NO_CIPHERTEXT"; /** Relayer HTTP request failed. */
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
-    readonly Configuration: "CONFIGURATION";
-    readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED";
-    readonly DelegationCooldown: "DELEGATION_COOLDOWN";
-    readonly DelegationNotFound: "DELEGATION_NOT_FOUND";
+    readonly Configuration: "CONFIGURATION"; /** Delegation cannot target self (delegate === msg.sender). */
+    readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED"; /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
+    readonly DelegationCooldown: "DELEGATION_COOLDOWN"; /** No active delegation found for this (delegator, delegate, contract) tuple. */
+    readonly DelegationNotFound: "DELEGATION_NOT_FOUND"; /** The delegation has expired. */
     readonly DelegationExpired: "DELEGATION_EXPIRED";
 };
 

@@ -683,8 +683,16 @@ export class Token extends ReadonlyToken {
   // DELEGATION OPERATIONS
 
   /**
+   * Delegate decryption rights for this token to another address.
+   * Calls `ACL.delegateForUserDecryption()` on-chain.
+   *
+   * @param delegate - Address to delegate decryption rights to.
+   * @param options - Optional configuration.
    * @param options.expirationDate - When the delegation expires. Defaults to
-   *   `uint64.max` (≈ year 584 billion), i.e. no practical expiry.
+   *   `uint64.max` (≈ year 584 billion), i.e. permanent delegation.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link ConfigurationError} if `aclAddress` was not provided.
+   * @throws {@link TransactionRevertedError} if the delegation transaction reverts.
    */
   async delegateDecryption(
     delegate: Address,
@@ -711,6 +719,15 @@ export class Token extends ReadonlyToken {
     }
   }
 
+  /**
+   * Revoke decryption delegation for this token.
+   * Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
+   *
+   * @param delegate - Address to revoke delegation from.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link ConfigurationError} if `aclAddress` was not provided.
+   * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
+   */
   async revokeDelegation(delegate: Address): Promise<TransactionResult> {
     const acl = this.requireAclAddress();
     const normalizedDelegate = validateAddress(delegate, "delegate");
@@ -731,38 +748,53 @@ export class Token extends ReadonlyToken {
 
   // BATCH DELEGATION
 
+  /**
+   * Delegate decryption rights across multiple tokens in parallel.
+   * Returns a per-token result map with partial success semantics.
+   *
+   * @param tokens - Array of Token instances to delegate on.
+   * @param delegate - Address to delegate decryption rights to.
+   * @param options - Optional expiration date.
+   * @returns Map from token address to TransactionResult or ZamaError.
+   */
   static async delegateDecryptionBatch(
     tokens: Token[],
     delegate: Address,
     options?: { expirationDate?: Date },
   ): Promise<Map<Address, TransactionResult | ZamaError>> {
-    const results = new Map<Address, TransactionResult | ZamaError>();
-    const settled = await Promise.allSettled(
-      tokens.map((t) => t.delegateDecryption(delegate, options)),
+    return Token.#batchDelegationOp(
+      tokens,
+      (t) => t.delegateDecryption(delegate, options),
+      "Delegation failed",
     );
-    for (let i = 0; i < tokens.length; i++) {
-      const outcome = settled[i]!;
-      if (outcome.status === "fulfilled") {
-        results.set(tokens[i]!.address, outcome.value);
-      } else {
-        const err =
-          outcome.reason instanceof ZamaError
-            ? outcome.reason
-            : new TransactionRevertedError("Delegation failed", {
-                cause: outcome.reason instanceof Error ? outcome.reason : undefined,
-              });
-        results.set(tokens[i]!.address, err);
-      }
-    }
-    return results;
   }
 
+  /**
+   * Revoke delegation across multiple tokens in parallel.
+   * Returns a per-token result map with partial success semantics.
+   *
+   * @param tokens - Array of Token instances to revoke delegation on.
+   * @param delegate - Address to revoke delegation from.
+   * @returns Map from token address to TransactionResult or ZamaError.
+   */
   static async revokeDelegationBatch(
     tokens: Token[],
     delegate: Address,
   ): Promise<Map<Address, TransactionResult | ZamaError>> {
+    return Token.#batchDelegationOp(
+      tokens,
+      (t) => t.revokeDelegation(delegate),
+      "Revoke delegation failed",
+    );
+  }
+
+  static async #batchDelegationOp(
+    tokens: Token[],
+    op: (token: Token) => Promise<TransactionResult>,
+    errorMessage: string,
+  ): Promise<Map<Address, TransactionResult | ZamaError>> {
     const results = new Map<Address, TransactionResult | ZamaError>();
-    const settled = await Promise.allSettled(tokens.map((t) => t.revokeDelegation(delegate)));
+    const settled = await Promise.allSettled(tokens.map(op));
     for (let i = 0; i < tokens.length; i++) {
       const outcome = settled[i]!;
       if (outcome.status === "fulfilled") {
@@ -771,7 +803,7 @@ export class Token extends ReadonlyToken {
         const err =
           outcome.reason instanceof ZamaError
             ? outcome.reason
-            : new TransactionRevertedError("Revoke delegation failed", {
+            : new TransactionRevertedError(errorMessage, {
                 cause: outcome.reason instanceof Error ? outcome.reason : undefined,
               });
         results.set(tokens[i]!.address, err);

@@ -1,4 +1,7 @@
 import { test, expect } from "../fixtures";
+import { privateKeyToAccount } from "viem/accounts";
+import { createWalletClient, http } from "viem";
+import { hardhat } from "viem/chains";
 
 const ACCOUNT_1 = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
 
@@ -30,10 +33,6 @@ test("should decrypt balance as delegate after on-chain delegation", async ({
 
   // Delegate on-chain from Account #0 to Account #0 won't work (SenderCannotBeDelegate),
   // so we delegate from Account #1 to Account #0 using a direct viem call.
-  const { privateKeyToAccount } = await import("viem/accounts");
-  const { createWalletClient, http } = await import("viem");
-  const { hardhat } = await import("viem/chains");
-
   const account1 = privateKeyToAccount(
     "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
   );

@@ -531,15 +531,29 @@ export class ReadonlyToken {
   }
 
   /**
-   * Client-side approximation — compares the on-chain expiry against the
-   * local clock.  For authoritative checks, read the expiry directly and
-   * compare against the block timestamp.
+   * Check whether a delegation is active for this token's contract address.
+   * This is a client-side approximation — it compares the on-chain expiry
+   * against the local clock. For authoritative checks, read the expiry
+   * directly and compare against the block timestamp.
+   *
+   * @param delegator - The address that granted the delegation.
+   * @param delegate - The address that received delegation rights.
+   * @returns `true` if the delegation exists and has not expired.
+   * @throws {@link ConfigurationError} if `aclAddress` was not provided.
    */
   async isDelegated(delegator: Address, delegate: Address): Promise<boolean> {
     const expiry = await this.getDelegationExpiry(delegator, delegate);
     return expiry > 0n && expiry >= BigInt(Math.floor(Date.now() / 1000));
   }
 
+  /**
+   * Get the expiration timestamp of a delegation for this token.
+   *
+   * @param delegator - The address that granted the delegation.
+   * @param delegate - The address that received delegation rights.
+   * @returns Unix timestamp as bigint. `0n` = no delegation. `2^64 - 1` = permanent.
+   * @throws {@link ConfigurationError} if `aclAddress` was not provided.
+   */
   async getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint> {
     const acl = this.requireAclAddress();
     const normalizedDelegator = validateAddress(delegator, "delegator");
