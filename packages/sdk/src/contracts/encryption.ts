@@ -1,6 +1,6 @@
-import { toHex } from "viem";
+import { toHex, Address } from "viem";
 import { ENCRYPTION_ABI } from "../abi/encryption.abi";
-import type { Address, Handle } from "../relayer/relayer-sdk.types";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import { assertAddress } from "../utils";
 import { FHE_GAS_LIMIT } from "./gas";
 

@@ -1,5 +1,5 @@
 import type { EIP1193Provider } from "viem";
-import type { Address } from "../relayer-sdk.types";
+import { type Address } from "viem";
 
 export interface CleartextContracts {
   acl: Address;

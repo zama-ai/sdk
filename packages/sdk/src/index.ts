@@ -69,8 +69,6 @@ export {
   clearPendingUnshield,
 } from "./token/pending-unshield";
 export type {
-  Address,
-  Hex,
   GenericSigner,
   GenericStorage,
   SignerLifecycleCallbacks,
@@ -89,6 +87,7 @@ export type {
   ShieldCallbacks,
   TransferCallbacks,
 } from "./token/token.types";
+export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events/sdk-events";
 export type {
   ZamaSDKEventType,

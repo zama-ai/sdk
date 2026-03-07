@@ -1,5 +1,5 @@
 import { FEE_MANAGER_ABI } from "../abi/fee-manager.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
+import { type Address } from "viem";
 import { assertAddress } from "../utils";
 
 /**

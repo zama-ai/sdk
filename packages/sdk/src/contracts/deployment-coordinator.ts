@@ -1,5 +1,5 @@
 import { DEPLOYMENT_COORDINATOR_ABI } from "../abi/deployment-coordinator.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
+import { type Address } from "viem";
 import { assertAddress } from "../utils";
 
 /**

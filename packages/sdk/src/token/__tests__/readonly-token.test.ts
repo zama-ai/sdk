@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { ReadonlyToken } from "../readonly-token";
 import { ZERO_HANDLE } from "../readonly-token";
-import { ZamaErrorCode } from "../token.types";
+import { ZamaErrorCode } from "../errors";
 import type { GenericSigner, GenericStorage } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Address } from "../../relayer/relayer-sdk.types";
+
 import { DecryptionFailedError } from "../errors";
+import type { Address } from "viem";
 
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
 
@@ -286,47 +287,6 @@ describe("ReadonlyToken", () => {
       // normalizeHandle is protected, test via confidentialBalanceOf
       vi.mocked(signer.readContract).mockResolvedValue(handle);
       await expect(token.confidentialBalanceOf()).resolves.toBe(handle);
-    });
-
-    it("converts bigint to padded hex", async ({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      tokenAddress,
-      handle,
-    }) => {
-      const token = createReadonlyToken({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        tokenAddress,
-        handle,
-      });
-      vi.mocked(signer.readContract).mockResolvedValue(255n);
-      const result = await token.confidentialBalanceOf();
-      expect(result).toBe("0x" + "ff".padStart(64, "0"));
-    });
-
-    it("throws for non-handle values returned by signer.readContract", async ({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      tokenAddress,
-      handle,
-    }) => {
-      const token = createReadonlyToken({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        tokenAddress,
-        handle,
-      });
-      vi.mocked(signer.readContract).mockResolvedValue(true);
-      await expect(token.confidentialBalanceOf()).rejects.toThrow("Handle must be a hex string");
     });
   });
 

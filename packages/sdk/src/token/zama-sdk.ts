@@ -1,4 +1,4 @@
-import type { Address } from "../relayer/relayer-sdk.types";
+import { type Address } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { validateAddress } from "../utils";
 import { Token } from "./token";

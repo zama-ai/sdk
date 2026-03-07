@@ -7,12 +7,13 @@ import type {
   EIP1193Provider,
   PublicClient,
   WalletClient,
+  Address,
+  Hex,
 } from "viem";
 import { writeContract } from "viem/actions";
-import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   GenericSigner,
-  Hex,
   ReadContractConfig,
   SignerLifecycleCallbacks,
   TransactionReceipt,

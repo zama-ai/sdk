@@ -1,8 +1,8 @@
 import { confidentialBalanceOfContract } from "../contracts";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { Address, GenericSigner } from "../token/token.types";
-import type { Hex } from "viem";
 import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions, normalizeHandle } from "./utils";
+import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 
 const DEFAULT_POLLING_INTERVAL = 10_000;
@@ -18,9 +18,9 @@ export function confidentialHandlesQueryOptions(
   tokenAddresses: Address[],
   config?: ConfidentialHandlesQueryConfig,
 ): QueryFactoryOptions<
-  Hex[],
+  Handle[],
   Error,
-  Hex[],
+  Handle[],
   ReturnType<typeof zamaQueryKeys.confidentialHandles.tokens>
 > {
   const ownerKey = config?.owner ?? "";
@@ -34,9 +34,9 @@ export function confidentialHandlesQueryOptions(
       return Promise.all(
         keyTokenAddresses.map(async (tokenAddress) => {
           const handle = await signer.readContract(
-            confidentialBalanceOfContract(tokenAddress as Address, keyOwner as Address),
+            confidentialBalanceOfContract(tokenAddress, keyOwner as Address),
           );
-          return normalizeHandle(handle);
+          return handle as Handle;
         }),
       );
     },

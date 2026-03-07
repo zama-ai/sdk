@@ -7,11 +7,11 @@ import { useZamaSDK } from "../provider";
 /** Parameters for {@link useCreateDelegatedUserDecryptEIP712}. */
 export interface CreateDelegatedUserDecryptEIP712Params {
   /** The FHE public key (hex-encoded). */
-  publicKey: string;
+  publicKey: `0x${string}`;
   /** Contract addresses the credential authorizes decryption for. */
   contractAddresses: Address[];
   /** Address of the wallet that delegated decrypt authority. */
-  delegatorAddress: string;
+  delegatorAddress: Address;
   /** Unix timestamp (seconds) when the credential becomes valid. */
   startTimestamp: number;
   /** Number of days the credential remains valid. Default: 1. */

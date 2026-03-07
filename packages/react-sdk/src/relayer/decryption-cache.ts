@@ -6,6 +6,6 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
  * and by useUserDecryptedValue to read.
  */
 export const decryptionKeys = {
-  value: (handle: string, contractAddress?: string) =>
+  value: (handle: `0x${string}`, contractAddress?: `0x${string}`) =>
     zamaQueryKeys.decryption.handle(handle, contractAddress),
 };

@@ -1,11 +1,12 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Address } from "../relayer/relayer-sdk.types";
+
 import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
 import { MemoryStorage } from "./memory-storage";
 import { SigningRejectedError, SigningFailedError } from "./errors";
 import { assertObject, assertString, assertArray, assertCondition } from "../utils";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
+import type { Address, Hex } from "viem";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
 interface EncryptedData {
@@ -20,7 +21,7 @@ interface EncryptedCredentials extends Omit<StoredCredentials, "privateKey" | "s
 
 /** Structured session entry stored in session storage. */
 interface SessionEntry {
-  signature: string;
+  signature: Hex;
   /** Epoch seconds when the session was created. */
   createdAt: number;
   /** TTL at creation time (not current config). */
@@ -263,7 +264,7 @@ export class CredentialsManager {
 
   /** Returns a truncated SHA-256 hash of the address and chainId to avoid leaking it in storage. */
   async #storeKey(): Promise<string> {
-    const address = (await this.#signer.getAddress()).toLowerCase();
+    const address = await this.#signer.getAddress();
     const chainId = await this.#signer.getChainId();
     return CredentialsManager.computeStoreKey(address, chainId);
   }
@@ -292,7 +293,7 @@ export class CredentialsManager {
   }
 
   /** Create and store a session entry with current TTL config. */
-  async #setSessionEntry(storeKey: string, signature: string): Promise<void> {
+  async #setSessionEntry(storeKey: string, signature: Hex): Promise<void> {
     const entry: SessionEntry = {
       signature,
       createdAt: Math.floor(Date.now() / 1000),
@@ -329,7 +330,7 @@ export class CredentialsManager {
     return requiredContracts.every((addr) => signedSet.has(addr.toLowerCase()));
   }
 
-  async #sign(encrypted: EncryptedCredentials): Promise<string> {
+  async #sign(encrypted: EncryptedCredentials): Promise<Hex> {
     const eip712 = await this.#relayer.createEIP712(
       encrypted.publicKey,
       encrypted.contractAddresses,
@@ -359,8 +360,11 @@ export class CredentialsManager {
 
       const durationDays = Math.ceil(this.#keypairTTL / 86400);
 
+      const publicKey = keypair.publicKey;
+      const privateKey = keypair.privateKey;
+
       const eip712 = await this.#relayer.createEIP712(
-        keypair.publicKey,
+        publicKey,
         contractAddresses,
         startTimestamp,
         durationDays,
@@ -370,8 +374,8 @@ export class CredentialsManager {
       await this.#setSessionEntry(storeKey, signature);
 
       const creds: StoredCredentials = {
-        publicKey: keypair.publicKey,
-        privateKey: keypair.privateKey,
+        publicKey,
+        privateKey,
         signature,
         contractAddresses,
         startTimestamp,
@@ -414,7 +418,7 @@ export class CredentialsManager {
 
   async #decryptCredentials(
     encrypted: EncryptedCredentials,
-    signature: string,
+    signature: Hex,
   ): Promise<StoredCredentials> {
     const address = (await this.#signer.getAddress()).toLowerCase();
     const privateKey = await this.#decrypt(encrypted.encryptedPrivateKey, signature, address);
@@ -427,7 +431,7 @@ export class CredentialsManager {
    * The signature is a secret known only to the wallet holder, providing
    * meaningful encryption protection for the stored private key.
    */
-  async #deriveKey(signature: string, address: string): Promise<CryptoKey> {
+  async #deriveKey(signature: Hex, address: string): Promise<CryptoKey> {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
       "raw",
@@ -452,7 +456,7 @@ export class CredentialsManager {
   }
 
   /** Encrypts a string using AES-GCM with a key derived from the wallet signature. */
-  async #encrypt(plaintext: string, signature: string, address: string): Promise<EncryptedData> {
+  async #encrypt(plaintext: Hex, signature: Hex, address: string): Promise<EncryptedData> {
     const key = await this.#deriveKey(signature, address);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encoder = new TextEncoder();
@@ -470,13 +474,13 @@ export class CredentialsManager {
   }
 
   /** Decrypts AES-GCM encrypted data using a key derived from the wallet signature. */
-  async #decrypt(encrypted: EncryptedData, signature: string, address: string): Promise<string> {
+  async #decrypt(encrypted: EncryptedData, signature: Hex, address: string): Promise<Hex> {
     const key = await this.#deriveKey(signature, address);
     const iv = Uint8Array.from(atob(encrypted.iv), (c) => c.charCodeAt(0));
     const ciphertext = Uint8Array.from(atob(encrypted.ciphertext), (c) => c.charCodeAt(0));
 
     const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
 
-    return new TextDecoder().decode(plaintext);
+    return new TextDecoder().decode(plaintext) as Hex;
   }
 }

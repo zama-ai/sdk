@@ -142,9 +142,9 @@ function createUserDecryptParams(
     handles: handles as Handle[],
     contractAddress: CONTRACT_ADDRESS,
     signedContractAddresses: [CONTRACT_ADDRESS],
-    privateKey: "0x" + "01".repeat(32),
-    publicKey: "0x" + "02".repeat(32),
-    signature: "0x" + "03".repeat(65),
+    privateKey: `0x${"01".repeat(32)}`,
+    publicKey: `0x${"02".repeat(32)}`,
+    signature: `0x${"03".repeat(65)}`,
     signerAddress: USER_ADDRESS,
     startTimestamp: 1,
     durationDays: 1,
@@ -209,7 +209,7 @@ describe("CleartextFhevmInstance", () => {
     const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const typedData = await fhevm.createEIP712(
-      "0x" + "ab".repeat(32),
+      `0x${"ab".repeat(32)}`,
       [CONTRACT_ADDRESS],
       1710000000,
       7,
@@ -320,9 +320,9 @@ describe("CleartextFhevmInstance", () => {
     const result = await fhevm.userDecrypt(
       createUserDecryptParams({
         handles: [handleA, handleB],
-        privateKey: "0x" + "11".repeat(32),
-        publicKey: "0x" + "22".repeat(32),
-        signature: "0x" + "33".repeat(65),
+        privateKey: `0x${"11".repeat(32)}`,
+        publicKey: `0x${"22".repeat(32)}`,
+        signature: `0x${"33".repeat(65)}`,
       }),
     );
 
@@ -387,13 +387,12 @@ describe("CleartextFhevmInstance", () => {
     }
   });
 
-  it("userDecrypt normalizes uppercase hex handles to lowercase 0x-prefixed 66-char keys", async () => {
+  it("userDecrypt preserves handle casing in result keys", async () => {
     const handleUpper = asHandle("0x" + "AB".repeat(32));
-    const normalizedHandle = toHex(hexToBigInt(handleUpper as `0x${string}`), { size: 32 });
 
     const { client } = createMockClient({
       persistAllowed: () => true,
-      plaintexts: { [normalizedHandle.toLowerCase()]: 55n },
+      plaintexts: { [handleUpper.toLowerCase()]: 55n },
     });
     const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
@@ -405,7 +404,7 @@ describe("CleartextFhevmInstance", () => {
 
     const keys = Object.keys(result);
     expect(keys).toHaveLength(1);
-    expect(keys[0]).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(keys[0]).toBe(handleUpper);
     expect(result[keys[0]! as Handle]).toBe(55n);
   });
 
@@ -526,7 +525,7 @@ describe("CleartextFhevmInstance", () => {
     const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const typedData = await fhevm.createDelegatedUserDecryptEIP712(
-      "0x" + "ab".repeat(32),
+      `0x${"ab".repeat(32)}`,
       [CONTRACT_ADDRESS],
       USER_ADDRESS,
       1710000000,
@@ -557,9 +556,9 @@ describe("CleartextFhevmInstance", () => {
       handles: [handle],
       contractAddress: CONTRACT_ADDRESS,
       signedContractAddresses: [CONTRACT_ADDRESS],
-      privateKey: "0x" + "01".repeat(32),
-      publicKey: "0x" + "02".repeat(32),
-      signature: "0x" + "03".repeat(65),
+      privateKey: `0x${"01".repeat(32)}`,
+      publicKey: `0x${"02".repeat(32)}`,
+      signature: `0x${"03".repeat(65)}`,
       delegatorAddress,
       delegateAddress,
       startTimestamp: 1,
@@ -603,9 +602,9 @@ describe("CleartextFhevmInstance", () => {
       handles: [handleA, handleB],
       contractAddress: CONTRACT_ADDRESS,
       signedContractAddresses: [CONTRACT_ADDRESS],
-      privateKey: "0x" + "11".repeat(32),
-      publicKey: "0x" + "22".repeat(32),
-      signature: "0x" + "33".repeat(65),
+      privateKey: `0x${"11".repeat(32)}`,
+      publicKey: `0x${"22".repeat(32)}`,
+      signature: `0x${"33".repeat(65)}`,
       delegatorAddress,
       delegateAddress,
       startTimestamp: 1,
@@ -683,9 +682,9 @@ describe("CleartextFhevmInstance", () => {
         handles: [handleA, handleB],
         contractAddress: CONTRACT_ADDRESS,
         signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: "0x" + "01".repeat(32),
-        publicKey: "0x" + "02".repeat(32),
-        signature: "0x" + "03".repeat(65),
+        privateKey: `0x${"01".repeat(32)}`,
+        publicKey: `0x${"02".repeat(32)}`,
+        signature: `0x${"03".repeat(65)}`,
         delegatorAddress,
         delegateAddress,
         startTimestamp: 1,
@@ -720,9 +719,9 @@ describe("CleartextFhevmInstance", () => {
       handles: [handleA, handleB],
       contractAddress: CONTRACT_ADDRESS,
       signedContractAddresses: [CONTRACT_ADDRESS],
-      privateKey: "0x" + "11".repeat(32),
-      publicKey: "0x" + "22".repeat(32),
-      signature: "0x" + "33".repeat(65),
+      privateKey: `0x${"11".repeat(32)}`,
+      publicKey: `0x${"22".repeat(32)}`,
+      signature: `0x${"33".repeat(65)}`,
       delegatorAddress: USER_ADDRESS,
       delegateAddress: "0x3000000000000000000000000000000000000003",
       startTimestamp: 1,
@@ -751,9 +750,9 @@ describe("CleartextFhevmInstance", () => {
       handles: [boolHandle, addressHandle],
       contractAddress: CONTRACT_ADDRESS,
       signedContractAddresses: [CONTRACT_ADDRESS],
-      privateKey: "0x" + "11".repeat(32),
-      publicKey: "0x" + "22".repeat(32),
-      signature: "0x" + "33".repeat(65),
+      privateKey: `0x${"11".repeat(32)}`,
+      publicKey: `0x${"22".repeat(32)}`,
+      signature: `0x${"33".repeat(65)}`,
       delegatorAddress: USER_ADDRESS,
       delegateAddress: "0x3000000000000000000000000000000000000003",
       startTimestamp: 1,

@@ -1,5 +1,5 @@
 import { ERC20_ABI, ERC20_METADATA_ABI } from "../abi/erc20.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
+import { type Address } from "viem";
 import { assertAddress } from "../utils";
 
 /**

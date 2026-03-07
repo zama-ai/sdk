@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react";
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
-import type { Address, GenericSigner, Token } from "@zama-fhe/sdk";
+import type { Address, GenericSigner, RawLog, Token } from "@zama-fhe/sdk";
 import { expect, vi } from "../test-fixtures";
 import { createMockRelayer, createMockSigner } from "../../../sdk/src/test-fixtures";
 import { expectCacheInvalidated } from "../test-helpers";
@@ -46,7 +46,7 @@ export function toTopicAddress(address: Address): Address {
   return `0x${address.slice(2).padStart(64, "0")}` as Address;
 }
 
-export function createUnwrapRequestedLog(handle: Address) {
+export function createUnwrapRequestedLog(handle: Address): RawLog {
   return {
     topics: [UNWRAP_REQUESTED_TOPIC, toTopicAddress(USER)],
     data: handle,

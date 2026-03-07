@@ -1,5 +1,5 @@
-import { hexToBigInt, isAddress, isHex, toHex } from "viem";
-import type { Address, Handle } from "./relayer/relayer-sdk.types";
+import { isAddress } from "viem";
+import { type Address } from "viem";
 
 // ── Runtime type assertion helpers ───────────────────────────
 
@@ -19,17 +19,6 @@ export function assertAddress(value: string, name: string): asserts value is Add
 export function validateAddress(addr: string, name: string): Address {
   assertAddress(addr, name);
   return addr;
-}
-
-/** Normalize a ciphertext handle or handle-like bigint into canonical 32-byte hex. */
-export function normalizeHandle(handle: string | bigint): Handle {
-  if (typeof handle === "bigint") {
-    return toHex(handle, { size: 32 }) as Handle;
-  }
-  if (!isHex(handle)) {
-    throw new TypeError(`Handle must be a hex string or bigint, got: ${handle}`);
-  }
-  return toHex(hexToBigInt(handle), { size: 32 }) as Handle;
 }
 
 export function assertObject(

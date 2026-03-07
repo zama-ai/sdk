@@ -24,7 +24,7 @@ export function useIsAllowed() {
   const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(sdk.signer),
   });
-  const account = addressQuery.data as Address | undefined;
+  const account = addressQuery.data;
   const baseOpts = account
     ? isAllowedQueryOptions(sdk, { account })
     : {

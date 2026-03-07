@@ -1,5 +1,6 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { getAddress } from "viem";
+import { type Address } from "viem";
 import { expectTypeOf } from "vitest";
 
 import { zamaQueryKeys } from "../query-keys";
@@ -264,15 +265,15 @@ describe("zamaQueryKeys", () => {
     ]);
   });
 
-  test("fees keys type feeManagerAddress as string", () => {
+  test("fees keys type feeManagerAddress as Address | empty string", () => {
     const shieldFeeKey = zamaQueryKeys.fees.shieldFee(TOKEN_LOWER);
     const unshieldFeeKey = zamaQueryKeys.fees.unshieldFee(TOKEN_LOWER);
     const batchTransferFeeKey = zamaQueryKeys.fees.batchTransferFee(TOKEN_LOWER);
     const feeRecipientKey = zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER);
 
-    expectTypeOf(shieldFeeKey[1].feeManagerAddress).toEqualTypeOf<string>();
-    expectTypeOf(unshieldFeeKey[1].feeManagerAddress).toEqualTypeOf<string>();
-    expectTypeOf(batchTransferFeeKey[1].feeManagerAddress).toEqualTypeOf<string>();
-    expectTypeOf(feeRecipientKey[1].feeManagerAddress).toEqualTypeOf<string>();
+    expectTypeOf(shieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | "">();
+    expectTypeOf(unshieldFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | "">();
+    expectTypeOf(batchTransferFeeKey[1].feeManagerAddress).toEqualTypeOf<Address | "">();
+    expectTypeOf(feeRecipientKey[1].feeManagerAddress).toEqualTypeOf<Address | "">();
   });
 });

@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
-import { ZamaError, ZamaErrorCode } from "../token.types";
+import { ZamaError, ZamaErrorCode } from "../errors";
 import { KeypairExpiredError } from "../errors";
-import type { Address } from "../../relayer/relayer-sdk.types";
+
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { GenericSigner } from "../token.types";
 import { ZamaSDKEvents } from "../../events";
+import type { Address } from "viem";
 
 /** Compute the truncated SHA-256 store key used by CredentialManager. */
 async function computeStoreKey(address: string, chainId: number = 31337): Promise<string> {

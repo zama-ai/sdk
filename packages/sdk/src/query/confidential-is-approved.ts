@@ -33,7 +33,7 @@ export function confidentialIsApprovedQueryOptions(
       const [, { tokenAddress: keyTokenAddress, holder: keyHolder, spender: keySpender }] =
         context.queryKey;
       return signer.readContract(
-        isOperatorContract(keyTokenAddress as Address, keyHolder as Address, keySpender as Address),
+        isOperatorContract(keyTokenAddress, keyHolder as Address, keySpender as Address),
       );
     },
     staleTime: 30_000,

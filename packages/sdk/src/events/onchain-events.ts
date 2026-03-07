@@ -4,6 +4,7 @@
  */
 
 import type { Handle } from "../relayer/relayer-sdk.types";
+import type { Address, Hex } from "viem";
 
 // ---------------------------------------------------------------------------
 // Generic log shape
@@ -12,9 +13,9 @@ import type { Handle } from "../relayer/relayer-sdk.types";
 /** Framework-agnostic log shape compatible with any Ethereum provider. */
 export interface RawLog {
   /** Indexed event topics (topic[0] is the event signature hash). */
-  readonly topics: readonly string[];
+  readonly topics: readonly Hex[];
   /** ABI-encoded non-indexed event data. */
-  readonly data: string;
+  readonly data: Hex;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,9 +47,9 @@ export const Topics = {
 export interface ConfidentialTransferEvent {
   readonly eventName: "ConfidentialTransfer";
   /** Sender address. */
-  readonly from: string;
+  readonly from: Address;
   /** Receiver address. */
-  readonly to: string;
+  readonly to: Address;
   /** FHE ciphertext handle for the transferred amount. */
   readonly encryptedAmountHandle: Handle;
 }
@@ -63,7 +64,7 @@ export interface WrappedEvent {
   /** Fee deducted during wrapping. */
   readonly feeAmount: bigint;
   /** Receiver of the minted confidential tokens. */
-  readonly to: string;
+  readonly to: Address;
   /** On-chain mint transaction ID. */
   readonly mintTxId: bigint;
 }
@@ -72,7 +73,7 @@ export interface WrappedEvent {
 export interface UnwrapRequestedEvent {
   readonly eventName: "UnwrapRequested";
   /** Address that will receive the unwrapped ERC-20 tokens. */
-  readonly receiver: string;
+  readonly receiver: Address;
   /** FHE ciphertext handle for the requested unshield amount. */
   readonly encryptedAmount: Handle;
 }
@@ -106,9 +107,9 @@ export interface UnwrappedStartedEvent {
   /** On-chain transaction ID. */
   readonly txId: bigint;
   /** Receiver address. */
-  readonly to: string;
+  readonly to: Address;
   /** Refund address (if applicable). */
-  readonly refund: string;
+  readonly refund: Address;
   /** FHE handle of the requested amount. */
   readonly requestedAmount: Handle;
   /** FHE handle of the burn amount. */
@@ -127,39 +128,39 @@ export type OnChainEvent =
 // ABI decoding helpers (no external deps)
 // ---------------------------------------------------------------------------
 
-function topicToAddress(topic: string): string {
-  return "0x" + topic.slice(-40);
+function topicToAddress(topic: Hex): Address {
+  return ("0x" + topic.slice(-40)) as Address;
 }
 
-function topicToBigInt(topic: string): bigint {
+function topicToBigInt(topic: Hex): bigint {
   return BigInt(topic);
 }
 
-function topicToBytes32(topic: string): Handle {
+function topicToBytes32(topic: Hex): Handle {
   // EVM topics are already 32-byte 0x-prefixed hex — cast directly
   return topic as Handle;
 }
 
-function wordAt(data: string, index: number): string {
+function wordAt(data: Hex, index: number): string {
   // data starts with "0x", each word is 64 hex chars (32 bytes)
   const start = 2 + index * 64;
   const word = data.slice(start, start + 64);
   return word.length === 64 ? word : word.padEnd(64, "0");
 }
 
-function wordToAddress(data: string, index: number): string {
-  return "0x" + wordAt(data, index).slice(-40);
+function wordToAddress(data: Hex, index: number): Address {
+  return ("0x" + wordAt(data, index).slice(-40)) as Address;
 }
 
-function wordToBigInt(data: string, index: number): bigint {
+function wordToBigInt(data: Hex, index: number): bigint {
   return BigInt("0x" + wordAt(data, index));
 }
 
-function wordToBool(data: string, index: number): boolean {
+function wordToBool(data: Hex, index: number): boolean {
   return BigInt("0x" + wordAt(data, index)) !== 0n;
 }
 
-function wordToBytes32(data: string, index: number): Handle {
+function wordToBytes32(data: Hex, index: number): Handle {
   // wordAt returns exactly 64 hex chars — prefix and cast directly
   return `0x${wordAt(data, index)}` as Handle;
 }

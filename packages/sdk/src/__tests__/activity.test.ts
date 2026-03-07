@@ -7,13 +7,14 @@ import {
   type ActivityItem,
 } from "../activity";
 import type { Handle } from "../relayer/relayer-sdk.types";
+import type { Hex } from "viem";
 import { Topics, type RawLog } from "../events";
 
 // Helpers (matching events.test.ts conventions)
-const addr = (hex: string) => "0x" + hex.padStart(40, "0");
-const topic = (hex: string) => "0x" + hex.padStart(64, "0");
+const addr = (hex: string): Hex => `0x${hex.padStart(40, "0")}`;
+const topic = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 const word = (hex: string) => hex.padStart(64, "0");
-const bytes32 = (hex: string) => ("0x" + hex.padStart(64, "0")) as Handle;
+const bytes32 = (hex: string): Handle => `0x${hex.padStart(64, "0")}`;
 
 const USER = addr("aaa1");
 const OTHER = addr("bbb2");
@@ -22,32 +23,28 @@ const OTHER = addr("bbb2");
 // Log builders
 // ---------------------------------------------------------------------------
 
-function transferLog(from: string, to: string, handle: string) {
+function transferLog(from: string, to: string, handle: string): RawLog {
   return {
-    topics: [Topics.ConfidentialTransfer, topic(from.slice(2)), topic(to.slice(2)), handle],
+    topics: [Topics.ConfidentialTransfer, topic(from.slice(2)), topic(to.slice(2)), handle as Hex],
     data: "0x",
   };
 }
 
-function wrappedLog(to: string, amountIn: bigint, feeAmount: bigint) {
+function wrappedLog(to: string, amountIn: bigint, feeAmount: bigint): RawLog {
   return {
     topics: [Topics.Wrapped, topic(to.slice(2)), topic("1")],
-    data:
-      "0x" +
-      word(amountIn.toString(16)) + // mintAmount (same as amountIn for simplicity)
-      word(amountIn.toString(16)) + // amountIn
-      word(feeAmount.toString(16)), // feeAmount
+    data: `0x${word(amountIn.toString(16))}${word(amountIn.toString(16))}${word(feeAmount.toString(16))}`,
   };
 }
 
-function unwrapRequestedLog(receiver: string, handle: string) {
+function unwrapRequestedLog(receiver: string, handle: string): RawLog {
   return {
     topics: [Topics.UnwrapRequested, topic(receiver.slice(2))],
-    data: "0x" + word(handle.slice(2)),
+    data: `0x${word(handle.slice(2))}`,
   };
 }
 
-function unwrappedStartedLog(to: string, requestedAmount: string) {
+function unwrappedStartedLog(to: string, requestedAmount: string): RawLog {
   return {
     topics: [
       Topics.UnwrappedStarted,
@@ -55,29 +52,18 @@ function unwrappedStartedLog(to: string, requestedAmount: string) {
       topic("b"), // txId
       topic(to.slice(2)),
     ],
-    data:
-      "0x" +
-      word("1") + // returnVal = true
-      word("beef") + // refund
-      word(requestedAmount.slice(2)) + // requestedAmount
-      word("22".repeat(32)), // burnAmount
+    data: `0x${word("1")}${word("beef")}${word(requestedAmount.slice(2))}${word("22".repeat(32))}` as Hex,
   };
 }
 
-function unwrappedFinalizedLog(unwrapAmount: bigint, feeAmount: bigint, success: boolean) {
+function unwrappedFinalizedLog(unwrapAmount: bigint, feeAmount: bigint, success: boolean): RawLog {
   return {
     topics: [
       Topics.UnwrappedFinalized,
       bytes32("ab".repeat(32)), // burntAmountHandle
       topic("7"), // nextTxId
     ],
-    data:
-      "0x" +
-      word(success ? "1" : "0") + // finalizeSuccess
-      word("1") + // feeTransferSuccess
-      word("1f4") + // burnAmount = 500
-      word(unwrapAmount.toString(16)) + // unwrapAmount
-      word(feeAmount.toString(16)), // feeAmount
+    data: `0x${word(success ? "1" : "0")}${word("1")}${word("1f4")}${word(unwrapAmount.toString(16))}${word(feeAmount.toString(16))}`,
   };
 }
 
@@ -119,7 +105,7 @@ describe("parseActivityFeed", () => {
 
   it("handles case-insensitive address comparison", () => {
     const handle = bytes32("ff".repeat(32));
-    const upperUser = USER.toUpperCase().replace("0X", "0x");
+    const upperUser = USER.toUpperCase().replace("0X", "0x") as Hex;
     const logs = [transferLog(USER, OTHER, handle)];
     const items = parseActivityFeed(logs, upperUser);
 
@@ -174,7 +160,7 @@ describe("parseActivityFeed", () => {
     const handle = bytes32("cc".repeat(32));
     const log = {
       ...transferLog(USER, OTHER, handle),
-      transactionHash: "0xdeadbeef",
+      transactionHash: "0xdeadbeef" as Hex,
       blockNumber: 42n,
       logIndex: 3,
     };
@@ -189,7 +175,7 @@ describe("parseActivityFeed", () => {
 
   it("skips unknown logs", () => {
     const logs: (RawLog & { blockNumber?: bigint })[] = [
-      { topics: ["0x" + "00".repeat(32)], data: "0x" },
+      { topics: [topic("00".repeat(32))], data: "0x" as Hex },
       {
         ...transferLog(USER, OTHER, bytes32("cc".repeat(32))),
         blockNumber: 1n,
@@ -243,7 +229,7 @@ describe("extractEncryptedHandles", () => {
   });
 
   it("skips zero handles", () => {
-    const zeroHandle = "0x" + "0".repeat(64);
+    const zeroHandle = bytes32("0".repeat(64));
     const items = parseActivityFeed([transferLog(USER, OTHER, zeroHandle)], USER);
     const handles = extractEncryptedHandles(items);
     expect(handles).toHaveLength(0);

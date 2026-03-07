@@ -14,11 +14,13 @@ import {
   type RawLog,
 } from "../events";
 
+import { type Hex } from "viem";
+
 // Helpers
-const addr = (hex: string) => "0x" + hex.padStart(40, "0");
-const topic = (hex: string) => "0x" + hex.padStart(64, "0");
+const addr = (hex: string): Hex => `0x${hex.padStart(40, "0")}`;
+const topic = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 const word = (hex: string) => hex.padStart(64, "0");
-const bytes32 = (hex: string) => "0x" + hex.padStart(64, "0");
+const bytes32 = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 
 describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
@@ -90,11 +92,7 @@ describe("decodeWrapped", () => {
 
   const log: RawLog = {
     topics: [Topics.Wrapped, topic("dead"), topic(mintTxId.toString(16))],
-    data:
-      "0x" +
-      word(mintAmount.toString(16)) +
-      word(amountIn.toString(16)) +
-      word(feeAmount.toString(16)),
+    data: `0x${word(mintAmount.toString(16))}${word(amountIn.toString(16))}${word(feeAmount.toString(16))}`,
   };
 
   it("decodes valid log", () => {
@@ -125,7 +123,7 @@ describe("decodeUnwrapRequested", () => {
 
   const log: RawLog = {
     topics: [Topics.UnwrapRequested, topic("1234")],
-    data: "0x" + word("ff".repeat(32)),
+    data: `0x${word("ff".repeat(32))}`,
   };
 
   it("decodes valid log", () => {
@@ -153,13 +151,7 @@ describe("decodeUnwrappedFinalized", () => {
 
   const log: RawLog = {
     topics: [Topics.UnwrappedFinalized, burntHandle, topic(nextTxId.toString(16))],
-    data:
-      "0x" +
-      word("1") + // finalizeSuccess = true
-      word("0") + // feeTransferSuccess = false
-      word(500n.toString(16)) + // burnAmount
-      word(450n.toString(16)) + // unwrapAmount
-      word(50n.toString(16)), // feeAmount
+    data: `0x${word("1")}${word("0")}${word(500n.toString(16))}${word(450n.toString(16))}${word(50n.toString(16))}`,
   };
 
   it("decodes valid log", () => {
@@ -201,12 +193,7 @@ describe("decodeUnwrappedStarted", () => {
       topic(txId.toString(16)),
       topic("cafe"),
     ],
-    data:
-      "0x" +
-      word("1") + // returnVal = true
-      word("beef") + // refund address
-      word("11".repeat(32)) + // requestedAmount
-      word("22".repeat(32)), // burnAmount
+    data: `0x${word("1")}${word("beef")}${word("11".repeat(32))}${word("22".repeat(32))}`,
   };
 
   it("decodes valid log", () => {
@@ -237,7 +224,7 @@ describe("decodeOnChainEvent", () => {
   it("dispatches to correct decoder", () => {
     const log: RawLog = {
       topics: [Topics.UnwrapRequested, topic("abcd")],
-      data: "0x" + word("ff".repeat(32)),
+      data: `0x${word("ff".repeat(32))}`,
     };
     const event = decodeOnChainEvent(log);
     expect(event?.eventName).toBe("UnwrapRequested");
@@ -245,7 +232,7 @@ describe("decodeOnChainEvent", () => {
 
   it("returns null for unknown event", () => {
     const log: RawLog = {
-      topics: ["0x" + "00".repeat(32)],
+      topics: [topic("00".repeat(32))],
       data: "0x",
     };
     expect(decodeOnChainEvent(log)).toBeNull();
@@ -257,9 +244,9 @@ describe("decodeOnChainEvents", () => {
     const logs: RawLog[] = [
       {
         topics: [Topics.UnwrapRequested, topic("abcd")],
-        data: "0x" + word("ff".repeat(32)),
+        data: `0x${word("ff".repeat(32))}`,
       },
-      { topics: ["0xunknown"], data: "0x" },
+      { topics: ["0xunknown" as Hex], data: "0x" as Hex },
       {
         topics: [
           Topics.ConfidentialTransfer,
@@ -291,7 +278,7 @@ describe("findUnwrapRequested", () => {
       },
       {
         topics: [Topics.UnwrapRequested, topic("1234")],
-        data: "0x" + word("ff".repeat(32)),
+        data: `0x${word("ff".repeat(32))}`,
       },
     ];
     const event = findUnwrapRequested(logs);
@@ -309,7 +296,7 @@ describe("findWrapped", () => {
     const logs: RawLog[] = [
       {
         topics: [Topics.Wrapped, topic("dead"), topic(42n.toString(16))],
-        data: "0x" + word(1000n.toString(16)) + word(2000n.toString(16)) + word(50n.toString(16)),
+        data: `0x${word(1000n.toString(16))}${word(2000n.toString(16))}${word(50n.toString(16))}`,
       },
     ];
     const event = findWrapped(logs);

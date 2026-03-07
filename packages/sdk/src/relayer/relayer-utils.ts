@@ -1,4 +1,5 @@
-import type { EIP712TypedData, FhevmInstanceConfig } from "./relayer-sdk.types";
+import type { EIP712TypedData } from "./relayer-sdk.types";
+import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;

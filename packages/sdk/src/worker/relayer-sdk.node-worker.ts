@@ -155,8 +155,8 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
 
     const result = await sdkInstance.userDecrypt(
       handleContractPairs,
-      payload.privateKey,
-      payload.publicKey,
+      payload.privateKey.slice(2),
+      payload.publicKey.slice(2),
       payload.signature,
       payload.signedContractAddresses,
       payload.signerAddress,
@@ -205,8 +205,8 @@ function handleGenerateKeypair(request: GenerateKeypairRequest): void {
     const keypair = sdkInstance.generateKeypair();
 
     const response: GenerateKeypairResponseData = {
-      publicKey: keypair.publicKey,
-      privateKey: keypair.privateKey,
+      publicKey: `0x${keypair.publicKey}`,
+      privateKey: `0x${keypair.privateKey}`,
     };
 
     sendSuccess(id, type, response);
@@ -226,7 +226,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
     }
 
     const eip712 = sdkInstance.createEIP712(
-      payload.publicKey,
+      payload.publicKey.slice(2),
       payload.contractAddresses,
       payload.startTimestamp,
       payload.durationDays,
@@ -248,11 +248,11 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
         ),
       },
       message: {
-        publicKey: eip712.message.publicKey,
-        contractAddresses: [...eip712.message.contractAddresses],
+        publicKey: `0x${eip712.message.publicKey}`,
+        contractAddresses: [...eip712.message.contractAddresses] as `0x${string}`[],
         startTimestamp: BigInt(eip712.message.startTimestamp),
         durationDays: BigInt(eip712.message.durationDays),
-        extraData: eip712.message.extraData,
+        extraData: `0x${eip712.message.extraData}`,
       },
     };
 
@@ -273,7 +273,7 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
     }
 
     const result = sdkInstance.createDelegatedUserDecryptEIP712(
-      payload.publicKey,
+      payload.publicKey.slice(2),
       payload.contractAddresses,
       payload.delegatorAddress,
       payload.startTimestamp,
@@ -303,8 +303,8 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
 
     const result = await sdkInstance.delegatedUserDecrypt(
       handleContractPairs,
-      payload.privateKey,
-      payload.publicKey,
+      payload.privateKey.slice(2),
+      payload.publicKey.slice(2),
       payload.signature,
       payload.signedContractAddresses,
       payload.delegatorAddress,

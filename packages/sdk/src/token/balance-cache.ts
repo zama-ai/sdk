@@ -1,4 +1,6 @@
-import type { Address, GenericStorage, Handle } from "./token.types";
+import type { Address } from "viem";
+import type { GenericStorage } from "./token.types";
+import type { Handle } from "../relayer/relayer-sdk.types";
 
 const BALANCES_KEY = "zama:balances";
 

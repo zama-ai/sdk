@@ -1,7 +1,7 @@
 import { Topics } from "../../events";
 import { Token } from "../token";
-import type { Address } from "../token.types";
-import { ZamaError, ZamaErrorCode } from "../token.types";
+import type { Address } from "viem";
+import { ZamaError, ZamaErrorCode } from "../errors";
 import { describe, expect, it, vi } from "../../test-fixtures";
 
 const ZERO_HANDLE = "0x" + "0".repeat(64);
@@ -577,8 +577,8 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
-            data: "0x" + "ff".repeat(32),
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            data: `0x${"ff".repeat(32)}`,
           },
         ],
       });
@@ -648,8 +648,8 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
-            data: "0x" + "ff".repeat(32),
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            data: `0x${"ff".repeat(32)}`,
           },
         ],
       });
@@ -1338,8 +1338,8 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
-            data: "0x" + "ff".repeat(32),
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            data: `0x${"ff".repeat(32)}`,
           },
         ],
       });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "../../test-fixtures";
-import type { Address } from "../../relayer/relayer-sdk.types";
+
 import { Token } from "../token";
+import type { Address } from "viem";
 
 describe("Address normalization (P6)", () => {
   it("preserves token address case in constructor", ({

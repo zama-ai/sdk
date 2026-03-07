@@ -1,7 +1,7 @@
-import type { Address } from "../../relayer/relayer-sdk.types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
+import type { Address } from "viem";
 
 describe("Session TTL", () => {
   beforeEach(() => {

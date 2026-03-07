@@ -12,8 +12,8 @@ export type {
   EIP1193EventMap,
   ProviderConnectInfo,
   ProviderMessage,
-} from "./ethers.types";
-export { ProviderRpcError } from "./ethers.types";
+} from "viem";
+export { ProviderRpcError } from "viem";
 export {
   readConfidentialBalanceOfContract,
   readWrapperForTokenContract,
@@ -29,22 +29,3 @@ export {
   writeWrapContract,
   writeWrapETHContract,
 } from "./contracts";
-
-// Re-export types used in EthersSigner's public API
-export type {
-  GenericSigner,
-  SignerLifecycleCallbacks,
-  ContractAbi,
-  ReadContractConfig,
-  ReadContractArgs,
-  ReadContractReturnType,
-  ReadFunctionName,
-  WriteContractConfig,
-  WriteContractArgs,
-  WriteFunctionName,
-  TransactionReceipt,
-  Hex,
-} from "../token/token.types";
-export type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-export type { BatchTransferData } from "../contracts";
-export type { RawLog } from "../events/onchain-events";

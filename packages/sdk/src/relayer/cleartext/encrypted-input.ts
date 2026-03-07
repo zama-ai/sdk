@@ -1,6 +1,6 @@
 import { concat, getAddress, keccak256, pad, toBytes, toHex, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import type { Address } from "../relayer-sdk.types";
+import { type Address } from "viem";
 import { FHE_BIT_WIDTHS, FheType } from "./constants";
 import { INPUT_VERIFICATION_EIP712 } from "./eip712";
 import { computeInputHandle, computeMockCiphertext } from "./handle";

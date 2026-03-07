@@ -12,14 +12,15 @@ import {
   getWrapperContract,
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Address, Handle } from "../relayer/relayer-sdk.types";
-import { normalizeHandle, pLimit, validateAddress } from "../utils";
+import type { Handle } from "../relayer/relayer-sdk.types";
+import { pLimit, validateAddress } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import type { Address } from "viem";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -510,9 +511,9 @@ export class ReadonlyToken {
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
-    return normalizeHandle(
-      await this.signer.readContract(confidentialBalanceOfContract(this.address, owner)),
-    );
+    return (await this.signer.readContract(
+      confidentialBalanceOfContract(this.address, owner),
+    )) as Handle;
   }
 
   isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {

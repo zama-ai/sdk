@@ -1,5 +1,6 @@
 import { WRAPPER_ABI } from "../abi/wrapper.abi";
-import type { Address, Handle, Hex } from "../relayer/relayer-sdk.types";
+import type { Handle } from "../relayer/relayer-sdk.types";
+import type { Address, Hex } from "viem";
 import { assertAddress } from "../utils";
 import { FHE_GAS_LIMIT } from "./gas";
 

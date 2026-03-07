@@ -1,9 +1,10 @@
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { ReadonlyToken } from "../../token/readonly-token";
 import { DecryptionFailedError } from "../../token/errors";
-import type { Address } from "../../token/token.types";
+
 import { confidentialBalancesQueryOptions } from "../confidential-balances";
 import { zamaQueryKeys } from "../query-keys";
+import type { Address } from "viem";
 
 describe("confidentialBalancesQueryOptions", () => {
   const tokenA = "0x1111111111111111111111111111111111111111";

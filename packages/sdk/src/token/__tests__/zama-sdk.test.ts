@@ -5,7 +5,7 @@ import { Token } from "../token";
 import { CredentialsManager } from "../credentials-manager";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "../token.types";
-import type { Address } from "../../relayer/relayer-sdk.types";
+import type { Address } from "viem";
 
 describe("ZamaSDK", () => {
   it("exposes signer and storage", ({ relayer, signer, storage }) => {

@@ -1,9 +1,9 @@
 import { confidentialBalanceOfContract } from "../contracts";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { Address, GenericSigner } from "../token/token.types";
-import type { Hex } from "viem";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
-import { filterQueryOptions, normalizeHandle } from "./utils";
+import { filterQueryOptions } from "./utils";
 
 const DEFAULT_POLLING_INTERVAL = 10_000;
 
@@ -17,7 +17,12 @@ export function confidentialHandleQueryOptions(
   signer: GenericSigner,
   tokenAddress: Address,
   config?: ConfidentialHandleQueryConfig,
-): QueryFactoryOptions<Hex, Error, Hex, ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>> {
+): QueryFactoryOptions<
+  Handle,
+  Error,
+  Handle,
+  ReturnType<typeof zamaQueryKeys.confidentialHandle.owner>
+> {
   const ownerKey = config?.owner ?? "";
   const queryKey = zamaQueryKeys.confidentialHandle.owner(tokenAddress, ownerKey);
 
@@ -27,9 +32,9 @@ export function confidentialHandleQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, owner: keyOwner }] = context.queryKey;
       const handle = await signer.readContract(
-        confidentialBalanceOfContract(keyTokenAddress as Address, keyOwner as Address),
+        confidentialBalanceOfContract(keyTokenAddress, keyOwner as Address),
       );
-      return normalizeHandle(handle);
+      return handle as Handle;
     },
     enabled: Boolean(ownerKey) && config?.query?.enabled !== false,
     refetchInterval: config?.pollingInterval ?? DEFAULT_POLLING_INTERVAL,

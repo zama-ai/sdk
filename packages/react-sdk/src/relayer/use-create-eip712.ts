@@ -7,7 +7,7 @@ import { useZamaSDK } from "../provider";
 /** Parameters for {@link useCreateEIP712}. */
 export interface CreateEIP712Params {
   /** The FHE public key (hex-encoded). */
-  publicKey: string;
+  publicKey: `0x${string}`;
   /** Contract addresses the credential authorizes decryption for. */
   contractAddresses: `0x${string}`[];
   /** Unix timestamp (seconds) when the credential becomes valid. */

@@ -8,11 +8,11 @@ import {
 } from "../activity";
 import type { RawLog } from "../events/onchain-events";
 import type { ReadonlyToken } from "../token/readonly-token";
-import type { Address } from "../token/token.types";
-import type { Hex } from "viem";
+
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
+import type { Address } from "viem";
 
 export interface ActivityFeedConfig {
   userAddress?: Address;
@@ -62,7 +62,7 @@ export function activityFeedQueryOptions(
       const parsed = parseActivityFeed(config.logs, config.userAddress);
       if (!decrypt) return sortByBlockNumber(parsed);
 
-      const handles = extractEncryptedHandles(parsed) as Hex[];
+      const handles = extractEncryptedHandles(parsed);
       if (handles.length === 0) return sortByBlockNumber(parsed);
 
       const decrypted = await token.decryptHandles(handles, config.userAddress);

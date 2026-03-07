@@ -12,9 +12,9 @@ import {
   wrapContract,
   wrapETHContract,
 } from "../contracts";
-import { hexToBigInt } from "viem";
+import { hexToBigInt, Address, Hex } from "viem";
 import { findUnwrapRequested } from "../events/onchain-events";
-import type { Address, Handle, Hex } from "../relayer/relayer-sdk.types";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import { validateAddress } from "../utils";
 import {
   ZamaError,

@@ -3,7 +3,7 @@ import { DecryptionFailedError } from "../token/errors";
 import type { Address } from "../token/token.types";
 import type { EncryptedBalanceHandle } from "./confidential-balance";
 import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions, normalizeHandle } from "./utils";
+import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 
 /** Result type for batch confidential balance queries with partial error support. */
@@ -36,7 +36,7 @@ export function confidentialBalancesQueryOptions(
   const tokenAddresses = tokens.map((token) => token.address);
   const resultAddresses = config?.resultAddresses ?? tokenAddresses;
   const ownerKey = config?.owner ?? "";
-  const handleKeys = config?.handles?.map((handle) => normalizeHandle(handle));
+  const handleKeys = config?.handles;
   const handlesReady =
     Array.isArray(handleKeys) &&
     handleKeys.length === tokens.length &&

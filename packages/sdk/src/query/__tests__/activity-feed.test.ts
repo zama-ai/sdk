@@ -1,19 +1,25 @@
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import type { RawLog } from "../../events/onchain-events";
 import { Topics } from "../../events/onchain-events";
-import type { Address } from "../../token/token.types";
+
 import { activityFeedQueryOptions } from "../activity-feed";
+import type { Address } from "viem";
 
 const USER = "0x2222222222222222222222222222222222222222";
 const TOKEN = "0x1111111111111111111111111111111111111111";
 const OTHER = "0x3333333333333333333333333333333333333333";
 
-const topic = (hex: string) => `0x${hex.padStart(64, "0")}`;
+const topic = (hex: string): `0x${string}` => `0x${hex.padStart(64, "0")}`;
 const bytes32 = (hex: string): Address => `0x${hex.padStart(64, "0")}`;
 
-function transferLog(from: string, to: string, handle: string): RawLog {
+function transferLog(from: `0x${string}`, to: `0x${string}`, handle: `0x${string}`): RawLog {
   return {
-    topics: [Topics.ConfidentialTransfer, topic(from.slice(2)), topic(to.slice(2)), handle],
+    topics: [
+      Topics.ConfidentialTransfer,
+      topic(from.slice(2)),
+      topic(to.slice(2)),
+      `0x${handle.slice(2)}`,
+    ],
     data: "0x",
   };
 }

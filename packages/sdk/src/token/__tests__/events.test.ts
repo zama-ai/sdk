@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "../../test-fixtures";
 import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Address } from "../../relayer/relayer-sdk.types";
+
 import { ReadonlyToken } from "../readonly-token";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { ZamaSDKEvent, ZamaSDKEventListener } from "../../events/sdk-events";
 import { CredentialsManager } from "../credentials-manager";
 import type { GenericSigner, GenericStorage } from "../token.types";
+import type { Address } from "viem";
 
 const ZERO_HANDLE = "0x" + "0".repeat(64);
 
@@ -771,8 +772,8 @@ describe("Token event emissions", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
-            data: "0x" + "ff".repeat(32),
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            data: `0x${"ff".repeat(32)}`,
           },
         ],
       });

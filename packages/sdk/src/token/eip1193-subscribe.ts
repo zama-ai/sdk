@@ -1,5 +1,5 @@
 import type { EIP1193EventMap, EIP1193Provider } from "viem";
-import type { Address } from "../relayer/relayer-sdk.types";
+import { type Address } from "viem";
 import type { SignerLifecycleCallbacks } from "./token.types";
 
 /**
@@ -19,7 +19,7 @@ export function eip1193Subscribe(
 ): () => void {
   if (!provider) return () => {};
 
-  let currentAddress: string | undefined;
+  let currentAddress: Address | undefined;
   getAddress()
     .then((addr) => {
       currentAddress = addr;
