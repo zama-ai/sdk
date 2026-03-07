@@ -138,7 +138,7 @@ export async function mockRelayerSdk(page: Page, baseURL: string) {
 
   await page.route(`${baseURL}/createDelegatedEIP712`, async (route) => {
     const body = route.request().postDataJSON();
-    const result = fhevm.createDelegatedUserDecryptEIP712(
+    const result = await fhevm.createDelegatedUserDecryptEIP712(
       body.publicKey,
       body.contractAddresses,
       body.delegatorAddress,
