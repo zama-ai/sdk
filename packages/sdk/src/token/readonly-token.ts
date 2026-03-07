@@ -532,9 +532,8 @@ export class ReadonlyToken {
 
   /**
    * Check whether a delegation is active for this token's contract address.
-   * This is a client-side approximation — it compares the on-chain expiry
-   * against the local clock. For authoritative checks, read the expiry
-   * directly and compare against the block timestamp.
+   * Uses the block timestamp when the signer supports `getBlockTimestamp()`,
+   * otherwise falls back to the local clock.
    *
    * @param delegator - The address that granted the delegation.
    * @param delegate - The address that received delegation rights.
@@ -543,7 +542,11 @@ export class ReadonlyToken {
    */
   async isDelegated(delegator: Address, delegate: Address): Promise<boolean> {
     const expiry = await this.getDelegationExpiry(delegator, delegate);
-    return expiry > 0n && expiry >= BigInt(Math.floor(Date.now() / 1000));
+    if (expiry === 0n) return false;
+    const now = this.signer.getBlockTimestamp
+      ? await this.signer.getBlockTimestamp()
+      : BigInt(Math.floor(Date.now() / 1000));
+    return expiry >= now;
   }
 
   /**

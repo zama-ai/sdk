@@ -78,6 +78,7 @@ export function createMockSigner(
     readContract: vi.fn(),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getChainId: vi.fn().mockResolvedValue(31337),
+    getBlockTimestamp: vi.fn().mockResolvedValue(BigInt(Math.floor(Date.now() / 1000))),
     subscribe: vi.fn().mockReturnValue(() => {}),
     ...overrides,
   };
