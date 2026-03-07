@@ -10,6 +10,7 @@ import type { GenericSigner, GenericStorage } from "../token.types";
 import type { Address } from "viem";
 
 const ZERO_HANDLE = "0x" + "0".repeat(64);
+const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 describe("ZamaSDKEvents constants", () => {
   it("has all expected event keys", () => {
@@ -1038,7 +1039,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
@@ -1059,11 +1060,11 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     events.length = 0; // reset
 
     // Second call should hit cache
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsLoading);
@@ -1088,11 +1089,11 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
 
     // Tamper stored data to simulate expiration
     const storeKey = await CredentialsManager.computeStoreKey(
-      (await signer.getAddress()).toLowerCase(),
+      await signer.getAddress(),
       await signer.getChainId(),
     );
     const stored = await store.get(storeKey);
@@ -1111,7 +1112,7 @@ describe("CredentialsManager event emissions", () => {
       keypairTTL: 86400,
       onEvent,
     });
-    await manager2.allow("0xtoken" as Address);
+    await manager2.allow(TOKEN_A);
 
     const types = events.map((e) => e.type);
     expect(types).toContain(ZamaSDKEvents.CredentialsExpired);
@@ -1136,7 +1137,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
 
     const credEvents = events.filter(
       (e) =>
@@ -1146,7 +1147,7 @@ describe("CredentialsManager event emissions", () => {
     );
     expect(credEvents.length).toBe(3);
     for (const event of credEvents) {
-      expect("contractAddresses" in event && event.contractAddresses).toEqual(["0xtoken"]);
+      expect("contractAddresses" in event && event.contractAddresses).toEqual([TOKEN_A]);
     }
   });
 
@@ -1167,7 +1168,7 @@ describe("CredentialsManager event emissions", () => {
       onEvent,
     });
 
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
 
     for (const event of events) {
       expect(event.timestamp).toBeGreaterThan(0);
@@ -1188,7 +1189,7 @@ describe("CredentialsManager event emissions", () => {
       keypairTTL: 86400,
     });
 
-    const creds = await manager.allow("0xtoken" as Address);
+    const creds = await manager.allow(TOKEN_A);
     expect(creds.publicKey).toBe("0xpub");
   });
 });

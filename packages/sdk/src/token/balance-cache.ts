@@ -17,7 +17,7 @@ export interface BalanceCachePayload {
  * invalidates the cache entry — no TTL needed.
  */
 function storageKey(tokenAddress: Address, owner: Address, handle: Handle): string {
-  return `zama:balance:${tokenAddress.toLowerCase()}:${owner.toLowerCase()}:${handle.toLowerCase()}`;
+  return `zama:balance:${tokenAddress}:${owner}:${handle.toLowerCase()}`;
 }
 
 /**

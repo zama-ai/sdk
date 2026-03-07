@@ -7,6 +7,8 @@ import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "../token.types";
 import type { Address } from "viem";
 
+const NEXT_USER_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+
 describe("ZamaSDK", () => {
   it("exposes signer and storage", ({ relayer, signer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
@@ -103,7 +105,7 @@ describe("ZamaSDK", () => {
 
     // Simulate a cached session signature by computing the same store key
     // the CredentialsManager uses.
-    const address = (await signer.getAddress()).toLowerCase();
+    const address = await signer.getAddress();
     const chainId = await signer.getChainId();
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
 
@@ -123,7 +125,7 @@ describe("ZamaSDK", () => {
   }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage });
 
-    const address = (await signer.getAddress()).toLowerCase();
+    const address = await signer.getAddress();
     const chainId = await signer.getChainId();
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
 
@@ -238,7 +240,7 @@ describe("ZamaSDK", () => {
         },
       });
 
-      subscribeCbs!.onAccountChange("0xnewuser" as Address);
+      subscribeCbs!.onAccountChange(NEXT_USER_ADDRESS);
 
       await vi.waitFor(() => {
         expect(events).toContainEqual(
@@ -329,10 +331,10 @@ describe("ZamaSDK", () => {
       await sessionStorage.set(keyA, "0xsigA");
 
       // Simulate account change: signer now reports account B
-      (signer.getAddress as Mock).mockResolvedValue("0xnewuser");
+      (signer.getAddress as Mock).mockResolvedValue(NEXT_USER_ADDRESS);
 
       // Trigger the lifecycle callback with the NEW address
-      subscribeCbs!.onAccountChange("0xnewuser");
+      subscribeCbs!.onAccountChange(NEXT_USER_ADDRESS);
 
       // Wait for async revoke to complete
       await vi.waitFor(async () => {
@@ -340,7 +342,7 @@ describe("ZamaSDK", () => {
       });
 
       // Account B's key should be untouched (it was never seeded)
-      const keyB = await CredentialsManager.computeStoreKey("0xnewuser", 31337);
+      const keyB = await CredentialsManager.computeStoreKey(NEXT_USER_ADDRESS, 31337);
       expect(await sessionStorage.get(keyB)).toBeNull();
 
       sdk.terminate();
@@ -372,14 +374,14 @@ describe("ZamaSDK", () => {
       });
 
       const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
-      const keyB = await CredentialsManager.computeStoreKey("0xnewuser", 31337);
+      const keyB = await CredentialsManager.computeStoreKey(NEXT_USER_ADDRESS, 31337);
 
       // A has a session
       await sessionStorage.set(keyA, "0xsigA");
 
       // Switch A → B
-      (signer.getAddress as Mock).mockResolvedValue("0xnewuser");
-      subscribeCbs!.onAccountChange("0xnewuser");
+      (signer.getAddress as Mock).mockResolvedValue(NEXT_USER_ADDRESS);
+      subscribeCbs!.onAccountChange(NEXT_USER_ADDRESS);
       await vi.waitFor(async () => {
         expect(await sessionStorage.get(keyA)).toBeNull();
       });
@@ -444,7 +446,7 @@ describe("ZamaSDK", () => {
     }) => {
       let subscribeCbs: Required<SignerLifecycleCallbacks>;
 
-      const mockSigner = createMockSigner("0xuser" as Address);
+      const mockSigner = createMockSigner("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);
       const signer = {
         ...mockSigner,
         subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
@@ -460,7 +462,10 @@ describe("ZamaSDK", () => {
         sessionStorage,
       });
 
-      const oldKey = await CredentialsManager.computeStoreKey("0xuser", 31337);
+      const oldKey = await CredentialsManager.computeStoreKey(
+        "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address,
+        31337,
+      );
       await sessionStorage.set(oldKey, "0xsigA");
 
       subscribeCbs!.onChainChange(1);
@@ -470,7 +475,10 @@ describe("ZamaSDK", () => {
       });
 
       (signer.getChainId as Mock).mockResolvedValue(1);
-      const newKey = await CredentialsManager.computeStoreKey("0xuser", 1);
+      const newKey = await CredentialsManager.computeStoreKey(
+        "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address,
+        1,
+      );
       await sessionStorage.set(newKey, "0xsigB");
 
       await sdk.revokeSession();

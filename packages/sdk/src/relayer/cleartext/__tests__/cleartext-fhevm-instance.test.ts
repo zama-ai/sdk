@@ -9,6 +9,7 @@ import {
   toHex,
   concat,
   pad,
+  getAddress,
 } from "viem";
 import type { PublicClient } from "viem";
 import { describe, expect, it } from "vitest";
@@ -55,9 +56,9 @@ function createMockClient(options: MockClientOptions = {}) {
 
         if (method === "eth_call") {
           const tx = paramList[0] as { to: string; data: string };
-          const to = tx.to.toLowerCase();
+          const to = getAddress(tx.to);
 
-          if (to === TEST_FHEVM_ADDRESSES.acl.toLowerCase()) {
+          if (to === getAddress(TEST_FHEVM_ADDRESSES.acl)) {
             const parsed = decodeFunctionData({
               abi: ACL_ABI,
               data: tx.data as `0x${string}`,
@@ -108,7 +109,7 @@ function createMockClient(options: MockClientOptions = {}) {
             }
           }
 
-          if (to === TEST_FHEVM_ADDRESSES.executor.toLowerCase()) {
+          if (to === getAddress(TEST_FHEVM_ADDRESSES.executor)) {
             const parsed = decodeFunctionData({
               abi: EXECUTOR_ABI,
               data: tx.data as `0x${string}`,
@@ -153,11 +154,11 @@ function createUserDecryptParams(
 }
 
 function filterEthCallsTo(calls: MockCall[], to: string): MockCall[] {
-  const normalizedTo = to.toLowerCase();
+  const target = getAddress(to);
   return calls.filter((call) => {
     if (call.method !== "eth_call") return false;
     const tx = call.params[0] as { to?: string };
-    return tx.to?.toLowerCase() === normalizedTo;
+    return tx.to !== undefined && getAddress(tx.to) === target;
   });
 }
 
@@ -383,7 +384,7 @@ describe("CleartextFhevmInstance", () => {
 
     expect(persistAllowedAccounts.length).toBeGreaterThan(0);
     for (const account of persistAllowedAccounts) {
-      expect(account.toLowerCase()).toBe(USER_ADDRESS.toLowerCase());
+      expect(getAddress(account)).toBe(getAddress(USER_ADDRESS));
     }
   });
 
@@ -635,15 +636,15 @@ describe("CleartextFhevmInstance", () => {
       .filter((call) => call.method === "eth_call")
       .map((call) => {
         const tx = call.params[0] as { to: string; data: string };
-        const target = tx.to.toLowerCase();
-        if (target === TEST_FHEVM_ADDRESSES.acl.toLowerCase()) {
+        const target = getAddress(tx.to);
+        if (target === getAddress(TEST_FHEVM_ADDRESSES.acl)) {
           const parsed = decodeFunctionData({
             abi: ACL_ABI,
             data: tx.data as `0x${string}`,
           });
           return parsed?.functionName ?? "unknown";
         }
-        if (target === TEST_FHEVM_ADDRESSES.executor.toLowerCase()) {
+        if (target === getAddress(TEST_FHEVM_ADDRESSES.executor)) {
           const parsed = decodeFunctionData({
             abi: EXECUTOR_ABI,
             data: tx.data as `0x${string}`,

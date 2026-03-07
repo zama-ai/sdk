@@ -59,7 +59,7 @@ export class ZamaSDK {
   readonly #onEvent: ZamaSDKEventListener;
   #unsubscribeSigner?: () => void;
   #identityReady: Promise<void>;
-  #lastAddress: string | null = null;
+  #lastAddress: Address | null = null;
   #lastChainId: number | null = null;
 
   constructor(config: ZamaSDKConfig) {
@@ -107,7 +107,7 @@ export class ZamaSDK {
         onAccountChange: (newAddress: Address) => {
           runLifecycleEffect("signerAccountChange", async () => {
             await this.#revokeByTrackedIdentity();
-            this.#lastAddress = newAddress.toLowerCase();
+            this.#lastAddress = getAddress(newAddress);
             try {
               this.#lastChainId = await this.signer.getChainId();
             } catch {
@@ -121,7 +121,7 @@ export class ZamaSDK {
             await this.#revokeByTrackedIdentity();
             this.#lastChainId = newChainId;
             try {
-              this.#lastAddress = (await this.signer.getAddress()).toLowerCase();
+              this.#lastAddress = await this.signer.getAddress();
             } catch {
               // Signer may not be ready — keep previous address
             }
@@ -134,7 +134,7 @@ export class ZamaSDK {
 
   async #initIdentity(): Promise<void> {
     try {
-      const address = (await this.signer.getAddress()).toLowerCase();
+      const address = await this.signer.getAddress();
       const chainId = await this.signer.getChainId();
       // Only commit both values atomically so revokeByTrackedIdentity
       // never sees a partial (address-only) state.
@@ -241,7 +241,7 @@ export class ZamaSDK {
    */
   async revokeSession(): Promise<void> {
     await this.#identityReady;
-    const address = this.#lastAddress ?? (await this.signer.getAddress()).toLowerCase();
+    const address = this.#lastAddress ?? (await this.signer.getAddress());
     const chainId = this.#lastChainId ?? (await this.signer.getChainId());
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.sessionStorage.delete(storeKey);
