@@ -3,10 +3,7 @@ import { createFhevmConfig } from "../config";
 import { fhevmHardhat, fhevmMainnet, fhevmSepolia } from "@zama-fhe/sdk/chains";
 import { resolveRelayer } from "../resolve-relayer";
 import type { FhevmInstanceConfig } from "@zama-fhe/sdk";
-import {
-  HardhatCleartextConfig,
-  hoodiCleartextConfig,
-} from "@zama-fhe/sdk/cleartext";
+import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { beforeEach, vi } from "vitest";
 
 const relayerWebCtor = vi.fn();
@@ -28,9 +25,8 @@ vi.mock("@zama-fhe/sdk", async () => {
 });
 
 vi.mock("@zama-fhe/sdk/cleartext", async () => {
-  const actual = await vi.importActual<typeof import("@zama-fhe/sdk/cleartext")>(
-    "@zama-fhe/sdk/cleartext",
-  );
+  const actual =
+    await vi.importActual<typeof import("@zama-fhe/sdk/cleartext")>("@zama-fhe/sdk/cleartext");
 
   class MockCleartextFhevmInstance {
     constructor(config: unknown) {
@@ -88,18 +84,14 @@ describe("resolveRelayer", () => {
   });
 
   it("uses cleartext hoodi preset for chain 560048", () => {
-    resolveRelayer(
-      createFhevmConfig({ chains: [{ id: 560048, name: "Hoodi" }] }),
-    );
+    resolveRelayer(createFhevmConfig({ chains: [{ id: 560048, name: "Hoodi" }] }));
 
     expect(cleartextCtor).toHaveBeenCalledWith(hoodiCleartextConfig);
     expect(relayerWebCtor).not.toHaveBeenCalled();
   });
 
   it("falls back to cleartext hardhat preset for unknown chains", () => {
-    resolveRelayer(
-      createFhevmConfig({ chains: [{ id: 999, name: "Unknown" }] }),
-    );
+    resolveRelayer(createFhevmConfig({ chains: [{ id: 999, name: "Unknown" }] }));
 
     expect(cleartextCtor).toHaveBeenCalledWith(HardhatCleartextConfig);
     expect(relayerWebCtor).not.toHaveBeenCalled();
@@ -123,9 +115,7 @@ describe("resolveRelayer", () => {
       transports: Record<number, FhevmInstanceConfig>;
     };
 
-    expect(args.transports[11155111]?.relayerUrl).toBe(
-      "https://example.test/relayer",
-    );
+    expect(args.transports[11155111]?.relayerUrl).toBe("https://example.test/relayer");
     expect(args.transports[11155111]?.chainId).toBe(11155111);
   });
 

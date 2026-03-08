@@ -39,9 +39,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <FhevmProvider config={fhevmConfig}>
-          {children}
-        </FhevmProvider>
+        <FhevmProvider config={fhevmConfig}>{children}</FhevmProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

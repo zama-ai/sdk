@@ -80,7 +80,10 @@ export const test = base.extend<ReactSdkFixtures>({
       }),
     );
   },
-  createWrapper: async ({ relayer, signer, storage, sessionStorage: _sessionStorage, queryClient }, use) => {
+  createWrapper: async (
+    { relayer, signer, storage, sessionStorage: _sessionStorage, queryClient },
+    use,
+  ) => {
     let currentRelayer = relayer;
     const relayerSpy = vi
       .spyOn(resolveRelayerModule, "resolveRelayer")

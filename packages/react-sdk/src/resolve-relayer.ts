@@ -32,9 +32,9 @@ export function resolveRelayer(config: FhevmConfig): RelayerSDK {
             : undefined,
       });
     }
-    case 31337:
+    case HardhatCleartextConfig.chainId:
       return new CleartextFhevmInstance(HardhatCleartextConfig);
-    case 560048:
+    case hoodiCleartextConfig.chainId:
       return new CleartextFhevmInstance(hoodiCleartextConfig);
     default:
       return new CleartextFhevmInstance(HardhatCleartextConfig);

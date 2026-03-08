@@ -1,9 +1,6 @@
 import type { GenericSigner } from "@zama-fhe/sdk";
 import { MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
-import {
-  HardhatCleartextConfig,
-  hoodiCleartextConfig,
-} from "@zama-fhe/sdk/cleartext";
+import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { createPublicClient, http } from "viem";
 import type { Config as WagmiConfig } from "wagmi";
@@ -21,10 +18,7 @@ function isWagmiAdapter(wallet: unknown): wallet is WagmiAdapter {
   return typeof wallet === "object" && wallet !== null && (wallet as WagmiAdapter).type === "wagmi";
 }
 
-export function resolveWallet(
-  config: FhevmConfig,
-  wagmiConfig: WagmiConfig | null,
-): GenericSigner {
+export function resolveWallet(config: FhevmConfig, wagmiConfig: WagmiConfig | null): GenericSigner {
   const wallet = config.wallet;
 
   if (wallet && !isWagmiAdapter(wallet)) {
@@ -43,7 +37,9 @@ export function resolveWallet(
   const rpcUrl = RPC_BY_CHAIN[chainId];
 
   if (!rpcUrl) {
-    throw new Error(`No RPC URL known for chain ${chainId}. Provide a wallet or use a known chain.`);
+    throw new Error(
+      `No RPC URL known for chain ${chainId}. Provide a wallet or use a known chain.`,
+    );
   }
 
   const signer = new ViemSigner({

@@ -1,6 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, renderHook, waitFor } from "@testing-library/react";
-import type { Address, FhevmInstanceConfig, ZamaSDKConfig, ZamaSDKEventListener } from "@zama-fhe/sdk";
+import type {
+  Address,
+  FhevmInstanceConfig,
+  ZamaSDKConfig,
+  ZamaSDKEventListener,
+} from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { createFhevmConfig } from "../config";
 import { decryptionKeys } from "../relayer/decryption-cache";
@@ -8,10 +13,7 @@ import { useAllow } from "../token/use-allow";
 import { wagmiAdapter } from "../wagmi/adapter";
 import { fhevmHardhat, fhevmSepolia } from "@zama-fhe/sdk/chains";
 import { FhevmProvider, useFhevmClient } from "../provider";
-import {
-  HardhatCleartextConfig,
-  hoodiCleartextConfig,
-} from "@zama-fhe/sdk/cleartext";
+import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { describe, expect, it } from "../test-fixtures";
 import { beforeEach, vi } from "vitest";
 
@@ -55,9 +57,8 @@ vi.mock("@zama-fhe/sdk", async () => {
 });
 
 vi.mock("@zama-fhe/sdk/cleartext", async () => {
-  const actual = await vi.importActual<typeof import("@zama-fhe/sdk/cleartext")>(
-    "@zama-fhe/sdk/cleartext",
-  );
+  const actual =
+    await vi.importActual<typeof import("@zama-fhe/sdk/cleartext")>("@zama-fhe/sdk/cleartext");
 
   class MockCleartextFhevmInstance {
     terminate = vi.fn();
@@ -161,7 +162,8 @@ describe("FhevmProvider & useFhevmClient", () => {
     const config = createFhevmConfig({ chains: [fhevmSepolia], wallet: signer });
 
     const { result } = renderHook(() => useFhevmClient(), {
-      wrapper: ({ children }) => withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+      wrapper: ({ children }) =>
+        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
     expect(result.current).toBeDefined();
@@ -181,7 +183,8 @@ describe("FhevmProvider & useFhevmClient", () => {
     const config = createFhevmConfig({ chains: [fhevmSepolia] });
 
     const { result } = renderHook(() => useAllow(), {
-      wrapper: ({ children }) => withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+      wrapper: ({ children }) =>
+        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
     await expect(result.current.mutateAsync([tokenAddress])).rejects.toThrow("No wallet connected");
@@ -191,7 +194,8 @@ describe("FhevmProvider & useFhevmClient", () => {
     const config = createFhevmConfig({ chains: [fhevmSepolia], wallet: createMockSigner() });
 
     renderHook(() => useFhevmClient(), {
-      wrapper: ({ children }) => withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+      wrapper: ({ children }) =>
+        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
     expect(relayerWebCtor).toHaveBeenCalledTimes(1);
@@ -204,7 +208,8 @@ describe("FhevmProvider & useFhevmClient", () => {
     const config = createFhevmConfig({ chains: [fhevmHardhat], wallet: createMockSigner() });
 
     renderHook(() => useFhevmClient(), {
-      wrapper: ({ children }) => withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+      wrapper: ({ children }) =>
+        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
     expect(cleartextCtor).toHaveBeenCalledWith(HardhatCleartextConfig);
@@ -220,7 +225,8 @@ describe("FhevmProvider & useFhevmClient", () => {
     });
 
     renderHook(() => useFhevmClient(), {
-      wrapper: ({ children }) => withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+      wrapper: ({ children }) =>
+        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
     expect(cleartextCtor).toHaveBeenCalledWith(hoodiCleartextConfig);
@@ -242,7 +248,8 @@ describe("FhevmProvider & useFhevmClient", () => {
     });
 
     renderHook(() => useFhevmClient(), {
-      wrapper: ({ children }) => withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+      wrapper: ({ children }) =>
+        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
     const relayerConfig = relayerWebCtor.mock.calls[0]?.[0] as {
@@ -256,7 +263,8 @@ describe("FhevmProvider & useFhevmClient", () => {
     const config = createFhevmConfig({ chains: [fhevmSepolia], wallet: createMockSigner() });
 
     const { result, unmount } = renderHook(() => useFhevmClient(), {
-      wrapper: ({ children }) => withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+      wrapper: ({ children }) =>
+        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
     const terminateSpy = vi.spyOn(result.current.relayer, "terminate");
@@ -275,7 +283,8 @@ describe("FhevmProvider & useFhevmClient", () => {
     });
 
     renderHook(() => useFhevmClient(), {
-      wrapper: ({ children }) => withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+      wrapper: ({ children }) =>
+        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
     const wrappedOnEvent = tokenSDKConstructorArgs[0]?.onEvent;
@@ -295,7 +304,8 @@ describe("FhevmProvider & useFhevmClient", () => {
     });
 
     renderHook(() => useFhevmClient(), {
-      wrapper: ({ children }) => withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+      wrapper: ({ children }) =>
+        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
     expect(tokenSDKConstructorArgs[0]).toEqual(
