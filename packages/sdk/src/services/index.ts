@@ -4,6 +4,7 @@ export { CredentialStorage, SessionStorage, type StorageService } from "./Storag
 export { EventEmitter, type EventEmitterService } from "./EventEmitter";
 export {
   makeSignerLayer,
+  makeRelayerLayer,
   makeCredentialStorageLayer,
   makeSessionStorageLayer,
   makeEventEmitterLayer,

@@ -1,16 +1,4 @@
-import {
-  ERC7984_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID,
-  allowanceContract,
-  confidentialBalanceOfContract,
-  decimalsContract,
-  nameContract,
-  supportsInterfaceContract,
-  symbolContract,
-  underlyingContract,
-  wrapperExistsContract,
-  getWrapperContract,
-} from "../contracts";
+import { Effect, Layer } from "effect";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address, Handle } from "../relayer/relayer-sdk.types";
 import { normalizeHandle, pLimit, validateAddress } from "../utils";
@@ -20,6 +8,29 @@ import { CredentialsManager } from "./credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import {
+  makeSignerLayer,
+  makeRelayerLayer,
+  makeCredentialStorageLayer,
+  makeSessionStorageLayer,
+  makeEventEmitterLayer,
+} from "../services/layers";
+import type { Signer } from "../services/Signer";
+import type { Relayer } from "../services/Relayer";
+import type { CredentialStorage, SessionStorage } from "../services/Storage";
+import type { EventEmitter } from "../services/EventEmitter";
+import {
+  isConfidential as effectIsConfidential,
+  isWrapper as effectIsWrapper,
+  name as effectName,
+  symbol as effectSymbol,
+  decimals as effectDecimals,
+  underlyingToken as effectUnderlyingToken,
+  allowance as effectAllowance,
+  discoverWrapper as effectDiscoverWrapper,
+  readConfidentialBalanceOf as effectReadConfidentialBalanceOf,
+  confidentialBalanceOf as effectConfidentialBalanceOf,
+} from "./effects/balance";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -68,6 +79,9 @@ export interface ReadonlyTokenConfig {
   onEvent?: ZamaSDKEventListener;
 }
 
+/** Full layer type for Effect-based operations. */
+type FullLayer = Signer | Relayer | CredentialStorage | SessionStorage | EventEmitter;
+
 /**
  * Read-only interface for a confidential token.
  * Supports balance queries, authorization, and ERC-165 checks.
@@ -80,6 +94,7 @@ export class ReadonlyToken {
   readonly address: Address;
   readonly #storage: GenericStorage;
   readonly #onEvent: ZamaSDKEventListener | undefined;
+  readonly #layer: Layer.Layer<FullLayer>;
 
   constructor(config: ReadonlyTokenConfig) {
     const address = validateAddress(config.address, "address");
@@ -98,11 +113,23 @@ export class ReadonlyToken {
     this.address = address;
     this.#storage = config.storage;
     this.#onEvent = config.onEvent;
+    this.#layer = Layer.mergeAll(
+      makeSignerLayer(config.signer),
+      makeRelayerLayer(config.relayer),
+      makeCredentialStorageLayer(config.storage),
+      makeSessionStorageLayer(config.sessionStorage),
+      makeEventEmitterLayer(config.onEvent),
+    );
   }
 
   /** Access the storage backend (used by static batch methods). */
   protected get storage(): GenericStorage {
     return this.#storage;
+  }
+
+  /** Run an Effect program against this token's layer. */
+  protected runEffect<A, E>(effect: Effect.Effect<A, E, FullLayer>): Promise<A> {
+    return Effect.runPromise(effect.pipe(Effect.provide(this.#layer)));
   }
 
   /** Emit a structured event (no-op when no listener is registered). */
@@ -189,12 +216,11 @@ export class ReadonlyToken {
    * ```
    */
   async confidentialBalanceOf(owner?: Address): Promise<Handle> {
-    const ownerAddress = owner ? validateAddress(owner, "owner") : await this.signer.getAddress();
-    return this.readConfidentialBalanceOf(ownerAddress);
+    return this.runEffect(effectConfidentialBalanceOf(this.address, owner));
   }
 
   /**
-   * ERC-165 check for {@link ERC7984_INTERFACE_ID} support.
+   * ERC-165 check for ERC-7984 support.
    *
    * @returns `true` if the contract implements the ERC-7984 confidential token interface.
    *
@@ -206,14 +232,11 @@ export class ReadonlyToken {
    * ```
    */
   async isConfidential(): Promise<boolean> {
-    const result = await this.signer.readContract(
-      supportsInterfaceContract(this.address, ERC7984_INTERFACE_ID),
-    );
-    return result === true;
+    return this.runEffect(effectIsConfidential(this.address));
   }
 
   /**
-   * ERC-165 check for {@link ERC7984_WRAPPER_INTERFACE_ID} support.
+   * ERC-165 check for ERC-7984 wrapper support.
    *
    * @returns `true` if the contract implements the ERC-7984 wrapper interface.
    *
@@ -225,10 +248,7 @@ export class ReadonlyToken {
    * ```
    */
   async isWrapper(): Promise<boolean> {
-    const result = await this.signer.readContract(
-      supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
-    );
-    return result === true;
+    return this.runEffect(effectIsWrapper(this.address));
   }
 
   /**
@@ -373,9 +393,7 @@ export class ReadonlyToken {
    */
   async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
     const coordinator = validateAddress(coordinatorAddress, "coordinatorAddress");
-    const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
-    if (!exists) return null;
-    return this.signer.readContract(getWrapperContract(coordinator, this.address));
+    return this.runEffect(effectDiscoverWrapper(this.address, coordinator));
   }
 
   /**
@@ -389,7 +407,7 @@ export class ReadonlyToken {
    * ```
    */
   async underlyingToken(): Promise<Address> {
-    return this.signer.readContract(underlyingContract(this.address));
+    return this.runEffect(effectUnderlyingToken(this.address));
   }
 
   /**
@@ -406,9 +424,7 @@ export class ReadonlyToken {
    */
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
     const normalizedWrapper = validateAddress(wrapper, "wrapper");
-    const underlying = await this.signer.readContract(underlyingContract(normalizedWrapper));
-    const userAddress = owner ? validateAddress(owner, "owner") : await this.signer.getAddress();
-    return this.signer.readContract(allowanceContract(underlying, userAddress, normalizedWrapper));
+    return this.runEffect(effectAllowance(normalizedWrapper, owner));
   }
 
   /**
@@ -422,7 +438,7 @@ export class ReadonlyToken {
    * ```
    */
   async name(): Promise<string> {
-    return this.signer.readContract(nameContract(this.address));
+    return this.runEffect(effectName(this.address));
   }
 
   /**
@@ -436,7 +452,7 @@ export class ReadonlyToken {
    * ```
    */
   async symbol(): Promise<string> {
-    return this.signer.readContract(symbolContract(this.address));
+    return this.runEffect(effectSymbol(this.address));
   }
 
   /**
@@ -450,7 +466,7 @@ export class ReadonlyToken {
    * ```
    */
   async decimals(): Promise<number> {
-    return this.signer.readContract(decimalsContract(this.address));
+    return this.runEffect(effectDecimals(this.address));
   }
 
   /**
@@ -510,9 +526,7 @@ export class ReadonlyToken {
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
-    return normalizeHandle(
-      await this.signer.readContract(confidentialBalanceOfContract(this.address, owner)),
-    );
+    return this.runEffect(effectReadConfidentialBalanceOf(this.address, owner));
   }
 
   isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {

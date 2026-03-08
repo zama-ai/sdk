@@ -31,6 +31,7 @@ import type {
   ShieldCallbacks,
   TransferCallbacks,
 } from "./token.types";
+import { isApproved as effectIsApproved } from "./effects/approve";
 
 /** Coerce an unknown caught value to an Error instance. */
 function toError(error: unknown): Error {
@@ -286,13 +287,7 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async isApproved(spender: Address, holder?: Address): Promise<boolean> {
-    const normalizedSpender = validateAddress(spender, "spender");
-    const resolvedHolder = holder
-      ? validateAddress(holder, "holder")
-      : await this.signer.getAddress();
-    return this.signer.readContract(
-      isOperatorContract(this.address, resolvedHolder, normalizedSpender),
-    );
+    return this.runEffect(effectIsApproved(this.address, spender, holder));
   }
 
   /**
@@ -500,7 +495,7 @@ export class Token extends ReadonlyToken {
 
   /**
    * Unshield a specific amount and finalize in one call.
-   * Orchestrates: unshield → wait for receipt → parse event → finalize.
+   * Orchestrates: unshield -> wait for receipt -> parse event -> finalize.
    *
    * @param amount - The plaintext amount to unshield.
    * @param callbacks - Optional progress callbacks for each phase.
@@ -522,7 +517,7 @@ export class Token extends ReadonlyToken {
 
   /**
    * Unshield the entire balance and finalize in one call.
-   * Orchestrates: unshieldAll → wait for receipt → parse event → finalize.
+   * Orchestrates: unshieldAll -> wait for receipt -> parse event -> finalize.
    *
    * @param callbacks - Optional progress callbacks for each phase.
    * @returns The finalize transaction hash and mined receipt.
