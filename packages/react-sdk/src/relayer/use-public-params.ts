@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { hashFn, publicParamsQueryOptions } from "@zama-fhe/sdk/query";
-import { useZamaSDK } from "../provider";
+import { useFhevmClient } from "../provider";
 
 export { publicParamsQueryOptions };
 
@@ -28,7 +28,7 @@ export interface PublicParamsData {
  * ```
  */
 export function usePublicParams(bits: number) {
-  const sdk = useZamaSDK();
+  const sdk = useFhevmClient();
   const options = publicParamsQueryOptions(sdk, bits);
   return useQuery({
     ...options,

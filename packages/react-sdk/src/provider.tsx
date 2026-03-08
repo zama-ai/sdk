@@ -1,14 +1,8 @@
 "use client";
 
-import type {
-  GenericSigner,
-  GenericStorage,
-  RelayerSDK,
-  ZamaSDKEventListener,
-} from "@zama-fhe/sdk";
-import { ZamaSDK } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
-import { useQueryClient } from "@tanstack/react-query";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
   createContext,
   type PropsWithChildren,
@@ -17,65 +11,64 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { useConfig, type Config as WagmiConfig } from "wagmi";
+import type { FhevmConfig, WagmiAdapter } from "./config";
+import { resolveRelayer } from "./resolve-relayer";
+import { resolveWallet } from "./resolve-wallet";
 
-/** Props for {@link ZamaProvider}. */
-export interface ZamaProviderProps extends PropsWithChildren {
-  /** FHE relayer backend (RelayerWeb for browser, RelayerNode for server). */
-  relayer: RelayerSDK;
-  /** Wallet signer (`ViemSigner`, `EthersSigner`, or custom {@link GenericSigner}). */
-  signer: GenericSigner;
-  /** Credential storage backend (IndexedDBStorage for browser, MemoryStorage for tests). */
-  storage: GenericStorage;
-  /**
-   * Session storage for wallet signatures. Defaults to in-memory (lost on reload).
-   * Pass a `chrome.storage.session`-backed store for web extensions.
-   */
-  sessionStorage?: GenericStorage;
-  /**
-   * How long the ML-KEM re-encryption keypair remains valid, in seconds.
-   * Default: `86400` (1 day). Must be positive — `0` is rejected.
-   */
-  keypairTTL?: number;
-  /**
-   * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
-   * Default: `2592000` (30 days).
-   * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
-   * - Positive number: seconds until the session signature expires and requires re-authentication.
-   */
-  sessionTTL?: number;
-  /** Callback invoked on SDK lifecycle events. */
-  onEvent?: ZamaSDKEventListener;
+export interface FhevmProviderProps extends PropsWithChildren {
+  config: FhevmConfig;
+  queryClient?: QueryClient;
 }
 
-const ZamaSDKContext = createContext<ZamaSDK | null>(null);
+const FhevmClientContext = createContext<ZamaSDK | null>(null);
 
-/**
- * Provides a {@link ZamaSDK} instance to all descendant hooks.
- *
- * @example
- * ```tsx
- * <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
- *   <App />
- * </ZamaProvider>
- * ```
- */
-export function ZamaProvider({
+function isWagmiAdapter(wallet: unknown): wallet is WagmiAdapter {
+  return typeof wallet === "object" && wallet !== null && (wallet as WagmiAdapter).type === "wagmi";
+}
+
+export function FhevmProvider({ config, queryClient, children }: FhevmProviderProps) {
+  if (isWagmiAdapter(config.wallet)) {
+    return (
+      <WagmiFhevmProviderInner config={config} queryClient={queryClient}>
+        {children}
+      </WagmiFhevmProviderInner>
+    );
+  }
+
+  return (
+    <FhevmProviderInner config={config} queryClient={queryClient} wagmiConfig={null}>
+      {children}
+    </FhevmProviderInner>
+  );
+}
+
+function WagmiFhevmProviderInner({ config, queryClient, children }: FhevmProviderProps) {
+  const wagmiConfig = useConfig();
+
+  return (
+    <FhevmProviderInner config={config} queryClient={queryClient} wagmiConfig={wagmiConfig}>
+      {children}
+    </FhevmProviderInner>
+  );
+}
+
+function FhevmProviderInner({
+  config,
+  queryClient: queryClientProp,
+  wagmiConfig,
   children,
-  relayer,
-  signer,
-  storage,
-  sessionStorage,
-  keypairTTL,
-  sessionTTL,
-  onEvent,
-}: ZamaProviderProps) {
-  const queryClient = useQueryClient();
+}: FhevmProviderProps & { wagmiConfig: WagmiConfig | null }) {
+  const ambientQueryClient = useQueryClient();
+  const queryClient = queryClientProp ?? ambientQueryClient;
 
-  // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
-  const onEventRef = useRef(onEvent);
+  const onEventRef = useRef(config.advanced?.onEvent);
   useEffect(() => {
-    onEventRef.current = onEvent;
+    onEventRef.current = config.advanced?.onEvent;
   });
+
+  const relayer = useMemo(() => resolveRelayer(config), [config]);
+  const signer = useMemo(() => resolveWallet(config, wagmiConfig), [config, wagmiConfig]);
 
   const signerLifecycleCallbacks = useMemo(
     () =>
@@ -94,41 +87,34 @@ export function ZamaProvider({
       new ZamaSDK({
         relayer,
         signer,
-        storage,
-        sessionStorage,
-        keypairTTL,
-        sessionTTL,
-        onEvent: onEventRef.current,
+        storage: config.storage,
+        keypairTTL: config.advanced?.keypairTTL,
+        sessionTTL: config.advanced?.sessionTTL,
+        onEvent: (...args) => onEventRef.current?.(...args),
         signerLifecycleCallbacks,
       }),
-    [relayer, signer, storage, sessionStorage, keypairTTL, sessionTTL, signerLifecycleCallbacks],
+    [
+      relayer,
+      signer,
+      config.storage,
+      config.advanced?.keypairTTL,
+      config.advanced?.sessionTTL,
+      signerLifecycleCallbacks,
+    ],
   );
 
-  // Clean up signer subscriptions on unmount without terminating the
-  // caller-owned relayer. dispose() only unsubscribes from wallet events
-  // and is idempotent.
-  useEffect(() => () => sdk.dispose(), [sdk]);
+  useEffect(() => () => sdk.terminate(), [sdk]);
 
-  return <ZamaSDKContext.Provider value={sdk}>{children}</ZamaSDKContext.Provider>;
+  return <FhevmClientContext.Provider value={sdk}>{children}</FhevmClientContext.Provider>;
 }
 
-/**
- * Access the {@link ZamaSDK} instance from context.
- * Throws if called outside a {@link ZamaProvider} or when no signer is provided.
- *
- * @example
- * ```tsx
- * const sdk = useZamaSDK();
- * const token = sdk.createReadonlyToken("0x...");
- * ```
- */
-export function useZamaSDK(): ZamaSDK {
-  const context = useContext(ZamaSDKContext);
+export function useFhevmClient(): ZamaSDK {
+  const context = useContext(FhevmClientContext);
 
   if (!context) {
     throw new Error(
-      "useZamaSDK must be used within a <ZamaProvider>. " +
-        "Wrap your component tree in <ZamaProvider relayer={…} signer={…} storage={…}>.",
+      "useFhevmClient must be used within a <FhevmProvider>. " +
+        "Wrap your component tree in <FhevmProvider config={config}>.",
     );
   }
 

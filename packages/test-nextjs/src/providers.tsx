@@ -1,16 +1,14 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage, ZamaProvider } from "@zama-fhe/react-sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { createFhevmConfig, FhevmProvider, MemoryStorage } from "@zama-fhe/react-sdk";
+import { wagmiAdapter } from "@zama-fhe/react-sdk/wagmi";
+import { fhevmHardhat } from "@zama-fhe/sdk/chains";
 import { type ReactNode } from "react";
-import type { Address } from "viem";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
-import { HardhatCleartextChainConfig, RelayerCleartext } from "@zama-fhe/sdk/cleartext";
-import deployments from "../../../hardhat/deployments.json" with { type: "json" };
 
 const isHardhat = process.env.NEXT_PUBLIC_NETWORK === "hardhat";
 
@@ -30,23 +28,11 @@ const wagmiConfig = createConfig({
   },
 });
 
-const signer = new WagmiSigner({ config: wagmiConfig });
 const storage = new MemoryStorage();
-
-const relayer = new RelayerCleartext({
-  transports: {
-    [hardhat.id]: {
-      network: hardhat.rpcUrls.default.http[0],
-    },
-  },
-  chainConfigs: {
-    [hardhat.id]: {
-      ...HardhatCleartextChainConfig,
-      aclContractAddress: deployments.fhevm.acl as Address,
-      cleartextExecutorAddress: deployments.fhevm.executor as Address,
-    },
-  },
-  getChainId: () => signer.getChainId(),
+const fhevmConfig = createFhevmConfig({
+  chains: [fhevmHardhat],
+  wallet: wagmiAdapter(),
+  storage,
 });
 
 const queryClient = new QueryClient();
@@ -55,9 +41,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <ZamaProvider relayer={relayer} storage={storage} signer={signer}>
+        <FhevmProvider config={fhevmConfig}>
           {children}
-        </ZamaProvider>
+        </FhevmProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

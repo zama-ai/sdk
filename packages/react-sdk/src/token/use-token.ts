@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { Address } from "@zama-fhe/sdk";
-import { useZamaSDK } from "../provider";
+import { useFhevmClient } from "../provider";
 
 /** Base configuration shared by all mutation hooks that need a Token instance. */
 export interface UseZamaConfig {
@@ -14,7 +14,7 @@ export interface UseZamaConfig {
 
 /**
  * Get a {@link Token} instance, memoized by address pair.
- * Reads signer and storage from the nearest {@link ZamaProvider}.
+ * Reads signer and storage from the nearest {@link FhevmProvider}.
  *
  * @param config - Token and optional wrapper addresses.
  * @returns A memoized `Token` instance.
@@ -25,7 +25,7 @@ export interface UseZamaConfig {
  * ```
  */
 export function useToken(config: UseZamaConfig) {
-  const sdk = useZamaSDK();
+  const sdk = useFhevmClient();
 
   return useMemo(
     () => sdk.createToken(config.tokenAddress, config.wrapperAddress),

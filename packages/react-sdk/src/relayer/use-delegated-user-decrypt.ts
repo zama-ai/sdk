@@ -2,7 +2,7 @@
 
 import type { DelegatedUserDecryptParams, ClearValueType, Handle } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
-import { useZamaSDK } from "../provider";
+import { useFhevmClient } from "../provider";
 
 /**
  * Decrypt FHE ciphertext handles using delegated user credentials.
@@ -18,7 +18,7 @@ import { useZamaSDK } from "../provider";
  * ```
  */
 export function useDelegatedUserDecrypt() {
-  const sdk = useZamaSDK();
+  const sdk = useFhevmClient();
   return useMutation<Record<Handle, ClearValueType>, Error, DelegatedUserDecryptParams>({
     mutationFn: (params) => sdk.relayer.delegatedUserDecrypt(params),
   });

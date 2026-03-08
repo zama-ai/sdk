@@ -1,38 +1,61 @@
 /* eslint-disable no-empty-pattern */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import type { GenericSigner, GenericStorage, RelayerSDK, Token } from "@zama-fhe/sdk";
-import React, { PropsWithChildren } from "react";
+import type {
+  GenericSigner,
+  GenericStorage,
+  RelayerSDK,
+  Token,
+  ZamaSDKEventListener,
+} from "@zama-fhe/sdk";
+import { fhevmHardhat, type FhevmChain } from "@zama-fhe/sdk/chains";
+import React, { type PropsWithChildren } from "react";
+import { vi } from "vitest";
 import { test as base } from "../../sdk/src/test-fixtures";
-import { ZamaProvider, ZamaProviderProps } from "./provider";
 import { createMockToken } from "./__tests__/mutation-test-helpers";
+import {
+  createFhevmConfig,
+  type FhevmAdvancedOptions,
+  type FhevmConfig,
+  type RelayerOverride,
+  type WalletOption,
+} from "./config";
+import { FhevmProvider, type FhevmProviderProps } from "./provider";
+import * as resolveRelayerModule from "./resolve-relayer";
 
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
-// ---------------------------------------------------------------------------
-// Internal helpers (not exported — used by fixtures only)
-// ---------------------------------------------------------------------------
+interface WrapperOverrides {
+  config?: FhevmConfig;
+  chains?: FhevmChain[];
+  wallet?: WalletOption;
+  signer?: GenericSigner;
+  relayer?: RelayerSDK;
+  storage?: GenericStorage;
+  sessionStorage?: GenericStorage;
+  relayerOverride?: RelayerOverride;
+  advanced?: FhevmAdvancedOptions;
+  keypairTTL?: number;
+  sessionTTL?: number;
+  onEvent?: ZamaSDKEventListener;
+}
 
 function Providers({
   children,
   queryClient,
-  ...props
-}: PropsWithChildren<ZamaProviderProps & { queryClient: QueryClient }>) {
+  config,
+}: PropsWithChildren<FhevmProviderProps & { queryClient: QueryClient }>) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider {...props}>{children}</ZamaProvider>
+      <FhevmProvider config={config}>{children}</FhevmProvider>
     </QueryClientProvider>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Vitest fixtures (accessed via test context destructuring)
-// ---------------------------------------------------------------------------
-
 interface ReactSdkFixtures {
   token: Token;
   queryClient: QueryClient;
-  createWrapper: (overrides?: Partial<ZamaProviderProps>) => {
+  createWrapper: (overrides?: WrapperOverrides) => {
     Wrapper: React.FC<{ children?: React.ReactNode }>;
     queryClient: QueryClient;
     signer: GenericSigner | undefined;
@@ -41,7 +64,7 @@ interface ReactSdkFixtures {
   };
   renderWithProviders: <TResult>(
     hook: () => TResult,
-    overrides?: Partial<ZamaProviderProps>,
+    overrides?: WrapperOverrides,
     options?: Omit<RenderHookOptions<unknown>, "wrapper">,
   ) => ReturnType<typeof renderHook<TResult, unknown>> & { queryClient: QueryClient };
 }
@@ -57,13 +80,45 @@ export const test = base.extend<ReactSdkFixtures>({
       }),
     );
   },
-  createWrapper: async ({ relayer, signer, storage, sessionStorage, queryClient }, use) => {
-    function createWrapper(overrides?: Partial<ZamaProviderProps>) {
-      const props = { relayer, signer, storage, sessionStorage, ...overrides };
+  createWrapper: async ({ relayer, signer, storage, sessionStorage: _sessionStorage, queryClient }, use) => {
+    let currentRelayer = relayer;
+    const relayerSpy = vi
+      .spyOn(resolveRelayerModule, "resolveRelayer")
+      .mockImplementation(() => currentRelayer);
+
+    function createWrapper(overrides?: WrapperOverrides) {
+      const advanced: FhevmAdvancedOptions | undefined =
+        overrides?.advanced ||
+        overrides?.keypairTTL !== undefined ||
+        overrides?.sessionTTL !== undefined ||
+        overrides?.onEvent
+          ? {
+              ...overrides?.advanced,
+              keypairTTL: overrides?.keypairTTL ?? overrides?.advanced?.keypairTTL,
+              sessionTTL: overrides?.sessionTTL ?? overrides?.advanced?.sessionTTL,
+              onEvent: overrides?.onEvent ?? overrides?.advanced?.onEvent,
+            }
+          : undefined;
+
+      const config =
+        overrides?.config ??
+        createFhevmConfig({
+          chains: overrides?.chains ?? [fhevmHardhat],
+          wallet: overrides?.wallet ?? overrides?.signer ?? signer,
+          storage: overrides?.storage ?? storage,
+          relayer: overrides?.relayerOverride,
+          advanced,
+        });
+
+      currentRelayer = overrides?.relayer ?? relayer;
+      const resolvedSigner =
+        overrides?.wallet && typeof overrides.wallet === "object" && "type" in overrides.wallet
+          ? undefined
+          : ((overrides?.wallet as GenericSigner | undefined) ?? overrides?.signer ?? signer);
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
         return (
-          <Providers queryClient={queryClient} {...props}>
+          <Providers queryClient={queryClient} config={config}>
             {children}
           </Providers>
         );
@@ -72,22 +127,25 @@ export const test = base.extend<ReactSdkFixtures>({
       return {
         Wrapper,
         queryClient,
-        signer: props.signer,
-        relayer: props.relayer,
-        storage: props.storage,
+        signer: resolvedSigner,
+        relayer: currentRelayer,
+        storage: config.storage,
       };
     }
+
     await use(createWrapper);
+    relayerSpy.mockRestore();
   },
   renderWithProviders: async ({ createWrapper }, use) => {
     function renderWithProviders<TResult>(
       hook: () => TResult,
-      overrides?: Partial<ZamaProviderProps>,
+      overrides?: WrapperOverrides,
       options?: Omit<RenderHookOptions<unknown>, "wrapper">,
     ) {
       const { Wrapper, queryClient } = createWrapper(overrides);
       return { ...renderHook(hook, { wrapper: Wrapper, ...options }), queryClient };
     }
+
     await use(renderWithProviders);
   },
 });
