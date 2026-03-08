@@ -85,15 +85,15 @@ const mockConfig: RelayerWebConfig = {
   onStatusChange: vi.fn(),
 };
 
-describe("makeRelayerWebLayer", () => {
+describe("makeRelayerWeb", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   // Lazy import to ensure mocks are in place
   async function getLayer() {
-    const { makeRelayerWebLayer } = await import("../relayer-web.layer");
-    return makeRelayerWebLayer(mockConfig);
+    const { makeRelayerWeb } = await import("../relayer-web.layer");
+    return makeRelayerWeb(mockConfig);
   }
 
   it("provides a working Relayer service", async () => {
@@ -216,8 +216,8 @@ describe("makeRelayerWebLayer", () => {
       ...mockConfig,
       security: { getCsrfToken: () => "csrf-token-123" },
     };
-    const { makeRelayerWebLayer } = await import("../relayer-web.layer");
-    const layer = makeRelayerWebLayer(configWithCsrf);
+    const { makeRelayerWeb } = await import("../relayer-web.layer");
+    const layer = makeRelayerWeb(configWithCsrf);
 
     const program = Effect.gen(function* () {
       const relayer = yield* Relayer;

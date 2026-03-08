@@ -29,9 +29,7 @@ import { retryTransient } from "./retry-policy";
  * The pool is initialized when the layer is built and terminated when the
  * Effect scope closes, using `acquireRelease` for safe resource management.
  */
-export function makeRelayerNodeLayer(
-  config: RelayerNodeConfig,
-): Layer.Layer<Relayer, EncryptionFailed> {
+export function makeRelayerNode(config: RelayerNodeConfig): Layer.Layer<Relayer, EncryptionFailed> {
   return Layer.scoped(
     Relayer,
     Effect.gen(function* () {

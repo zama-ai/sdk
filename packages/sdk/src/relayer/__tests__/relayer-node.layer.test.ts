@@ -82,15 +82,15 @@ const mockConfig: RelayerNodeConfig = {
   transports: { 1: {} },
 };
 
-describe("makeRelayerNodeLayer", () => {
+describe("makeRelayerNode", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   // Lazy import to ensure mocks are in place
   async function getLayer() {
-    const { makeRelayerNodeLayer } = await import("../relayer-node.layer");
-    return makeRelayerNodeLayer(mockConfig);
+    const { makeRelayerNode } = await import("../relayer-node.layer");
+    return makeRelayerNode(mockConfig);
   }
 
   it("provides a working Relayer service (generateKeypair)", async () => {

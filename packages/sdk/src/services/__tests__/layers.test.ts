@@ -1,12 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 import { Effect } from "effect";
-import { Signer, CredentialStorage, SessionStorage, EventEmitter } from "../index";
 import {
+  Signer,
+  CredentialStorage,
+  SessionStorage,
+  EventEmitter,
   makeSignerLayer,
   makeCredentialStorageLayer,
   makeSessionStorageLayer,
   makeEventEmitterLayer,
-} from "../layers";
+} from "../index";
 import type { GenericSigner } from "../../token/token.types";
 import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
 import type { ZamaSDKEventInput } from "../../events/sdk-events";

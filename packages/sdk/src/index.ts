@@ -156,7 +156,7 @@ export {
 export type { RelayerError, TokenError } from "./errors";
 
 // Effect layer factories
-export { makeRelayerWebLayer } from "./relayer/relayer-web.layer";
+export { makeRelayerWeb } from "./relayer/relayer-web.layer";
 
 // Effect service definitions & layer helpers
 export { Relayer, Signer, CredentialStorage, SessionStorage, EventEmitter } from "./services";

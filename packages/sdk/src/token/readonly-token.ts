@@ -1,24 +1,23 @@
 import { Effect, Layer } from "effect";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address, Handle } from "../relayer/relayer-sdk.types";
-import { normalizeHandle, pLimit, validateAddress } from "../utils";
+import { pLimit, validateAddress } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+
+import { makeSignerLayer, type Signer } from "../services/Signer";
+import { makeRelayerLayer, type Relayer } from "../services/Relayer";
 import {
-  makeSignerLayer,
-  makeRelayerLayer,
   makeCredentialStorageLayer,
   makeSessionStorageLayer,
-  makeEventEmitterLayer,
-} from "../services/layers";
-import type { Signer } from "../services/Signer";
-import type { Relayer } from "../services/Relayer";
-import type { CredentialStorage, SessionStorage } from "../services/Storage";
-import type { EventEmitter } from "../services/EventEmitter";
+  type CredentialStorage,
+  type SessionStorage,
+} from "../services/Storage";
+import { makeEventEmitterLayer, type EventEmitter } from "../services/EventEmitter";
 import {
   isConfidential as effectIsConfidential,
   isWrapper as effectIsWrapper,

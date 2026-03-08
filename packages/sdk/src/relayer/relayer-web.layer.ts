@@ -65,9 +65,7 @@ function refreshCsrf(client: RelayerWorkerClient, config: RelayerWebConfig): Eff
  * The worker is initialized when the layer is built and terminated when the
  * Effect scope closes, using `acquireRelease` for safe resource management.
  */
-export function makeRelayerWebLayer(
-  config: RelayerWebConfig,
-): Layer.Layer<Relayer, EncryptionFailed> {
+export function makeRelayerWeb(config: RelayerWebConfig): Layer.Layer<Relayer, EncryptionFailed> {
   return Layer.scoped(
     Relayer,
     Effect.gen(function* () {
