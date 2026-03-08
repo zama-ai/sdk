@@ -5,3 +5,4 @@
  */
 
 export { WagmiSigner, type WagmiSignerConfig } from "./wagmi-signer";
+export { wagmiAdapter } from "./adapter";

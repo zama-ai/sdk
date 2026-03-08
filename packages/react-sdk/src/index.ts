@@ -10,6 +10,18 @@
 // Provider
 export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
+// Config factory & types
+export { createFhevmConfig } from "./config";
+export type {
+  FhevmConfig,
+  FhevmConfigOptions,
+  FhevmAdvancedOptions,
+  WalletOption,
+  WagmiAdapter,
+  RelayerOverride,
+} from "./config";
+export { wagmiAdapter } from "./wagmi/adapter";
+
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
 export { useUserDecrypt } from "./relayer/use-user-decrypt";
