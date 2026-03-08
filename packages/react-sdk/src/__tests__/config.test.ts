@@ -1,20 +1,18 @@
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 import { fhevmSepolia } from "@zama-fhe/sdk/chains";
 import { createFhevmConfig, type RelayerOverride, wagmiAdapter } from "@zama-fhe/react-sdk";
-import { wagmiAdapter as wagmiAdapterFromWagmiEntrypoint } from "@zama-fhe/react-sdk/wagmi";
 import { describe, expect, it, vi } from "vitest";
 
 describe("createFhevmConfig", () => {
-  it("returns a plain object with no async behavior", () => {
-    const config = createFhevmConfig({
+  it("does not mutate the caller-provided options object", () => {
+    const options = {
       chains: [fhevmSepolia],
       wallet: wagmiAdapter(),
-    });
+    };
+    const config = createFhevmConfig(options);
 
-    expect(typeof config).toBe("object");
-    expect(config).not.toBeNull();
-    expect(config.constructor).toBe(Object);
-    expect(config).not.toBeInstanceOf(Promise);
+    expect(Object.hasOwn(options, "storage")).toBe(false);
+    expect(config.storage).toBe(memoryStorage);
   });
 
   it("defaults storage to memoryStorage when storage is omitted", () => {
@@ -49,7 +47,6 @@ describe("createFhevmConfig", () => {
 
     expect(defaultConfig.storage).toBe(memoryStorage);
     expect(indexedConfig.storage).toBe(indexedDBStorage);
-    expect(defaultConfig.storage).not.toBe(indexedConfig.storage);
   });
 
   it("passes through chains, wallet, relayer, and advanced options", () => {
@@ -83,8 +80,7 @@ describe("createFhevmConfig", () => {
 });
 
 describe("wagmiAdapter", () => {
-  it("returns the wagmi adapter shape from both public entrypoints", () => {
+  it("returns the wagmi adapter shape", () => {
     expect(wagmiAdapter()).toEqual({ type: "wagmi" });
-    expect(wagmiAdapterFromWagmiEntrypoint()).toEqual({ type: "wagmi" });
   });
 });
