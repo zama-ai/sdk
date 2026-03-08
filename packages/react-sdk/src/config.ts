@@ -1,7 +1,7 @@
 import type {
-  FhevmInstanceConfig,
   GenericSigner,
   GenericStorage,
+  RelayerWebConfig,
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { memoryStorage } from "@zama-fhe/sdk";
@@ -26,7 +26,7 @@ export type WalletOption = GenericSigner | WagmiAdapter;
 
 /** Optional relayer transport overrides keyed by chain id. */
 export interface RelayerOverride {
-  transports: Record<number, Partial<FhevmInstanceConfig>>;
+  transports: RelayerWebConfig["transports"];
 }
 
 /** Input options for building an inert FHEVM config object. */
