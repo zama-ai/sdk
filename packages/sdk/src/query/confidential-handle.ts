@@ -24,7 +24,7 @@ export function confidentialHandleQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { tokenAddress: keyTokenAddress, owner: keyOwner }] = context.queryKey;
       const handle = await signer.readContract(
         confidentialBalanceOfContract(keyTokenAddress as Address, keyOwner as Address),

@@ -56,7 +56,7 @@ export function activityFeedQueryOptions(
   return {
     ...filterQueryOptions(queryConfig?.query ?? {}),
     queryKey,
-    queryFn: async (_context) => {
+    queryFn: async (_context: { queryKey: typeof queryKey }) => {
       if (!config.logs || !config.userAddress) return [];
 
       const parsed = parseActivityFeed(config.logs, config.userAddress);

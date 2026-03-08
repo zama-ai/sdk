@@ -28,8 +28,10 @@ export interface PublicKeyData {
  */
 export function usePublicKey() {
   const sdk = useZamaSDK();
+  const options = publicKeyQueryOptions(sdk);
   return useQuery({
-    ...publicKeyQueryOptions(sdk),
+    ...options,
+    queryKey: options.queryKey,
     queryKeyHashFn: hashFn,
   });
 }

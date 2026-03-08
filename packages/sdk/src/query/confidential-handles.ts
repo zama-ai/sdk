@@ -29,7 +29,7 @@ export function confidentialHandlesQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { tokenAddresses: keyTokenAddresses, owner: keyOwner }] = context.queryKey;
       return Promise.all(
         keyTokenAddresses.map(async (tokenAddress) => {

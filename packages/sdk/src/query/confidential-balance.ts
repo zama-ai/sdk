@@ -29,7 +29,7 @@ export function confidentialBalanceQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
       return token.decryptBalance(keyHandle as Handle, keyOwner as Address);
     },

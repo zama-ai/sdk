@@ -22,7 +22,7 @@ export function publicParamsQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { bits: keyBits }] = context.queryKey;
       return sdk.relayer.getPublicParams(keyBits);
     },

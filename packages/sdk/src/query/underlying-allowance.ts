@@ -30,7 +30,7 @@ export function underlyingAllowanceQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { owner: keyOwner, wrapperAddress: keyWrapperAddress }] = context.queryKey;
       const underlying = await signer.readContract(
         underlyingContract(keyWrapperAddress as Address),

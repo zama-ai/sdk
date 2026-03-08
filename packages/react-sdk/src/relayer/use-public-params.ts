@@ -29,8 +29,10 @@ export interface PublicParamsData {
  */
 export function usePublicParams(bits: number) {
   const sdk = useZamaSDK();
+  const options = publicParamsQueryOptions(sdk, bits);
   return useQuery({
-    ...publicParamsQueryOptions(sdk, bits),
+    ...options,
+    queryKey: options.queryKey,
     queryKeyHashFn: hashFn,
   });
 }

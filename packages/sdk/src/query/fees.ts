@@ -46,7 +46,7 @@ export function shieldFeeQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
       if (amount === undefined || !params.from || !params.to) return 0n;
@@ -79,7 +79,7 @@ export function unshieldFeeQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
       if (amount === undefined || !params.from || !params.to) return 0n;
@@ -112,7 +112,7 @@ export function batchTransferFeeQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
       return signer.readContract(getBatchTransferFeeContract(keyFeeManagerAddress as Address));
     },
@@ -136,7 +136,7 @@ export function feeRecipientQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
       return signer.readContract(getFeeRecipientContract(keyFeeManagerAddress as Address));
     },
