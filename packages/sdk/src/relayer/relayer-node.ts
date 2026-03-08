@@ -1,3 +1,4 @@
+import { Effect, Layer } from "effect";
 import type {
   ClearValueType,
   FhevmInstanceConfig,
@@ -7,7 +8,7 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
 import type { RelayerSDK } from "./relayer-sdk";
-import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
+import { mergeFhevmConfig } from "./relayer-utils";
 import { ZamaError, EncryptionFailedError } from "../token/errors";
 import type {
   Address,
@@ -20,6 +21,8 @@ import type {
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import { Relayer } from "../services/Relayer";
+import { buildRelayerService } from "./relayer-service";
 
 export interface RelayerNodeConfig {
   transports: Record<number, Partial<FhevmInstanceConfig>>;
@@ -42,6 +45,7 @@ export interface RelayerNodeConfig {
 export class RelayerNode implements RelayerSDK {
   readonly #config: RelayerNodeConfig;
   #pool: NodeWorkerPool | null = null;
+  #layer: Layer.Layer<Relayer> | null = null;
   #initPromise: Promise<NodeWorkerPool> | null = null;
   #ensureLock: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
@@ -83,6 +87,7 @@ export class RelayerNode implements RelayerSDK {
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
       this.#pool?.terminate();
       this.#pool = null;
+      this.#layer = null;
       this.#initPromise = null;
     }
 
@@ -113,23 +118,28 @@ export class RelayerNode implements RelayerSDK {
     return pool;
   }
 
+  /** Run an Effect program against the Relayer service backed by the current pool. */
+  async #runEffect<A, E>(effect: Effect.Effect<A, E, Relayer>): Promise<A> {
+    const pool = await this.#ensurePool();
+    if (!this.#layer) {
+      this.#layer = Layer.succeed(Relayer, buildRelayerService(pool));
+    }
+    return Effect.runPromise(effect.pipe(Effect.provide(this.#layer)));
+  }
+
   terminate(): void {
     this.#terminated = true;
     if (this.#pool) {
       this.#pool.terminate();
       this.#pool = null;
     }
+    this.#layer = null;
     this.#initPromise = null;
     this.#ensureLock = null;
   }
 
   async generateKeypair(): Promise<KeypairType<string>> {
-    const pool = await this.#ensurePool();
-    const result = await pool.generateKeypair();
-    return {
-      publicKey: result.publicKey,
-      privateKey: result.privateKey,
-    };
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.generateKeypair()));
   }
 
   async createEIP712(
@@ -138,63 +148,23 @@ export class RelayerNode implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
-    const pool = await this.#ensurePool();
-    const result = await pool.createEIP712({
-      publicKey,
-      contractAddresses,
-      startTimestamp,
-      durationDays,
-    });
-
-    const domain = {
-      name: result.domain.name,
-      version: result.domain.version,
-      chainId: result.domain.chainId,
-      verifyingContract: result.domain.verifyingContract,
-    };
-
-    return {
-      domain,
-      types: {
-        EIP712Domain: buildEIP712DomainType(domain),
-        UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
-      },
-      message: {
-        publicKey: result.message.publicKey,
-        contractAddresses: result.message.contractAddresses,
-        startTimestamp: result.message.startTimestamp,
-        durationDays: result.message.durationDays,
-        extraData: result.message.extraData,
-      },
-    };
+    return this.#runEffect(
+      Effect.flatMap(Relayer, (r) =>
+        r.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays),
+      ),
+    );
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      const result = await pool.encrypt(params);
-      return { handles: result.handles, inputProof: result.inputProof };
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.encrypt(params)));
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      const result = await pool.userDecrypt(params);
-      return result.clearValues;
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.userDecrypt(params)));
   }
 
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      const result = await pool.publicDecrypt(handles);
-      return {
-        clearValues: result.clearValues,
-        abiEncodedClearValues: result.abiEncodedClearValues,
-        decryptionProof: result.decryptionProof,
-      };
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.publicDecrypt(handles)));
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -204,45 +174,39 @@ export class RelayerNode implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const pool = await this.#ensurePool();
-    return pool.createDelegatedUserDecryptEIP712({
-      publicKey,
-      contractAddresses,
-      delegatorAddress,
-      startTimestamp,
-      durationDays,
-    });
+    return this.#runEffect(
+      Effect.flatMap(Relayer, (r) =>
+        r.createDelegatedUserDecryptEIP712(
+          publicKey,
+          contractAddresses,
+          delegatorAddress,
+          startTimestamp,
+          durationDays,
+        ),
+      ),
+    );
   }
 
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      const result = await pool.delegatedUserDecrypt(params);
-      return result.clearValues;
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.delegatedUserDecrypt(params)));
   }
 
   async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    return withRetry(async () => {
-      const pool = await this.#ensurePool();
-      return pool.requestZKProofVerification(zkProof);
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.requestZKProofVerification(zkProof)));
   }
 
   async getPublicKey(): Promise<{
     publicKeyId: string;
     publicKey: Uint8Array;
   } | null> {
-    const pool = await this.#ensurePool();
-    return (await pool.getPublicKey()).result;
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.getPublicKey()));
   }
 
   async getPublicParams(
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
-    const pool = await this.#ensurePool();
-    return (await pool.getPublicParams(bits)).result;
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.getPublicParams(bits)));
   }
 }

@@ -26,9 +26,11 @@ function isTransient(error: unknown): boolean {
   );
 }
 
-const transientSchedule = Schedule.exponential("500 millis").pipe(
+const TransientSchedule = Schedule.exponential("500 millis").pipe(
   Schedule.intersect(Schedule.recurs(2)),
 );
+
+export const WhileTransient = TransientSchedule.pipe(Schedule.whileInput(isTransient));
 
 /**
  * Wrap an effect with transient-error retry logic.
@@ -36,7 +38,5 @@ const transientSchedule = Schedule.exponential("500 millis").pipe(
  * Non-transient errors fail immediately.
  */
 export function retryTransient<A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> {
-  return effect.pipe(
-    Effect.retry(transientSchedule.pipe(Schedule.whileInput((error: E) => isTransient(error)))),
-  );
+  return effect.pipe(Effect.retry(WhileTransient));
 }

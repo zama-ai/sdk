@@ -1,3 +1,4 @@
+import { Effect, Layer } from "effect";
 import type {
   ClearValueType,
   InputProofBytesType,
@@ -19,8 +20,10 @@ import type {
 } from "./relayer-sdk.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
-import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
+import { mergeFhevmConfig } from "./relayer-utils";
 import { ZamaError, EncryptionFailedError } from "../token/errors";
+import { Relayer } from "../services/Relayer";
+import { buildRelayerService } from "./relayer-service";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -59,6 +62,7 @@ const CDN_INTEGRITY =
  */
 export class RelayerWeb implements RelayerSDK {
   #workerClient: RelayerWorkerClient | null = null;
+  #layer: Layer.Layer<Relayer> | null = null;
   #initPromise: Promise<RelayerWorkerClient> | null = null;
   #ensureLock: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
@@ -134,6 +138,7 @@ export class RelayerWeb implements RelayerSDK {
     if (this.#terminated) {
       this.#terminated = false;
       this.#workerClient = null;
+      this.#layer = null;
       this.#initPromise = null;
       this.#resolvedChainId = null;
     }
@@ -144,6 +149,7 @@ export class RelayerWeb implements RelayerSDK {
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
       this.#workerClient?.terminate();
       this.#workerClient = null;
+      this.#layer = null;
       this.#initPromise = null;
     }
 
@@ -171,20 +177,34 @@ export class RelayerWeb implements RelayerSDK {
     return this.#initPromise;
   }
 
-  /**
-   * Initialize the worker (called once via promise lock).
-   */
   async #initWorker(): Promise<RelayerWorkerClient> {
     const workerConfig = await this.#getWorkerConfig();
     const client = new RelayerWorkerClient(workerConfig);
     await client.initWorker();
-    // If terminate() was called while we were initializing, clean up immediately
     if (this.#terminated) {
       client.terminate();
       throw new Error("RelayerWeb was terminated during initialization");
     }
     this.#workerClient = client;
     return client;
+  }
+
+  /** Run an Effect program against the Relayer service backed by the current worker. */
+  async #runEffect<A, E>(effect: Effect.Effect<A, E, Relayer>): Promise<A> {
+    const client = await this.#ensureWorker();
+    if (!this.#layer) {
+      this.#layer = Layer.succeed(
+        Relayer,
+        buildRelayerService(client, () => {
+          const token = this.#config.security?.getCsrfToken?.() ?? "";
+          if (token) {
+            return Effect.tryPromise(() => client.updateCsrf(token)).pipe(Effect.orDie);
+          }
+          return Effect.void;
+        }),
+      );
+    }
+    return Effect.runPromise(effect.pipe(Effect.provide(this.#layer)));
   }
 
   /**
@@ -197,123 +217,40 @@ export class RelayerWeb implements RelayerSDK {
       this.#workerClient.terminate();
       this.#workerClient = null;
     }
+    this.#layer = null;
     this.#initPromise = null;
     this.#ensureLock = null;
   }
 
-  /**
-   * Refresh the CSRF token in the worker.
-   * Call this before making authenticated network requests.
-   */
-  async #refreshCsrfToken(): Promise<void> {
-    if (this.#workerClient) {
-      const token = this.#config.security?.getCsrfToken?.() ?? "";
-      if (token) {
-        await this.#workerClient.updateCsrf(token);
-      }
-    }
-  }
-
-  /**
-   * Generate a keypair for FHE operations.
-   */
   async generateKeypair(): Promise<KeypairType<string>> {
-    const worker = await this.#ensureWorker();
-    const result = await worker.generateKeypair();
-    return {
-      publicKey: result.publicKey,
-      privateKey: result.privateKey,
-    };
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.generateKeypair()));
   }
 
-  /**
-   * Create EIP712 typed data for user decryption authorization.
-   */
   async createEIP712(
     publicKey: string,
     contractAddresses: Address[],
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
-    const worker = await this.#ensureWorker();
-    const result = await worker.createEIP712({
-      publicKey,
-      contractAddresses,
-      startTimestamp,
-      durationDays,
-    });
-
-    const domain = {
-      name: result.domain.name,
-      version: result.domain.version,
-      chainId: result.domain.chainId,
-      verifyingContract: result.domain.verifyingContract,
-    };
-
-    return {
-      domain,
-      types: {
-        EIP712Domain: buildEIP712DomainType(domain),
-        UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
-      },
-      message: {
-        publicKey: result.message.publicKey,
-        contractAddresses: result.message.contractAddresses,
-        startTimestamp: result.message.startTimestamp,
-        durationDays: result.message.durationDays,
-        extraData: result.message.extraData,
-      },
-    };
+    return this.#runEffect(
+      Effect.flatMap(Relayer, (r) =>
+        r.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays),
+      ),
+    );
   }
 
-  /**
-   * Encrypt values for use in smart contract calls.
-   * Each value must specify its FHE type (ebool, euint4–256, eaddress).
-   */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    const { values, contractAddress, userAddress } = params;
-
-    return withRetry(async () => {
-      const worker = await this.#ensureWorker();
-      await this.#refreshCsrfToken();
-      const result = await worker.encrypt({ values, contractAddress, userAddress });
-      return { handles: result.handles, inputProof: result.inputProof };
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.encrypt(params)));
   }
 
-  /**
-   * Decrypt ciphertexts using user's private key.
-   * Requires a valid EIP712 signature.
-   */
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    return withRetry(async () => {
-      const worker = await this.#ensureWorker();
-      await this.#refreshCsrfToken();
-      const result = await worker.userDecrypt(params);
-      return result.clearValues;
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.userDecrypt(params)));
   }
 
-  /**
-   * Public decryption - no authorization needed.
-   * Used for publicly visible encrypted values.
-   */
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    return withRetry(async () => {
-      const worker = await this.#ensureWorker();
-      await this.#refreshCsrfToken();
-      const result = await worker.publicDecrypt(handles);
-      return {
-        clearValues: result.clearValues,
-        abiEncodedClearValues: result.abiEncodedClearValues,
-        decryptionProof: result.decryptionProof,
-      };
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.publicDecrypt(handles)));
   }
 
-  /**
-   * Create EIP712 typed data for delegated user decryption authorization.
-   */
   async createDelegatedUserDecryptEIP712(
     publicKey: string,
     contractAddresses: Address[],
@@ -321,60 +258,39 @@ export class RelayerWeb implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const worker = await this.#ensureWorker();
-    return worker.createDelegatedUserDecryptEIP712({
-      publicKey,
-      contractAddresses,
-      delegatorAddress,
-      startTimestamp,
-      durationDays,
-    });
+    return this.#runEffect(
+      Effect.flatMap(Relayer, (r) =>
+        r.createDelegatedUserDecryptEIP712(
+          publicKey,
+          contractAddresses,
+          delegatorAddress,
+          startTimestamp,
+          durationDays,
+        ),
+      ),
+    );
   }
 
-  /**
-   * Decrypt ciphertexts via delegation.
-   * Requires a valid EIP712 signature from the delegator.
-   */
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    return withRetry(async () => {
-      const worker = await this.#ensureWorker();
-      await this.#refreshCsrfToken();
-      const result = await worker.delegatedUserDecrypt(params);
-      return result.clearValues;
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.delegatedUserDecrypt(params)));
   }
 
-  /**
-   * Submit a ZK proof to the relayer for verification.
-   */
   async requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    return withRetry(async () => {
-      const worker = await this.#ensureWorker();
-      await this.#refreshCsrfToken();
-      return worker.requestZKProofVerification(zkProof);
-    });
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.requestZKProofVerification(zkProof)));
   }
 
-  /**
-   * Get the TFHE compact public key.
-   */
   async getPublicKey(): Promise<{
     publicKeyId: string;
     publicKey: Uint8Array;
   } | null> {
-    const worker = await this.#ensureWorker();
-    return (await worker.getPublicKey()).result;
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.getPublicKey()));
   }
 
-  /**
-   * Get public parameters for encryption capacity.
-   */
   async getPublicParams(
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
-    const worker = await this.#ensureWorker();
-    return (await worker.getPublicParams(bits)).result;
+    return this.#runEffect(Effect.flatMap(Relayer, (r) => r.getPublicParams(bits)));
   }
 }
