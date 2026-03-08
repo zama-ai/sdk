@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 import type {
   ClearValueType,
   InputProofBytesType,
@@ -23,16 +23,23 @@ import { EncryptionFailed, DecryptionFailed, RelayerRequestFailed } from "../err
 import { buildEIP712DomainType, mergeFhevmConfig } from "./relayer-utils";
 import { retryTransient } from "./retry-policy";
 
+export class RelayerNodeConfiguration extends Context.Tag("RelayerNodeConfiguration")<
+  RelayerNodeConfiguration,
+  RelayerNodeConfig
+>() {}
+
 /**
- * Create an Effect Layer that provides the Relayer service backed by a Node.js worker pool.
+ * Effect Layer that provides the Relayer service backed by a Node.js worker pool.
  *
  * The pool is initialized when the layer is built and terminated when the
  * Effect scope closes, using `acquireRelease` for safe resource management.
  */
-export function makeRelayerNode(config: RelayerNodeConfig): Layer.Layer<Relayer, EncryptionFailed> {
-  return Layer.scoped(
+export const RelayerNodeLive: Layer.Layer<Relayer, EncryptionFailed, RelayerNodeConfiguration> =
+  Layer.scoped(
     Relayer,
     Effect.gen(function* () {
+      const config = yield* RelayerNodeConfiguration;
+
       // Acquire the worker pool, release on scope close
       const pool = yield* Effect.acquireRelease(
         // Acquire: init the pool
@@ -246,4 +253,3 @@ export function makeRelayerNode(config: RelayerNodeConfig): Layer.Layer<Relayer,
       };
     }),
   );
-}

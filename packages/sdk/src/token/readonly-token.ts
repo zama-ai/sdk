@@ -9,15 +9,17 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 
-import { makeSignerLayer, type Signer } from "../services/Signer";
-import { makeRelayerLayer, type Relayer } from "../services/Relayer";
+import { SignerConfig, SignerLive, type Signer } from "../services/Signer";
+import { RelayerConfig, RelayerLive, type Relayer } from "../services/Relayer";
 import {
-  makeCredentialStorageLayer,
-  makeSessionStorageLayer,
+  CredentialStorageConfig,
+  CredentialStorageLive,
+  SessionStorageConfig,
+  SessionStorageLive,
   type CredentialStorage,
   type SessionStorage,
 } from "../services/Storage";
-import { makeEventEmitterLayer, type EventEmitter } from "../services/EventEmitter";
+import { EventEmitterConfig, EventEmitterLive, type EventEmitter } from "../services/EventEmitter";
 import {
   isConfidential as effectIsConfidential,
   isWrapper as effectIsWrapper,
@@ -113,11 +115,21 @@ export class ReadonlyToken {
     this.#storage = config.storage;
     this.#onEvent = config.onEvent;
     this.#layer = Layer.mergeAll(
-      makeSignerLayer(config.signer),
-      makeRelayerLayer(config.relayer),
-      makeCredentialStorageLayer(config.storage),
-      makeSessionStorageLayer(config.sessionStorage),
-      makeEventEmitterLayer(config.onEvent),
+      SignerLive,
+      RelayerLive,
+      CredentialStorageLive,
+      SessionStorageLive,
+      EventEmitterLive,
+    ).pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(SignerConfig, config.signer),
+          Layer.succeed(RelayerConfig, config.relayer),
+          Layer.succeed(CredentialStorageConfig, config.storage),
+          Layer.succeed(SessionStorageConfig, config.sessionStorage),
+          Layer.succeed(EventEmitterConfig, { listener: config.onEvent }),
+        ),
+      ),
     );
   }
 

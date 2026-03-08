@@ -67,7 +67,7 @@ export { asyncLocalStorage, AsyncLocalMapStorage } from "../token/async-local-st
 export type { GenericStorage } from "../token/token.types";
 
 // Effect layer factories
-export { makeRelayerNode } from "../relayer/relayer-node.layer";
+export { RelayerNodeLive, RelayerNodeConfiguration } from "../relayer/relayer-node.layer";
 
 // Network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";

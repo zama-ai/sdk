@@ -10,11 +10,24 @@ export class EventEmitter extends Context.Tag("EventEmitter")<
   EventEmitterService
 >() {}
 
-export function makeEventEmitterLayer(listener?: ZamaSDKEventListener): Layer.Layer<EventEmitter> {
-  return Layer.succeed(EventEmitter, {
-    emit: (event) =>
-      Effect.sync(() => {
-        listener?.({ ...event, timestamp: Date.now() } as never);
-      }),
-  });
+export interface EventEmitterOptions {
+  readonly listener?: ZamaSDKEventListener;
 }
+
+export class EventEmitterConfig extends Context.Tag("EventEmitterConfig")<
+  EventEmitterConfig,
+  EventEmitterOptions
+>() {}
+
+export const EventEmitterLive: Layer.Layer<EventEmitter, never, EventEmitterConfig> = Layer.effect(
+  EventEmitter,
+  Effect.gen(function* () {
+    const { listener } = yield* EventEmitterConfig;
+    return {
+      emit: (event) =>
+        Effect.sync(() => {
+          listener?.({ ...event, timestamp: Date.now() } as never);
+        }),
+    };
+  }),
+);

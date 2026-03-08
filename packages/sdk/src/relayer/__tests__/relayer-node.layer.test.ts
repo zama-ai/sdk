@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { Relayer } from "../../services/Relayer";
 import type { RelayerNodeConfig } from "../relayer-node";
 
@@ -82,15 +82,15 @@ const mockConfig: RelayerNodeConfig = {
   transports: { 1: {} },
 };
 
-describe("makeRelayerNode", () => {
+describe("RelayerNodeLive", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   // Lazy import to ensure mocks are in place
   async function getLayer() {
-    const { makeRelayerNode } = await import("../relayer-node.layer");
-    return makeRelayerNode(mockConfig);
+    const { RelayerNodeLive, RelayerNodeConfiguration } = await import("../relayer-node.layer");
+    return RelayerNodeLive.pipe(Layer.provide(Layer.succeed(RelayerNodeConfiguration, mockConfig)));
   }
 
   it("provides a working Relayer service (generateKeypair)", async () => {

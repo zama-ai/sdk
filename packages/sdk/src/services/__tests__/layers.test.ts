@@ -1,22 +1,26 @@
 import { describe, it, expect, vi } from "vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import {
   Signer,
+  SignerConfig,
+  SignerLive,
   CredentialStorage,
+  CredentialStorageConfig,
+  CredentialStorageLive,
   SessionStorage,
+  SessionStorageConfig,
+  SessionStorageLive,
   EventEmitter,
-  makeSignerLayer,
-  makeCredentialStorageLayer,
-  makeSessionStorageLayer,
-  makeEventEmitterLayer,
+  EventEmitterConfig,
+  EventEmitterLive,
 } from "../index";
 import type { GenericSigner } from "../../token/token.types";
 import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
 import type { ZamaSDKEventInput } from "../../events/sdk-events";
 import { MemoryStorage } from "../../token/memory-storage";
 
-describe("Layer factories", () => {
-  it("makeSignerLayer wraps GenericSigner into Signer service", async () => {
+describe("Live layers", () => {
+  it("SignerLive wraps GenericSigner into Signer service", async () => {
     const mockSigner: GenericSigner = {
       getAddress: vi.fn().mockResolvedValue("0xaddr"),
       getChainId: vi.fn().mockResolvedValue(1),
@@ -26,7 +30,7 @@ describe("Layer factories", () => {
       waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     };
 
-    const layer = makeSignerLayer(mockSigner);
+    const layer = SignerLive.pipe(Layer.provide(Layer.succeed(SignerConfig, mockSigner)));
     const program = Effect.gen(function* () {
       const signer = yield* Signer;
       return yield* signer.getAddress();
@@ -36,7 +40,7 @@ describe("Layer factories", () => {
     expect(result).toBe("0xaddr");
   });
 
-  it("makeSignerLayer signTypedData maps rejection to SigningRejected", async () => {
+  it("SignerLive signTypedData maps rejection to SigningRejected", async () => {
     const mockSigner: GenericSigner = {
       getAddress: vi.fn().mockResolvedValue("0xaddr"),
       getChainId: vi.fn().mockResolvedValue(1),
@@ -48,7 +52,7 @@ describe("Layer factories", () => {
       waitForTransactionReceipt: vi.fn(),
     };
 
-    const layer = makeSignerLayer(mockSigner);
+    const layer = SignerLive.pipe(Layer.provide(Layer.succeed(SignerConfig, mockSigner)));
     const program = Effect.gen(function* () {
       const signer = yield* Signer;
       return yield* signer.signTypedData({} as unknown as EIP712TypedData);
@@ -58,9 +62,11 @@ describe("Layer factories", () => {
     expect(exit._tag).toBe("Failure");
   });
 
-  it("makeCredentialStorageLayer wraps GenericStorage", async () => {
+  it("CredentialStorageLive wraps GenericStorage", async () => {
     const store = new MemoryStorage();
-    const layer = makeCredentialStorageLayer(store);
+    const layer = CredentialStorageLive.pipe(
+      Layer.provide(Layer.succeed(CredentialStorageConfig, store)),
+    );
     const program = Effect.gen(function* () {
       const storage = yield* CredentialStorage;
       yield* storage.set("key", "value");
@@ -71,9 +77,11 @@ describe("Layer factories", () => {
     expect(result).toBe("value");
   });
 
-  it("makeSessionStorageLayer wraps GenericStorage", async () => {
+  it("SessionStorageLive wraps GenericStorage", async () => {
     const store = new MemoryStorage();
-    const layer = makeSessionStorageLayer(store);
+    const layer = SessionStorageLive.pipe(
+      Layer.provide(Layer.succeed(SessionStorageConfig, store)),
+    );
     const program = Effect.gen(function* () {
       const storage = yield* SessionStorage;
       yield* storage.set("k", 42);
@@ -84,9 +92,11 @@ describe("Layer factories", () => {
     expect(result).toBe(42);
   });
 
-  it("makeEventEmitterLayer calls listener", async () => {
+  it("EventEmitterLive calls listener", async () => {
     const listener = vi.fn();
-    const layer = makeEventEmitterLayer(listener);
+    const layer = EventEmitterLive.pipe(
+      Layer.provide(Layer.succeed(EventEmitterConfig, { listener })),
+    );
     const program = Effect.gen(function* () {
       const emitter = yield* EventEmitter;
       yield* emitter.emit({ type: "test" } as unknown as ZamaSDKEventInput);
@@ -96,8 +106,8 @@ describe("Layer factories", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it("makeEventEmitterLayer works without listener", async () => {
-    const layer = makeEventEmitterLayer();
+  it("EventEmitterLive works without listener", async () => {
+    const layer = EventEmitterLive.pipe(Layer.provide(Layer.succeed(EventEmitterConfig, {})));
     const program = Effect.gen(function* () {
       const emitter = yield* EventEmitter;
       yield* emitter.emit({ type: "test" } as unknown as ZamaSDKEventInput);

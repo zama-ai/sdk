@@ -156,22 +156,28 @@ export {
 export type { RelayerError, TokenError } from "./errors";
 
 // Effect layer factories
-export { makeRelayerWeb } from "./relayer/relayer-web.layer";
+export { RelayerWebLive, RelayerWebConfiguration } from "./relayer/relayer-web.layer";
 
-// Effect service definitions & layer helpers
+// Effect service definitions & Live layers
 export { Relayer, Signer, CredentialStorage, SessionStorage, EventEmitter } from "./services";
 export type {
   RelayerService,
   SignerService,
   StorageService,
   EventEmitterService,
+  EventEmitterOptions,
 } from "./services";
 export {
-  makeSignerLayer,
-  makeRelayerLayer,
-  makeCredentialStorageLayer,
-  makeSessionStorageLayer,
-  makeEventEmitterLayer,
+  SignerConfig,
+  SignerLive,
+  RelayerConfig,
+  RelayerLive,
+  CredentialStorageConfig,
+  CredentialStorageLive,
+  SessionStorageConfig,
+  SessionStorageLive,
+  EventEmitterConfig,
+  EventEmitterLive,
 } from "./services";
 
 // Event decoders and types

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { Relayer } from "../../services/Relayer";
 import type { RelayerWebConfig } from "../relayer-sdk.types";
 
@@ -85,15 +85,15 @@ const mockConfig: RelayerWebConfig = {
   onStatusChange: vi.fn(),
 };
 
-describe("makeRelayerWeb", () => {
+describe("RelayerWebLive", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   // Lazy import to ensure mocks are in place
   async function getLayer() {
-    const { makeRelayerWeb } = await import("../relayer-web.layer");
-    return makeRelayerWeb(mockConfig);
+    const { RelayerWebLive, RelayerWebConfiguration } = await import("../relayer-web.layer");
+    return RelayerWebLive.pipe(Layer.provide(Layer.succeed(RelayerWebConfiguration, mockConfig)));
   }
 
   it("provides a working Relayer service", async () => {
@@ -216,8 +216,10 @@ describe("makeRelayerWeb", () => {
       ...mockConfig,
       security: { getCsrfToken: () => "csrf-token-123" },
     };
-    const { makeRelayerWeb } = await import("../relayer-web.layer");
-    const layer = makeRelayerWeb(configWithCsrf);
+    const { RelayerWebLive, RelayerWebConfiguration } = await import("../relayer-web.layer");
+    const layer = RelayerWebLive.pipe(
+      Layer.provide(Layer.succeed(RelayerWebConfiguration, configWithCsrf)),
+    );
 
     const program = Effect.gen(function* () {
       const relayer = yield* Relayer;

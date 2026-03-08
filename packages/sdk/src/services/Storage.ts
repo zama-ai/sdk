@@ -17,20 +17,38 @@ export class SessionStorage extends Context.Tag("SessionStorage")<
   StorageService
 >() {}
 
-function makeStorageService(storage: GenericStorage) {
-  return {
-    get: (key: string) => Effect.promise(() => storage.get(key)),
-    set: (key: string, value: unknown) => Effect.promise(() => storage.set(key, value)),
-    delete: (key: string) => Effect.promise(() => storage.delete(key)),
-  };
-}
+export class CredentialStorageConfig extends Context.Tag("CredentialStorageConfig")<
+  CredentialStorageConfig,
+  GenericStorage
+>() {}
 
-export function makeCredentialStorageLayer(
-  storage: GenericStorage,
-): Layer.Layer<CredentialStorage> {
-  return Layer.succeed(CredentialStorage, makeStorageService(storage));
-}
+export class SessionStorageConfig extends Context.Tag("SessionStorageConfig")<
+  SessionStorageConfig,
+  GenericStorage
+>() {}
 
-export function makeSessionStorageLayer(storage: GenericStorage): Layer.Layer<SessionStorage> {
-  return Layer.succeed(SessionStorage, makeStorageService(storage));
-}
+export const CredentialStorageLive: Layer.Layer<CredentialStorage, never, CredentialStorageConfig> =
+  Layer.effect(
+    CredentialStorage,
+    Effect.gen(function* () {
+      const storage = yield* CredentialStorageConfig;
+      return {
+        get: (key: string) => Effect.promise(() => storage.get(key)),
+        set: (key: string, value: unknown) => Effect.promise(() => storage.set(key, value)),
+        delete: (key: string) => Effect.promise(() => storage.delete(key)),
+      };
+    }),
+  );
+
+export const SessionStorageLive: Layer.Layer<SessionStorage, never, SessionStorageConfig> =
+  Layer.effect(
+    SessionStorage,
+    Effect.gen(function* () {
+      const storage = yield* SessionStorageConfig;
+      return {
+        get: (key: string) => Effect.promise(() => storage.get(key)),
+        set: (key: string, value: unknown) => Effect.promise(() => storage.set(key, value)),
+        delete: (key: string) => Effect.promise(() => storage.delete(key)),
+      };
+    }),
+  );
