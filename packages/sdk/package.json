@@ -75,9 +75,9 @@
   },
   "peerDependencies": {
     "@tanstack/query-core": ">=5",
-    "viem": ">=2",
+    "@zama-fhe/relayer-sdk": "~0.4.1",
     "ethers": ">=6",
-    "@zama-fhe/relayer-sdk": "~0.4.1"
+    "viem": ">=2"
   },
   "sideEffects": false,
   "peerDependenciesMeta": {
@@ -96,5 +96,8 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "dependencies": {
+    "effect": "^3.19.19"
   }
 }
