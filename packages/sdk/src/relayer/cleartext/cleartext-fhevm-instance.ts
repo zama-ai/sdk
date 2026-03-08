@@ -1,13 +1,24 @@
 import { privateKeyToAccount } from "viem/accounts";
-import { concat, getAddress, pad, parseAbi, toHex } from "viem";
-import type { PublicClient } from "viem";
+import {
+  concat,
+  createPublicClient,
+  custom,
+  getAddress,
+  http,
+  keccak256,
+  pad,
+  parseAbi,
+  toBytes,
+  toHex,
+  type Hex,
+  type PublicClient,
+} from "viem";
 import { mainnet, sepolia } from "viem/chains";
 import type {
   ClearValueType,
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
-  KmsEIP712DomainType,
   KmsPublicDecryptEIP712Type,
   KmsUserDecryptEIP712Type,
   ZKProofLike,
@@ -25,12 +36,19 @@ import type {
 } from "../relayer-sdk.types";
 import {
   DELEGATED_USER_DECRYPT_EIP712,
+  INPUT_VERIFICATION_EIP712,
   KMS_DECRYPTION_EIP712,
   USER_DECRYPT_EIP712,
 } from "./eip712";
-import { CleartextEncryptedInput } from "./encrypted-input";
-import { FheType, MOCK_KMS_SIGNER_PK } from "./constants";
-import type { CleartextInstanceConfig } from "./types";
+import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "./constants";
+import {
+  encryptionBitsFromFheTypeId,
+  fheTypeIdFromName,
+  isFheTypeName,
+  type FheTypeId,
+} from "./fhe-type";
+import { computeInputHandle, computeMockCiphertext } from "./handle";
+import type { CleartextConfig } from "./types";
 import {
   ConfigurationError,
   DecryptionFailedError,
@@ -39,6 +57,7 @@ import {
 import { normalizeHandle } from "../../utils";
 
 const KMS_SIGNER = privateKeyToAccount(MOCK_KMS_SIGNER_PK as `0x${string}`);
+const INPUT_SIGNER = privateKeyToAccount(MOCK_INPUT_SIGNER_PK);
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -68,29 +87,76 @@ const KMS_DECRYPTION_TYPES = {
   PublicDecryptVerification: KMS_DECRYPTION_EIP712.types.PublicDecryptVerification,
 } satisfies KmsPublicDecryptEIP712Type["types"];
 
+const FORBIDDEN_CHAIN_IDS = new Set([BigInt(mainnet.id), BigInt(sepolia.id)]);
+
+// FheTypeId constants for hot-path comparisons
+const EBOOL_ID: FheTypeId = 0;
+const EADDRESS_ID: FheTypeId = 7;
+
 function decodeClearValueType(handle: Handle, rawValue: bigint): ClearValueType {
   const typeByte = Number((BigInt(handle) >> 8n) & 0xffn);
-  if (typeByte === FheType.Bool) return rawValue !== 0n;
-  if (typeByte === FheType.Uint160) return toHex(rawValue, { size: 20 });
+  if (typeByte === EBOOL_ID) return rawValue !== 0n;
+  if (typeByte === EADDRESS_ID) return toHex(rawValue, { size: 20 });
   return rawValue;
+}
+
+function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
+  fheType: FheTypeId;
+  value: bigint;
+} {
+  if (!isFheTypeName(entry.type)) {
+    throw new EncryptionFailedError(`Unsupported FHE type: ${entry.type}`);
+  }
+
+  const fheType = fheTypeIdFromName(entry.type);
+
+  let value: bigint;
+  if (entry.type === "ebool") {
+    if (typeof entry.value === "boolean") {
+      value = entry.value ? 1n : 0n;
+    } else {
+      value = entry.value;
+      if (value !== 0n && value !== 1n) {
+        throw new EncryptionFailedError("Bool value must be 0, 1, true, or false");
+      }
+    }
+  } else if (entry.type === "eaddress") {
+    value = BigInt(getAddress(entry.value));
+  } else {
+    value = entry.value;
+  }
+
+  if (value < 0n) {
+    throw new EncryptionFailedError("Only non-negative cleartext values are supported");
+  }
+
+  const bits = encryptionBitsFromFheTypeId(fheType);
+  const maxValue = (1n << BigInt(bits)) - 1n;
+  if (value > maxValue) {
+    throw new EncryptionFailedError(
+      `Value ${value} exceeds max ${maxValue} for FheType ${fheType}`,
+    );
+  }
+
+  return { fheType, value };
 }
 
 export class CleartextFhevmInstance implements RelayerSDK {
   readonly #client: PublicClient;
-  readonly #config: CleartextInstanceConfig;
+  readonly #config: CleartextConfig;
   readonly #chainIdBigInt: bigint;
 
-  static readonly #FORBIDDEN_CHAIN_IDS = new Set([BigInt(mainnet.id), BigInt(sepolia.id)]);
-
-  constructor(client: PublicClient, config: CleartextInstanceConfig) {
+  constructor(config: CleartextConfig) {
     this.#chainIdBigInt = BigInt(config.chainId);
-    if (CleartextFhevmInstance.#FORBIDDEN_CHAIN_IDS.has(this.#chainIdBigInt)) {
+    if (FORBIDDEN_CHAIN_IDS.has(this.#chainIdBigInt)) {
       throw new ConfigurationError(
         `Cleartext mode is not allowed on chain ${config.chainId}. ` +
           `It is intended for local development and testing only.`,
       );
     }
-    this.#client = client;
+    this.#client = createPublicClient({
+      transport: typeof config.network === "string" ? http(config.network) : custom(config.network),
+    });
     this.#config = config;
   }
 
@@ -112,7 +178,10 @@ export class CleartextFhevmInstance implements RelayerSDK {
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
     return {
-      domain: this.#createUserDecryptionDomain(),
+      domain: USER_DECRYPT_EIP712.domain(
+        this.#config.chainId,
+        this.#config.verifyingContractAddressDecryption,
+      ) as EIP712TypedData["domain"],
       types: USER_DECRYPT_TYPES,
       primaryType: "UserDecryptRequestVerification",
       message: {
@@ -126,47 +195,61 @@ export class CleartextFhevmInstance implements RelayerSDK {
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    const input = new CleartextEncryptedInput(
-      params.contractAddress,
-      params.userAddress,
-      this.#config,
+    const entries = params.values.map(normalizeEncryptValue);
+    const contractAddress = getAddress(params.contractAddress);
+    const userAddress = getAddress(params.userAddress);
+
+    const mockCiphertexts = entries.map(({ fheType, value }) =>
+      computeMockCiphertext(fheType, value, crypto.getRandomValues(new Uint8Array(32))),
     );
 
-    for (const entry of params.values) {
-      switch (entry.type) {
-        case "ebool":
-          input.addBool(entry.value);
-          break;
-        case "euint8":
-          input.add8(entry.value);
-          break;
-        case "euint16":
-          input.add16(entry.value);
-          break;
-        case "euint32":
-          input.add32(entry.value);
-          break;
-        case "euint64":
-          input.add64(entry.value);
-          break;
-        case "euint128":
-          input.add128(entry.value);
-          break;
-        case "eaddress":
-          input.addAddress(entry.value);
-          break;
-        case "euint256":
-          input.add256(entry.value);
-          break;
-        default: {
-          const unreachable: never = entry;
-          void unreachable;
-          throw new EncryptionFailedError("Unsupported FHE type");
-        }
-      }
-    }
+    const ciphertextBlob = keccak256(mockCiphertexts.length > 0 ? concat(mockCiphertexts) : "0x");
 
-    return input.encrypt();
+    const handles = entries.map(({ fheType }, index) =>
+      computeInputHandle(
+        ciphertextBlob,
+        index,
+        fheType,
+        this.#config.aclContractAddress as Address,
+        this.#chainIdBigInt,
+      ),
+    );
+
+    const cleartextParts = entries.map(({ value }) => pad(toHex(value), { size: 32 }));
+    const cleartextBytes: Hex = cleartextParts.length > 0 ? concat(cleartextParts) : "0x";
+
+    const signature = await INPUT_SIGNER.signTypedData({
+      domain: INPUT_VERIFICATION_EIP712.domain(
+        this.#config.gatewayChainId,
+        this.#config.verifyingContractAddressInputVerification,
+      ),
+      types: {
+        CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
+      },
+      primaryType: "CiphertextVerification",
+      message: {
+        ctHandles: handles,
+        userAddress,
+        contractAddress,
+        contractChainId: this.#chainIdBigInt,
+        extraData: cleartextBytes,
+      },
+    });
+
+    const inputProof = toBytes(
+      concat([
+        toHex(new Uint8Array([handles.length])),
+        toHex(new Uint8Array([1])),
+        ...handles,
+        signature,
+        cleartextBytes,
+      ]),
+    );
+
+    return {
+      handles: handles.map((handle) => toBytes(handle)),
+      inputProof,
+    };
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
@@ -247,7 +330,10 @@ export class CleartextFhevmInstance implements RelayerSDK {
     };
 
     return {
-      domain: this.#createKmsDecryptionDomain(),
+      domain: DELEGATED_USER_DECRYPT_EIP712.domain(
+        this.#chainIdBigInt,
+        this.#config.verifyingContractAddressDecryption,
+      ) as KmsDelegatedUserDecryptEIP712Type["domain"],
       types: DELEGATED_USER_DECRYPT_TYPES,
       primaryType: "DelegatedUserDecryptRequestVerification",
       message,
@@ -300,24 +386,6 @@ export class CleartextFhevmInstance implements RelayerSDK {
         decodeClearValueType(handle, values[index]!),
       ]),
     );
-  }
-
-  #createUserDecryptionDomain(): EIP712TypedData["domain"] {
-    return {
-      name: "Decryption",
-      version: "1",
-      chainId: this.#config.chainId,
-      verifyingContract: this.#config.verifyingContractAddressDecryption as Address,
-    };
-  }
-
-  #createKmsDecryptionDomain(): KmsEIP712DomainType {
-    return {
-      name: "Decryption",
-      version: "1",
-      chainId: this.#chainIdBigInt,
-      verifyingContract: this.#config.verifyingContractAddressDecryption as Address,
-    };
   }
 
   async #assertDecryptAuthorization(

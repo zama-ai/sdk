@@ -1,6 +1,4 @@
 import {
-  createPublicClient,
-  custom,
   decodeFunctionData,
   encodeFunctionResult,
   hexToBigInt,
@@ -10,15 +8,16 @@ import {
   concat,
   pad,
 } from "viem";
-import type { PublicClient } from "viem";
+import type { EIP1193Provider } from "viem";
 import { describe, expect, it } from "vitest";
 import { CleartextFhevmInstance } from "../cleartext-fhevm-instance";
 import type { Handle } from "../../relayer-sdk.types";
+import type { CleartextConfig } from "../types";
 import {
-  CLEAR_TEXT_MOCK_CONFIG,
   CONTRACT_ADDRESS,
   TEST_FHEVM_ADDRESSES,
   USER_ADDRESS,
+  CLEAR_TEXT_MOCK_CONFIG,
 } from "./fixtures";
 
 const ACL_ABI = parseAbi([
@@ -37,77 +36,89 @@ type MockCall = { method: string; params: unknown[] };
 type UserDecryptParams = Parameters<CleartextFhevmInstance["userDecrypt"]>[0];
 const asHandle = (value: string): Handle => value as Handle;
 
-function createMockClient(options: MockClientOptions = {}) {
+function createMockProvider(options: MockClientOptions = {}) {
   const calls: MockCall[] = [];
 
-  const client = createPublicClient({
-    transport: custom({
-      async request({ method, params }: { method: string; params?: unknown[] }) {
-        const paramList = params ?? [];
-        calls.push({ method, params: paramList });
+  const provider: EIP1193Provider = {
+    async request({ method, params }: { method: string; params?: unknown[] }) {
+      const paramList = (params ?? []) as unknown[];
+      calls.push({ method, params: paramList });
 
-        if (method === "eth_call") {
-          const tx = paramList[0] as { to: string; data: string };
-          const to = tx.to.toLowerCase();
+      if (method === "eth_call") {
+        const tx = paramList[0] as { to: string; data: string };
+        const to = tx.to.toLowerCase();
 
-          if (to === TEST_FHEVM_ADDRESSES.acl.toLowerCase()) {
-            const parsed = decodeFunctionData({
-              abi: ACL_ABI,
-              data: tx.data as `0x${string}`,
-            });
-            if (!parsed) {
-              throw new Error("Unable to parse ACL call");
-            }
-
-            if (parsed.functionName === "persistAllowed") {
-              const [handle, account] = parsed.args;
-              const allowed = options.persistAllowed
-                ? options.persistAllowed(String(handle), String(account))
-                : true;
-              return encodeFunctionResult({
-                abi: ACL_ABI,
-                functionName: "persistAllowed",
-                result: allowed,
-              });
-            }
-
-            if (parsed.functionName === "isAllowedForDecryption") {
-              const [handle] = parsed.args;
-              const allowed = options.isAllowedForDecryption
-                ? options.isAllowedForDecryption(String(handle))
-                : true;
-              return encodeFunctionResult({
-                abi: ACL_ABI,
-                functionName: "isAllowedForDecryption",
-                result: allowed,
-              });
-            }
+        if (to === TEST_FHEVM_ADDRESSES.acl.toLowerCase()) {
+          const parsed = decodeFunctionData({
+            abi: ACL_ABI,
+            data: tx.data as `0x${string}`,
+          });
+          if (!parsed) {
+            throw new Error("Unable to parse ACL call");
           }
 
-          if (to === TEST_FHEVM_ADDRESSES.executor.toLowerCase()) {
-            const parsed = decodeFunctionData({
-              abi: EXECUTOR_ABI,
-              data: tx.data as `0x${string}`,
-            });
-            if (!parsed || parsed.functionName !== "plaintexts") {
-              throw new Error("Unable to parse executor call");
-            }
-            const [handle] = parsed.args;
-            const value = options.plaintexts?.[String(handle).toLowerCase()] ?? 0n;
+          if (parsed.functionName === "persistAllowed") {
+            const [handle, account] = parsed.args;
+            const allowed = options.persistAllowed
+              ? options.persistAllowed(String(handle), String(account))
+              : true;
             return encodeFunctionResult({
-              abi: EXECUTOR_ABI,
-              functionName: "plaintexts",
-              result: value,
+              abi: ACL_ABI,
+              functionName: "persistAllowed",
+              result: allowed,
+            });
+          }
+
+          if (parsed.functionName === "isAllowedForDecryption") {
+            const [handle] = parsed.args;
+            const allowed = options.isAllowedForDecryption
+              ? options.isAllowedForDecryption(String(handle))
+              : true;
+            return encodeFunctionResult({
+              abi: ACL_ABI,
+              functionName: "isAllowedForDecryption",
+              result: allowed,
             });
           }
         }
 
-        throw new Error(`Unexpected provider call: ${method}`);
-      },
-    }),
-  });
+        if (to === TEST_FHEVM_ADDRESSES.executor.toLowerCase()) {
+          const parsed = decodeFunctionData({
+            abi: EXECUTOR_ABI,
+            data: tx.data as `0x${string}`,
+          });
+          if (!parsed || parsed.functionName !== "plaintexts") {
+            throw new Error("Unable to parse executor call");
+          }
+          const [handle] = parsed.args;
+          const value = options.plaintexts?.[String(handle).toLowerCase()] ?? 0n;
+          return encodeFunctionResult({
+            abi: EXECUTOR_ABI,
+            functionName: "plaintexts",
+            result: value,
+          });
+        }
+      }
 
-  return { client: client as PublicClient, calls };
+      throw new Error(`Unexpected provider call: ${method}`);
+    },
+    on() {},
+    removeListener() {},
+  } as EIP1193Provider;
+
+  return { provider, calls };
+}
+
+function createInstance(options: MockClientOptions = {}): {
+  fhevm: CleartextFhevmInstance;
+  calls: MockCall[];
+} {
+  const { provider, calls } = createMockProvider(options);
+  const config: CleartextConfig = {
+    ...CLEAR_TEXT_MOCK_CONFIG,
+    network: provider,
+  };
+  return { fhevm: new CleartextFhevmInstance(config), calls };
 }
 
 function createUserDecryptParams(
@@ -139,32 +150,33 @@ function filterEthCallsTo(calls: MockCall[], to: string): MockCall[] {
 
 describe("CleartextFhevmInstance", () => {
   it("throws when configured with mainnet chain ID", () => {
-    const { client } = createMockClient();
+    const { provider } = createMockProvider();
 
     expect(
       () =>
-        new CleartextFhevmInstance(client, {
+        new CleartextFhevmInstance({
           ...CLEAR_TEXT_MOCK_CONFIG,
+          network: provider,
           chainId: 1,
         }),
     ).toThrow(/not allowed on chain 1/);
   });
 
   it("throws when configured with Sepolia chain ID", () => {
-    const { client } = createMockClient();
+    const { provider } = createMockProvider();
 
     expect(
       () =>
-        new CleartextFhevmInstance(client, {
+        new CleartextFhevmInstance({
           ...CLEAR_TEXT_MOCK_CONFIG,
+          network: provider,
           chainId: 11155111,
         }),
     ).toThrow(/not allowed on chain 11155111/);
   });
 
   it("generateKeypair returns distinct 32-byte hex strings", async () => {
-    const { client } = createMockClient();
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+    const { fhevm } = createInstance();
 
     const first = await fhevm.generateKeypair();
     const second = await fhevm.generateKeypair();
@@ -181,8 +193,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("createEIP712 returns a typed data payload for user decrypt requests", async () => {
-    const { client } = createMockClient();
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+    const { fhevm } = createInstance();
 
     const typedData = await fhevm.createEIP712(
       "0x" + "ab".repeat(32),
@@ -214,8 +225,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("encrypt returns handles and input proof bytes", async () => {
-    const { client } = createMockClient();
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+    const { fhevm } = createInstance();
 
     const encrypted = await fhevm.encrypt({
       values: [
@@ -232,8 +242,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("encrypt dispatches to correct add method based on FHE type", async () => {
-    const { client } = createMockClient();
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+    const { fhevm } = createInstance();
 
     const encrypted = await fhevm.encrypt({
       values: [
@@ -252,8 +261,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("encrypt throws on unsupported FHE type", async () => {
-    const { client } = createMockClient();
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+    const { fhevm } = createInstance();
 
     await expect(
       fhevm.encrypt({
@@ -265,12 +273,90 @@ describe("CleartextFhevmInstance", () => {
     ).rejects.toThrow(/Unsupported FHE type/);
   });
 
+  it("encrypt proof layout: [numHandles][1][handles...][signature][cleartexts...]", async () => {
+    const { fhevm } = createInstance();
+
+    const encrypted = await fhevm.encrypt({
+      values: [
+        { value: 42n, type: "euint8" },
+        { value: 99n, type: "euint8" },
+      ],
+      contractAddress: CONTRACT_ADDRESS,
+      userAddress: USER_ADDRESS,
+    });
+
+    const proof = encrypted.inputProof;
+    expect(proof[0]).toBe(2); // numHandles
+    expect(proof[1]).toBe(1); // version
+    expect(proof.length).toBe(195); // 2 + 2*32 + 65 + 2*32
+
+    // Handles in proof match returned handles
+    expect(toHex(proof.slice(2, 34))).toBe(toHex(encrypted.handles[0]!));
+    expect(toHex(proof.slice(34, 66))).toBe(toHex(encrypted.handles[1]!));
+
+    // Cleartext values at end
+    const clear0 = hexToBigInt(toHex(proof.slice(131, 163)));
+    const clear1 = hexToBigInt(toHex(proof.slice(163, 195)));
+    expect(clear0).toBe(42n);
+    expect(clear1).toBe(99n);
+  });
+
+  it("encrypt with no values returns empty handles and a proof header", async () => {
+    const { fhevm } = createInstance();
+
+    const encrypted = await fhevm.encrypt({
+      values: [],
+      contractAddress: CONTRACT_ADDRESS,
+      userAddress: USER_ADDRESS,
+    });
+
+    expect(encrypted.handles).toEqual([]);
+    expect(encrypted.inputProof[0]).toBe(0);
+    expect(encrypted.inputProof[1]).toBe(1);
+    expect(encrypted.inputProof.length).toBe(67); // 2 + 0 handles + 65 sig + 0 cleartexts
+  });
+
+  it("encrypt rejects negative values", async () => {
+    const { fhevm } = createInstance();
+
+    await expect(
+      fhevm.encrypt({
+        values: [{ value: -1n, type: "euint8" }],
+        contractAddress: CONTRACT_ADDRESS,
+        userAddress: USER_ADDRESS,
+      }),
+    ).rejects.toThrow(/non-negative/i);
+  });
+
+  it("encrypt rejects values exceeding bit width", async () => {
+    const { fhevm } = createInstance();
+
+    await expect(
+      fhevm.encrypt({
+        values: [{ value: 256n, type: "euint8" }],
+        contractAddress: CONTRACT_ADDRESS,
+        userAddress: USER_ADDRESS,
+      }),
+    ).rejects.toThrow(/exceeds max/i);
+  });
+
+  it("encrypt rejects bool values outside 0/1", async () => {
+    const { fhevm } = createInstance();
+
+    await expect(
+      fhevm.encrypt({
+        values: [{ value: 2n, type: "ebool" }],
+        contractAddress: CONTRACT_ADDRESS,
+        userAddress: USER_ADDRESS,
+      }),
+    ).rejects.toThrow(/must be 0, 1, true, or false/i);
+  });
+
   it("userDecrypt throws when ACL.persistAllowed returns false", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: () => false,
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(
       fhevm.userDecrypt(
@@ -284,14 +370,13 @@ describe("CleartextFhevmInstance", () => {
   it("userDecrypt returns cleartext values when ACL allows access", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
-    const { client, calls } = createMockClient({
+    const { fhevm, calls } = createInstance({
       persistAllowed: () => true,
       plaintexts: {
         [handleA.toLowerCase()]: 7n,
         [handleB.toLowerCase()]: 11n,
       },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.userDecrypt(
       createUserDecryptParams({
@@ -317,14 +402,13 @@ describe("CleartextFhevmInstance", () => {
     const handleB = asHandle("0x" + "bb".repeat(32));
     const normalizedB = toHex(hexToBigInt(handleB as `0x${string}`), { size: 32 });
 
-    const { client, calls } = createMockClient({
+    const { fhevm, calls } = createInstance({
       persistAllowed: (handle) => handle.toLowerCase() !== normalizedB.toLowerCase(),
       plaintexts: {
         [handleA.toLowerCase()]: 1n,
         [handleB.toLowerCase()]: 2n,
       },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(
       fhevm.userDecrypt(
@@ -342,14 +426,13 @@ describe("CleartextFhevmInstance", () => {
     const handle = asHandle("0x" + "cc".repeat(32));
     const persistAllowedAccounts: string[] = [];
 
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: (_handle, account) => {
         persistAllowedAccounts.push(account);
         return true;
       },
       plaintexts: { [handle.toLowerCase()]: 42n },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await fhevm.userDecrypt(
       createUserDecryptParams({
@@ -365,12 +448,11 @@ describe("CleartextFhevmInstance", () => {
 
   it("userDecrypt throws when contract is not authorized", async () => {
     const handle = asHandle("0x" + "cc".repeat(32));
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: (_handle, account) =>
         account.toLowerCase() !== CONTRACT_ADDRESS.toLowerCase(),
       plaintexts: { [handle.toLowerCase()]: 42n },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(fhevm.userDecrypt(createUserDecryptParams({ handles: [handle] }))).rejects.toThrow(
       /Contract.*not authorized/i,
@@ -379,11 +461,10 @@ describe("CleartextFhevmInstance", () => {
 
   it("userDecrypt throws when signer equals contract", async () => {
     const handle = asHandle("0x" + "cc".repeat(32));
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [handle.toLowerCase()]: 42n },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(
       fhevm.userDecrypt(
@@ -400,11 +481,10 @@ describe("CleartextFhevmInstance", () => {
     const handleUpper = asHandle("0x" + "AB".repeat(32));
     const normalizedHandle = toHex(hexToBigInt(handleUpper as `0x${string}`), { size: 32 });
 
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [normalizedHandle.toLowerCase()]: 55n },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.userDecrypt(
       createUserDecryptParams({
@@ -420,11 +500,10 @@ describe("CleartextFhevmInstance", () => {
 
   it("userDecrypt decodes ebool handle as boolean", async () => {
     const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [boolHandle.toLowerCase()]: 1n },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [boolHandle] }));
 
@@ -433,11 +512,10 @@ describe("CleartextFhevmInstance", () => {
 
   it("userDecrypt decodes ebool handle with value 0 as false", async () => {
     const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [boolHandle.toLowerCase()]: 0n },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [boolHandle] }));
 
@@ -447,11 +525,10 @@ describe("CleartextFhevmInstance", () => {
   it("userDecrypt decodes eaddress handle as hex string", async () => {
     const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
     const addressValue = BigInt("0x1000000000000000000000000000000000000001");
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [addressHandle.toLowerCase()]: addressValue },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [addressHandle] }));
 
@@ -462,10 +539,9 @@ describe("CleartextFhevmInstance", () => {
 
   it("publicDecrypt throws when ACL.isAllowedForDecryption returns false", async () => {
     const handle = asHandle("0x" + "34".repeat(32));
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       isAllowedForDecryption: () => false,
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(fhevm.publicDecrypt([handle])).rejects.toThrow(/not allowed/i);
   });
@@ -475,14 +551,13 @@ describe("CleartextFhevmInstance", () => {
     const handleB = asHandle("0x" + "ee".repeat(32));
     const normalizedB = toHex(hexToBigInt(handleB as `0x${string}`), { size: 32 });
 
-    const { client, calls } = createMockClient({
+    const { fhevm, calls } = createInstance({
       isAllowedForDecryption: (handle) => handle.toLowerCase() !== normalizedB.toLowerCase(),
       plaintexts: {
         [handleA.toLowerCase()]: 10n,
         [handleB.toLowerCase()]: 20n,
       },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(fhevm.publicDecrypt([handleA, handleB])).rejects.toThrow(new RegExp(normalizedB));
 
@@ -494,14 +569,13 @@ describe("CleartextFhevmInstance", () => {
     const handleA = asHandle("0x" + "56".repeat(32));
     const handleB = asHandle("0x" + "78".repeat(32));
 
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       isAllowedForDecryption: () => true,
       plaintexts: {
         [handleA.toLowerCase()]: 42n,
         [handleB.toLowerCase()]: 99n,
       },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.publicDecrypt([handleA, handleB]);
     const proofBytes = toBytes(result.decryptionProof as `0x${string}`);
@@ -516,23 +590,20 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("getPublicKey returns null and getPublicParams returns null", async () => {
-    const { client } = createMockClient();
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+    const { fhevm } = createInstance();
 
     await expect(fhevm.getPublicKey()).resolves.toBeNull();
     await expect(fhevm.getPublicParams(2048)).resolves.toBeNull();
   });
 
   it("terminate is a no-op", () => {
-    const { client } = createMockClient();
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+    const { fhevm } = createInstance();
 
     expect(() => fhevm.terminate()).not.toThrow();
   });
 
   it("createDelegatedUserDecryptEIP712 returns domain and message with delegatorAddress", async () => {
-    const { client } = createMockClient();
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+    const { fhevm } = createInstance();
 
     const typedData = await fhevm.createDelegatedUserDecryptEIP712(
       "0x" + "ab".repeat(32),
@@ -554,13 +625,11 @@ describe("CleartextFhevmInstance", () => {
 
   it("delegatedUserDecrypt throws when delegator is not authorized", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
-    const normalizedHandle = toHex(hexToBigInt(handle as `0x${string}`), { size: 32 });
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const { client, calls } = createMockClient({
+    const { fhevm, calls } = createInstance({
       persistAllowed: () => false,
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(
       fhevm.delegatedUserDecrypt({
@@ -585,11 +654,10 @@ describe("CleartextFhevmInstance", () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: (_handle, account) =>
         account.toLowerCase() !== CONTRACT_ADDRESS.toLowerCase(),
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(
       fhevm.delegatedUserDecrypt({
@@ -610,10 +678,9 @@ describe("CleartextFhevmInstance", () => {
   it("delegatedUserDecrypt throws when delegator equals contract", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: () => true,
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(
       fhevm.delegatedUserDecrypt({
@@ -635,11 +702,10 @@ describe("CleartextFhevmInstance", () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: (_handle, account) => account.toLowerCase() !== delegateAddress.toLowerCase(),
       plaintexts: { [handle.toLowerCase()]: 42n },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.delegatedUserDecrypt({
       handles: [handle],
@@ -664,7 +730,7 @@ describe("CleartextFhevmInstance", () => {
     const delegateAddress = "0x3000000000000000000000000000000000000003";
     const persistAllowedCalls: Array<{ handle: string; account: string }> = [];
 
-    const { client, calls } = createMockClient({
+    const { fhevm, calls } = createInstance({
       persistAllowed: (handle, account) => {
         persistAllowedCalls.push({ handle, account });
         return true;
@@ -674,7 +740,6 @@ describe("CleartextFhevmInstance", () => {
         [handleB.toLowerCase()]: 11n,
       },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.delegatedUserDecrypt({
       handles: [handleA, handleB],
@@ -732,14 +797,13 @@ describe("CleartextFhevmInstance", () => {
   it("delegatedUserDecrypt returns cleartext values when both delegator and contract are authorized", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: {
         [handleA.toLowerCase()]: 7n,
         [handleB.toLowerCase()]: 11n,
       },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.delegatedUserDecrypt({
       handles: [handleA, handleB],
@@ -763,14 +827,13 @@ describe("CleartextFhevmInstance", () => {
     const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
     const addressValue = BigInt("0x1000000000000000000000000000000000000001");
 
-    const { client } = createMockClient({
+    const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: {
         [boolHandle.toLowerCase()]: 1n,
         [addressHandle.toLowerCase()]: addressValue,
       },
     });
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     const result = await fhevm.delegatedUserDecrypt({
       handles: [boolHandle, addressHandle],
@@ -792,8 +855,7 @@ describe("CleartextFhevmInstance", () => {
   });
 
   it("requestZKProofVerification throws in cleartext mode", async () => {
-    const { client } = createMockClient();
-    const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
+    const { fhevm } = createInstance();
 
     await expect(fhevm.requestZKProofVerification({} as never)).rejects.toThrow(
       "Not implemented in cleartext mode",

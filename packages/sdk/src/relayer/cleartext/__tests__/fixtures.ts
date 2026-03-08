@@ -1,5 +1,5 @@
 import { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "../constants";
-import type { CleartextInstanceConfig } from "../types";
+import type { CleartextConfig } from "../types";
 
 // Deterministic Hardhat deployment addresses (from FHEVMHostAddresses.sol).
 // Hardcoded here instead of importing from deployments.json so the SDK
@@ -14,7 +14,7 @@ export const TEST_FHEVM_ADDRESSES = {
 export const USER_ADDRESS = "0x1000000000000000000000000000000000000001";
 export const CONTRACT_ADDRESS = "0x2000000000000000000000000000000000000002";
 
-export const CLEAR_TEXT_MOCK_CONFIG: CleartextInstanceConfig = {
+export const CLEAR_TEXT_MOCK_CONFIG: CleartextConfig = {
   network: "http://127.0.0.1:8545",
   chainId: 31_337,
   gatewayChainId: GATEWAY_CHAIN_ID,
