@@ -66,5 +66,8 @@ export type { KeypairType } from "@zama-fhe/relayer-sdk/bundle";
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../token/async-local-storage";
 export type { GenericStorage } from "../token/token.types";
 
+// Effect layer factories
+export { makeRelayerNodeLayer } from "../relayer/relayer-node.layer";
+
 // Network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";

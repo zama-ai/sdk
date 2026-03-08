@@ -139,6 +139,41 @@ export {
   matchZamaError,
 } from "./token/errors";
 
+// Tagged errors (Effect-based)
+export {
+  EncryptionFailed,
+  DecryptionFailed,
+  SigningRejected,
+  SigningFailed,
+  TransactionReverted,
+  ApprovalFailed,
+  RelayerRequestFailed,
+  NoCiphertext,
+  KeypairExpired,
+  InvalidKeypair,
+  ConfigurationFailed,
+} from "./errors";
+export type { RelayerError, TokenError } from "./errors";
+
+// Effect layer factories
+export { makeRelayerWebLayer } from "./relayer/relayer-web.layer";
+
+// Effect service definitions & layer helpers
+export { Relayer, Signer, CredentialStorage, SessionStorage, EventEmitter } from "./services";
+export type {
+  RelayerService,
+  SignerService,
+  StorageService,
+  EventEmitterService,
+} from "./services";
+export {
+  makeSignerLayer,
+  makeRelayerLayer,
+  makeCredentialStorageLayer,
+  makeSessionStorageLayer,
+  makeEventEmitterLayer,
+} from "./services";
+
 // Event decoders and types
 export type {
   RawLog,
