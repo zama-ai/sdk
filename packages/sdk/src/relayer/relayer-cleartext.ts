@@ -116,8 +116,9 @@ export class RelayerCleartext implements RelayerSDK {
 
     const chainId = await this.#multi.getChainId();
 
-    // Chain changed → discard old instance
+    // Chain changed → clean up old instance and discard
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
+      this.#instance?.terminate();
       this.#instance = null;
     }
     this.#resolvedChainId = chainId;

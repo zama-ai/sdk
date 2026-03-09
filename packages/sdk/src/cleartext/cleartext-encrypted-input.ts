@@ -22,7 +22,7 @@
  */
 
 import type { FheTypeEncryptionBitwidth, RelayerEncryptedInput } from "@zama-fhe/relayer-sdk/web";
-import { concat, getAddress, hexToBytes, keccak256, toBytes, type Hex } from "viem";
+import { concat, getAddress, hexToBytes, keccak256, numberToBytes, toBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { EncryptionFailedError, NotSupportedError } from "../token/errors";
 import { computeCleartextHandles } from "./cleartext-handles";
@@ -62,9 +62,7 @@ function checkValue(value: number | bigint, bits: number): void {
 function buildExtraData(values: bigint[]): Uint8Array {
   const extraData = new Uint8Array(values.length * 32);
   for (let i = 0; i < values.length; i++) {
-    const hex = values[i]!.toString(16).padStart(64, "0");
-    const bytes = hexToBytes(`0x${hex}`);
-    extraData.set(bytes, i * 32);
+    extraData.set(numberToBytes(values[i]!, { size: 32 }), i * 32);
   }
   return extraData;
 }

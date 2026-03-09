@@ -19,6 +19,31 @@ import { FheType } from "./constants";
 /** Decrypted value — `boolean` for ebool, `bigint` for all other FHE types. */
 type ClearValue = bigint | boolean;
 
+/** Normalize mixed handle arrays to hex strings. */
+function normalizeHandles(handles: (Uint8Array | string)[]): string[] {
+  return handles.map((h) => (typeof h === "string" ? h : toHex(h)));
+}
+
+/** Normalize handle-contract pairs, returning hex handles alongside original pairs. */
+function normalizeHandleContractPairs(
+  pairs: { handle: Uint8Array | string; contractAddress: string }[],
+): string[] {
+  return pairs.map((p) => (typeof p.handle === "string" ? p.handle : toHex(p.handle)));
+}
+
+/** Build a handle→ClearValue record from parallel arrays. */
+function buildClearValueRecord(
+  handlesHex: string[],
+  rawValues: bigint[],
+  fheTypes: number[],
+): Record<string, ClearValue> {
+  const results: Record<string, ClearValue> = {};
+  for (let i = 0; i < handlesHex.length; i++) {
+    results[handlesHex[i]!] = formatPlaintext(rawValues[i]!, fheTypes[i]!);
+  }
+  return results;
+}
+
 /**
  * Minimal ACL contract interface needed for decrypt permission checks.
  *
@@ -51,30 +76,23 @@ function getFheTypeId(handleHex: string): number {
   return parseInt(hex.slice(62, 64), 16);
 }
 
-/** Map fheTypeId to the Solidity ABI type for encoding. */
-function fheTypeToSolidity(fheTypeId: number) {
-  switch (fheTypeId) {
-    case FheType.Bool:
-      return "bool"; // ebool
-    case FheType.Uint4:
-      return "uint256"; // euint4
-    case FheType.Uint8:
-      return "uint256"; // euint8
-    case FheType.Uint16:
-      return "uint256"; // euint16
-    case FheType.Uint32:
-      return "uint256"; // euint32
-    case FheType.Uint64:
-      return "uint256"; // euint64
-    case FheType.Uint128:
-      return "uint256"; // euint128
-    case FheType.Uint160:
-      return "address"; // eaddress
-    case FheType.Uint256:
-      return "uint256"; // euint256
-    default:
-      throw new Error(`Unsupported FHE type ID in cleartext mode: ${fheTypeId}`);
-  }
+/** FHE type → Solidity ABI type for encoding. */
+const FHE_TYPE_TO_SOLIDITY: Record<number, string> = {
+  [FheType.Bool]: "bool",
+  [FheType.Uint4]: "uint256",
+  [FheType.Uint8]: "uint256",
+  [FheType.Uint16]: "uint256",
+  [FheType.Uint32]: "uint256",
+  [FheType.Uint64]: "uint256",
+  [FheType.Uint128]: "uint256",
+  [FheType.Uint160]: "address",
+  [FheType.Uint256]: "uint256",
+};
+
+function fheTypeToSolidity(fheTypeId: number): string {
+  const type = FHE_TYPE_TO_SOLIDITY[fheTypeId];
+  if (!type) throw new Error(`Unsupported FHE type ID in cleartext mode: ${fheTypeId}`);
+  return type;
 }
 
 /** Format a raw bigint plaintext based on the handle's FHE type. */
@@ -169,8 +187,8 @@ export async function cleartextPublicDecrypt(
   abiEncodedClearValues: string;
   decryptionProof: string;
 }> {
-  const handlesHex = handles.map((h) => (typeof h === "string" ? h : toHex(h)));
-  const fheTypes = handlesHex.map((h) => getFheTypeId(h));
+  const handlesHex = normalizeHandles(handles);
+  const fheTypes = handlesHex.map(getFheTypeId);
 
   // Verify ACL permissions first, then fetch plaintexts
   await Promise.all(
@@ -182,10 +200,7 @@ export async function cleartextPublicDecrypt(
   );
   const rawValues = await executor.getPlaintexts(handlesHex);
 
-  const clearValues: Record<string, ClearValue> = {};
-  handlesHex.forEach((h, i) => {
-    clearValues[h] = formatPlaintext(rawValues[i]!, fheTypes[i]!);
-  });
+  const clearValues = buildClearValueRecord(handlesHex, rawValues, fheTypes);
 
   const abiTypes = fheTypes.map((t) => fheTypeToSolidity(t));
   const abiValues = handlesHex.map((_, i) => {
@@ -222,11 +237,8 @@ export async function cleartextDelegatedUserDecrypt(
   executor: CleartextExecutor,
   acl: CleartextACL,
 ): Promise<Record<string, ClearValue>> {
-  const handlesHex = handleContractPairs.map((p) =>
-    typeof p.handle === "string" ? p.handle : toHex(p.handle),
-  );
-
-  const fheTypes = handlesHex.map((h) => getFheTypeId(h));
+  const handlesHex = normalizeHandleContractPairs(handleContractPairs);
+  const fheTypes = handlesHex.map(getFheTypeId);
 
   // Verify ACL permissions first, then fetch plaintexts
   await Promise.all(
@@ -248,12 +260,7 @@ export async function cleartextDelegatedUserDecrypt(
   );
   const rawValues = await executor.getPlaintexts(handlesHex);
 
-  const results: Record<string, ClearValue> = {};
-  handlesHex.forEach((h, i) => {
-    results[h] = formatPlaintext(rawValues[i]!, fheTypes[i]!);
-  });
-
-  return results;
+  return buildClearValueRecord(handlesHex, rawValues, fheTypes);
 }
 
 /**
@@ -274,11 +281,8 @@ export async function cleartextUserDecrypt(
   executor: CleartextExecutor,
   acl: CleartextACL,
 ): Promise<Record<string, ClearValue>> {
-  const handlesHex = handleContractPairs.map((p) =>
-    typeof p.handle === "string" ? p.handle : toHex(p.handle),
-  );
-
-  const fheTypes = handlesHex.map((h) => getFheTypeId(h));
+  const handlesHex = normalizeHandleContractPairs(handleContractPairs);
+  const fheTypes = handlesHex.map(getFheTypeId);
 
   // Verify ACL permissions first, then fetch plaintexts
   await Promise.all(
@@ -302,10 +306,5 @@ export async function cleartextUserDecrypt(
   );
   const rawValues = await executor.getPlaintexts(handlesHex);
 
-  const results: Record<string, ClearValue> = {};
-  handlesHex.forEach((h, i) => {
-    results[h] = formatPlaintext(rawValues[i]!, fheTypes[i]!);
-  });
-
-  return results;
+  return buildClearValueRecord(handlesHex, rawValues, fheTypes);
 }
