@@ -70,8 +70,8 @@ importers:
         specifier: ^4.0.18
         version: 4.0.18(vitest@4.0.18)
       '@zama-fhe/relayer-sdk':
-        specifier: 0.4.1
-        version: 0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+        specifier: 0.4.2
+        version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       conventional-changelog-conventionalcommits:
         specifier: ^9.3.0
         version: 9.3.0
@@ -193,8 +193,8 @@ importers:
         specifier: ^5.90.20
         version: 5.90.20
       '@zama-fhe/relayer-sdk':
-        specifier: 0.4.1
-        version: 0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+        specifier: 0.4.2
+        version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       rolldown:
         specifier: ^1.0.0-rc.6
         version: 1.0.0-rc.6
@@ -2002,8 +2002,8 @@ packages:
       typescript:
         optional: true
 
-  '@zama-fhe/relayer-sdk@0.4.1':
-    resolution: {integrity: sha512-bS7tVQbXnsPFgiqm5R4pJ8hbPMYZuRh/Pv89S+jxO60y0mD296F4qIKEO7dgiHjC87V5GFM9DqCLNejjCNVw2Q==}
+  '@zama-fhe/relayer-sdk@0.4.2':
+    resolution: {integrity: sha512-3Q0tINKxz6YseaDxOrNP/648j5Wr2C4Utnjx5npZESjLAc20tWgWFE7BOfx0Kjhs8cx/ykU+tMZBq40+DsiUvA==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -6408,7 +6408,7 @@ snapshots:
       - react
       - use-sync-external-store
 
-  '@zama-fhe/relayer-sdk@0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)':
+  '@zama-fhe/relayer-sdk@0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)':
     dependencies:
       commander: 14.0.3
       ethers: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
