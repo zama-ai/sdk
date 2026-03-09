@@ -1,14 +1,14 @@
 /**
  * React hooks for confidential token operations, built on React Query.
  *
- * Requires {@link FhevmProvider} in the component tree. Re-exports all public
+ * Requires {@link ZamaProvider} in the component tree. Re-exports all public
  * symbols from `@zama-fhe/sdk`.
  *
  * @packageDocumentation
  */
 
 // Provider
-export { FhevmProvider, useFhevmClient, type FhevmProviderProps } from "./provider";
+export { ZamaProvider, useZamaSdk, type ZamaProviderProps } from "./provider";
 
 // Config factory & types
 export { createFhevmConfig } from "./config";

@@ -3,7 +3,7 @@
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { revokeMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { useFhevmClient } from "../provider";
+import { useZamaSdk } from "../provider";
 
 /**
  * Revoke stored FHE credentials for a list of token addresses.
@@ -16,7 +16,7 @@ import { useFhevmClient } from "../provider";
  * ```
  */
 export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>) {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
 
   return useMutation<void, Error, Address[]>({
     ...revokeMutationOptions(sdk),

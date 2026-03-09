@@ -25,7 +25,7 @@ export interface WagmiAdapter {
 
 export const CHAIN_REQUIRED_ERROR = "FhevmConfig.chain is required.";
 export const WAGMI_PROVIDER_REQUIRED_ERROR =
-  "FhevmProvider with wagmiAdapter() requires a <WagmiProvider> in the component tree.";
+  "ZamaProvider with wagmiAdapter() requires a <WagmiProvider> in the component tree.";
 
 /** Wallet option accepted by {@link createFhevmConfig}. */
 export type WalletOption = GenericSigner | WagmiAdapter;

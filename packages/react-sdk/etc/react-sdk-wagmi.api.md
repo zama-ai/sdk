@@ -20,6 +20,11 @@ import { WriteContractArgs } from '@zama-fhe/sdk';
 import { WriteContractConfig } from '@zama-fhe/sdk';
 import { WriteFunctionName } from '@zama-fhe/sdk';
 
+// Warning: (ae-forgotten-export) The symbol "WagmiAdapter" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function wagmiAdapter(): WagmiAdapter;
+
 // @public
 export class WagmiSigner implements GenericSigner {
     constructor(signerConfig: WagmiSignerConfig);

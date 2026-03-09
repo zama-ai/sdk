@@ -20,7 +20,7 @@ import {
   type RelayerOverride,
   type WalletOption,
 } from "./config";
-import { FhevmProvider, type FhevmProviderProps } from "./provider";
+import { ZamaProvider, type ZamaProviderProps } from "./provider";
 import * as resolveRelayerModule from "./resolve-relayer";
 
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
@@ -44,10 +44,10 @@ function Providers({
   children,
   queryClient,
   config,
-}: PropsWithChildren<FhevmProviderProps & { queryClient: QueryClient }>) {
+}: PropsWithChildren<ZamaProviderProps & { queryClient: QueryClient }>) {
   return (
     <QueryClientProvider client={queryClient}>
-      <FhevmProvider config={config}>{children}</FhevmProvider>
+      <ZamaProvider config={config}>{children}</ZamaProvider>
     </QueryClientProvider>
   );
 }

@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Address, ClearValueType, Handle, Hex } from "@zama-fhe/sdk";
 import { decryptionKeys } from "./decryption-cache";
-import { useFhevmClient } from "../provider";
+import { useZamaSdk } from "../provider";
 
 /** A handle to decrypt, paired with its originating contract address. */
 export interface DecryptHandle {
@@ -59,7 +59,7 @@ export interface UseUserDecryptFlowConfig {
  * ```
  */
 export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig) {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
   const queryClient = useQueryClient();
   const callbacks = config?.callbacks;
 

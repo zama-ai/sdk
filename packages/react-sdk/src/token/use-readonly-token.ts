@@ -2,12 +2,12 @@
 
 import { useMemo } from "react";
 import type { Address } from "@zama-fhe/sdk";
-import { useFhevmClient } from "../provider";
+import { useZamaSdk } from "../provider";
 
 /**
  * Get a {@link ReadonlyToken} instance, memoized by address.
  * Supports balance queries, ERC-165 checks, and authorization — no wrapper needed.
- * Reads signer and storage from the nearest {@link FhevmProvider}.
+ * Reads signer and storage from the nearest {@link ZamaProvider}.
  *
  * @param address - Address of the confidential token contract.
  * @returns A memoized `ReadonlyToken` instance.
@@ -19,7 +19,7 @@ import { useFhevmClient } from "../provider";
  * ```
  */
 export function useReadonlyToken(address: Address) {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
 
   return useMemo(() => sdk.createReadonlyToken(address), [sdk, address]);
 }

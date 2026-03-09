@@ -12,7 +12,7 @@ import { decryptionKeys } from "../relayer/decryption-cache";
 import { useAllow } from "../token/use-allow";
 import { wagmiAdapter } from "../wagmi/adapter";
 import { fhevmHardhat, fhevmHoodi, fhevmSepolia } from "@zama-fhe/sdk/chains";
-import { FhevmProvider, useFhevmClient } from "../provider";
+import { ZamaProvider, useZamaSdk } from "../provider";
 import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { describe, expect, it } from "../test-fixtures";
 import { beforeEach, vi } from "vitest";
@@ -126,7 +126,7 @@ function withQueryClient(children: React.ReactNode, queryClient?: QueryClient) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-describe("FhevmProvider & useFhevmClient", () => {
+describe("ZamaProvider & useZamaSdk", () => {
   beforeEach(() => {
     tokenSDKConstructorArgs.length = 0;
     relayerWebCtor.mockReset();
@@ -146,9 +146,9 @@ describe("FhevmProvider & useFhevmClient", () => {
 
     const view = render(
       withQueryClient(
-        <FhevmProvider config={config}>
+        <ZamaProvider config={config}>
           <div data-testid="child" />
-        </FhevmProvider>,
+        </ZamaProvider>,
         queryClient,
       ),
     );
@@ -170,9 +170,9 @@ describe("FhevmProvider & useFhevmClient", () => {
 
     const view = render(
       withQueryClient(
-        <FhevmProvider config={createFhevmConfig({ chain: fhevmSepolia, wallet: signer, storage })}>
+        <ZamaProvider config={createFhevmConfig({ chain: fhevmSepolia, wallet: signer, storage })}>
           <div data-testid="child" />
-        </FhevmProvider>,
+        </ZamaProvider>,
         queryClient,
       ),
     );
@@ -182,9 +182,9 @@ describe("FhevmProvider & useFhevmClient", () => {
 
     view.rerender(
       withQueryClient(
-        <FhevmProvider config={createFhevmConfig({ chain: fhevmSepolia, wallet: signer, storage })}>
+        <ZamaProvider config={createFhevmConfig({ chain: fhevmSepolia, wallet: signer, storage })}>
           <div data-testid="child" />
-        </FhevmProvider>,
+        </ZamaProvider>,
         queryClient,
       ),
     );
@@ -197,9 +197,9 @@ describe("FhevmProvider & useFhevmClient", () => {
     const signer = createMockSigner();
     const config = createFhevmConfig({ chain: fhevmSepolia, wallet: signer });
 
-    const { result } = renderHook(() => useFhevmClient(), {
+    const { result } = renderHook(() => useZamaSdk(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
 
     expect(result.current).toBeDefined();
@@ -208,8 +208,8 @@ describe("FhevmProvider & useFhevmClient", () => {
   });
 
   it("throws outside provider", () => {
-    expect(() => renderHook(() => useFhevmClient())).toThrow(
-      "useFhevmClient must be used within a <FhevmProvider>",
+    expect(() => renderHook(() => useZamaSdk())).toThrow(
+      "useZamaSdk must be used within a <ZamaProvider>",
     );
   });
 
@@ -221,11 +221,9 @@ describe("FhevmProvider & useFhevmClient", () => {
     expect(() =>
       render(
         withQueryClient(
-          <FhevmProvider
-            config={createFhevmConfig({ chain: fhevmSepolia, wallet: wagmiAdapter() })}
-          >
+          <ZamaProvider config={createFhevmConfig({ chain: fhevmSepolia, wallet: wagmiAdapter() })}>
             <div />
-          </FhevmProvider>,
+          </ZamaProvider>,
         ),
       ),
     ).toThrow(WAGMI_PROVIDER_REQUIRED_ERROR);
@@ -238,7 +236,7 @@ describe("FhevmProvider & useFhevmClient", () => {
 
     const { result } = renderHook(() => useAllow(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
 
     await expect(result.current.mutateAsync([tokenAddress])).rejects.toThrow(
@@ -249,9 +247,9 @@ describe("FhevmProvider & useFhevmClient", () => {
   it("chain 11155111 resolves through RelayerWeb", ({ createMockSigner }) => {
     const config = createFhevmConfig({ chain: fhevmSepolia, wallet: createMockSigner() });
 
-    renderHook(() => useFhevmClient(), {
+    renderHook(() => useZamaSdk(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
 
     expect(relayerWebCtor).toHaveBeenCalledTimes(1);
@@ -263,9 +261,9 @@ describe("FhevmProvider & useFhevmClient", () => {
   }) => {
     const config = createFhevmConfig({ chain: fhevmHardhat, wallet: createMockSigner() });
 
-    renderHook(() => useFhevmClient(), {
+    renderHook(() => useZamaSdk(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
 
     expect(cleartextCtor).toHaveBeenCalledWith(HardhatCleartextConfig);
@@ -280,9 +278,9 @@ describe("FhevmProvider & useFhevmClient", () => {
       wallet: createMockSigner(),
     });
 
-    renderHook(() => useFhevmClient(), {
+    renderHook(() => useZamaSdk(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
 
     expect(cleartextCtor).toHaveBeenCalledWith(hoodiCleartextConfig);
@@ -299,9 +297,9 @@ describe("FhevmProvider & useFhevmClient", () => {
       },
     });
 
-    renderHook(() => useFhevmClient(), {
+    renderHook(() => useZamaSdk(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
 
     const relayerConfig = relayerWebCtor.mock.calls[0]?.[0] as {
@@ -314,9 +312,9 @@ describe("FhevmProvider & useFhevmClient", () => {
   it("terminates sdk on unmount", ({ createMockSigner }) => {
     const config = createFhevmConfig({ chain: fhevmSepolia, wallet: createMockSigner() });
 
-    const { result, unmount } = renderHook(() => useFhevmClient(), {
+    const { result, unmount } = renderHook(() => useZamaSdk(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
 
     const terminateSpy = vi.spyOn(result.current.relayer, "terminate");
@@ -334,9 +332,9 @@ describe("FhevmProvider & useFhevmClient", () => {
       advanced: { onEvent },
     });
 
-    renderHook(() => useFhevmClient(), {
+    renderHook(() => useZamaSdk(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
 
     const wrappedOnEvent = tokenSDKConstructorArgs[0]?.onEvent;
@@ -355,9 +353,9 @@ describe("FhevmProvider & useFhevmClient", () => {
       },
     });
 
-    renderHook(() => useFhevmClient(), {
+    renderHook(() => useZamaSdk(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
 
     expect(tokenSDKConstructorArgs[0]).toEqual(
@@ -379,9 +377,9 @@ describe("FhevmProvider & useFhevmClient", () => {
 
     const config = createFhevmConfig({ chain: fhevmSepolia, wallet: signer });
 
-    renderHook(() => useFhevmClient(), {
+    renderHook(() => useZamaSdk(), {
       wrapper: ({ children }) =>
-        withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>, queryClient),
+        withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>, queryClient),
     });
 
     const lifecycle = vi.mocked(signer.subscribe!).mock.calls.at(-1)?.[0];

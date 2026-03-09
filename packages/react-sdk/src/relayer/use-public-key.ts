@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { hashFn, publicKeyQueryOptions } from "@zama-fhe/sdk/query";
-import { useFhevmClient } from "../provider";
+import { useZamaSdk } from "../provider";
 
 export { publicKeyQueryOptions };
 
@@ -27,7 +27,7 @@ export interface PublicKeyData {
  * ```
  */
 export function usePublicKey() {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
   const options = publicKeyQueryOptions(sdk);
   return useQuery({
     ...options,

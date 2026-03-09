@@ -3,7 +3,7 @@
 import type { EncryptParams, EncryptResult } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { encryptMutationOptions } from "@zama-fhe/sdk/query";
-import { useFhevmClient } from "../provider";
+import { useZamaSdk } from "../provider";
 
 /**
  * Encrypt a plaintext value using FHE.
@@ -18,6 +18,6 @@ import { useFhevmClient } from "../provider";
  * ```
  */
 export function useEncrypt() {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
   return useMutation<EncryptResult, Error, EncryptParams>(encryptMutationOptions(sdk));
 }

@@ -20,31 +20,31 @@ import {
 import { resolveRelayer } from "./resolve-relayer";
 import { resolveWallet } from "./resolve-wallet";
 
-export interface FhevmProviderProps extends PropsWithChildren {
+export interface ZamaProviderProps extends PropsWithChildren {
   config: FhevmConfig;
   queryClient?: QueryClient;
 }
 
 const FhevmClientContext = createContext<ZamaSDK | null>(null);
 
-export function FhevmProvider({ config, queryClient, children }: FhevmProviderProps) {
+export function ZamaProvider({ config, queryClient, children }: ZamaProviderProps) {
   if (isWagmiAdapter(config.wallet)) {
     return (
-      <WagmiFhevmProviderInner config={config} queryClient={queryClient}>
+      <WagmiZamaProviderInner config={config} queryClient={queryClient}>
         {children}
-      </WagmiFhevmProviderInner>
+      </WagmiZamaProviderInner>
     );
   }
 
   return (
-    <FhevmProviderInner config={config} queryClient={queryClient} wagmiConfig={null}>
+    <ZamaProviderInner config={config} queryClient={queryClient} wagmiConfig={null}>
       {children}
-    </FhevmProviderInner>
+    </ZamaProviderInner>
   );
 }
 
-function WagmiFhevmProviderInner({ config, queryClient, children }: FhevmProviderProps) {
-  // config.wallet is guaranteed to be a WagmiAdapter here (enforced by FhevmProvider)
+function WagmiZamaProviderInner({ config, queryClient, children }: ZamaProviderProps) {
+  // config.wallet is guaranteed to be a WagmiAdapter here (enforced by ZamaProvider)
   const adapter = config.wallet as WagmiAdapter;
   let wagmiConfig: unknown;
 
@@ -55,18 +55,18 @@ function WagmiFhevmProviderInner({ config, queryClient, children }: FhevmProvide
   }
 
   return (
-    <FhevmProviderInner config={config} queryClient={queryClient} wagmiConfig={wagmiConfig}>
+    <ZamaProviderInner config={config} queryClient={queryClient} wagmiConfig={wagmiConfig}>
       {children}
-    </FhevmProviderInner>
+    </ZamaProviderInner>
   );
 }
 
-function FhevmProviderInner({
+function ZamaProviderInner({
   config,
   queryClient: queryClientProp,
   wagmiConfig,
   children,
-}: FhevmProviderProps & { wagmiConfig: unknown }) {
+}: ZamaProviderProps & { wagmiConfig: unknown }) {
   const ambientQueryClient = useQueryClient();
   const queryClient = queryClientProp ?? ambientQueryClient;
 
@@ -119,13 +119,13 @@ function FhevmProviderInner({
   return <FhevmClientContext.Provider value={sdk}>{children}</FhevmClientContext.Provider>;
 }
 
-export function useFhevmClient(): ZamaSDK {
+export function useZamaSdk(): ZamaSDK {
   const context = useContext(FhevmClientContext);
 
   if (!context) {
     throw new Error(
-      "useFhevmClient must be used within a <FhevmProvider>. " +
-        "Wrap your component tree in <FhevmProvider config={config}>.",
+      "useZamaSdk must be used within a <ZamaProvider>. " +
+        "Wrap your component tree in <ZamaProvider config={config}>.",
     );
   }
 

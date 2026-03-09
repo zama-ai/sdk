@@ -10,7 +10,7 @@ import {
   signerAddressQueryOptions,
   type ConfidentialBalancesData,
 } from "@zama-fhe/sdk/query";
-import { useFhevmClient } from "../provider";
+import { useZamaSdk } from "../provider";
 
 /** Configuration for {@link useConfidentialBalances}. */
 export interface UseConfidentialBalancesConfig {
@@ -59,7 +59,7 @@ export function useConfidentialBalances(
 ) {
   const { tokenAddresses, handleRefetchInterval, maxConcurrency } = config;
   const userEnabled = options?.enabled;
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
 
   const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(sdk.signer),

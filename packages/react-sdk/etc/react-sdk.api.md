@@ -92,6 +92,7 @@ import { extractEncryptedHandles } from '@zama-fhe/sdk';
 import { FEE_MANAGER_ABI } from '@zama-fhe/sdk';
 import { feeRecipientQueryOptions } from '@zama-fhe/sdk/query';
 import { FheTypeName } from '@zama-fhe/sdk';
+import { FhevmChain } from '@zama-fhe/sdk/chains';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
 import { filterQueryOptions } from '@zama-fhe/sdk/query';
 import { finalizeUnwrapContract } from '@zama-fhe/sdk';
@@ -138,6 +139,7 @@ import { PropsWithChildren } from 'react';
 import { PublicDecryptResult } from '@zama-fhe/sdk';
 import { publicKeyQueryOptions } from '@zama-fhe/sdk/query';
 import { publicParamsQueryOptions } from '@zama-fhe/sdk/query';
+import { QueryClient } from '@tanstack/react-query';
 import { QueryKey } from '@tanstack/react-query';
 import { rateContract } from '@zama-fhe/sdk';
 import { RawLog } from '@zama-fhe/sdk';
@@ -349,6 +351,9 @@ export interface CreateEIP712Params {
     startTimestamp: number;
 }
 
+// @public
+export function createFhevmConfig(options: FhevmConfigOptions): FhevmConfig;
+
 export { CredentialsAllowedEvent }
 
 export { CredentialsCachedEvent }
@@ -451,7 +456,60 @@ export { feeRecipientQueryOptions }
 
 export { FheTypeName }
 
+// @public
+export interface FhevmAdvancedOptions {
+    // (undocumented)
+    integrityCheck?: boolean;
+    // (undocumented)
+    keypairTTL?: number;
+    // (undocumented)
+    onEvent?: ZamaSDKEventListener;
+    // (undocumented)
+    sessionTTL?: number;
+    // (undocumented)
+    threads?: number;
+}
+
+// @public
+export interface FhevmConfig {
+    // (undocumented)
+    advanced?: FhevmAdvancedOptions;
+    // (undocumented)
+    chain: FhevmChain;
+    // (undocumented)
+    relayer?: RelayerOverride;
+    // (undocumented)
+    storage: GenericStorage;
+    // (undocumented)
+    wallet?: WalletOption;
+}
+
+// @public
+export interface FhevmConfigOptions {
+    // (undocumented)
+    advanced?: FhevmAdvancedOptions;
+    // (undocumented)
+    chain: FhevmChain;
+    // (undocumented)
+    relayer?: RelayerOverride;
+    // (undocumented)
+    storage?: GenericStorage;
+    // (undocumented)
+    wallet?: WalletOption;
+}
+
 export { FhevmInstanceConfig }
+
+// @public (undocumented)
+export function FhevmProvider(input: FhevmProviderProps): react_jsx_runtime0.JSX.Element;
+
+// @public (undocumented)
+export interface FhevmProviderProps extends PropsWithChildren {
+    // (undocumented)
+    config: FhevmConfig;
+    // (undocumented)
+    queryClient?: QueryClient;
+}
 
 export { filterQueryOptions }
 
@@ -579,6 +637,9 @@ export { ReadFunctionName }
 export { ReadonlyToken }
 
 export { ReadonlyTokenConfig }
+
+// @public
+export type RelayerOverride = Partial<FhevmInstanceConfig>;
 
 export { RelayerRequestFailedError }
 
@@ -1321,8 +1382,24 @@ export interface UseZamaConfig {
     wrapperAddress?: Address;
 }
 
+// @public (undocumented)
+export function useZamaSdk(): ZamaSDK;
+
 // @public
-export function useZamaSDK(): ZamaSDK;
+export interface WagmiAdapter {
+    // (undocumented)
+    createSigner: (config: unknown) => GenericSigner;
+    // (undocumented)
+    type: "wagmi";
+    // (undocumented)
+    useConfig: () => unknown;
+}
+
+// @public
+export function wagmiAdapter(): WagmiAdapter;
+
+// @public
+export type WalletOption = GenericSigner | WagmiAdapter;
 
 export { wrapContract }
 
@@ -1345,20 +1422,6 @@ export { WriteFunctionName }
 export { ZamaError }
 
 export { ZamaErrorCode }
-
-// @public
-export function ZamaProvider(input: ZamaProviderProps): react_jsx_runtime0.JSX.Element;
-
-// @public
-export interface ZamaProviderProps extends PropsWithChildren {
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    relayer: RelayerSDK;
-    sessionStorage?: GenericStorage;
-    sessionTTL?: number;
-    signer: GenericSigner;
-    storage: GenericStorage;
-}
 
 export { zamaQueryKeys }
 

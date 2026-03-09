@@ -2,7 +2,7 @@
 
 import type { Address, KmsDelegatedUserDecryptEIP712Type } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
-import { useFhevmClient } from "../provider";
+import { useZamaSdk } from "../provider";
 
 /** Parameters for {@link useCreateDelegatedUserDecryptEIP712}. */
 export interface CreateDelegatedUserDecryptEIP712Params {
@@ -36,7 +36,7 @@ export interface CreateDelegatedUserDecryptEIP712Params {
  * ```
  */
 export function useCreateDelegatedUserDecryptEIP712() {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
   return useMutation<
     KmsDelegatedUserDecryptEIP712Type,
     Error,

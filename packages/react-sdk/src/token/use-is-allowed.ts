@@ -8,7 +8,7 @@ import {
   signerAddressQueryOptions,
   zamaQueryKeys,
 } from "@zama-fhe/sdk/query";
-import { useFhevmClient } from "../provider";
+import { useZamaSdk } from "../provider";
 
 /**
  * Check whether a session signature is cached for the connected wallet.
@@ -20,7 +20,7 @@ import { useFhevmClient } from "../provider";
  * ```
  */
 export function useIsAllowed() {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
   const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(sdk.signer),
   });

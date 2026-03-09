@@ -9,7 +9,7 @@ import {
   shieldFeeQueryOptions,
   unshieldFeeQueryOptions,
 } from "@zama-fhe/sdk/query";
-import { useFhevmClient } from "../provider";
+import { useZamaSdk } from "../provider";
 
 export {
   batchTransferFeeQueryOptions,
@@ -51,7 +51,7 @@ export function useShieldFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
 
   return useQuery<bigint>({
     ...shieldFeeQueryOptions(sdk.signer, config),
@@ -80,7 +80,7 @@ export function useUnshieldFee(
   config: UseFeeConfig,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
 
   return useQuery<bigint>({
     ...unshieldFeeQueryOptions(sdk.signer, config),
@@ -104,7 +104,7 @@ export function useBatchTransferFee(
   feeManagerAddress: Address,
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
 
   return useQuery<bigint>({
     ...batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress),
@@ -128,7 +128,7 @@ export function useFeeRecipient(
   feeManagerAddress: Address,
   options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
 ) {
-  const sdk = useFhevmClient();
+  const sdk = useZamaSdk();
 
   return useQuery<Address>({
     ...feeRecipientQueryOptions(sdk.signer, feeManagerAddress),

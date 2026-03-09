@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createFhevmConfig, FhevmProvider, MemoryStorage } from "@zama-fhe/react-sdk";
+import { createFhevmConfig, ZamaProvider, MemoryStorage } from "@zama-fhe/react-sdk";
 import { wagmiAdapter } from "@zama-fhe/react-sdk/wagmi";
 import { fhevmHardhat } from "@zama-fhe/sdk/chains";
 import { type ReactNode } from "react";
@@ -39,7 +39,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <FhevmProvider config={fhevmConfig}>{children}</FhevmProvider>
+        <ZamaProvider config={fhevmConfig}>{children}</ZamaProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );
