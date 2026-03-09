@@ -11,6 +11,7 @@ const mockUnsubscribe = vi.fn();
 
 vi.mock("wagmi/actions", () => ({
   getChainId: vi.fn().mockReturnValue(31337),
+  getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000n }),
   getConnection: vi.fn().mockReturnValue({ address: "0xuser" }),
   readContract: vi.fn(),
   signTypedData: vi.fn(),
@@ -99,5 +100,12 @@ describe("WagmiSigner.subscribe", () => {
 
     expect(onChainChange).toHaveBeenCalledOnce();
     expect(onChainChange).toHaveBeenCalledWith(2);
+  });
+});
+
+describe("WagmiSigner.getBlockTimestamp", () => {
+  wit("returns block timestamp from getBlock", async ({ wagmiSigner }) => {
+    const timestamp = await wagmiSigner.getBlockTimestamp();
+    expect(timestamp).toBe(1700000000n);
   });
 });

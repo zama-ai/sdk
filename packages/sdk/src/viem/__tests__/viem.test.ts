@@ -47,6 +47,7 @@ const viemTest = base.extend<ViemFixtures>({
           getChainId: vi.fn().mockResolvedValue(1),
           readContract: vi.fn().mockResolvedValue("0xresult"),
           waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
+          getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000n }),
         }) as unknown as PublicClient,
     );
   },
@@ -211,6 +212,17 @@ describe("ViemSigner", () => {
         expect(publicClient.waitForTransactionReceipt).toHaveBeenCalledWith({
           hash: TX_HASH,
         });
+      },
+    );
+  });
+
+  describe("getBlockTimestamp", () => {
+    vit(
+      "returns block timestamp from publicClient.getBlock",
+      async ({ viemSigner, publicClient }) => {
+        const timestamp = await viemSigner.getBlockTimestamp();
+        expect(timestamp).toBe(1700000000n);
+        expect(publicClient.getBlock).toHaveBeenCalled();
       },
     );
   });
