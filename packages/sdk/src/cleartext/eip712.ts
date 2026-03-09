@@ -1,10 +1,78 @@
-import type { TypedDataDomain } from "viem";
-import type {
+/**
+ * Shared EIP-712 utilities and pre-built type definitions for cleartext signing operations.
+ *
+ * @module
+ */
+
+import {
+  keccak256,
+  concat,
+  toBytes,
+  toHex,
+  encodeAbiParameters,
+  type Hex,
+  type TypedDataDomain,
+} from "viem";
+import {
   CoprocessorEIP712TypesType,
   KmsDelegatedUserDecryptEIP712TypesType,
   KmsPublicDecryptEIP712TypesType,
   KmsUserDecryptEIP712TypesType,
-} from "@zama-fhe/relayer-sdk/bundle";
+} from "../relayer/relayer-sdk.types";
+
+/**
+ * Drop-in replacement for ethers' `AbiCoder.defaultAbiCoder()`.
+ * Exposes an `encode(types, values)` method backed by viem's `encodeAbiParameters`.
+ */
+export const abiCoder = {
+  encode(types: string[], values: unknown[]): Hex {
+    const params = types.map((t) => ({ type: t }));
+    return encodeAbiParameters(params, values);
+  },
+};
+
+export const EIP712_DOMAIN_TYPEHASH = keccak256(
+  toBytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+);
+
+const VERSION_HASH = keccak256(toBytes("1"));
+
+/** Pre-computed name hashes for the two signing domains. */
+const NAME_HASH_CACHE: Record<string, Hex> = {};
+function getNameHash(name: string): Hex {
+  return (NAME_HASH_CACHE[name] ??= keccak256(toBytes(name)));
+}
+
+/**
+ * Build an EIP-712 domain separator.
+ *
+ * @param name - The signing domain name (e.g. "Decryption", "InputVerification")
+ * @param chainId - Chain ID for the domain
+ * @param verifyingContract - Address of the verifying contract
+ */
+export function buildDomainSeparator(
+  name: string,
+  chainId: number,
+  verifyingContract: string,
+): Hex {
+  return keccak256(
+    abiCoder.encode(
+      ["bytes32", "bytes32", "bytes32", "uint256", "address"],
+      [EIP712_DOMAIN_TYPEHASH, getNameHash(name), VERSION_HASH, chainId, verifyingContract],
+    ),
+  );
+}
+
+/**
+ * Compute a full EIP-712 digest from a domain separator and struct hash.
+ */
+export function eip712Digest(domainSeparator: string, structHash: string): Hex {
+  return keccak256(concat([toHex(0x1901, { size: 2 }), domainSeparator as Hex, structHash as Hex]));
+}
+
+// ---------------------------------------------------------------------------
+// Pre-built EIP-712 type definitions for all four signing flows.
+// ---------------------------------------------------------------------------
 
 type DomainFactory = (chainId: number | bigint, verifyingContract: string) => TypedDataDomain;
 

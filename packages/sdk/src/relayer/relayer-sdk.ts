@@ -1,11 +1,4 @@
 import type {
-  ClearValueType,
-  InputProofBytesType,
-  KeypairType,
-  KmsDelegatedUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/bundle";
-import type {
   Address,
   DelegatedUserDecryptParams,
   EIP712TypedData,
@@ -14,13 +7,31 @@ import type {
   Handle,
   PublicDecryptResult,
   UserDecryptParams,
+  FhevmInstance,
+  ClearValueType,
+  InputProofBytesType,
+  KeypairType,
+  KmsDelegatedUserDecryptEIP712Type,
+  ZKProofLike,
 } from "./relayer-sdk.types";
 
 /**
  * Interface for FHE relayer operations.
  * Implemented by `RelayerWeb` (browser, via Web Worker + WASM) and `RelayerNode` (Node.js, direct).
  */
-export interface RelayerSDK {
+export interface RelayerSDK extends Omit<
+  FhevmInstance,
+  | "config"
+  | "createEncryptedInput"
+  | "generateKeypair"
+  | "createEIP712"
+  | "createDelegatedUserDecryptEIP712"
+  | "userDecrypt"
+  | "delegatedUserDecrypt"
+  | "publicDecrypt"
+  | "getPublicKey"
+  | "getPublicParams"
+> {
   /** Generate an FHE keypair (public + private key). */
   generateKeypair(): Promise<KeypairType<string>>;
 

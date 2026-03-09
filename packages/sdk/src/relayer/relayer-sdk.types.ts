@@ -140,6 +140,15 @@ export interface DelegatedUserDecryptParams {
   durationDays: number;
 }
 
+/** An FHE keypair (hex-encoded public + private key). */
+export interface FHEKeypair {
+  publicKey: string;
+  privateKey: string;
+}
+
+/** A decrypted FHE value — boolean, bigint, or hex address. */
+export type DecryptedValue = SDK.ClearValueType;
+
 /** SDK status */
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 

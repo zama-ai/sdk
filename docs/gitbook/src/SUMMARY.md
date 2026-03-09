@@ -9,6 +9,7 @@
 
 - [Getting Started](guides/sdk/overview.md)
 - [Configuration](guides/sdk/configuration.md)
+- [Cleartext Mode](guides/sdk/cleartext-mode.md)
 - [Token Operations](guides/sdk/token-operations.md)
 - [Error Handling](guides/sdk/error-handling.md)
 - [Contract Call Builders](guides/sdk/contract-builders.md)

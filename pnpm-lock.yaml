@@ -225,6 +225,9 @@ importers:
       '@zama-fhe/react-sdk':
         specifier: workspace:*
         version: link:../react-sdk
+      '@zama-fhe/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@zama-fhe/test-components':
         specifier: workspace:*
         version: link:../test-components
@@ -271,6 +274,9 @@ importers:
       '@zama-fhe/react-sdk':
         specifier: workspace:*
         version: link:../react-sdk
+      '@zama-fhe/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@zama-fhe/test-components':
         specifier: workspace:*
         version: link:../test-components

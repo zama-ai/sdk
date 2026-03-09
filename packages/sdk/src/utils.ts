@@ -1,5 +1,11 @@
-import { hexToBigInt, isAddress, isHex, toHex } from "viem";
-import type { Address, Handle } from "./relayer/relayer-sdk.types";
+import { isAddress } from "viem";
+import type { Address } from "./relayer/relayer-sdk.types";
+
+/** Convert a Uint8Array to a hex string prefixed with `0x`. */
+export function toHex(bytes: Uint8Array): Address {
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `0x${hex}`;
+}
 
 // ── Runtime type assertion helpers ───────────────────────────
 
@@ -13,23 +19,34 @@ export function assertAddress(value: string, name: string): asserts value is Add
  * Validate an address and return it unchanged.
  * Call at public API entry points so invalid addresses are caught early.
  *
- * Addresses are preserved exactly as provided.
- * Use `getAddress()` from viem when you need canonical EIP-55 checksumming.
+ * Addresses are **not** lowercased — the relayer SDK requires EIP-55
+ * checksummed addresses for encrypt / decrypt calls.
+ * Use case-insensitive comparison (`.toLowerCase()`) when comparing addresses.
  */
-export function validateAddress(addr: string, name: string): Address {
+export function normalizeAddress(addr: string, name: string): Address {
   assertAddress(addr, name);
-  return addr;
+  return addr as Address;
 }
 
-/** Normalize a ciphertext handle or handle-like bigint into canonical 32-byte hex. */
-export function normalizeHandle(handle: string | bigint): Handle {
+/** Alias for {@link normalizeAddress}. */
+export const validateAddress = normalizeAddress;
+
+// ── Handle normalization ────────────────────────────────────
+
+const HEX_REGEX = /^0x[0-9a-fA-F]+$/;
+
+/**
+ * Normalize a ciphertext handle to a zero-padded 32-byte hex string.
+ * Accepts a `bigint` or a `0x`-prefixed hex string.
+ */
+export function normalizeHandle(handle: string | bigint): `0x${string}` {
   if (typeof handle === "bigint") {
-    return toHex(handle, { size: 32 }) as Handle;
+    return `0x${handle.toString(16).padStart(64, "0")}`;
   }
-  if (!isHex(handle)) {
-    throw new TypeError(`Handle must be a hex string or bigint, got: ${handle}`);
+  if (typeof handle === "string" && HEX_REGEX.test(handle)) {
+    return handle as `0x${string}`;
   }
-  return toHex(hexToBigInt(handle), { size: 32 }) as Handle;
+  throw new TypeError("Handle must be a hex string or bigint");
 }
 
 export function assertObject(
@@ -50,6 +67,12 @@ export function assertString(value: unknown, context: string): asserts value is 
 export function assertArray(value: unknown, context: string): asserts value is unknown[] {
   if (!Array.isArray(value)) {
     throw new TypeError(`${context} must be an array, got ${typeof value}`);
+  }
+}
+
+export function assertNonNullable<T>(value: T, context: string): asserts value is NonNullable<T> {
+  if (value === null || value === undefined) {
+    throw new TypeError(`${context} must not be ${value}`);
   }
 }
 

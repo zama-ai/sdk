@@ -95,6 +95,34 @@ const relayer = new RelayerNode({
 });
 ```
 
+### Development: `RelayerCleartext`
+
+No WASM, no workers, no API key. Reads plaintext values directly from on-chain contracts. Use this for local Hardhat development and the Hoodi testnet.
+
+For single-chain setups, pass the config preset directly — no `getChainId` or `transports` needed:
+
+```ts
+import { HardhatConfig } from "@zama-fhe/sdk";
+import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+
+const relayer = new RelayerCleartext(HardhatConfig);
+```
+
+For multi-chain setups, use `getChainId` + `transports`:
+
+```ts
+const signer = new EthersSigner({ signer: ethersSigner });
+const relayer = new RelayerCleartext({
+  getChainId: () => signer.getChainId(),
+  transports: {
+    [HardhatConfig.chainId]: HardhatConfig,
+    [HoodiConfig.chainId]: HoodiConfig,
+  },
+});
+```
+
+See [Cleartext Mode](cleartext-mode.md) for the full guide.
+
 ### Network presets
 
 You don't need to figure out contract addresses or relayer URLs. Use the built-in presets and just add your RPC URL. For browser apps, override `relayerUrl` with your proxy; for server-side apps, add `auth` instead:
@@ -121,7 +149,7 @@ const transports = {
 };
 ```
 
-Available presets: `MainnetConfig` (chain 1), `SepoliaConfig` (chain 11155111), `HardhatConfig` (chain 31337).
+Available presets: `MainnetConfig` (chain 1), `SepoliaConfig` (chain 11155111), `HoodiConfig` (chain 560048), `HardhatConfig` (chain 31337).
 
 ## Signer
 
@@ -149,12 +177,8 @@ import { EthersSigner } from "@zama-fhe/sdk/ethers";
 // Browser — pass the raw EIP-1193 provider; subscribe() works automatically
 const signer = new EthersSigner({ ethereum: window.ethereum! });
 
-// Node.js — pass an ethers Signer directly
-// const provider = new ethers.JsonRpcProvider(rpcUrl);
-// const signer = new EthersSigner({ signer: new ethers.Wallet(privateKey, provider) });
-
-// Read-only mode — pass a Provider for chain reads without a wallet
-// const signer = new EthersSigner({ provider: new ethers.JsonRpcProvider(rpcUrl) });
+// Node.js — pass an ethers Signer directly (no subscribe support)
+// const signer = new EthersSigner({ signer: wallet });
 ```
 
 ### wagmi (React only)

@@ -252,6 +252,38 @@ const balance = await token.balanceOf();
 
 ---
 
+## Local development (cleartext mode)
+
+For local Hardhat development and testing, use `RelayerCleartext` — no WASM, no API key, no workers. Values are stored in plaintext on-chain so everything runs instantly.
+
+```bash
+pnpm add @zama-fhe/sdk ethers  # or viem
+```
+
+```ts
+import { ZamaSDK, HardhatConfig, MemoryStorage } from "@zama-fhe/sdk";
+import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import { EthersSigner } from "@zama-fhe/sdk/ethers";
+
+// ethersSigner from BrowserProvider.getSigner() or Wallet.connect(provider)
+const signer = new EthersSigner({ signer: ethersSigner });
+
+const sdk = new ZamaSDK({
+  relayer: new RelayerCleartext(HardhatConfig),
+  signer,
+  storage: new MemoryStorage(),
+});
+
+// Same Token API — shield, balanceOf, confidentialTransfer, unshield
+const token = sdk.createToken("0xYourEncryptedERC20");
+await token.shield(1000n);
+const balance = await token.balanceOf();
+```
+
+See [Cleartext Mode](sdk/cleartext-mode.md) for the full guide including React setup, Hardhat setup, and switching between environments.
+
+---
+
 ## Next steps
 
 - [Core SDK guide](sdk/overview.md) — all the things you can do with tokens

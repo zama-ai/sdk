@@ -57,4 +57,15 @@ await token.confidentialTransfer("0xRecipient", 500n); // private send
 await token.unshield(500n); // withdraw back to public
 ```
 
+## Local development
+
+For Hardhat development, use [Cleartext Mode](guides/sdk/cleartext-mode.md) — no WASM, no API key, instant execution:
+
+```ts
+import { HardhatConfig } from "@zama-fhe/sdk";
+import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+
+const relayer = new RelayerCleartext(HardhatConfig);
+```
+
 Ready? Jump to the [Quick Start](guides/quick-start.md) for a full working example with your stack.
