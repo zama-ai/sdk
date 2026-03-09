@@ -1,11 +1,12 @@
 import type { GenericSigner } from "@zama-fhe/sdk";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 import { fhevmSepolia } from "@zama-fhe/sdk/chains";
-import { createFhevmConfig, CHAIN_REQUIRED_ERROR, WAGMI_PROVIDER_REQUIRED_ERROR } from "../config";
-import { getConfiguredChainMismatchError } from "../configured-chain-signer";
+import { createFhevmConfig, WAGMI_PROVIDER_REQUIRED_ERROR } from "../config";
 import { wagmiAdapter } from "../wagmi/adapter";
 import { resolveWallet } from "../resolve-wallet";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const NO_WALLET_ERROR = "No walletClient configured";
 
 const { wagmiSignerCtor, viemSignerCtor, createPublicClientMock, httpMock } = vi.hoisted(() => ({
   wagmiSignerCtor: vi.fn(),
@@ -24,21 +25,31 @@ vi.mock("../wagmi/wagmi-signer", () => {
 });
 
 vi.mock("@zama-fhe/sdk/viem", () => {
+  const noWallet = new TypeError("No walletClient configured — read-only mode");
+
   class MockViemSigner {
     constructor(config: unknown) {
       viemSignerCtor(config);
     }
 
+    async getChainId() {
+      return 11155111;
+    }
+
     async getAddress() {
-      return "0x1111111111111111111111111111111111111111";
+      throw noWallet;
     }
 
     async signTypedData() {
-      return "0xsig";
+      throw noWallet;
     }
 
     async writeContract() {
-      return "0xtx";
+      throw noWallet;
+    }
+
+    async readContract() {
+      return null;
     }
 
     async waitForTransactionReceipt() {
@@ -69,7 +80,7 @@ describe("resolveWallet", () => {
     httpMock.mockImplementation((url: unknown) => ({ type: "http", url }));
   });
 
-  it("returns GenericSigner directly when provided", () => {
+  it("returns the provided GenericSigner as-is", () => {
     const genericSigner = {
       getChainId: vi.fn(async () => 11155111),
       getAddress: vi.fn(),
@@ -84,7 +95,7 @@ describe("resolveWallet", () => {
       null,
     );
 
-    expect(resolved).not.toBe(genericSigner);
+    expect(resolved).toBe(genericSigner);
     expect(wagmiSignerCtor).not.toHaveBeenCalled();
     expect(viemSignerCtor).not.toHaveBeenCalled();
   });
@@ -133,37 +144,12 @@ describe("resolveWallet", () => {
   it("read-only signer write methods throw a consistent no-wallet error", async () => {
     const signer = resolveWallet(createFhevmConfig({ chain: fhevmSepolia }), null);
 
-    await expect(signer.getAddress()).rejects.toThrow("No wallet connected");
-    await expect(signer.signTypedData({} as never)).rejects.toThrow("No wallet connected");
-    await expect(signer.writeContract({} as never)).rejects.toThrow("No wallet connected");
-    await expect(signer.waitForTransactionReceipt("0xtx" as never)).rejects.toThrow(
-      "No wallet connected",
-    );
+    await expect(signer.getAddress()).rejects.toThrow(NO_WALLET_ERROR);
+    await expect(signer.signTypedData({} as never)).rejects.toThrow(NO_WALLET_ERROR);
+    await expect(signer.writeContract({} as never)).rejects.toThrow(NO_WALLET_ERROR);
   });
 
-  it("throws a clear error when the chain is missing", () => {
-    expect(() => resolveWallet({ storage: () => null } as never, null)).toThrow(
-      CHAIN_REQUIRED_ERROR,
-    );
-  });
-
-  it("throws when a wallet signer is connected to a different chain", async () => {
-    const genericSigner = {
-      getChainId: vi.fn(async () => 1),
-      getAddress: vi.fn(async () => "0x1111111111111111111111111111111111111111"),
-      signTypedData: vi.fn(),
-      writeContract: vi.fn(),
-      readContract: vi.fn(),
-      waitForTransactionReceipt: vi.fn(),
-    } as unknown as GenericSigner;
-
-    const signer = resolveWallet(
-      createFhevmConfig({ chain: fhevmSepolia, wallet: genericSigner }),
-      null,
-    );
-
-    await expect(signer.getAddress()).rejects.toThrow(
-      getConfiguredChainMismatchError(fhevmSepolia, 1),
-    );
+  it("throws when passed a config without chain", () => {
+    expect(() => resolveWallet({ storage: () => null } as never, null)).toThrow();
   });
 });

@@ -11,7 +11,12 @@ import {
   useMemo,
   useRef,
 } from "react";
-import { isWagmiAdapter, WAGMI_PROVIDER_REQUIRED_ERROR, type FhevmConfig } from "./config";
+import {
+  isWagmiAdapter,
+  WAGMI_PROVIDER_REQUIRED_ERROR,
+  type FhevmConfig,
+  type WagmiAdapter,
+} from "./config";
 import { resolveRelayer } from "./resolve-relayer";
 import { resolveWallet } from "./resolve-wallet";
 
@@ -39,17 +44,14 @@ export function FhevmProvider({ config, queryClient, children }: FhevmProviderPr
 }
 
 function WagmiFhevmProviderInner({ config, queryClient, children }: FhevmProviderProps) {
-  const wallet = config.wallet;
+  // config.wallet is guaranteed to be a WagmiAdapter here (enforced by FhevmProvider)
+  const adapter = config.wallet as WagmiAdapter;
   let wagmiConfig: unknown;
 
   try {
-    if (!wallet || !isWagmiAdapter(wallet)) {
-      throw new Error(WAGMI_PROVIDER_REQUIRED_ERROR);
-    }
-
-    wagmiConfig = wallet.useConfig();
-  } catch {
-    throw new Error(WAGMI_PROVIDER_REQUIRED_ERROR);
+    wagmiConfig = adapter.useConfig();
+  } catch (err) {
+    throw new Error(WAGMI_PROVIDER_REQUIRED_ERROR, { cause: err });
   }
 
   return (
@@ -64,14 +66,9 @@ function FhevmProviderInner({
   queryClient: queryClientProp,
   wagmiConfig,
   children,
-}: FhevmProviderProps & { wagmiConfig: unknown | null }) {
+}: FhevmProviderProps & { wagmiConfig: unknown }) {
   const ambientQueryClient = useQueryClient();
   const queryClient = queryClientProp ?? ambientQueryClient;
-  const walletMode = isWagmiAdapter(config.wallet)
-    ? "wagmi"
-    : config.wallet
-      ? "custom"
-      : "readonly";
 
   const onEventRef = useRef(config.advanced?.onEvent);
   useEffect(() => {
@@ -84,19 +81,16 @@ function FhevmProviderInner({
   );
   const signer = useMemo(
     () => resolveWallet(config, wagmiConfig),
-    [config.chain.id, walletMode, wagmiConfig, walletMode === "custom" ? config.wallet : null],
+    [config.chain.id, wagmiConfig, config.wallet],
   );
 
   const signerLifecycleCallbacks = useMemo(
-    () =>
-      signer?.subscribe
-        ? {
-            onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
-            onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
-            onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
-          }
-        : undefined,
-    [queryClient, signer],
+    () => ({
+      onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
+      onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
+      onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
+    }),
+    [queryClient],
   );
 
   const sdk = useMemo(

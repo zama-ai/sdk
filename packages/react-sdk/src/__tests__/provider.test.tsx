@@ -203,7 +203,7 @@ describe("FhevmProvider & useFhevmClient", () => {
     });
 
     expect(result.current).toBeDefined();
-    expect(result.current.signer).not.toBe(signer);
+    expect(result.current.signer).toBe(signer);
     expect(result.current.relayer).toBeDefined();
   });
 
@@ -241,7 +241,9 @@ describe("FhevmProvider & useFhevmClient", () => {
         withQueryClient(<FhevmProvider config={config}>{children}</FhevmProvider>),
     });
 
-    await expect(result.current.mutateAsync([tokenAddress])).rejects.toThrow("No wallet connected");
+    await expect(result.current.mutateAsync([tokenAddress])).rejects.toThrow(
+      "No walletClient configured",
+    );
   });
 
   it("chain 11155111 resolves through RelayerWeb", ({ createMockSigner }) => {
