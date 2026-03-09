@@ -16,7 +16,9 @@ import { CleartextFhevmInstance } from "../cleartext-fhevm-instance";
 import type { Handle } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
 import { hardhatCleartextConfig } from "../presets";
-import { CONTRACT_ADDRESS, USER_ADDRESS } from "./fixtures";
+
+const USER_ADDRESS = "0x1000000000000000000000000000000000000001";
+const CONTRACT_ADDRESS = "0x2000000000000000000000000000000000000002";
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
