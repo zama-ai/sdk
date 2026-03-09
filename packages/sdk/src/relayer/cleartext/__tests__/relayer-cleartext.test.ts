@@ -132,7 +132,7 @@ function createInstance(options: MockClientOptions = {}): {
   calls: MockCall[];
 } {
   const { provider, calls } = createMockProvider(options);
-  return { fhevm: new RelayerCleartext(hardhatCleartextConfig), calls };
+  return { fhevm: new RelayerCleartext({ ...hardhatCleartextConfig, network: provider }), calls };
 }
 
 function createUserDecryptParams(
@@ -635,11 +635,20 @@ describe("RelayerCleartext", () => {
     expect(result.abiEncodedClearValues).toBe(expected);
   });
 
-  it("getPublicKey returns null and getPublicParams returns null", async () => {
+  it("getPublicKey and getPublicParams return defined mock values", async () => {
     const { fhevm } = createInstance();
 
-    await expect(fhevm.getPublicKey()).resolves.toBeNull();
-    await expect(fhevm.getPublicParams(2048)).resolves.toBeNull();
+    const publicKey = await fhevm.getPublicKey();
+    expect(publicKey).toEqual({
+      publicKeyId: "mock-public-key-id",
+      publicKey: new Uint8Array([32]),
+    });
+
+    const publicParams = await fhevm.getPublicParams(2048);
+    expect(publicParams).toEqual({
+      publicParams: new Uint8Array([32]),
+      publicParamsId: "mock-public-params-id",
+    });
   });
 
   it("terminate is a no-op", () => {
