@@ -12657,6 +12657,7 @@ export interface GenericLogger {
 // @public
 export interface GenericSigner {
     getAddress: () => Promise<Address>;
+    getBlockTimestamp?: () => Promise<bigint>;
     getChainId(): Promise<number>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
@@ -19562,7 +19563,6 @@ export class ReadonlyToken {
     decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
     discoverWrapper(coordinatorAddress: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
-    // (undocumented)
     getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint>;
     isAllowed(): Promise<boolean>;
     isConfidential(): Promise<boolean>;
@@ -22807,20 +22807,16 @@ export class Token extends ReadonlyToken {
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
-    // (undocumented)
     delegateDecryption(delegate: Address, options?: {
         expirationDate?: Date;
     }): Promise<TransactionResult>;
-    // (undocumented)
     static delegateDecryptionBatch(tokens: Token[], delegate: Address, options?: {
         expirationDate?: Date;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
     finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    // (undocumented)
     revokeDelegation(delegate: Address): Promise<TransactionResult>;
-    // (undocumented)
     static revokeDelegationBatch(tokens: Token[], delegate: Address): Promise<Map<Address, TransactionResult | ZamaError>>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";

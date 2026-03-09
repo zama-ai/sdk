@@ -102,6 +102,7 @@ export type EthersSignerConfig = {
 // @public
 export interface GenericSigner {
     getAddress: () => Promise<Address>;
+    getBlockTimestamp?: () => Promise<bigint>;
     getChainId(): Promise<number>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
