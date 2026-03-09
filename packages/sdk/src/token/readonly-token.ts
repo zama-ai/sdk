@@ -586,6 +586,7 @@ export class ReadonlyToken {
    * @param delegator - The address of the account that delegated decryption rights.
    * @param options - Optional configuration: `owner` sets the balance owner address (defaults to the delegator).
    * @returns The decrypted plaintext balance as a bigint.
+   * @throws {@link ConfigurationError} if the chain ID exceeds the safe integer range.
    * @throws {@link DecryptionFailedError} if delegated decryption fails.
    *
    * @example
