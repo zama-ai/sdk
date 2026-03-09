@@ -4,7 +4,7 @@ import type { CleartextConfig } from "./types";
 /**
  * Hardhat local network configuration (chainId 31337).
  *
- * @dev The addresses in this configuration must match those of your deployment.
+ * The addresses in this configuration must match those of your deployment.
  * Ensure that the executor address and other contract addresses correspond to
  * the contracts deployed on your Hardhat network.
  */
