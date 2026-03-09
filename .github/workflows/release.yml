@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     branches: [main, prerelease]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,15 +20,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate-branch:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate target branch
+        run: |
+          if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "prerelease" ]]; then
+            echo "::error::Releases are only allowed from main or prerelease (got: ${GITHUB_REF_NAME})."
+            exit 1
+          fi
+
   vitest:
+    needs: [validate-branch]
+    if: ${{ !cancelled() && !failure() }}
     uses: ./.github/workflows/vitest.yml
 
   playwright:
+    needs: [validate-branch]
+    if: ${{ !cancelled() && !failure() }}
     uses: ./.github/workflows/playwright.yml
     secrets:
       SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
   api-report:
+    needs: [validate-branch]
+    if: ${{ !cancelled() && !failure() }}
     uses: ./.github/workflows/api-report.yml
 
   release:
@@ -87,3 +105,12 @@ jobs:
           npm publish --access public --tag "${npm_tag}"
         env:
           NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public
+
+      - name: Verify release was published
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if ! grep -q "Published release" /tmp/release-output.txt; then
+            echo "::error::semantic-release completed but no release was published."
+            echo "Common causes: no releasable commits, branch not configured, or authentication issue."
+            exit 1
+          fi
