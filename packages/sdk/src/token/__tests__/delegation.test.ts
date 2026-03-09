@@ -74,28 +74,6 @@ describe("delegation read methods", () => {
     // getBlockTimestamp should NOT have been called — permanent delegation skips it.
     expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
   });
-
-  it("throws ConfigurationError when aclAddress is missing", async ({
-    signer,
-    relayer,
-    storage,
-    sessionStorage,
-    tokenAddress,
-    delegatorAddress,
-    delegateAddress,
-  }) => {
-    const token = new ReadonlyToken({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-    });
-
-    await expect(token.getDelegationExpiry(delegatorAddress, delegateAddress)).rejects.toThrow(
-      ConfigurationError,
-    );
-  });
 });
 
 describe("delegation write methods", () => {
@@ -155,26 +133,6 @@ describe("delegation write methods", () => {
         functionName: "revokeDelegationForUserDecryption",
         args: [delegateAddress, tokenAddress],
       }),
-    );
-  });
-
-  it("delegateDecryption throws ConfigurationError without aclAddress", async ({
-    signer,
-    relayer,
-    storage,
-    sessionStorage,
-    tokenAddress,
-    delegateAddress,
-  }) => {
-    const tokenNoAcl = new Token({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-    });
-    await expect(tokenNoAcl.delegateDecryption(delegateAddress)).rejects.toThrow(
-      ConfigurationError,
     );
   });
 

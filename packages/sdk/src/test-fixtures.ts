@@ -192,7 +192,7 @@ export const test = base.extend<SdkFixtures>({
   sessionStorage: async ({}, use) => {
     await use(new MemoryStorage());
   },
-  token: async ({ relayer, signer, storage, sessionStorage, tokenAddress, aclAddress }, use) => {
+  token: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, use) => {
     await use(
       new Token({
         relayer,

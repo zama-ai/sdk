@@ -1,31 +1,32 @@
+import { getAddress } from "viem";
 import {
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
   allowanceContract,
   confidentialBalanceOfContract,
   decimalsContract,
+  getDelegationExpiryContract,
+  getWrapperContract,
   nameContract,
   supportsInterfaceContract,
   symbolContract,
   underlyingContract,
   wrapperExistsContract,
-  getWrapperContract,
-  getDelegationExpiryContract,
 } from "../contracts";
+import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address, Handle } from "../relayer/relayer-sdk.types";
 import { normalizeHandle, pLimit, validateAddress } from "../utils";
-import type { GenericSigner, GenericStorage } from "./token.types";
+import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import { CredentialsManager } from "./credentials-manager";
 import {
   ConfigurationError,
   DecryptionFailedError,
   NoCiphertextError,
   RelayerRequestFailedError,
 } from "./errors";
-import { CredentialsManager } from "./credentials-manager";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import type { GenericSigner, GenericStorage } from "./token.types";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -81,7 +82,7 @@ export interface ReadonlyTokenConfig {
  */
 export class ReadonlyToken {
   protected readonly credentials: CredentialsManager;
-  protected readonly sdk: RelayerSDK;
+  protected readonly relayer: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
   readonly #storage: GenericStorage;
@@ -99,7 +100,7 @@ export class ReadonlyToken {
         keypairTTL: config.keypairTTL ?? 86400,
         onEvent: config.onEvent,
       });
-    this.sdk = config.relayer;
+    this.relayer = config.relayer;
     this.signer = config.signer;
     this.address = address;
     this.#storage = config.storage;
@@ -151,7 +152,7 @@ export class ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const result = await this.sdk.userDecrypt({
+      const result = await this.relayer.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
         signedContractAddresses: creds.contractAddresses,
@@ -273,7 +274,7 @@ export class ReadonlyToken {
 
     const { handles, owner, onError, maxConcurrency } = options ?? {};
 
-    const sdk = tokens[0]!.sdk;
+    const sdk = tokens[0]!.relayer;
     const signer = tokens[0]!.signer;
     const signerAddress = owner ?? (await signer.getAddress());
 
@@ -517,7 +518,7 @@ export class ReadonlyToken {
 
   protected async requireAclAddress(): Promise<Address> {
     try {
-      return await this.sdk.getAclAddress();
+      return await this.relayer.getAclAddress();
     } catch {
       throw new ConfigurationError(
         "Could not resolve ACL address from the relayer. Ensure the relayer is configured with a transport that includes aclContractAddress.",
@@ -590,8 +591,8 @@ export class ReadonlyToken {
    * ```
    */
   async decryptBalanceAs(delegator: Address, options?: { owner?: Address }): Promise<bigint> {
-    const normalizedDelegator = validateAddress(delegator, "delegator");
-    const owner = options?.owner ? validateAddress(options.owner, "owner") : normalizedDelegator;
+    const normalizedDelegator = getAddress(delegator);
+    const owner = options?.owner ? getAddress(options.owner) : normalizedDelegator;
 
     const handle = await this.readConfidentialBalanceOf(owner);
     if (this.isZeroHandle(handle)) return 0n;
@@ -610,13 +611,13 @@ export class ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
 
       // Generate a fresh keypair for the delegated decrypt request.
-      const { publicKey, privateKey } = await this.sdk.generateKeypair();
+      const { publicKey, privateKey } = await this.relayer.generateKeypair();
       const delegateAddress = await this.signer.getAddress();
       const startTimestamp = Math.floor(Date.now() / 1000);
       const durationDays = 1;
 
       // Create delegated EIP-712 typed data.
-      const delegatedEIP712 = await this.sdk.createDelegatedUserDecryptEIP712(
+      const delegatedEIP712 = await this.relayer.createDelegatedUserDecryptEIP712(
         publicKey,
         [this.address],
         normalizedDelegator,
@@ -646,7 +647,7 @@ export class ReadonlyToken {
       });
 
       // Perform delegated decryption.
-      const result = await this.sdk.delegatedUserDecrypt({
+      const result = await this.relayer.delegatedUserDecrypt({
         handles: [handle],
         contractAddress: this.address,
         signedContractAddresses: [this.address],
@@ -717,7 +718,7 @@ export class ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const result = await this.sdk.userDecrypt({
+      const result = await this.relayer.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
         signedContractAddresses: creds.contractAddresses,
@@ -777,7 +778,7 @@ export class ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const decrypted = await this.sdk.userDecrypt({
+      const decrypted = await this.relayer.userDecrypt({
         handles: nonZeroHandles,
         contractAddress: this.address,
         signedContractAddresses: creds.contractAddresses,

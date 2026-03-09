@@ -111,7 +111,7 @@ export class Token extends ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
-      ({ handles, inputProof } = await this.sdk.encrypt({
+      ({ handles, inputProof } = await this.relayer.encrypt({
         values: [{ value: amount, type: "euint64" }],
         contractAddress: this.address,
         userAddress: await this.signer.getAddress(),
@@ -185,7 +185,7 @@ export class Token extends ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
-      ({ handles, inputProof } = await this.sdk.encrypt({
+      ({ handles, inputProof } = await this.relayer.encrypt({
         values: [{ value: amount, type: "euint64" }],
         contractAddress: this.address,
         userAddress: normalizedFrom,
@@ -416,7 +416,7 @@ export class Token extends ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
-      ({ handles, inputProof } = await this.sdk.encrypt({
+      ({ handles, inputProof } = await this.relayer.encrypt({
         values: [{ value: amount, type: "euint64" }],
         contractAddress: this.wrapper,
         userAddress,
@@ -587,7 +587,7 @@ export class Token extends ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const result = await this.sdk.publicDecrypt([burnAmountHandle]);
+      const result = await this.relayer.publicDecrypt([burnAmountHandle]);
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
       decryptionProof = result.decryptionProof;
       try {
