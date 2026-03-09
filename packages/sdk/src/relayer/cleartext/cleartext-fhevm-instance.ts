@@ -83,7 +83,7 @@ const KMS_DECRYPTION_TYPES = {
   PublicDecryptVerification: KMS_DECRYPTION_EIP712.types.PublicDecryptVerification,
 } satisfies KmsPublicDecryptEIP712Type["types"];
 
-const FORBIDDEN_CHAIN_IDS = new Set([BigInt(mainnet.id), BigInt(sepolia.id)]);
+const FORBIDDEN_CHAIN_IDS = new Set<number>([mainnet.id, sepolia.id]);
 
 // FheTypeId constants for hot-path comparisons
 const EBOOL_ID: FheTypeId = 0;
@@ -140,13 +140,11 @@ function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
 export class CleartextFhevmInstance implements RelayerSDK {
   readonly #client: PublicClient;
   readonly #config: CleartextConfig;
-  readonly #chainIdBigInt: bigint;
   readonly kmsSigner: PrivateKeyAccount;
   readonly inputSigner: PrivateKeyAccount;
 
   constructor(config: CleartextConfig) {
-    this.#chainIdBigInt = BigInt(config.chainId);
-    if (FORBIDDEN_CHAIN_IDS.has(this.#chainIdBigInt)) {
+    if (FORBIDDEN_CHAIN_IDS.has(config.chainId)) {
       throw new ConfigurationError(
         `Cleartext mode is not allowed on chain ${config.chainId}. ` +
           `It is intended for local development and testing only.`,
@@ -210,8 +208,8 @@ export class CleartextFhevmInstance implements RelayerSDK {
         ciphertextBlob,
         index,
         fheType,
-        this.#config.aclContractAddress as Address,
-        this.#chainIdBigInt,
+        this.#config.aclContractAddress,
+        BigInt(this.#config.chainId),
       ),
     );
 
@@ -231,7 +229,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
         ctHandles: handles,
         userAddress,
         contractAddress,
-        contractChainId: this.#chainIdBigInt,
+        contractChainId: BigInt(this.#config.chainId),
         extraData: cleartextBytes,
       },
     });
@@ -331,7 +329,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
 
     return {
       domain: DELEGATED_USER_DECRYPT_EIP712.domain(
-        this.#chainIdBigInt,
+        BigInt(this.#config.chainId),
         this.#config.verifyingContractAddressDecryption,
       ) as KmsDelegatedUserDecryptEIP712Type["domain"],
       types: DELEGATED_USER_DECRYPT_TYPES,
@@ -426,7 +424,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
 
   async #persistAllowed(handle: Handle, account: Address): Promise<boolean> {
     return this.#client.readContract({
-      address: this.#config.aclContractAddress as Address,
+      address: this.#config.aclContractAddress,
       abi: ACL_ABI,
       functionName: "persistAllowed",
       args: [handle, account],
@@ -435,7 +433,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
 
   async #isAllowedForDecryption(handle: Handle): Promise<boolean> {
     return this.#client.readContract({
-      address: this.#config.aclContractAddress as Address,
+      address: this.#config.aclContractAddress,
       abi: ACL_ABI,
       functionName: "isAllowedForDecryption",
       args: [handle],

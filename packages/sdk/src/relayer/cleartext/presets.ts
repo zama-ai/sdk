@@ -2,13 +2,7 @@ import { HardhatConfig } from "../relayer-utils";
 import type { CleartextConfig } from "./types";
 
 export const hardhatCleartextConfig = {
-  chainId: 31337,
-  network: "http://127.0.0.1:8545",
-  gatewayChainId: HardhatConfig.gatewayChainId,
-  aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
-  verifyingContractAddressDecryption: HardhatConfig.verifyingContractAddressDecryption,
-  verifyingContractAddressInputVerification:
-    HardhatConfig.verifyingContractAddressInputVerification,
+  ...HardhatConfig,
   executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
 } satisfies CleartextConfig;
 
