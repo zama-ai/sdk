@@ -1,6 +1,13 @@
 import { HardhatConfig } from "../relayer-utils";
 import type { CleartextConfig } from "./types";
 
+/**
+ * Hardhat local network configuration (chainId 31337).
+ *
+ * @dev The addresses in this configuration must match those of your deployment.
+ * Ensure that the executor address and other contract addresses correspond to
+ * the contracts deployed on your Hardhat network.
+ */
 export const hardhatCleartextConfig = {
   ...HardhatConfig,
   executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
