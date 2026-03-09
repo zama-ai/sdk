@@ -82,6 +82,7 @@ export function createMockToken(
     unshield: vi.fn().mockResolvedValue(mockResult),
     unshieldAll: vi.fn().mockResolvedValue(mockResult),
     resumeUnshield: vi.fn().mockResolvedValue(mockResult),
+    delegateDecryption: vi.fn().mockResolvedValue(mockResult),
   } as unknown as Token;
 }
 
