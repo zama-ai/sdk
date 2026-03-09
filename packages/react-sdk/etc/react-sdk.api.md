@@ -66,10 +66,14 @@ import { decodeUnwrappedFinalized } from '@zama-fhe/sdk';
 import { decodeUnwrappedStarted } from '@zama-fhe/sdk';
 import { decodeUnwrapRequested } from '@zama-fhe/sdk';
 import { decodeWrapped } from '@zama-fhe/sdk';
+import { decryptBalanceAsMutationOptions } from '@zama-fhe/sdk/query';
+import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
 import { DecryptEndEvent } from '@zama-fhe/sdk';
 import { DecryptErrorEvent } from '@zama-fhe/sdk';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
 import { DecryptStartEvent } from '@zama-fhe/sdk';
+import { delegateDecryptionMutationOptions } from '@zama-fhe/sdk/query';
+import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegatedUserDecryptParams } from '@zama-fhe/sdk';
 import { DEPLOYMENT_COORDINATOR_ABI } from '@zama-fhe/sdk';
 import { deploymentCoordinatorContract } from '@zama-fhe/sdk';
@@ -383,6 +387,10 @@ export { decodeUnwrapRequested }
 
 export { decodeWrapped }
 
+export { decryptBalanceAsMutationOptions }
+
+export { DecryptBalanceAsParams }
+
 export { DecryptEndEvent }
 
 export { DecryptErrorEvent }
@@ -406,6 +414,10 @@ export const decryptionKeys: {
 };
 
 export { DecryptStartEvent }
+
+export { delegateDecryptionMutationOptions }
+
+export { DelegateDecryptionParams }
 
 export { DelegatedUserDecryptParams }
 
@@ -1135,6 +1147,12 @@ export function useCreateDelegatedUserDecryptEIP712(): _tanstack_react_query0.Us
 export function useCreateEIP712(): _tanstack_react_query0.UseMutationResult<EIP712TypedData, Error, CreateEIP712Params, unknown>;
 
 // @public
+export function useDecryptBalanceAs(tokenAddress: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): _tanstack_react_query0.UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;
+
+// @public
+export function useDelegateDecryption(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
+
+// @public
 export function useDelegatedUserDecrypt(): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptParams, unknown>;
 
 // @public
@@ -1351,6 +1369,7 @@ export function ZamaProvider(input: ZamaProviderProps): react_jsx_runtime0.JSX.E
 
 // @public
 export interface ZamaProviderProps extends PropsWithChildren {
+    aclAddress?: Address;
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
