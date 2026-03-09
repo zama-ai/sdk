@@ -771,7 +771,7 @@ describe("CleartextFhevmInstance", () => {
     const fhevm = new CleartextFhevmInstance(client, CLEAR_TEXT_MOCK_CONFIG);
 
     await expect(fhevm.requestZKProofVerification({} as never)).rejects.toThrow(
-      "Not implemented in cleartext mode",
+      "requestZKProofVerification is not supported in cleartext mode",
     );
   });
 });
