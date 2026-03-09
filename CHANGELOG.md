@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.0-alpha.17](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.16...v1.0.0-alpha.17) (2026-03-09)
+
+### Bug Fixes
+
+- add `viem` as dep of sdk, fix examples ([#74](https://github.com/zama-ai/sdk/issues/74)) ([3cf92cd](https://github.com/zama-ai/sdk/commit/3cf92cd8bb69d1188530e49fd9dbf77ab62c13da))
+
 ## [1.0.0-alpha.16](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.15...v1.0.0-alpha.16) (2026-03-06)
 
 ## [1.0.0-alpha.15](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.14...v1.0.0-alpha.15) (2026-03-06)
