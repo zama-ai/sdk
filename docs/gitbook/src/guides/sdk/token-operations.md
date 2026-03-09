@@ -155,6 +155,30 @@ if (pending) {
 }
 ```
 
+## Delegated decryption
+
+Delegation lets you grant another address the right to decrypt your confidential balance — useful for portfolio dashboards, fund managers, or any scenario where a third party needs read access to your encrypted holdings.
+
+> **Prerequisite:** Pass `aclAddress` when creating the SDK or token. Delegation operations throw `ConfigurationError` without it. See [Delegated Decryption](delegation.md) for the full guide.
+
+```ts
+// Grant delegation rights (permanent by default)
+await token.delegateDecryption("0xDelegate");
+
+// Grant with an expiration date
+await token.delegateDecryption("0xDelegate", {
+  expirationDate: new Date("2025-12-31"),
+});
+
+// Revoke delegation
+await token.revokeDelegation("0xDelegate");
+
+// Decrypt as a delegate
+const balance = await readonlyToken.decryptBalanceAs("0xDelegator");
+```
+
+For the full guide — including batch operations, querying delegation status, and React hooks — see [Delegated Decryption](delegation.md).
+
 ## Operator approval
 
 Let another address (like a DEX or multisig) operate on your confidential tokens:

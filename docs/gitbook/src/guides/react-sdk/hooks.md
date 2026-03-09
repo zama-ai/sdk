@@ -227,6 +227,38 @@ await tokenA.revoke();
 
 See [Session management](../sdk/configuration.md#session-management) for details on the security model.
 
+## Delegated Decryption
+
+### `useDelegateDecryption`
+
+Grant or manage decryption delegation via the on-chain ACL. Requires `aclAddress` on the `ZamaProvider`.
+
+```tsx
+const { mutateAsync: delegate, isPending } = useDelegateDecryption({
+  tokenAddress: "0xToken",
+});
+
+// Permanent delegation
+await delegate({ delegate: "0xDelegate" });
+
+// With expiration
+await delegate({
+  delegate: "0xDelegate",
+  options: { expirationDate: new Date("2025-12-31") },
+});
+```
+
+### `useDecryptBalanceAs`
+
+Decrypt another user's balance as a delegate. Uses the delegated EIP-712 flow — the connected wallet signs as the delegate, and the relayer verifies the on-chain delegation.
+
+```tsx
+const { mutateAsync: decryptAs, data: balance } = useDecryptBalanceAs("0xToken");
+
+const result = await decryptAs({ delegator: "0xDelegator" });
+// result => bigint (decrypted balance)
+```
+
 ## Approval
 
 ### `useConfidentialApprove`

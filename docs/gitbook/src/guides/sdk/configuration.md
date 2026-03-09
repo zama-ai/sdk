@@ -10,6 +10,7 @@ const sdk = new ZamaSDK({
   sessionStorage,                // optional — wallet signature storage (default: in-memory)
   keypairTTL: 86400,             // optional (default: 86400 = 1 day, in seconds)
   sessionTTL: 2592000,            // optional — session signature lifetime in seconds (default: 2592000 = 30 days)
+  aclAddress: "0xACL",             // optional — required for delegation operations
   onEvent: (event) => { ... },   // optional — lifecycle events for debugging
 });
 ```

@@ -156,6 +156,7 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
   sessionStorage={sessionStorage} // Optional. Session storage for wallet signatures. Default: in-memory (lost on reload).
   keypairTTL={86400} // Optional. Seconds the ML-KEM keypair remains valid. Default: 86400 (1 day).
   sessionTTL={2592000} // Optional. Seconds the session signature remains valid. Default: 2592000 (30 days). 0 = re-sign every operation.
+  aclAddress="0xACL" // Optional. ACL contract address — required for delegation operations.
   onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
   {children}
@@ -564,6 +565,67 @@ function useFinalizeUnwrap(
 interface FinalizeUnwrapParams {
   burnAmountHandle: Address;
 }
+```
+
+### Delegation Hooks
+
+#### `useDelegateDecryption`
+
+Grant decryption delegation to another address via the on-chain ACL. Requires `aclAddress` on the `ZamaProvider`.
+
+```ts
+function useDelegateDecryption(
+  config: UseZamaConfig,
+  options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>,
+): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams>;
+
+interface DelegateDecryptionParams {
+  delegate: Address;
+  options?: {
+    expirationDate: Date;
+  };
+}
+```
+
+```tsx
+const { mutateAsync: delegate, isPending } = useDelegateDecryption({
+  tokenAddress: "0xToken",
+});
+
+// Permanent delegation
+await delegate({ delegate: "0xDelegate" });
+
+// With expiration
+await delegate({
+  delegate: "0xDelegate",
+  options: { expirationDate: new Date("2025-12-31") },
+});
+```
+
+#### `useDecryptBalanceAs`
+
+Decrypt another user's balance as a delegate. Uses the delegated EIP-712 flow — the connected wallet signs as the delegate, and the relayer verifies the on-chain delegation.
+
+```ts
+function useDecryptBalanceAs(
+  tokenAddress: Address,
+  options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>,
+): UseMutationResult<bigint, Error, DecryptBalanceAsParams>;
+
+interface DecryptBalanceAsParams {
+  delegator: Address;
+  options?: {
+    owner: Address;
+  };
+}
+```
+
+```tsx
+const { mutateAsync: decryptAs, data: balance } = useDecryptBalanceAs("0xToken");
+
+// Decrypt the delegator's balance
+const result = await decryptAs({ delegator: "0xDelegator" });
+// result => bigint
 ```
 
 ### Approval Hooks
