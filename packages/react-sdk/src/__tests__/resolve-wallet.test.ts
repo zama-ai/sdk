@@ -1,7 +1,7 @@
 import type { GenericSigner } from "@zama-fhe/sdk";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 import { fhevmSepolia } from "@zama-fhe/sdk/chains";
-import { createFhevmConfig } from "../config";
+import { createFhevmConfig, EMPTY_CHAINS_ERROR, WAGMI_PROVIDER_REQUIRED_ERROR } from "../config";
 import { wagmiAdapter } from "../wagmi/adapter";
 import { resolveWallet } from "../resolve-wallet";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -26,6 +26,22 @@ vi.mock("@zama-fhe/sdk/viem", () => {
   class MockViemSigner {
     constructor(config: unknown) {
       viemSignerCtor(config);
+    }
+
+    async getAddress() {
+      return "0x1111111111111111111111111111111111111111";
+    }
+
+    async signTypedData() {
+      return "0xsig";
+    }
+
+    async writeContract() {
+      return "0xtx";
+    }
+
+    async waitForTransactionReceipt() {
+      return { transactionHash: "0xtx" };
     }
   }
   return { ViemSigner: MockViemSigner };
@@ -85,6 +101,12 @@ describe("resolveWallet", () => {
     expect(viemSignerCtor).not.toHaveBeenCalled();
   });
 
+  it("throws a provider-specific error when wagmi adapter is used without wagmi config", () => {
+    expect(() =>
+      resolveWallet(createFhevmConfig({ chains: [fhevmSepolia], wallet: wagmiAdapter() }), null),
+    ).toThrow(WAGMI_PROVIDER_REQUIRED_ERROR);
+  });
+
   it("constructs a read-only ViemSigner when wallet is omitted", () => {
     resolveWallet(createFhevmConfig({ chains: [fhevmSepolia] }), null);
 
@@ -105,5 +127,22 @@ describe("resolveWallet", () => {
 
     expect(args).toBeDefined();
     expect(Object.hasOwn(args, "walletClient")).toBe(false);
+  });
+
+  it("read-only signer write methods throw a consistent no-wallet error", async () => {
+    const signer = resolveWallet(createFhevmConfig({ chains: [fhevmSepolia] }), null);
+
+    await expect(signer.getAddress()).rejects.toThrow("No wallet connected");
+    await expect(signer.signTypedData({} as never)).rejects.toThrow("No wallet connected");
+    await expect(signer.writeContract({} as never)).rejects.toThrow("No wallet connected");
+    await expect(signer.waitForTransactionReceipt("0xtx" as never)).rejects.toThrow(
+      "No wallet connected",
+    );
+  });
+
+  it("throws a clear error when chains is empty", () => {
+    expect(() => resolveWallet({ chains: [], storage: () => null } as never, null)).toThrow(
+      EMPTY_CHAINS_ERROR,
+    );
   });
 });

@@ -21,6 +21,10 @@ export interface WagmiAdapter {
   type: "wagmi";
 }
 
+export const EMPTY_CHAINS_ERROR = "FhevmConfig.chains must contain at least one chain.";
+export const WAGMI_PROVIDER_REQUIRED_ERROR =
+  "FhevmProvider with wagmiAdapter() requires a <WagmiProvider> in the component tree.";
+
 /** Wallet option accepted by {@link createFhevmConfig}. */
 export type WalletOption = GenericSigner | WagmiAdapter;
 
@@ -47,8 +51,24 @@ export interface FhevmConfig {
   advanced?: FhevmAdvancedOptions;
 }
 
+export function isWagmiAdapter(wallet: unknown): wallet is WagmiAdapter {
+  return typeof wallet === "object" && wallet !== null && (wallet as WagmiAdapter).type === "wagmi";
+}
+
+export function getPrimaryChain(config: Pick<FhevmConfigOptions, "chains">): FhevmChain {
+  const chain = config.chains[0];
+
+  if (!chain) {
+    throw new TypeError(EMPTY_CHAINS_ERROR);
+  }
+
+  return chain;
+}
+
 /** Create an inert FHEVM config object with defaults applied. */
 export function createFhevmConfig(options: FhevmConfigOptions): FhevmConfig {
+  getPrimaryChain(options);
+
   return {
     chains: options.chains,
     wallet: options.wallet,

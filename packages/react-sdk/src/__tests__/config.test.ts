@@ -1,6 +1,7 @@
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 import { fhevmSepolia } from "@zama-fhe/sdk/chains";
 import { createFhevmConfig, type RelayerOverride, wagmiAdapter } from "@zama-fhe/react-sdk";
+import { EMPTY_CHAINS_ERROR } from "../config";
 import { describe, expect, it, vi } from "vitest";
 
 describe("createFhevmConfig", () => {
@@ -76,6 +77,10 @@ describe("createFhevmConfig", () => {
     expect(config.wallet).toBe(wallet);
     expect(config.relayer).toBe(relayer);
     expect(config.advanced).toBe(advanced);
+  });
+
+  it("throws a clear error when chains is empty", () => {
+    expect(() => createFhevmConfig({ chains: [] })).toThrow(EMPTY_CHAINS_ERROR);
   });
 });
 

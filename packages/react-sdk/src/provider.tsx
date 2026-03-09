@@ -12,7 +12,12 @@ import {
   useRef,
 } from "react";
 import { useConfig, type Config as WagmiConfig } from "wagmi";
-import type { FhevmConfig, WagmiAdapter } from "./config";
+import {
+  getPrimaryChain,
+  isWagmiAdapter,
+  WAGMI_PROVIDER_REQUIRED_ERROR,
+  type FhevmConfig,
+} from "./config";
 import { resolveRelayer } from "./resolve-relayer";
 import { resolveWallet } from "./resolve-wallet";
 
@@ -22,10 +27,6 @@ export interface FhevmProviderProps extends PropsWithChildren {
 }
 
 const FhevmClientContext = createContext<ZamaSDK | null>(null);
-
-function isWagmiAdapter(wallet: unknown): wallet is WagmiAdapter {
-  return typeof wallet === "object" && wallet !== null && (wallet as WagmiAdapter).type === "wagmi";
-}
 
 export function FhevmProvider({ config, queryClient, children }: FhevmProviderProps) {
   if (isWagmiAdapter(config.wallet)) {
@@ -44,7 +45,13 @@ export function FhevmProvider({ config, queryClient, children }: FhevmProviderPr
 }
 
 function WagmiFhevmProviderInner({ config, queryClient, children }: FhevmProviderProps) {
-  const wagmiConfig = useConfig();
+  let wagmiConfig: WagmiConfig;
+
+  try {
+    wagmiConfig = useConfig();
+  } catch {
+    throw new Error(WAGMI_PROVIDER_REQUIRED_ERROR);
+  }
 
   return (
     <FhevmProviderInner config={config} queryClient={queryClient} wagmiConfig={wagmiConfig}>
@@ -61,14 +68,27 @@ function FhevmProviderInner({
 }: FhevmProviderProps & { wagmiConfig: WagmiConfig | null }) {
   const ambientQueryClient = useQueryClient();
   const queryClient = queryClientProp ?? ambientQueryClient;
+  const primaryChain = getPrimaryChain(config);
+  const relayerOverride = config.relayer?.transports?.[primaryChain.id];
+  const walletMode = isWagmiAdapter(config.wallet)
+    ? "wagmi"
+    : config.wallet
+      ? "custom"
+      : "readonly";
 
   const onEventRef = useRef(config.advanced?.onEvent);
   useEffect(() => {
     onEventRef.current = config.advanced?.onEvent;
   });
 
-  const relayer = useMemo(() => resolveRelayer(config), [config]);
-  const signer = useMemo(() => resolveWallet(config, wagmiConfig), [config, wagmiConfig]);
+  const relayer = useMemo(
+    () => resolveRelayer(config),
+    [primaryChain.id, relayerOverride, config.advanced?.threads, config.advanced?.integrityCheck],
+  );
+  const signer = useMemo(
+    () => resolveWallet(config, wagmiConfig),
+    [primaryChain.id, walletMode, wagmiConfig, walletMode === "custom" ? config.wallet : null],
+  );
 
   const signerLifecycleCallbacks = useMemo(
     () =>

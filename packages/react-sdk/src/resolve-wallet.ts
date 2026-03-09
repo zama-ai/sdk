@@ -4,7 +4,12 @@ import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/clea
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { createPublicClient, http } from "viem";
 import type { Config as WagmiConfig } from "wagmi";
-import type { FhevmConfig, WagmiAdapter } from "./config";
+import {
+  getPrimaryChain,
+  isWagmiAdapter,
+  WAGMI_PROVIDER_REQUIRED_ERROR,
+  type FhevmConfig,
+} from "./config";
 import { WagmiSigner } from "./wagmi/wagmi-signer";
 
 const RPC_BY_CHAIN: Record<number, string> = {
@@ -13,10 +18,6 @@ const RPC_BY_CHAIN: Record<number, string> = {
   31337: HardhatCleartextConfig.network,
   560048: hoodiCleartextConfig.network,
 };
-
-function isWagmiAdapter(wallet: unknown): wallet is WagmiAdapter {
-  return typeof wallet === "object" && wallet !== null && (wallet as WagmiAdapter).type === "wagmi";
-}
 
 export function resolveWallet(config: FhevmConfig, wagmiConfig: WagmiConfig | null): GenericSigner {
   const wallet = config.wallet;
@@ -27,13 +28,13 @@ export function resolveWallet(config: FhevmConfig, wagmiConfig: WagmiConfig | nu
 
   if (wallet && isWagmiAdapter(wallet)) {
     if (!wagmiConfig) {
-      throw new Error("WagmiAdapter requires a WagmiProvider in the component tree.");
+      throw new Error(WAGMI_PROVIDER_REQUIRED_ERROR);
     }
 
     return new WagmiSigner({ config: wagmiConfig });
   }
 
-  const chainId = config.chains[0]!.id;
+  const chainId = getPrimaryChain(config).id;
   const rpcUrl = RPC_BY_CHAIN[chainId];
 
   if (!rpcUrl) {
@@ -56,6 +57,9 @@ export function resolveWallet(config: FhevmConfig, wagmiConfig: WagmiConfig | nu
     throw noWalletError;
   };
   (signer as GenericSigner).writeContract = async () => {
+    throw noWalletError;
+  };
+  (signer as GenericSigner).waitForTransactionReceipt = async () => {
     throw noWalletError;
   };
 

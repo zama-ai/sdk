@@ -4,10 +4,12 @@ import { fhevmHardhat, fhevmMainnet, fhevmSepolia } from "@zama-fhe/sdk/chains";
 import { resolveRelayer } from "../resolve-relayer";
 import type { FhevmInstanceConfig } from "@zama-fhe/sdk";
 import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { beforeEach, vi } from "vitest";
+import { afterAll, beforeEach, vi } from "vitest";
+import { EMPTY_CHAINS_ERROR } from "../config";
 
 const relayerWebCtor = vi.fn();
 const cleartextCtor = vi.fn();
+const consoleWarnMock = vi.fn();
 
 vi.mock("@zama-fhe/sdk", async () => {
   const actual = await vi.importActual<typeof import("@zama-fhe/sdk")>("@zama-fhe/sdk");
@@ -44,6 +46,12 @@ describe("resolveRelayer", () => {
   beforeEach(() => {
     relayerWebCtor.mockReset();
     cleartextCtor.mockReset();
+    consoleWarnMock.mockReset();
+    vi.stubGlobal("console", { ...console, warn: consoleWarnMock });
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
   });
 
   it("uses RelayerWeb + MainnetConfig for chain 1", () => {
@@ -95,6 +103,15 @@ describe("resolveRelayer", () => {
 
     expect(cleartextCtor).toHaveBeenCalledWith(HardhatCleartextConfig);
     expect(relayerWebCtor).not.toHaveBeenCalled();
+    expect(consoleWarnMock).toHaveBeenCalledWith(
+      "Unknown FHEVM chain 999; falling back to Hardhat cleartext relayer preset.",
+    );
+  });
+
+  it("throws a clear error when chains is empty", () => {
+    expect(() => resolveRelayer({ chains: [], storage: () => null } as never)).toThrow(
+      EMPTY_CHAINS_ERROR,
+    );
   });
 
   it("merges relayer overrides for the resolved chain", () => {

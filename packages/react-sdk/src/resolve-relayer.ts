@@ -5,10 +5,10 @@ import {
   HardhatCleartextConfig,
   hoodiCleartextConfig,
 } from "@zama-fhe/sdk/cleartext";
-import type { FhevmConfig } from "./config";
+import { getPrimaryChain, type FhevmConfig } from "./config";
 
 export function resolveRelayer(config: FhevmConfig): RelayerSDK {
-  const chainId = config.chains[0]!.id;
+  const chainId = getPrimaryChain(config).id;
   const overrideTransport = config.relayer?.transports?.[chainId];
 
   switch (chainId) {
@@ -37,6 +37,9 @@ export function resolveRelayer(config: FhevmConfig): RelayerSDK {
     case hoodiCleartextConfig.chainId:
       return new CleartextFhevmInstance(hoodiCleartextConfig);
     default:
+      console.warn(
+        `Unknown FHEVM chain ${chainId}; falling back to Hardhat cleartext relayer preset.`,
+      );
       return new CleartextFhevmInstance(HardhatCleartextConfig);
   }
 }

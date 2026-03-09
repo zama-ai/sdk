@@ -7,7 +7,7 @@ import type {
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { createFhevmConfig } from "../config";
+import { createFhevmConfig, WAGMI_PROVIDER_REQUIRED_ERROR } from "../config";
 import { decryptionKeys } from "../relayer/decryption-cache";
 import { useAllow } from "../token/use-allow";
 import { wagmiAdapter } from "../wagmi/adapter";
@@ -157,6 +157,37 @@ describe("FhevmProvider & useFhevmClient", () => {
     expect(wagmiSignerCtor).toHaveBeenCalledTimes(1);
   });
 
+  it("does not recreate relayer or sdk when parent rerenders with an equivalent inline config", ({
+    createMockSigner,
+  }) => {
+    const signer = createMockSigner();
+    const queryClient = new QueryClient();
+
+    const view = render(
+      withQueryClient(
+        <FhevmProvider config={createFhevmConfig({ chains: [fhevmSepolia], wallet: signer })}>
+          <div data-testid="child" />
+        </FhevmProvider>,
+        queryClient,
+      ),
+    );
+
+    expect(relayerWebCtor).toHaveBeenCalledTimes(1);
+    expect(tokenSDKConstructorArgs).toHaveLength(1);
+
+    view.rerender(
+      withQueryClient(
+        <FhevmProvider config={createFhevmConfig({ chains: [fhevmSepolia], wallet: signer })}>
+          <div data-testid="child" />
+        </FhevmProvider>,
+        queryClient,
+      ),
+    );
+
+    expect(relayerWebCtor).toHaveBeenCalledTimes(1);
+    expect(tokenSDKConstructorArgs).toHaveLength(1);
+  });
+
   it("returns a ZamaSDK instance inside provider", ({ createMockSigner }) => {
     const signer = createMockSigner();
     const config = createFhevmConfig({ chains: [fhevmSepolia], wallet: signer });
@@ -175,6 +206,24 @@ describe("FhevmProvider & useFhevmClient", () => {
     expect(() => renderHook(() => useFhevmClient())).toThrow(
       "useFhevmClient must be used within a <FhevmProvider>",
     );
+  });
+
+  it("rethrows wagmi misconfiguration with provider context", () => {
+    wagmiUseConfigMock.mockImplementation(() => {
+      throw new Error("useConfig must be used within WagmiProvider");
+    });
+
+    expect(() =>
+      render(
+        withQueryClient(
+          <FhevmProvider
+            config={createFhevmConfig({ chains: [fhevmSepolia], wallet: wagmiAdapter() })}
+          >
+            <div />
+          </FhevmProvider>,
+        ),
+      ),
+    ).toThrow(WAGMI_PROVIDER_REQUIRED_ERROR);
   });
 
   it("omitting wallet creates read-only context where write hooks throw No wallet connected", async ({
