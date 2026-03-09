@@ -6,9 +6,9 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
+import { EncryptionFailedError, ZamaError } from "../token/errors";
+import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 import type { RelayerSDK } from "./relayer-sdk";
-import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { ZamaError, EncryptionFailedError } from "../token/errors";
 import type {
   Address,
   DelegatedUserDecryptParams,
@@ -19,7 +19,12 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import {
+  buildEIP712DomainType,
+  DefaultConfigs,
+  mergeFhevmConfig,
+  withRetry,
+} from "./relayer-utils";
 
 export interface RelayerNodeConfig {
   transports: Record<number, Partial<FhevmInstanceConfig>>;
@@ -244,5 +249,11 @@ export class RelayerNode implements RelayerSDK {
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const pool = await this.#ensurePool();
     return (await pool.getPublicParams(bits)).result;
+  }
+
+  async getAclAddress(): Promise<Address> {
+    const chainId = await this.#config.getChainId();
+    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+    return config.aclContractAddress as Address;
   }
 }

@@ -56,6 +56,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     createDelegatedUserDecryptEIP712: vi.fn(),
     delegatedUserDecrypt: vi.fn(),
     requestZKProofVerification: vi.fn(),
+    getAclAddress: vi.fn().mockResolvedValue(ACL),
     getPublicKey: vi
       .fn()
       .mockResolvedValue({ publicKeyId: "pk-1", publicKey: new Uint8Array([1]) }),
@@ -199,14 +200,10 @@ export const test = base.extend<SdkFixtures>({
         storage,
         sessionStorage,
         address: tokenAddress,
-        aclAddress,
       }),
     );
   },
-  readonlyToken: async (
-    { relayer, signer, storage, sessionStorage, tokenAddress, aclAddress },
-    use,
-  ) => {
+  readonlyToken: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, use) => {
     await use(
       new ReadonlyToken({
         relayer,
@@ -214,7 +211,6 @@ export const test = base.extend<SdkFixtures>({
         storage,
         sessionStorage,
         address: tokenAddress,
-        aclAddress,
       }),
     );
   },

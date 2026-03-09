@@ -19,7 +19,12 @@ import type {
 } from "./relayer-sdk.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
-import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
+import {
+  buildEIP712DomainType,
+  DefaultConfigs,
+  mergeFhevmConfig,
+  withRetry,
+} from "./relayer-utils";
 import { ZamaError, EncryptionFailedError } from "../token/errors";
 
 /**
@@ -376,5 +381,11 @@ export class RelayerWeb implements RelayerSDK {
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const worker = await this.#ensureWorker();
     return (await worker.getPublicParams(bits)).result;
+  }
+
+  async getAclAddress(): Promise<Address> {
+    const chainId = await this.#config.getChainId();
+    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+    return config.aclContractAddress as Address;
   }
 }

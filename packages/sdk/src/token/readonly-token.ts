@@ -68,8 +68,6 @@ export interface ReadonlyTokenConfig {
   credentials?: CredentialsManager;
   /** Address of the confidential token contract. */
   address: Address;
-  /** ACL contract address. Required for delegation methods. */
-  aclAddress?: Address;
   /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
   keypairTTL?: number;
   /** Optional structured event listener for debugging and telemetry. */
@@ -86,7 +84,6 @@ export class ReadonlyToken {
   protected readonly sdk: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
-  protected readonly aclAddress: Address | undefined;
   readonly #storage: GenericStorage;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
@@ -105,9 +102,6 @@ export class ReadonlyToken {
     this.sdk = config.relayer;
     this.signer = config.signer;
     this.address = address;
-    this.aclAddress = config.aclAddress
-      ? validateAddress(config.aclAddress, "aclAddress")
-      : undefined;
     this.#storage = config.storage;
     this.#onEvent = config.onEvent;
   }
@@ -521,13 +515,14 @@ export class ReadonlyToken {
     await tokens[0]!.credentials.allow(...allAddresses);
   }
 
-  protected requireAclAddress(): Address {
-    if (!this.aclAddress) {
+  protected async requireAclAddress(): Promise<Address> {
+    try {
+      return await this.sdk.getAclAddress();
+    } catch {
       throw new ConfigurationError(
-        "aclAddress is required for delegation operations. Pass it in the token config or ZamaSDKConfig.",
+        "Could not resolve ACL address from the relayer. Ensure the relayer is configured with a transport that includes aclContractAddress.",
       );
     }
-    return this.aclAddress;
   }
 
   /**
@@ -560,7 +555,7 @@ export class ReadonlyToken {
    * @throws {@link ConfigurationError} if `aclAddress` was not provided.
    */
   async getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint> {
-    const acl = this.requireAclAddress();
+    const acl = await this.requireAclAddress();
     const normalizedDelegator = validateAddress(delegator, "delegator");
     const normalizedDelegate = validateAddress(delegate, "delegate");
     return this.signer.readContract(

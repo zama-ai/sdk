@@ -353,7 +353,6 @@ describe("batch delegation", () => {
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
       address: TOKEN2,
-      aclAddress,
     });
 
     const results = await Token.delegateDecryptionBatch([token, token2], delegateAddress);
@@ -381,7 +380,6 @@ describe("batch delegation", () => {
       storage: new MemoryStorage(),
       sessionStorage: new MemoryStorage(),
       address: TOKEN2,
-      aclAddress,
     });
 
     const results = await Token.delegateDecryptionBatch([token, token2], delegateAddress);

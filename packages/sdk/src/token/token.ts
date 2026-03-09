@@ -696,7 +696,7 @@ export class Token extends ReadonlyToken {
     delegate: Address,
     options?: { expirationDate?: Date },
   ): Promise<TransactionResult> {
-    const acl = this.requireAclAddress();
+    const acl = await this.requireAclAddress();
     const normalizedDelegate = validateAddress(delegate, "delegate");
     // uint64 max → no practical expiry
     const expirationDate = options?.expirationDate
@@ -727,7 +727,7 @@ export class Token extends ReadonlyToken {
    * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
    */
   async revokeDelegation(delegate: Address): Promise<TransactionResult> {
-    const acl = this.requireAclAddress();
+    const acl = await this.requireAclAddress();
     const normalizedDelegate = validateAddress(delegate, "delegate");
 
     try {

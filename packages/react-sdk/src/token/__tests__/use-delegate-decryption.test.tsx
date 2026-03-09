@@ -12,9 +12,10 @@ const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 describe("useDelegateDecryption", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useDelegateDecryption({ tokenAddress: TOKEN }), {
-      aclAddress: ACL,
-    });
+    const { result } = renderWithProviders(
+      () => useDelegateDecryption({ tokenAddress: TOKEN }),
+      {},
+    );
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
@@ -26,9 +27,10 @@ describe("useDelegateDecryption", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useDelegateDecryption({ tokenAddress: TOKEN }), {
-      aclAddress: ACL,
-    });
+    const { result } = renderWithProviders(
+      () => useDelegateDecryption({ tokenAddress: TOKEN }),
+      {},
+    );
 
     act(() => {
       result.current.mutate({ delegate: RECIPIENT });
@@ -49,9 +51,10 @@ describe("useDelegateDecryption", () => {
   test("behavior: passes expiration options", async ({ renderWithProviders, signer }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const { result } = renderWithProviders(() => useDelegateDecryption({ tokenAddress: TOKEN }), {
-      aclAddress: ACL,
-    });
+    const { result } = renderWithProviders(
+      () => useDelegateDecryption({ tokenAddress: TOKEN }),
+      {},
+    );
 
     const expirationDate = new Date("2030-01-01T00:00:00Z");
     act(() => {
@@ -74,9 +77,8 @@ describe("useDelegateDecryption", () => {
 
     const onSuccess = vi.fn();
 
-    const { result } = renderWithProviders(
-      () => useDelegateDecryption({ tokenAddress: TOKEN }, { onSuccess }),
-      { aclAddress: ACL },
+    const { result } = renderWithProviders(() =>
+      useDelegateDecryption({ tokenAddress: TOKEN }, { onSuccess }),
     );
 
     act(() => {

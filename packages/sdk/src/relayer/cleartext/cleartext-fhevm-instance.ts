@@ -308,6 +308,10 @@ export class CleartextFhevmInstance implements RelayerSDK {
     return null;
   }
 
+  async getAclAddress(): Promise<Address> {
+    return this.#config.contracts.acl;
+  }
+
   terminate(): void {
     // No resources to release in cleartext mode.
   }
