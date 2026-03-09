@@ -137,7 +137,7 @@ function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
   return { fheType, value };
 }
 
-export class CleartextFhevmInstance implements RelayerSDK {
+export class RelayerCleartext implements RelayerSDK {
   readonly #client: PublicClient;
   readonly #config: CleartextConfig;
   readonly kmsSigner: PrivateKeyAccount;

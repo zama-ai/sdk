@@ -1,5 +1,3 @@
-import { HardhatConfig } from "../relayer-utils";
-
 export const HANDLE_VERSION = 0;
 
 export const PREHANDLE_MASK = 0xffffffffffffffffffffffffffffffffffffffffff0000000000000000000000n;

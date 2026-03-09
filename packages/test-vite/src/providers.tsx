@@ -6,6 +6,7 @@ import { createConfig, http, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
+import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 
 const isHardhat = import.meta.env.VITE_NETWORK === "hardhat";
 
@@ -27,15 +28,7 @@ const wagmiConfig = createConfig({
 
 const signer = new WagmiSigner({ config: wagmiConfig });
 
-const relayer = new RelayerWeb({
-  getChainId: async () => signer.getChainId(),
-  transports: {
-    [hardhat.id]: {
-      network: hardhat.rpcUrls.default.http[0],
-    },
-  },
-  security: { integrityCheck: !isHardhat },
-});
+const relayer = new RelayerCleartext(hardhatCleartextConfig);
 
 const storage = new MemoryStorage();
 

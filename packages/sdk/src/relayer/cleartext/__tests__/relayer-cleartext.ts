@@ -12,7 +12,7 @@ import {
 import type { EIP1193Provider } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
-import { CleartextFhevmInstance } from "../cleartext-fhevm-instance";
+import { RelayerCleartext } from "../relayer-cleartext";
 import type { Handle } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
 import { hardhatCleartextConfig } from "../presets";
@@ -35,7 +35,7 @@ type MockClientOptions = {
   plaintexts?: Record<string, bigint>;
 };
 type MockCall = { method: string; params: unknown[] };
-type UserDecryptParams = Parameters<CleartextFhevmInstance["userDecrypt"]>[0];
+type UserDecryptParams = Parameters<RelayerCleartext["userDecrypt"]>[0];
 const asHandle = (value: string): Handle => value as Handle;
 
 function createMockProvider(options: MockClientOptions = {}) {
@@ -128,11 +128,11 @@ function createMockProvider(options: MockClientOptions = {}) {
 }
 
 function createInstance(options: MockClientOptions = {}): {
-  fhevm: CleartextFhevmInstance;
+  fhevm: RelayerCleartext;
   calls: MockCall[];
 } {
   const { provider, calls } = createMockProvider(options);
-  return { fhevm: new CleartextFhevmInstance(hardhatCleartextConfig), calls };
+  return { fhevm: new RelayerCleartext(hardhatCleartextConfig), calls };
 }
 
 function createUserDecryptParams(
@@ -162,7 +162,7 @@ function filterEthCallsTo(calls: MockCall[], to: string): MockCall[] {
   });
 }
 
-describe("CleartextFhevmInstance", () => {
+describe("RelayerCleartext", () => {
   it("constructor uses kms/input private keys from config", () => {
     const customInputKey =
       "0x0000000000000000000000000000000000000000000000000000000000000001" as const;
@@ -172,7 +172,7 @@ describe("CleartextFhevmInstance", () => {
     const customInputSigner = privateKeyToAccount(customInputKey);
     const customKmsSigner = privateKeyToAccount(customKmsKey);
 
-    const fhevm = new CleartextFhevmInstance({
+    const fhevm = new RelayerCleartext({
       ...hardhatCleartextConfig,
       inputSignerPrivateKey: customInputKey,
       kmsSignerPrivateKey: customKmsKey,
@@ -188,7 +188,7 @@ describe("CleartextFhevmInstance", () => {
     const defaultInputSigner = privateKeyToAccount(MOCK_INPUT_SIGNER_PK);
     const defaultKmsSigner = privateKeyToAccount(MOCK_KMS_SIGNER_PK);
 
-    const fhevm = new CleartextFhevmInstance(hardhatCleartextConfig);
+    const fhevm = new RelayerCleartext(hardhatCleartextConfig);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const instance = fhevm as any;
@@ -201,7 +201,7 @@ describe("CleartextFhevmInstance", () => {
 
     expect(
       () =>
-        new CleartextFhevmInstance({
+        new RelayerCleartext({
           ...hardhatCleartextConfig,
           network: provider,
           chainId: 1,
@@ -214,7 +214,7 @@ describe("CleartextFhevmInstance", () => {
 
     expect(
       () =>
-        new CleartextFhevmInstance({
+        new RelayerCleartext({
           ...hardhatCleartextConfig,
           network: provider,
           chainId: 11155111,
