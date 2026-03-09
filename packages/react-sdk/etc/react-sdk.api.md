@@ -1369,7 +1369,6 @@ export function ZamaProvider(input: ZamaProviderProps): react_jsx_runtime0.JSX.E
 
 // @public
 export interface ZamaProviderProps extends PropsWithChildren {
-    aclAddress?: Address;
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;

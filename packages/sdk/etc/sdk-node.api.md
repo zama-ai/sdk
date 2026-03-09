@@ -525,6 +525,8 @@ export class RelayerNode implements RelayerSDK {
     // (undocumented)
     generateKeypair(): Promise<KeypairType_2<string>>;
     // (undocumented)
+    getAclAddress(): Promise<Address>;
+    // (undocumented)
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;
@@ -561,6 +563,7 @@ export interface RelayerSDK {
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<string>>;
+    getAclAddress(): Promise<Address>;
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;

@@ -683,8 +683,6 @@ export interface RawLog {
 export class ReadonlyToken {
     constructor(config: ReadonlyTokenConfig);
     // (undocumented)
-    protected readonly aclAddress: Address | undefined;
-    // (undocumented)
     readonly address: Address;
     allow(): Promise<void>;
     static allow(...tokens: ReadonlyToken[]): Promise<void>;
@@ -715,7 +713,7 @@ export class ReadonlyToken {
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
     // (undocumented)
-    protected requireAclAddress(): Address;
+    protected requireAclAddress(): Promise<Address>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     protected readonly sdk: RelayerSDK;
@@ -728,7 +726,6 @@ export class ReadonlyToken {
 
 // @public
 export interface ReadonlyTokenConfig {
-    aclAddress?: Address;
     address: Address;
     credentials?: CredentialsManager;
     keypairTTL?: number;
@@ -746,6 +743,7 @@ export interface RelayerSDK {
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<string>>;
+    getAclAddress(): Promise<Address>;
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;
@@ -1332,7 +1330,6 @@ export class ZamaSDK {
 
 // @public
 export interface ZamaSDKConfig {
-    aclAddress?: Address;
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
@@ -1388,7 +1385,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/activity-BLrkgcod.d.ts:1001:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/activity-CNFbLLI6.d.ts:996:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
