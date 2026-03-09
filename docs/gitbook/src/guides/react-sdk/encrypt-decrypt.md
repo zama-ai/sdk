@@ -63,7 +63,6 @@ const result = await encrypt.mutateAsync({
 | Type       | JS value type       | Range                 |
 | ---------- | ------------------- | --------------------- |
 | `ebool`    | `boolean \| bigint` | `true`/`false` or 0/1 |
-| `euint4`   | `bigint`            | 0–15                  |
 | `euint8`   | `bigint`            | 0–255                 |
 | `euint16`  | `bigint`            | 0–65535               |
 | `euint32`  | `bigint`            | 0–2³²−1               |
