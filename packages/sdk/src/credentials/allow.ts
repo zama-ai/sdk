@@ -62,17 +62,18 @@ const getStoreKey = Effect.gen(function* () {
   return yield* Effect.promise(() => computeStoreKey(address, chainId));
 });
 
-const getSessionEntry = (storeKey: string) =>
-  Effect.gen(function* () {
+function getSessionEntry(storeKey: string) {
+  return Effect.gen(function* () {
     const sessionStorage = yield* SessionStorage;
     const raw = yield* sessionStorage.get(storeKey);
     if (raw === null) return null;
     assertSessionEntry(raw);
     return raw;
   });
+}
 
-const decryptCredentials = (encrypted: EncryptedCredentials, signature: string) =>
-  Effect.gen(function* () {
+function decryptCredentials(encrypted: EncryptedCredentials, signature: string) {
+  return Effect.gen(function* () {
     const signer = yield* Signer;
     const address = (yield* signer.getAddress()).toLowerCase();
     const privateKey = yield* Effect.promise(() =>
@@ -81,9 +82,10 @@ const decryptCredentials = (encrypted: EncryptedCredentials, signature: string) 
     const { encryptedPrivateKey: _, ...rest } = encrypted;
     return { ...rest, privateKey, signature } as StoredCredentials;
   });
+}
 
-const signEncrypted = (encrypted: EncryptedCredentials) =>
-  Effect.gen(function* () {
+function signEncrypted(encrypted: EncryptedCredentials) {
+  return Effect.gen(function* () {
     const relayer = yield* Relayer;
     const signer = yield* Signer;
     const eip712 = yield* relayer
@@ -100,6 +102,7 @@ const signEncrypted = (encrypted: EncryptedCredentials) =>
       );
     return yield* signer.signTypedData(eip712);
   });
+}
 
 // ── Public API ─────────────────────────────────────────────
 
@@ -108,15 +111,15 @@ const signEncrypted = (encrypted: EncryptedCredentials) =>
  * Returns cached credentials if still valid and covering all addresses,
  * otherwise generates a fresh keypair and requests an EIP-712 signature.
  */
-export const allow = (
+export function allow(
   contractAddresses: Address[],
   config: { keypairTTL: number; sessionTTL: number },
 ): Effect.Effect<
   StoredCredentials,
   SigningRejected | SigningFailed,
   Relayer | Signer | CredentialStorage | SessionStorage | EventEmitter
-> =>
-  Effect.gen(function* () {
+> {
+  return Effect.gen(function* () {
     const credentialStorage = yield* CredentialStorage;
     const sessionStorage = yield* SessionStorage;
     const emitter = yield* EventEmitter;
@@ -197,16 +200,17 @@ export const allow = (
     yield* emitter.emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
     return creds;
   });
+}
 
 /**
  * Check if stored credentials exist and are expired.
  * Returns `true` if credentials are stored but past their expiration time.
  * Returns `false` if no credentials are stored or if they are still valid.
  */
-export const isExpired = (
+export function isExpired(
   contractAddress?: Address,
-): Effect.Effect<boolean, never, Signer | CredentialStorage> =>
-  Effect.gen(function* () {
+): Effect.Effect<boolean, never, Signer | CredentialStorage> {
+  return Effect.gen(function* () {
     const credentialStorage = yield* CredentialStorage;
     const storeKey = yield* getStoreKey;
 
@@ -224,14 +228,15 @@ export const isExpired = (
       encrypted.contractAddresses,
     );
   }).pipe(Effect.catchAll(() => Effect.succeed(false)));
+}
 
 /**
  * Revoke the session signature for the connected wallet.
  */
-export const revoke = (
+export function revoke(
   ...contractAddresses: Address[]
-): Effect.Effect<void, never, Signer | SessionStorage | EventEmitter> =>
-  Effect.gen(function* () {
+): Effect.Effect<void, never, Signer | SessionStorage | EventEmitter> {
+  return Effect.gen(function* () {
     const sessionStorage = yield* SessionStorage;
     const emitter = yield* EventEmitter;
     const storeKey = yield* getStoreKey;
@@ -242,23 +247,25 @@ export const revoke = (
       ...(contractAddresses.length > 0 && { contractAddresses }),
     });
   });
+}
 
 /**
  * Whether a session signature is currently cached for the connected wallet.
  */
-export const isAllowed = (): Effect.Effect<boolean, never, Signer | SessionStorage> =>
-  Effect.gen(function* () {
+export function isAllowed(): Effect.Effect<boolean, never, Signer | SessionStorage> {
+  return Effect.gen(function* () {
     const storeKey = yield* getStoreKey;
     const entry = yield* getSessionEntry(storeKey);
     if (entry === null) return false;
     return !isSessionExpired(entry);
   });
+}
 
 /**
  * Delete stored credentials and session for the connected wallet (best-effort).
  */
-export const clear = (): Effect.Effect<void, never, Signer | CredentialStorage | SessionStorage> =>
-  Effect.gen(function* () {
+export function clear(): Effect.Effect<void, never, Signer | CredentialStorage | SessionStorage> {
+  return Effect.gen(function* () {
     const credentialStorage = yield* CredentialStorage;
     const sessionStorage = yield* SessionStorage;
     const storeKey = yield* getStoreKey;
@@ -266,3 +273,4 @@ export const clear = (): Effect.Effect<void, never, Signer | CredentialStorage |
     yield* sessionStorage.delete(storeKey);
     yield* credentialStorage.delete(storeKey).pipe(Effect.catchAll(() => Effect.void));
   });
+}
