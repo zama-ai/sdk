@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1](https://github.com/zama-ai/sdk/compare/v1.0.0...v1.0.1) (2026-03-09)
+
+### Bug Fixes
+
+- **release:** Trigger release ([19d079a](https://github.com/zama-ai/sdk/commit/19d079ae9f108f531892151c2612b150ff505e8a))
+
 ## 1.0.0 (2026-03-09)
 
 ### Features
