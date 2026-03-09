@@ -23,7 +23,7 @@ import {
 } from "../../contracts";
 import { validateAddress } from "../../utils";
 import { findUnwrapRequested } from "../../events/onchain-events";
-import { readConfidentialBalanceOf, isZeroHandle } from "./balance";
+import { readConfidentialBalanceOfEffect, isZeroHandle } from "./balance";
 
 const ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
 
@@ -46,6 +46,7 @@ function ensureAllowance(
   wrapperAddress: Address,
   amount: bigint,
   maxApproval: boolean,
+  onApprovalSubmitted?: (txHash: Address) => void,
 ) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
@@ -80,13 +81,14 @@ function ensureAllowance(
       );
 
     yield* emitter.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
+    onApprovalSubmitted?.(txHash);
   });
 }
 
 /**
  * Shield native ETH into confidential tokens.
  */
-export function shieldETH(wrapperAddress: Address, amount: bigint, value?: bigint) {
+export function shieldETHEffect(wrapperAddress: Address, amount: bigint, value?: bigint) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const emitter = yield* EventEmitter;
@@ -123,7 +125,7 @@ export function shieldETH(wrapperAddress: Address, amount: bigint, value?: bigin
  * Shield public ERC-20 tokens into confidential tokens.
  * Handles ERC-20 approval automatically.
  */
-export function shield(
+export function shieldEffect(
   tokenAddress: Address,
   wrapperAddress: Address,
   amount: bigint,
@@ -131,18 +133,25 @@ export function shield(
     approvalStrategy?: "max" | "exact" | "skip";
     fees?: bigint;
     to?: Address;
+    onApprovalSubmitted?: (txHash: Address) => void;
   },
 ) {
   return Effect.gen(function* () {
     const underlying = yield* getUnderlying(wrapperAddress);
 
     if (underlying === ZERO_ADDRESS) {
-      return yield* shieldETH(wrapperAddress, amount, amount + (options?.fees ?? 0n));
+      return yield* shieldETHEffect(wrapperAddress, amount, amount + (options?.fees ?? 0n));
     }
 
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
-      yield* ensureAllowance(underlying, wrapperAddress, amount, strategy === "max");
+      yield* ensureAllowance(
+        underlying,
+        wrapperAddress,
+        amount,
+        strategy === "max",
+        options?.onApprovalSubmitted,
+      );
     }
 
     const signer = yield* Signer;
@@ -179,7 +188,7 @@ export function shield(
 /**
  * Request an unwrap for a specific amount. Encrypts the amount first.
  */
-export function unwrap(tokenAddress: Address, wrapperAddress: Address, amount: bigint) {
+export function unwrapEffect(tokenAddress: Address, wrapperAddress: Address, amount: bigint) {
   return Effect.gen(function* () {
     const relayer = yield* Relayer;
     const signer = yield* Signer;
@@ -247,12 +256,12 @@ export function unwrap(tokenAddress: Address, wrapperAddress: Address, amount: b
  * Request an unwrap for the entire confidential balance.
  * Uses the on-chain balance handle directly (no encryption needed).
  */
-export function unwrapAll(tokenAddress: Address) {
+export function unwrapAllEffect(tokenAddress: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const emitter = yield* EventEmitter;
     const userAddress = yield* signer.getAddress();
-    const handle = yield* readConfidentialBalanceOf(tokenAddress, userAddress);
+    const handle = yield* readConfidentialBalanceOfEffect(tokenAddress, userAddress);
 
     if (isZeroHandle(handle)) {
       return yield* Effect.fail(
@@ -290,7 +299,7 @@ export function unwrapAll(tokenAddress: Address) {
 /**
  * Complete an unwrap by providing the public decryption proof.
  */
-export function finalizeUnwrap(wrapperAddress: Address, burnAmountHandle: Handle) {
+export function finalizeUnwrapEffect(wrapperAddress: Address, burnAmountHandle: Handle) {
   return Effect.gen(function* () {
     const relayer = yield* Relayer;
     const signer = yield* Signer;
@@ -382,7 +391,7 @@ function waitAndFinalizeUnshield(wrapperAddress: Address, unwrapTxHash: Hex, ope
 
     yield* emitter.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
 
-    const finalizeResult = yield* finalizeUnwrap(wrapperAddress, event.encryptedAmount);
+    const finalizeResult = yield* finalizeUnwrapEffect(wrapperAddress, event.encryptedAmount);
 
     yield* emitter.emit({
       type: ZamaSDKEvents.UnshieldPhase2Submitted,
@@ -398,10 +407,10 @@ function waitAndFinalizeUnshield(wrapperAddress: Address, unwrapTxHash: Hex, ope
  * Unshield a specific amount and finalize in one call.
  * Orchestrates: unwrap -> wait for receipt -> parse event -> finalize.
  */
-export function unshield(tokenAddress: Address, wrapperAddress: Address, amount: bigint) {
+export function unshieldEffect(tokenAddress: Address, wrapperAddress: Address, amount: bigint) {
   return Effect.gen(function* () {
     const operationId = crypto.randomUUID();
-    const unwrapResult = yield* unwrap(tokenAddress, wrapperAddress, amount);
+    const unwrapResult = yield* unwrapEffect(tokenAddress, wrapperAddress, amount);
     return yield* waitAndFinalizeUnshield(wrapperAddress, unwrapResult.txHash, operationId);
   });
 }
@@ -409,10 +418,10 @@ export function unshield(tokenAddress: Address, wrapperAddress: Address, amount:
 /**
  * Unshield the entire balance and finalize in one call.
  */
-export function unshieldAll(tokenAddress: Address, wrapperAddress: Address) {
+export function unshieldAllEffect(tokenAddress: Address, wrapperAddress: Address) {
   return Effect.gen(function* () {
     const operationId = crypto.randomUUID();
-    const unwrapResult = yield* unwrapAll(tokenAddress);
+    const unwrapResult = yield* unwrapAllEffect(tokenAddress);
     return yield* waitAndFinalizeUnshield(wrapperAddress, unwrapResult.txHash, operationId);
   });
 }
@@ -420,7 +429,7 @@ export function unshieldAll(tokenAddress: Address, wrapperAddress: Address) {
 /**
  * Resume an in-progress unshield from an existing unwrap tx hash.
  */
-export function resumeUnshield(wrapperAddress: Address, unwrapTxHash: Hex) {
+export function resumeUnshieldEffect(wrapperAddress: Address, unwrapTxHash: Hex) {
   return Effect.gen(function* () {
     const operationId = crypto.randomUUID();
     return yield* waitAndFinalizeUnshield(wrapperAddress, unwrapTxHash, operationId);

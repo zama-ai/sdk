@@ -16,7 +16,7 @@ function toError(error: unknown): Error {
 /**
  * Confidential transfer. Encrypts the amount via FHE, then calls the contract.
  */
-export function confidentialTransfer(tokenAddress: Address, to: Address, amount: bigint) {
+export function confidentialTransferEffect(tokenAddress: Address, to: Address, amount: bigint) {
   return Effect.gen(function* () {
     const relayer = yield* Relayer;
     const signer = yield* Signer;
@@ -85,7 +85,7 @@ export function confidentialTransfer(tokenAddress: Address, to: Address, amount:
  * Operator encrypted transfer on behalf of another address.
  * The caller must be an approved operator for `from`.
  */
-export function confidentialTransferFrom(
+export function confidentialTransferFromEffect(
   tokenAddress: Address,
   from: Address,
   to: Address,

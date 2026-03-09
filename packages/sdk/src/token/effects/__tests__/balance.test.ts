@@ -8,18 +8,18 @@ import type { Address, Handle, Hex, EIP712TypedData } from "../../../relayer/rel
 import {
   isZeroHandle,
   ZERO_HANDLE,
-  readConfidentialBalanceOf,
-  confidentialBalanceOf,
-  decryptBalance,
-  balanceOf,
-  decryptHandles,
-  isConfidential,
-  isWrapper,
-  name,
-  symbol,
-  decimals,
-  underlyingToken,
-  discoverWrapper,
+  readConfidentialBalanceOfEffect,
+  confidentialBalanceOfEffect,
+  decryptBalanceEffect,
+  balanceOfEffect,
+  decryptHandlesEffect,
+  isConfidentialEffect,
+  isWrapperEffect,
+  nameEffect,
+  symbolEffect,
+  decimalsEffect,
+  underlyingTokenEffect,
+  discoverWrapperEffect,
 } from "../balance";
 
 // ── Test constants ─────────────────────────────────────────
@@ -161,7 +161,7 @@ describe("readConfidentialBalanceOf", () => {
     });
 
     const result = await Effect.runPromise(
-      readConfidentialBalanceOf(TEST_ADDRESS, TEST_OWNER).pipe(
+      readConfidentialBalanceOfEffect(TEST_ADDRESS, TEST_OWNER).pipe(
         Effect.provideService(Signer, signer),
       ),
     );
@@ -178,7 +178,7 @@ describe("confidentialBalanceOf", () => {
     });
 
     const result = await Effect.runPromise(
-      confidentialBalanceOf(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
+      confidentialBalanceOfEffect(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
     );
 
     expect(result).toBe(ZERO_HANDLE);
@@ -190,7 +190,7 @@ describe("decryptBalance", () => {
     const storage = makeGenericStorage();
     const result = await Effect.runPromise(
       provideAll(
-        decryptBalance(
+        decryptBalanceEffect(
           TEST_ADDRESS,
           ZERO_HANDLE as Handle,
           { keypairTTL: 86400, sessionTTL: 2592000 },
@@ -210,7 +210,7 @@ describe("decryptBalance", () => {
 
     const result = await Effect.runPromise(
       provideAll(
-        decryptBalance(
+        decryptBalanceEffect(
           TEST_ADDRESS,
           TEST_HANDLE,
           { keypairTTL: 86400, sessionTTL: 2592000 },
@@ -238,7 +238,7 @@ describe("decryptBalance", () => {
 
     await Effect.runPromise(
       provideAll(
-        decryptBalance(
+        decryptBalanceEffect(
           TEST_ADDRESS,
           TEST_HANDLE,
           { keypairTTL: 86400, sessionTTL: 2592000 },
@@ -266,13 +266,13 @@ describe("decryptBalance", () => {
 
     // First call: decrypts
     await Effect.runPromise(
-      provideAll(decryptBalance(TEST_ADDRESS, TEST_HANDLE, config, storage), { relayer }),
+      provideAll(decryptBalanceEffect(TEST_ADDRESS, TEST_HANDLE, config, storage), { relayer }),
     );
     expect(decryptCalls).toBe(1);
 
     // Second call: should use cache
     const result = await Effect.runPromise(
-      provideAll(decryptBalance(TEST_ADDRESS, TEST_HANDLE, config, storage), { relayer }),
+      provideAll(decryptBalanceEffect(TEST_ADDRESS, TEST_HANDLE, config, storage), { relayer }),
     );
     expect(result).toBe(99n);
     expect(decryptCalls).toBe(1); // no additional decrypt call
@@ -287,9 +287,12 @@ describe("balanceOf", () => {
     });
 
     const result = await Effect.runPromise(
-      provideAll(balanceOf(TEST_ADDRESS, { keypairTTL: 86400, sessionTTL: 2592000 }, storage), {
-        signer,
-      }),
+      provideAll(
+        balanceOfEffect(TEST_ADDRESS, { keypairTTL: 86400, sessionTTL: 2592000 }, storage),
+        {
+          signer,
+        },
+      ),
     );
 
     expect(result).toBe(BigInt(0));
@@ -305,10 +308,13 @@ describe("balanceOf", () => {
     });
 
     const result = await Effect.runPromise(
-      provideAll(balanceOf(TEST_ADDRESS, { keypairTTL: 86400, sessionTTL: 2592000 }, storage), {
-        signer,
-        relayer,
-      }),
+      provideAll(
+        balanceOfEffect(TEST_ADDRESS, { keypairTTL: 86400, sessionTTL: 2592000 }, storage),
+        {
+          signer,
+          relayer,
+        },
+      ),
     );
 
     expect(result).toBe(1000n);
@@ -319,7 +325,7 @@ describe("decryptHandles", () => {
   it("returns 0n for zero handles without calling relayer", async () => {
     const result = await Effect.runPromise(
       provideAll(
-        decryptHandles(TEST_ADDRESS, [ZERO_HANDLE as Handle], {
+        decryptHandlesEffect(TEST_ADDRESS, [ZERO_HANDLE as Handle], {
           keypairTTL: 86400,
           sessionTTL: 2592000,
         }),
@@ -341,7 +347,7 @@ describe("decryptHandles", () => {
 
     const result = await Effect.runPromise(
       provideAll(
-        decryptHandles(TEST_ADDRESS, [TEST_HANDLE, handle2], {
+        decryptHandlesEffect(TEST_ADDRESS, [TEST_HANDLE, handle2], {
           keypairTTL: 86400,
           sessionTTL: 2592000,
         }),
@@ -361,7 +367,7 @@ describe("metadata reads", () => {
     });
 
     const result = await Effect.runPromise(
-      isConfidential(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
+      isConfidentialEffect(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
     );
     expect(result).toBe(true);
   });
@@ -372,7 +378,7 @@ describe("metadata reads", () => {
     });
 
     const result = await Effect.runPromise(
-      isWrapper(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
+      isWrapperEffect(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
     );
     expect(result).toBe(false);
   });
@@ -383,7 +389,7 @@ describe("metadata reads", () => {
     });
 
     const result = await Effect.runPromise(
-      name(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
+      nameEffect(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
     );
     expect(result).toBe("Wrapped USDC");
   });
@@ -394,7 +400,7 @@ describe("metadata reads", () => {
     });
 
     const result = await Effect.runPromise(
-      symbol(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
+      symbolEffect(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
     );
     expect(result).toBe("cUSDC");
   });
@@ -405,7 +411,7 @@ describe("metadata reads", () => {
     });
 
     const result = await Effect.runPromise(
-      decimals(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
+      decimalsEffect(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
     );
     expect(result).toBe(6);
   });
@@ -416,7 +422,7 @@ describe("metadata reads", () => {
     });
 
     const result = await Effect.runPromise(
-      underlyingToken(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
+      underlyingTokenEffect(TEST_ADDRESS).pipe(Effect.provideService(Signer, signer)),
     );
     expect(result).toBe(TEST_OWNER);
   });
@@ -428,7 +434,7 @@ describe("metadata reads", () => {
     });
 
     const result = await Effect.runPromise(
-      discoverWrapper(TEST_ADDRESS, coordinator).pipe(Effect.provideService(Signer, signer)),
+      discoverWrapperEffect(TEST_ADDRESS, coordinator).pipe(Effect.provideService(Signer, signer)),
     );
     expect(result).toBeNull();
   });

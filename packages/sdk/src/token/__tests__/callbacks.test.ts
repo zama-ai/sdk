@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "../../test-fixtures";
 import { Topics } from "../../events";
 import type { Address } from "../../relayer/relayer-sdk.types";
-import { DecryptionFailedError, TransactionRevertedError } from "../errors";
+import { DecryptionFailed, TransactionReverted } from "../../errors";
 import type { GenericSigner } from "../token.types";
 
 describe("Unshield callbacks (P4)", () => {
@@ -106,7 +106,7 @@ describe("Unshield callbacks (P4)", () => {
   it("throws TransactionRevertedError when receipt fetch fails", async ({ signer, token }) => {
     vi.mocked(signer.waitForTransactionReceipt).mockRejectedValue(new Error("network error"));
 
-    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
+    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionReverted);
   });
 
   it("throws TransactionRevertedError when no UnwrapRequested event in receipt", async ({
@@ -115,7 +115,7 @@ describe("Unshield callbacks (P4)", () => {
   }) => {
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
-    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
+    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionReverted);
   });
 
   it("throws TransactionRevertedError when finalize writeContract fails", async ({
@@ -128,7 +128,7 @@ describe("Unshield callbacks (P4)", () => {
       .mockResolvedValueOnce("0xunwraphash") // unwrap succeeds
       .mockRejectedValueOnce(new Error("finalize failed")); // finalize fails
 
-    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
+    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionReverted);
   });
 
   it("throws DecryptionFailedError when publicDecrypt fails during finalize", async ({
@@ -140,7 +140,7 @@ describe("Unshield callbacks (P4)", () => {
     mockReceiptWithUnwrapRequested(signer, userAddress);
     vi.mocked(relayer.publicDecrypt).mockRejectedValue(new Error("decrypt error"));
 
-    await expect(token.unshield(50n)).rejects.toBeInstanceOf(DecryptionFailedError);
+    await expect(token.unshield(50n)).rejects.toBeInstanceOf(DecryptionFailed);
   });
 });
 

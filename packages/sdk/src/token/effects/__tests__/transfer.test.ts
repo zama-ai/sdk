@@ -5,7 +5,7 @@ import { Signer } from "../../../services/Signer";
 import { EventEmitter, type EventEmitterService } from "../../../services/EventEmitter";
 import { EncryptionFailed } from "../../../errors";
 import type { Address, Hex, EIP712TypedData } from "../../../relayer/relayer-sdk.types";
-import { confidentialTransfer, confidentialTransferFrom } from "../transfer";
+import { confidentialTransferEffect, confidentialTransferFromEffect } from "../transfer";
 
 // ── Test constants ─────────────────────────────────────────
 
@@ -92,7 +92,7 @@ function provideAll<A, E>(
 describe("confidentialTransfer", () => {
   it("encrypts, submits transfer, and returns txHash + receipt", async () => {
     const result = await Effect.runPromise(
-      provideAll(confidentialTransfer(TOKEN_ADDRESS, RECIPIENT, 1000n)),
+      provideAll(confidentialTransferEffect(TOKEN_ADDRESS, RECIPIENT, 1000n)),
     );
 
     expect(result.txHash).toBe(TEST_TX_HASH);
@@ -109,7 +109,7 @@ describe("confidentialTransfer", () => {
     });
 
     const exit = await Effect.runPromiseExit(
-      provideAll(confidentialTransfer(TOKEN_ADDRESS, RECIPIENT, 1000n), { relayer }),
+      provideAll(confidentialTransferEffect(TOKEN_ADDRESS, RECIPIENT, 1000n), { relayer }),
     );
 
     expect(exit._tag).toBe("Failure");
@@ -129,7 +129,7 @@ describe("confidentialTransfer", () => {
     };
 
     await Effect.runPromise(
-      provideAll(confidentialTransfer(TOKEN_ADDRESS, RECIPIENT, 1000n), { emitter }),
+      provideAll(confidentialTransferEffect(TOKEN_ADDRESS, RECIPIENT, 1000n), { emitter }),
     );
 
     expect(events).toContain("encrypt:start");
@@ -150,7 +150,7 @@ describe("confidentialTransfer", () => {
     });
 
     await Effect.runPromiseExit(
-      provideAll(confidentialTransfer(TOKEN_ADDRESS, RECIPIENT, 1000n), { relayer, emitter }),
+      provideAll(confidentialTransferEffect(TOKEN_ADDRESS, RECIPIENT, 1000n), { relayer, emitter }),
     );
 
     expect(events).toContain("encrypt:error");
@@ -158,7 +158,7 @@ describe("confidentialTransfer", () => {
 
   it("validates the recipient address", async () => {
     const exit = await Effect.runPromiseExit(
-      provideAll(confidentialTransfer(TOKEN_ADDRESS, "invalid-address" as Address, 1000n)),
+      provideAll(confidentialTransferEffect(TOKEN_ADDRESS, "invalid-address" as Address, 1000n)),
     );
 
     expect(exit._tag).toBe("Failure");
@@ -168,7 +168,7 @@ describe("confidentialTransfer", () => {
 describe("confidentialTransferFrom", () => {
   it("encrypts, submits transferFrom, and returns txHash + receipt", async () => {
     const result = await Effect.runPromise(
-      provideAll(confidentialTransferFrom(TOKEN_ADDRESS, SENDER, RECIPIENT, 500n)),
+      provideAll(confidentialTransferFromEffect(TOKEN_ADDRESS, SENDER, RECIPIENT, 500n)),
     );
 
     expect(result.txHash).toBe(TEST_TX_HASH);
@@ -185,7 +185,9 @@ describe("confidentialTransferFrom", () => {
     };
 
     await Effect.runPromise(
-      provideAll(confidentialTransferFrom(TOKEN_ADDRESS, SENDER, RECIPIENT, 500n), { emitter }),
+      provideAll(confidentialTransferFromEffect(TOKEN_ADDRESS, SENDER, RECIPIENT, 500n), {
+        emitter,
+      }),
     );
 
     expect(events).toContain("transferFrom:submitted");
@@ -201,7 +203,9 @@ describe("confidentialTransferFrom", () => {
     });
 
     const exit = await Effect.runPromiseExit(
-      provideAll(confidentialTransferFrom(TOKEN_ADDRESS, SENDER, RECIPIENT, 500n), { relayer }),
+      provideAll(confidentialTransferFromEffect(TOKEN_ADDRESS, SENDER, RECIPIENT, 500n), {
+        relayer,
+      }),
     );
 
     expect(exit._tag).toBe("Failure");

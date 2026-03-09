@@ -436,7 +436,7 @@ describe("Token event emissions", () => {
       const errorEvent = events.find((e) => e.type === ZamaSDKEvents.EncryptError);
       expect(errorEvent).toBeDefined();
       expect("error" in errorEvent! && errorEvent.error).toBeInstanceOf(Error);
-      expect("error" in errorEvent! && errorEvent.error.message).toBe("encrypt boom");
+      expect("error" in errorEvent! && errorEvent.error.message).toBe("Encryption failed");
       expect("durationMs" in errorEvent! && errorEvent.durationMs).toBeGreaterThanOrEqual(0);
     });
 
@@ -473,7 +473,7 @@ describe("Token event emissions", () => {
       const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);
       expect(txError).toBeDefined();
       expect("operation" in txError! && txError.operation).toBe("transfer");
-      expect("error" in txError! && txError.error.message).toBe("tx reverted");
+      expect("error" in txError! && txError.error.message).toBe("Transaction failed");
     });
   });
 

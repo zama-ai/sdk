@@ -22,7 +22,7 @@ function toError(error: unknown): Error {
  * Set operator approval for the confidential token.
  * Defaults to 1 hour from now if `until` is not specified.
  */
-export function approve(tokenAddress: Address, spender: Address, until?: number) {
+export function approveEffect(tokenAddress: Address, spender: Address, until?: number) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const emitter = yield* EventEmitter;
@@ -59,7 +59,7 @@ export function approve(tokenAddress: Address, spender: Address, until?: number)
 /**
  * Check if a spender is an approved operator for a given holder.
  */
-export function isApproved(tokenAddress: Address, spender: Address, holder?: Address) {
+export function isApprovedEffect(tokenAddress: Address, spender: Address, holder?: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const normalizedSpender = validateAddress(spender, "spender");
@@ -74,7 +74,7 @@ export function isApproved(tokenAddress: Address, spender: Address, holder?: Add
  * Approve this token contract to spend the underlying ERC-20.
  * Resets to zero first if there's an existing non-zero allowance.
  */
-export function approveUnderlying(wrapperAddress: Address, amount?: bigint) {
+export function approveUnderlyingEffect(wrapperAddress: Address, amount?: bigint) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const emitter = yield* EventEmitter;

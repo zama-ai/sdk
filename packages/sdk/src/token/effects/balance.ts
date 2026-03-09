@@ -80,7 +80,7 @@ function wrapDecryptError(
 // ── Read operations ────────────────────────────────────────
 
 /** Read the encrypted balance handle from the chain. */
-export function readConfidentialBalanceOf(tokenAddress: Address, owner: Address) {
+export function readConfidentialBalanceOfEffect(tokenAddress: Address, owner: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const raw = yield* signer.readContract<bigint>(
@@ -91,11 +91,11 @@ export function readConfidentialBalanceOf(tokenAddress: Address, owner: Address)
 }
 
 /** Get the raw encrypted balance handle, resolving owner to signer if not provided. */
-export function confidentialBalanceOf(tokenAddress: Address, owner?: Address) {
+export function confidentialBalanceOfEffect(tokenAddress: Address, owner?: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const ownerAddress = owner ?? (yield* signer.getAddress());
-    return yield* readConfidentialBalanceOf(tokenAddress, ownerAddress);
+    return yield* readConfidentialBalanceOfEffect(tokenAddress, ownerAddress);
   });
 }
 
@@ -103,7 +103,7 @@ export function confidentialBalanceOf(tokenAddress: Address, owner?: Address) {
  * Decrypt a single balance handle into a plaintext bigint.
  * Returns 0n for zero handles without calling the relayer.
  */
-export function decryptBalance(
+export function decryptBalanceEffect(
   tokenAddress: Address,
   handle: Handle,
   credentialsConfig: { keypairTTL: number; sessionTTL: number },
@@ -167,7 +167,7 @@ export function decryptBalance(
  * Decrypt the balance for a token address: reads the handle, then decrypts.
  * Returns 0n for zero balances.
  */
-export function balanceOf(
+export function balanceOfEffect(
   tokenAddress: Address,
   credentialsConfig: { keypairTTL: number; sessionTTL: number },
   storage: GenericStorage,
@@ -176,7 +176,7 @@ export function balanceOf(
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const ownerAddress = owner ?? (yield* signer.getAddress());
-    const handle = yield* readConfidentialBalanceOf(tokenAddress, ownerAddress);
+    const handle = yield* readConfidentialBalanceOfEffect(tokenAddress, ownerAddress);
 
     if (isZeroHandle(handle)) return BigInt(0);
 
@@ -232,7 +232,7 @@ export function balanceOf(
  * Batch-decrypt arbitrary encrypted handles in a single relayer call.
  * Zero handles are returned as 0n without hitting the relayer.
  */
-export function decryptHandles(
+export function decryptHandlesEffect(
   tokenAddress: Address,
   handles: Handle[],
   credentialsConfig: { keypairTTL: number; sessionTTL: number },
@@ -298,7 +298,7 @@ export function decryptHandles(
 // ── Metadata reads ─────────────────────────────────────────
 
 /** Check if the contract implements the ERC-7984 confidential token interface. */
-export function isConfidential(tokenAddress: Address) {
+export function isConfidentialEffect(tokenAddress: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const result = yield* signer.readContract(
@@ -309,7 +309,7 @@ export function isConfidential(tokenAddress: Address) {
 }
 
 /** Check if the contract implements the ERC-7984 wrapper interface. */
-export function isWrapper(tokenAddress: Address) {
+export function isWrapperEffect(tokenAddress: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const result = yield* signer.readContract(
@@ -320,7 +320,7 @@ export function isWrapper(tokenAddress: Address) {
 }
 
 /** Read the token name from the contract. */
-export function name(tokenAddress: Address) {
+export function nameEffect(tokenAddress: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     return yield* signer.readContract<string>(nameContract(tokenAddress));
@@ -328,7 +328,7 @@ export function name(tokenAddress: Address) {
 }
 
 /** Read the token symbol from the contract. */
-export function symbol(tokenAddress: Address) {
+export function symbolEffect(tokenAddress: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     return yield* signer.readContract<string>(symbolContract(tokenAddress));
@@ -336,7 +336,7 @@ export function symbol(tokenAddress: Address) {
 }
 
 /** Read the token decimals from the contract. */
-export function decimals(tokenAddress: Address) {
+export function decimalsEffect(tokenAddress: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     return yield* signer.readContract<number>(decimalsContract(tokenAddress));
@@ -344,7 +344,7 @@ export function decimals(tokenAddress: Address) {
 }
 
 /** Read the underlying ERC-20 address from this token's wrapper contract. */
-export function underlyingToken(tokenAddress: Address) {
+export function underlyingTokenEffect(tokenAddress: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     return yield* signer.readContract<Address>(underlyingContract(tokenAddress));
@@ -352,7 +352,7 @@ export function underlyingToken(tokenAddress: Address) {
 }
 
 /** Read the ERC-20 allowance of the underlying token for a given wrapper. */
-export function allowance(wrapperAddress: Address, owner?: Address) {
+export function allowanceEffect(wrapperAddress: Address, owner?: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const underlying = yield* signer.readContract<Address>(underlyingContract(wrapperAddress));
@@ -364,7 +364,7 @@ export function allowance(wrapperAddress: Address, owner?: Address) {
 }
 
 /** Look up the wrapper contract for a token via the deployment coordinator. */
-export function discoverWrapper(tokenAddress: Address, coordinatorAddress: Address) {
+export function discoverWrapperEffect(tokenAddress: Address, coordinatorAddress: Address) {
   return Effect.gen(function* () {
     const signer = yield* Signer;
     const exists = yield* signer.readContract(

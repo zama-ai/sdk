@@ -2,35 +2,35 @@
 export {
   ZERO_HANDLE,
   isZeroHandle,
-  readConfidentialBalanceOf,
-  confidentialBalanceOf,
-  decryptBalance,
-  balanceOf,
-  decryptHandles,
-  isConfidential,
-  isWrapper,
-  name,
-  symbol,
-  decimals,
-  underlyingToken,
-  allowance,
-  discoverWrapper,
+  readConfidentialBalanceOfEffect,
+  confidentialBalanceOfEffect,
+  decryptBalanceEffect,
+  balanceOfEffect,
+  decryptHandlesEffect,
+  isConfidentialEffect,
+  isWrapperEffect,
+  nameEffect,
+  symbolEffect,
+  decimalsEffect,
+  underlyingTokenEffect,
+  allowanceEffect,
+  discoverWrapperEffect,
 } from "./balance";
 
 // Transfer operations
-export { confidentialTransfer, confidentialTransferFrom } from "./transfer";
+export { confidentialTransferEffect, confidentialTransferFromEffect } from "./transfer";
 
 // Shield/unshield operations
 export {
-  shield,
-  shieldETH,
-  unwrap,
-  unwrapAll,
-  finalizeUnwrap,
-  unshield,
-  unshieldAll,
-  resumeUnshield,
+  shieldEffect,
+  shieldETHEffect,
+  unwrapEffect,
+  unwrapAllEffect,
+  finalizeUnwrapEffect,
+  unshieldEffect,
+  unshieldAllEffect,
+  resumeUnshieldEffect,
 } from "./shield";
 
 // Approval operations
-export { approve, isApproved, approveUnderlying } from "./approve";
+export { approveEffect, isApprovedEffect, approveUnderlyingEffect } from "./approve";

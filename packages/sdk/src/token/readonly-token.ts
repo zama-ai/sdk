@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Cause, Effect, Exit, Layer } from "effect";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Address, Handle } from "../relayer/relayer-sdk.types";
 import { pLimit, validateAddress } from "../utils";
@@ -21,16 +21,16 @@ import {
 } from "../services/Storage";
 import { EventEmitterConfig, EventEmitterLive, type EventEmitter } from "../services/EventEmitter";
 import {
-  isConfidential as effectIsConfidential,
-  isWrapper as effectIsWrapper,
-  name as effectName,
-  symbol as effectSymbol,
-  decimals as effectDecimals,
-  underlyingToken as effectUnderlyingToken,
-  allowance as effectAllowance,
-  discoverWrapper as effectDiscoverWrapper,
-  readConfidentialBalanceOf as effectReadConfidentialBalanceOf,
-  confidentialBalanceOf as effectConfidentialBalanceOf,
+  isConfidentialEffect,
+  isWrapperEffect,
+  nameEffect,
+  symbolEffect,
+  decimalsEffect,
+  underlyingTokenEffect,
+  allowanceEffect,
+  discoverWrapperEffect,
+  readConfidentialBalanceOfEffect,
+  confidentialBalanceOfEffect,
 } from "./effects/balance";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
@@ -138,9 +138,16 @@ export class ReadonlyToken {
     return this.#storage;
   }
 
-  /** Run an Effect program against this token's layer. */
-  protected runEffect<A, E>(effect: Effect.Effect<A, E, FullLayer>): Promise<A> {
-    return Effect.runPromise(effect.pipe(Effect.provide(this.#layer)));
+  /**
+   * Run an Effect program against this token's layer.
+   * Uses runPromiseExit to unwrap the tagged error from the Cause,
+   * so callers see the original error (e.g. EncryptionFailed) directly
+   * instead of a FiberFailure wrapper.
+   */
+  protected async runEffect<A, E>(effect: Effect.Effect<A, E, FullLayer>): Promise<A> {
+    const exit = await Effect.runPromiseExit(effect.pipe(Effect.provide(this.#layer)));
+    if (Exit.isSuccess(exit)) return exit.value;
+    throw Cause.squash(exit.cause);
   }
 
   /** Emit a structured event (no-op when no listener is registered). */
@@ -227,7 +234,7 @@ export class ReadonlyToken {
    * ```
    */
   async confidentialBalanceOf(owner?: Address): Promise<Handle> {
-    return this.runEffect(effectConfidentialBalanceOf(this.address, owner));
+    return this.runEffect(confidentialBalanceOfEffect(this.address, owner));
   }
 
   /**
@@ -243,7 +250,7 @@ export class ReadonlyToken {
    * ```
    */
   async isConfidential(): Promise<boolean> {
-    return this.runEffect(effectIsConfidential(this.address));
+    return this.runEffect(isConfidentialEffect(this.address));
   }
 
   /**
@@ -259,7 +266,7 @@ export class ReadonlyToken {
    * ```
    */
   async isWrapper(): Promise<boolean> {
-    return this.runEffect(effectIsWrapper(this.address));
+    return this.runEffect(isWrapperEffect(this.address));
   }
 
   /**
@@ -404,7 +411,7 @@ export class ReadonlyToken {
    */
   async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
     const coordinator = validateAddress(coordinatorAddress, "coordinatorAddress");
-    return this.runEffect(effectDiscoverWrapper(this.address, coordinator));
+    return this.runEffect(discoverWrapperEffect(this.address, coordinator));
   }
 
   /**
@@ -418,7 +425,7 @@ export class ReadonlyToken {
    * ```
    */
   async underlyingToken(): Promise<Address> {
-    return this.runEffect(effectUnderlyingToken(this.address));
+    return this.runEffect(underlyingTokenEffect(this.address));
   }
 
   /**
@@ -435,7 +442,7 @@ export class ReadonlyToken {
    */
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
     const normalizedWrapper = validateAddress(wrapper, "wrapper");
-    return this.runEffect(effectAllowance(normalizedWrapper, owner));
+    return this.runEffect(allowanceEffect(normalizedWrapper, owner));
   }
 
   /**
@@ -449,7 +456,7 @@ export class ReadonlyToken {
    * ```
    */
   async name(): Promise<string> {
-    return this.runEffect(effectName(this.address));
+    return this.runEffect(nameEffect(this.address));
   }
 
   /**
@@ -463,7 +470,7 @@ export class ReadonlyToken {
    * ```
    */
   async symbol(): Promise<string> {
-    return this.runEffect(effectSymbol(this.address));
+    return this.runEffect(symbolEffect(this.address));
   }
 
   /**
@@ -477,7 +484,7 @@ export class ReadonlyToken {
    * ```
    */
   async decimals(): Promise<number> {
-    return this.runEffect(effectDecimals(this.address));
+    return this.runEffect(decimalsEffect(this.address));
   }
 
   /**
@@ -537,7 +544,7 @@ export class ReadonlyToken {
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
-    return this.runEffect(effectReadConfidentialBalanceOf(this.address, owner));
+    return this.runEffect(readConfidentialBalanceOfEffect(this.address, owner));
   }
 
   isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {
