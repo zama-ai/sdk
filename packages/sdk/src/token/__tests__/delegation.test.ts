@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { createMockRelayer, describe, expect, it, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
 import type { Address } from "../token.types";
@@ -74,6 +74,54 @@ describe("delegation read methods", () => {
     // getBlockTimestamp should NOT have been called — permanent delegation skips it.
     expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
   });
+
+  it("isDelegated falls back to local clock when getBlockTimestamp is undefined", async ({
+    signer,
+    relayer,
+    storage,
+    sessionStorage,
+    tokenAddress,
+    delegatorAddress,
+    delegateAddress,
+  }) => {
+    const signerWithoutBlockTimestamp = { ...signer, getBlockTimestamp: undefined };
+    const token = new ReadonlyToken({
+      relayer,
+      signer: signerWithoutBlockTimestamp,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
+    });
+
+    const futureTimestamp = BigInt(Math.floor(Date.now() / 1000) + 3600);
+    vi.mocked(signer.readContract).mockResolvedValue(futureTimestamp);
+
+    expect(await token.isDelegated(delegatorAddress, delegateAddress)).toBe(true);
+  });
+
+  it("getDelegationExpiry throws ConfigurationError when relayer cannot resolve ACL", async ({
+    signer,
+    storage,
+    sessionStorage,
+    tokenAddress,
+    delegatorAddress,
+    delegateAddress,
+  }) => {
+    const relayerNoAcl = createMockRelayer({
+      getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
+    });
+    const token = new ReadonlyToken({
+      relayer: relayerNoAcl,
+      signer,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
+    });
+
+    await expect(token.getDelegationExpiry(delegatorAddress, delegateAddress)).rejects.toThrow(
+      ConfigurationError,
+    );
+  });
 });
 
 describe("delegation write methods", () => {
@@ -146,6 +194,67 @@ describe("delegation write methods", () => {
     await expect(token.delegateDecryption(delegateAddress)).rejects.toThrow(
       expect.objectContaining({ code: "TRANSACTION_REVERTED" }),
     );
+  });
+
+  it("revokeDelegation wraps revert as TransactionRevertedError", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("revert"));
+
+    await expect(token.revokeDelegation(delegateAddress)).rejects.toThrow(
+      expect.objectContaining({ code: "TRANSACTION_REVERTED" }),
+    );
+  });
+
+  it("revokeDelegation returns TransactionResult", async ({ token, delegateAddress }) => {
+    const result = await token.revokeDelegation(delegateAddress);
+    expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
+  });
+
+  it("delegateDecryption throws ConfigurationError when relayer cannot resolve ACL", async ({
+    signer,
+    storage,
+    sessionStorage,
+    tokenAddress,
+    delegateAddress,
+  }) => {
+    const relayerNoAcl = createMockRelayer({
+      getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
+    });
+    const tokenNoAcl = new Token({
+      relayer: relayerNoAcl,
+      signer,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
+    });
+
+    await expect(tokenNoAcl.delegateDecryption(delegateAddress)).rejects.toThrow(
+      ConfigurationError,
+    );
+  });
+
+  it("revokeDelegation throws ConfigurationError when relayer cannot resolve ACL", async ({
+    signer,
+    storage,
+    sessionStorage,
+    tokenAddress,
+    delegateAddress,
+  }) => {
+    const relayerNoAcl = createMockRelayer({
+      getAclAddress: vi.fn().mockRejectedValue(new Error("no transport config")),
+    });
+    const tokenNoAcl = new Token({
+      relayer: relayerNoAcl,
+      signer,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
+    });
+
+    await expect(tokenNoAcl.revokeDelegation(delegateAddress)).rejects.toThrow(ConfigurationError);
   });
 });
 
@@ -302,7 +411,6 @@ describe("batch delegation", () => {
     relayer,
     token,
     tokenAddress,
-    aclAddress,
     delegateAddress,
   }) => {
     const token2 = new Token({
@@ -325,7 +433,6 @@ describe("batch delegation", () => {
     relayer,
     token,
     tokenAddress,
-    aclAddress,
     delegateAddress,
   }) => {
     vi.mocked(signer.writeContract)
@@ -351,5 +458,51 @@ describe("batch delegation", () => {
 
     expect(results.size).toBe(1);
     expect(results.get(tokenAddress)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
+  });
+
+  it("revokeDelegationBatch captures per-token errors", async ({
+    signer,
+    relayer,
+    token,
+    tokenAddress,
+    delegateAddress,
+  }) => {
+    vi.mocked(signer.writeContract)
+      .mockResolvedValueOnce("0xtxhash")
+      .mockRejectedValueOnce(new Error("revert"));
+
+    const token2 = new Token({
+      relayer,
+      signer,
+      storage: new MemoryStorage(),
+      sessionStorage: new MemoryStorage(),
+      address: TOKEN2,
+    });
+
+    const results = await Token.revokeDelegationBatch([token, token2], delegateAddress);
+
+    expect(results.get(tokenAddress)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
+    expect(results.get(TOKEN2)).toBeInstanceOf(Error);
+  });
+
+  it("delegateDecryptionBatch with expiration date", async ({
+    signer,
+    token,
+    tokenAddress,
+    delegateAddress,
+  }) => {
+    const expiry = new Date("2030-06-15");
+
+    const results = await Token.delegateDecryptionBatch([token], delegateAddress, {
+      expirationDate: expiry,
+    });
+
+    expect(results.size).toBe(1);
+    expect(results.get(tokenAddress)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
+    expect(signer.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        args: [delegateAddress, tokenAddress, BigInt(Math.floor(expiry.getTime() / 1000))],
+      }),
+    );
   });
 });
