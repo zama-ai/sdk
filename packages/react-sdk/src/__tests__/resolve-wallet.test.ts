@@ -1,7 +1,8 @@
 import type { GenericSigner } from "@zama-fhe/sdk";
 import { SepoliaConfig } from "@zama-fhe/sdk";
 import { fhevmSepolia } from "@zama-fhe/sdk/chains";
-import { createFhevmConfig, EMPTY_CHAINS_ERROR, WAGMI_PROVIDER_REQUIRED_ERROR } from "../config";
+import { createFhevmConfig, CHAIN_REQUIRED_ERROR, WAGMI_PROVIDER_REQUIRED_ERROR } from "../config";
+import { getConfiguredChainMismatchError } from "../configured-chain-signer";
 import { wagmiAdapter } from "../wagmi/adapter";
 import { resolveWallet } from "../resolve-wallet";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -79,11 +80,11 @@ describe("resolveWallet", () => {
     } as unknown as GenericSigner;
 
     const resolved = resolveWallet(
-      createFhevmConfig({ chains: [fhevmSepolia], wallet: genericSigner }),
+      createFhevmConfig({ chain: fhevmSepolia, wallet: genericSigner }),
       null,
     );
 
-    expect(resolved).toBe(genericSigner);
+    expect(resolved).not.toBe(genericSigner);
     expect(wagmiSignerCtor).not.toHaveBeenCalled();
     expect(viemSignerCtor).not.toHaveBeenCalled();
   });
@@ -92,7 +93,7 @@ describe("resolveWallet", () => {
     const wagmiConfig = { chains: [] };
 
     resolveWallet(
-      createFhevmConfig({ chains: [fhevmSepolia], wallet: wagmiAdapter() }),
+      createFhevmConfig({ chain: fhevmSepolia, wallet: wagmiAdapter() }),
       wagmiConfig as never,
     );
 
@@ -103,12 +104,12 @@ describe("resolveWallet", () => {
 
   it("throws a provider-specific error when wagmi adapter is used without wagmi config", () => {
     expect(() =>
-      resolveWallet(createFhevmConfig({ chains: [fhevmSepolia], wallet: wagmiAdapter() }), null),
+      resolveWallet(createFhevmConfig({ chain: fhevmSepolia, wallet: wagmiAdapter() }), null),
     ).toThrow(WAGMI_PROVIDER_REQUIRED_ERROR);
   });
 
   it("constructs a read-only ViemSigner when wallet is omitted", () => {
-    resolveWallet(createFhevmConfig({ chains: [fhevmSepolia] }), null);
+    resolveWallet(createFhevmConfig({ chain: fhevmSepolia }), null);
 
     expect(httpMock).toHaveBeenCalledWith(SepoliaConfig.network);
     expect(createPublicClientMock).toHaveBeenCalledWith({
@@ -121,7 +122,7 @@ describe("resolveWallet", () => {
   });
 
   it("does not pass walletClient to read-only ViemSigner", () => {
-    resolveWallet(createFhevmConfig({ chains: [fhevmSepolia] }), null);
+    resolveWallet(createFhevmConfig({ chain: fhevmSepolia }), null);
 
     const args = viemSignerCtor.mock.calls[0]?.[0] as Record<string, unknown>;
 
@@ -130,7 +131,7 @@ describe("resolveWallet", () => {
   });
 
   it("read-only signer write methods throw a consistent no-wallet error", async () => {
-    const signer = resolveWallet(createFhevmConfig({ chains: [fhevmSepolia] }), null);
+    const signer = resolveWallet(createFhevmConfig({ chain: fhevmSepolia }), null);
 
     await expect(signer.getAddress()).rejects.toThrow("No wallet connected");
     await expect(signer.signTypedData({} as never)).rejects.toThrow("No wallet connected");
@@ -140,9 +141,29 @@ describe("resolveWallet", () => {
     );
   });
 
-  it("throws a clear error when chains is empty", () => {
-    expect(() => resolveWallet({ chains: [], storage: () => null } as never, null)).toThrow(
-      EMPTY_CHAINS_ERROR,
+  it("throws a clear error when the chain is missing", () => {
+    expect(() => resolveWallet({ storage: () => null } as never, null)).toThrow(
+      CHAIN_REQUIRED_ERROR,
+    );
+  });
+
+  it("throws when a wallet signer is connected to a different chain", async () => {
+    const genericSigner = {
+      getChainId: vi.fn(async () => 1),
+      getAddress: vi.fn(async () => "0x1111111111111111111111111111111111111111"),
+      signTypedData: vi.fn(),
+      writeContract: vi.fn(),
+      readContract: vi.fn(),
+      waitForTransactionReceipt: vi.fn(),
+    } as unknown as GenericSigner;
+
+    const signer = resolveWallet(
+      createFhevmConfig({ chain: fhevmSepolia, wallet: genericSigner }),
+      null,
+    );
+
+    await expect(signer.getAddress()).rejects.toThrow(
+      getConfiguredChainMismatchError(fhevmSepolia, 1),
     );
   });
 });

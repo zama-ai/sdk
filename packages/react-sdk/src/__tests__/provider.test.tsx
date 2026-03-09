@@ -11,7 +11,7 @@ import { createFhevmConfig, WAGMI_PROVIDER_REQUIRED_ERROR } from "../config";
 import { decryptionKeys } from "../relayer/decryption-cache";
 import { useAllow } from "../token/use-allow";
 import { wagmiAdapter } from "../wagmi/adapter";
-import { fhevmHardhat, fhevmSepolia } from "@zama-fhe/sdk/chains";
+import { fhevmHardhat, fhevmHoodi, fhevmSepolia } from "@zama-fhe/sdk/chains";
 import { FhevmProvider, useFhevmClient } from "../provider";
 import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { describe, expect, it } from "../test-fixtures";
@@ -140,7 +140,7 @@ describe("FhevmProvider & useFhevmClient", () => {
     const queryClient = new QueryClient();
 
     const config = createFhevmConfig({
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet: wagmiAdapter(),
     });
 
@@ -162,10 +162,15 @@ describe("FhevmProvider & useFhevmClient", () => {
   }) => {
     const signer = createMockSigner();
     const queryClient = new QueryClient();
+    const storage = {
+      get: vi.fn(async () => null),
+      set: vi.fn(async () => undefined),
+      delete: vi.fn(async () => undefined),
+    };
 
     const view = render(
       withQueryClient(
-        <FhevmProvider config={createFhevmConfig({ chains: [fhevmSepolia], wallet: signer })}>
+        <FhevmProvider config={createFhevmConfig({ chain: fhevmSepolia, wallet: signer, storage })}>
           <div data-testid="child" />
         </FhevmProvider>,
         queryClient,
@@ -177,7 +182,7 @@ describe("FhevmProvider & useFhevmClient", () => {
 
     view.rerender(
       withQueryClient(
-        <FhevmProvider config={createFhevmConfig({ chains: [fhevmSepolia], wallet: signer })}>
+        <FhevmProvider config={createFhevmConfig({ chain: fhevmSepolia, wallet: signer, storage })}>
           <div data-testid="child" />
         </FhevmProvider>,
         queryClient,
@@ -190,7 +195,7 @@ describe("FhevmProvider & useFhevmClient", () => {
 
   it("returns a ZamaSDK instance inside provider", ({ createMockSigner }) => {
     const signer = createMockSigner();
-    const config = createFhevmConfig({ chains: [fhevmSepolia], wallet: signer });
+    const config = createFhevmConfig({ chain: fhevmSepolia, wallet: signer });
 
     const { result } = renderHook(() => useFhevmClient(), {
       wrapper: ({ children }) =>
@@ -198,7 +203,7 @@ describe("FhevmProvider & useFhevmClient", () => {
     });
 
     expect(result.current).toBeDefined();
-    expect(result.current.signer).toBe(signer);
+    expect(result.current.signer).not.toBe(signer);
     expect(result.current.relayer).toBeDefined();
   });
 
@@ -217,7 +222,7 @@ describe("FhevmProvider & useFhevmClient", () => {
       render(
         withQueryClient(
           <FhevmProvider
-            config={createFhevmConfig({ chains: [fhevmSepolia], wallet: wagmiAdapter() })}
+            config={createFhevmConfig({ chain: fhevmSepolia, wallet: wagmiAdapter() })}
           >
             <div />
           </FhevmProvider>,
@@ -229,7 +234,7 @@ describe("FhevmProvider & useFhevmClient", () => {
   it("omitting wallet creates read-only context where write hooks throw No wallet connected", async ({
     tokenAddress,
   }) => {
-    const config = createFhevmConfig({ chains: [fhevmSepolia] });
+    const config = createFhevmConfig({ chain: fhevmSepolia });
 
     const { result } = renderHook(() => useAllow(), {
       wrapper: ({ children }) =>
@@ -240,7 +245,7 @@ describe("FhevmProvider & useFhevmClient", () => {
   });
 
   it("chain 11155111 resolves through RelayerWeb", ({ createMockSigner }) => {
-    const config = createFhevmConfig({ chains: [fhevmSepolia], wallet: createMockSigner() });
+    const config = createFhevmConfig({ chain: fhevmSepolia, wallet: createMockSigner() });
 
     renderHook(() => useFhevmClient(), {
       wrapper: ({ children }) =>
@@ -254,7 +259,7 @@ describe("FhevmProvider & useFhevmClient", () => {
   it("chain 31337 resolves through CleartextFhevmInstance with hardhat config", ({
     createMockSigner,
   }) => {
-    const config = createFhevmConfig({ chains: [fhevmHardhat], wallet: createMockSigner() });
+    const config = createFhevmConfig({ chain: fhevmHardhat, wallet: createMockSigner() });
 
     renderHook(() => useFhevmClient(), {
       wrapper: ({ children }) =>
@@ -269,7 +274,7 @@ describe("FhevmProvider & useFhevmClient", () => {
     createMockSigner,
   }) => {
     const config = createFhevmConfig({
-      chains: [{ id: 560048, name: "Hoodi" }],
+      chain: fhevmHoodi,
       wallet: createMockSigner(),
     });
 
@@ -285,14 +290,10 @@ describe("FhevmProvider & useFhevmClient", () => {
   it("merges relayer transport overrides over auto-resolved transport", ({ createMockSigner }) => {
     const overrideUrl = "https://example.test/relayer";
     const config = createFhevmConfig({
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet: createMockSigner(),
       relayer: {
-        transports: {
-          11155111: {
-            relayerUrl: overrideUrl,
-          },
-        },
+        relayerUrl: overrideUrl,
       },
     });
 
@@ -309,7 +310,7 @@ describe("FhevmProvider & useFhevmClient", () => {
   });
 
   it("terminates sdk on unmount", ({ createMockSigner }) => {
-    const config = createFhevmConfig({ chains: [fhevmSepolia], wallet: createMockSigner() });
+    const config = createFhevmConfig({ chain: fhevmSepolia, wallet: createMockSigner() });
 
     const { result, unmount } = renderHook(() => useFhevmClient(), {
       wrapper: ({ children }) =>
@@ -326,7 +327,7 @@ describe("FhevmProvider & useFhevmClient", () => {
     const onEvent: ZamaSDKEventListener = vi.fn();
 
     const config = createFhevmConfig({
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet: createMockSigner(),
       advanced: { onEvent },
     });
@@ -344,7 +345,7 @@ describe("FhevmProvider & useFhevmClient", () => {
 
   it("forwards keypairTTL and sessionTTL to ZamaSDK", ({ createMockSigner }) => {
     const config = createFhevmConfig({
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet: createMockSigner(),
       advanced: {
         keypairTTL: 604800,
@@ -374,7 +375,7 @@ describe("FhevmProvider & useFhevmClient", () => {
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
 
-    const config = createFhevmConfig({ chains: [fhevmSepolia], wallet: signer });
+    const config = createFhevmConfig({ chain: fhevmSepolia, wallet: signer });
 
     renderHook(() => useFhevmClient(), {
       wrapper: ({ children }) =>

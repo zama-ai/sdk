@@ -28,7 +28,7 @@ const wagmiConfig = createConfig({
 
 const storage = new MemoryStorage();
 const fhevmConfig = createFhevmConfig({
-  chains: [fhevmHardhat],
+  chain: fhevmHardhat,
   wallet: wagmiAdapter(),
   storage,
 });

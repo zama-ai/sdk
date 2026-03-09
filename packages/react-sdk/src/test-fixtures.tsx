@@ -27,7 +27,7 @@ export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
 interface WrapperOverrides {
   config?: FhevmConfig;
-  chains?: FhevmChain[];
+  chain?: FhevmChain;
   wallet?: WalletOption;
   signer?: GenericSigner;
   relayer?: RelayerSDK;
@@ -106,7 +106,7 @@ export const test = base.extend<ReactSdkFixtures>({
       const config =
         overrides?.config ??
         createFhevmConfig({
-          chains: overrides?.chains ?? [fhevmHardhat],
+          chain: overrides?.chain ?? fhevmHardhat,
           wallet: overrides?.wallet ?? overrides?.signer ?? signer,
           storage: overrides?.storage ?? storage,
           relayer: overrides?.relayerOverride,

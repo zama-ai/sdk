@@ -1,16 +1,14 @@
 import { describe, expect, it } from "../test-fixtures";
 import { createFhevmConfig } from "../config";
-import { fhevmHardhat, fhevmMainnet, fhevmSepolia } from "@zama-fhe/sdk/chains";
+import { fhevmHardhat, fhevmHoodi, fhevmMainnet, fhevmSepolia } from "@zama-fhe/sdk/chains";
 import { resolveRelayer } from "../resolve-relayer";
 import type { FhevmInstanceConfig } from "@zama-fhe/sdk";
 import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { afterAll, beforeEach, vi } from "vitest";
-import { EMPTY_CHAINS_ERROR } from "../config";
+import { beforeEach, vi } from "vitest";
+import { CHAIN_REQUIRED_ERROR } from "../config";
 
 const relayerWebCtor = vi.fn();
 const cleartextCtor = vi.fn();
-const consoleWarnMock = vi.fn();
-
 vi.mock("@zama-fhe/sdk", async () => {
   const actual = await vi.importActual<typeof import("@zama-fhe/sdk")>("@zama-fhe/sdk");
 
@@ -46,16 +44,10 @@ describe("resolveRelayer", () => {
   beforeEach(() => {
     relayerWebCtor.mockReset();
     cleartextCtor.mockReset();
-    consoleWarnMock.mockReset();
-    vi.stubGlobal("console", { ...console, warn: consoleWarnMock });
-  });
-
-  afterAll(() => {
-    vi.unstubAllGlobals();
   });
 
   it("uses RelayerWeb + MainnetConfig for chain 1", () => {
-    resolveRelayer(createFhevmConfig({ chains: [fhevmMainnet] }));
+    resolveRelayer(createFhevmConfig({ chain: fhevmMainnet }));
 
     expect(relayerWebCtor).toHaveBeenCalledTimes(1);
     const args = relayerWebCtor.mock.calls[0]?.[0] as {
@@ -70,7 +62,7 @@ describe("resolveRelayer", () => {
   });
 
   it("uses RelayerWeb + SepoliaConfig for chain 11155111", () => {
-    resolveRelayer(createFhevmConfig({ chains: [fhevmSepolia] }));
+    resolveRelayer(createFhevmConfig({ chain: fhevmSepolia }));
 
     expect(relayerWebCtor).toHaveBeenCalledTimes(1);
     const args = relayerWebCtor.mock.calls[0]?.[0] as {
@@ -85,45 +77,29 @@ describe("resolveRelayer", () => {
   });
 
   it("uses cleartext hardhat preset for chain 31337", () => {
-    resolveRelayer(createFhevmConfig({ chains: [fhevmHardhat] }));
+    resolveRelayer(createFhevmConfig({ chain: fhevmHardhat }));
 
     expect(cleartextCtor).toHaveBeenCalledWith(HardhatCleartextConfig);
     expect(relayerWebCtor).not.toHaveBeenCalled();
   });
 
   it("uses cleartext hoodi preset for chain 560048", () => {
-    resolveRelayer(createFhevmConfig({ chains: [{ id: 560048, name: "Hoodi" }] }));
+    resolveRelayer(createFhevmConfig({ chain: fhevmHoodi }));
 
     expect(cleartextCtor).toHaveBeenCalledWith(hoodiCleartextConfig);
     expect(relayerWebCtor).not.toHaveBeenCalled();
   });
 
-  it("falls back to cleartext hardhat preset for unknown chains", () => {
-    resolveRelayer(createFhevmConfig({ chains: [{ id: 999, name: "Unknown" }] }));
-
-    expect(cleartextCtor).toHaveBeenCalledWith(HardhatCleartextConfig);
-    expect(relayerWebCtor).not.toHaveBeenCalled();
-    expect(consoleWarnMock).toHaveBeenCalledWith(
-      "Unknown FHEVM chain 999; falling back to Hardhat cleartext relayer preset.",
-    );
-  });
-
-  it("throws a clear error when chains is empty", () => {
-    expect(() => resolveRelayer({ chains: [], storage: () => null } as never)).toThrow(
-      EMPTY_CHAINS_ERROR,
-    );
+  it("throws a clear error when the chain is missing", () => {
+    expect(() => resolveRelayer({ storage: () => null } as never)).toThrow(CHAIN_REQUIRED_ERROR);
   });
 
   it("merges relayer overrides for the resolved chain", () => {
     resolveRelayer(
       createFhevmConfig({
-        chains: [fhevmSepolia],
+        chain: fhevmSepolia,
         relayer: {
-          transports: {
-            11155111: {
-              relayerUrl: "https://example.test/relayer",
-            },
-          },
+          relayerUrl: "https://example.test/relayer",
         },
       }),
     );
@@ -139,7 +115,7 @@ describe("resolveRelayer", () => {
   it("forwards advanced threads to RelayerWeb", () => {
     resolveRelayer(
       createFhevmConfig({
-        chains: [fhevmSepolia],
+        chain: fhevmSepolia,
         advanced: { threads: 8 },
       }),
     );
@@ -151,7 +127,7 @@ describe("resolveRelayer", () => {
   it("forwards advanced integrityCheck to RelayerWeb security", () => {
     resolveRelayer(
       createFhevmConfig({
-        chains: [fhevmSepolia],
+        chain: fhevmSepolia,
         advanced: { integrityCheck: false },
       }),
     );

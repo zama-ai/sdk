@@ -5,26 +5,26 @@ import {
   HardhatCleartextConfig,
   hoodiCleartextConfig,
 } from "@zama-fhe/sdk/cleartext";
-import { getPrimaryChain, type FhevmConfig } from "./config";
+import { fhevmHardhat, fhevmHoodi, fhevmMainnet, fhevmSepolia } from "@zama-fhe/sdk/chains";
+import { getChain, type FhevmConfig } from "./config";
 
 export function resolveRelayer(config: FhevmConfig): RelayerSDK {
-  const chainId = getPrimaryChain(config).id;
-  const overrideTransport = config.relayer?.transports?.[chainId];
+  const chain = getChain(config);
 
-  switch (chainId) {
-    case 1:
-    case 11155111: {
-      const preset = chainId === 1 ? MainnetConfig : SepoliaConfig;
+  switch (chain.id) {
+    case fhevmMainnet.id:
+    case fhevmSepolia.id: {
+      const preset = chain.id === fhevmMainnet.id ? MainnetConfig : SepoliaConfig;
       const transports = {
-        [chainId]: {
+        [chain.id]: {
           ...preset,
-          ...overrideTransport,
+          ...config.relayer,
         },
       };
 
       return new RelayerWeb({
         transports,
-        getChainId: async () => chainId,
+        getChainId: async () => chain.id,
         threads: config.advanced?.threads,
         security:
           config.advanced?.integrityCheck !== undefined
@@ -32,14 +32,11 @@ export function resolveRelayer(config: FhevmConfig): RelayerSDK {
             : undefined,
       });
     }
-    case HardhatCleartextConfig.chainId:
+    case fhevmHardhat.id:
       return new CleartextFhevmInstance(HardhatCleartextConfig);
-    case hoodiCleartextConfig.chainId:
+    case fhevmHoodi.id:
       return new CleartextFhevmInstance(hoodiCleartextConfig);
-    default:
-      console.warn(
-        `Unknown FHEVM chain ${chainId}; falling back to Hardhat cleartext relayer preset.`,
-      );
-      return new CleartextFhevmInstance(HardhatCleartextConfig);
   }
+
+  throw new Error(`Unsupported FHEVM chain ${chain.id}`);
 }

@@ -1,10 +1,10 @@
 import type {
+  FhevmInstanceConfig,
   GenericSigner,
   GenericStorage,
-  RelayerWebConfig,
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
-import { memoryStorage } from "@zama-fhe/sdk";
+import { MemoryStorage } from "@zama-fhe/sdk";
 import type { FhevmChain } from "@zama-fhe/sdk/chains";
 
 /** Advanced runtime options forwarded to SDK initialization. */
@@ -19,23 +19,23 @@ export interface FhevmAdvancedOptions {
 /** Lazy adapter marker for integrating a wallet from wagmi context. */
 export interface WagmiAdapter {
   type: "wagmi";
+  useConfig: () => unknown;
+  createSigner: (config: unknown) => GenericSigner;
 }
 
-export const EMPTY_CHAINS_ERROR = "FhevmConfig.chains must contain at least one chain.";
+export const CHAIN_REQUIRED_ERROR = "FhevmConfig.chain is required.";
 export const WAGMI_PROVIDER_REQUIRED_ERROR =
   "FhevmProvider with wagmiAdapter() requires a <WagmiProvider> in the component tree.";
 
 /** Wallet option accepted by {@link createFhevmConfig}. */
 export type WalletOption = GenericSigner | WagmiAdapter;
 
-/** Optional relayer transport overrides keyed by chain id. */
-export interface RelayerOverride {
-  transports: RelayerWebConfig["transports"];
-}
+/** Optional relayer transport override for the configured chain. */
+export type RelayerOverride = Partial<FhevmInstanceConfig>;
 
 /** Input options for building an inert FHEVM config object. */
 export interface FhevmConfigOptions {
-  chains: FhevmChain[];
+  chain: FhevmChain;
   wallet?: WalletOption;
   relayer?: RelayerOverride;
   storage?: GenericStorage;
@@ -44,7 +44,7 @@ export interface FhevmConfigOptions {
 
 /** Normalized config consumed by the provider layer. */
 export interface FhevmConfig {
-  chains: FhevmChain[];
+  chain: FhevmChain;
   wallet?: WalletOption;
   relayer?: RelayerOverride;
   storage: GenericStorage;
@@ -55,11 +55,11 @@ export function isWagmiAdapter(wallet: unknown): wallet is WagmiAdapter {
   return typeof wallet === "object" && wallet !== null && (wallet as WagmiAdapter).type === "wagmi";
 }
 
-export function getPrimaryChain(config: Pick<FhevmConfigOptions, "chains">): FhevmChain {
-  const chain = config.chains[0];
+export function getChain(config: { chain?: FhevmChain }): FhevmChain {
+  const chain = config.chain;
 
   if (!chain) {
-    throw new TypeError(EMPTY_CHAINS_ERROR);
+    throw new TypeError(CHAIN_REQUIRED_ERROR);
   }
 
   return chain;
@@ -67,13 +67,13 @@ export function getPrimaryChain(config: Pick<FhevmConfigOptions, "chains">): Fhe
 
 /** Create an inert FHEVM config object with defaults applied. */
 export function createFhevmConfig(options: FhevmConfigOptions): FhevmConfig {
-  getPrimaryChain(options);
+  const chain = getChain(options);
 
   return {
-    chains: options.chains,
+    chain,
     wallet: options.wallet,
     relayer: options.relayer,
-    storage: options.storage ?? memoryStorage,
+    storage: options.storage ?? new MemoryStorage(),
     advanced: options.advanced,
   };
 }

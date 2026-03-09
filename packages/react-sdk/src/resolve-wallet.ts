@@ -1,29 +1,34 @@
 import type { GenericSigner } from "@zama-fhe/sdk";
 import { MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { fhevmHardhat, fhevmHoodi, fhevmMainnet, fhevmSepolia } from "@zama-fhe/sdk/chains";
 import { createPublicClient, http } from "viem";
-import type { Config as WagmiConfig } from "wagmi";
+import { ConfiguredChainSigner } from "./configured-chain-signer";
 import {
-  getPrimaryChain,
+  getChain,
   isWagmiAdapter,
   WAGMI_PROVIDER_REQUIRED_ERROR,
   type FhevmConfig,
 } from "./config";
-import { WagmiSigner } from "./wagmi/wagmi-signer";
+import { ReadonlyViemSigner } from "./readonly-viem-signer";
 
-const RPC_BY_CHAIN: Record<number, string> = {
-  1: MainnetConfig.network,
-  11155111: SepoliaConfig.network,
-  31337: HardhatCleartextConfig.network,
-  560048: hoodiCleartextConfig.network,
-};
+const RPC_BY_CHAIN = {
+  [fhevmMainnet.id]: MainnetConfig.network,
+  [fhevmSepolia.id]: SepoliaConfig.network,
+  [fhevmHardhat.id]: HardhatCleartextConfig.network,
+  [fhevmHoodi.id]: hoodiCleartextConfig.network,
+} satisfies Record<FhevmConfig["chain"]["id"], string>;
 
-export function resolveWallet(config: FhevmConfig, wagmiConfig: WagmiConfig | null): GenericSigner {
+function bindConfiguredChain(config: FhevmConfig, signer: GenericSigner): GenericSigner {
+  return new ConfiguredChainSigner(getChain(config), signer);
+}
+
+export function resolveWallet(config: FhevmConfig, wagmiConfig: unknown | null): GenericSigner {
+  const chain = getChain(config);
   const wallet = config.wallet;
 
   if (wallet && !isWagmiAdapter(wallet)) {
-    return wallet;
+    return bindConfiguredChain(config, wallet);
   }
 
   if (wallet && isWagmiAdapter(wallet)) {
@@ -31,37 +36,12 @@ export function resolveWallet(config: FhevmConfig, wagmiConfig: WagmiConfig | nu
       throw new Error(WAGMI_PROVIDER_REQUIRED_ERROR);
     }
 
-    return new WagmiSigner({ config: wagmiConfig });
+    return bindConfiguredChain(config, wallet.createSigner(wagmiConfig));
   }
 
-  const chainId = getPrimaryChain(config).id;
-  const rpcUrl = RPC_BY_CHAIN[chainId];
-
-  if (!rpcUrl) {
-    throw new Error(
-      `No RPC URL known for chain ${chainId}. Provide a wallet or use a known chain.`,
-    );
-  }
-
-  const signer = new ViemSigner({
+  return new ReadonlyViemSigner({
     publicClient: createPublicClient({
-      transport: http(rpcUrl),
+      transport: http(RPC_BY_CHAIN[chain.id]),
     }),
   });
-
-  const noWalletError = new TypeError("No wallet connected — provider is in read-only mode");
-  (signer as GenericSigner).getAddress = async () => {
-    throw noWalletError;
-  };
-  (signer as GenericSigner).signTypedData = async () => {
-    throw noWalletError;
-  };
-  (signer as GenericSigner).writeContract = async () => {
-    throw noWalletError;
-  };
-  (signer as GenericSigner).waitForTransactionReceipt = async () => {
-    throw noWalletError;
-  };
-
-  return signer;
 }

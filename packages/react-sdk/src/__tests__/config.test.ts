@@ -1,33 +1,33 @@
-import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
+import { indexedDBStorage, MemoryStorage } from "@zama-fhe/sdk";
 import { fhevmSepolia } from "@zama-fhe/sdk/chains";
-import { createFhevmConfig, type RelayerOverride, wagmiAdapter } from "@zama-fhe/react-sdk";
-import { EMPTY_CHAINS_ERROR } from "../config";
+import { createFhevmConfig, type RelayerOverride } from "../config";
+import { wagmiAdapter } from "../wagmi/adapter";
 import { describe, expect, it, vi } from "vitest";
 
 describe("createFhevmConfig", () => {
   it("does not mutate the caller-provided options object", () => {
     const options = {
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet: wagmiAdapter(),
     };
     const config = createFhevmConfig(options);
 
     expect(Object.hasOwn(options, "storage")).toBe(false);
-    expect(config.storage).toBe(memoryStorage);
+    expect(config.storage).toBeInstanceOf(MemoryStorage);
   });
 
   it("defaults storage to memoryStorage when storage is omitted", () => {
     const config = createFhevmConfig({
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet: wagmiAdapter(),
     });
 
-    expect(config.storage).toBe(memoryStorage);
+    expect(config.storage).toBeInstanceOf(MemoryStorage);
   });
 
   it("uses explicit storage when provided", () => {
     const config = createFhevmConfig({
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet: wagmiAdapter(),
       storage: indexedDBStorage,
     });
@@ -37,25 +37,24 @@ describe("createFhevmConfig", () => {
 
   it("keeps storage selection isolated per config call", () => {
     const defaultConfig = createFhevmConfig({
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet: wagmiAdapter(),
     });
     const indexedConfig = createFhevmConfig({
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet: wagmiAdapter(),
       storage: indexedDBStorage,
     });
 
-    expect(defaultConfig.storage).toBe(memoryStorage);
+    expect(defaultConfig.storage).toBeInstanceOf(MemoryStorage);
+    expect(defaultConfig.storage).not.toBe(indexedConfig.storage);
     expect(indexedConfig.storage).toBe(indexedDBStorage);
   });
 
-  it("passes through chains, wallet, relayer, and advanced options", () => {
+  it("passes through chain, wallet, relayer, and advanced options", () => {
     const wallet = wagmiAdapter();
     const relayer: RelayerOverride = {
-      transports: {
-        [fhevmSepolia.id]: {},
-      },
+      relayerUrl: "https://example.test/relayer",
     };
     const onEvent = vi.fn();
     const advanced = {
@@ -67,25 +66,27 @@ describe("createFhevmConfig", () => {
     };
 
     const config = createFhevmConfig({
-      chains: [fhevmSepolia],
+      chain: fhevmSepolia,
       wallet,
       relayer,
       advanced,
     });
 
-    expect(config.chains).toEqual([fhevmSepolia]);
+    expect(config.chain).toEqual(fhevmSepolia);
     expect(config.wallet).toBe(wallet);
     expect(config.relayer).toBe(relayer);
     expect(config.advanced).toBe(advanced);
-  });
-
-  it("throws a clear error when chains is empty", () => {
-    expect(() => createFhevmConfig({ chains: [] })).toThrow(EMPTY_CHAINS_ERROR);
   });
 });
 
 describe("wagmiAdapter", () => {
   it("returns the wagmi adapter shape", () => {
-    expect(wagmiAdapter()).toEqual({ type: "wagmi" });
+    expect(wagmiAdapter()).toEqual(
+      expect.objectContaining({
+        type: "wagmi",
+        useConfig: expect.any(Function),
+        createSigner: expect.any(Function),
+      }),
+    );
   });
 });

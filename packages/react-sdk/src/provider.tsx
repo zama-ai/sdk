@@ -11,13 +11,7 @@ import {
   useMemo,
   useRef,
 } from "react";
-import { useConfig, type Config as WagmiConfig } from "wagmi";
-import {
-  getPrimaryChain,
-  isWagmiAdapter,
-  WAGMI_PROVIDER_REQUIRED_ERROR,
-  type FhevmConfig,
-} from "./config";
+import { isWagmiAdapter, WAGMI_PROVIDER_REQUIRED_ERROR, type FhevmConfig } from "./config";
 import { resolveRelayer } from "./resolve-relayer";
 import { resolveWallet } from "./resolve-wallet";
 
@@ -45,10 +39,15 @@ export function FhevmProvider({ config, queryClient, children }: FhevmProviderPr
 }
 
 function WagmiFhevmProviderInner({ config, queryClient, children }: FhevmProviderProps) {
-  let wagmiConfig: WagmiConfig;
+  const wallet = config.wallet;
+  let wagmiConfig: unknown;
 
   try {
-    wagmiConfig = useConfig();
+    if (!wallet || !isWagmiAdapter(wallet)) {
+      throw new Error(WAGMI_PROVIDER_REQUIRED_ERROR);
+    }
+
+    wagmiConfig = wallet.useConfig();
   } catch {
     throw new Error(WAGMI_PROVIDER_REQUIRED_ERROR);
   }
@@ -65,11 +64,9 @@ function FhevmProviderInner({
   queryClient: queryClientProp,
   wagmiConfig,
   children,
-}: FhevmProviderProps & { wagmiConfig: WagmiConfig | null }) {
+}: FhevmProviderProps & { wagmiConfig: unknown | null }) {
   const ambientQueryClient = useQueryClient();
   const queryClient = queryClientProp ?? ambientQueryClient;
-  const primaryChain = getPrimaryChain(config);
-  const relayerOverride = config.relayer?.transports?.[primaryChain.id];
   const walletMode = isWagmiAdapter(config.wallet)
     ? "wagmi"
     : config.wallet
@@ -83,11 +80,11 @@ function FhevmProviderInner({
 
   const relayer = useMemo(
     () => resolveRelayer(config),
-    [primaryChain.id, relayerOverride, config.advanced?.threads, config.advanced?.integrityCheck],
+    [config.chain.id, config.relayer, config.advanced?.threads, config.advanced?.integrityCheck],
   );
   const signer = useMemo(
     () => resolveWallet(config, wagmiConfig),
-    [primaryChain.id, walletMode, wagmiConfig, walletMode === "custom" ? config.wallet : null],
+    [config.chain.id, walletMode, wagmiConfig, walletMode === "custom" ? config.wallet : null],
   );
 
   const signerLifecycleCallbacks = useMemo(
