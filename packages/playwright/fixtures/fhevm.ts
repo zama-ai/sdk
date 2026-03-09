@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const hardhat = {
   chainId: 31_337n,
   gatewayChainId: GATEWAY_CHAIN_ID,
-  rpcUrl: "http://127.0.0.1:8545",
+  rpcUrl: process.env.HARDHAT_RPC_URL ?? "http://127.0.0.1:8545",
   contracts: {
     acl: deployments.fhevm.acl as `0x${string}`,
     executor: deployments.fhevm.executor as `0x${string}`,

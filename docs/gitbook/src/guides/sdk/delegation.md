@@ -10,18 +10,29 @@ Delegation is enforced on-chain through the ACL contract. The delegate never rec
 
 ## Setup
 
-Pass `aclAddress` when creating the SDK. All delegation methods throw `ConfigurationError` without it.
+Pass `aclAddress` when creating the SDK. This is the address of the **global ACL contract** deployed on your chain — it's the same contract for all tokens on that chain. All delegation methods throw `ConfigurationError` without it.
+
+Each network has a single ACL contract:
+
+| Network | ACL address                                  |
+| ------- | -------------------------------------------- |
+| Mainnet | `0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6` |
+| Sepolia | `0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D` |
+| Hardhat | `0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D` |
 
 ```ts
+import { SepoliaConfig } from "@zama-fhe/sdk";
+
 const sdk = new ZamaSDK({
   relayer,
   signer,
   storage,
-  aclAddress: "0xACL", // required for delegation
+  aclAddress: SepoliaConfig.aclContractAddress, // one per chain, shared by all tokens
 });
 
-const token = sdk.createToken("0xToken");
-const readonlyToken = sdk.createReadonlyToken("0xToken");
+// Both tokens use the same ACL — aclAddress is not per-token
+const tokenA = sdk.createToken("0xTokenA");
+const tokenB = sdk.createToken("0xTokenB");
 ```
 
 ## Granting delegation
@@ -39,6 +50,19 @@ await token.delegateDecryption("0xDelegate", {
 ```
 
 Both return `{ txHash, receipt }`.
+
+### How expiration dates work
+
+The SDK accepts a standard JavaScript `Date` object and converts it to a **UTC Unix timestamp** (seconds since epoch) before sending it on-chain. Since `Date.getTime()` always returns UTC milliseconds regardless of the local timezone, you don't need to normalize manually — a `Date` constructed from any timezone produces the same on-chain value.
+
+```ts
+// These all produce the same on-chain expiry:
+new Date("2025-12-31T00:00:00Z"); // explicit UTC
+new Date("2025-12-31T00:00:00+05:30"); // IST → converted to UTC internally
+new Date(2025, 11, 31); // local time → .getTime() returns UTC ms
+```
+
+If no `expirationDate` is provided, the SDK uses `2^64 - 1` (effectively permanent).
 
 ### Batch delegation
 
@@ -85,7 +109,10 @@ const delegated = await readonlyToken.isDelegated("0xDelegator", "0xDelegate");
 const expiry = await readonlyToken.getDelegationExpiry("0xDelegator", "0xDelegate");
 // 0n = no delegation
 // 2^64 - 1 = permanent
-// otherwise = Unix timestamp (seconds)
+// otherwise = UTC Unix timestamp in seconds
+
+// Convert to a JavaScript Date if needed:
+const expiryDate = new Date(Number(expiry) * 1000);
 ```
 
 ## Decrypting as a delegate
