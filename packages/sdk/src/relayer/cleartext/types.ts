@@ -10,6 +10,8 @@ export interface CleartextConfig {
   verifyingContractAddressDecryption: Address;
   /** Address of the InputVerification contract on the gateway chain. */
   verifyingContractAddressInputVerification: Address;
+  /** Private key of the KMS signer used for EIP-712 verification of the decryption. */
   kmsSignerPrivateKey?: Hex;
+  /** Private key of the input signer used for EIP-712 verification of the input verification. */
   inputSignerPrivateKey?: Hex;
 }
