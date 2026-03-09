@@ -119,12 +119,12 @@ function ZamaProviderInner({
   return <FhevmClientContext.Provider value={sdk}>{children}</FhevmClientContext.Provider>;
 }
 
-export function useZamaSdk(): ZamaSDK {
+export function useZamaSDK(): ZamaSDK {
   const context = useContext(FhevmClientContext);
 
   if (!context) {
     throw new Error(
-      "useZamaSdk must be used within a <ZamaProvider>. " +
+      "useZamaSDK must be used within a <ZamaProvider>. " +
         "Wrap your component tree in <ZamaProvider config={config}>.",
     );
   }

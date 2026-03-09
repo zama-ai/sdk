@@ -2,7 +2,7 @@
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import { revokeSessionMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { useZamaSdk } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /**
  * Revoke the session signature for the connected wallet without
@@ -15,7 +15,7 @@ import { useZamaSdk } from "../provider";
  * ```
  */
 export function useRevokeSession(options?: UseMutationOptions<void, Error, void>) {
-  const sdk = useZamaSdk();
+  const sdk = useZamaSDK();
 
   return useMutation<void, Error, void>({
     ...revokeSessionMutationOptions(sdk),

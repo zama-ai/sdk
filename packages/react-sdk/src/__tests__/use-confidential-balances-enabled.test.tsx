@@ -19,7 +19,7 @@ vi.mock("@tanstack/react-query", async () => {
 });
 
 vi.mock("../provider", () => ({
-  useZamaSdk: vi.fn(() => ({
+  useZamaSDK: vi.fn(() => ({
     signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
     createReadonlyToken: vi.fn((address: Address) => ({ address })),
   })),

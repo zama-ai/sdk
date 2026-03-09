@@ -32,7 +32,6 @@ interface WrapperOverrides {
   signer?: GenericSigner;
   relayer?: RelayerSDK;
   storage?: GenericStorage;
-  sessionStorage?: GenericStorage;
   relayerOverride?: RelayerOverride;
   advanced?: FhevmAdvancedOptions;
   keypairTTL?: number;
@@ -80,10 +79,7 @@ export const test = base.extend<ReactSdkFixtures>({
       }),
     );
   },
-  createWrapper: async (
-    { relayer, signer, storage, sessionStorage: _sessionStorage, queryClient },
-    use,
-  ) => {
+  createWrapper: async ({ relayer, signer, storage, queryClient }, use) => {
     let currentRelayer = relayer;
     const relayerSpy = vi
       .spyOn(resolveRelayerModule, "resolveRelayer")

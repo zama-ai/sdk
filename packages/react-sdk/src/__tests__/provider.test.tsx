@@ -12,7 +12,7 @@ import { decryptionKeys } from "../relayer/decryption-cache";
 import { useAllow } from "../token/use-allow";
 import { wagmiAdapter } from "../wagmi/adapter";
 import { fhevmHardhat, fhevmHoodi, fhevmSepolia } from "@zama-fhe/sdk/chains";
-import { ZamaProvider, useZamaSdk } from "../provider";
+import { ZamaProvider, useZamaSDK } from "../provider";
 import { HardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { describe, expect, it } from "../test-fixtures";
 import { beforeEach, vi } from "vitest";
@@ -126,7 +126,7 @@ function withQueryClient(children: React.ReactNode, queryClient?: QueryClient) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-describe("ZamaProvider & useZamaSdk", () => {
+describe("ZamaProvider & useZamaSDK", () => {
   beforeEach(() => {
     tokenSDKConstructorArgs.length = 0;
     relayerWebCtor.mockReset();
@@ -197,7 +197,7 @@ describe("ZamaProvider & useZamaSdk", () => {
     const signer = createMockSigner();
     const config = createFhevmConfig({ chain: fhevmSepolia, wallet: signer });
 
-    const { result } = renderHook(() => useZamaSdk(), {
+    const { result } = renderHook(() => useZamaSDK(), {
       wrapper: ({ children }) =>
         withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
@@ -208,8 +208,8 @@ describe("ZamaProvider & useZamaSdk", () => {
   });
 
   it("throws outside provider", () => {
-    expect(() => renderHook(() => useZamaSdk())).toThrow(
-      "useZamaSdk must be used within a <ZamaProvider>",
+    expect(() => renderHook(() => useZamaSDK())).toThrow(
+      "useZamaSDK must be used within a <ZamaProvider>",
     );
   });
 
@@ -247,7 +247,7 @@ describe("ZamaProvider & useZamaSdk", () => {
   it("chain 11155111 resolves through RelayerWeb", ({ createMockSigner }) => {
     const config = createFhevmConfig({ chain: fhevmSepolia, wallet: createMockSigner() });
 
-    renderHook(() => useZamaSdk(), {
+    renderHook(() => useZamaSDK(), {
       wrapper: ({ children }) =>
         withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
@@ -261,7 +261,7 @@ describe("ZamaProvider & useZamaSdk", () => {
   }) => {
     const config = createFhevmConfig({ chain: fhevmHardhat, wallet: createMockSigner() });
 
-    renderHook(() => useZamaSdk(), {
+    renderHook(() => useZamaSDK(), {
       wrapper: ({ children }) =>
         withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
@@ -278,7 +278,7 @@ describe("ZamaProvider & useZamaSdk", () => {
       wallet: createMockSigner(),
     });
 
-    renderHook(() => useZamaSdk(), {
+    renderHook(() => useZamaSDK(), {
       wrapper: ({ children }) =>
         withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
@@ -297,7 +297,7 @@ describe("ZamaProvider & useZamaSdk", () => {
       },
     });
 
-    renderHook(() => useZamaSdk(), {
+    renderHook(() => useZamaSDK(), {
       wrapper: ({ children }) =>
         withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
@@ -312,7 +312,7 @@ describe("ZamaProvider & useZamaSdk", () => {
   it("terminates sdk on unmount", ({ createMockSigner }) => {
     const config = createFhevmConfig({ chain: fhevmSepolia, wallet: createMockSigner() });
 
-    const { result, unmount } = renderHook(() => useZamaSdk(), {
+    const { result, unmount } = renderHook(() => useZamaSDK(), {
       wrapper: ({ children }) =>
         withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
@@ -332,7 +332,7 @@ describe("ZamaProvider & useZamaSdk", () => {
       advanced: { onEvent },
     });
 
-    renderHook(() => useZamaSdk(), {
+    renderHook(() => useZamaSDK(), {
       wrapper: ({ children }) =>
         withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
@@ -353,7 +353,7 @@ describe("ZamaProvider & useZamaSdk", () => {
       },
     });
 
-    renderHook(() => useZamaSdk(), {
+    renderHook(() => useZamaSDK(), {
       wrapper: ({ children }) =>
         withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>),
     });
@@ -377,7 +377,7 @@ describe("ZamaProvider & useZamaSdk", () => {
 
     const config = createFhevmConfig({ chain: fhevmSepolia, wallet: signer });
 
-    renderHook(() => useZamaSdk(), {
+    renderHook(() => useZamaSDK(), {
       wrapper: ({ children }) =>
         withQueryClient(<ZamaProvider config={config}>{children}</ZamaProvider>, queryClient),
     });

@@ -8,7 +8,7 @@
  */
 
 // Provider
-export { ZamaProvider, useZamaSdk, type ZamaProviderProps } from "./provider";
+export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // Config factory & types
 export { createFhevmConfig } from "./config";
@@ -52,7 +52,6 @@ export { decryptionKeys } from "./relayer/decryption-cache";
 
 // Re-export core classes
 export {
-  RelayerWeb,
   ZamaSDK,
   Token,
   ReadonlyToken,
@@ -67,8 +66,6 @@ export {
 // Re-export core types
 export type {
   RelayerSDK,
-  RelayerWebConfig,
-  RelayerWebSecurityConfig,
   ZamaSDKConfig,
   TokenConfig,
   ReadonlyTokenConfig,

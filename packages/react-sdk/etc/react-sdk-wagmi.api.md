@@ -4,51 +4,20 @@
 
 ```ts
 
-import { Address } from '@zama-fhe/sdk';
-import { Config } from 'wagmi';
-import { ContractAbi } from '@zama-fhe/sdk';
-import { EIP712TypedData } from '@zama-fhe/sdk';
 import { GenericSigner } from '@zama-fhe/sdk';
-import { Hex } from '@zama-fhe/sdk';
-import { ReadContractArgs } from '@zama-fhe/sdk';
-import { ReadContractConfig } from '@zama-fhe/sdk';
-import { ReadContractReturnType } from '@zama-fhe/sdk';
-import { ReadFunctionName } from '@zama-fhe/sdk';
-import { SignerLifecycleCallbacks } from '@zama-fhe/sdk';
-import { TransactionReceipt } from '@zama-fhe/sdk';
-import { WriteContractArgs } from '@zama-fhe/sdk';
-import { WriteContractConfig } from '@zama-fhe/sdk';
-import { WriteFunctionName } from '@zama-fhe/sdk';
 
-// Warning: (ae-forgotten-export) The symbol "WagmiAdapter" needs to be exported by the entry point index.d.ts
-//
+// @public
+export interface WagmiAdapter {
+    // (undocumented)
+    createSigner: (config: unknown) => GenericSigner;
+    // (undocumented)
+    type: "wagmi";
+    // (undocumented)
+    useConfig: () => unknown;
+}
+
 // @public
 export function wagmiAdapter(): WagmiAdapter;
-
-// @public
-export class WagmiSigner implements GenericSigner {
-    constructor(signerConfig: WagmiSignerConfig);
-    // (undocumented)
-    getAddress(): Promise<Address>;
-    // (undocumented)
-    getChainId(): Promise<number>;
-    // (undocumented)
-    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    // (undocumented)
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // (undocumented)
-    subscribe(input: SignerLifecycleCallbacks): () => void;
-    // (undocumented)
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    // (undocumented)
-    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
-}
-
-// @public
-export interface WagmiSignerConfig {
-    // (undocumented)
-    config: Config;
-}
 
 // (No @packageDocumentation comment for this package)
 

@@ -23,17 +23,17 @@ test("should generate keypair then create EIP-712", async ({ page, contracts }) 
 test("should get public key", async ({ page, contracts }) => {
   await page.goto(`/fhe-relayer?tokens=${contracts.cUSDT}`);
 
-  await expect(page.getByTestId("public-key-result")).toContainText(
-    "Public key ID: mock-public-key-id",
-  );
+  // In cleartext mode the relayer returns null — verify the hook resolves without error
+  await expect(page.getByTestId("public-key-unavailable")).toBeVisible();
+  await expect(page.getByTestId("public-key-error")).not.toBeVisible();
 });
 
 test("should get public params", async ({ page, contracts }) => {
   await page.goto(`/fhe-relayer?tokens=${contracts.cUSDT}`);
 
-  await expect(page.getByTestId("public-params-result")).toContainText(
-    "Public params ID: mock-public-params-id",
-  );
+  // In cleartext mode the relayer returns null — verify the hook resolves without error
+  await expect(page.getByTestId("public-params-unavailable")).toBeVisible();
+  await expect(page.getByTestId("public-params-error")).not.toBeVisible();
 });
 
 test("should encrypt a value", async ({ page, contracts }) => {

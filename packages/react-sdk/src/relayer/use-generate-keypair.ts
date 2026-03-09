@@ -2,7 +2,7 @@
 
 import type { KeypairType } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
-import { useZamaSdk } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /**
  * Generate an FHE keypair via the relayer.
@@ -18,7 +18,7 @@ import { useZamaSdk } from "../provider";
  * ```
  */
 export function useGenerateKeypair() {
-  const sdk = useZamaSdk();
+  const sdk = useZamaSDK();
   return useMutation<KeypairType<string>, Error, void>({
     mutationFn: () => sdk.relayer.generateKeypair(),
   });

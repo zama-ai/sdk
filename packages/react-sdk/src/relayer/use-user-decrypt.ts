@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ClearValueType, Handle, UserDecryptParams } from "@zama-fhe/sdk";
 import { decryptionKeys } from "./decryption-cache";
-import { useZamaSdk } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /**
  * Thin wrapper around sdk.userDecrypt().
@@ -15,7 +15,7 @@ import { useZamaSdk } from "../provider";
  * can read the results.
  */
 export function useUserDecrypt() {
-  const sdk = useZamaSdk();
+  const sdk = useZamaSDK();
   const queryClient = useQueryClient();
 
   return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptParams>({

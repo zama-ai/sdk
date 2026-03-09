@@ -143,8 +143,8 @@ export const test = base.extend<TestFixtures>({
       window.localStorage.setItem("burnerWallet.pk", pk);
     }, privateKey);
 
-    // Navigate to wallet page and ensure wallet is connected
-    await page.goto("/wallet");
+    // Navigate to home and ensure wallet is connected
+    await page.goto("/");
     const connectButton = page.getByRole("button", {
       name: "Connect Wallet",
     });

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { Address } from "@zama-fhe/sdk";
-import { useZamaSdk } from "../provider";
+import { useZamaSDK } from "../provider";
 
 /**
  * Get a {@link ReadonlyToken} instance, memoized by address.
@@ -19,7 +19,7 @@ import { useZamaSdk } from "../provider";
  * ```
  */
 export function useReadonlyToken(address: Address) {
-  const sdk = useZamaSdk();
+  const sdk = useZamaSDK();
 
   return useMemo(() => sdk.createReadonlyToken(address), [sdk, address]);
 }

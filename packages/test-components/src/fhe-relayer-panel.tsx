@@ -88,6 +88,11 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
             Public key ID: {publicKey.data.publicKeyId}
           </p>
         )}
+        {publicKey.isSuccess && !publicKey.data && (
+          <p className="text-zama-gray" data-testid="public-key-unavailable">
+            Not available
+          </p>
+        )}
         {publicKey.isError && (
           <p className="text-zama-error" data-testid="public-key-error">
             Error: {publicKey.error.message}
@@ -102,6 +107,11 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
         {publicParams.isSuccess && publicParams.data && (
           <p className="text-zama-success" data-testid="public-params-result">
             Public params ID: {publicParams.data.publicParamsId}
+          </p>
+        )}
+        {publicParams.isSuccess && !publicParams.data && (
+          <p className="text-zama-gray" data-testid="public-params-unavailable">
+            Not available
           </p>
         )}
         {publicParams.isError && (

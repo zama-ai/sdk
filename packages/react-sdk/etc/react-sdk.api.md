@@ -153,9 +153,6 @@ import { ReadonlyTokenConfig } from '@zama-fhe/sdk';
 import { RelayerRequestFailedError } from '@zama-fhe/sdk';
 import { RelayerSDK } from '@zama-fhe/sdk';
 import { RelayerSDKStatus } from '@zama-fhe/sdk';
-import { RelayerWeb } from '@zama-fhe/sdk';
-import { RelayerWebConfig } from '@zama-fhe/sdk';
-import { RelayerWebSecurityConfig } from '@zama-fhe/sdk';
 import { resumeUnshieldMutationOptions } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { revokeMutationOptions } from '@zama-fhe/sdk/query';
@@ -500,17 +497,6 @@ export interface FhevmConfigOptions {
 
 export { FhevmInstanceConfig }
 
-// @public (undocumented)
-export function FhevmProvider(input: FhevmProviderProps): react_jsx_runtime0.JSX.Element;
-
-// @public (undocumented)
-export interface FhevmProviderProps extends PropsWithChildren {
-    // (undocumented)
-    config: FhevmConfig;
-    // (undocumented)
-    queryClient?: QueryClient;
-}
-
 export { filterQueryOptions }
 
 export { finalizeUnwrapContract }
@@ -646,12 +632,6 @@ export { RelayerRequestFailedError }
 export { RelayerSDK }
 
 export { RelayerSDKStatus }
-
-export { RelayerWeb }
-
-export { RelayerWebConfig }
-
-export { RelayerWebSecurityConfig }
 
 export { resumeUnshieldMutationOptions }
 
@@ -1383,7 +1363,7 @@ export interface UseZamaConfig {
 }
 
 // @public (undocumented)
-export function useZamaSdk(): ZamaSDK;
+export function useZamaSDK(): ZamaSDK;
 
 // @public
 export interface WagmiAdapter {
@@ -1422,6 +1402,17 @@ export { WriteFunctionName }
 export { ZamaError }
 
 export { ZamaErrorCode }
+
+// @public (undocumented)
+export function ZamaProvider(input: ZamaProviderProps): react_jsx_runtime0.JSX.Element;
+
+// @public (undocumented)
+export interface ZamaProviderProps extends PropsWithChildren {
+    // (undocumented)
+    config: FhevmConfig;
+    // (undocumented)
+    queryClient?: QueryClient;
+}
 
 export { zamaQueryKeys }
 
