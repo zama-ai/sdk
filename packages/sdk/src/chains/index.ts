@@ -1,4 +1,10 @@
-export type FhevmChainId = 1 | 11155111 | 31337 | 560048;
+import { sepolia, mainnet, hardhat, hoodi } from "viem/chains";
+
+export type FhevmChainId =
+  | typeof mainnet.id
+  | typeof sepolia.id
+  | typeof hardhat.id
+  | typeof hoodi.id;
 
 export interface FhevmChain<TChainId extends FhevmChainId = FhevmChainId> {
   id: TChainId;
@@ -6,24 +12,24 @@ export interface FhevmChain<TChainId extends FhevmChainId = FhevmChainId> {
 }
 
 export const fhevmMainnet = {
-  id: 1,
-  name: "Ethereum Mainnet",
-} as const satisfies FhevmChain<1>;
+  id: mainnet.id,
+  name: mainnet.name,
+} as const satisfies FhevmChain;
 
 export const fhevmSepolia = {
-  id: 11155111,
-  name: "Sepolia",
-} as const satisfies FhevmChain<11155111>;
+  id: sepolia.id,
+  name: sepolia.name,
+} as const satisfies FhevmChain;
 
 export const fhevmHardhat = {
-  id: 31337,
-  name: "Hardhat",
-} as const satisfies FhevmChain<31337>;
+  id: hardhat.id,
+  name: hardhat.name,
+} as const satisfies FhevmChain;
 
 export const fhevmHoodi = {
-  id: 560048,
-  name: "Hoodi",
-} as const satisfies FhevmChain<560048>;
+  id: hoodi.id,
+  name: hoodi.name,
+} as const satisfies FhevmChain;
 
 export const fhevmChains = [
   fhevmMainnet,
