@@ -50,6 +50,7 @@ jobs:
 
   release:
     needs: [vitest, playwright, api-report]
+    if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
