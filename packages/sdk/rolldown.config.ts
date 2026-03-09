@@ -27,7 +27,7 @@ export default defineConfig([
       minify: true,
     },
     ...shared,
-    plugins: [dts({ tsconfig: "tsconfig.build.json" })],
+    plugins: [dts({ tsconfig: "tsconfig.build.json", parallel: true })],
   },
   {
     input: {
