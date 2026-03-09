@@ -159,7 +159,7 @@ if (pending) {
 
 Delegation lets you grant another address the right to decrypt your confidential balance — useful for portfolio dashboards, fund managers, or any scenario where a third party needs read access to your encrypted holdings.
 
-> **Prerequisite:** Pass `aclAddress` when creating the SDK or token. Delegation operations throw `ConfigurationError` without it. See [Delegated Decryption](delegation.md) for the full guide.
+> The ACL contract address is resolved automatically from the relayer's transport configuration. See [Delegated Decryption](delegation.md) for the full guide.
 
 ```ts
 // Grant delegation rights (permanent by default)

@@ -231,7 +231,7 @@ See [Session management](../sdk/configuration.md#session-management) for details
 
 ### `useDelegateDecryption`
 
-Grant or manage decryption delegation via the on-chain ACL. Requires `aclAddress` on the `ZamaProvider`.
+Grant or manage decryption delegation via the on-chain ACL. The ACL address is resolved automatically from the relayer's transport configuration.
 
 ```tsx
 const { mutateAsync: delegate, isPending } = useDelegateDecryption({

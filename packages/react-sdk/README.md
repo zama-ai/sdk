@@ -156,7 +156,6 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
   sessionStorage={sessionStorage} // Optional. Session storage for wallet signatures. Default: in-memory (lost on reload).
   keypairTTL={86400} // Optional. Seconds the ML-KEM keypair remains valid. Default: 86400 (1 day).
   sessionTTL={2592000} // Optional. Seconds the session signature remains valid. Default: 2592000 (30 days). 0 = re-sign every operation.
-  aclAddress="0xACL" // Optional. ACL contract address — required for delegation operations.
   onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
   {children}
@@ -571,7 +570,7 @@ interface FinalizeUnwrapParams {
 
 #### `useDelegateDecryption`
 
-Grant decryption delegation to another address via the on-chain ACL. Requires `aclAddress` on the `ZamaProvider`.
+Grant decryption delegation to another address via the on-chain ACL. ACL address is resolved automatically from the relayer transport config.
 
 ```ts
 function useDelegateDecryption(

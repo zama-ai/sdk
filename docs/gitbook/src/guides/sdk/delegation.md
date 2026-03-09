@@ -10,27 +10,16 @@ Delegation is enforced on-chain through the ACL contract. The delegate never rec
 
 ## Setup
 
-Pass `aclAddress` when creating the SDK. This is the address of the **global ACL contract** deployed on your chain — it's the same contract for all tokens on that chain. All delegation methods throw `ConfigurationError` without it.
-
-Each network has a single ACL contract:
-
-| Network | ACL address                                  |
-| ------- | -------------------------------------------- |
-| Mainnet | `0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6` |
-| Sepolia | `0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D` |
-| Hardhat | `0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D` |
+The ACL contract address is automatically resolved from the relayer's transport configuration. Network presets (`SepoliaConfig`, `MainnetConfig`, `HardhatConfig`) already include the correct ACL address for each chain — no manual configuration needed.
 
 ```ts
-import { SepoliaConfig } from "@zama-fhe/sdk";
-
 const sdk = new ZamaSDK({
   relayer,
   signer,
   storage,
-  aclAddress: SepoliaConfig.aclContractAddress, // one per chain, shared by all tokens
 });
 
-// Both tokens use the same ACL — aclAddress is not per-token
+// Both tokens use the same ACL — resolved automatically from the relayer config
 const tokenA = sdk.createToken("0xTokenA");
 const tokenB = sdk.createToken("0xTokenB");
 ```
@@ -133,11 +122,11 @@ Decrypted values are cached in storage (keyed by token + owner + handle), so sub
 
 ## Error handling
 
-| Error                      | When                                             |
-| -------------------------- | ------------------------------------------------ |
-| `ConfigurationError`       | `aclAddress` not provided in SDK or token config |
-| `TransactionRevertedError` | Delegation or revocation transaction fails       |
-| `DecryptionFailedError`    | Delegated decryption fails                       |
+| Error                      | When                                              |
+| -------------------------- | ------------------------------------------------- |
+| `ConfigurationError`       | ACL address not found in relayer transport config |
+| `TransactionRevertedError` | Delegation or revocation transaction fails        |
+| `DecryptionFailedError`    | Delegated decryption fails                        |
 
 ```ts
 import { ConfigurationError, TransactionRevertedError } from "@zama-fhe/sdk";
@@ -146,7 +135,7 @@ try {
   await token.delegateDecryption("0xDelegate");
 } catch (error) {
   if (error instanceof ConfigurationError) {
-    // aclAddress not configured
+    // ACL address not found in relayer transport config
   }
   if (error instanceof TransactionRevertedError) {
     // on-chain transaction failed

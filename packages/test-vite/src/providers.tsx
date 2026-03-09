@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage, RelayerWeb, ZamaProvider, type Address } from "@zama-fhe/react-sdk";
-import { ACL_ADDRESS } from "./constants";
+import { MemoryStorage, RelayerWeb, ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import { type ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
@@ -46,12 +45,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <ZamaProvider
-          relayer={relayer}
-          storage={storage}
-          signer={signer}
-          aclAddress={ACL_ADDRESS as Address}
-        >
+        <ZamaProvider relayer={relayer} storage={storage} signer={signer}>
           {children}
         </ZamaProvider>
       </WagmiProvider>
