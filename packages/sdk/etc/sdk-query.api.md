@@ -1339,10 +1339,14 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 // Warnings were encountered during analysis:
 //
 <<<<<<< HEAD
+<<<<<<< HEAD
 // dist/activity-DMDQPBKI.d.ts:913:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 =======
 // dist/activity-BZBwZmvo.d.ts:912:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 >>>>>>> 1ecefa29 (feat(sdk): cleartext flat config refactor, chains module, query typing)
+=======
+// dist/activity-BCIwYEi-.d.ts:912:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+>>>>>>> 2aa5aa74 (update constants)
 
 // (No @packageDocumentation comment for this package)
 
