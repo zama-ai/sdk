@@ -18,5 +18,6 @@
 - [Getting Started](guides/react-sdk/overview.md)
 - [Provider Setup](guides/react-sdk/provider-setup.md)
 - [Hooks](guides/react-sdk/hooks.md)
+- [Encryption & Decryption](guides/react-sdk/encrypt-decrypt.md)
 - [Choosing the Right Hook](guides/react-sdk/hook-disambiguation.md)
 - [Library Adapters](guides/react-sdk/library-adapters.md)

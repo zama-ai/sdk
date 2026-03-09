@@ -289,6 +289,52 @@ feed?.forEach((item) => {
 });
 ```
 
+## Encryption & Decryption
+
+For custom FHE flows beyond the high-level token hooks, the SDK provides low-level encrypt/decrypt hooks. See the dedicated [Encryption & Decryption](encrypt-decrypt.md) guide for full working examples, the complete decrypt orchestration flow, and debugging tips.
+
+### Quick overview
+
+**Encrypt** values for smart contract calls:
+
+```tsx
+const encrypt = useEncrypt();
+
+const { handles, inputProof } = await encrypt.mutateAsync({
+  values: [{ value: 1000n, type: "euint64" }],
+  contractAddress: "0xYourContract",
+  userAddress,
+});
+```
+
+**Decrypt** with the full orchestration flow (recommended):
+
+```tsx
+const decrypt = useUserDecryptFlow();
+
+const result = await decrypt.mutateAsync({
+  handles: [{ handle: "0xabc...", contractAddress: "0xYourContract" }],
+});
+// result: { "0xabc...": 1000n }
+```
+
+**Read cached** decrypted values anywhere in the tree:
+
+```tsx
+const { data: value } = useUserDecryptedValue("0xabc...");
+```
+
+| Hook                     | Purpose                                               |
+| ------------------------ | ----------------------------------------------------- |
+| `useEncrypt`             | Encrypt plaintext values for contract calls           |
+| `useUserDecryptFlow`     | Full decrypt orchestration (keypair → sign → decrypt) |
+| `useUserDecrypt`         | Low-level decrypt (you manage keypair and signature)  |
+| `usePublicDecrypt`       | Decrypt publicly-decryptable values (no auth needed)  |
+| `useGenerateKeypair`     | Generate an FHE keypair                               |
+| `useCreateEIP712`        | Create EIP-712 typed data for decrypt authorization   |
+| `useUserDecryptedValue`  | Read a single decrypted value from cache              |
+| `useUserDecryptedValues` | Read multiple decrypted values from cache             |
+
 ## Fees
 
 | Hook                                                      | What it reads         |

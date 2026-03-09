@@ -741,16 +741,56 @@ function useFeeRecipient(
 
 ### Low-Level FHE Hooks
 
-These hooks expose the raw `RelayerSDK` operations as React Query mutations.
+These hooks expose the raw `RelayerSDK` operations as React Query mutations. For detailed usage examples and common pitfalls, see the [Encryption & Decryption guide](docs/gitbook/src/guides/react-sdk/encrypt-decrypt.md).
 
-#### Encryption & Decryption
+#### Encryption
 
-| Hook                        | Input                        | Output                   | Description                                                          |
-| --------------------------- | ---------------------------- | ------------------------ | -------------------------------------------------------------------- |
-| `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                             |
-| `useUserDecrypt()`          | `UserDecryptParams`          | `Record<string, bigint>` | Decrypt with user's FHE private key. Populates the decryption cache. |
-| `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption. Populates the decryption cache.                   |
-| `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                              |
+```tsx
+const encrypt = useEncrypt();
+
+const { handles, inputProof } = await encrypt.mutateAsync({
+  values: [{ value: 1000n, type: "euint64" }],
+  contractAddress: "0xYourContract",
+  userAddress,
+});
+
+// Pass handles and inputProof to your contract call
+```
+
+#### Decryption (recommended: `useUserDecryptFlow`)
+
+`useUserDecryptFlow` handles the full 4-step orchestration (generate keypair → create EIP-712 → wallet signature → decrypt) in a single call with optional progress callbacks:
+
+```tsx
+const decrypt = useUserDecryptFlow({
+  callbacks: {
+    onKeypairGenerated: () => setStep("eip712"),
+    onEIP712Created: () => setStep("signing"),
+    onSigned: () => setStep("decrypting"),
+    onDecrypted: (values) => setStep("done"),
+  },
+});
+
+const result = await decrypt.mutateAsync({
+  handles: [
+    { handle: "0xabc...", contractAddress: "0xTokenA" },
+    { handle: "0xdef...", contractAddress: "0xTokenB" },
+  ],
+  durationDays: 1,
+});
+// result: { "0xabc...": 500n, "0xdef...": 1000n }
+// Results are automatically cached for useUserDecryptedValue
+```
+
+#### All Encryption & Decryption Hooks
+
+| Hook                        | Input                        | Output                   | Description                                                                                     |
+| --------------------------- | ---------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------- |
+| `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                                                        |
+| `useUserDecryptFlow()`      | `UserDecryptFlowParams`      | `Record<string, bigint>` | **Recommended.** Full decrypt orchestration with progress callbacks. Populates cache.           |
+| `useUserDecrypt()`          | `UserDecryptParams`          | `Record<string, bigint>` | Low-level decrypt — you manage keypair, EIP-712, and signature. Populates the decryption cache. |
+| `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption (no authorization needed). Populates the decryption cache.                    |
+| `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                                                         |
 
 #### Key Management
 
@@ -770,7 +810,7 @@ These hooks expose the raw `RelayerSDK` operations as React Query mutations.
 
 ### Decryption Cache Hooks
 
-`useUserDecrypt` and `usePublicDecrypt` populate a shared React Query cache. These hooks read from that cache without triggering new decryption requests.
+`useUserDecryptFlow`, `useUserDecrypt`, and `usePublicDecrypt` populate a shared React Query cache. These hooks read from that cache without triggering new decryption requests.
 
 ```ts
 // Single handle
@@ -784,11 +824,13 @@ function useUserDecryptedValues(handles: string[]): {
 ```
 
 ```tsx
-// First, trigger decryption
-const { mutateAsync: decrypt } = useUserDecrypt();
-await decrypt(decryptParams);
+// First, trigger decryption (populates the cache)
+const decrypt = useUserDecryptFlow();
+await decrypt.mutateAsync({
+  handles: [{ handle: "0xHandleHash", contractAddress: "0xToken" }],
+});
 
-// Then read cached results anywhere in the tree
+// Then read cached results anywhere in the tree — no new decryption
 const { data: value } = useUserDecryptedValue("0xHandleHash");
 ```
 
