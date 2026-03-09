@@ -67,6 +67,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "viem": ">=2"
+  },
   "devDependencies": {
     "@tanstack/query-core": "^5.90.20",
     "@zama-fhe/relayer-sdk": "0.4.1",
@@ -75,16 +78,12 @@
   },
   "peerDependencies": {
     "@tanstack/query-core": ">=5",
-    "viem": ">=2",
     "ethers": ">=6",
     "@zama-fhe/relayer-sdk": "~0.4.1"
   },
   "sideEffects": false,
   "peerDependenciesMeta": {
     "@tanstack/query-core": {
-      "optional": true
-    },
-    "viem": {
       "optional": true
     },
     "ethers": {

@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",
-    "@zama-fhe/react-sdk": "git+https://github.com/zama-ai/sdk.git",
-    "@zama-fhe/sdk": "git+https://github.com/zama-ai/sdk.git",
+    "@zama-fhe/react-sdk": "1.0.0-alpha.16",
+    "@zama-fhe/sdk": "1.0.0-alpha.16",
     "ethers": "^6.13.0",
     "next": "^16.0.0",
     "react": "^19.2.0",

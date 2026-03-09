@@ -12,8 +12,8 @@ import {
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 
-const TOKEN_ADDRESS = "0x..." as Address; // Replace with your token address
-const WRAPPER_ADDRESS = "0x..." as Address; // Replace with your wrapper address
+const TOKEN_ADDRESS = `0x${"aa".repeat(20)}` as Address; // Replace with your token address
+const WRAPPER_ADDRESS = `0x${"bb".repeat(20)}` as Address; // Replace with your wrapper address
 
 export default function Home() {
   const { address, isConnected } = useAccount();
