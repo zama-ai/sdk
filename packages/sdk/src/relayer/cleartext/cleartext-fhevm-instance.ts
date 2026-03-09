@@ -295,7 +295,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
   }
 
   async requestZKProofVerification(_zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    throw new ConfigurationError("requestZKProofVerification is not supported in cleartext mode");
+    throw new Error("requestZKProofVerification is not supported in cleartext mode");
   }
 
   async getPublicKey(): Promise<{ publicKeyId: string; publicKey: Uint8Array } | null> {
