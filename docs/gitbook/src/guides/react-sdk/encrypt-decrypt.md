@@ -25,8 +25,7 @@ function EncryptExample() {
 
     // result.handles — array of Uint8Array, one per value
     // result.inputProof — Uint8Array, required alongside handles in contract calls
-    console.log("Encrypted handle:", result.handles[0]);
-    console.log("Input proof:", result.inputProof);
+    // Use handles and inputProof in your contract call (see next section)
   };
 
   return (
@@ -120,14 +119,16 @@ This is the **recommended hook** for most use cases. It handles the complete 4-s
 ```tsx
 import { useUserDecryptFlow } from "@zama-fhe/react-sdk";
 import type { DecryptHandle } from "@zama-fhe/react-sdk";
+import { useState } from "react";
 
 function DecryptExample() {
+  const [status, setStatus] = useState("idle");
   const decrypt = useUserDecryptFlow({
     callbacks: {
-      onKeypairGenerated: () => console.log("Keypair ready"),
-      onEIP712Created: () => console.log("Awaiting wallet signature..."),
-      onSigned: (sig) => console.log("Signed:", sig.slice(0, 10)),
-      onDecrypted: (values) => console.log("Decrypted:", values),
+      onKeypairGenerated: () => setStatus("Keypair ready"),
+      onEIP712Created: () => setStatus("Awaiting wallet signature..."),
+      onSigned: () => setStatus("Signed, decrypting..."),
+      onDecrypted: () => setStatus("Done!"),
     },
   });
 
@@ -154,6 +155,7 @@ function DecryptExample() {
         {decrypt.isPending ? "Decrypting..." : "Decrypt Balance"}
       </button>
       {decrypt.error && <p>Error: {decrypt.error.message}</p>}
+      {status !== "idle" && <p>{status}</p>}
     </div>
   );
 }
