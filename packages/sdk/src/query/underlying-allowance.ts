@@ -33,7 +33,7 @@ export function underlyingAllowanceQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context: { queryKey: typeof queryKey }) => {
+    queryFn: async (context) => {
       const [, { owner: keyOwner, wrapperAddress: keyWrapperAddress }] = context.queryKey;
       if (!keyOwner) throw new Error("owner is required");
       if (!keyWrapperAddress) throw new Error("wrapperAddress is required");

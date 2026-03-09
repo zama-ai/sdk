@@ -29,7 +29,7 @@ export function confidentialIsApprovedQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context: { queryKey: typeof queryKey }) => {
+    queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, holder: keyHolder, spender: keySpender }] =
         context.queryKey;
       if (!keyHolder) throw new Error("holder is required");

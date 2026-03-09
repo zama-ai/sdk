@@ -23,7 +23,7 @@ export function isConfidentialQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context: { queryKey: typeof queryKey }) => {
+    queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       return signer.readContract(isConfidentialTokenContract(keyTokenAddress));
     },
@@ -41,7 +41,7 @@ export function isWrapperQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context: { queryKey: typeof queryKey }) => {
+    queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       return signer.readContract(isConfidentialWrapperContract(keyTokenAddress));
     },

@@ -32,7 +32,7 @@ export function tokenMetadataQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context: { queryKey: typeof queryKey }) => {
+    queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       const [name, symbol, decimals] = await Promise.all([
         signer.readContract(nameContract(keyTokenAddress)),

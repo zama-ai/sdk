@@ -7,5 +7,5 @@ export interface CleartextConfig {
   aclContractAddress: Address;
   verifyingContractAddressDecryption: Address;
   verifyingContractAddressInputVerification: Address;
-  cleartextExecutorAddress: Address;
+  executorAddress: Address;
 }

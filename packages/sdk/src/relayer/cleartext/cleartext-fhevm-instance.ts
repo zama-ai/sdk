@@ -443,7 +443,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
 
   async #readPlaintext(handle: Handle): Promise<bigint> {
     return this.#client.readContract({
-      address: this.#config.cleartextExecutorAddress as Address,
+      address: this.#config.executorAddress as Address,
       abi: EXECUTOR_ABI,
       functionName: "plaintexts",
       args: [handle],

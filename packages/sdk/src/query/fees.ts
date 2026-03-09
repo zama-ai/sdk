@@ -46,7 +46,7 @@ export function shieldFeeQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context: { queryKey: typeof queryKey }) => {
+    queryFn: async (context) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
       if (!params.feeManagerAddress) throw new Error("feeManagerAddress is required");
@@ -77,7 +77,7 @@ export function unshieldFeeQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context: { queryKey: typeof queryKey }) => {
+    queryFn: async (context) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
       if (!params.feeManagerAddress) throw new Error("feeManagerAddress is required");
@@ -110,7 +110,7 @@ export function batchTransferFeeQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context: { queryKey: typeof queryKey }) => {
+    queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
       if (!keyFeeManagerAddress) throw new Error("feeManagerAddress is required");
       return signer.readContract(getBatchTransferFeeContract(keyFeeManagerAddress));
@@ -136,7 +136,7 @@ export function feeRecipientQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context: { queryKey: typeof queryKey }) => {
+    queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
       if (!keyFeeManagerAddress) throw new Error("feeManagerAddress is required");
       return signer.readContract(getFeeRecipientContract(keyFeeManagerAddress));
