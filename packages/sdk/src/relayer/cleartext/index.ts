@@ -1,4 +1,4 @@
-export { createCleartextRelayer } from "./factory";
-export { hoodi } from "./presets";
+export { CleartextFhevmInstance } from "./cleartext-fhevm-instance";
+export { HardhatCleartextConfig, hoodiCleartextConfig } from "./presets";
 export { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "./constants";
-export type { CleartextChainConfig, CleartextContracts } from "./types";
+export type { CleartextConfig } from "./types";

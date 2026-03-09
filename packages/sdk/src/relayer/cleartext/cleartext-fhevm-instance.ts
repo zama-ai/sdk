@@ -1,6 +1,18 @@
 import { privateKeyToAccount } from "viem/accounts";
-import { concat, getAddress, pad, parseAbi, toHex } from "viem";
-import type { PublicClient } from "viem";
+import {
+  concat,
+  createPublicClient,
+  custom,
+  getAddress,
+  http,
+  keccak256,
+  pad,
+  parseAbi,
+  toBytes,
+  toHex,
+  type Hex,
+  type PublicClient,
+} from "viem";
 import { mainnet, sepolia } from "viem/chains";
 import type {
   ClearValueType,
@@ -24,11 +36,18 @@ import type {
 import type { Address, Hex } from "viem";
 import {
   DELEGATED_USER_DECRYPT_EIP712,
+  INPUT_VERIFICATION_EIP712,
   KMS_DECRYPTION_EIP712,
   USER_DECRYPT_EIP712,
 } from "./eip712";
-import { CleartextEncryptedInput } from "./encrypted-input";
-import { FheType, MOCK_KMS_SIGNER_PK } from "./constants";
+import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "./constants";
+import {
+  encryptionBitsFromFheTypeId,
+  fheTypeIdFromName,
+  isFheTypeName,
+  type FheTypeId,
+} from "./fhe-type";
+import { computeInputHandle, computeMockCiphertext } from "./handle";
 import type { CleartextConfig } from "./types";
 import {
   ConfigurationError,
@@ -37,11 +56,11 @@ import {
 } from "../../token/errors";
 
 const KMS_SIGNER = privateKeyToAccount(MOCK_KMS_SIGNER_PK as `0x${string}`);
+const INPUT_SIGNER = privateKeyToAccount(MOCK_INPUT_SIGNER_PK);
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
-  "function isHandleDelegatedForUserDecryption(address delegator, address delegate, address contractAddress, bytes32 handle) view returns (bool)",
 ]);
 
 const EXECUTOR_ABI = parseAbi(["function plaintexts(bytes32 handle) view returns (uint256)"]);
@@ -67,27 +86,76 @@ const KMS_DECRYPTION_TYPES = {
   PublicDecryptVerification: KMS_DECRYPTION_EIP712.types.PublicDecryptVerification,
 } satisfies KmsPublicDecryptEIP712Type["types"];
 
+const FORBIDDEN_CHAIN_IDS = new Set([BigInt(mainnet.id), BigInt(sepolia.id)]);
+
+// FheTypeId constants for hot-path comparisons
+const EBOOL_ID: FheTypeId = 0;
+const EADDRESS_ID: FheTypeId = 7;
+
 function decodeClearValueType(handle: Handle, rawValue: bigint): ClearValueType {
   const typeByte = Number((BigInt(handle) >> 8n) & 0xffn);
-  if (typeByte === FheType.Bool) return rawValue !== 0n;
-  if (typeByte === FheType.Uint160) return toHex(rawValue, { size: 20 });
+  if (typeByte === EBOOL_ID) return rawValue !== 0n;
+  if (typeByte === EADDRESS_ID) return toHex(rawValue, { size: 20 });
   return rawValue;
+}
+
+function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
+  fheType: FheTypeId;
+  value: bigint;
+} {
+  if (!isFheTypeName(entry.type)) {
+    throw new EncryptionFailedError(`Unsupported FHE type: ${entry.type}`);
+  }
+
+  const fheType = fheTypeIdFromName(entry.type);
+
+  let value: bigint;
+  if (entry.type === "ebool") {
+    if (typeof entry.value === "boolean") {
+      value = entry.value ? 1n : 0n;
+    } else {
+      value = entry.value;
+      if (value !== 0n && value !== 1n) {
+        throw new EncryptionFailedError("Bool value must be 0, 1, true, or false");
+      }
+    }
+  } else if (entry.type === "eaddress") {
+    value = BigInt(getAddress(entry.value));
+  } else {
+    value = entry.value;
+  }
+
+  if (value < 0n) {
+    throw new EncryptionFailedError("Only non-negative cleartext values are supported");
+  }
+
+  const bits = encryptionBitsFromFheTypeId(fheType);
+  const maxValue = (1n << BigInt(bits)) - 1n;
+  if (value > maxValue) {
+    throw new EncryptionFailedError(
+      `Value ${value} exceeds max ${maxValue} for FheType ${fheType}`,
+    );
+  }
+
+  return { fheType, value };
 }
 
 export class CleartextFhevmInstance implements RelayerSDK {
   readonly #client: PublicClient;
   readonly #config: CleartextConfig;
+  readonly #chainIdBigInt: bigint;
 
-  static readonly #FORBIDDEN_CHAIN_IDS = new Set([BigInt(mainnet.id), BigInt(sepolia.id)]);
-
-  constructor(client: PublicClient, config: CleartextConfig) {
-    if (CleartextFhevmInstance.#FORBIDDEN_CHAIN_IDS.has(config.chainId)) {
+  constructor(config: CleartextConfig) {
+    this.#chainIdBigInt = BigInt(config.chainId);
+    if (FORBIDDEN_CHAIN_IDS.has(this.#chainIdBigInt)) {
       throw new ConfigurationError(
         `Cleartext mode is not allowed on chain ${config.chainId}. ` +
           `It is intended for local development and testing only.`,
       );
     }
-    this.#client = client;
+    this.#client = createPublicClient({
+      transport: typeof config.network === "string" ? http(config.network) : custom(config.network),
+    });
     this.#config = config;
   }
 
@@ -108,15 +176,11 @@ export class CleartextFhevmInstance implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<EIP712TypedData> {
-    const domain: EIP712TypedData["domain"] = {
-      name: "Decryption",
-      version: "1",
-      chainId: Number(this.#config.chainId),
-      verifyingContract: this.#config.contracts.verifyingDecryption,
-    };
-
     return {
-      domain,
+      domain: USER_DECRYPT_EIP712.domain(
+        this.#config.chainId,
+        this.#config.verifyingContractAddressDecryption,
+      ) as EIP712TypedData["domain"],
       types: USER_DECRYPT_TYPES,
       primaryType: "UserDecryptRequestVerification",
       message: {
@@ -130,62 +194,72 @@ export class CleartextFhevmInstance implements RelayerSDK {
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    const input = new CleartextEncryptedInput(
-      params.contractAddress,
-      params.userAddress,
-      this.#config,
+    const entries = params.values.map(normalizeEncryptValue);
+    const contractAddress = getAddress(params.contractAddress);
+    const userAddress = getAddress(params.userAddress);
+
+    const mockCiphertexts = entries.map(({ fheType, value }) =>
+      computeMockCiphertext(fheType, value, crypto.getRandomValues(new Uint8Array(32))),
     );
 
-    for (const entry of params.values) {
-      switch (entry.type) {
-        case "ebool":
-          input.addBool(entry.value);
-          break;
-        case "euint8":
-          input.add8(entry.value);
-          break;
-        case "euint16":
-          input.add16(entry.value);
-          break;
-        case "euint32":
-          input.add32(entry.value);
-          break;
-        case "euint64":
-          input.add64(entry.value);
-          break;
-        case "euint128":
-          input.add128(entry.value);
-          break;
-        case "eaddress":
-          input.addAddress(entry.value);
-          break;
-        case "euint256":
-          input.add256(entry.value);
-          break;
-        default: {
-          const unreachable: never = entry;
-          void unreachable;
-          throw new EncryptionFailedError("Unsupported FHE type");
-        }
-      }
-    }
+    const ciphertextBlob = keccak256(mockCiphertexts.length > 0 ? concat(mockCiphertexts) : "0x");
 
-    return input.encrypt();
+    const handles = entries.map(({ fheType }, index) =>
+      computeInputHandle(
+        ciphertextBlob,
+        index,
+        fheType,
+        this.#config.aclContractAddress as Address,
+        this.#chainIdBigInt,
+      ),
+    );
+
+    const cleartextParts = entries.map(({ value }) => pad(toHex(value), { size: 32 }));
+    const cleartextBytes: Hex = cleartextParts.length > 0 ? concat(cleartextParts) : "0x";
+
+    const signature = await INPUT_SIGNER.signTypedData({
+      domain: INPUT_VERIFICATION_EIP712.domain(
+        this.#config.gatewayChainId,
+        this.#config.verifyingContractAddressInputVerification,
+      ),
+      types: {
+        CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
+      },
+      primaryType: "CiphertextVerification",
+      message: {
+        ctHandles: handles,
+        userAddress,
+        contractAddress,
+        contractChainId: this.#chainIdBigInt,
+        extraData: cleartextBytes,
+      },
+    });
+
+    const inputProof = toBytes(
+      concat([
+        toHex(new Uint8Array([handles.length])),
+        toHex(new Uint8Array([1])),
+        ...handles,
+        signature,
+        cleartextBytes,
+      ]),
+    );
+
+    return {
+      handles: handles.map((handle) => toBytes(handle)),
+      inputProof,
+    };
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    const normalizedSignerAddress = getAddress(params.signerAddress);
-    const normalizedHandles = params.handles;
-
-    const allowedResults = await Promise.all(
-      normalizedHandles.map((handle) => this.#persistAllowed(handle, normalizedSignerAddress)),
+    const normalizedHandles = params.handles.map(normalizeHandle);
+    await this.#assertDecryptAuthorization(
+      normalizedHandles,
+      getAddress(params.signerAddress),
+      getAddress(params.contractAddress),
+      "User",
+      "user decrypt",
     );
-    const unauthorizedIndex = allowedResults.findIndex((isAllowed) => !isAllowed);
-    if (unauthorizedIndex !== -1) {
-      throw new DecryptionFailedError(
-        `Handle ${normalizedHandles[unauthorizedIndex]!} is not authorized for user decrypt`,
-      );
-    }
 
     return this.#decryptHandles(normalizedHandles);
   }
@@ -218,7 +292,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     const signature = await KMS_SIGNER.signTypedData({
       domain: KMS_DECRYPTION_EIP712.domain(
         this.#config.gatewayChainId,
-        this.#config.contracts.verifyingDecryption,
+        this.#config.verifyingContractAddressDecryption,
       ) as KmsPublicDecryptEIP712Type["domain"],
       types: KMS_DECRYPTION_TYPES,
       primaryType: "PublicDecryptVerification",
@@ -245,12 +319,6 @@ export class CleartextFhevmInstance implements RelayerSDK {
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    const domain: KmsDelegatedUserDecryptEIP712Type["domain"] = {
-      name: "Decryption",
-      version: "1",
-      chainId: this.#config.chainId,
-      verifyingContract: this.#config.contracts.verifyingDecryption,
-    };
     const message: KmsDelegatedUserDecryptEIP712Type["message"] = {
       publicKey: publicKey as KmsDelegatedUserDecryptEIP712Type["message"]["publicKey"],
       contractAddresses,
@@ -261,7 +329,10 @@ export class CleartextFhevmInstance implements RelayerSDK {
     };
 
     return {
-      domain,
+      domain: DELEGATED_USER_DECRYPT_EIP712.domain(
+        this.#chainIdBigInt,
+        this.#config.verifyingContractAddressDecryption,
+      ) as KmsDelegatedUserDecryptEIP712Type["domain"],
       types: DELEGATED_USER_DECRYPT_TYPES,
       primaryType: "DelegatedUserDecryptRequestVerification",
       message,
@@ -271,24 +342,14 @@ export class CleartextFhevmInstance implements RelayerSDK {
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    const normalizedHandles = params.handles;
-
-    const delegatedResults = await Promise.all(
-      normalizedHandles.map((handle) =>
-        this.#isHandleDelegatedForUserDecryption(
-          params.delegatorAddress,
-          params.delegateAddress,
-          params.contractAddress,
-          handle,
-        ),
-      ),
+    const normalizedHandles = params.handles.map(normalizeHandle);
+    await this.#assertDecryptAuthorization(
+      normalizedHandles,
+      getAddress(params.delegatorAddress),
+      getAddress(params.contractAddress),
+      "Delegator",
+      "delegated decrypt",
     );
-    const unauthorizedIndex = delegatedResults.findIndex((isDelegated) => !isDelegated);
-    if (unauthorizedIndex !== -1) {
-      throw new DecryptionFailedError(
-        `Handle ${normalizedHandles[unauthorizedIndex]!} is not delegated for user decryption (delegator=${params.delegatorAddress}, delegate=${params.delegateAddress}, contract=${params.contractAddress})`,
-      );
-    }
 
     return this.#decryptHandles(normalizedHandles);
   }
@@ -326,9 +387,45 @@ export class CleartextFhevmInstance implements RelayerSDK {
     );
   }
 
+  async #assertDecryptAuthorization(
+    normalizedHandles: Handle[],
+    actorAddress: Address,
+    contractAddress: Address,
+    actorLabel: "User" | "Delegator",
+    operationLabel: "user decrypt" | "delegated decrypt",
+  ): Promise<void> {
+    if (actorAddress === contractAddress) {
+      throw new DecryptionFailedError(
+        `${actorLabel} address ${actorAddress} must not equal contract address for ${operationLabel}`,
+      );
+    }
+
+    const results = await Promise.all(
+      normalizedHandles.flatMap((handle) => [
+        this.#persistAllowed(handle, actorAddress),
+        this.#persistAllowed(handle, contractAddress),
+      ]),
+    );
+
+    for (let i = 0; i < normalizedHandles.length; i++) {
+      const actorAllowed = results[i * 2];
+      const contractAllowed = results[i * 2 + 1];
+      if (!actorAllowed) {
+        throw new DecryptionFailedError(
+          `${actorLabel} ${actorAddress} is not authorized for ${operationLabel} of handle ${normalizedHandles[i]!}`,
+        );
+      }
+      if (!contractAllowed) {
+        throw new DecryptionFailedError(
+          `Contract ${contractAddress} is not authorized for ${operationLabel} of handle ${normalizedHandles[i]!}`,
+        );
+      }
+    }
+  }
+
   async #persistAllowed(handle: Handle, account: Address): Promise<boolean> {
     return this.#client.readContract({
-      address: this.#config.contracts.acl,
+      address: this.#config.aclContractAddress as Address,
       abi: ACL_ABI,
       functionName: "persistAllowed",
       args: [handle, account],
@@ -337,30 +434,16 @@ export class CleartextFhevmInstance implements RelayerSDK {
 
   async #isAllowedForDecryption(handle: Handle): Promise<boolean> {
     return this.#client.readContract({
-      address: this.#config.contracts.acl,
+      address: this.#config.aclContractAddress as Address,
       abi: ACL_ABI,
       functionName: "isAllowedForDecryption",
       args: [handle],
     });
   }
 
-  async #isHandleDelegatedForUserDecryption(
-    delegator: Address,
-    delegate: Address,
-    contractAddress: Address,
-    handle: Handle,
-  ): Promise<boolean> {
-    return this.#client.readContract({
-      address: this.#config.contracts.acl,
-      abi: ACL_ABI,
-      functionName: "isHandleDelegatedForUserDecryption",
-      args: [delegator, delegate, contractAddress, handle],
-    });
-  }
-
   async #readPlaintext(handle: Handle): Promise<bigint> {
     return this.#client.readContract({
-      address: this.#config.contracts.executor,
+      address: this.#config.cleartextExecutorAddress as Address,
       abi: EXECUTOR_ABI,
       functionName: "plaintexts",
       args: [handle],

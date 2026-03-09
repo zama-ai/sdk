@@ -25,7 +25,7 @@ export function wrapperDiscoveryQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { tokenAddress: keyTokenAddress, coordinatorAddress: keyCoordinatorAddress }] =
         context.queryKey;
       const exists = await signer.readContract(

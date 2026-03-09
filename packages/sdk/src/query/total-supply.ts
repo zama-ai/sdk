@@ -19,7 +19,7 @@ export function totalSupplyQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       return signer.readContract(totalSupplyContract(keyTokenAddress));
     },

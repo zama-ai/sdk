@@ -31,7 +31,7 @@ export function confidentialBalanceQueryOptions(
   return {
     ...filterQueryOptions(config?.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
+    queryFn: async (context: { queryKey: typeof queryKey }) => {
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
       if (!keyOwner) throw new Error("owner is required");
       if (!keyHandle) throw new Error("handle is required");

@@ -15,14 +15,11 @@ export const USER_ADDRESS = "0x1000000000000000000000000000000000000001";
 export const CONTRACT_ADDRESS = "0x2000000000000000000000000000000000000002";
 
 export const CLEAR_TEXT_MOCK_CONFIG: CleartextConfig = {
-  chainId: 31_337n,
+  network: "http://127.0.0.1:8545",
+  chainId: 31_337,
   gatewayChainId: GATEWAY_CHAIN_ID,
-  contracts: {
-    acl: TEST_FHEVM_ADDRESSES.acl,
-    executor: TEST_FHEVM_ADDRESSES.executor,
-    inputVerifier: TEST_FHEVM_ADDRESSES.inputVerifier,
-    kmsVerifier: TEST_FHEVM_ADDRESSES.kmsVerifier,
-    verifyingInputVerifier: VERIFYING_CONTRACTS.inputVerification,
-    verifyingDecryption: VERIFYING_CONTRACTS.decryption,
-  },
+  aclContractAddress: TEST_FHEVM_ADDRESSES.acl,
+  cleartextExecutorAddress: TEST_FHEVM_ADDRESSES.executor,
+  verifyingContractAddressInputVerification: VERIFYING_CONTRACTS.inputVerification,
+  verifyingContractAddressDecryption: VERIFYING_CONTRACTS.decryption,
 };

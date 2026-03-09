@@ -1,19 +1,26 @@
 import { toBytes } from "viem";
 import { describe, expect, it } from "vitest";
-import { FheType, HANDLE_VERSION } from "../constants";
+import { HANDLE_VERSION } from "../constants";
+import type { FheTypeId } from "../fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "../handle";
 import { TEST_FHEVM_ADDRESSES } from "./fixtures";
+
+// FheTypeId literal values (matching relayer-sdk)
+const EBOOL: FheTypeId = 0;
+const EUINT8: FheTypeId = 2;
+const EUINT16: FheTypeId = 3;
+const EUINT256: FheTypeId = 8;
 
 describe("handle", () => {
   it("computeInputHandle matches precomputed test vector for index 0", () => {
     const random32 = toBytes(("0x" + "11".repeat(32)) as `0x${string}`);
-    const mockCiphertext = computeMockCiphertext(FheType.Uint8, 42n, random32);
+    const mockCiphertext = computeMockCiphertext(EUINT8, 42n, random32);
     const expectedCiphertext = "0x1668ad37a597863340858d59a40264ceed77d79ff8001c02d8768c2a6f098da6";
 
     const handleHex = computeInputHandle(
       mockCiphertext,
       0,
-      FheType.Uint8,
+      EUINT8,
       TEST_FHEVM_ADDRESSES.acl,
       31_337n,
     );
@@ -25,11 +32,11 @@ describe("handle", () => {
 
   it("computeInputHandle matches precomputed test vector for non-zero index", () => {
     const random32 = toBytes(("0x" + "22".repeat(32)) as `0x${string}`);
-    const mockCiphertext = computeMockCiphertext(FheType.Uint8, 99n, random32);
+    const mockCiphertext = computeMockCiphertext(EUINT8, 99n, random32);
     const handleHex = computeInputHandle(
       mockCiphertext,
       5,
-      FheType.Uint8,
+      EUINT8,
       TEST_FHEVM_ADDRESSES.acl,
       31_337n,
     );
@@ -38,33 +45,14 @@ describe("handle", () => {
     expect(handleHex).toBe(expectedHandle);
     const handle = BigInt(handleHex);
     expect(handle & 0xffn).toBe(BigInt(HANDLE_VERSION));
-    expect((handle >> 8n) & 0xffn).toBe(BigInt(FheType.Uint8));
+    expect((handle >> 8n) & 0xffn).toBe(BigInt(EUINT8));
     expect((handle >> 16n) & 0xffff_ffff_ffff_ffffn).toBe(31_337n);
     expect((handle >> 80n) & 0xffn).toBe(5n);
   });
 
-  it("computeInputHandle works for euint4 (4-bit) type", () => {
-    const random32 = toBytes(("0x" + "55".repeat(32)) as `0x${string}`);
-    const mockCiphertext = computeMockCiphertext(FheType.Uint4, 15n, random32);
-
-    const handleHex = computeInputHandle(
-      mockCiphertext,
-      0,
-      FheType.Uint4,
-      TEST_FHEVM_ADDRESSES.acl,
-      31_337n,
-    );
-
-    const handle = BigInt(handleHex);
-    expect(handle & 0xffn).toBe(BigInt(HANDLE_VERSION));
-    expect((handle >> 8n) & 0xffn).toBe(BigInt(FheType.Uint4));
-    expect((handle >> 16n) & 0xffff_ffff_ffff_ffffn).toBe(31_337n);
-    expect((handle >> 80n) & 0xffn).toBe(0n);
-  });
-
   it("computeMockCiphertext matches a precomputed test vector", () => {
     const random32 = toBytes(("0x" + "33".repeat(32)) as `0x${string}`);
-    const result = computeMockCiphertext(FheType.Uint16, 0x1234n, random32);
+    const result = computeMockCiphertext(EUINT16, 0x1234n, random32);
     const expected = "0xc9e84391d90f823647ae0840c852a338860399a6a8e1d4862d64db814bd491d6";
 
     expect(result).toBe(expected);
@@ -73,8 +61,8 @@ describe("handle", () => {
   it("computeMockCiphertext distinguishes bool and uint256 vectors", () => {
     const random32 = toBytes(("0x" + "44".repeat(32)) as `0x${string}`);
 
-    const boolCiphertext = computeMockCiphertext(FheType.Bool, 1n, random32);
-    const uint256Ciphertext = computeMockCiphertext(FheType.Uint256, 1n, random32);
+    const boolCiphertext = computeMockCiphertext(EBOOL, 1n, random32);
+    const uint256Ciphertext = computeMockCiphertext(EUINT256, 1n, random32);
     const expectedBool = "0x22f313acf24f016a6075b20dc3c8c54082efeb8b88f6ca9ed12dd3e8c004f9b5";
     const expectedUint256 = "0xc2e9ac6f1a4bb20b8439d8fb6f3bf11c1d01e01b8fcaa4f8cdcd54e77738fe17";
 
@@ -84,22 +72,20 @@ describe("handle", () => {
   });
 
   it("computeMockCiphertext rejects random values not equal to 32 bytes", () => {
-    expect(() => computeMockCiphertext(FheType.Uint8, 1n, toBytes("0x1234"))).toThrow(
-      /exactly 32 bytes/i,
-    );
+    expect(() => computeMockCiphertext(EUINT8, 1n, toBytes("0x1234"))).toThrow(/exactly 32 bytes/i);
   });
 
   it("computeInputHandle validates index range", () => {
     const mockCiphertext = "0x1668ad37a597863340858d59a40264ceed77d79ff8001c02d8768c2a6f098da6";
 
     expect(() =>
-      computeInputHandle(mockCiphertext, -1, FheType.Uint8, TEST_FHEVM_ADDRESSES.acl, 31_337n),
+      computeInputHandle(mockCiphertext, -1, EUINT8, TEST_FHEVM_ADDRESSES.acl, 31_337n),
     ).toThrow(/between 0 and 255/i);
     expect(() =>
-      computeInputHandle(mockCiphertext, 256, FheType.Uint8, TEST_FHEVM_ADDRESSES.acl, 31_337n),
+      computeInputHandle(mockCiphertext, 256, EUINT8, TEST_FHEVM_ADDRESSES.acl, 31_337n),
     ).toThrow(/between 0 and 255/i);
     expect(() =>
-      computeInputHandle(mockCiphertext, 1.5, FheType.Uint8, TEST_FHEVM_ADDRESSES.acl, 31_337n),
+      computeInputHandle(mockCiphertext, 1.5, EUINT8, TEST_FHEVM_ADDRESSES.acl, 31_337n),
     ).toThrow(/between 0 and 255/i);
   });
 });
