@@ -122,7 +122,7 @@ import type { DecryptHandle } from "@zama-fhe/react-sdk";
 import { useState } from "react";
 
 function DecryptExample() {
-  const [status, setStatus] = useState("idle");
+  const [status, setStatus] = useState("Decrypt Balance");
   const decrypt = useUserDecryptFlow({
     callbacks: {
       onKeypairGenerated: () => setStatus("Keypair ready"),
@@ -140,10 +140,15 @@ function DecryptExample() {
       },
     ];
 
-    const result = await decrypt.mutateAsync({
-      handles,
-      durationDays: 1, // credential validity (default: 1 day)
-    });
+    setStatus("Generating keypair...");
+    try {
+      const result = await decrypt.mutateAsync({
+        handles,
+        durationDays: 1, // credential validity (default: 1 day)
+      });
+    } catch {
+      setStatus("Decrypt Balance");
+    }
 
     // result is Record<Handle, ClearValueType>
     // e.g. { "0xabc123...": 1000n }
@@ -152,10 +157,9 @@ function DecryptExample() {
   return (
     <div>
       <button onClick={handleDecrypt} disabled={decrypt.isPending}>
-        {decrypt.isPending ? "Decrypting..." : "Decrypt Balance"}
+        {status}
       </button>
       {decrypt.error && <p>Error: {decrypt.error.message}</p>}
-      {status !== "idle" && <p>{status}</p>}
     </div>
   );
 }
