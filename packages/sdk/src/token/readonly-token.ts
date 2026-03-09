@@ -543,6 +543,8 @@ export class ReadonlyToken {
   async isDelegated(delegator: Address, delegate: Address): Promise<boolean> {
     const expiry = await this.getDelegationExpiry(delegator, delegate);
     if (expiry === 0n) return false;
+    // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
+    if (expiry === 2n ** 64n - 1n) return true;
     const now = this.signer.getBlockTimestamp
       ? await this.signer.getBlockTimestamp()
       : BigInt(Math.floor(Date.now() / 1000));
@@ -629,10 +631,16 @@ export class ReadonlyToken {
 
       // Sign the delegated EIP-712 with the delegate's signer.
       // Convert KMS types (bigint chainId, string timestamps) to EIP712TypedData format.
+      const chainId = Number(delegatedEIP712.domain.chainId);
+      if (!Number.isSafeInteger(chainId)) {
+        throw new ConfigurationError(
+          `chainId ${delegatedEIP712.domain.chainId} exceeds safe integer range`,
+        );
+      }
       const signature = await this.signer.signTypedData({
         domain: {
           ...delegatedEIP712.domain,
-          chainId: Number(delegatedEIP712.domain.chainId),
+          chainId,
         },
         types: delegatedEIP712.types,
         message: {
@@ -803,11 +811,6 @@ export class ReadonlyToken {
   }
 }
 
-/**
- * Inspect a caught error for an HTTP status code and return the appropriate
- * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
- * other HTTP errors, or the generic DecryptionFailedError as fallback).
- */
 /** Coerce an unknown caught value to an Error instance. */
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));

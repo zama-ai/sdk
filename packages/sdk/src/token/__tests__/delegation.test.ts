@@ -62,6 +62,19 @@ describe("delegation read methods", () => {
     expect(await readonlyToken.isDelegated(delegatorAddress, delegateAddress)).toBe(false);
   });
 
+  it("isDelegated short-circuits for permanent delegation without fetching block timestamp", async ({
+    signer,
+    readonlyToken,
+    delegatorAddress,
+    delegateAddress,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(2n ** 64n - 1n);
+
+    expect(await readonlyToken.isDelegated(delegatorAddress, delegateAddress)).toBe(true);
+    // getBlockTimestamp should NOT have been called — permanent delegation skips it.
+    expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
+  });
+
   it("throws ConfigurationError when aclAddress is missing", async ({
     signer,
     relayer,
@@ -252,6 +265,39 @@ describe("decryptBalanceAs", () => {
     await expect(readonlyToken.decryptBalanceAs(delegatorAddress)).rejects.toThrow(
       expect.objectContaining({ code: "DECRYPTION_FAILED" }),
     );
+  });
+
+  it("throws ConfigurationError when chainId exceeds safe integer range", async ({
+    signer,
+    relayer,
+    readonlyToken,
+    handle,
+    tokenAddress,
+    delegatorAddress,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
+      domain: {
+        name: "Decryption",
+        version: "1",
+        chainId: 2n ** 64n,
+        verifyingContract: "0xkms",
+      },
+      types: { DelegatedUserDecryptRequestVerification: [] },
+      message: {
+        publicKey: "0xpub",
+        contractAddresses: [tokenAddress],
+        delegatorAddress,
+        startTimestamp: "1000",
+        durationDays: "1",
+        extraData: "0x",
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+
+    const error = await readonlyToken.decryptBalanceAs(delegatorAddress).catch((e: Error) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).cause).toBeInstanceOf(ConfigurationError);
   });
 
   it("caches by owner, not delegator, when options.owner differs", async ({
