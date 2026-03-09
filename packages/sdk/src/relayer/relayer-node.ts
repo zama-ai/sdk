@@ -19,12 +19,7 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import {
-  buildEIP712DomainType,
-  DefaultConfigs,
-  mergeFhevmConfig,
-  withRetry,
-} from "./relayer-utils";
+import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
 
 export interface RelayerNodeConfig {
   transports: Record<number, Partial<FhevmInstanceConfig>>;
@@ -61,7 +56,7 @@ export class RelayerNode implements RelayerSDK {
     const { transports, poolSize } = this.#config;
 
     return {
-      fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
+      fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
       poolSize,
       logger: this.#config.logger,
     };

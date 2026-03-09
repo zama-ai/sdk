@@ -5,6 +5,9 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+import { EncryptionFailedError, ZamaError } from "../token/errors";
+import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
+import type { RelayerSDK } from "./relayer-sdk";
 import type {
   Address,
   DelegatedUserDecryptParams,
@@ -17,15 +20,7 @@ import type {
   RelayerWebConfig,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
-import type { RelayerSDK } from "./relayer-sdk";
-import {
-  buildEIP712DomainType,
-  DefaultConfigs,
-  mergeFhevmConfig,
-  withRetry,
-} from "./relayer-utils";
-import { ZamaError, EncryptionFailedError } from "../token/errors";
+import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -108,7 +103,7 @@ export class RelayerWeb implements RelayerSDK {
 
     return {
       cdnUrl: CDN_URL,
-      fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
+      fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
       csrfToken: security?.getCsrfToken?.() ?? "",
       integrity: security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
       logger: this.#config.logger,
