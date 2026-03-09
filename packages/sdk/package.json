@@ -21,10 +21,6 @@
       "types": "./dist/cleartext/index.d.ts",
       "import": "./dist/cleartext/index.js"
     },
-    "./chains": {
-      "types": "./dist/chains/index.d.ts",
-      "import": "./dist/chains/index.js"
-    },
     "./query": {
       "types": "./dist/query/index.d.ts",
       "import": "./dist/query/index.js"

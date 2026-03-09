@@ -10,16 +10,13 @@ import {
   getAddress,
 } from "viem";
 import type { EIP1193Provider } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 import { CleartextFhevmInstance } from "../cleartext-fhevm-instance";
 import type { Handle } from "../../relayer-sdk.types";
-import type { CleartextConfig } from "../types";
-import {
-  CONTRACT_ADDRESS,
-  TEST_FHEVM_ADDRESSES,
-  USER_ADDRESS,
-  CLEAR_TEXT_MOCK_CONFIG,
-} from "./fixtures";
+import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
+import { hardhatCleartextConfig } from "../presets";
+import { CONTRACT_ADDRESS, USER_ADDRESS } from "./fixtures";
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -51,7 +48,7 @@ function createMockProvider(options: MockClientOptions = {}) {
         const tx = paramList[0] as { to: string; data: string };
         const to = tx.to.toLowerCase();
 
-        if (to === TEST_FHEVM_ADDRESSES.acl.toLowerCase()) {
+        if (to === hardhatCleartextConfig.aclContractAddress.toLowerCase()) {
           const parsed = decodeFunctionData({
             abi: ACL_ABI,
             data: tx.data as `0x${string}`,
@@ -101,7 +98,7 @@ function createMockProvider(options: MockClientOptions = {}) {
           }
         }
 
-        if (to === TEST_FHEVM_ADDRESSES.executor.toLowerCase()) {
+        if (to === hardhatCleartextConfig.executorAddress.toLowerCase()) {
           const parsed = decodeFunctionData({
             abi: EXECUTOR_ABI,
             data: tx.data as `0x${string}`,
@@ -133,11 +130,7 @@ function createInstance(options: MockClientOptions = {}): {
   calls: MockCall[];
 } {
   const { provider, calls } = createMockProvider(options);
-  const config: CleartextConfig = {
-    ...CLEAR_TEXT_MOCK_CONFIG,
-    network: provider,
-  };
-  return { fhevm: new CleartextFhevmInstance(config), calls };
+  return { fhevm: new CleartextFhevmInstance(hardhatCleartextConfig), calls };
 }
 
 function createUserDecryptParams(
@@ -168,13 +161,46 @@ function filterEthCallsTo(calls: MockCall[], to: string): MockCall[] {
 }
 
 describe("CleartextFhevmInstance", () => {
+  it("constructor uses kms/input private keys from config", () => {
+    const customInputKey =
+      "0x0000000000000000000000000000000000000000000000000000000000000001" as const;
+    const customKmsKey =
+      "0x0000000000000000000000000000000000000000000000000000000000000002" as const;
+
+    const customInputSigner = privateKeyToAccount(customInputKey);
+    const customKmsSigner = privateKeyToAccount(customKmsKey);
+
+    const fhevm = new CleartextFhevmInstance({
+      ...hardhatCleartextConfig,
+      inputSignerPrivateKey: customInputKey,
+      kmsSignerPrivateKey: customKmsKey,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const instance = fhevm as any;
+    expect(instance.inputSigner.address).toBe(customInputSigner.address);
+    expect(instance.kmsSigner.address).toBe(customKmsSigner.address);
+  });
+
+  it("constructor falls back to default signer keys when none provided", () => {
+    const defaultInputSigner = privateKeyToAccount(MOCK_INPUT_SIGNER_PK);
+    const defaultKmsSigner = privateKeyToAccount(MOCK_KMS_SIGNER_PK);
+
+    const fhevm = new CleartextFhevmInstance(hardhatCleartextConfig);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const instance = fhevm as any;
+    expect(instance.inputSigner.address).toBe(defaultInputSigner.address);
+    expect(instance.kmsSigner.address).toBe(defaultKmsSigner.address);
+  });
+
   it("throws when configured with mainnet chain ID", () => {
     const { provider } = createMockProvider();
 
     expect(
       () =>
         new CleartextFhevmInstance({
-          ...CLEAR_TEXT_MOCK_CONFIG,
+          ...hardhatCleartextConfig,
           network: provider,
           chainId: 1,
         }),
@@ -187,7 +213,7 @@ describe("CleartextFhevmInstance", () => {
     expect(
       () =>
         new CleartextFhevmInstance({
-          ...CLEAR_TEXT_MOCK_CONFIG,
+          ...hardhatCleartextConfig,
           network: provider,
           chainId: 11155111,
         }),
@@ -224,8 +250,8 @@ describe("CleartextFhevmInstance", () => {
     expect(typedData.domain).toEqual({
       name: "Decryption",
       version: "1",
-      chainId: CLEAR_TEXT_MOCK_CONFIG.chainId,
-      verifyingContract: CLEAR_TEXT_MOCK_CONFIG.verifyingContractAddressDecryption,
+      chainId: hardhatCleartextConfig.chainId,
+      verifyingContract: hardhatCleartextConfig.verifyingContractAddressDecryption,
     });
     expect(typedData.types.UserDecryptRequestVerification!.map((field) => field.name)).toEqual([
       "publicKey",
@@ -409,8 +435,8 @@ describe("CleartextFhevmInstance", () => {
     expect(result[handleA]).toBe(7n);
     expect(result[handleB]).toBe(11n);
 
-    const persistAllowedCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.acl);
-    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
+    const persistAllowedCalls = filterEthCallsTo(calls, hardhatCleartextConfig.aclContractAddress);
+    const plaintextCalls = filterEthCallsTo(calls, hardhatCleartextConfig.executorAddress);
 
     expect(persistAllowedCalls).toHaveLength(4);
     expect(plaintextCalls).toHaveLength(2);
@@ -437,7 +463,7 @@ describe("CleartextFhevmInstance", () => {
       ),
     ).rejects.toThrow(new RegExp(normalizedB));
 
-    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
+    const plaintextCalls = filterEthCallsTo(calls, hardhatCleartextConfig.executorAddress);
     expect(plaintextCalls).toHaveLength(0);
   });
 
@@ -579,7 +605,7 @@ describe("CleartextFhevmInstance", () => {
 
     await expect(fhevm.publicDecrypt([handleA, handleB])).rejects.toThrow(new RegExp(normalizedB));
 
-    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
+    const plaintextCalls = filterEthCallsTo(calls, hardhatCleartextConfig.executorAddress);
     expect(plaintextCalls).toHaveLength(0);
   });
 
@@ -632,7 +658,7 @@ describe("CleartextFhevmInstance", () => {
     );
 
     expect(typedData.domain.verifyingContract).toBe(
-      CLEAR_TEXT_MOCK_CONFIG.verifyingContractAddressDecryption,
+      hardhatCleartextConfig.verifyingContractAddressDecryption,
     );
     expect(typedData.domain.name).toBe("Decryption");
     expect(typedData.domain.version).toBe("1");
@@ -664,7 +690,7 @@ describe("CleartextFhevmInstance", () => {
       }),
     ).rejects.toThrow(/Delegator.*not authorized/i);
 
-    const plaintextCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
+    const plaintextCalls = filterEthCallsTo(calls, hardhatCleartextConfig.executorAddress);
     expect(plaintextCalls).toHaveLength(0);
   });
 
@@ -684,7 +710,7 @@ describe("CleartextFhevmInstance", () => {
         signedContractAddresses: [CONTRACT_ADDRESS],
         privateKey: `0x${"01".repeat(32)}` as `0x${string}`,
         publicKey: `0x${"02".repeat(32)}` as `0x${string}`,
-        signature: "0x" + "03".repeat(65),
+        signature: `0x${"03".repeat(65)}` as `0x${string}`,
         delegatorAddress,
         delegateAddress,
         startTimestamp: 1,
@@ -786,14 +812,14 @@ describe("CleartextFhevmInstance", () => {
       .map((call) => {
         const tx = call.params[0] as { to: string; data: string };
         const target = getAddress(tx.to);
-        if (target === getAddress(TEST_FHEVM_ADDRESSES.acl)) {
+        if (target === getAddress(hardhatCleartextConfig.aclContractAddress)) {
           const parsed = decodeFunctionData({
             abi: ACL_ABI,
             data: tx.data as `0x${string}`,
           });
           return parsed?.functionName ?? "unknown";
         }
-        if (target === getAddress(TEST_FHEVM_ADDRESSES.executor)) {
+        if (target === getAddress(hardhatCleartextConfig.executorAddress)) {
           const parsed = decodeFunctionData({
             abi: EXECUTOR_ABI,
             data: tx.data as `0x${string}`,
@@ -843,14 +869,14 @@ describe("CleartextFhevmInstance", () => {
       }),
     ).rejects.toThrow(new RegExp(normalizedB));
 
-    const delegationCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.acl).filter((call) => {
+    const delegationCalls = filterEthCallsTo(calls, getAddress(hardhatCleartextConfig.aclContractAddress)).filter((call) => {
       const tx = call.params[0] as { data: string };
       const parsed = decodeFunctionData({ abi: ACL_ABI, data: tx.data as `0x${string}` });
       return parsed?.functionName === "isHandleDelegatedForUserDecryption";
     });
     expect(delegationCalls).toHaveLength(2);
 
-    const executorCalls = filterEthCallsTo(calls, TEST_FHEVM_ADDRESSES.executor);
+    const executorCalls = filterEthCallsTo(calls, getAddress(hardhatCleartextConfig.executorAddress));
     expect(executorCalls).toHaveLength(0);
   });
 

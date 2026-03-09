@@ -2,14 +2,12 @@ import { Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import deployments from "../../../hardhat/deployments.json" with { type: "json" };
-import { CleartextFhevmInstance, HardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { GATEWAY_CHAIN_ID, VERIFYING_CONTRACTS } from "@zama-fhe/sdk/cleartext";
+import { CleartextFhevmInstance, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function mockRelayerSdk(page: Page, baseURL: string) {
-  const fhevm = new CleartextFhevmInstance(HardhatCleartextConfig);
+  const fhevm = new CleartextFhevmInstance(hardhatCleartextConfig);
 
   await page.route(`${baseURL}/generateKeypair`, async (route) => {
     const result = await fhevm.generateKeypair();

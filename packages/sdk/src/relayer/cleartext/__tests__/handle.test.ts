@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { HANDLE_VERSION } from "../constants";
 import type { FheTypeId } from "../fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "../handle";
-import { TEST_FHEVM_ADDRESSES } from "./fixtures";
+import { hardhatCleartextConfig } from "../presets";
 
 // FheTypeId literal values (matching relayer-sdk)
 const EBOOL: FheTypeId = 0;
@@ -21,7 +21,7 @@ describe("handle", () => {
       mockCiphertext,
       0,
       EUINT8,
-      TEST_FHEVM_ADDRESSES.acl,
+      hardhatCleartextConfig.aclContractAddress,
       31_337n,
     );
     const expectedHandle = "0x9067cd93773315815e07e738be1bd5c043044a8fc1000000000000007a690200";
@@ -37,7 +37,7 @@ describe("handle", () => {
       mockCiphertext,
       5,
       EUINT8,
-      TEST_FHEVM_ADDRESSES.acl,
+      hardhatCleartextConfig.aclContractAddress,
       31_337n,
     );
     const expectedHandle = "0xcd3bf5700ed87292362798f9ee0f28510348fa3b78050000000000007a690200";
@@ -79,13 +79,31 @@ describe("handle", () => {
     const mockCiphertext = "0x1668ad37a597863340858d59a40264ceed77d79ff8001c02d8768c2a6f098da6";
 
     expect(() =>
-      computeInputHandle(mockCiphertext, -1, EUINT8, TEST_FHEVM_ADDRESSES.acl, 31_337n),
+      computeInputHandle(
+        mockCiphertext,
+        -1,
+        EUINT8,
+        hardhatCleartextConfig.aclContractAddress,
+        31_337n,
+      ),
     ).toThrow(/between 0 and 255/i);
     expect(() =>
-      computeInputHandle(mockCiphertext, 256, EUINT8, TEST_FHEVM_ADDRESSES.acl, 31_337n),
+      computeInputHandle(
+        mockCiphertext,
+        256,
+        EUINT8,
+        hardhatCleartextConfig.aclContractAddress,
+        31_337n,
+      ),
     ).toThrow(/between 0 and 255/i);
     expect(() =>
-      computeInputHandle(mockCiphertext, 1.5, EUINT8, TEST_FHEVM_ADDRESSES.acl, 31_337n),
+      computeInputHandle(
+        mockCiphertext,
+        1.5,
+        EUINT8,
+        hardhatCleartextConfig.aclContractAddress,
+        31_337n,
+      ),
     ).toThrow(/between 0 and 255/i);
   });
 });

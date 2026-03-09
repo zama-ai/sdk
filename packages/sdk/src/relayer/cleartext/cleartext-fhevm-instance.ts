@@ -1,4 +1,4 @@
-import { privateKeyToAccount } from "viem/accounts";
+import { PrivateKeyAccount, privateKeyToAccount } from "viem/accounts";
 import {
   concat,
   createPublicClient,
@@ -54,9 +54,6 @@ import {
   DecryptionFailedError,
   EncryptionFailedError,
 } from "../../token/errors";
-
-const KMS_SIGNER = privateKeyToAccount(MOCK_KMS_SIGNER_PK as `0x${string}`);
-const INPUT_SIGNER = privateKeyToAccount(MOCK_INPUT_SIGNER_PK);
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -144,6 +141,8 @@ export class CleartextFhevmInstance implements RelayerSDK {
   readonly #client: PublicClient;
   readonly #config: CleartextConfig;
   readonly #chainIdBigInt: bigint;
+  readonly kmsSigner: PrivateKeyAccount;
+  readonly inputSigner: PrivateKeyAccount;
 
   constructor(config: CleartextConfig) {
     this.#chainIdBigInt = BigInt(config.chainId);
@@ -157,6 +156,8 @@ export class CleartextFhevmInstance implements RelayerSDK {
       transport: typeof config.network === "string" ? http(config.network) : custom(config.network),
     });
     this.#config = config;
+    this.kmsSigner = privateKeyToAccount(config.kmsSignerPrivateKey ?? MOCK_KMS_SIGNER_PK);
+    this.inputSigner = privateKeyToAccount(config.inputSignerPrivateKey ?? MOCK_INPUT_SIGNER_PK);
   }
 
   async generateKeypair(): Promise<KeypairType<Hex>> {
@@ -217,7 +218,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     const cleartextParts = entries.map(({ value }) => pad(toHex(value), { size: 32 }));
     const cleartextBytes: Hex = cleartextParts.length > 0 ? concat(cleartextParts) : "0x";
 
-    const signature = await INPUT_SIGNER.signTypedData({
+    const signature = await this.inputSigner.signTypedData({
       domain: INPUT_VERIFICATION_EIP712.domain(
         this.#config.gatewayChainId,
         this.#config.verifyingContractAddressInputVerification,
@@ -289,7 +290,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
 
     const abiEncodedClearValues = concat(orderedValues.map((v) => pad(toHex(v), { size: 32 })));
 
-    const signature = await KMS_SIGNER.signTypedData({
+    const signature = await this.kmsSigner.signTypedData({
       domain: KMS_DECRYPTION_EIP712.domain(
         this.#config.gatewayChainId,
         this.#config.verifyingContractAddressDecryption,
