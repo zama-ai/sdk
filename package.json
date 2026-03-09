@@ -69,7 +69,7 @@
     "@types/react-dom": "19.2.3",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
-    "@zama-fhe/relayer-sdk": "0.4.1",
+    "@zama-fhe/relayer-sdk": "0.4.2",
     "conventional-changelog-conventionalcommits": "^9.3.0",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
