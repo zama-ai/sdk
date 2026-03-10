@@ -5,9 +5,9 @@ description: How to use the cleartext relayer for local Hardhat nodes and custom
 
 # Local Development
 
-The SDK ships a `RelayerCleartext` that replaces the FHE relayer with a cleartext implementation. Values are stored as plaintext on-chain — no KMS, no gateway, no WASM. Use it for local Hardhat nodes, custom testnets, or any chain where you deploy fhEVM contracts in cleartext mode.
+The SDK ships a `createCleartextRelayer` factory that replaces the FHE relayer with a cleartext implementation. Values are stored as plaintext on-chain — no KMS, no gateway, no WASM. Use it for local Hardhat nodes, custom testnets, or any chain where you deploy fhEVM contracts in cleartext mode.
 
-`RelayerCleartext` implements the same `RelayerSDK` interface as `RelayerWeb` and `RelayerNode`, so the rest of your code stays unchanged.
+The cleartext relayer implements the same `RelayerSDK` interface as `RelayerWeb` and `RelayerNode`, so the rest of your code stays unchanged.
 
 {% hint style="warning" %}
 Cleartext mode is blocked on Ethereum Mainnet (chain 1) and Sepolia (chain 11155111). It is intended for development and testing only.
@@ -24,25 +24,17 @@ npm install @zama-fhe/sdk viem
 ### 2. Import from the `/cleartext` sub-path
 
 ```ts
-import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { createCleartextRelayer, hoodi } from "@zama-fhe/sdk/cleartext";
 import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 ```
 
 ### 3. Create the relayer with a preset
 
-For a local Hardhat node, use the built-in `hardhatCleartextConfig`:
+For the Hoodi testnet, use the built-in `hoodi` preset:
 
 ```ts
-const relayer = new RelayerCleartext(hardhatCleartextConfig);
-```
-
-For the Hoodi testnet:
-
-```ts
-import { hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-
-const relayer = new RelayerCleartext(hoodiCleartextConfig);
+const relayer = createCleartextRelayer(hoodi);
 ```
 
 ### 4. Plug into `ZamaSDK`
@@ -67,49 +59,49 @@ const balance = await token.balanceOf();
 
 ### 5. (Optional) Create a custom config for your own chain
 
-If you deploy fhEVM contracts on a custom chain, build a `CleartextConfig` manually. Each field maps to a contract address from your deployment:
+If you deploy fhEVM contracts on a custom chain, build a `CleartextChainConfig` manually. Each field maps to a contract address from your deployment:
 
 ```ts
-import type { CleartextConfig } from "@zama-fhe/sdk/cleartext";
+import type { CleartextChainConfig } from "@zama-fhe/sdk/cleartext";
 
-const myChainConfig: CleartextConfig = {
+const myChainConfig: CleartextChainConfig = {
   // Chain identity
-  chainId: 12345,
-  network: "http://localhost:8545", // RPC URL or EIP-1193 provider
+  chainId: 12345n, // bigint
+  rpcUrl: "http://localhost:8545", // RPC URL or EIP-1193 provider
   gatewayChainId: 10901, // Chain ID of the gateway (usually same as Hardhat default)
 
   // Contract addresses from your own deployment
-  aclContractAddress: "0x...", // ACL contract
-  executorAddress: "0x...", // CleartextFHEVMExecutor — stores plaintext values
-
-  // EIP-712 verifying contracts (on the gateway chain — usuall same as Hardhat default)
-  verifyingContractAddressDecryption: "0x...", // Decryption verifier
-  verifyingContractAddressInputVerification: "0x...", // Input verification
-
-  // Optional: override the default mock signer keys
-  // kmsSignerPrivateKey: "0x...",
-  // inputSignerPrivateKey: "0x...",
+  contracts: {
+    acl: "0x...", // ACL contract
+    executor: "0x...", // CleartextFHEVMExecutor — stores plaintext values
+    inputVerifier: "0x...", // Input verifier contract
+    kmsVerifier: "0x...", // KMS verifier contract
+    verifyingDecryption: "0x...", // EIP-712 verifying contract for decryption
+    verifyingInputVerifier: "0x...", // EIP-712 verifying contract for input verification
+  },
 };
 
-const relayer = new RelayerCleartext(myChainConfig);
+const relayer = createCleartextRelayer(myChainConfig);
 ```
 
 **Where to find these addresses:**
 
-| Field                                       | Source                                            |
-| ------------------------------------------- | ------------------------------------------------- |
-| `aclContractAddress`                        | Deployed ACL contract address                     |
-| `executorAddress`                           | Deployed TFHEExecutor contract address            |
-| `verifyingContractAddressDecryption`        | Decryption contract on the gateway chain          |
-| `verifyingContractAddressInputVerification` | InputVerification contract on the gateway chain   |
-| `gatewayChainId`                            | The chain ID where gateway contracts are deployed |
+| Field                              | Source                                            |
+| ---------------------------------- | ------------------------------------------------- |
+| `contracts.acl`                    | Deployed ACL contract address                     |
+| `contracts.executor`               | Deployed CleartextFHEVMExecutor contract address  |
+| `contracts.inputVerifier`          | Deployed input verifier contract address          |
+| `contracts.kmsVerifier`            | Deployed KMS verifier contract address            |
+| `contracts.verifyingDecryption`    | Decryption contract on the gateway chain          |
+| `contracts.verifyingInputVerifier` | InputVerification contract on the gateway chain   |
+| `gatewayChainId`                   | The chain ID where gateway contracts are deployed |
 
 {% hint style="info" %}
-Usually, you want to use the same `gatewayChainId` and verifyingContracts as the Hardhat defaults.
+Usually, you want to use the same `gatewayChainId` and verifying contracts as the Hardhat defaults.
 {% endhint %}
 
 ## Next steps
 
-- [RelayerCleartext reference](/reference/sdk/RelayerCleartext) — full constructor options and `CleartextConfig` type
+- [RelayerCleartext reference](/reference/sdk/RelayerCleartext) — full factory options and `CleartextChainConfig` type
 - [Configuration](/guides/configuration) — production setup with `RelayerWeb` or `RelayerNode`
 - [Network Presets](/reference/sdk/network-presets) — preset configs for Mainnet, Sepolia, and Hardhat

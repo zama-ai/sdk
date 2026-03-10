@@ -180,12 +180,15 @@ const underlying = await readonlyToken.underlyingToken();
 
 ### allowance
 
-`(spenderAddress: Address) => Promise<bigint>`
+`(wrapper: Address, owner?: Address) => Promise<bigint>`
 
-Reads the ERC-20 allowance of the underlying token for a given spender.
+Reads the ERC-20 allowance of the underlying token for the given wrapper contract. Optionally specify an `owner` address (defaults to the connected wallet).
 
 ```ts
 const allowance = await readonlyToken.allowance("0xWrapperAddress");
+
+// With explicit owner
+const allowance = await readonlyToken.allowance("0xWrapperAddress", "0xOwnerAddress");
 ```
 
 ### allow

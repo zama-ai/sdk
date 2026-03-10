@@ -23,6 +23,7 @@ import {
   KeypairExpiredError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  ConfigurationError,
 } from "@zama-fhe/sdk";
 ```
 
@@ -63,6 +64,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `KeypairExpiredError`       | `KEYPAIR_EXPIRED`        | FHE keypair expired — user must re-sign           |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No encrypted balance for this account             |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP request failed                       |
+| `ConfigurationError`        | `CONFIGURATION_ERROR`    | Invalid SDK configuration                         |
 
 ## Error details
 

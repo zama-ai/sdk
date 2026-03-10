@@ -10,7 +10,7 @@ Development relayer that operates in cleartext mode. Values are stored as plaint
 ## Import
 
 ```ts
-import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import { createCleartextRelayer } from "@zama-fhe/sdk/cleartext";
 ```
 
 ## Usage
@@ -19,9 +19,9 @@ import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
 {% tab title="app.ts" %}
 
 ```ts
-import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { createCleartextRelayer, hoodi } from "@zama-fhe/sdk/cleartext";
 
-const relayer = new RelayerCleartext(hardhatCleartextConfig);
+const relayer = createCleartextRelayer(hoodi);
 ```
 
 {% endtab %}
@@ -40,42 +40,37 @@ const sdk = new ZamaSDK({
 {% endtab %}
 {% endtabs %}
 
-## Constructor
+## Factory
 
 ```ts
-import type { CleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { createCleartextRelayer } from "@zama-fhe/sdk/cleartext";
+import type { CleartextChainConfig } from "@zama-fhe/sdk/cleartext";
+
+const relayer = createCleartextRelayer(config);
 ```
+
+Returns a `RelayerSDK` instance that operates in cleartext mode.
+
+## Config (`CleartextChainConfig`)
 
 ### chainId
 
-`number`
+`bigint`
 
 Target chain ID. Mainnet (1) and Sepolia (11155111) are blocked — cleartext mode is for development only.
 
-### network
+### rpcUrl
 
 `string | EIP1193Provider`
 
 RPC URL or EIP-1193 provider for reading on-chain state (ACL checks, plaintext values).
 
 ```ts
-const relayer = new RelayerCleartext({
-  ...hardhatCleartextConfig,
-  network: "http://localhost:8545",
+const relayer = createCleartextRelayer({
+  ...hoodi,
+  rpcUrl: "http://localhost:8545",
 });
 ```
-
-### aclContractAddress
-
-`Address`
-
-Deployed ACL contract address. Used to verify `persistAllowed` and `isAllowedForDecryption` before returning values.
-
-### executorAddress
-
-`Address`
-
-Deployed CleartextFHEVMExecutor contract address. The relayer reads cleartext values from `plaintexts(handle)` on this contract.
 
 ### gatewayChainId
 
@@ -83,48 +78,36 @@ Deployed CleartextFHEVMExecutor contract address. The relayer reads cleartext va
 
 Chain ID of the gateway chain, used in EIP-712 domain construction for signature verification.
 
-### verifyingContractAddressDecryption
+### contracts
 
-`Address`
+`CleartextContracts`
 
-Address of the Decryption contract on the gateway chain. Used as `verifyingContract` in EIP-712 signatures for decrypt operations.
+Object containing all deployed contract addresses:
 
-### verifyingContractAddressInputVerification
-
-`Address`
-
-Address of the InputVerification contract on the gateway chain. Used as `verifyingContract` in EIP-712 signatures for encrypt operations.
-
----
-
-### kmsSignerPrivateKey
-
-`Hex | undefined`
-
-Private key for signing decryption EIP-712 messages. Defaults to a built-in mock key.
-
-### inputSignerPrivateKey
-
-`Hex | undefined`
-
-Private key for signing input verification EIP-712 messages. Defaults to a built-in mock key.
+| Field                    | Type      | Description                                                  |
+| ------------------------ | --------- | ------------------------------------------------------------ |
+| `acl`                    | `Address` | ACL contract — verifies `persistAllowed` and decryption ACLs |
+| `executor`               | `Address` | CleartextFHEVMExecutor — stores plaintext values             |
+| `inputVerifier`          | `Address` | Input verifier contract                                      |
+| `kmsVerifier`            | `Address` | KMS verifier contract                                        |
+| `verifyingInputVerifier` | `Address` | EIP-712 verifying contract for encrypt operations            |
+| `verifyingDecryption`    | `Address` | EIP-712 verifying contract for decrypt operations            |
 
 ## Presets
 
-Two presets are exported for common environments:
+One preset is exported for the Hoodi testnet:
 
 ```ts
-import { hardhatCleartextConfig, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { hoodi } from "@zama-fhe/sdk/cleartext";
 ```
 
-| Preset                   | Chain ID | Network                            |
-| ------------------------ | -------- | ---------------------------------- |
-| `hardhatCleartextConfig` | `31337`  | `http://127.0.0.1:8545`            |
-| `hoodiCleartextConfig`   | `560048` | `https://rpc.hoodi.ethpandaops.io` |
+| Preset  | Chain ID | Network                            |
+| ------- | -------- | ---------------------------------- |
+| `hoodi` | `560048` | `https://rpc.hoodi.ethpandaops.io` |
 
 ## Methods
 
-`RelayerCleartext` implements the full `RelayerSDK` interface:
+The cleartext relayer implements the full `RelayerSDK` interface:
 
 | Method                                  | Description                                                |
 | --------------------------------------- | ---------------------------------------------------------- |

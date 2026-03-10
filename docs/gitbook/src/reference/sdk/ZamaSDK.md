@@ -231,11 +231,21 @@ Returns whether the session has active credentials.
 const allowed = await sdk.isAllowed();
 ```
 
+### dispose
+
+`() => void`
+
+Unsubscribes from signer lifecycle events (disconnect, account change, chain change) without terminating the relayer. Use when you want to stop reacting to wallet events but keep the relayer alive for other SDK instances.
+
+```ts
+sdk.dispose();
+```
+
 ### terminate
 
 `() => void`
 
-Cleans up the Web Worker (browser) or thread pool (Node.js). Call when the SDK is no longer needed.
+Full cleanup — calls `dispose()` and terminates the Web Worker (browser) or thread pool (Node.js). Call when the SDK is no longer needed.
 
 ```ts
 sdk.terminate();

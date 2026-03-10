@@ -21,7 +21,7 @@ The SDK ships two relayer implementations. Pick the one that matches your runtim
 `RelayerWeb` runs FHE inside a Web Worker using WASM. `RelayerNode` uses native worker threads.
 
 {% hint style="info" %}
-For local Hardhat nodes or custom testnets deployed in cleartext mode, use [`RelayerCleartext`](/guides/local-development) instead — no KMS, no gateway, no WASM needed.
+For local Hardhat nodes or custom testnets deployed in cleartext mode, use [`createCleartextRelayer`](/guides/local-development) instead — no KMS, no gateway, no WASM needed.
 {% endhint %}
 
 ### 2. Set up a signer
