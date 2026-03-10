@@ -2,8 +2,8 @@ import { describe, it, expect } from "../../test-fixtures";
 import { getAddress, type Address } from "viem";
 import { CredentialsManager } from "../credentials-manager";
 
-const ADDRESS_A = getAddress("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-const ADDRESS_B = getAddress("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+const ADDRESS_A = getAddress("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
+const ADDRESS_B = getAddress("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
 
 describe("CredentialsManager.computeStoreKey", () => {
   it("returns a 32-char hex hash of address:chainId", async () => {

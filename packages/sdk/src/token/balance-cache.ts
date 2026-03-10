@@ -1,5 +1,4 @@
-import { getAddress } from "viem";
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
 import type { GenericStorage } from "./token.types";
 import type { Handle } from "../relayer/relayer-sdk.types";
 

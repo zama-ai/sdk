@@ -62,8 +62,8 @@ describe("balance-cache", () => {
   });
 
   it("is case-insensitive for token, owner, and handle", async ({ storage, tokenAddress }) => {
-    const upperToken = tokenAddress.toUpperCase() as `0x${string}`;
-    const upperOwner = OWNER.toUpperCase() as `0x${string}`;
+    const upperToken = tokenAddress.toLowerCase() as `0x${string}`;
+    const upperOwner = OWNER.toLowerCase() as `0x${string}`;
     const upperHandle = HANDLE.toUpperCase() as `0x${string}`;
     await saveCachedBalance({
       storage,

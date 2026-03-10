@@ -12,9 +12,9 @@ import { ZamaSDK, ZamaSDKConfig } from "./token/zama-sdk";
 import { ZamaSDKEvents } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
-const TOKEN: Address = "0x1111111111111111111111111111111111111111";
-const WRAPPER: Address = "0x4444444444444444444444444444444444444444";
-const USER: Address = "0x2222222222222222222222222222222222222222";
+const TOKEN: Address = "0x1111111111111111111111111111111111abCDEF";
+const WRAPPER: Address = "0x4444444444444444444444444444444444444Abc";
+const USER: Address = "0x2222222222222222222222222222222222abCDEF";
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Handle;
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
