@@ -45,3 +45,6 @@ tools/mdbook/.tmp-mdbook
 # api-extractor temp files
 packages/sdk/temp/
 packages/react-sdk/temp/
+
+# devcontainer
+.devcontainer
