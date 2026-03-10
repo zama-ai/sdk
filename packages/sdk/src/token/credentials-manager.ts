@@ -141,17 +141,35 @@ export class CredentialsManager {
               this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
               return creds;
             }
+            // Keypair still time-valid but missing contracts — extend and re-sign
+            if (this.#isTimeValid(creds)) {
+              return this.#extendContracts({
+                storeKey,
+                credentials: creds,
+                requiredContracts: contractAddresses,
+              });
+            }
             this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
           }
         }
         // No session signature or TTL expired — need to re-sign
-        if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
-          const signature = await this.#sign(encrypted);
-          await this.#setSessionEntry(storeKey, signature);
-          const creds = await this.#decryptCredentials(encrypted, signature);
-          this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
-          this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
-          return creds;
+        if (this.#isTimeValid(encrypted)) {
+          if (this.#coversContracts(encrypted.contractAddresses, contractAddresses)) {
+            const signature = await this.#sign(encrypted);
+            await this.#setSessionEntry(storeKey, signature);
+            const creds = await this.#decryptCredentials(encrypted, signature);
+            this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
+            this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
+            return creds;
+          }
+          // Time-valid but missing contracts and no session — sign with old addresses to decrypt, then extend
+          const oldSignature = await this.#sign(encrypted);
+          const creds = await this.#decryptCredentials(encrypted, oldSignature);
+          return this.#extendContracts({
+            storeKey,
+            credentials: creds,
+            requiredContracts: contractAddresses,
+          });
         }
         this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
       }
@@ -207,7 +225,7 @@ export class CredentialsManager {
       this.#assertEncryptedCredentials(encrypted);
 
       const requiredContracts = contractAddress ? [contractAddress] : [];
-      return !this.#isValidWithoutDecrypt(encrypted, requiredContracts);
+      return !this.#isValid(encrypted, requiredContracts);
     } catch {
       return false;
     }
@@ -316,31 +334,90 @@ export class CredentialsManager {
     assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
   }
 
-  #isValid(creds: StoredCredentials, requiredContracts: Address[]): boolean {
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    const expiresAt = creds.startTimestamp + creds.durationDays * 86400;
-    if (nowSeconds >= expiresAt) return false;
-
-    const signedSet = new Set(creds.contractAddresses.map(getAddress));
-    return requiredContracts.every((addr) => signedSet.has(getAddress(addr)));
+  #isValid(
+    creds: { startTimestamp: number; durationDays: number; contractAddresses: Address[] },
+    requiredContracts: Address[],
+  ): boolean {
+    if (!this.#isTimeValid(creds)) return false;
+    return this.#coversContracts(creds.contractAddresses, requiredContracts);
   }
 
-  #isValidWithoutDecrypt(encrypted: EncryptedCredentials, requiredContracts: Address[]): boolean {
+  /** Check if credentials are still within their keypair TTL. */
+  #isTimeValid(creds: { startTimestamp: number; durationDays: number }): boolean {
     const nowSeconds = Math.floor(Date.now() / 1000);
-    const expiresAt = encrypted.startTimestamp + encrypted.durationDays * 86400;
-    if (nowSeconds >= expiresAt) return false;
-    const signedSet = new Set(encrypted.contractAddresses.map(getAddress));
-    return requiredContracts.every((addr) => signedSet.has(getAddress(addr)));
+    const expiresAt = creds.startTimestamp + creds.durationDays * 86400;
+    return nowSeconds < expiresAt;
+  }
+
+  /** Check if the signed address set covers all required addresses. */
+  #coversContracts(signedAddresses: Address[], requiredContracts: Address[]): boolean {
+    const signedSet = new Set(signedAddresses.map((a) => a.toLowerCase()));
+    return requiredContracts.every((addr) => signedSet.has(addr.toLowerCase()));
   }
 
   async #sign(encrypted: EncryptedCredentials): Promise<Hex> {
+    return this.#signWithContracts(encrypted, encrypted.contractAddresses);
+  }
+
+  /** Sign an EIP-712 authorization for the given contract addresses using the stored keypair metadata. */
+  async #signWithContracts(
+    keypairMeta: { publicKey: Hex; startTimestamp: number; durationDays: number },
+    contractAddresses: Address[],
+  ): Promise<Hex> {
     const eip712 = await this.#relayer.createEIP712(
-      encrypted.publicKey,
-      encrypted.contractAddresses,
-      encrypted.startTimestamp,
-      encrypted.durationDays,
+      keypairMeta.publicKey,
+      contractAddresses,
+      keypairMeta.startTimestamp,
+      keypairMeta.durationDays,
     );
     return this.#signer.signTypedData(eip712);
+  }
+
+  /** Merge two contract address lists into a deduplicated sorted array. */
+  #mergeContracts(existing: Address[], incoming: Address[]): Address[] {
+    const map = new Map<string, Address>();
+    for (const addr of [...existing, ...incoming]) {
+      const key = addr.toLowerCase();
+      if (!map.has(key)) map.set(key, getAddress(addr));
+    }
+    return [...map.values()].sort();
+  }
+
+  /**
+   * Extend credentials with additional contract addresses: re-sign with the
+   * merged set and persist, reusing the existing keypair.
+   */
+  async #extendContracts({
+    storeKey,
+    credentials,
+    requiredContracts,
+  }: {
+    storeKey: string;
+    credentials: StoredCredentials;
+    requiredContracts: Address[];
+  }): Promise<StoredCredentials> {
+    const merged = this.#mergeContracts(credentials.contractAddresses, requiredContracts);
+    const signature = await this.#signWithContracts(credentials, merged);
+    await this.#setSessionEntry(storeKey, signature);
+
+    const extended: StoredCredentials = {
+      ...credentials,
+      contractAddresses: merged,
+      signature,
+    };
+    await this.#persistExtended(storeKey, extended);
+    this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: requiredContracts });
+    return extended;
+  }
+
+  /** Re-encrypt and persist updated credentials. */
+  async #persistExtended(storeKey: string, creds: StoredCredentials): Promise<void> {
+    try {
+      const encrypted = await this.#encryptCredentials(creds);
+      await this.#storage.set(storeKey, encrypted);
+    } catch {
+      // Store write failed — credentials still usable in memory
+    }
   }
 
   // ── Credential generation ───────────────────────────────────
