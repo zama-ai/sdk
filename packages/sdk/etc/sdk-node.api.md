@@ -601,7 +601,7 @@ export interface SuccessResponse<T> extends BaseResponse {
 export interface UpdateCsrfRequest extends BaseRequest {
     // (undocumented)
     payload: {
-        csrfToken?: string;
+        csrfToken: string;
     };
     // (undocumented)
     type: "UPDATE_CSRF";

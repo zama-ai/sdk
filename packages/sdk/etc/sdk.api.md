@@ -19452,7 +19452,7 @@ export interface RelayerWebConfig {
 
 // @public
 export interface RelayerWebSecurityConfig {
-    getCsrfToken?: () => string | undefined;
+    getCsrfToken?: () => string;
     integrityCheck?: boolean;
 }
 
