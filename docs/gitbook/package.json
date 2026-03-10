@@ -1,0 +1,8 @@
+{
+  "name": "zama-sdk-docs",
+  "private": true,
+  "scripts": {
+    "dev": "mdbook serve",
+    "build": "mdbook build"
+  }
+}
