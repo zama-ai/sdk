@@ -7428,7 +7428,7 @@ export interface DelegatedUserDecryptParams {
 }
 
 // @public
-export function delegateForUserDecryptionContract(aclAddress: Address, delegate: Address, contractAddress: Address, expirationDate: bigint): {
+export function delegateForUserDecryptionContract(aclAddress: Address, delegateAddress: Address, contractAddress: Address, expirationDate: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [{
@@ -13214,7 +13214,7 @@ export function getBatchTransferFeeContract(feeManagerAddress: Address): {
 };
 
 // @public
-export function getDelegationExpiryContract(aclAddress: Address, delegator: Address, delegate: Address, contractAddress: Address): {
+export function getDelegationExpiryContract(aclAddress: Address, delegatorAddress: Address, delegateAddress: Address, contractAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [{
@@ -19555,7 +19555,8 @@ export class ReadonlyToken {
     protected readonly credentials: CredentialsManager;
     decimals(): Promise<number>;
     decryptBalance(handle: Handle, owner?: Address): Promise<bigint>;
-    decryptBalanceAs(delegator: Address, options?: {
+    decryptBalanceAs(input: {
+        delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
     decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
@@ -19563,10 +19564,16 @@ export class ReadonlyToken {
     protected emit(partial: ZamaSDKEventInput): void;
     // (undocumented)
     protected getAclAddress(): Promise<Address>;
-    getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint>;
+    getDelegationExpiry(input: {
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<bigint>;
     isAllowed(): Promise<boolean>;
     isConfidential(): Promise<boolean>;
-    isDelegated(delegator: Address, delegate: Address): Promise<boolean>;
+    isDelegated(params: {
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<boolean>;
     isWrapper(): Promise<boolean>;
     // (undocumented)
     isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x`;
@@ -19670,7 +19677,7 @@ export interface RelayerWebSecurityConfig {
 }
 
 // @public
-export function revokeDelegationContract(aclAddress: Address, delegate: Address, contractAddress: Address): {
+export function revokeDelegationContract(aclAddress: Address, delegateAddress: Address, contractAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [{
@@ -22807,17 +22814,20 @@ export class Token extends ReadonlyToken {
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
-    delegateDecryption(delegate: Address, options?: {
+    delegateDecryption(input: {
+        delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<TransactionResult>;
-    static delegateDecryptionBatch(tokens: Token[], delegate: Address, options?: {
+    static delegateDecryptionBatch(input: {
+        tokens: Token[];
+        delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
     finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    revokeDelegation(delegate: Address): Promise<TransactionResult>;
-    static revokeDelegationBatch(tokens: Token[], delegate: Address): Promise<Map<Address, TransactionResult | ZamaError>>;
+    revokeDelegation(delegateAddress: Address): Promise<TransactionResult>;
+    static revokeDelegationBatch(tokens: Token[], delegateAddress: Address): Promise<Map<Address, TransactionResult | ZamaError>>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */

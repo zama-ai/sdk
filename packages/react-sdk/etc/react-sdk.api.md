@@ -1175,8 +1175,8 @@ export function useDelegationStatus(config: UseDelegationStatusConfig): _tanstac
 
 // @public (undocumented)
 export interface UseDelegationStatusConfig {
-    delegate?: Address;
-    delegator?: Address;
+    delegateAddress?: Address;
+    delegatorAddress?: Address;
     tokenAddress: Address;
 }
 

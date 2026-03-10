@@ -327,11 +327,9 @@ export function decryptBalanceAsMutationOptions(readonlyToken: ReadonlyToken): M
 // @public
 export interface DecryptBalanceAsParams {
     // (undocumented)
-    delegator: Address;
+    delegatorAddress: Address;
     // (undocumented)
-    options?: {
-        owner: Address;
-    };
+    owner?: Address;
 }
 
 // @public (undocumented)
@@ -363,11 +361,9 @@ export function delegateDecryptionMutationOptions(token: Token): MutationFactory
 // @public
 export interface DelegateDecryptionParams {
     // (undocumented)
-    delegate: Address;
+    delegateAddress: Address;
     // (undocumented)
-    options?: {
-        expirationDate: Date;
-    };
+    expirationDate?: Date;
 }
 
 // @public
@@ -405,9 +401,9 @@ export interface DelegationStatusData {
 // @public (undocumented)
 export interface DelegationStatusQueryConfig {
     // (undocumented)
-    delegate: Address;
+    delegateAddress: Address;
     // (undocumented)
-    delegator: Address;
+    delegatorAddress: Address;
     // (undocumented)
     query?: Record<string, unknown>;
 }
@@ -712,7 +708,8 @@ export class ReadonlyToken {
     protected readonly credentials: CredentialsManager;
     decimals(): Promise<number>;
     decryptBalance(handle: Handle, owner?: Address): Promise<bigint>;
-    decryptBalanceAs(delegator: Address, options?: {
+    decryptBalanceAs(input: {
+        delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
     decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
@@ -720,10 +717,16 @@ export class ReadonlyToken {
     protected emit(partial: ZamaSDKEventInput): void;
     // (undocumented)
     protected getAclAddress(): Promise<Address>;
-    getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint>;
+    getDelegationExpiry(input: {
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<bigint>;
     isAllowed(): Promise<boolean>;
     isConfidential(): Promise<boolean>;
-    isDelegated(delegator: Address, delegate: Address): Promise<boolean>;
+    isDelegated(params: {
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<boolean>;
     isWrapper(): Promise<boolean>;
     // Warning: (ae-forgotten-export) The symbol "ZERO_HANDLE_2" needs to be exported by the entry point index.d.ts
     //
@@ -793,7 +796,7 @@ export function revokeDelegationMutationOptions(token: Token): MutationFactoryOp
 // @public
 export interface RevokeDelegationParams {
     // (undocumented)
-    delegate: Address;
+    delegateAddress: Address;
 }
 
 // @public (undocumented)
@@ -893,18 +896,21 @@ export class Token extends ReadonlyToken {
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
-    delegateDecryption(delegate: Address, options?: {
+    delegateDecryption(input: {
+        delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<TransactionResult>;
     // Warning: (ae-forgotten-export) The symbol "ZamaError" needs to be exported by the entry point index.d.ts
-    static delegateDecryptionBatch(tokens: Token[], delegate: Address, options?: {
+    static delegateDecryptionBatch(input: {
+        tokens: Token[];
+        delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
     finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    revokeDelegation(delegate: Address): Promise<TransactionResult>;
-    static revokeDelegationBatch(tokens: Token[], delegate: Address): Promise<Map<Address, TransactionResult | ZamaError>>;
+    revokeDelegation(delegateAddress: Address): Promise<TransactionResult>;
+    static revokeDelegationBatch(tokens: Token[], delegateAddress: Address): Promise<Map<Address, TransactionResult | ZamaError>>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
@@ -1423,7 +1429,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/activity-BI7mVfZ1.d.ts:1115:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/activity-Ds18_ThD.d.ts:1138:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
