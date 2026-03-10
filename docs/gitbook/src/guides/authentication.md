@@ -38,10 +38,10 @@ const app = express();
 app.use(express.json());
 
 // Map chain IDs to their network config
-const Configs = {
+const Configs: Record<string, typeof MainnetConfig> = {
   [MainnetConfig.chainId]: MainnetConfig,
   [SepoliaConfig.chainId]: SepoliaConfig,
-} as const;
+};
 
 app.use("/api/relayer/:chainId", async (req, res) => {
   const config = Configs[req.params.chainId];

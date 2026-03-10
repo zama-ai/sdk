@@ -25,7 +25,7 @@ You can resolve the wrapper address on-chain using the `readWrapperForTokenContr
 const token = sdk.createToken("0xEncryptedERC20Address");
 
 // Separate wrapper — pass it explicitly
-const token = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
+const tokenWithWrapper = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
 ```
 
 {% endtab %}
@@ -66,7 +66,10 @@ import { useToken } from "@zama-fhe/react-sdk";
 const token = useToken({ tokenAddress: "0xEncryptedERC20Address" });
 
 // With separate wrapper
-const token = useToken({ tokenAddress: "0xTokenAddress", wrapperAddress: "0xWrapperAddress" });
+const tokenWithWrapper = useToken({
+  tokenAddress: "0xTokenAddress",
+  wrapperAddress: "0xWrapperAddress",
+});
 ```
 
 {% endtab %}

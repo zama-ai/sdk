@@ -85,7 +85,7 @@ const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });
 // Returns Map<Address, bigint>
 
 // With pre-fetched handles
-const balances = await ReadonlyToken.batchDecryptBalances(tokens, { handles, owner });
+const balancesWithHandles = await ReadonlyToken.batchDecryptBalances(tokens, { handles, owner });
 ```
 
 ## Methods
@@ -100,7 +100,7 @@ Returns the decrypted confidential balance. First call prompts a wallet signatur
 const balance = await readonlyToken.balanceOf();
 
 // Another address
-const balance = await readonlyToken.balanceOf("0xOwnerAddress");
+const otherBalance = await readonlyToken.balanceOf("0xOwnerAddress");
 ```
 
 ### confidentialBalanceOf
@@ -193,7 +193,7 @@ Reads the ERC-20 allowance of the underlying token for the given wrapper contrac
 const allowance = await readonlyToken.allowance("0xWrapperAddress");
 
 // With explicit owner
-const allowance = await readonlyToken.allowance("0xWrapperAddress", "0xOwnerAddress");
+const ownerAllowance = await readonlyToken.allowance("0xWrapperAddress", "0xOwnerAddress");
 ```
 
 ### allow
@@ -263,4 +263,4 @@ if (readonlyToken.isZeroHandle(handle)) {
 
 - [ZamaSDK](/reference/sdk/ZamaSDK) — creates `ReadonlyToken` via `createReadonlyToken()`
 - [Token](/reference/sdk/Token) — read/write variant with shielding and transfers
-- [Token operations guide](/reference/sdk/Token)
+- [Check Balances guide](/guides/check-balances) — step-by-step balance decryption walkthrough

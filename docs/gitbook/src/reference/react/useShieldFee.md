@@ -127,4 +127,3 @@ The `data` field resolves to `bigint` -- the fee amount in token units.
 - [useUnshieldFee](/reference/react/useUnshieldFee) -- calculate the unshield (unwrap) fee
 - [useShield](/reference/react/useShield) -- shield tokens
 - [Query keys](/reference/react/query-keys) -- `zamaQueryKeys.fees.shieldFee(...)` for cache control
-- [Hooks overview](/reference/react/query-keys) -- all available hooks

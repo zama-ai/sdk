@@ -154,4 +154,3 @@ Array<{
 - [useConfidentialBalance](/reference/react/useConfidentialBalance) -- read the decrypted balance
 - [useMetadata](/reference/react/useMetadata) -- token name, symbol, decimals
 - [Query keys](/reference/react/query-keys) -- `zamaQueryKeys.activityFeed` for cache control
-- [Hooks overview](/reference/react/query-keys) -- all available hooks

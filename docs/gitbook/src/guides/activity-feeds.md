@@ -181,7 +181,9 @@ You can control cache invalidation with `zamaQueryKeys.activityFeed`:
 
 ```tsx
 import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { useQueryClient } from "@tanstack/react-query";
 
+const queryClient = useQueryClient();
 queryClient.invalidateQueries({
   queryKey: zamaQueryKeys.activityFeed.token("0xToken"),
 });

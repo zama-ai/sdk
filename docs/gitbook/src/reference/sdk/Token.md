@@ -95,7 +95,7 @@ Returns the decrypted confidential balance. The first call prompts a wallet sign
 const balance = await token.balanceOf();
 
 // Another address
-const balance = await token.balanceOf("0xOwnerAddress");
+const otherBalance = await token.balanceOf("0xOwnerAddress");
 ```
 
 ### confidentialBalanceOf
