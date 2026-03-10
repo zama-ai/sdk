@@ -133,6 +133,12 @@ export class EthersSigner implements GenericSigner {
     >;
   }
 
+  async getBlockTimestamp(): Promise<bigint> {
+    const block = await this.#requireProvider().getBlock("latest");
+    if (!block) throw new Error("Failed to fetch latest block");
+    return BigInt(block.timestamp);
+  }
+
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     const receipt = await this.#requireProvider().waitForTransaction(hash);
     if (!receipt) throw new Error("Transaction receipt not found");

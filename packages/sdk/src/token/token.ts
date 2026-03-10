@@ -684,14 +684,13 @@ export class Token extends ReadonlyToken {
    * @param delegate - Address to delegate decryption rights to.
    * @param options - Optional configuration: `expirationDate` sets when the delegation expires (defaults to `uint64.max`, i.e. permanent delegation).
    * @returns The transaction hash and mined receipt.
-   * @throws {@link ConfigurationError} if `aclAddress` was not provided.
    * @throws {@link TransactionRevertedError} if the delegation transaction reverts.
    */
   async delegateDecryption(
     delegate: Address,
     options?: { expirationDate?: Date },
   ): Promise<TransactionResult> {
-    const acl = await this.requireAclAddress();
+    const acl = await this.getAclAddress();
     const normalizedDelegate = getAddress(delegate);
     // uint64 max → no practical expiry
     const expirationDate = options?.expirationDate
@@ -718,11 +717,10 @@ export class Token extends ReadonlyToken {
    *
    * @param delegate - Address to revoke delegation from.
    * @returns The transaction hash and mined receipt.
-   * @throws {@link ConfigurationError} if `aclAddress` was not provided.
    * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
    */
   async revokeDelegation(delegate: Address): Promise<TransactionResult> {
-    const acl = await this.requireAclAddress();
+    const acl = await this.getAclAddress();
     const normalizedDelegate = getAddress(delegate);
 
     try {

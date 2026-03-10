@@ -1,7 +1,6 @@
 import { createMockRelayer, describe, expect, it, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
-import { ConfigurationError } from "../errors";
 import { MemoryStorage } from "../memory-storage";
 import { Address } from "viem";
 
@@ -75,31 +74,7 @@ describe("delegation read methods", () => {
     expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
   });
 
-  it("isDelegated falls back to local clock when getBlockTimestamp is undefined", async ({
-    signer,
-    relayer,
-    storage,
-    sessionStorage,
-    tokenAddress,
-    delegatorAddress,
-    delegateAddress,
-  }) => {
-    const signerWithoutBlockTimestamp = { ...signer, getBlockTimestamp: undefined };
-    const token = new ReadonlyToken({
-      relayer,
-      signer: signerWithoutBlockTimestamp,
-      storage,
-      sessionStorage,
-      address: tokenAddress,
-    });
-
-    const futureTimestamp = BigInt(Math.floor(Date.now() / 1000) + 3600);
-    vi.mocked(signer.readContract).mockResolvedValue(futureTimestamp);
-
-    expect(await token.isDelegated(delegatorAddress, delegateAddress)).toBe(true);
-  });
-
-  it("getDelegationExpiry throws ConfigurationError when relayer cannot resolve ACL", async ({
+  it("getDelegationExpiry throws when relayer cannot resolve ACL", async ({
     signer,
     storage,
     sessionStorage,
@@ -119,7 +94,7 @@ describe("delegation read methods", () => {
     });
 
     await expect(token.getDelegationExpiry(delegatorAddress, delegateAddress)).rejects.toThrow(
-      ConfigurationError,
+      "no transport config",
     );
   });
 });
@@ -213,7 +188,7 @@ describe("delegation write methods", () => {
     expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
   });
 
-  it("delegateDecryption throws ConfigurationError when relayer cannot resolve ACL", async ({
+  it("delegateDecryption throws when relayer cannot resolve ACL", async ({
     signer,
     storage,
     sessionStorage,
@@ -232,11 +207,11 @@ describe("delegation write methods", () => {
     });
 
     await expect(tokenNoAcl.delegateDecryption(delegateAddress)).rejects.toThrow(
-      ConfigurationError,
+      "no transport config",
     );
   });
 
-  it("revokeDelegation throws ConfigurationError when relayer cannot resolve ACL", async ({
+  it("revokeDelegation throws when relayer cannot resolve ACL", async ({
     signer,
     storage,
     sessionStorage,
@@ -254,7 +229,9 @@ describe("delegation write methods", () => {
       address: tokenAddress,
     });
 
-    await expect(tokenNoAcl.revokeDelegation(delegateAddress)).rejects.toThrow(ConfigurationError);
+    await expect(tokenNoAcl.revokeDelegation(delegateAddress)).rejects.toThrow(
+      "no transport config",
+    );
   });
 });
 
@@ -332,39 +309,6 @@ describe("decryptBalanceAs", () => {
     await expect(readonlyToken.decryptBalanceAs(delegatorAddress)).rejects.toThrow(
       expect.objectContaining({ code: "DECRYPTION_FAILED" }),
     );
-  });
-
-  it("throws ConfigurationError when chainId exceeds safe integer range", async ({
-    signer,
-    relayer,
-    readonlyToken,
-    handle,
-    tokenAddress,
-    delegatorAddress,
-  }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-      domain: {
-        name: "Decryption",
-        version: "1",
-        chainId: 2n ** 64n,
-        verifyingContract: "0xkms",
-      },
-      types: { DelegatedUserDecryptRequestVerification: [] },
-      message: {
-        publicKey: "0xpub",
-        contractAddresses: [tokenAddress],
-        delegatorAddress,
-        startTimestamp: "1000",
-        durationDays: "1",
-        extraData: "0x",
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
-
-    const error = await readonlyToken.decryptBalanceAs(delegatorAddress).catch((e: Error) => e);
-    expect(error).toBeInstanceOf(Error);
-    expect((error as Error).cause).toBeInstanceOf(ConfigurationError);
   });
 
   it("caches by owner, not delegator, when options.owner differs", async ({

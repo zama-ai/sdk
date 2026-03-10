@@ -536,7 +536,7 @@ export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
 // @public
 export interface GenericSigner {
     getAddress: () => Promise<Address>;
-    getBlockTimestamp?: () => Promise<bigint>;
+    getBlockTimestamp: () => Promise<bigint>;
     getChainId(): Promise<number>;
     // Warning: (ae-forgotten-export) The symbol "ReadFunctionName" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "ReadContractArgs" needs to be exported by the entry point index.d.ts
@@ -718,6 +718,8 @@ export class ReadonlyToken {
     decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
     discoverWrapper(coordinatorAddress: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
+    // (undocumented)
+    protected getAclAddress(): Promise<Address>;
     getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint>;
     isAllowed(): Promise<boolean>;
     isConfidential(): Promise<boolean>;
@@ -732,8 +734,6 @@ export class ReadonlyToken {
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
     // (undocumented)
     protected readonly relayer: RelayerSDK;
-    // (undocumented)
-    protected requireAclAddress(): Promise<Address>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner;
@@ -1423,7 +1423,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/activity-JTyooLn_.d.ts:1122:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/activity-BI7mVfZ1.d.ts:1115:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -20,12 +20,7 @@ import type { Handle } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { CredentialsManager } from "./credentials-manager";
-import {
-  ConfigurationError,
-  DecryptionFailedError,
-  NoCiphertextError,
-  RelayerRequestFailedError,
-} from "./errors";
+import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import type { GenericSigner, GenericStorage } from "./token.types";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
@@ -516,34 +511,23 @@ export class ReadonlyToken {
     await tokens[0]!.credentials.allow(...allAddresses);
   }
 
-  protected async requireAclAddress(): Promise<Address> {
-    try {
-      return await this.relayer.getAclAddress();
-    } catch {
-      throw new ConfigurationError(
-        "Could not resolve ACL address from the relayer. Ensure the relayer is configured with a transport that includes aclContractAddress.",
-      );
-    }
+  protected async getAclAddress(): Promise<Address> {
+    return this.relayer.getAclAddress();
   }
 
   /**
    * Check whether a delegation is active for this token's contract address.
-   * Uses the block timestamp when the signer supports `getBlockTimestamp()`,
-   * otherwise falls back to the local clock.
    *
    * @param delegator - The address that granted the delegation.
    * @param delegate - The address that received delegation rights.
    * @returns `true` if the delegation exists and has not expired.
-   * @throws {@link ConfigurationError} if `aclAddress` was not provided.
    */
   async isDelegated(delegator: Address, delegate: Address): Promise<boolean> {
     const expiry = await this.getDelegationExpiry(delegator, delegate);
     if (expiry === 0n) return false;
     // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
     if (expiry === 2n ** 64n - 1n) return true;
-    const now = this.signer.getBlockTimestamp
-      ? await this.signer.getBlockTimestamp()
-      : BigInt(Math.floor(Date.now() / 1000));
+    const now = await this.signer.getBlockTimestamp();
     return expiry >= now;
   }
 
@@ -553,10 +537,9 @@ export class ReadonlyToken {
    * @param delegator - The address that granted the delegation.
    * @param delegate - The address that received delegation rights.
    * @returns Unix timestamp as bigint. `0n` = no delegation. `2^64 - 1` = permanent.
-   * @throws {@link ConfigurationError} if `aclAddress` was not provided.
    */
   async getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint> {
-    const acl = await this.requireAclAddress();
+    const acl = await this.getAclAddress();
     const normalizedDelegator = getAddress(delegator);
     const normalizedDelegate = getAddress(delegate);
     return this.signer.readContract(
@@ -582,7 +565,6 @@ export class ReadonlyToken {
    * @param delegator - The address of the account that delegated decryption rights.
    * @param options - Optional configuration: `owner` sets the balance owner address (defaults to the delegator).
    * @returns The decrypted plaintext balance as a bigint.
-   * @throws {@link ConfigurationError} if the chain ID exceeds the safe integer range.
    * @throws {@link DecryptionFailedError} if delegated decryption fails.
    *
    * @example
@@ -629,16 +611,10 @@ export class ReadonlyToken {
 
       // Sign the delegated EIP-712 with the delegate's signer.
       // Convert KMS types (bigint chainId, string timestamps) to EIP712TypedData format.
-      const chainId = Number(delegatedEIP712.domain.chainId);
-      if (!Number.isSafeInteger(chainId)) {
-        throw new ConfigurationError(
-          `chainId ${delegatedEIP712.domain.chainId} exceeds safe integer range`,
-        );
-      }
       const signature = await this.signer.signTypedData({
         domain: {
           ...delegatedEIP712.domain,
-          chainId,
+          chainId: Number(delegatedEIP712.domain.chainId),
         },
         types: delegatedEIP712.types,
         message: {

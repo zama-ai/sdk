@@ -12657,7 +12657,7 @@ export interface GenericLogger {
 // @public
 export interface GenericSigner {
     getAddress: () => Promise<Address>;
-    getBlockTimestamp?: () => Promise<bigint>;
+    getBlockTimestamp: () => Promise<bigint>;
     getChainId(): Promise<number>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
@@ -19561,6 +19561,8 @@ export class ReadonlyToken {
     decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
     discoverWrapper(coordinatorAddress: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
+    // (undocumented)
+    protected getAclAddress(): Promise<Address>;
     getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint>;
     isAllowed(): Promise<boolean>;
     isConfidential(): Promise<boolean>;
@@ -19573,8 +19575,6 @@ export class ReadonlyToken {
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
     // (undocumented)
     protected readonly relayer: RelayerSDK;
-    // (undocumented)
-    protected requireAclAddress(): Promise<Address>;
     revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner;

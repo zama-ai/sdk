@@ -136,10 +136,8 @@ export interface GenericSigner {
    * Return the latest block timestamp in seconds.
    * Used by {@link ReadonlyToken.isDelegated} to compare delegation expiry
    * against the chain clock instead of the local clock.
-   *
-   * Optional — when not implemented, `isDelegated` falls back to `Date.now()`.
    */
-  getBlockTimestamp?: () => Promise<bigint>;
+  getBlockTimestamp: () => Promise<bigint>;
   /**
    * Subscribe to wallet lifecycle events (disconnect, account change, chain change).
    * Returns an unsubscribe function. When no EIP-1193 provider is available,
