@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RelayerWeb, ZamaProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
-import { type ReactNode, useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 
 const MAINNET_RPC_URL = process.env.NEXT_PUBLIC_MAINNET_RPC_URL!;
 const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL!;
