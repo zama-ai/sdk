@@ -14,7 +14,7 @@ import { useToken, type UseZamaConfig } from "./use-token";
  * @example
  * ```tsx
  * const revoke = useRevokeDelegation({ tokenAddress: "0x..." });
- * revoke.mutate({ delegate: "0xDelegate" });
+ * revoke.mutate({ delegateAddress: "0xDelegate" });
  * ```
  */
 export function useRevokeDelegation(

@@ -27,7 +27,7 @@ export function DelegationPanel({
       {/* Section 1: Delegate */}
       <form
         action={(formData) => {
-          delegate.mutate({ delegate: formData.get("delegate") as Address });
+          delegate.mutate({ delegateAddress: formData.get("delegate") as Address });
         }}
         className="space-y-4"
       >
@@ -65,7 +65,7 @@ export function DelegationPanel({
       {/* Section 2: Decrypt as Delegate */}
       <form
         action={(formData) => {
-          decryptAs.mutate({ delegator: formData.get("delegator") as Address });
+          decryptAs.mutate({ delegatorAddress: formData.get("delegator") as Address });
         }}
         className="space-y-4"
       >

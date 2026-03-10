@@ -28,7 +28,7 @@ describe("useDecryptBalanceAs", () => {
     const { result } = renderWithProviders(() => useDecryptBalanceAs(TOKEN));
 
     act(() => {
-      result.current.mutate({ delegator: RECIPIENT });
+      result.current.mutate({ delegatorAddress: RECIPIENT });
     });
 
     await waitFor(() => {
@@ -46,7 +46,7 @@ describe("useDecryptBalanceAs", () => {
     const { result } = renderWithProviders(() => useDecryptBalanceAs(TOKEN, { onSuccess }));
 
     act(() => {
-      result.current.mutate({ delegator: RECIPIENT });
+      result.current.mutate({ delegatorAddress: RECIPIENT });
     });
 
     await waitFor(() => {

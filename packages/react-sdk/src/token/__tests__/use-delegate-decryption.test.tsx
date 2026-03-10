@@ -33,7 +33,7 @@ describe("useDelegateDecryption", () => {
     );
 
     act(() => {
-      result.current.mutate({ delegate: RECIPIENT });
+      result.current.mutate({ delegateAddress: RECIPIENT });
     });
 
     await waitFor(() => {
@@ -58,7 +58,7 @@ describe("useDelegateDecryption", () => {
 
     const expirationDate = new Date("2030-01-01T00:00:00Z");
     act(() => {
-      result.current.mutate({ delegate: RECIPIENT, options: { expirationDate } });
+      result.current.mutate({ delegateAddress: RECIPIENT, expirationDate });
     });
 
     await waitFor(() => {
@@ -82,7 +82,7 @@ describe("useDelegateDecryption", () => {
     );
 
     act(() => {
-      result.current.mutate({ delegate: RECIPIENT });
+      result.current.mutate({ delegateAddress: RECIPIENT });
     });
 
     await waitFor(() => {

@@ -2,7 +2,7 @@ import { createMockRelayer, describe, expect, it, vi } from "../../test-fixtures
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
-import { Address } from "viem";
+import { getAddress, type Address } from "viem";
 
 describe("delegation read methods", () => {
   it("getDelegationExpiry reads from ACL contract", async ({
@@ -109,7 +109,7 @@ describe("delegation write methods", () => {
   }) => {
     const expiry = new Date("2030-01-01T00:00:00Z");
 
-    await token.delegateDecryption(delegateAddress, { expirationDate: expiry });
+    await token.delegateDecryption({ delegateAddress, expirationDate: expiry });
 
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -126,7 +126,7 @@ describe("delegation write methods", () => {
     tokenAddress,
     delegateAddress,
   }) => {
-    await token.delegateDecryption(delegateAddress);
+    await token.delegateDecryption({ delegateAddress });
 
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -137,7 +137,7 @@ describe("delegation write methods", () => {
   });
 
   it("delegateDecryption returns TransactionResult", async ({ token, delegateAddress }) => {
-    const result = await token.delegateDecryption(delegateAddress);
+    const result = await token.delegateDecryption({ delegateAddress });
     expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
   });
 
@@ -166,7 +166,7 @@ describe("delegation write methods", () => {
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("revert"));
 
-    await expect(token.delegateDecryption(delegateAddress)).rejects.toThrow(
+    await expect(token.delegateDecryption({ delegateAddress })).rejects.toThrow(
       expect.objectContaining({ code: "TRANSACTION_REVERTED" }),
     );
   });
@@ -206,7 +206,7 @@ describe("delegation write methods", () => {
       address: tokenAddress,
     });
 
-    await expect(tokenNoAcl.delegateDecryption(delegateAddress)).rejects.toThrow(
+    await expect(tokenNoAcl.delegateDecryption({ delegateAddress })).rejects.toThrow(
       "no transport config",
     );
   });
@@ -365,11 +365,16 @@ describe("batch delegation", () => {
       address: TOKEN2,
     });
 
-    const results = await Token.delegateDecryptionBatch([token, token2], delegateAddress);
+    const results = await Token.delegateDecryptionBatch({
+      tokens: [token, token2],
+      delegateAddress,
+    });
 
     expect(results.size).toBe(2);
     expect(results.get(tokenAddress)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
-    expect(results.get(TOKEN2)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
+    expect(results.get(getAddress(TOKEN2))).toEqual(
+      expect.objectContaining({ txHash: "0xtxhash" }),
+    );
   });
 
   it("delegateDecryptionBatch captures per-token errors", async ({
@@ -391,10 +396,13 @@ describe("batch delegation", () => {
       address: TOKEN2,
     });
 
-    const results = await Token.delegateDecryptionBatch([token, token2], delegateAddress);
+    const results = await Token.delegateDecryptionBatch({
+      tokens: [token, token2],
+      delegateAddress,
+    });
 
     expect(results.get(tokenAddress)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
-    expect(results.get(TOKEN2)).toBeInstanceOf(Error);
+    expect(results.get(getAddress(TOKEN2))).toBeInstanceOf(Error);
   });
 
   it("revokeDelegationBatch works", async ({ token, tokenAddress, delegateAddress }) => {
@@ -426,7 +434,7 @@ describe("batch delegation", () => {
     const results = await Token.revokeDelegationBatch([token, token2], delegateAddress);
 
     expect(results.get(tokenAddress)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
-    expect(results.get(TOKEN2)).toBeInstanceOf(Error);
+    expect(results.get(getAddress(TOKEN2))).toBeInstanceOf(Error);
   });
 
   it("delegateDecryptionBatch with expiration date", async ({
@@ -437,7 +445,9 @@ describe("batch delegation", () => {
   }) => {
     const expiry = new Date("2030-06-15");
 
-    const results = await Token.delegateDecryptionBatch([token], delegateAddress, {
+    const results = await Token.delegateDecryptionBatch({
+      tokens: [token],
+      delegateAddress,
       expirationDate: expiry,
     });
 

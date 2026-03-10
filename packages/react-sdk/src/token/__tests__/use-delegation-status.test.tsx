@@ -22,8 +22,8 @@ describe("useDelegationStatus", () => {
     renderWithProviders(() =>
       useDelegationStatus({
         tokenAddress: TOKEN,
-        delegator: USER,
-        delegate: RECIPIENT,
+        delegatorAddress: USER,
+        delegateAddress: RECIPIENT,
       }),
     );
 
@@ -42,7 +42,7 @@ describe("useDelegationStatus", () => {
     renderWithProviders(() =>
       useDelegationStatus({
         tokenAddress: TOKEN,
-        delegate: RECIPIENT,
+        delegateAddress: RECIPIENT,
       }),
     );
 
@@ -59,7 +59,7 @@ describe("useDelegationStatus", () => {
     renderWithProviders(() =>
       useDelegationStatus({
         tokenAddress: TOKEN,
-        delegator: USER,
+        delegatorAddress: USER,
       }),
     );
 

@@ -14,7 +14,7 @@ import { useReadonlyToken } from "./use-readonly-token";
  * @example
  * ```tsx
  * const decryptAs = useDecryptBalanceAs("0xToken");
- * decryptAs.mutate({ delegator: "0xDelegator" });
+ * decryptAs.mutate({ delegatorAddress: "0xDelegator" });
  * // decryptAs.data => 1000n
  * ```
  */

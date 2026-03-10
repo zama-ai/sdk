@@ -8,13 +8,13 @@ import { FHE_GAS_LIMIT } from "./gas";
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   delegateForUserDecryptionContract(aclAddress, delegate, contractAddress, expirationDate),
+ *   delegateForUserDecryptionContract(aclAddress, delegateAddress, contractAddress, expirationDate),
  * );
  * ```
  */
 export function delegateForUserDecryptionContract(
   aclAddress: Address,
-  delegate: Address,
+  delegateAddress: Address,
   contractAddress: Address,
   expirationDate: bigint,
 ) {
@@ -22,7 +22,7 @@ export function delegateForUserDecryptionContract(
     address: aclAddress,
     abi: ACL_ABI,
     functionName: "delegateForUserDecryption",
-    args: [delegate, contractAddress, expirationDate],
+    args: [delegateAddress, contractAddress, expirationDate],
     gas: FHE_GAS_LIMIT,
   } as const;
 }
@@ -33,20 +33,20 @@ export function delegateForUserDecryptionContract(
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   revokeDelegationContract(aclAddress, delegate, contractAddress),
+ *   revokeDelegationContract(aclAddress, delegateAddress, contractAddress),
  * );
  * ```
  */
 export function revokeDelegationContract(
   aclAddress: Address,
-  delegate: Address,
+  delegateAddress: Address,
   contractAddress: Address,
 ) {
   return {
     address: aclAddress,
     abi: ACL_ABI,
     functionName: "revokeDelegationForUserDecryption",
-    args: [delegate, contractAddress],
+    args: [delegateAddress, contractAddress],
     gas: FHE_GAS_LIMIT,
   } as const;
 }
@@ -57,20 +57,20 @@ export function revokeDelegationContract(
  * @example
  * ```ts
  * const expiry = await signer.readContract(
- *   getDelegationExpiryContract(aclAddress, delegator, delegate, contractAddress),
+ *   getDelegationExpiryContract(aclAddress, delegatorAddress, delegateAddress, contractAddress),
  * );
  * ```
  */
 export function getDelegationExpiryContract(
   aclAddress: Address,
-  delegator: Address,
-  delegate: Address,
+  delegatorAddress: Address,
+  delegateAddress: Address,
   contractAddress: Address,
 ) {
   return {
     address: aclAddress,
     abi: ACL_ABI,
     functionName: "getUserDecryptionDelegationExpirationDate",
-    args: [delegator, delegate, contractAddress],
+    args: [delegatorAddress, delegateAddress, contractAddress],
   } as const;
 }

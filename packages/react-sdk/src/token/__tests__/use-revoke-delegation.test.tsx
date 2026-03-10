@@ -24,7 +24,7 @@ describe("useRevokeDelegation", () => {
     const { result } = renderWithProviders(() => useRevokeDelegation({ tokenAddress: TOKEN }), {});
 
     act(() => {
-      result.current.mutate({ delegate: RECIPIENT });
+      result.current.mutate({ delegateAddress: RECIPIENT });
     });
 
     await waitFor(() => {
@@ -48,7 +48,7 @@ describe("useRevokeDelegation", () => {
     );
 
     act(() => {
-      result.current.mutate({ delegate: RECIPIENT });
+      result.current.mutate({ delegateAddress: RECIPIENT });
     });
 
     await waitFor(() => {

@@ -5,10 +5,8 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link delegateDecryptionMutationOptions}. */
 export interface DelegateDecryptionParams {
-  delegate: Address;
-  options?: {
-    expirationDate: Date;
-  };
+  delegateAddress: Address;
+  expirationDate?: Date;
 }
 
 export function delegateDecryptionMutationOptions(
@@ -20,6 +18,7 @@ export function delegateDecryptionMutationOptions(
 > {
   return {
     mutationKey: ["zama.delegateDecryption", token.address] as const,
-    mutationFn: async ({ delegate, options }) => token.delegateDecryption(delegate, options),
+    mutationFn: async ({ delegateAddress, expirationDate }) =>
+      token.delegateDecryption({ delegateAddress, expirationDate }),
   };
 }

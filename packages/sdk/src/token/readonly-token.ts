@@ -518,12 +518,12 @@ export class ReadonlyToken {
   /**
    * Check whether a delegation is active for this token's contract address.
    *
-   * @param delegator - The address that granted the delegation.
-   * @param delegate - The address that received delegation rights.
+   * @param delegatorAddress - The address that granted the delegation.
+   * @param delegateAddress - The address that received delegation rights.
    * @returns `true` if the delegation exists and has not expired.
    */
-  async isDelegated(delegator: Address, delegate: Address): Promise<boolean> {
-    const expiry = await this.getDelegationExpiry(delegator, delegate);
+  async isDelegated(delegatorAddress: Address, delegateAddress: Address): Promise<boolean> {
+    const expiry = await this.getDelegationExpiry(delegatorAddress, delegateAddress);
     if (expiry === 0n) return false;
     // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
     if (expiry === 2n ** 64n - 1n) return true;
@@ -534,16 +534,19 @@ export class ReadonlyToken {
   /**
    * Get the expiration timestamp of a delegation for this token.
    *
-   * @param delegator - The address that granted the delegation.
-   * @param delegate - The address that received delegation rights.
+   * @param delegatorAddress - The address that granted the delegation.
+   * @param delegateAddress - The address that received delegation rights.
    * @returns Unix timestamp as bigint. `0n` = no delegation. `2^64 - 1` = permanent.
    */
-  async getDelegationExpiry(delegator: Address, delegate: Address): Promise<bigint> {
+  async getDelegationExpiry(delegatorAddress: Address, delegateAddress: Address): Promise<bigint> {
     const acl = await this.getAclAddress();
-    const normalizedDelegator = getAddress(delegator);
-    const normalizedDelegate = getAddress(delegate);
     return this.signer.readContract(
-      getDelegationExpiryContract(acl, normalizedDelegator, normalizedDelegate, this.address),
+      getDelegationExpiryContract(
+        acl,
+        getAddress(delegatorAddress),
+        getAddress(delegateAddress),
+        this.address,
+      ),
     );
   }
 
@@ -562,7 +565,7 @@ export class ReadonlyToken {
    * The connected signer acts as the delegate who has been granted permission
    * by the delegator to decrypt their balance.
    *
-   * @param delegator - The address of the account that delegated decryption rights.
+   * @param delegatorAddress - The address of the account that delegated decryption rights.
    * @param options - Optional configuration: `owner` sets the balance owner address (defaults to the delegator).
    * @returns The decrypted plaintext balance as a bigint.
    * @throws {@link DecryptionFailedError} if delegated decryption fails.
@@ -572,8 +575,11 @@ export class ReadonlyToken {
    * const balance = await token.decryptBalanceAs("0xDelegator");
    * ```
    */
-  async decryptBalanceAs(delegator: Address, options?: { owner?: Address }): Promise<bigint> {
-    const normalizedDelegator = getAddress(delegator);
+  async decryptBalanceAs(
+    delegatorAddress: Address,
+    options?: { owner?: Address },
+  ): Promise<bigint> {
+    const normalizedDelegator = getAddress(delegatorAddress);
     const owner = options?.owner ? getAddress(options.owner) : normalizedDelegator;
 
     const handle = await this.readConfidentialBalanceOf(owner);

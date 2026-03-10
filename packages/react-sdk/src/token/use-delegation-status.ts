@@ -14,9 +14,9 @@ export interface UseDelegationStatusConfig {
   /** Address of the confidential token contract. */
   tokenAddress: Address;
   /** The address that granted the delegation. */
-  delegator?: Address;
+  delegatorAddress?: Address;
   /** The address that received delegation rights. */
-  delegate?: Address;
+  delegateAddress?: Address;
 }
 
 /**
@@ -29,8 +29,8 @@ export interface UseDelegationStatusConfig {
  * ```tsx
  * const { data } = useDelegationStatus({
  *   tokenAddress: "0xToken",
- *   delegator: "0xDelegator",
- *   delegate: "0xDelegate",
+ *   delegatorAddress: "0xDelegator",
+ *   delegateAddress: "0xDelegate",
  * });
  * // data?.isDelegated, data?.expiryTimestamp
  * ```
@@ -38,12 +38,12 @@ export interface UseDelegationStatusConfig {
 export function useDelegationStatus(config: UseDelegationStatusConfig) {
   const readonlyToken = useReadonlyToken(config.tokenAddress);
 
-  const enabled = Boolean(config.delegator && config.delegate);
+  const enabled = Boolean(config.delegatorAddress && config.delegateAddress);
   const baseOpts =
-    config.delegator && config.delegate
+    config.delegatorAddress && config.delegateAddress
       ? delegationStatusQueryOptions(readonlyToken, {
-          delegator: config.delegator,
-          delegate: config.delegate,
+          delegatorAddress: config.delegatorAddress,
+          delegateAddress: config.delegateAddress,
         })
       : {
           queryKey: zamaQueryKeys.delegationStatus.all,

@@ -681,25 +681,27 @@ export class Token extends ReadonlyToken {
    * Delegate decryption rights for this token to another address.
    * Calls `ACL.delegateForUserDecryption()` on-chain.
    *
-   * @param delegate - Address to delegate decryption rights to.
+   * @param delegateAddress - Address to delegate decryption rights to.
    * @param options - Optional configuration: `expirationDate` sets when the delegation expires (defaults to `uint64.max`, i.e. permanent delegation).
    * @returns The transaction hash and mined receipt.
    * @throws {@link TransactionRevertedError} if the delegation transaction reverts.
    */
-  async delegateDecryption(
-    delegate: Address,
-    options?: { expirationDate?: Date },
-  ): Promise<TransactionResult> {
+  async delegateDecryption({
+    delegateAddress,
+    expirationDate,
+  }: {
+    delegateAddress: Address;
+    expirationDate?: Date;
+  }): Promise<TransactionResult> {
     const acl = await this.getAclAddress();
-    const normalizedDelegate = getAddress(delegate);
     // uint64 max → no practical expiry
-    const expirationDate = options?.expirationDate
-      ? BigInt(Math.floor(options.expirationDate.getTime() / 1000))
+    const expDate = expirationDate
+      ? BigInt(Math.floor(expirationDate.getTime() / 1000))
       : 2n ** 64n - 1n;
 
     try {
       const txHash = await this.signer.writeContract(
-        delegateForUserDecryptionContract(acl, normalizedDelegate, this.address, expirationDate),
+        delegateForUserDecryptionContract(acl, getAddress(delegateAddress), this.address, expDate),
       );
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
@@ -715,17 +717,16 @@ export class Token extends ReadonlyToken {
    * Revoke decryption delegation for this token.
    * Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
    *
-   * @param delegate - Address to revoke delegation from.
+   * @param delegateAddress - Address to revoke delegation from.
    * @returns The transaction hash and mined receipt.
    * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
    */
-  async revokeDelegation(delegate: Address): Promise<TransactionResult> {
+  async revokeDelegation(delegateAddress: Address): Promise<TransactionResult> {
     const acl = await this.getAclAddress();
-    const normalizedDelegate = getAddress(delegate);
 
     try {
       const txHash = await this.signer.writeContract(
-        revokeDelegationContract(acl, normalizedDelegate, this.address),
+        revokeDelegationContract(acl, getAddress(delegateAddress), this.address),
       );
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
@@ -744,18 +745,22 @@ export class Token extends ReadonlyToken {
    * Returns a per-token result map with partial success semantics.
    *
    * @param tokens - Array of Token instances to delegate on.
-   * @param delegate - Address to delegate decryption rights to.
+   * @param delegateAddress - Address to delegate decryption rights to.
    * @param options - Optional expiration date.
    * @returns Map from token address to TransactionResult or ZamaError.
    */
-  static async delegateDecryptionBatch(
-    tokens: Token[],
-    delegate: Address,
-    options?: { expirationDate?: Date },
-  ): Promise<Map<Address, TransactionResult | ZamaError>> {
+  static async delegateDecryptionBatch({
+    tokens,
+    delegateAddress,
+    expirationDate,
+  }: {
+    tokens: Token[];
+    delegateAddress: Address;
+    expirationDate?: Date;
+  }): Promise<Map<Address, TransactionResult | ZamaError>> {
     return Token.#batchDelegationOp(
       tokens,
-      (t) => t.delegateDecryption(delegate, options),
+      (t) => t.delegateDecryption({ delegateAddress, expirationDate }),
       "Delegation failed",
     );
   }
@@ -765,16 +770,16 @@ export class Token extends ReadonlyToken {
    * Returns a per-token result map with partial success semantics.
    *
    * @param tokens - Array of Token instances to revoke delegation on.
-   * @param delegate - Address to revoke delegation from.
+   * @param delegateAddress - Address to revoke delegation from.
    * @returns Map from token address to TransactionResult or ZamaError.
    */
   static async revokeDelegationBatch(
     tokens: Token[],
-    delegate: Address,
+    delegateAddress: Address,
   ): Promise<Map<Address, TransactionResult | ZamaError>> {
     return Token.#batchDelegationOp(
       tokens,
-      (t) => t.revokeDelegation(delegate),
+      (t) => t.revokeDelegation(delegateAddress),
       "Revoke delegation failed",
     );
   }

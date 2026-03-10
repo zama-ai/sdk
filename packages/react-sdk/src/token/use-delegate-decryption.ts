@@ -17,7 +17,7 @@ import { useToken, type UseZamaConfig } from "./use-token";
  * @example
  * ```tsx
  * const delegate = useDelegateDecryption({ tokenAddress: "0x..." });
- * delegate.mutate({ delegate: "0xDelegate" });
+ * delegate.mutate({ delegateAddress: "0xDelegate" });
  * ```
  */
 export function useDelegateDecryption(

@@ -5,7 +5,7 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link revokeDelegationMutationOptions}. */
 export interface RevokeDelegationParams {
-  delegate: Address;
+  delegateAddress: Address;
 }
 
 export function revokeDelegationMutationOptions(
@@ -17,6 +17,6 @@ export function revokeDelegationMutationOptions(
 > {
   return {
     mutationKey: ["zama.revokeDelegation", token.address] as const,
-    mutationFn: async ({ delegate }) => token.revokeDelegation(delegate),
+    mutationFn: async ({ delegateAddress }) => token.revokeDelegation(delegateAddress),
   };
 }

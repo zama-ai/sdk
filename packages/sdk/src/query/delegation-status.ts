@@ -10,8 +10,8 @@ export interface DelegationStatusData {
 }
 
 export interface DelegationStatusQueryConfig {
-  delegator: Address;
-  delegate: Address;
+  delegatorAddress: Address;
+  delegateAddress: Address;
   query?: Record<string, unknown>;
 }
 
@@ -41,13 +41,13 @@ export function delegationStatusQueryOptions(
     ...filterQueryOptions(config.query ?? {}),
     queryKey: zamaQueryKeys.delegationStatus.scope(
       readonlyToken.address,
-      config.delegator,
-      config.delegate,
+      config.delegatorAddress,
+      config.delegateAddress,
     ),
     queryFn: async () => {
       const expiryTimestamp = await readonlyToken.getDelegationExpiry(
-        config.delegator,
-        config.delegate,
+        config.delegatorAddress,
+        config.delegateAddress,
       );
       // Derive isDelegated locally to avoid a redundant RPC call
       // (isDelegated() internally calls getDelegationExpiry() again)

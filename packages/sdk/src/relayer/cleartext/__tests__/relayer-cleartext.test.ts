@@ -880,7 +880,7 @@ describe("RelayerCleartext", () => {
     const { fhevm } = createInstance();
 
     await expect(fhevm.requestZKProofVerification({} as never)).rejects.toThrow(
-      "requestZKProofVerification is not supported in cleartext mode",
+      "Not implemented in cleartext mode",
     );
   });
 });
