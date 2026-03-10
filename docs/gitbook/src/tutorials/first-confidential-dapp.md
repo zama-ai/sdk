@@ -159,22 +159,22 @@ Create `src/ShieldForm.tsx`. Shielding converts public ERC-20 tokens into their 
 {% tab title="src/ShieldForm.tsx" %}
 
 ```tsx
-import { useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import { useShield } from "@zama-fhe/react-sdk";
 import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
 
 export function ShieldForm() {
-  const [amount, setAmount] = useState("");
   const { mutateAsync: shield, isPending } = useShield({
     tokenAddress: TOKEN_ADDRESS,
     wrapperAddress: WRAPPER_ADDRESS,
   });
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!amount) return;
+    const data = new FormData(e.currentTarget);
+    const amount = data.get("amount") as string;
     await shield({ amount: BigInt(amount) });
-    setAmount("");
+    e.currentTarget.reset();
   }
 
   return (
@@ -183,13 +183,7 @@ export function ShieldForm() {
         <legend>Shield Tokens</legend>
         <label>
           Amount
-          <input
-            type="number"
-            placeholder="Amount to shield"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-          />
+          <input name="amount" type="number" placeholder="Amount to shield" required />
         </label>
         <button type="submit">{isPending ? "Shielding…" : "Shield"}</button>
       </fieldset>
@@ -211,23 +205,22 @@ Create `src/TransferForm.tsx`. The transfer amount is encrypted before it reache
 {% tab title="src/TransferForm.tsx" %}
 
 ```tsx
-import { useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import { TOKEN_ADDRESS } from "./config";
 
 export function TransferForm() {
-  const [to, setTo] = useState("");
-  const [amount, setAmount] = useState("");
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
     tokenAddress: TOKEN_ADDRESS,
   });
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!to || !amount) return;
+    const data = new FormData(e.currentTarget);
+    const to = data.get("to") as string;
+    const amount = data.get("amount") as string;
     await transfer({ to: to as `0x${string}`, amount: BigInt(amount) });
-    setTo("");
-    setAmount("");
+    e.currentTarget.reset();
   }
 
   return (
@@ -236,23 +229,11 @@ export function TransferForm() {
         <legend>Confidential Transfer</legend>
         <label>
           Recipient
-          <input
-            type="text"
-            placeholder="0x…"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            required
-          />
+          <input name="to" type="text" placeholder="0x…" required />
         </label>
         <label>
           Amount
-          <input
-            type="number"
-            placeholder="Amount"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-          />
+          <input name="amount" type="number" placeholder="Amount" required />
         </label>
         <button type="submit">{isPending ? "Sending…" : "Send"}</button>
       </fieldset>
@@ -277,16 +258,16 @@ import { useUnshield } from "@zama-fhe/react-sdk";
 import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
 
 export function UnshieldForm() {
-  const [amount, setAmount] = useState("");
   const [status, setStatus] = useState("");
   const { mutateAsync: unshield, isPending } = useUnshield({
     tokenAddress: TOKEN_ADDRESS,
     wrapperAddress: WRAPPER_ADDRESS,
   });
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!amount) return;
+    const data = new FormData(e.currentTarget);
+    const amount = data.get("amount") as string;
     setStatus("Submitting unwrap…");
     await unshield({
       amount: BigInt(amount),
@@ -296,7 +277,7 @@ export function UnshieldForm() {
         onFinalizeSubmitted: (txHash) => setStatus(`Complete: ${txHash}`),
       },
     });
-    setAmount("");
+    e.currentTarget.reset();
     setStatus("");
   }
 
@@ -306,13 +287,7 @@ export function UnshieldForm() {
         <legend>Unshield Tokens</legend>
         <label>
           Amount
-          <input
-            type="number"
-            placeholder="Amount to unshield"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-          />
+          <input name="amount" type="number" placeholder="Amount to unshield" required />
         </label>
         <button type="submit">{isPending ? "Unshielding…" : "Unshield"}</button>
       </fieldset>

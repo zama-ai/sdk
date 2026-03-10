@@ -93,10 +93,11 @@ function fixLinks(content) {
   });
 }
 
-/** Remap unsupported highlight.js languages to supported ones. */
+/** Remap unsupported highlight.js languages to supported ones.
+ *  mdbook's bundled highlight.js 10.1.1 doesn't support tsx/jsx.
+ *  We remap them to typescript/javascript so they get proper highlighting. */
 function fixLanguages(content) {
-  // tsx → typescript (hljs doesn't register tsx as an alias)
-  return content.replace(/```tsx/g, "```typescript");
+  return content.replace(/```tsx/g, "```typescript").replace(/```jsx/g, "```javascript");
 }
 
 function processContent(content) {

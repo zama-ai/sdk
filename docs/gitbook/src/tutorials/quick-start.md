@@ -246,7 +246,7 @@ const sdk = new ZamaSDK({
 {% tab title="React + wagmi" %}
 
 ```tsx
-import { useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import {
@@ -269,27 +269,24 @@ function MyTokenPage() {
     tokenAddress: TOKEN,
   });
 
-  const [shieldAmount, setShieldAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
-  const [transferAmount, setTransferAmount] = useState("");
-
   if (!isConnected) {
     return <button onClick={() => connect({ connector: injected() })}>Connect Wallet</button>;
   }
 
-  async function handleShield(e: FormEvent) {
+  async function handleShield(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!shieldAmount) return;
-    await shield({ amount: BigInt(shieldAmount) });
-    setShieldAmount("");
+    const amount = new FormData(e.currentTarget).get("amount") as string;
+    await shield({ amount: BigInt(amount) });
+    e.currentTarget.reset();
   }
 
-  async function handleTransfer(e: FormEvent) {
+  async function handleTransfer(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!recipient || !transferAmount) return;
-    await transfer({ to: recipient as `0x${string}`, amount: BigInt(transferAmount) });
-    setRecipient("");
-    setTransferAmount("");
+    const data = new FormData(e.currentTarget);
+    const to = data.get("to") as string;
+    const amount = data.get("amount") as string;
+    await transfer({ to: to as `0x${string}`, amount: BigInt(amount) });
+    e.currentTarget.reset();
   }
 
   return (
@@ -305,13 +302,7 @@ function MyTokenPage() {
       <form onSubmit={handleShield}>
         <fieldset disabled={isShielding}>
           <legend>Shield</legend>
-          <input
-            type="number"
-            placeholder="Amount"
-            value={shieldAmount}
-            onChange={(e) => setShieldAmount(e.target.value)}
-            required
-          />
+          <input name="amount" type="number" placeholder="Amount" required />
           <button type="submit">{isShielding ? "Shielding…" : "Shield"}</button>
         </fieldset>
       </form>
@@ -319,20 +310,8 @@ function MyTokenPage() {
       <form onSubmit={handleTransfer}>
         <fieldset disabled={isSending}>
           <legend>Confidential Transfer</legend>
-          <input
-            type="text"
-            placeholder="Recipient (0x…)"
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            required
-          />
-          <input
-            type="number"
-            placeholder="Amount"
-            value={transferAmount}
-            onChange={(e) => setTransferAmount(e.target.value)}
-            required
-          />
+          <input name="to" type="text" placeholder="Recipient (0x…)" required />
+          <input name="amount" type="number" placeholder="Amount" required />
           <button type="submit">{isSending ? "Sending…" : "Send"}</button>
         </fieldset>
       </form>
