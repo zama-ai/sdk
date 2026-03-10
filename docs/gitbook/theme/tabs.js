@@ -3,11 +3,12 @@
 document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll(".tab-header").forEach(function (btn) {
     btn.addEventListener("click", function () {
+      var group = btn.closest(".tab-group");
       // Small delay to let the tab content become visible
       setTimeout(function () {
-        document.querySelectorAll(".tab-content.active pre code").forEach(function (block) {
+        group.querySelectorAll(".tab-content.active pre code").forEach(function (block) {
           if (!block.dataset.highlighted) {
-            hljs.highlightBlock(block);
+            hljs.highlightElement(block);
             block.dataset.highlighted = "true";
           }
         });

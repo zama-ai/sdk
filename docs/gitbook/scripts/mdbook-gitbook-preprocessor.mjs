@@ -27,14 +27,16 @@ for await (const chunk of process.stdin) {
 
 const [context, book] = JSON.parse(input);
 const bookRoot = context.root;
+const includeCache = new Map();
 
 function expandIncludes(content) {
   return content.replace(/\{%\s*include\s*"([^"]+)"\s*%\}/g, (_match, includePath) => {
     const absPath = join(bookRoot, includePath);
-    if (existsSync(absPath)) {
-      let included = readFileSync(absPath, "utf8");
-      return expandIncludes(included);
+    if (!includeCache.has(absPath)) {
+      includeCache.set(absPath, existsSync(absPath) ? readFileSync(absPath, "utf8") : null);
     }
+    const included = includeCache.get(absPath);
+    if (included !== null) return expandIncludes(included);
     return `<!-- include not found: ${includePath} -->`;
   });
 }
@@ -84,8 +86,6 @@ function stripFrontmatter(content) {
 function fixLinks(content) {
   // Match markdown links with absolute paths: [text](/path/to/page)
   return content.replace(/\]\(\/([^)]+)\)/g, (_match, path) => {
-    // Don't touch external URLs or anchors
-    if (path.startsWith("http") || path.startsWith("#")) return _match;
     // Add .md extension if not present and not an anchor
     const hasExt = /\.\w+$/.test(path.split("#")[0]);
     const fixed = hasExt ? path : path + ".md";
