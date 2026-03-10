@@ -120,6 +120,6 @@ function walkChapters(chapters) {
   }
 }
 
-walkChapters(book.sections);
+walkChapters(book.items ?? book.sections);
 
 process.stdout.write(JSON.stringify(book));
