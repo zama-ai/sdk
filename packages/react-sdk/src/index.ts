@@ -191,9 +191,9 @@ export {
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
-export { useAllow } from "./token/use-allow";
+export { useAllowTokens } from "./token/use-allow-tokens";
 export { useIsAllowed } from "./token/use-is-allowed";
-export { useRevoke } from "./token/use-revoke";
+export { useRevokeTokens } from "./token/use-revoke-tokens";
 export { useRevokeSession } from "./token/use-revoke-session";
 export {
   useConfidentialTransfer,
@@ -229,6 +229,8 @@ export {
 export { useMetadata, useMetadataSuspense, type TokenMetadata } from "./token/use-metadata";
 export { useActivityFeed, type UseActivityFeedConfig } from "./token/use-activity-feed";
 export { useDelegateDecryption } from "./token/use-delegate-decryption";
+export { useRevokeDelegation } from "./token/use-revoke-delegation";
+export { useDelegationStatus, type UseDelegationStatusConfig } from "./token/use-delegation-status";
 export { useDecryptBalanceAs } from "./token/use-decrypt-balance-as";
 export { useApproveUnderlying } from "./token/use-approve-underlying";
 export {
@@ -303,6 +305,11 @@ export {
   type DelegateDecryptionParams,
   decryptBalanceAsMutationOptions,
   type DecryptBalanceAsParams,
+  revokeDelegationMutationOptions,
+  type RevokeDelegationParams,
+  delegationStatusQueryOptions,
+  type DelegationStatusData,
+  type DelegationStatusQueryConfig,
 } from "@zama-fhe/sdk/query";
 export type {
   OptimisticBalanceSnapshot,

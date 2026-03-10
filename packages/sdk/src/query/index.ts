@@ -103,6 +103,12 @@ export {
   type DelegateDecryptionParams,
 } from "./delegate-decryption";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
+export { revokeDelegationMutationOptions, type RevokeDelegationParams } from "./revoke-delegation";
+export {
+  delegationStatusQueryOptions,
+  type DelegationStatusData,
+  type DelegationStatusQueryConfig,
+} from "./delegation-status";
 export type { ActivityItem, ActivityLogMetadata } from "../activity";
 export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";

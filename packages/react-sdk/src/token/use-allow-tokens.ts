@@ -2,24 +2,25 @@
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { revokeMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { allowMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
- * Revoke stored FHE credentials for a list of token addresses.
- * The next decrypt operation will require a fresh wallet signature.
+ * Pre-authorize FHE decrypt credentials for a list of token addresses.
+ * A single wallet signature covers all addresses, so subsequent decrypt
+ * operations on any of these tokens reuse cached credentials.
  *
  * @example
  * ```tsx
- * const { mutate: revoke } = useRevoke();
- * revoke(["0xTokenA", "0xTokenB"]);
+ * const { mutateAsync: allowTokens, isPending } = useAllowTokens();
+ * // Call allowTokens(allTokenAddresses) before any individual reveal
  * ```
  */
-export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>) {
+export function useAllowTokens(options?: UseMutationOptions<void, Error, Address[]>) {
   const sdk = useZamaSDK();
 
   return useMutation<void, Error, Address[]>({
-    ...revokeMutationOptions(sdk),
+    ...allowMutationOptions(sdk),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
