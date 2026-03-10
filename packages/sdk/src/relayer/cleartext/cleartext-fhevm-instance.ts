@@ -13,7 +13,6 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { RelayerSDK } from "../relayer-sdk";
 import type {
-  Address,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -22,6 +21,7 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "../relayer-sdk.types";
+import type { Address, Hex } from "viem";
 import {
   DELEGATED_USER_DECRYPT_EIP712,
   KMS_DECRYPTION_EIP712,
@@ -35,7 +35,6 @@ import {
   DecryptionFailedError,
   EncryptionFailedError,
 } from "../../token/errors";
-import { normalizeHandle } from "../../utils";
 
 const KMS_SIGNER = privateKeyToAccount(MOCK_KMS_SIGNER_PK as `0x${string}`);
 
@@ -92,7 +91,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
     this.#config = config;
   }
 
-  async generateKeypair(): Promise<KeypairType<string>> {
+  async generateKeypair(): Promise<KeypairType<Hex>> {
     const publicKey = toHex(crypto.getRandomValues(new Uint8Array(32)));
     let privateKey = toHex(crypto.getRandomValues(new Uint8Array(32)));
 
@@ -104,7 +103,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
   }
 
   async createEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
     durationDays: number = 7,
@@ -176,7 +175,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
 
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
     const normalizedSignerAddress = getAddress(params.signerAddress);
-    const normalizedHandles = params.handles.map(normalizeHandle);
+    const normalizedHandles = params.handles;
 
     const allowedResults = await Promise.all(
       normalizedHandles.map((handle) => this.#persistAllowed(handle, normalizedSignerAddress)),
@@ -192,7 +191,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
   }
 
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    const normalizedHandles = handles.map(normalizeHandle);
+    const normalizedHandles = handles;
 
     const allowedResults = await Promise.all(
       normalizedHandles.map((handle) => this.#isAllowedForDecryption(handle)),
@@ -240,9 +239,9 @@ export class CleartextFhevmInstance implements RelayerSDK {
   }
 
   async createDelegatedUserDecryptEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
-    delegatorAddress: string,
+    delegatorAddress: Address,
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
@@ -272,7 +271,7 @@ export class CleartextFhevmInstance implements RelayerSDK {
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    const normalizedHandles = params.handles.map(normalizeHandle);
+    const normalizedHandles = params.handles;
 
     const delegatedResults = await Promise.all(
       normalizedHandles.map((handle) =>

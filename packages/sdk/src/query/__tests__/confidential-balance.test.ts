@@ -6,7 +6,7 @@ describe("confidentialBalanceQueryOptions", () => {
     const token = createMockReadonlyToken("0x1111111111111111111111111111111111111111");
     const options = confidentialBalanceQueryOptions(token, {
       owner: "0x2222222222222222222222222222222222222222",
-      handle: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     });
 
     expect(options.queryKey).toEqual([
@@ -14,7 +14,7 @@ describe("confidentialBalanceQueryOptions", () => {
       {
         tokenAddress: "0x1111111111111111111111111111111111111111",
         owner: "0x2222222222222222222222222222222222222222",
-        handle: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
       },
     ]);
     expect(options.staleTime).toBe(Infinity);
@@ -33,7 +33,7 @@ describe("confidentialBalanceQueryOptions", () => {
     const token = createMockReadonlyToken("0x1111111111111111111111111111111111111111");
     const options = confidentialBalanceQueryOptions(token, {
       owner: "0x2222222222222222222222222222222222222222",
-      handle: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      handle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     });
 
     const key = [
@@ -41,13 +41,13 @@ describe("confidentialBalanceQueryOptions", () => {
       {
         tokenAddress: "0x1111111111111111111111111111111111111111",
         owner: "0x2222222222222222222222222222222222222222",
-        handle: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        handle: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
       },
     ] as const;
 
     await options.queryFn(mockQueryContext(key));
     expect(token.decryptBalance).toHaveBeenCalledWith(
-      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
       "0x2222222222222222222222222222222222222222",
     );
   });

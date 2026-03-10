@@ -1,7 +1,6 @@
-import { toHex } from "viem";
+import { toHex, Address } from "viem";
 import { ENCRYPTION_ABI } from "../abi/encryption.abi";
-import type { Address, Handle } from "../relayer/relayer-sdk.types";
-import { assertAddress } from "../utils";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import { FHE_GAS_LIMIT } from "./gas";
 
 /**
@@ -15,8 +14,6 @@ import { FHE_GAS_LIMIT } from "./gas";
  * ```
  */
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address) {
-  assertAddress(tokenAddress, "tokenAddress");
-  assertAddress(userAddress, "userAddress");
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -41,8 +38,6 @@ export function confidentialTransferContract(
   handle: Uint8Array,
   inputProof: Uint8Array,
 ) {
-  assertAddress(encryptedErc20, "encryptedErc20");
-  assertAddress(to, "to");
   return {
     address: encryptedErc20,
     abi: ENCRYPTION_ABI,
@@ -69,9 +64,6 @@ export function confidentialTransferFromContract(
   handle: Uint8Array,
   inputProof: Uint8Array,
 ) {
-  assertAddress(encryptedErc20, "encryptedErc20");
-  assertAddress(from, "from");
-  assertAddress(to, "to");
   return {
     address: encryptedErc20,
     abi: ENCRYPTION_ABI,
@@ -92,9 +84,6 @@ export function confidentialTransferFromContract(
  * ```
  */
 export function isOperatorContract(tokenAddress: Address, holder: Address, spender: Address) {
-  assertAddress(tokenAddress, "tokenAddress");
-  assertAddress(holder, "holder");
-  assertAddress(spender, "spender");
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -115,8 +104,6 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
  * ```
  */
 export function setOperatorContract(tokenAddress: Address, spender: Address, timestamp?: number) {
-  assertAddress(tokenAddress, "tokenAddress");
-  assertAddress(spender, "spender");
   const until = timestamp ?? Math.floor(Date.now() / 1000) + 3600;
   return {
     address: tokenAddress,
@@ -144,9 +131,6 @@ export function unwrapContract(
   encryptedAmount: Uint8Array,
   inputProof: Uint8Array,
 ) {
-  assertAddress(encryptedErc20, "encryptedErc20");
-  assertAddress(from, "from");
-  assertAddress(to, "to");
   return {
     address: encryptedErc20,
     abi: ENCRYPTION_ABI,
@@ -172,9 +156,6 @@ export function unwrapFromBalanceContract(
   to: Address,
   encryptedBalance: Handle,
 ) {
-  assertAddress(encryptedErc20, "encryptedErc20");
-  assertAddress(from, "from");
-  assertAddress(to, "to");
   return {
     address: encryptedErc20,
     abi: ENCRYPTION_ABI,
@@ -195,7 +176,6 @@ export function unwrapFromBalanceContract(
  * ```
  */
 export function confidentialTotalSupplyContract(tokenAddress: Address) {
-  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -215,7 +195,6 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
  * ```
  */
 export function totalSupplyContract(tokenAddress: Address) {
-  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -233,7 +212,6 @@ export function totalSupplyContract(tokenAddress: Address) {
  * ```
  */
 export function rateContract(tokenAddress: Address) {
-  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -253,7 +231,6 @@ export function rateContract(tokenAddress: Address) {
  * ```
  */
 export function deploymentCoordinatorContract(tokenAddress: Address) {
-  assertAddress(tokenAddress, "tokenAddress");
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -277,9 +254,6 @@ export function isFinalizeUnwrapOperatorContract(
   holder: Address,
   operator: Address,
 ) {
-  assertAddress(tokenAddress, "tokenAddress");
-  assertAddress(holder, "holder");
-  assertAddress(operator, "operator");
   return {
     address: tokenAddress,
     abi: ENCRYPTION_ABI,
@@ -304,8 +278,6 @@ export function setFinalizeUnwrapOperatorContract(
   operator: Address,
   timestamp?: number,
 ) {
-  assertAddress(tokenAddress, "tokenAddress");
-  assertAddress(operator, "operator");
   const until = timestamp ?? Math.floor(Date.now() / 1000) + 3600;
   return {
     address: tokenAddress,

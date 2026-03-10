@@ -1,6 +1,7 @@
 import type { Token } from "../token/token";
-import type { Address, TransactionResult, UnshieldCallbacks } from "../token/token.types";
+import type { TransactionResult, UnshieldCallbacks } from "../token/token.types";
 import type { MutationFactoryOptions } from "./factory-types";
+import type { Address } from "viem";
 
 /** Variables for {@link unshieldAllMutationOptions}. */
 export interface UnshieldAllParams {

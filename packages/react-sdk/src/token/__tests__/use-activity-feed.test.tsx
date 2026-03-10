@@ -1,8 +1,26 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, RawLog } from "@zama-fhe/sdk";
+import { Topics } from "@zama-fhe/sdk";
 import { useActivityFeed } from "../use-activity-feed";
 import { TOKEN, USER } from "../../__tests__/mutation-test-helpers";
+
+const OTHER = "0x3333333333333333333333333333333333333333";
+
+const topic = (hex: string): `0x${string}` => `0x${hex.padStart(64, "0")}`;
+const bytes32 = (hex: string): Address => `0x${hex.padStart(64, "0")}`;
+
+function transferLog(from: `0x${string}`, to: `0x${string}`, handle: `0x${string}`): RawLog {
+  return {
+    topics: [
+      Topics.ConfidentialTransfer,
+      topic(from.slice(2)),
+      topic(to.slice(2)),
+      `0x${handle.slice(2)}`,
+    ],
+    data: "0x",
+  };
+}
 
 describe("useActivityFeed", () => {
   test("behavior: disabled when logs is undefined", ({ renderWithProviders }) => {
@@ -106,5 +124,45 @@ describe("useActivityFeed", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
+  });
+
+  test("recomputes when logs change without tx metadata", async ({ createWrapper, signer }) => {
+    const ctx = createWrapper({ signer });
+    const logA = transferLog(USER, OTHER, bytes32("aa".repeat(32)));
+    const logB = transferLog(USER, OTHER, bytes32("bb".repeat(32)));
+
+    const { result, rerender } = renderHook(
+      ({ logs }) =>
+        useActivityFeed({
+          tokenAddress: TOKEN,
+          userAddress: USER,
+          logs,
+          decrypt: false,
+        }),
+      {
+        wrapper: ctx.Wrapper,
+        initialProps: {
+          logs: [logA] as RawLog[],
+        },
+      },
+    );
+
+    await waitFor(() =>
+      expect(result.current.data?.[0]?.amount).toEqual({
+        type: "encrypted",
+        handle: bytes32("aa".repeat(32)),
+      }),
+    );
+
+    rerender({
+      logs: [logB],
+    });
+
+    await waitFor(() =>
+      expect(result.current.data?.[0]?.amount).toEqual({
+        type: "encrypted",
+        handle: bytes32("bb".repeat(32)),
+      }),
+    );
   });
 });

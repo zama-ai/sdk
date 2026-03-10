@@ -1,5 +1,5 @@
 import { concat, encodePacked, keccak256, pad, toBytes, toHex, type Hex } from "viem";
-import type { Address } from "../relayer-sdk.types";
+import { type Address } from "viem";
 import { FHE_BIT_WIDTHS, FheType, HANDLE_VERSION, PREHANDLE_MASK } from "./constants";
 import { EncryptionFailedError } from "../../token/errors";
 

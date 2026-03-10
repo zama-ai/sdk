@@ -4,7 +4,7 @@ import {
   loadPendingUnshield,
   clearPendingUnshield,
 } from "../pending-unshield";
-import type { Address, Hex } from "../token.types";
+import type { Address, Hex } from "viem";
 
 const TX_HASH = "0xabc123" as Hex;
 

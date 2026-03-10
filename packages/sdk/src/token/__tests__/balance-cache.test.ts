@@ -1,7 +1,7 @@
 import { describe, it, expect } from "../../test-fixtures";
 import { loadCachedBalance, saveCachedBalance, clearAllCachedBalances } from "../balance-cache";
 
-const OWNER = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const OWNER = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa";
 const HANDLE = "0x00000000000000000000000000000000000000000000000000000000000000ab";
 const HANDLE2 = "0x00000000000000000000000000000000000000000000000000000000000000cd";
 
@@ -62,8 +62,8 @@ describe("balance-cache", () => {
   });
 
   it("is case-insensitive for token, owner, and handle", async ({ storage, tokenAddress }) => {
-    const upperToken = tokenAddress.toUpperCase() as `0x${string}`;
-    const upperOwner = OWNER.toUpperCase() as `0x${string}`;
+    const upperToken = tokenAddress.toLowerCase() as `0x${string}`;
+    const upperOwner = OWNER.toLowerCase() as `0x${string}`;
     const upperHandle = HANDLE.toUpperCase() as `0x${string}`;
     await saveCachedBalance({
       storage,

@@ -1,9 +1,10 @@
 /* eslint-disable no-empty-pattern */
-import type { Address } from "../../relayer/relayer-sdk.types";
+
 import { test as base, describe, expect, vi } from "../../test-fixtures";
 import { eip1193Subscribe } from "../eip1193-subscribe";
+import type { Address } from "viem";
 
-const ADDR_A = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" as Address;
+const ADDR_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 /** Minimal fake EIP-1193 provider with manual event dispatch. */
 function createFakeProvider() {

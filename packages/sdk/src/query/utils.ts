@@ -1,5 +1,3 @@
-export { normalizeHandle } from "../utils";
-
 // Adapted from the wagmi codebase
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-wrapper-object-types
 function isPlainObject(value: any): value is Object {
