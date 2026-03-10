@@ -21,15 +21,3 @@ export {
   writeWrapContract,
   writeWrapETHContract,
 } from "./contracts";
-
-// Re-export types used in ViemSigner's public API
-export type {
-  GenericSigner,
-  SignerLifecycleCallbacks,
-  ContractCallConfig,
-  TransactionReceipt,
-  Hex,
-} from "../token/token.types";
-export type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-export type { BatchTransferData } from "../contracts";
-export type { RawLog } from "../events/onchain-events";

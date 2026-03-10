@@ -1,11 +1,6 @@
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { EIP1193EventMap, EIP1193Provider } from "viem";
+import { getAddress as checksumAddress, type Address } from "viem";
 import type { SignerLifecycleCallbacks } from "./token.types";
-
-/** Minimal EIP-1193 provider shape needed for lifecycle subscriptions. */
-interface EIP1193Subscribable {
-  on(event: string, listener: (...args: never[]) => void): void;
-  removeListener(event: string, listener: (...args: never[]) => void): void;
-}
 
 /**
  * Subscribe to EIP-1193 wallet lifecycle events on a raw provider.
@@ -18,38 +13,58 @@ interface EIP1193Subscribable {
  * @returns An unsubscribe function (no-op when provider is undefined).
  */
 export function eip1193Subscribe(
-  provider: EIP1193Subscribable | undefined,
+  provider: Pick<EIP1193Provider, "on" | "removeListener"> | undefined,
   getAddress: () => Promise<Address>,
-  { onDisconnect = () => {}, onAccountChange = () => {} }: SignerLifecycleCallbacks,
+  { onDisconnect = () => {}, onAccountChange = () => {}, onChainChange }: SignerLifecycleCallbacks,
 ): () => void {
   if (!provider) return () => {};
 
-  let currentAddress: string | undefined;
+  let currentAddress: Address | undefined;
   getAddress()
     .then((addr) => {
       currentAddress = addr;
     })
     .catch(() => {});
 
-  const handleAccountsChanged = (accounts: Address[]) => {
+  const handleAccountsChanged: EIP1193EventMap["accountsChanged"] = (accounts) => {
     if (accounts.length === 0) {
       currentAddress = undefined;
       return onDisconnect();
     }
-    if (
-      accounts[0] &&
-      (!currentAddress || accounts[0].toLowerCase() !== currentAddress.toLowerCase())
-    ) {
-      onAccountChange(accounts[0]);
+    if (!accounts[0]) return;
+    let nextAddress: Address;
+    try {
+      nextAddress = checksumAddress(accounts[0]);
+    } catch {
+      return;
     }
-    currentAddress = accounts[0];
+    if (!currentAddress || nextAddress !== currentAddress) {
+      onAccountChange(nextAddress);
+    }
+    currentAddress = nextAddress;
   };
+  const handleDisconnect: EIP1193EventMap["disconnect"] = () => onDisconnect();
+  const handleChainChanged = onChainChange
+    ? (chainId: string) => onChainChange(Number.parseInt(chainId, 16))
+    : undefined;
 
   provider.on("accountsChanged", handleAccountsChanged);
-  provider.on("disconnect", onDisconnect);
+  provider.on("disconnect", handleDisconnect);
+  if (handleChainChanged) {
+    (provider as EIP1193Provider).on(
+      "chainChanged",
+      handleChainChanged as EIP1193EventMap["chainChanged"],
+    );
+  }
 
   return () => {
     provider.removeListener("accountsChanged", handleAccountsChanged);
-    provider.removeListener("disconnect", onDisconnect);
+    provider.removeListener("disconnect", handleDisconnect);
+    if (handleChainChanged) {
+      (provider as EIP1193Provider).removeListener(
+        "chainChanged",
+        handleChainChanged as EIP1193EventMap["chainChanged"],
+      );
+    }
   };
 }

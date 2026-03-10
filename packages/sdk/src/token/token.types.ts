@@ -1,7 +1,12 @@
 import type { RawLog } from "../events/onchain-events";
-import type { Address, EIP712TypedData, Hex } from "../relayer/relayer-sdk.types";
-export type { Address } from "../relayer/relayer-sdk.types";
-export type { Hex } from "../relayer/relayer-sdk.types";
+import type { Address, Hex } from "viem";
+import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type {
+  Abi,
+  ContractFunctionArgs,
+  ContractFunctionName,
+  ContractFunctionReturnType,
+} from "viem";
 
 /** Framework-agnostic transaction receipt (only the fields the SDK needs). */
 export interface TransactionReceipt {
@@ -17,19 +22,70 @@ export interface TransactionResult {
   receipt: TransactionReceipt;
 }
 
+export type ContractAbi = Abi | readonly unknown[];
+
+export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<
+  TAbi,
+  "pure" | "view"
+>;
+
+export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<
+  TAbi,
+  "nonpayable" | "payable"
+>;
+
+export type ReadContractArgs<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>,
+> = ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>;
+
+export type WriteContractArgs<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>,
+> = ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>;
+
+export type ReadContractReturnType<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>,
+  TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>,
+> = ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>;
+
 /**
- * Minimal contract call configuration.
- * Matches the shape returned by contract call builder functions in `src/contracts/`.
+ * Typed read-contract configuration.
+ * Matches the shape returned by read contract builders in `src/contracts/`.
  */
-export interface ContractCallConfig {
+export interface ReadContractConfig<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>,
+  TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>,
+> {
   /** Target contract address. */
   readonly address: Address;
   /** ABI fragment for the function being called. */
-  readonly abi: readonly unknown[];
+  readonly abi: TAbi;
   /** Solidity function name. */
-  readonly functionName: string;
-  /** Encoded function arguments. */
-  readonly args: readonly unknown[];
+  readonly functionName: TFunctionName;
+  /** Contract call arguments inferred from the ABI and function name. */
+  readonly args: TArgs;
+}
+
+/**
+ * Typed write-contract configuration.
+ * Matches the shape returned by write contract builders in `src/contracts/`.
+ */
+export interface WriteContractConfig<
+  TAbi extends ContractAbi = ContractAbi,
+  TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>,
+  TArgs extends WriteContractArgs<TAbi, TFunctionName> = WriteContractArgs<TAbi, TFunctionName>,
+> {
+  /** Target contract address. */
+  readonly address: Address;
+  /** ABI fragment for the function being called. */
+  readonly abi: TAbi;
+  /** Solidity function name. */
+  readonly functionName: TFunctionName;
+  /** Contract call arguments inferred from the ABI and function name. */
+  readonly args: TArgs;
   /** Native value to send with the transaction (for payable functions). */
   readonly value?: bigint;
   /** Gas limit override. */
@@ -42,6 +98,8 @@ export interface SignerLifecycleCallbacks {
   onDisconnect?: () => void;
   /** Called when the active account changes. */
   onAccountChange?: (newAddress: Address) => void;
+  /** Called when the connected chain changes. */
+  onChainChange?: (newChainId: number) => void;
 }
 
 /**
@@ -57,15 +115,25 @@ export interface GenericSigner {
   /** Sign EIP-712 typed data (used for decrypt authorization). */
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
   /** Send a write transaction and return the tx hash. */
-  writeContract<C extends ContractCallConfig>(config: C): Promise<Hex>;
+  writeContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(
+    config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
+  ): Promise<Hex>;
   /** Execute a read-only call and return the decoded result. */
-  readContract<T = unknown, C extends ContractCallConfig = ContractCallConfig>(
-    config: C,
-  ): Promise<T>;
+  readContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends ReadFunctionName<TAbi>,
+    const TArgs extends ReadContractArgs<TAbi, TFunctionName>,
+  >(
+    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
+  ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
   /** Wait for a transaction to be mined and return its receipt. */
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   /**
-   * Subscribe to wallet lifecycle events (disconnect, account change).
+   * Subscribe to wallet lifecycle events (disconnect, account change, chain change).
    * Returns an unsubscribe function. When no EIP-1193 provider is available,
    * returns a no-op unsubscribe.
    *
@@ -93,11 +161,11 @@ export interface GenericStorage {
 /** Stored FHE credential data (serialized as JSON in the credential store). */
 export interface StoredCredentials {
   /** FHE public key (hex-encoded). */
-  publicKey: string;
+  publicKey: Hex;
   /** FHE private key (hex-encoded, encrypted at rest via AES-GCM). */
-  privateKey: string;
+  privateKey: Hex;
   /** EIP-712 signature authorizing decryption. */
-  signature: string;
+  signature: Hex;
   /** Contract addresses this credential is authorized for. */
   contractAddresses: Address[];
   /** Unix timestamp (seconds) when the credential became valid. */
@@ -116,18 +184,18 @@ export interface UnshieldCallbacks {
   onFinalizeSubmitted?: (txHash: Hex) => void;
 }
 
-// Re-export errors for backward compatibility
-export {
-  ZamaErrorCode,
-  type ZamaErrorCode as ZamaErrorCodeType,
-  ZamaError,
-  SigningRejectedError,
-  SigningFailedError,
-  EncryptionFailedError,
-  DecryptionFailedError,
-  ApprovalFailedError,
-  TransactionRevertedError,
-  InvalidCredentialsError,
-  NoCiphertextError,
-  RelayerRequestFailedError,
-} from "./errors";
+/** Progress callbacks for multi-step shield operations. */
+export interface ShieldCallbacks {
+  /** Fired after the ERC-20 approval transaction is submitted (skipped when `approvalStrategy: "skip"`). */
+  onApprovalSubmitted?: (txHash: Hex) => void;
+  /** Fired after the shield (wrap) transaction is submitted. */
+  onShieldSubmitted?: (txHash: Hex) => void;
+}
+
+/** Progress callbacks for multi-step confidential transfer operations. */
+export interface TransferCallbacks {
+  /** Fired after FHE encryption of the transfer amount completes. */
+  onEncryptComplete?: () => void;
+  /** Fired after the transfer transaction is submitted. */
+  onTransferSubmitted?: (txHash: Hex) => void;
+}

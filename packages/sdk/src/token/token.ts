@@ -12,9 +12,9 @@ import {
   wrapContract,
   wrapETHContract,
 } from "../contracts";
+import { getAddress, hexToBigInt, Address, Hex } from "viem";
 import { findUnwrapRequested } from "../events/onchain-events";
-import type { Address, Hex } from "../relayer/relayer-sdk.types";
-import { normalizeAddress } from "../utils";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import {
   ZamaError,
   EncryptionFailedError,
@@ -24,7 +24,12 @@ import {
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { TransactionResult, UnshieldCallbacks } from "./token.types";
+import type {
+  TransactionResult,
+  UnshieldCallbacks,
+  ShieldCallbacks,
+  TransferCallbacks,
+} from "./token.types";
 
 /** Coerce an unknown caught value to an Error instance. */
 function toError(error: unknown): Error {
@@ -53,14 +58,14 @@ export class Token extends ReadonlyToken {
 
   constructor(config: TokenConfig) {
     super(config);
-    this.wrapper = config.wrapper ? normalizeAddress(config.wrapper, "wrapper") : this.address;
+    this.wrapper = config.wrapper ? getAddress(config.wrapper) : this.address;
   }
 
   async #getUnderlying(): Promise<Address> {
     if (this.#underlying !== undefined) return this.#underlying;
     if (!this.#underlyingPromise) {
       this.#underlyingPromise = this.signer
-        .readContract<Address>(underlyingContract(this.wrapper))
+        .readContract(underlyingContract(this.wrapper))
         .then((v) => {
           this.#underlying = v;
           this.#underlyingPromise = null;
@@ -91,8 +96,12 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.confidentialTransfer("0xRecipient", 1000n);
    * ```
    */
-  async confidentialTransfer(to: Address, amount: bigint): Promise<TransactionResult> {
-    const normalizedTo = normalizeAddress(to, "to");
+  async confidentialTransfer(
+    to: Address,
+    amount: bigint,
+    callbacks?: TransferCallbacks,
+  ): Promise<TransactionResult> {
+    const normalizedTo = getAddress(to);
 
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
@@ -100,11 +109,12 @@ export class Token extends ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
       ({ handles, inputProof } = await this.sdk.encrypt({
-        values: [amount],
+        values: [{ value: amount, type: "euint64" }],
         contractAddress: this.address,
         userAddress: await this.signer.getAddress(),
       }));
       this.emit({ type: ZamaSDKEvents.EncryptEnd, durationMs: Date.now() - t0 });
+      safeCallback(() => callbacks?.onEncryptComplete?.());
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.EncryptError,
@@ -126,6 +136,7 @@ export class Token extends ReadonlyToken {
         confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
       );
       this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
+      safeCallback(() => callbacks?.onTransferSubmitted?.(txHash));
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
@@ -161,9 +172,10 @@ export class Token extends ReadonlyToken {
     from: Address,
     to: Address,
     amount: bigint,
+    callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
-    const normalizedFrom = normalizeAddress(from, "from");
-    const normalizedTo = normalizeAddress(to, "to");
+    const normalizedFrom = getAddress(from);
+    const normalizedTo = getAddress(to);
 
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
@@ -171,11 +183,12 @@ export class Token extends ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
       ({ handles, inputProof } = await this.sdk.encrypt({
-        values: [amount],
+        values: [{ value: amount, type: "euint64" }],
         contractAddress: this.address,
         userAddress: normalizedFrom,
       }));
       this.emit({ type: ZamaSDKEvents.EncryptEnd, durationMs: Date.now() - t0 });
+      safeCallback(() => callbacks?.onEncryptComplete?.());
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.EncryptError,
@@ -203,6 +216,7 @@ export class Token extends ReadonlyToken {
         ),
       );
       this.emit({ type: ZamaSDKEvents.TransferFromSubmitted, txHash });
+      safeCallback(() => callbacks?.onTransferSubmitted?.(txHash));
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
@@ -233,7 +247,7 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async approve(spender: Address, until?: number): Promise<TransactionResult> {
-    const normalizedSpender = normalizeAddress(spender, "spender");
+    const normalizedSpender = getAddress(spender);
     try {
       const txHash = await this.signer.writeContract(
         setOperatorContract(this.address, normalizedSpender, until),
@@ -255,23 +269,26 @@ export class Token extends ReadonlyToken {
   }
 
   /**
-   * Check if a spender is an approved operator for the connected wallet.
+   * Check if a spender is an approved operator for a given holder.
    *
    * @param spender - The address to check operator approval for.
-   * @returns `true` if the spender is an approved operator for the connected wallet.
+   * @param holder - The token holder address. Defaults to the connected wallet.
+   * @returns `true` if the spender is an approved operator for the holder.
    *
    * @example
    * ```ts
    * if (await token.isApproved("0xSpender")) {
-   *   // spender can call transferFrom
+   *   // spender can call transferFrom on behalf of connected wallet
    * }
+   * // or check for a specific holder:
+   * if (await token.isApproved("0xSpender", "0xHolder")) { ... }
    * ```
    */
-  async isApproved(spender: Address): Promise<boolean> {
-    const normalizedSpender = normalizeAddress(spender, "spender");
-    const holder = await this.signer.getAddress();
-    return this.signer.readContract<boolean>(
-      isOperatorContract(this.address, holder, normalizedSpender),
+  async isApproved(spender: Address, holder?: Address): Promise<boolean> {
+    const normalizedSpender = getAddress(spender);
+    const resolvedHolder = holder ? getAddress(holder) : await this.signer.getAddress();
+    return this.signer.readContract(
+      isOperatorContract(this.address, resolvedHolder, normalizedSpender),
     );
   }
 
@@ -298,6 +315,10 @@ export class Token extends ReadonlyToken {
     options?: {
       approvalStrategy?: "max" | "exact" | "skip";
       fees?: bigint;
+      /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
+      to?: Address;
+      /** Progress callbacks for the multi-step shield flow. */
+      callbacks?: ShieldCallbacks;
     },
   ): Promise<TransactionResult> {
     const underlying = await this.#getUnderlying();
@@ -308,13 +329,14 @@ export class Token extends ReadonlyToken {
 
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
-      await this.#ensureAllowance(amount, strategy === "max");
+      await this.#ensureAllowance(amount, strategy === "max", options?.callbacks);
     }
 
     try {
-      const address = await this.signer.getAddress();
-      const txHash = await this.signer.writeContract(wrapContract(this.wrapper, address, amount));
+      const recipient = options?.to ? getAddress(options.to) : await this.signer.getAddress();
+      const txHash = await this.signer.writeContract(wrapContract(this.wrapper, recipient, amount));
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
+      safeCallback(() => options?.callbacks?.onShieldSubmitted?.(txHash));
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
@@ -388,7 +410,7 @@ export class Token extends ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
       ({ handles, inputProof } = await this.sdk.encrypt({
-        values: [amount],
+        values: [{ value: amount, type: "euint64" }],
         contractAddress: this.wrapper,
         userAddress,
       }));
@@ -551,9 +573,9 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.finalizeUnwrap(event.encryptedAmount);
    * ```
    */
-  async finalizeUnwrap(burnAmountHandle: Address): Promise<TransactionResult> {
+  async finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult> {
     let clearValue: bigint;
-    let decryptionProof: Address;
+    let decryptionProof: Hex;
 
     const t0 = Date.now();
     try {
@@ -562,7 +584,7 @@ export class Token extends ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
       decryptionProof = result.decryptionProof;
       try {
-        clearValue = BigInt(result.abiEncodedClearValues);
+        clearValue = hexToBigInt(result.abiEncodedClearValues);
       } catch {
         throw new DecryptionFailedError(
           `Cannot parse decrypted value: ${result.abiEncodedClearValues}`,
@@ -623,7 +645,7 @@ export class Token extends ReadonlyToken {
     try {
       if (approvalAmount > 0n) {
         const userAddress = await this.signer.getAddress();
-        const currentAllowance = await this.signer.readContract<bigint>(
+        const currentAllowance = await this.signer.readContract(
           allowanceContract(underlying, userAddress, this.wrapper),
         );
 
@@ -684,11 +706,15 @@ export class Token extends ReadonlyToken {
     return finalizeResult;
   }
 
-  async #ensureAllowance(amount: bigint, maxApproval: boolean): Promise<void> {
+  async #ensureAllowance(
+    amount: bigint,
+    maxApproval: boolean,
+    callbacks?: ShieldCallbacks,
+  ): Promise<void> {
     const underlying = await this.#getUnderlying();
 
     const userAddress = await this.signer.getAddress();
-    const allowance = await this.signer.readContract<bigint>(
+    const allowance = await this.signer.readContract(
       allowanceContract(underlying, userAddress, this.wrapper),
     );
 
@@ -704,7 +730,11 @@ export class Token extends ReadonlyToken {
 
       const approvalAmount = maxApproval ? 2n ** 256n - 1n : amount;
 
-      await this.signer.writeContract(approveContract(underlying, this.wrapper, approvalAmount));
+      const txHash = await this.signer.writeContract(
+        approveContract(underlying, this.wrapper, approvalAmount),
+      );
+      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
+      safeCallback(() => callbacks?.onApprovalSubmitted?.(txHash));
     } catch (error) {
       if (error instanceof ZamaError) throw error;
       throw new ApprovalFailedError("ERC-20 approval failed", {

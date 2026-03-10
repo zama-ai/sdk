@@ -1,23 +1,30 @@
 import type {
   Address,
-  ContractCallConfig,
+  ContractAbi,
   EIP712TypedData,
   GenericSigner,
   Hex,
+  ReadContractArgs,
+  ReadContractConfig,
+  ReadContractReturnType,
+  ReadFunctionName,
   SignerLifecycleCallbacks,
   TransactionReceipt,
+  WriteContractArgs,
+  WriteFunctionName,
+  WriteContractConfig,
 } from "@zama-fhe/sdk";
 import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 import {
   getChainId,
+  getAccount,
   readContract,
   signTypedData,
   waitForTransactionReceipt,
   watchConnection,
   writeContract,
 } from "wagmi/actions";
-import { getConnection } from "./compat";
 
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
@@ -41,7 +48,7 @@ export class WagmiSigner implements GenericSigner {
   }
 
   async getAddress(): Promise<Address> {
-    const account = getConnection(this.config);
+    const account = getAccount(this.config);
     if (!account?.address) {
       throw new TypeError("Invalid address");
     }
@@ -58,12 +65,22 @@ export class WagmiSigner implements GenericSigner {
     });
   }
 
-  async writeContract<C extends ContractCallConfig>(config: C): Promise<Hex> {
+  async writeContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
     return writeContract(this.config, config as Parameters<typeof writeContract>[1]);
   }
 
-  async readContract<T, C extends ContractCallConfig = ContractCallConfig>(config: C): Promise<T> {
-    return readContract(this.config, config) as Promise<T>;
+  async readContract<
+    const TAbi extends ContractAbi,
+    TFunctionName extends ReadFunctionName<TAbi>,
+    const TArgs extends ReadContractArgs<TAbi, TFunctionName>,
+  >(
+    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
+  ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>> {
+    return readContract(this.config, config);
   }
 
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
@@ -86,6 +103,7 @@ export class WagmiSigner implements GenericSigner {
   subscribe({
     onDisconnect = () => {},
     onAccountChange = () => {},
+    onChainChange = () => {},
   }: SignerLifecycleCallbacks): () => void {
     return watchConnection(this.config, {
       onChange(connection, prevConnection) {
@@ -98,6 +116,13 @@ export class WagmiSigner implements GenericSigner {
           connection.address !== prevConnection.address
         ) {
           onAccountChange(connection.address);
+        }
+        if (
+          typeof prevConnection.chainId === "number" &&
+          typeof connection.chainId === "number" &&
+          connection.chainId !== prevConnection.chainId
+        ) {
+          onChainChange(connection.chainId);
         }
       },
     });

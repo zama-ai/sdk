@@ -1,13 +1,17 @@
-import type { Address } from "../relayer/relayer-sdk.types";
+import { getAddress, type Address } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import { normalizeAddress } from "../utils";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
-import { CredentialsManager, computeStoreKey } from "./credentials-manager";
+import { CredentialsManager } from "./credentials-manager";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
+import type { SignerLifecycleCallbacks } from "./token.types";
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -23,10 +27,23 @@ export interface ZamaSDKConfig {
    * implementation for web extensions so signatures survive service worker restarts.
    */
   sessionStorage?: GenericStorage;
-  /** Number of days FHE credentials remain valid. Default: `1`. Set `0` to require a wallet signature on every decrypt (high-security mode). */
-  credentialDurationDays?: number;
+  /**
+   * How long the ML-KEM re-encryption keypair remains valid, in seconds.
+   * Default: `86400` (1 day). Must be a positive number — `0` is rejected
+   * because the keypair is required to establish the relayer connection.
+   */
+  keypairTTL?: number;
+  /**
+   * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
+   * Default: `2592000` (30 days).
+   * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
+   * - Positive number: seconds until the session signature expires and requires re-authentication.
+   */
+  sessionTTL?: number;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
+  /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
+  signerLifecycleCallbacks?: SignerLifecycleCallbacks;
 }
 
 /**
@@ -42,7 +59,7 @@ export class ZamaSDK {
   readonly #onEvent: ZamaSDKEventListener;
   #unsubscribeSigner?: () => void;
   #identityReady: Promise<void>;
-  #lastAddress: string | null = null;
+  #lastAddress: Address | null = null;
   #lastChainId: number | null = null;
 
   constructor(config: ZamaSDKConfig) {
@@ -56,27 +73,59 @@ export class ZamaSDK {
       signer: this.signer,
       storage: this.storage,
       sessionStorage: this.sessionStorage,
-      durationDays: config.credentialDurationDays ?? 1,
+      keypairTTL: (() => {
+        const ttl = config.keypairTTL ?? 86400;
+        if (ttl <= 0) throw new Error("keypairTTL must be a positive number (seconds)");
+        return ttl;
+      })(),
+      sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: this.#onEvent,
     });
     this.#identityReady = this.#initIdentity();
 
     if (this.signer.subscribe) {
+      const lifecycleCallbacks = config.signerLifecycleCallbacks;
+      const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
+        void effect().catch((error) => {
+          this.#onEvent?.({
+            type: ZamaSDKEvents.TransactionError,
+            operation,
+            error: toError(error),
+            timestamp: Date.now(),
+          });
+        });
+      };
       this.#unsubscribeSigner = this.signer.subscribe({
         onDisconnect: () => {
-          void this.#revokeByTrackedIdentity().then(() => {
+          runLifecycleEffect("signerDisconnect", async () => {
+            await this.#revokeByTrackedIdentity();
             this.#lastAddress = null;
             this.#lastChainId = null;
+            lifecycleCallbacks?.onDisconnect?.();
           });
         },
         onAccountChange: (newAddress: Address) => {
-          void this.#revokeByTrackedIdentity().then(async () => {
-            this.#lastAddress = newAddress.toLowerCase();
+          runLifecycleEffect("signerAccountChange", async () => {
+            await this.#revokeByTrackedIdentity();
+            this.#lastAddress = getAddress(newAddress);
             try {
               this.#lastChainId = await this.signer.getChainId();
             } catch {
               // Signer may not be ready — keep previous chainId
             }
+            lifecycleCallbacks?.onAccountChange?.(newAddress);
+          });
+        },
+        onChainChange: (newChainId: number) => {
+          runLifecycleEffect("signerChainChange", async () => {
+            await this.#revokeByTrackedIdentity();
+            this.#lastChainId = newChainId;
+            try {
+              this.#lastAddress = await this.signer.getAddress();
+            } catch {
+              // Signer may not be ready — keep previous address
+            }
+            lifecycleCallbacks?.onChainChange?.(newChainId);
           });
         },
       });
@@ -85,7 +134,7 @@ export class ZamaSDK {
 
   async #initIdentity(): Promise<void> {
     try {
-      const address = (await this.signer.getAddress()).toLowerCase();
+      const address = await this.signer.getAddress();
       const chainId = await this.signer.getChainId();
       // Only commit both values atomically so revokeByTrackedIdentity
       // never sees a partial (address-only) state.
@@ -99,7 +148,7 @@ export class ZamaSDK {
   async #revokeByTrackedIdentity(): Promise<void> {
     await this.#identityReady;
     if (this.#lastAddress == null || this.#lastChainId == null) return;
-    const storeKey = await computeStoreKey(this.#lastAddress, this.#lastChainId);
+    const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
     await this.sessionStorage.delete(storeKey);
     this.#onEvent?.({
       type: ZamaSDKEvents.CredentialsRevoked,
@@ -121,7 +170,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
-      address: normalizeAddress(address, "address"),
+      address: getAddress(address),
       onEvent: this.#onEvent,
     });
   }
@@ -141,8 +190,8 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
-      address: normalizeAddress(address, "address"),
-      wrapper: wrapper ? normalizeAddress(wrapper, "wrapper") : undefined,
+      address: getAddress(address),
+      wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,
     });
   }
@@ -192,9 +241,9 @@ export class ZamaSDK {
    */
   async revokeSession(): Promise<void> {
     await this.#identityReady;
-    const address = this.#lastAddress ?? (await this.signer.getAddress()).toLowerCase();
+    const address = this.#lastAddress ?? (await this.signer.getAddress());
     const chainId = this.#lastChainId ?? (await this.signer.getChainId());
-    const storeKey = await computeStoreKey(address, chainId);
+    const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.sessionStorage.delete(storeKey);
     this.#onEvent?.({
       type: ZamaSDKEvents.CredentialsRevoked,

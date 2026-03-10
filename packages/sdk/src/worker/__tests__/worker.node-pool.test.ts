@@ -1,7 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi } from "vitest";
+import { describe, it, expect, beforeEach } from "../../test-fixtures";
 import type { NodeWorkerPoolConfig } from "../worker.node-pool";
 import { NodeWorkerPool } from "../worker.node-pool";
-import type { ZKProofLike } from "../../relayer/relayer-sdk.types";
+import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
+
+const HANDLE = ("0x" + "11".repeat(32)) as `0x${string}`;
 
 vi.mock("../worker.node-client", () => {
   const NodeWorkerClient = vi.fn().mockImplementation(function () {
@@ -124,43 +127,47 @@ describe("NodeWorkerPool", () => {
     expect(instance.generateKeypair).toHaveBeenCalled();
 
     await pool.createEIP712({
-      publicKey: "pk",
+      publicKey: "0xpk",
       contractAddresses: ["0x1"],
       startTimestamp: 1000,
       durationDays: 7,
     });
     expect(instance.createEIP712).toHaveBeenCalledWith({
-      publicKey: "pk",
+      publicKey: "0xpk",
       contractAddresses: ["0x1"],
       startTimestamp: 1000,
       durationDays: 7,
     });
 
-    await pool.encrypt({ values: [1n], contractAddress: "0xC", userAddress: "0xU" });
+    await pool.encrypt({
+      values: [{ value: 1n, type: "euint8" as const }],
+      contractAddress: "0xC",
+      userAddress: "0xU",
+    });
     expect(instance.encrypt).toHaveBeenCalledWith({
-      values: [1n],
+      values: [{ value: 1n, type: "euint8" as const }],
       contractAddress: "0xC",
       userAddress: "0xU",
     });
 
     await pool.userDecrypt({
-      handles: ["h1"],
+      handles: [HANDLE],
       contractAddress: "0xC",
       signedContractAddresses: ["0xS"],
-      privateKey: "sk",
-      publicKey: "pk",
-      signature: "sig",
+      privateKey: "0xsk",
+      publicKey: "0xpk",
+      signature: "0xsig",
       signerAddress: "0xA",
       startTimestamp: 100,
       durationDays: 7,
     });
     expect(instance.userDecrypt).toHaveBeenCalled();
 
-    await pool.publicDecrypt(["h1"]);
-    expect(instance.publicDecrypt).toHaveBeenCalledWith(["h1"]);
+    await pool.publicDecrypt([HANDLE]);
+    expect(instance.publicDecrypt).toHaveBeenCalledWith([HANDLE]);
 
     await pool.createDelegatedUserDecryptEIP712({
-      publicKey: "pk",
+      publicKey: "0xpk",
       contractAddresses: ["0x1"],
       delegatorAddress: "0xD",
       startTimestamp: 100,
@@ -169,12 +176,12 @@ describe("NodeWorkerPool", () => {
     expect(instance.createDelegatedUserDecryptEIP712).toHaveBeenCalled();
 
     await pool.delegatedUserDecrypt({
-      handles: ["h1"],
+      handles: [HANDLE],
       contractAddress: "0xC",
       signedContractAddresses: ["0xS"],
-      privateKey: "sk",
-      publicKey: "pk",
-      signature: "sig",
+      privateKey: "0xsk",
+      publicKey: "0xpk",
+      signature: "0xsig",
       delegatorAddress: "0xD",
       delegateAddress: "0xE",
       startTimestamp: 100,

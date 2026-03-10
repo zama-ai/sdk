@@ -8,6 +8,9 @@ module.exports = {
         preset: "conventionalcommits",
         releaseRules: [
           { breaking: true, release: "major" },
+          { scope: "security", release: "patch" },
+          { scope: "release", release: "patch" },
+          { scope: "no-release", release: false },
           { type: "feat", release: "minor" },
           { type: "fix", release: "patch" },
           { type: "perf", release: "patch" },
@@ -19,9 +22,6 @@ module.exports = {
           { type: "docs", release: false },
           { type: "style", release: false },
           { type: "test", release: false },
-          { scope: "security", release: "patch" },
-          { scope: "release", release: "patch" },
-          { scope: "no-release", release: false },
         ],
       },
     ],
@@ -42,8 +42,6 @@ module.exports = {
       "@semantic-release/exec",
       {
         prepareCmd: "node scripts/release/prepare-lockstep.mjs ${nextRelease.version}",
-        publishCmd:
-          "bash scripts/release/publish-lockstep.sh ${nextRelease.version} ${nextRelease.channel}",
       },
     ],
     [

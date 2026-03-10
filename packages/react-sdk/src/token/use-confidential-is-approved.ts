@@ -1,54 +1,37 @@
 "use client";
 
-import { useQuery, useSuspenseQuery, skipToken, type UseQueryOptions } from "@tanstack/react-query";
-import type { Address, Token } from "@zama-fhe/sdk";
+import { useQuery, useSuspenseQuery } from "../utils/query";
+import { skipToken, type UseQueryOptions } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import {
+  confidentialIsApprovedQueryOptions,
+  signerAddressQueryOptions,
+  zamaQueryKeys,
+} from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
 
-/**
- * Query key factory for confidential approval queries.
- * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
- */
-export const confidentialIsApprovedQueryKeys = {
-  /** Match all approval queries. */
-  all: ["confidentialIsApproved"] as const,
-  /** Match approval queries for a specific token. */
-  token: (tokenAddress: string) => ["confidentialIsApproved", tokenAddress] as const,
-  /** Match approval queries for a specific token + spender pair. */
-  spender: (tokenAddress: string, spender: string) =>
-    ["confidentialIsApproved", tokenAddress, spender] as const,
-} as const;
+export { confidentialIsApprovedQueryOptions };
 
 /** Configuration for {@link useConfidentialIsApproved}. */
 export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
   /** Address to check approval for. Pass `undefined` to disable the query. */
   spender: Address | undefined;
+  /** Token holder address. Defaults to the connected wallet. */
+  holder?: Address;
 }
 
 /** Configuration for {@link useConfidentialIsApprovedSuspense}. */
 export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
   /** Address to check approval for. */
   spender: Address;
+  /** Token holder address. Defaults to the connected wallet. */
+  holder?: Address;
 }
 
 /**
- * TanStack Query options factory for confidential approval check.
+ * Check if a spender is an approved operator for a given holder (defaults to connected wallet).
  *
- * @param token - A `Token` instance.
- * @param spender - Address to check approval for.
- * @returns Query options with `queryKey`, `queryFn`, and `staleTime`.
- */
-export function confidentialIsApprovedQueryOptions(token: Token, spender: Address) {
-  return {
-    queryKey: confidentialIsApprovedQueryKeys.spender(token.address, spender),
-    queryFn: () => token.isApproved(spender),
-    staleTime: 30_000,
-  } as const;
-}
-
-/**
- * Check if a spender is an approved operator for the connected wallet.
- *
- * @param config - Token address and spender to check.
+ * @param config - Token address, spender, and optional holder to check.
  * @param options - React Query options (forwarded to `useQuery`).
  * @returns Query result with `data: boolean`.
  *
@@ -57,6 +40,7 @@ export function confidentialIsApprovedQueryOptions(token: Token, spender: Addres
  * const { data: isApproved } = useConfidentialIsApproved({
  *   tokenAddress: "0xToken",
  *   spender: "0xSpender",
+ *   holder: "0xHolder", // optional
  * });
  * ```
  */
@@ -64,17 +48,31 @@ export function useConfidentialIsApproved(
   config: UseConfidentialIsApprovedConfig,
   options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
 ) {
-  const { spender, ...tokenConfig } = config;
+  const { spender, holder, ...tokenConfig } = config;
+  const userEnabled = options?.enabled;
   const token = useToken(tokenConfig);
+  const holderQuery = useQuery<Address>({
+    ...signerAddressQueryOptions(token.signer),
+    enabled: holder === undefined,
+  });
+  const resolvedHolder = holder ?? holderQuery.data;
 
-  return useQuery<boolean, Error>({
-    ...(spender
-      ? confidentialIsApprovedQueryOptions(token, spender)
+  const baseOpts =
+    spender && resolvedHolder
+      ? confidentialIsApprovedQueryOptions(token.signer, token.address, {
+          holder: resolvedHolder,
+          spender,
+        })
       : {
-          queryKey: confidentialIsApprovedQueryKeys.spender(config.tokenAddress, ""),
+          queryKey: zamaQueryKeys.confidentialIsApproved.token(config.tokenAddress),
           queryFn: skipToken,
-        }),
+        };
+  const factoryEnabled = "enabled" in baseOpts ? (baseOpts.enabled ?? true) : true;
+
+  return useQuery({
+    ...baseOpts,
     ...options,
+    enabled: factoryEnabled && (userEnabled ?? true),
   });
 }
 
@@ -82,7 +80,7 @@ export function useConfidentialIsApproved(
  * Suspense variant of {@link useConfidentialIsApproved}.
  * Suspends rendering until the approval check resolves.
  *
- * @param config - Token address and spender to check.
+ * @param config - Token address, spender, and optional holder to check.
  * @returns Suspense query result with `data: boolean`.
  *
  * @example
@@ -90,12 +88,22 @@ export function useConfidentialIsApproved(
  * const { data: isApproved } = useConfidentialIsApprovedSuspense({
  *   tokenAddress: "0xToken",
  *   spender: "0xSpender",
+ *   holder: "0xHolder", // optional
  * });
  * ```
  */
 export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsApprovedSuspenseConfig) {
-  const { spender, ...tokenConfig } = config;
+  const { spender, holder, ...tokenConfig } = config;
   const token = useToken(tokenConfig);
+  const addressQuery = useSuspenseQuery<Address>({
+    ...signerAddressQueryOptions(token.signer),
+  });
+  const resolvedHolder = holder ?? addressQuery.data;
 
-  return useSuspenseQuery<boolean, Error>(confidentialIsApprovedQueryOptions(token, spender));
+  return useSuspenseQuery<boolean>({
+    ...confidentialIsApprovedQueryOptions(token.signer, token.address, {
+      holder: resolvedHolder,
+      spender,
+    }),
+  });
 }

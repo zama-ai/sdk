@@ -15,17 +15,23 @@ export type {
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
+  EncryptInput,
+  Handle,
   UserDecryptParams,
   PublicDecryptResult,
-  FHEKeypair,
   EIP712TypedData,
   DelegatedUserDecryptParams,
   NetworkType,
+} from "./relayer/relayer-sdk.types";
+export type {
+  ClearValueType,
+  FheTypeName,
+  KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
   InputProofBytesType,
   FhevmInstanceConfig,
-} from "./relayer/relayer-sdk.types";
+} from "@zama-fhe/relayer-sdk/bundle";
 export type { GenericLogger } from "./worker/worker.types";
 
 // Network preset configs
@@ -63,17 +69,25 @@ export {
   clearPendingUnshield,
 } from "./token/pending-unshield";
 export type {
-  Address,
-  Hex,
   GenericSigner,
   GenericStorage,
   SignerLifecycleCallbacks,
   StoredCredentials,
-  ContractCallConfig,
+  ContractAbi,
+  ReadContractConfig,
+  ReadContractArgs,
+  ReadContractReturnType,
+  ReadFunctionName,
+  WriteContractConfig,
+  WriteContractArgs,
+  WriteFunctionName,
   TransactionReceipt,
   TransactionResult,
   UnshieldCallbacks,
+  ShieldCallbacks,
+  TransferCallbacks,
 } from "./token/token.types";
+export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events/sdk-events";
 export type {
   ZamaSDKEventType,
@@ -105,6 +119,7 @@ export type {
   CredentialsCreatedEvent,
   CredentialsRevokedEvent,
   CredentialsAllowedEvent,
+  SessionExpiredEvent,
 } from "./events/sdk-events";
 export {
   ZamaError,
@@ -115,10 +130,11 @@ export {
   DecryptionFailedError,
   ApprovalFailedError,
   TransactionRevertedError,
-  CredentialExpiredError,
-  InvalidCredentialsError,
+  KeypairExpiredError,
+  InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  ConfigurationError,
   matchZamaError,
 } from "./token/errors";
 

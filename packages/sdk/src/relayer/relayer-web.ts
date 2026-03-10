@@ -1,21 +1,26 @@
 import type {
-  Address,
+  ClearValueType,
+  InputProofBytesType,
+  KeypairType,
+  KmsDelegatedUserDecryptEIP712Type,
+  ZKProofLike,
+} from "@zama-fhe/relayer-sdk/bundle";
+import type {
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  FHEKeypair,
-  InputProofBytesType,
-  KmsDelegatedUserDecryptEIP712Type,
+  Handle,
   PublicDecryptResult,
+  RelayerSDKStatus,
   RelayerWebConfig,
   UserDecryptParams,
-  ZKProofLike,
 } from "./relayer-sdk.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
 import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
 import { ZamaError, EncryptionFailedError } from "../token/errors";
+import type { Address, Hex } from "viem";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -58,10 +63,28 @@ export class RelayerWeb implements RelayerSDK {
   #ensureLock: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
+  #status: RelayerSDKStatus = "idle";
+  #initError: Error | undefined;
   readonly #config: RelayerWebConfig;
 
   constructor(config: RelayerWebConfig) {
     this.#config = config;
+  }
+
+  /** Current WASM initialization status. */
+  get status(): RelayerSDKStatus {
+    return this.#status;
+  }
+
+  /** The error that caused initialization to fail, if `status` is `"error"`. */
+  get initError(): Error | undefined {
+    return this.#initError;
+  }
+
+  #setStatus(status: RelayerSDKStatus, error?: Error): void {
+    this.#status = status;
+    this.#initError = error;
+    this.#config.onStatusChange?.(status, error);
   }
 
   async #getWorkerConfig(): Promise<WorkerClientConfig> {
@@ -127,14 +150,23 @@ export class RelayerWeb implements RelayerSDK {
     this.#resolvedChainId = chainId;
 
     if (!this.#initPromise) {
-      this.#initPromise = this.#initWorker().catch((error) => {
-        this.#initPromise = null;
-        throw error instanceof ZamaError
-          ? error
-          : new EncryptionFailedError("Failed to initialize FHE worker", {
-              cause: error instanceof Error ? error : undefined,
-            });
-      });
+      this.#setStatus("initializing");
+      this.#initPromise = this.#initWorker()
+        .then((client) => {
+          this.#setStatus("ready");
+          return client;
+        })
+        .catch((error) => {
+          this.#initPromise = null;
+          const wrappedError =
+            error instanceof ZamaError
+              ? error
+              : new EncryptionFailedError("Failed to initialize FHE worker", {
+                  cause: error instanceof Error ? error : undefined,
+                });
+          this.#setStatus("error", wrappedError);
+          throw wrappedError;
+        });
     }
     return this.#initPromise;
   }
@@ -185,7 +217,7 @@ export class RelayerWeb implements RelayerSDK {
   /**
    * Generate a keypair for FHE operations.
    */
-  async generateKeypair(): Promise<FHEKeypair> {
+  async generateKeypair(): Promise<KeypairType<Hex>> {
     const worker = await this.#ensureWorker();
     const result = await worker.generateKeypair();
     return {
@@ -198,7 +230,7 @@ export class RelayerWeb implements RelayerSDK {
    * Create EIP712 typed data for user decryption authorization.
    */
   async createEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
     durationDays: number = 7,
@@ -236,7 +268,7 @@ export class RelayerWeb implements RelayerSDK {
 
   /**
    * Encrypt values for use in smart contract calls.
-   * All values are treated as 64-bit unsigned integers.
+   * Each value must specify its FHE type (ebool, euint4–256, eaddress).
    */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const { values, contractAddress, userAddress } = params;
@@ -253,7 +285,7 @@ export class RelayerWeb implements RelayerSDK {
    * Decrypt ciphertexts using user's private key.
    * Requires a valid EIP712 signature.
    */
-  async userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>> {
+  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
@@ -266,7 +298,7 @@ export class RelayerWeb implements RelayerSDK {
    * Public decryption - no authorization needed.
    * Used for publicly visible encrypted values.
    */
-  async publicDecrypt(handles: string[]): Promise<PublicDecryptResult> {
+  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
@@ -283,9 +315,9 @@ export class RelayerWeb implements RelayerSDK {
    * Create EIP712 typed data for delegated user decryption authorization.
    */
   async createDelegatedUserDecryptEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
-    delegatorAddress: string,
+    delegatorAddress: Address,
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
@@ -303,7 +335,9 @@ export class RelayerWeb implements RelayerSDK {
    * Decrypt ciphertexts via delegation.
    * Requires a valid EIP712 signature from the delegator.
    */
-  async delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>> {
+  async delegatedUserDecrypt(
+    params: DelegatedUserDecryptParams,
+  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();

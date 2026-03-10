@@ -1,16 +1,20 @@
 import type {
-  Address,
+  ClearValueType,
+  InputProofBytesType,
+  KeypairType,
+  KmsDelegatedUserDecryptEIP712Type,
+  ZKProofLike,
+} from "@zama-fhe/relayer-sdk/bundle";
+import type {
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  FHEKeypair,
-  InputProofBytesType,
-  KmsDelegatedUserDecryptEIP712Type,
+  Handle,
   PublicDecryptResult,
   UserDecryptParams,
-  ZKProofLike,
 } from "./relayer-sdk.types";
+import type { Address, Hex } from "viem";
 
 /**
  * Interface for FHE relayer operations.
@@ -18,11 +22,11 @@ import type {
  */
 export interface RelayerSDK {
   /** Generate an FHE keypair (public + private key). */
-  generateKeypair(): Promise<FHEKeypair>;
+  generateKeypair(): Promise<KeypairType<Hex>>;
 
   /** Create EIP-712 typed data for signing an FHE decrypt credential. */
   createEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
     durationDays?: number,
@@ -32,22 +36,24 @@ export interface RelayerSDK {
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
   /** Decrypt FHE ciphertext handles using the user's own credentials. */
-  userDecrypt(params: UserDecryptParams): Promise<Record<string, bigint>>;
+  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 
   /** Decrypt FHE handles using the network public key (no credential needed). */
-  publicDecrypt(handles: string[]): Promise<PublicDecryptResult>;
+  publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
 
   /** Create EIP-712 typed data for a delegated user decrypt credential. */
   createDelegatedUserDecryptEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
-    delegatorAddress: string,
+    delegatorAddress: Address,
     startTimestamp: number,
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type>;
 
   /** Decrypt FHE handles using delegated user credentials. */
-  delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Record<string, bigint>>;
+  delegatedUserDecrypt(
+    params: DelegatedUserDecryptParams,
+  ): Promise<Readonly<Record<Handle, ClearValueType>>>;
 
   /** Submit a ZK proof for on-chain verification. */
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;

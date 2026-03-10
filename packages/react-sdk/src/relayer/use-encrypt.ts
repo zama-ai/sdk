@@ -1,21 +1,9 @@
 "use client";
 
-import type { EncryptParams, EncryptResult, ZamaSDK } from "@zama-fhe/sdk";
+import type { EncryptParams, EncryptResult } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
+import { encryptMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-
-/**
- * TanStack Query mutation options factory for FHE encrypt.
- *
- * @param sdk - A `ZamaSDK` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function encryptMutationOptions(sdk: ZamaSDK) {
-  return {
-    mutationKey: ["encrypt"] as const,
-    mutationFn: (params: EncryptParams) => sdk.relayer.encrypt(params),
-  };
-}
 
 /**
  * Encrypt a plaintext value using FHE.

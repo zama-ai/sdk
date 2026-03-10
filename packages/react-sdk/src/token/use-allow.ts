@@ -1,24 +1,9 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Address, ZamaSDK } from "@zama-fhe/sdk";
+import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import { allowMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { isAllowedQueryKeys } from "./use-is-allowed";
-
-/**
- * TanStack Query mutation options factory for token allow.
- *
- * @param sdk - A `ZamaSDK` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function allowMutationOptions(sdk: ZamaSDK) {
-  return {
-    mutationKey: ["allow"] as const,
-    mutationFn: async (tokenAddresses: Address[]) => {
-      await sdk.allow(...tokenAddresses);
-    },
-  };
-}
 
 /**
  * Pre-authorize FHE decrypt credentials for a list of token addresses.
@@ -31,14 +16,15 @@ export function allowMutationOptions(sdk: ZamaSDK) {
  * // Call allow(allTokenAddresses) before any individual reveal
  * ```
  */
-export function useAllow() {
+export function useAllow(options?: UseMutationOptions<void, Error, Address[]>) {
   const sdk = useZamaSDK();
-  const queryClient = useQueryClient();
 
   return useMutation<void, Error, Address[]>({
     ...allowMutationOptions(sdk),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: isAllowedQueryKeys.all });
+    ...options,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      options?.onSuccess?.(data, variables, onMutateResult, context);
+      context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
     },
   });
 }

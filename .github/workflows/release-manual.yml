@@ -46,16 +46,16 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
           cache: pnpm
-          registry-url: "https://registry.npmjs.org"
 
       - name: Ensure npm 11
         run: |
@@ -69,9 +69,31 @@ jobs:
         run: pnpm build
 
       - name: Semantic release
-        run: pnpm release:ci 2>&1 | tee /tmp/release-output.txt
+        id: release
+        run: |
+          pnpm release:ci 2>&1 | tee /tmp/release-output.txt
+          if grep -q "Published release" /tmp/release-output.txt; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
+
+      - name: Publish to npm
+        if: steps.release.outputs.released == 'true'
+        run: |
+          version=$(node -p "require('./packages/sdk/package.json').version")
+          if [[ "$version" == *-* ]]; then
+            npm_tag="${version#*-}"   # e.g. "alpha.10" from "1.0.0-alpha.10"
+            npm_tag="${npm_tag%%.*}"   # e.g. "alpha"
+          else
+            npm_tag="latest"
+          fi
+          echo "Publishing v${version} with tag '${npm_tag}'"
+          cd packages/sdk
+          npm publish --access public --tag "${npm_tag}"
+          cd ../react-sdk
+          npm publish --access public --tag "${npm_tag}"
+        env:
           NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public
 
       - name: Verify release was published

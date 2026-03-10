@@ -1,10 +1,12 @@
 import type {
-  Address,
+  ClearValueType,
   FhevmInstanceConfig,
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
-} from "../relayer/relayer-sdk.types";
+} from "@zama-fhe/relayer-sdk/bundle";
+import type { EncryptInput, Handle } from "../relayer/relayer-sdk.types";
+import type { Address, Hex } from "viem";
 
 // ============================================================================
 // Logger
@@ -76,7 +78,7 @@ export interface UpdateCsrfRequest extends BaseRequest {
 export interface EncryptRequest extends BaseRequest {
   type: "ENCRYPT";
   payload: {
-    values: bigint[];
+    values: EncryptInput[];
     contractAddress: Address;
     userAddress: Address;
   };
@@ -85,12 +87,12 @@ export interface EncryptRequest extends BaseRequest {
 export interface UserDecryptRequest extends BaseRequest {
   type: "USER_DECRYPT";
   payload: {
-    handles: string[];
+    handles: Handle[];
     contractAddress: Address;
     signedContractAddresses: Address[];
-    privateKey: string;
-    publicKey: string;
-    signature: string;
+    privateKey: Hex;
+    publicKey: Hex;
+    signature: Hex;
     signerAddress: Address;
     startTimestamp: number;
     durationDays: number;
@@ -100,7 +102,7 @@ export interface UserDecryptRequest extends BaseRequest {
 export interface PublicDecryptRequest extends BaseRequest {
   type: "PUBLIC_DECRYPT";
   payload: {
-    handles: string[];
+    handles: Handle[];
   };
 }
 
@@ -112,7 +114,7 @@ export interface GenerateKeypairRequest extends BaseRequest {
 export interface CreateEIP712Request extends BaseRequest {
   type: "CREATE_EIP712";
   payload: {
-    publicKey: string;
+    publicKey: Hex;
     contractAddresses: Address[];
     startTimestamp: number;
     durationDays: number;
@@ -122,9 +124,9 @@ export interface CreateEIP712Request extends BaseRequest {
 export interface CreateDelegatedEIP712Request extends BaseRequest {
   type: "CREATE_DELEGATED_EIP712";
   payload: {
-    publicKey: string;
+    publicKey: Hex;
     contractAddresses: Address[];
-    delegatorAddress: string;
+    delegatorAddress: Address;
     startTimestamp: number;
     durationDays: number;
   };
@@ -133,12 +135,12 @@ export interface CreateDelegatedEIP712Request extends BaseRequest {
 export interface DelegatedUserDecryptRequest extends BaseRequest {
   type: "DELEGATED_USER_DECRYPT";
   payload: {
-    handles: string[];
+    handles: Handle[];
     contractAddress: Address;
     signedContractAddresses: Address[];
-    privateKey: string;
-    publicKey: string;
-    signature: string;
+    privateKey: Hex;
+    publicKey: Hex;
+    signature: Hex;
     delegatorAddress: Address;
     delegateAddress: Address;
     startTimestamp: number;
@@ -231,18 +233,18 @@ export interface EncryptResponseData {
 }
 
 export interface UserDecryptResponseData {
-  clearValues: Record<string, bigint>;
+  clearValues: Record<Handle, ClearValueType>;
 }
 
 export interface PublicDecryptResponseData {
-  clearValues: Record<string, bigint>;
-  abiEncodedClearValues: string;
-  decryptionProof: Address;
+  clearValues: Readonly<Record<Handle, ClearValueType>>;
+  abiEncodedClearValues: Hex;
+  decryptionProof: Hex;
 }
 
 export interface GenerateKeypairResponseData {
-  publicKey: string;
-  privateKey: string;
+  publicKey: Hex;
+  privateKey: Hex;
 }
 
 export interface CreateEIP712ResponseData {
@@ -259,18 +261,18 @@ export interface CreateEIP712ResponseData {
     }>;
   };
   message: {
-    publicKey: string;
-    contractAddresses: string[];
+    publicKey: Hex;
+    contractAddresses: Address[];
     startTimestamp: bigint;
     durationDays: bigint;
-    extraData: string;
+    extraData: Hex;
   };
 }
 
 export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
 
 export interface DelegatedUserDecryptResponseData {
-  clearValues: Record<string, bigint>;
+  clearValues: Record<Handle, ClearValueType>;
 }
 
 export type RequestZKProofVerificationResponseData = InputProofBytesType;

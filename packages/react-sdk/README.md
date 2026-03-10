@@ -154,7 +154,8 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
   signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
   storage={storage} // GenericStorage
   sessionStorage={sessionStorage} // Optional. Session storage for wallet signatures. Default: in-memory (lost on reload).
-  credentialDurationDays={1} // Optional. Days FHE credentials remain valid. Default: 1. Set 0 for sign-every-time.
+  keypairTTL={86400} // Optional. Seconds the ML-KEM keypair remains valid. Default: 86400 (1 day).
+  sessionTTL={2592000} // Optional. Seconds the session signature remains valid. Default: 2592000 (30 days). 0 = re-sign every operation.
   onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
   {children}
@@ -597,7 +598,7 @@ function useConfidentialIsApproved(
 
 #### `useUnderlyingAllowance`
 
-Read the ERC-20 allowance of the underlying token for the wrapper.
+Read the underlying ERC-20 allowance granted to the wrapper.
 
 ```ts
 function useUnderlyingAllowance(
@@ -793,46 +794,36 @@ const { data: value } = useUserDecryptedValue("0xHandleHash");
 
 ## Query Keys
 
-Exported query key factories for manual cache management (invalidation, prefetching, removal).
+Use `zamaQueryKeys` for manual cache management (invalidation, prefetching, removal).
 
 ```ts
-import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-  isAllowedQueryKeys,
-  underlyingAllowanceQueryKeys,
-  activityFeedQueryKeys,
-  feeQueryKeys,
-  decryptionKeys,
-} from "@zama-fhe/react-sdk";
+import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 ```
 
-| Factory                         | Keys                                                                                     | Description                         |
-| ------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
-| `confidentialBalanceQueryKeys`  | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token decrypted balance.     |
-| `confidentialBalancesQueryKeys` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
-| `confidentialHandleQueryKeys`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
-| `confidentialHandlesQueryKeys`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
-| `isAllowedQueryKeys`            | `.all`, `.token(address)`                                                                | Session signature status.           |
-| `underlyingAllowanceQueryKeys`  | `.all`, `.token(address, wrapper)`                                                       | Underlying ERC-20 allowance.        |
-| `activityFeedQueryKeys`         | `.all`, `.token(address)`                                                                | Activity feed items.                |
-| `feeQueryKeys`                  | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
-| `decryptionKeys`                | `.value(handle)`                                                                         | Individual decrypted handle values. |
+| Factory                              | Keys                                                                                     | Description                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------- |
+| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token decrypted balance.     |
+| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
+| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
+| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
+| `zamaQueryKeys.isAllowed`            | `.all`                                                                                   | Session signature status.           |
+| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                             | Underlying ERC-20 allowance.        |
+| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)`              | Activity feed items.                |
+| `zamaQueryKeys.fees`                 | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
+| `decryptionKeys`                     | `.value(handle)`                                                                         | Individual decrypted handle values. |
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { confidentialBalanceQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/react-sdk";
 
 const queryClient = useQueryClient();
 
 // Invalidate all balances
-queryClient.invalidateQueries({ queryKey: confidentialBalanceQueryKeys.all });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 // Invalidate a specific token's balance
 queryClient.invalidateQueries({
-  queryKey: confidentialBalanceQueryKeys.token("0xTokenAddress"),
+  queryKey: zamaQueryKeys.confidentialBalance.token("0xTokenAddress"),
 });
 ```
 
@@ -906,7 +897,7 @@ FHE decrypt credentials are generated once per wallet + token set and cached in 
 1. **First decrypt** — SDK generates an FHE keypair, creates EIP-712 typed data, and prompts the wallet to sign. The encrypted credential is stored; the signature is cached in memory.
 2. **Same session** — Cached credentials and session signature are reused silently (no wallet prompt).
 3. **Page reload** — Encrypted credentials are loaded from storage; the wallet is prompted once to re-sign for the session.
-4. **Expiry** — Credentials expire based on `credentialDurationDays`. After expiry, the next decrypt regenerates and re-prompts.
+4. **Expiry** — Credentials expire based on `keypairTTL` (default: 86400s = 1 day). After expiry, the next decrypt regenerates and re-prompts.
 5. **Pre-authorization** — Call `useTokenAllow(tokenAddresses)` early to batch-authorize all tokens in one wallet prompt, avoiding repeated popups.
 6. **Check status** — Use `useIsTokenAllowed(tokenAddress)` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
 7. **Disconnect** — Call `useTokenRevoke(tokenAddresses)` or `await credentials.revoke()` to clear the session signature from memory.
@@ -983,7 +974,7 @@ To force a refresh:
 
 ```tsx
 const queryClient = useQueryClient();
-queryClient.invalidateQueries({ queryKey: confidentialBalanceQueryKeys.all });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 ```
 
 ## Re-exports from Core SDK
@@ -998,7 +989,7 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `ContractCallConfig`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
-**Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidCredentialsError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
+**Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidKeypairError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 
 **Constants:** `ZERO_HANDLE`, `ERC7984_INTERFACE_ID`, `ERC7984_WRAPPER_INTERFACE_ID`.
 

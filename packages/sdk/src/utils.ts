@@ -1,32 +1,14 @@
-import type { Address } from "./relayer/relayer-sdk.types";
+import { type Hex } from "viem";
 
-/** Convert a Uint8Array to a hex string prefixed with `0x`. */
-export function toHex(bytes: Uint8Array): Address {
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-  return `0x${hex}`;
+/** Normalize a un-prefixed hex payload to a 0x-prefixed `Hex` value. */
+export function prefixHex(value: string): Hex {
+  return (value.startsWith("0x") ? value : `0x${value}`) as Hex;
 }
 
-// ── Runtime type assertion helpers ───────────────────────────
-
-const ADDRESS_REGEX = /^0x[0-9a-fA-F]{40}$/;
-
-export function assertAddress(value: string, name: string): asserts value is Address {
-  if (!ADDRESS_REGEX.test(value)) {
-    throw new TypeError(`${name} must be a valid address (0x + 40 hex chars), got: ${value}`);
-  }
-}
-
-/**
- * Validate an address and return it unchanged.
- * Call at public API entry points so invalid addresses are caught early.
- *
- * Addresses are **not** lowercased — the relayer SDK requires EIP-55
- * checksummed addresses for encrypt / decrypt calls.
- * Use case-insensitive comparison (`.toLowerCase()`) when comparing addresses.
- */
-export function normalizeAddress(addr: string, name: string): Address {
-  assertAddress(addr, name);
-  return addr as Address;
+/** Convert a public `Hex` value back an unprefixed format. */
+export function unprefixHex(value: Hex): string {
+  assertCondition(value.startsWith("0x"), `Expected 0x-prefixed hex, got: ${value}`);
+  return value.slice(2);
 }
 
 export function assertObject(
@@ -47,6 +29,12 @@ export function assertString(value: unknown, context: string): asserts value is 
 export function assertArray(value: unknown, context: string): asserts value is unknown[] {
   if (!Array.isArray(value)) {
     throw new TypeError(`${context} must be an array, got ${typeof value}`);
+  }
+}
+
+export function assertCondition(condition: boolean, message: string): asserts condition {
+  if (!condition) {
+    throw new TypeError(message);
   }
 }
 

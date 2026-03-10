@@ -9,15 +9,16 @@
     "e2e:test": "playwright test",
     "e2e:test:ui": "playwright test --ui",
     "e2e:test:nextjs": "playwright test --project=nextjs",
-    "e2e:test:vite": "playwright test --project=vite"
+    "e2e:test:vite": "playwright test --project=vite",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fhevm/mock-utils": "0.4.2",
     "@playwright/test": "^1.58.2",
+    "@zama-fhe/sdk": "workspace:*",
     "ethers": "^6.16.0",
-    "viem": "^2.46.3"
+    "viem": "^2.47.0"
   },
   "devDependencies": {
-    "@types/node": "^22.19.13"
+    "@types/node": "^22.19.15"
   }
 }

@@ -5,7 +5,6 @@
 
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
 import { parentPort, type Transferable } from "node:worker_threads";
-import { convertToBigIntRecord } from "../relayer/relayer-utils";
 import type {
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,
@@ -32,6 +31,7 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
+import { prefixHex, unprefixHex } from "../utils";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -89,8 +89,36 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
 
     const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
 
-    for (const value of values) {
-      input.add64(value);
+    for (const entry of values) {
+      const { value, type: fheType } = entry;
+      switch (fheType) {
+        case "ebool":
+          input.addBool(typeof value === "boolean" ? value : value !== 0n);
+          break;
+        case "euint8":
+          input.add8(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          break;
+        case "euint16":
+          input.add16(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          break;
+        case "euint32":
+          input.add32(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          break;
+        case "euint64":
+          input.add64(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          break;
+        case "euint128":
+          input.add128(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          break;
+        case "euint256":
+          input.add256(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          break;
+        case "eaddress":
+          input.addAddress(typeof value === "boolean" ? String(value) : String(value));
+          break;
+        default:
+          throw new Error(`Unsupported FHE type: ${fheType}`);
+      }
     }
 
     const encrypted = await input.encrypt();
@@ -128,8 +156,8 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
 
     const result = await sdkInstance.userDecrypt(
       handleContractPairs,
-      payload.privateKey,
-      payload.publicKey,
+      unprefixHex(payload.privateKey),
+      unprefixHex(payload.publicKey),
       payload.signature,
       payload.signedContractAddresses,
       payload.signerAddress,
@@ -137,9 +165,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
       payload.durationDays,
     );
 
-    const response: UserDecryptResponseData = {
-      clearValues: convertToBigIntRecord(result),
-    };
+    const response: UserDecryptResponseData = { clearValues: result };
 
     sendSuccess(id, type, response);
   } catch (error) {
@@ -159,11 +185,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
 
     const result = await sdkInstance.publicDecrypt(payload.handles);
 
-    const response: PublicDecryptResponseData = {
-      clearValues: convertToBigIntRecord(result.clearValues),
-      abiEncodedClearValues: result.abiEncodedClearValues,
-      decryptionProof: result.decryptionProof,
-    };
+    const response: PublicDecryptResponseData = { ...result };
 
     sendSuccess(id, type, response);
   } catch (error) {
@@ -184,8 +206,8 @@ function handleGenerateKeypair(request: GenerateKeypairRequest): void {
     const keypair = sdkInstance.generateKeypair();
 
     const response: GenerateKeypairResponseData = {
-      publicKey: keypair.publicKey,
-      privateKey: keypair.privateKey,
+      publicKey: prefixHex(keypair.publicKey),
+      privateKey: prefixHex(keypair.privateKey),
     };
 
     sendSuccess(id, type, response);
@@ -205,7 +227,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
     }
 
     const eip712 = sdkInstance.createEIP712(
-      payload.publicKey,
+      unprefixHex(payload.publicKey),
       payload.contractAddresses,
       payload.startTimestamp,
       payload.durationDays,
@@ -216,7 +238,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
         name: eip712.domain.name,
         version: eip712.domain.version,
         chainId: Number(eip712.domain.chainId),
-        verifyingContract: eip712.domain.verifyingContract as `0x${string}`,
+        verifyingContract: eip712.domain.verifyingContract,
       },
       types: {
         UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification.map(
@@ -227,11 +249,11 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
         ),
       },
       message: {
-        publicKey: eip712.message.publicKey,
+        publicKey: prefixHex(eip712.message.publicKey),
         contractAddresses: [...eip712.message.contractAddresses],
         startTimestamp: BigInt(eip712.message.startTimestamp),
         durationDays: BigInt(eip712.message.durationDays),
-        extraData: eip712.message.extraData,
+        extraData: prefixHex(eip712.message.extraData),
       },
     };
 
@@ -252,7 +274,7 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
     }
 
     const result = sdkInstance.createDelegatedUserDecryptEIP712(
-      payload.publicKey,
+      unprefixHex(payload.publicKey),
       payload.contractAddresses,
       payload.delegatorAddress,
       payload.startTimestamp,
@@ -282,8 +304,8 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
 
     const result = await sdkInstance.delegatedUserDecrypt(
       handleContractPairs,
-      payload.privateKey,
-      payload.publicKey,
+      unprefixHex(payload.privateKey),
+      unprefixHex(payload.publicKey),
       payload.signature,
       payload.signedContractAddresses,
       payload.delegatorAddress,
@@ -292,9 +314,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
       payload.durationDays,
     );
 
-    const response: DelegatedUserDecryptResponseData = {
-      clearValues: convertToBigIntRecord(result),
-    };
+    const response: DelegatedUserDecryptResponseData = { clearValues: result };
 
     sendSuccess(id, type, response);
   } catch (error) {

@@ -1,5 +1,5 @@
-import type { PublicClient, WalletClient } from "viem";
-import type { Address } from "../relayer/relayer-sdk.types";
+import type { PublicClient, WalletClient, Address, Hex } from "viem";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { BatchTransferData } from "../contracts";
 import {
   confidentialBalanceOfContract,
@@ -121,7 +121,7 @@ export function writeUnwrapFromBalanceContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedBalance: Address,
+  encryptedBalance: Handle,
 ) {
   return client.writeContract({
     chain: client.chain,
@@ -133,9 +133,9 @@ export function writeUnwrapFromBalanceContract(
 export function writeFinalizeUnwrapContract(
   client: WalletClient,
   wrapper: Address,
-  burntAmount: Address,
+  burntAmount: Handle,
   burntAmountCleartext: bigint,
-  decryptionProof: Address,
+  decryptionProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,

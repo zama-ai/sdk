@@ -1,10 +1,9 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
-import type { Address } from "@zama-fhe/relayer-sdk/bundle";
+import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
 
 // ============================================================================
-// SDK Types (local definitions to avoid importing from @zama-fhe/relayer-sdk/web)
-// These mirror the SDK types but avoid bundler processing of WASM files
+// Application Types
 // ============================================================================
 
 /** Global SDK interface (from CDN script window.relayerSDK) */
@@ -14,13 +13,6 @@ export interface RelayerSDKGlobal {
   SepoliaConfig: SDK.FhevmInstanceConfig;
   MainnetConfig: SDK.FhevmInstanceConfig;
 }
-
-/** Generic hex-encoded string (signatures, tx hashes, proofs, etc.). */
-export type Hex = `0x${string}`;
-
-// ============================================================================
-// Application Types
-// ============================================================================
 
 /** Network configuration for the Relayer SDK */
 export type NetworkType = "hardhat" | "sepolia" | "mainnet";
@@ -56,6 +48,8 @@ export interface RelayerWebConfig {
    * When omitted, the relayer SDK uses its default (single-threaded).
    */
   threads?: number;
+  /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
+  onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
 }
 
 /** Result from encryption operation */
@@ -64,38 +58,49 @@ export interface EncryptResult {
   inputProof: Uint8Array;
 }
 
+/** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). */
+export type Handle = `0x${string}`;
+
+/** A single value to encrypt with its FHE type. */
+export type EncryptInput =
+  | {
+      value: boolean | bigint;
+      type: "ebool";
+    }
+  | {
+      value: bigint;
+      type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
+    }
+  | {
+      value: Address;
+      type: "eaddress";
+    };
+
 /** Parameters for encryption */
 export interface EncryptParams {
-  values: bigint[];
+  /** Typed inputs for encryption. Each value must specify its FHE type. */
+  values: EncryptInput[];
   contractAddress: Address;
   userAddress: Address;
 }
 
 /** Parameters for user decryption */
 export interface UserDecryptParams {
-  handles: string[];
+  handles: Handle[];
   contractAddress: Address;
   signedContractAddresses: Address[];
-  privateKey: string;
-  publicKey: string;
-  signature: string;
+  privateKey: Hex;
+  publicKey: Hex;
+  signature: Hex;
   signerAddress: Address;
   startTimestamp: number;
   durationDays: number;
 }
 
 /** Result from public decryption */
-export interface PublicDecryptResult {
-  clearValues: Record<string, bigint>;
-  abiEncodedClearValues: string;
-  decryptionProof: Address;
-}
-
-/** Keypair for FHE operations */
-export interface FHEKeypair {
-  publicKey: string;
-  privateKey: string;
-}
+export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
+  clearValues: Readonly<Record<Handle, SDK.ClearValueType>>;
+};
 
 /** EIP712 typed data structure */
 export interface EIP712TypedData {
@@ -106,28 +111,29 @@ export interface EIP712TypedData {
     verifyingContract: Address;
   };
   types: {
-    [key: string]: Array<{
-      name: string;
-      type: string;
+    [key: string]: ReadonlyArray<{
+      readonly name: string;
+      readonly type: string;
     }>;
   };
+  primaryType?: string;
   message: {
-    publicKey: string;
-    contractAddresses: string[];
+    publicKey: Hex;
+    contractAddresses: readonly Address[];
     startTimestamp: bigint;
     durationDays: bigint;
-    extraData: string;
+    extraData: Hex;
   };
 }
 
 /** Parameters for delegated user decryption */
 export interface DelegatedUserDecryptParams {
-  handles: string[];
+  handles: Handle[];
   contractAddress: Address;
   signedContractAddresses: Address[];
-  privateKey: string;
-  publicKey: string;
-  signature: string;
+  privateKey: Hex;
+  publicKey: Hex;
+  signature: Hex;
   delegatorAddress: Address;
   delegateAddress: Address;
   startTimestamp: number;
@@ -136,5 +142,3 @@ export interface DelegatedUserDecryptParams {
 
 /** SDK status */
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
-
-export type * from "@zama-fhe/relayer-sdk/bundle";

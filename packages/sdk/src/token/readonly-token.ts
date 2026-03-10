@@ -12,14 +12,15 @@ import {
   getWrapperContract,
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Address } from "../relayer/relayer-sdk.types";
-import { normalizeAddress, pLimit } from "../utils";
+import type { Handle } from "../relayer/relayer-sdk.types";
+import { pLimit } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import { getAddress, type Address } from "viem";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -28,7 +29,7 @@ export const ZERO_HANDLE =
 /** Options for {@link ReadonlyToken.batchDecryptBalances}. */
 export interface BatchDecryptOptions {
   /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
-  handles?: Address[];
+  handles?: Handle[];
   /** Balance owner address. Defaults to the connected signer. */
   owner?: Address;
   /**
@@ -58,12 +59,12 @@ export interface ReadonlyTokenConfig {
   storage: GenericStorage;
   /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
   sessionStorage: GenericStorage;
-  /** Shared CredentialsManager instance. When provided, storage/sessionStorage/durationDays/onEvent are ignored for credential creation. */
+  /** Shared CredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for credential creation. */
   credentials?: CredentialsManager;
   /** Address of the confidential token contract. */
   address: Address;
-  /** Number of days FHE credentials remain valid. Default: `1`. */
-  durationDays?: number;
+  /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
+  keypairTTL?: number;
   /** Optional structured event listener for debugging and telemetry. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -82,7 +83,7 @@ export class ReadonlyToken {
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
-    const address = normalizeAddress(config.address, "address");
+    const address = getAddress(config.address);
     this.credentials =
       config.credentials ??
       new CredentialsManager({
@@ -90,7 +91,7 @@ export class ReadonlyToken {
         signer: config.signer,
         storage: config.storage,
         sessionStorage: config.sessionStorage,
-        durationDays: config.durationDays ?? 1,
+        keypairTTL: config.keypairTTL ?? 86400,
         onEvent: config.onEvent,
       });
     this.sdk = config.relayer;
@@ -126,7 +127,7 @@ export class ReadonlyToken {
    * ```
    */
   async balanceOf(owner?: Address): Promise<bigint> {
-    const ownerAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
+    const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
 
     if (this.isZeroHandle(handle)) return BigInt(0);
@@ -158,7 +159,7 @@ export class ReadonlyToken {
       });
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
-      const value = result[handle] ?? BigInt(0);
+      const value = (result[handle] as bigint | undefined) ?? BigInt(0);
       await saveCachedBalance({
         storage: this.#storage,
         tokenAddress: this.address,
@@ -188,8 +189,8 @@ export class ReadonlyToken {
    * const handle = await token.confidentialBalanceOf();
    * ```
    */
-  async confidentialBalanceOf(owner?: Address): Promise<Address> {
-    const ownerAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
+  async confidentialBalanceOf(owner?: Address): Promise<Handle> {
+    const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
     return this.readConfidentialBalanceOf(ownerAddress);
   }
 
@@ -323,7 +324,7 @@ export class ReadonlyToken {
             durationDays: creds.durationDays,
           })
           .then(async (result) => {
-            const value = result[handle] ?? BigInt(0);
+            const value = (result[handle] as bigint | undefined) ?? BigInt(0);
             results.set(token.address, value);
             await saveCachedBalance({
               storage: tokenStorage,
@@ -372,12 +373,10 @@ export class ReadonlyToken {
    * ```
    */
   async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
-    const coordinator = normalizeAddress(coordinatorAddress, "coordinatorAddress");
-    const exists = await this.signer.readContract<boolean>(
-      wrapperExistsContract(coordinator, this.address),
-    );
+    const coordinator = getAddress(coordinatorAddress);
+    const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
     if (!exists) return null;
-    return this.signer.readContract<Address>(getWrapperContract(coordinator, this.address));
+    return this.signer.readContract(getWrapperContract(coordinator, this.address));
   }
 
   /**
@@ -391,7 +390,7 @@ export class ReadonlyToken {
    * ```
    */
   async underlyingToken(): Promise<Address> {
-    return this.signer.readContract<Address>(underlyingContract(this.address));
+    return this.signer.readContract(underlyingContract(this.address));
   }
 
   /**
@@ -407,14 +406,10 @@ export class ReadonlyToken {
    * ```
    */
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
-    const normalizedWrapper = normalizeAddress(wrapper, "wrapper");
-    const underlying = await this.signer.readContract<Address>(
-      underlyingContract(normalizedWrapper),
-    );
-    const userAddress = owner ? normalizeAddress(owner, "owner") : await this.signer.getAddress();
-    return this.signer.readContract<bigint>(
-      allowanceContract(underlying, userAddress, normalizedWrapper),
-    );
+    const normalizedWrapper = getAddress(wrapper);
+    const underlying = await this.signer.readContract(underlyingContract(normalizedWrapper));
+    const userAddress = owner ? getAddress(owner) : await this.signer.getAddress();
+    return this.signer.readContract(allowanceContract(underlying, userAddress, normalizedWrapper));
   }
 
   /**
@@ -428,7 +423,7 @@ export class ReadonlyToken {
    * ```
    */
   async name(): Promise<string> {
-    return this.signer.readContract<string>(nameContract(this.address));
+    return this.signer.readContract(nameContract(this.address));
   }
 
   /**
@@ -442,7 +437,7 @@ export class ReadonlyToken {
    * ```
    */
   async symbol(): Promise<string> {
-    return this.signer.readContract<string>(symbolContract(this.address));
+    return this.signer.readContract(symbolContract(this.address));
   }
 
   /**
@@ -456,7 +451,7 @@ export class ReadonlyToken {
    * ```
    */
   async decimals(): Promise<number> {
-    return this.signer.readContract<number>(decimalsContract(this.address));
+    return this.signer.readContract(decimalsContract(this.address));
   }
 
   /**
@@ -515,21 +510,10 @@ export class ReadonlyToken {
     await tokens[0]!.credentials.allow(...allAddresses);
   }
 
-  protected async readConfidentialBalanceOf(owner: Address): Promise<Address> {
-    const result = await this.signer.readContract(
+  protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
+    return (await this.signer.readContract(
       confidentialBalanceOfContract(this.address, owner),
-    );
-    return this.normalizeHandle(result);
-  }
-
-  protected normalizeHandle(value: unknown): Address {
-    if (typeof value === "string" && value.startsWith("0x")) {
-      return value as Address;
-    }
-    if (typeof value === "bigint") {
-      return `0x${value.toString(16).padStart(64, "0")}`;
-    }
-    return ZERO_HANDLE;
+    )) as Handle;
   }
 
   isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {
@@ -551,7 +535,7 @@ export class ReadonlyToken {
    * const value = await token.decryptBalance(handle);
    * ```
    */
-  async decryptBalance(handle: Address, owner?: Address): Promise<bigint> {
+  async decryptBalance(handle: Handle, owner?: Address): Promise<bigint> {
     if (this.isZeroHandle(handle)) return BigInt(0);
 
     const signerAddress = owner ?? (await this.signer.getAddress());
@@ -583,7 +567,7 @@ export class ReadonlyToken {
       });
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
-      const value = result[handle] ?? BigInt(0);
+      const value = (result[handle] as bigint | undefined) ?? BigInt(0);
       await saveCachedBalance({
         storage: this.#storage,
         tokenAddress: this.address,
@@ -611,9 +595,9 @@ export class ReadonlyToken {
    * @returns A Map from handle to decrypted bigint value.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    */
-  async decryptHandles(handles: Address[], owner?: Address): Promise<Map<Address, bigint>> {
-    const results = new Map<Address, bigint>();
-    const nonZeroHandles: Address[] = [];
+  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>> {
+    const results = new Map<Handle, bigint>();
+    const nonZeroHandles: Handle[] = [];
 
     for (const handle of handles) {
       if (this.isZeroHandle(handle)) {
@@ -644,7 +628,7 @@ export class ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
       for (const handle of nonZeroHandles) {
-        results.set(handle, decrypted[handle] ?? BigInt(0));
+        results.set(handle, (decrypted[handle] as bigint | undefined) ?? BigInt(0));
       }
     } catch (error) {
       this.emit({

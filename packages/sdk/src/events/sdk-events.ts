@@ -1,4 +1,4 @@
-import type { Address, Hex } from "../relayer/relayer-sdk.types";
+import { type Address, type Hex } from "viem";
 
 /**
  * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.
@@ -12,6 +12,7 @@ export const ZamaSDKEvents = {
   CredentialsCreated: "credentials:created",
   CredentialsRevoked: "credentials:revoked",
   CredentialsAllowed: "credentials:allowed",
+  SessionExpired: "session:expired",
   // FHE operations
   EncryptStart: "encrypt:start",
   EncryptEnd: "encrypt:end",
@@ -87,6 +88,12 @@ export interface CredentialsAllowedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.CredentialsAllowed;
   /** Contract addresses covered by the authorized credentials. */
   contractAddresses?: Address[];
+}
+
+export interface SessionExpiredEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.SessionExpired;
+  /** Why the session expired. Currently always `"ttl"`, extensible for future inactivity timeout. */
+  reason: "ttl";
 }
 
 export interface EncryptStartEvent extends BaseEvent {
@@ -187,6 +194,7 @@ export type ZamaSDKEvent =
   | CredentialsCreatedEvent
   | CredentialsRevokedEvent
   | CredentialsAllowedEvent
+  | SessionExpiredEvent
   | EncryptStartEvent
   | EncryptEndEvent
   | EncryptErrorEvent

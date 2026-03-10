@@ -1,4 +1,5 @@
-import type { EIP712TypedData, FhevmInstanceConfig } from "./relayer-sdk.types";
+import type { EIP712TypedData } from "./relayer-sdk.types";
+import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
@@ -46,27 +47,15 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Convert SDK result values to bigint record.
- * Handles bigint, boolean, string, and number values.
+ * Mainnet network configuration (chainId 1).
+ *
+ * Contract addresses mirror `MainnetConfigV2` from `@zama-fhe/relayer-sdk`.
+ * They are duplicated here because the `/bundle` export path only exposes
+ * types at build time (runtime values require `/web` or `/node` which pull
+ * in WASM). `satisfies FhevmInstanceConfig` ensures structural drift is
+ * caught at compile time.
  */
-export function convertToBigIntRecord(result: Record<string, unknown>): Record<string, bigint> {
-  const clearValues: Record<string, bigint> = {};
-  for (const [handle, value] of Object.entries(result)) {
-    if (typeof value === "bigint") {
-      clearValues[handle] = value;
-    } else if (typeof value === "boolean") {
-      clearValues[handle] = value ? BigInt(1) : BigInt(0);
-    } else if (typeof value === "string" || typeof value === "number") {
-      clearValues[handle] = BigInt(value);
-    } else {
-      throw new TypeError(`Unexpected decrypted value type for handle ${handle}: ${typeof value}`);
-    }
-  }
-  return clearValues;
-}
-
-/** Mainnet network configuration (chainId 1). */
-export const MainnetConfig: FhevmInstanceConfig = {
+export const MainnetConfig = {
   chainId: 1,
   gatewayChainId: 261131,
   relayerUrl: "https://relayer.mainnet.zama.org/v2",
@@ -76,10 +65,13 @@ export const MainnetConfig: FhevmInstanceConfig = {
   inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2",
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
-} as const;
+} as const satisfies FhevmInstanceConfig;
 
-/** Sepolia testnet network configuration (chainId 11155111). */
-export const SepoliaConfig: FhevmInstanceConfig = {
+/**
+ * Sepolia testnet network configuration (chainId 11155111).
+ * See {@link MainnetConfig} for why addresses are hardcoded.
+ */
+export const SepoliaConfig = {
   chainId: 11155111,
   gatewayChainId: 10901,
   relayerUrl: "https://relayer.testnet.zama.org/v2",
@@ -89,10 +81,16 @@ export const SepoliaConfig: FhevmInstanceConfig = {
   inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0",
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-} as const;
+} as const satisfies FhevmInstanceConfig;
 
-/** Hardhat local network configuration (chainId 31337). */
-export const HardhatConfig: FhevmInstanceConfig = {
+/**
+ * Hardhat local network configuration (chainId 31337).
+ *
+ * The addresses in this configuration must match those of your deployment.
+ * Ensure that the executor address and other contract addresses correspond to
+ * the contracts deployed on your Hardhat network.
+ */
+export const HardhatConfig = {
   chainId: 31337,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -102,7 +100,7 @@ export const HardhatConfig: FhevmInstanceConfig = {
   kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-} as const;
+} as const satisfies FhevmInstanceConfig;
 
 export const DefaultConfigs: Record<number, FhevmInstanceConfig> = {
   [1]: MainnetConfig,

@@ -1,25 +1,19 @@
 "use client";
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
-import type { Address, Token, TransactionResult } from "@zama-fhe/sdk";
+import type { TransactionResult } from "@zama-fhe/sdk";
 import {
-  confidentialBalanceQueryKeys,
-  confidentialBalancesQueryKeys,
-  confidentialHandleQueryKeys,
-  confidentialHandlesQueryKeys,
-  wagmiBalancePredicates,
-} from "./balance-query-keys";
+  invalidateAfterShield,
+  shieldMutationOptions,
+  type ShieldParams,
+} from "@zama-fhe/sdk/query";
+import {
+  applyOptimisticBalanceDelta,
+  type OptimisticMutateContext,
+  rollbackOptimisticBalanceDelta,
+  unwrapOptimisticCallerContext,
+} from "./optimistic-balance-update";
 import { useToken, type UseZamaConfig } from "./use-token";
-
-/** Parameters passed to the `mutate` function of {@link useShield}. */
-export interface ShieldParams {
-  /** Amount of underlying ERC-20 tokens to wrap. */
-  amount: bigint;
-  /** Optional fee amount (for native ETH wrapping with fees). */
-  fees?: bigint;
-  /** ERC-20 approval strategy: `"exact"` (default), `"max"`, or `"skip"`. */
-  approvalStrategy?: "max" | "exact" | "skip";
-}
 
 /** Configuration for {@link useShield}. */
 export interface UseShieldConfig extends UseZamaConfig {
@@ -29,20 +23,6 @@ export interface UseShieldConfig extends UseZamaConfig {
    * @defaultValue false
    */
   optimistic?: boolean;
-}
-
-/**
- * TanStack Query mutation options factory for shield.
- *
- * @param token - A `Token` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function shieldMutationOptions(token: Token) {
-  return {
-    mutationKey: ["shield", token.address] as const,
-    mutationFn: async ({ amount, fees, approvalStrategy }: ShieldParams) =>
-      token.shield(amount, { fees, approvalStrategy }),
-  };
 }
 
 /**
@@ -66,57 +46,56 @@ export function shieldMutationOptions(token: Token) {
  */
 export function useShield(
   config: UseShieldConfig,
-  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, OptimisticMutateContext>,
 ) {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<TransactionResult, Error, ShieldParams, Address>({
-    mutationKey: ["shield", config.tokenAddress],
-    mutationFn: async ({ amount, fees, approvalStrategy }) =>
-      token.shield(amount, { fees, approvalStrategy }),
+  return useMutation<TransactionResult, Error, ShieldParams, OptimisticMutateContext>({
+    ...shieldMutationOptions(token),
     ...options,
     onMutate: config.optimistic
       ? async (variables, mutationContext) => {
-          const balanceKey = confidentialBalanceQueryKeys.token(config.tokenAddress);
-          await queryClient.cancelQueries({ queryKey: balanceKey });
-          const previous = queryClient.getQueriesData<bigint>({ queryKey: balanceKey });
-          for (const [key, value] of previous) {
-            if (value !== undefined) {
-              queryClient.setQueryData(key, value + variables.amount);
-            }
-          }
-          return (options?.onMutate?.(variables, mutationContext) ??
-            config.tokenAddress) as Address;
+          const snapshot = await applyOptimisticBalanceDelta(
+            queryClient,
+            config.tokenAddress,
+            variables.amount,
+            "add",
+          );
+          const callerContext = await options?.onMutate?.(variables, mutationContext);
+          return { snapshot, callerContext };
         }
       : options?.onMutate,
-    onError: (error, variables, onMutateResult, context) => {
-      if (config.optimistic) {
-        // Rollback: invalidate to refetch actual values
-        queryClient.invalidateQueries({
-          queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-        });
+    onError: (error, variables, rawContext, context) => {
+      const { wrappedContext, callerContext } = unwrapOptimisticCallerContext(
+        config.optimistic,
+        rawContext,
+      );
+      if (wrappedContext) {
+        rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
       }
-      options?.onError?.(error, variables, onMutateResult, context);
+      // callerContext is the user's original onMutate return — cast required by wrapper pattern
+      options?.onError?.(
+        error,
+        variables,
+        callerContext as OptimisticMutateContext | undefined,
+        context,
+      );
     },
-    onSuccess: (data, variables, onMutateResult, context) => {
-      context.client.invalidateQueries({
-        queryKey: confidentialHandleQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialHandlesQueryKeys.all,
-      });
-      context.client.resetQueries({
-        queryKey: confidentialBalanceQueryKeys.token(config.tokenAddress),
-      });
-      context.client.invalidateQueries({
-        queryKey: confidentialBalancesQueryKeys.all,
-      });
-      // Underlying ERC-20 balance changes after shield — invalidate wagmi useBalance cache
-      context.client.invalidateQueries({
-        predicate: wagmiBalancePredicates.balanceOf,
-      });
-      options?.onSuccess?.(data, variables, onMutateResult, context);
+    onSuccess: (data, variables, rawContext, context) => {
+      const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
+      options?.onSuccess?.(data, variables, callerContext as OptimisticMutateContext, context);
+      invalidateAfterShield(context.client, config.tokenAddress);
+    },
+    onSettled: (data, error, variables, rawContext, context) => {
+      const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
+      options?.onSettled?.(
+        data,
+        error,
+        variables,
+        callerContext as OptimisticMutateContext | undefined,
+        context,
+      );
     },
   });
 }

@@ -1,13 +1,13 @@
 import { TRANSFER_BATCHER_ABI } from "../abi/transfer-batch.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
-import { assertAddress } from "../utils";
+import type { Handle } from "../relayer/relayer-sdk.types";
+import type { Address, Hex } from "viem";
 import { FHE_GAS_LIMIT } from "./gas";
 
 /** Batch transfer data for confidentialBatchTransfer. */
 export interface BatchTransferData {
   to: Address;
-  encryptedAmount: Address;
-  inputProof: Address;
+  encryptedAmount: Handle;
+  inputProof: Hex;
   retryFor: bigint;
 }
 
@@ -28,9 +28,6 @@ export function confidentialBatchTransferContract(
   batchTransferData: BatchTransferData[],
   fees: bigint,
 ) {
-  assertAddress(batcherAddress, "batcherAddress");
-  assertAddress(tokenAddress, "tokenAddress");
-  assertAddress(fromAddress, "fromAddress");
   return {
     address: batcherAddress,
     abi: TRANSFER_BATCHER_ABI,

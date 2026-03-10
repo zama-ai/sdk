@@ -1,4 +1,6 @@
-import type { Address, GenericStorage } from "./token.types";
+import { getAddress, type Address } from "viem";
+import type { GenericStorage } from "./token.types";
+import type { Handle } from "../relayer/relayer-sdk.types";
 
 const BALANCES_KEY = "zama:balances";
 
@@ -6,7 +8,7 @@ export interface BalanceCachePayload {
   storage: GenericStorage;
   tokenAddress: Address;
   owner: Address;
-  handle: Address;
+  handle: Handle;
 }
 
 /**
@@ -14,8 +16,8 @@ export interface BalanceCachePayload {
  * The handle is embedded in the key so a new on-chain handle automatically
  * invalidates the cache entry — no TTL needed.
  */
-function storageKey(tokenAddress: Address, owner: Address, handle: Address): string {
-  return `zama:balance:${tokenAddress.toLowerCase()}:${owner.toLowerCase()}:${handle.toLowerCase()}`;
+function storageKey(tokenAddress: Address, owner: Address, handle: Handle): string {
+  return `zama:balance:${getAddress(tokenAddress)}:${getAddress(owner)}:${handle.toLowerCase()}`;
 }
 
 /**

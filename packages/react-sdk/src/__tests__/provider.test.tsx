@@ -1,20 +1,15 @@
-import React from "react";
-import { describe, expect, it, vi } from "vitest";
-import { renderHook } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { vi } from "vitest";
+import { describe, expect, it } from "../test-fixtures";
+import { renderHook, waitFor } from "@testing-library/react";
 import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
-import { useZamaSDK, ZamaProvider } from "../provider";
-import {
-  createMockRelayer,
-  createMockSigner,
-  createMockStorage,
-  renderWithProviders,
-} from "./test-utils";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { useZamaSDK } from "../provider";
+import { decryptionKeys } from "../relayer/decryption-cache";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaSDKConfig[] = [];
-vi.mock("@zama-fhe/sdk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@zama-fhe/sdk")>();
+vi.mock("@zama-fhe/sdk", async (importOriginal: () => Promise<typeof import("@zama-fhe/sdk")>) => {
+  const actual = await importOriginal();
   return {
     ...actual,
     ZamaSDK: class MockZamaSDK extends actual.ZamaSDK {
@@ -29,11 +24,11 @@ vi.mock("@zama-fhe/sdk", async (importOriginal) => {
 describe("ZamaProvider & useZamaSDK", () => {
   it("throws when used outside provider", () => {
     expect(() => renderHook(() => useZamaSDK())).toThrow(
-      "useZamaSDK must be used within a ZamaProvider",
+      "useZamaSDK must be used within a <ZamaProvider>",
     );
   });
 
-  it("returns a ZamaSDK instance inside provider", () => {
+  it("returns a ZamaSDK instance inside provider", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useZamaSDK());
 
     expect(result.current).toBeDefined();
@@ -41,50 +36,68 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.relayer).toBeDefined();
   });
 
-  it("does not terminate relayer on unmount (caller owns the relayer)", () => {
-    const relayer = createMockRelayer();
+  it("does not terminate relayer on unmount (caller owns the relayer)", ({
+    relayer,
+    renderWithProviders,
+  }) => {
     const { unmount } = renderWithProviders(() => useZamaSDK(), { relayer });
 
     unmount();
     expect(relayer.terminate).not.toHaveBeenCalled();
   });
 
-  it("passes credentialDurationDays and onEvent to ZamaSDK", () => {
+  it("invalidates wallet-scoped queries when the signer lifecycle changes", ({
+    createWrapper,
+    signer,
+  }) => {
+    const { Wrapper, queryClient } = createWrapper({ signer });
+    renderHook(() => useZamaSDK(), { wrapper: Wrapper });
+
+    const lifecycle = vi.mocked(signer.subscribe!).mock.calls.at(-1)?.[0];
+    const signerKey = zamaQueryKeys.signerAddress.all;
+    const balanceKey = zamaQueryKeys.confidentialBalance.token(
+      "0x1111111111111111111111111111111111111111",
+    );
+    const decryptionKey = decryptionKeys.value(
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    );
+    const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
+
+    queryClient.setQueryData(signerKey, "0xuser");
+    queryClient.setQueryData(balanceKey, 1n);
+    queryClient.setQueryData(decryptionKey, 2n);
+    queryClient.setQueryData(wagmiBalanceKey, 2n);
+
+    lifecycle?.onChainChange?.(1);
+
+    return waitFor(() => {
+      expect(queryClient.getQueryData(signerKey)).toBeUndefined();
+      expect(queryClient.getQueryData(decryptionKey)).toBeUndefined();
+      expect(queryClient.getQueryState(balanceKey)?.isInvalidated).toBe(true);
+      expect(queryClient.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);
+    });
+  });
+
+  it("passes keypairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {
     tokenSDKConstructorArgs.length = 0;
 
-    const relayer = createMockRelayer();
-    const signer = createMockSigner();
-    const storage = createMockStorage();
     const onEvent: ZamaSDKEventListener = vi.fn();
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
+    const { Wrapper, signer, relayer } = createWrapper({
+      keypairTTL: 604800,
+      onEvent,
     });
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        <ZamaProvider
-          relayer={relayer}
-          signer={signer}
-          storage={storage}
-          credentialDurationDays={7}
-          onEvent={onEvent}
-        >
-          {children}
-        </ZamaProvider>
-      </QueryClientProvider>
-    );
-
-    const { result } = renderHook(() => useZamaSDK(), { wrapper });
+    const { result } = renderHook(() => useZamaSDK(), { wrapper: Wrapper });
 
     expect(result.current).toBeDefined();
     expect(result.current.signer).toBe(signer);
     expect(result.current.relayer).toBe(relayer);
 
-    // Verify ZamaSDK was constructed with credentialDurationDays
+    // Verify ZamaSDK was constructed with keypairTTL (7 days in seconds)
     expect(tokenSDKConstructorArgs).toHaveLength(1);
     expect(tokenSDKConstructorArgs[0]).toEqual(
       expect.objectContaining({
-        credentialDurationDays: 7,
+        keypairTTL: 604800,
       }),
     );
 

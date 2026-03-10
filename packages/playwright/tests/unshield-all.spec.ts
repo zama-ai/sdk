@@ -3,11 +3,13 @@ import { test, expect } from "../fixtures";
 test("should shield USDT then unshield all", async ({
   page,
   contracts,
-  initialBalances,
   formatUnits,
   computeFee,
+  confidentialBalances,
 }) => {
   const shieldAmount = 1000n;
+
+  const cUSDTBefore = confidentialBalances.cUSDT;
 
   await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
   await page.getByTestId("amount-input").fill(shieldAmount.toString());
@@ -17,7 +19,7 @@ test("should shield USDT then unshield all", async ({
   await page.goto(`/unshield-all?token=${contracts.cUSDT}`);
 
   // Verify balance is shown before unshield
-  const balanceBefore = initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount);
+  const balanceBefore = cUSDTBefore + shieldAmount - computeFee(shieldAmount);
   await expect(page.getByTestId("current-balance")).toContainText(`Balance: ${balanceBefore}`);
 
   await page.getByTestId("unshield-all-button").click();
@@ -34,11 +36,13 @@ test("should shield USDT then unshield all", async ({
 test("should shield USDC then unshield all", async ({
   page,
   contracts,
-  initialBalances,
   formatUnits,
   computeFee,
+  confidentialBalances,
 }) => {
   const shieldAmount = 1000n;
+
+  const cUSDCBefore = confidentialBalances.cUSDC;
 
   await page.goto(`/shield?token=${contracts.USDC}&wrapper=${contracts.cUSDC}`);
   await page.getByTestId("amount-input").fill(shieldAmount.toString());
@@ -48,7 +52,7 @@ test("should shield USDC then unshield all", async ({
   await page.goto(`/unshield-all?token=${contracts.cUSDC}`);
 
   // Verify balance is shown before unshield
-  const balanceBefore = initialBalances.cUSDC + shieldAmount - computeFee(shieldAmount);
+  const balanceBefore = cUSDCBefore + shieldAmount - computeFee(shieldAmount);
   await expect(page.getByTestId("current-balance")).toContainText(`Balance: ${balanceBefore}`);
 
   await page.getByTestId("unshield-all-button").click();

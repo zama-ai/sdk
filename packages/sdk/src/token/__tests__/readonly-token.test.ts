@@ -1,191 +1,289 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "../../test-fixtures";
 import { ReadonlyToken } from "../readonly-token";
 import { ZERO_HANDLE } from "../readonly-token";
-import { MemoryStorage } from "../memory-storage";
-import type { GenericSigner } from "../token.types";
-import { ZamaErrorCode } from "../token.types";
+import { ZamaErrorCode } from "../errors";
+import type { GenericSigner, GenericStorage } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { Address } from "../../relayer/relayer-sdk.types";
-import { DecryptionFailedError } from "../errors";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
+import { DecryptionFailedError } from "../errors";
+import { getAddress, type Address } from "viem";
+
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
 
-function createMockSdk() {
-  return {
-    generateKeypair: vi.fn().mockResolvedValue({
-      publicKey: "0xpub",
-      privateKey: "0xpriv",
-    }),
-    createEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { UserDecryptRequestVerification: [] },
-      message: {
-        publicKey: "0xpub",
-        contractAddresses: [TOKEN],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    }),
-    userDecrypt: vi.fn().mockResolvedValue({
-      [VALID_HANDLE]: 1000n,
-      [VALID_HANDLE2]: 2000n,
-    }),
-  } as unknown as RelayerSDK;
+interface ReadonlyTokenContext {
+  relayer: RelayerSDK;
+  signer: GenericSigner;
+  storage: GenericStorage;
+  sessionStorage: GenericStorage;
+  tokenAddress: Address;
+  handle: Address;
 }
 
-function createMockSigner(): GenericSigner {
-  return {
-    getAddress: vi.fn().mockResolvedValue(USER),
-    signTypedData: vi.fn().mockResolvedValue("0xsig"),
-    writeContract: vi.fn().mockResolvedValue("0xtxhash"),
-    readContract: vi.fn().mockResolvedValue(ZERO_HANDLE),
-    waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
-    getChainId: vi.fn().mockResolvedValue(31337),
-    subscribe: vi.fn().mockReturnValue(() => {}),
-  };
+function createReadonlyToken({
+  relayer,
+  signer,
+  storage,
+  sessionStorage,
+  tokenAddress,
+  handle,
+}: ReadonlyTokenContext): ReadonlyToken {
+  vi.mocked(relayer.userDecrypt).mockResolvedValue({
+    [handle]: 1000n,
+    [VALID_HANDLE2]: 2000n,
+  } as never);
+  return new ReadonlyToken({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    address: tokenAddress,
+  });
 }
 
 describe("ReadonlyToken", () => {
-  let sdk: ReturnType<typeof createMockSdk>;
-  let signer: GenericSigner;
-  let token: ReadonlyToken;
-
-  beforeEach(() => {
-    sdk = createMockSdk();
-    signer = createMockSigner();
-    token = new ReadonlyToken({
-      relayer: sdk as unknown as RelayerSDK,
-      signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
-    });
-  });
-
   describe("decryptHandles", () => {
-    it("returns 0n for zero handles without hitting relayer", async () => {
+    it("returns 0n for zero handles without hitting relayer", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       const result = await token.decryptHandles([ZERO_HANDLE as Address]);
 
       expect(result.get(ZERO_HANDLE)).toBe(0n);
-      expect(sdk.userDecrypt).not.toHaveBeenCalled();
+      expect(relayer.userDecrypt).not.toHaveBeenCalled();
     });
 
-    it("returns 0n for 0x handle without hitting relayer", async () => {
+    it("returns 0n for 0x handle without hitting relayer", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       const result = await token.decryptHandles(["0x" as Address]);
 
       expect(result.get("0x")).toBe(0n);
-      expect(sdk.userDecrypt).not.toHaveBeenCalled();
+      expect(relayer.userDecrypt).not.toHaveBeenCalled();
     });
 
-    it("decrypts non-zero handles in a single relayer call", async () => {
-      const result = await token.decryptHandles([
-        VALID_HANDLE as Address,
-        VALID_HANDLE2 as Address,
-      ]);
+    it("decrypts non-zero handles in a single relayer call", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const result = await token.decryptHandles([handle as Address, VALID_HANDLE2 as Address]);
 
-      expect(result.get(VALID_HANDLE)).toBe(1000n);
+      expect(result.get(handle)).toBe(1000n);
       expect(result.get(VALID_HANDLE2)).toBe(2000n);
-      expect(sdk.userDecrypt).toHaveBeenCalledOnce();
-      expect(sdk.userDecrypt).toHaveBeenCalledWith(
+      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+      expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
-          handles: [VALID_HANDLE, VALID_HANDLE2],
-          contractAddress: TOKEN,
+          handles: [handle, VALID_HANDLE2],
+          contractAddress: tokenAddress,
         }),
       );
     });
 
-    it("mixes zero and non-zero handles correctly", async () => {
-      const result = await token.decryptHandles([ZERO_HANDLE as Address, VALID_HANDLE as Address]);
+    it("mixes zero and non-zero handles correctly", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const result = await token.decryptHandles([ZERO_HANDLE as Address, handle as Address]);
 
       expect(result.get(ZERO_HANDLE)).toBe(0n);
-      expect(result.get(VALID_HANDLE)).toBe(1000n);
-      expect(sdk.userDecrypt).toHaveBeenCalledOnce();
+      expect(result.get(handle)).toBe(1000n);
+      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
       // Only the non-zero handle should be sent to relayer
-      expect(sdk.userDecrypt).toHaveBeenCalledWith(
+      expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
-          handles: [VALID_HANDLE],
+          handles: [handle],
         }),
       );
     });
 
-    it("returns empty map for empty input", async () => {
+    it("returns empty map for empty input", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       const result = await token.decryptHandles([]);
 
       expect(result.size).toBe(0);
-      expect(sdk.userDecrypt).not.toHaveBeenCalled();
+      expect(relayer.userDecrypt).not.toHaveBeenCalled();
     });
 
-    it("uses provided owner as signerAddress", async () => {
+    it("uses provided owner as signerAddress", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
-      await token.decryptHandles([VALID_HANDLE as Address], otherOwner);
+      await token.decryptHandles([handle as Address], otherOwner);
 
-      expect(sdk.userDecrypt).toHaveBeenCalledWith(
+      expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
           signerAddress: otherOwner,
         }),
       );
     });
 
-    it("defaults signerAddress to signer.getAddress()", async () => {
-      await token.decryptHandles([VALID_HANDLE as Address]);
+    it("defaults signerAddress to signer.getAddress()", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+      userAddress,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      await token.decryptHandles([handle as Address]);
 
-      expect(sdk.userDecrypt).toHaveBeenCalledWith(
+      expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
-          signerAddress: USER,
+          signerAddress: userAddress,
         }),
       );
     });
 
-    it("returns 0n for handles not in decrypt result", async () => {
+    it("returns 0n for handles not in decrypt result", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       const unknownHandle = ("0x" + "ff".repeat(32)) as Address;
-      vi.mocked(sdk.userDecrypt).mockResolvedValueOnce({});
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({});
 
       const result = await token.decryptHandles([unknownHandle as Address]);
 
       expect(result.get(unknownHandle)).toBe(0n);
     });
 
-    it("throws ZamaError on decryption failure", async () => {
-      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("relayer down"));
+    it("throws ZamaError on decryption failure", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
-      await expect(token.decryptHandles([VALID_HANDLE as Address])).rejects.toMatchObject({
+      await expect(token.decryptHandles([handle as Address])).rejects.toMatchObject({
         code: ZamaErrorCode.DecryptionFailed,
         message: "Failed to decrypt handles",
       });
     });
   });
 
-  describe("normalizeHandle", () => {
-    it("returns hex string as-is", async () => {
-      // normalizeHandle is protected, test via confidentialBalanceOf
-      vi.mocked(signer.readContract).mockResolvedValue(VALID_HANDLE);
-      await expect(token.confidentialBalanceOf()).resolves.toBe(VALID_HANDLE);
-    });
-
-    it("converts bigint to padded hex", async () => {
-      vi.mocked(signer.readContract).mockResolvedValue(255n);
-      const handle = await token.confidentialBalanceOf();
-      expect(handle).toBe("0x" + "ff".padStart(64, "0"));
-    });
-
-    it("returns ZERO_HANDLE for unknown types", async () => {
-      vi.mocked(signer.readContract).mockResolvedValue(true);
-      const handle = await token.confidentialBalanceOf();
-      expect(handle).toBe(ZERO_HANDLE);
-    });
-  });
-
   describe("allowance", () => {
-    it("reads underlying token then checks allowance", async () => {
+    it("reads underlying token then checks allowance", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(UNDERLYING) // underlying()
@@ -207,145 +305,280 @@ describe("ReadonlyToken", () => {
   });
 
   describe("batchDecryptBalances error paths", () => {
-    const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+    const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
-    it("throws DecryptionFailedError by default when decryption fails", async () => {
-      const token2 = new ReadonlyToken({
-        relayer: sdk as unknown as RelayerSDK,
+    it("throws DecryptionFailedError by default when decryption fails", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
         signer,
-        storage: new MemoryStorage(),
-        sessionStorage: new MemoryStorage(),
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const token2 = new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
         address: TOKEN2,
       });
 
-      vi.mocked(sdk.userDecrypt)
-        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
+      vi.mocked(relayer.userDecrypt)
+        .mockResolvedValueOnce({ [handle]: 1000n })
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(
         ReadonlyToken.batchDecryptBalances([token, token2], {
-          handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+          handles: [handle as Address, VALID_HANDLE2 as Address],
         }),
       ).rejects.toThrow(DecryptionFailedError);
 
       // Reset mocks for second assertion — token's result is now cached,
       // so only token2 will call userDecrypt.
-      vi.mocked(sdk.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
+      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       await expect(
         ReadonlyToken.batchDecryptBalances([token, token2], {
-          handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+          handles: [handle as Address, VALID_HANDLE2 as Address],
         }),
       ).rejects.toThrow(/Batch decryption failed for 1 token\(s\)/);
     });
 
-    it("returns fallback from onError callback instead of throwing", async () => {
-      const token2 = new ReadonlyToken({
-        relayer: sdk as unknown as RelayerSDK,
+    it("returns fallback from onError callback instead of throwing", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
         signer,
-        storage: new MemoryStorage(),
-        sessionStorage: new MemoryStorage(),
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const token2 = new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
         address: TOKEN2,
       });
 
-      vi.mocked(sdk.userDecrypt)
-        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
+      vi.mocked(relayer.userDecrypt)
+        .mockResolvedValueOnce({ [handle]: 1000n })
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
-        handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+        handles: [handle as Address, VALID_HANDLE2 as Address],
         onError: () => 0n,
       });
 
-      expect(result.get(TOKEN)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(0n);
+      expect(result.get(tokenAddress)).toBe(1000n);
+      expect(result.get(getAddress(TOKEN2))).toBe(0n);
     });
 
-    it("onError receives correct error and address", async () => {
-      const token2 = new ReadonlyToken({
-        relayer: sdk as unknown as RelayerSDK,
+    it("onError receives correct error and address", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
         signer,
-        storage: new MemoryStorage(),
-        sessionStorage: new MemoryStorage(),
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const token2 = new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
         address: TOKEN2,
       });
 
-      vi.mocked(sdk.userDecrypt)
-        .mockResolvedValueOnce({ [VALID_HANDLE]: 1000n })
+      vi.mocked(relayer.userDecrypt)
+        .mockResolvedValueOnce({ [handle]: 1000n })
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
       const captured: Array<{ error: Error; address: Address }> = [];
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
-        handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+        handles: [handle as Address, VALID_HANDLE2 as Address],
         onError: (error, address) => {
           captured.push({ error, address });
           return 42n;
         },
       });
 
-      expect(result.get(TOKEN)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(42n);
+      expect(result.get(tokenAddress)).toBe(1000n);
+      expect(result.get(getAddress(TOKEN2))).toBe(42n);
       expect(captured).toHaveLength(1);
-      expect(captured[0]!.address).toBe(TOKEN2);
+      expect(captured[0]!.address).toBe(getAddress(TOKEN2));
       expect(captured[0]!.error.message).toBe("decrypt failed");
     });
   });
 
   describe("batchDecryptBalances (length mismatch)", () => {
-    it("throws DecryptionFailedError when tokens and handles have different lengths", async () => {
+    it("throws DecryptionFailedError when tokens and handles have different lengths", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       await expect(
         ReadonlyToken.batchDecryptBalances([token], {
-          handles: [VALID_HANDLE as Address, VALID_HANDLE2 as Address],
+          handles: [handle as Address, VALID_HANDLE2 as Address],
         }),
       ).rejects.toThrow(/tokens\.length.*must equal.*handles\.length/);
     });
   });
 
   describe("allow", () => {
-    it("returns immediately when called with no tokens", async () => {
+    it("returns immediately when called with no tokens", async ({ relayer, signer }) => {
       await ReadonlyToken.allow();
 
-      expect(sdk.generateKeypair).not.toHaveBeenCalled();
+      expect(relayer.generateKeypair).not.toHaveBeenCalled();
       expect(signer.signTypedData).not.toHaveBeenCalled();
     });
 
-    it("instance allow() delegates to credentials manager", async () => {
+    it("instance allow() delegates to credentials manager", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       await token.allow();
 
-      expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
     });
 
-    it("allows credentials for all tokens in a single signature", async () => {
-      const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
-      const token2 = new ReadonlyToken({
-        relayer: sdk as unknown as RelayerSDK,
+    it("allows credentials for all tokens in a single signature", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
         signer,
-        storage: new MemoryStorage(),
-        sessionStorage: new MemoryStorage(),
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+      const token2 = new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
         address: TOKEN2,
       });
 
       await ReadonlyToken.allow(token, token2);
 
-      expect(sdk.generateKeypair).toHaveBeenCalledOnce();
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
     });
   });
 
   describe("isAllowed", () => {
-    it("returns false before allow()", async () => {
+    it("returns false before allow()", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       expect(await token.isAllowed()).toBe(false);
     });
 
-    it("returns true after allow()", async () => {
+    it("returns true after allow()", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       await token.allow();
       expect(await token.isAllowed()).toBe(true);
     });
   });
 
   describe("revoke", () => {
-    it("clears the session so isAllowed returns false", async () => {
+    it("clears the session so isAllowed returns false", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
       await token.allow();
       expect(await token.isAllowed()).toBe(true);
 
@@ -356,18 +589,22 @@ describe("ReadonlyToken", () => {
 });
 
 describe("ZamaSDK token factory", () => {
-  it("creates ReadonlyToken with correct address", () => {
-    const sdk = createMockSdk();
-    const signer = createMockSigner();
+  it("creates ReadonlyToken with correct address", ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    tokenAddress,
+  }) => {
     const token = new ReadonlyToken({
-      relayer: sdk as unknown as RelayerSDK,
+      relayer,
       signer,
-      storage: new MemoryStorage(),
-      sessionStorage: new MemoryStorage(),
-      address: TOKEN,
+      storage,
+      sessionStorage,
+      address: tokenAddress,
     });
 
-    expect(token.address).toBe(TOKEN);
+    expect(token.address).toBe(tokenAddress);
     expect(token.signer).toBe(signer);
   });
 });

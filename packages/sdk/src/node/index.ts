@@ -58,13 +58,11 @@ export type {
   EncryptResult,
   UserDecryptParams,
   DelegatedUserDecryptParams,
-  FHEKeypair,
   PublicDecryptResult,
 } from "../relayer/relayer-sdk.types";
 
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../token/async-local-storage";
-export type { GenericStorage } from "../token/token.types";
 
 // Network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";

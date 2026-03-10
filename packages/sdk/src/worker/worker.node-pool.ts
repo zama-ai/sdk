@@ -1,7 +1,8 @@
 import { availableParallelism } from "node:os";
 import { NodeWorkerClient } from "./worker.node-client";
 import type { NodeWorkerClientConfig } from "./worker.node-client";
-import type { ZKProofLike } from "../relayer/relayer-sdk.types";
+import type { Handle } from "../relayer/relayer-sdk.types";
+import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
 import type {
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
@@ -149,7 +150,7 @@ export class NodeWorkerPool {
     return this.#dispatch((w) => w.userDecrypt(params));
   }
 
-  async publicDecrypt(handles: string[]): Promise<PublicDecryptResponseData> {
+  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData> {
     return this.#dispatch((w) => w.publicDecrypt(handles));
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { DelegatedUserDecryptParams } from "@zama-fhe/sdk";
+import type { DelegatedUserDecryptParams, ClearValueType, Handle } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useZamaSDK } from "../provider";
 
@@ -19,7 +19,7 @@ import { useZamaSDK } from "../provider";
  */
 export function useDelegatedUserDecrypt() {
   const sdk = useZamaSDK();
-  return useMutation<Record<string, bigint>, Error, DelegatedUserDecryptParams>({
+  return useMutation<Record<Handle, ClearValueType>, Error, DelegatedUserDecryptParams>({
     mutationFn: (params) => sdk.relayer.delegatedUserDecrypt(params),
   });
 }

@@ -1,24 +1,8 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ZamaSDK } from "@zama-fhe/sdk";
+import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
+import { revokeSessionMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { isAllowedQueryKeys } from "./use-is-allowed";
-
-/**
- * TanStack Query mutation options factory for session revoke.
- *
- * @param sdk - A `ZamaSDK` instance.
- * @returns Mutation options with `mutationKey` and `mutationFn`.
- */
-export function revokeSessionMutationOptions(sdk: ZamaSDK) {
-  return {
-    mutationKey: ["revokeSession"] as const,
-    mutationFn: async () => {
-      await sdk.revokeSession();
-    },
-  };
-}
 
 /**
  * Revoke the session signature for the connected wallet without
@@ -30,14 +14,15 @@ export function revokeSessionMutationOptions(sdk: ZamaSDK) {
  * revokeSession();
  * ```
  */
-export function useRevokeSession() {
+export function useRevokeSession(options?: UseMutationOptions<void, Error, void>) {
   const sdk = useZamaSDK();
-  const queryClient = useQueryClient();
 
   return useMutation<void, Error, void>({
     ...revokeSessionMutationOptions(sdk),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: isAllowedQueryKeys.all });
+    ...options,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      options?.onSuccess?.(data, variables, onMutateResult, context);
+      context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
     },
   });
 }

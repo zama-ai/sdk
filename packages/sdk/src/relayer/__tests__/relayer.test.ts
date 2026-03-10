@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi } from "vitest";
+import { describe, it, expect, beforeEach } from "../../test-fixtures";
 import { EncryptionFailedError } from "../../token/errors";
 
 // ---------------------------------------------------------------------------
@@ -124,6 +125,8 @@ const MOCK_EIP712 = {
     extraData: "0x",
   },
 };
+
+const HANDLE = ("0x" + "11".repeat(32)) as `0x${string}`;
 
 // ===========================================================================
 // RelayerWeb
@@ -272,7 +275,7 @@ describe("RelayerWeb", () => {
       });
 
       await relayer.encrypt({
-        values: [100n],
+        values: [{ value: 100n, type: "euint64" as const }],
         contractAddress: "0xContract" as `0x${string}`,
         userAddress: "0xUser" as `0x${string}`,
       });
@@ -288,7 +291,7 @@ describe("RelayerWeb", () => {
       });
 
       await relayer.encrypt({
-        values: [100n],
+        values: [{ value: 100n, type: "euint64" as const }],
         contractAddress: "0xContract" as `0x${string}`,
         userAddress: "0xUser" as `0x${string}`,
       });
@@ -305,7 +308,7 @@ describe("RelayerWeb", () => {
       });
 
       await relayer.encrypt({
-        values: [100n],
+        values: [{ value: 100n, type: "euint64" as const }],
         contractAddress: "0xContract" as `0x${string}`,
         userAddress: "0xUser" as `0x${string}`,
       });
@@ -355,7 +358,7 @@ describe("RelayerWeb", () => {
       mockWorkerClient.encrypt.mockResolvedValue({ handles, inputProof });
 
       const result = await relayer.encrypt({
-        values: [42n],
+        values: [{ value: 42n, type: "euint64" as const }],
         contractAddress: "0xC" as `0x${string}`,
         userAddress: "0xU" as `0x${string}`,
       });
@@ -365,39 +368,42 @@ describe("RelayerWeb", () => {
 
     it("userDecrypt delegates to worker and returns clearValues", async () => {
       const relayer = createWebRelayer();
-      const clearValues = { handle1: 100n };
+      const clearValues = { [HANDLE]: 100n };
       mockWorkerClient.userDecrypt.mockResolvedValue({ clearValues });
 
       const params = {
-        handles: ["h1"],
+        handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
-        privateKey: "sk",
-        publicKey: "pk",
-        signature: "sig",
+        privateKey: "0xsk" as `0x${string}`,
+        publicKey: "0xpk" as `0x${string}`,
+        signature: "0xsig" as `0x${string}`,
         signerAddress: "0xS" as `0x${string}`,
         startTimestamp: 1000,
         durationDays: 7,
       };
       const result = await relayer.userDecrypt(params);
 
-      expect(result).toEqual({ handle1: 100n });
+      expect(result).toEqual(clearValues);
       expect(mockWorkerClient.userDecrypt).toHaveBeenCalledWith(params);
     });
 
     it("publicDecrypt delegates to worker and returns structured result", async () => {
       const relayer = createWebRelayer();
       const mockResult = {
-        clearValues: { h1: 50n },
+        clearValues: {
+          [HANDLE]: "0x1111111111111111111111111111111111111111",
+          [("0x" + "22".repeat(32)) as `0x${string}`]: true,
+        },
         abiEncodedClearValues: "0xencoded",
         decryptionProof: "0xproof" as `0x${string}`,
       };
       mockWorkerClient.publicDecrypt.mockResolvedValue(mockResult);
 
-      const result = await relayer.publicDecrypt(["h1"]);
+      const result = await relayer.publicDecrypt([HANDLE]);
 
       expect(result).toEqual(mockResult);
-      expect(mockWorkerClient.publicDecrypt).toHaveBeenCalledWith(["h1"]);
+      expect(mockWorkerClient.publicDecrypt).toHaveBeenCalledWith([HANDLE]);
     });
 
     it("createDelegatedUserDecryptEIP712 delegates to worker", async () => {
@@ -406,7 +412,7 @@ describe("RelayerWeb", () => {
       mockWorkerClient.createDelegatedUserDecryptEIP712.mockResolvedValue(mockData);
 
       const result = await relayer.createDelegatedUserDecryptEIP712(
-        "pk",
+        "0xpk",
         ["0xC" as `0x${string}`],
         "0xDelegator",
         1000,
@@ -415,7 +421,7 @@ describe("RelayerWeb", () => {
 
       expect(result).toBe(mockData);
       expect(mockWorkerClient.createDelegatedUserDecryptEIP712).toHaveBeenCalledWith({
-        publicKey: "pk",
+        publicKey: "0xpk",
         contractAddresses: ["0xC"],
         delegatorAddress: "0xDelegator",
         startTimestamp: 1000,
@@ -426,16 +432,16 @@ describe("RelayerWeb", () => {
     it("delegatedUserDecrypt delegates to worker and returns clearValues", async () => {
       const relayer = createWebRelayer();
       mockWorkerClient.delegatedUserDecrypt.mockResolvedValue({
-        clearValues: { h1: 200n },
+        clearValues: { [HANDLE]: 200n },
       });
 
       const params = {
-        handles: ["h1"],
+        handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
-        privateKey: "sk",
-        publicKey: "pk",
-        signature: "sig",
+        privateKey: "0xsk" as `0x${string}`,
+        publicKey: "0xpk" as `0x${string}`,
+        signature: "0xsig" as `0x${string}`,
         delegatorAddress: "0xD" as `0x${string}`,
         delegateAddress: "0xE" as `0x${string}`,
         startTimestamp: 1000,
@@ -443,7 +449,7 @@ describe("RelayerWeb", () => {
       };
       const result = await relayer.delegatedUserDecrypt(params);
 
-      expect(result).toEqual({ h1: 200n });
+      expect(result).toEqual({ [HANDLE]: 200n });
     });
 
     it("requestZKProofVerification delegates to worker", async () => {
@@ -487,6 +493,45 @@ describe("RelayerWeb", () => {
 
       expect(result).toEqual(pp);
       expect(mockWorkerClient.getPublicParams).toHaveBeenCalledWith(2048);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // SDK-17: Status tracking
+  // -------------------------------------------------------------------------
+
+  describe("status tracking", () => {
+    it("starts in idle state", () => {
+      const relayer = createWebRelayer();
+      expect(relayer.status).toBe("idle");
+      expect(relayer.initError).toBeUndefined();
+    });
+
+    it("transitions to ready after successful init", async () => {
+      const onStatusChange = vi.fn();
+      const relayer = createWebRelayer({ onStatusChange });
+      mockWorkerClient.generateKeypair.mockResolvedValue({
+        publicKey: "pk",
+        privateKey: "sk",
+      });
+
+      await relayer.generateKeypair();
+
+      expect(relayer.status).toBe("ready");
+      expect(onStatusChange).toHaveBeenCalledWith("initializing", undefined);
+      expect(onStatusChange).toHaveBeenCalledWith("ready", undefined);
+    });
+
+    it("transitions to error when init fails", async () => {
+      const onStatusChange = vi.fn();
+      const relayer = createWebRelayer({ onStatusChange });
+      mockWorkerClient.initWorker.mockRejectedValue(new Error("WASM failed"));
+
+      await expect(relayer.generateKeypair()).rejects.toThrow("Failed to initialize FHE worker");
+
+      expect(relayer.status).toBe("error");
+      expect(relayer.initError).toBeInstanceOf(Error);
+      expect(onStatusChange).toHaveBeenCalledWith("error", expect.any(Error));
     });
   });
 });
@@ -664,7 +709,7 @@ describe("RelayerNode", () => {
       mockPool.encrypt.mockResolvedValue({ handles, inputProof });
 
       const result = await relayer.encrypt({
-        values: [42n],
+        values: [{ value: 42n, type: "euint64" as const }],
         contractAddress: "0xC" as `0x${string}`,
         userAddress: "0xU" as `0x${string}`,
       });
@@ -674,39 +719,42 @@ describe("RelayerNode", () => {
 
     it("userDecrypt delegates to pool and returns clearValues", async () => {
       const relayer = createNodeRelayer();
-      const clearValues = { handle1: 100n };
+      const clearValues = { [HANDLE]: 100n };
       mockPool.userDecrypt.mockResolvedValue({ clearValues });
 
       const params = {
-        handles: ["h1"],
+        handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
-        privateKey: "sk",
-        publicKey: "pk",
-        signature: "sig",
+        privateKey: "0xsk" as `0x${string}`,
+        publicKey: "0xpk" as `0x${string}`,
+        signature: "0xsig" as `0x${string}`,
         signerAddress: "0xS" as `0x${string}`,
         startTimestamp: 1000,
         durationDays: 7,
       };
       const result = await relayer.userDecrypt(params);
 
-      expect(result).toEqual({ handle1: 100n });
+      expect(result).toEqual(clearValues);
       expect(mockPool.userDecrypt).toHaveBeenCalledWith(params);
     });
 
     it("publicDecrypt delegates to pool and returns structured result", async () => {
       const relayer = createNodeRelayer();
       const mockResult = {
-        clearValues: { h1: 50n },
+        clearValues: {
+          [HANDLE]: "0x1111111111111111111111111111111111111111",
+          [("0x" + "22".repeat(32)) as `0x${string}`]: true,
+        },
         abiEncodedClearValues: "0xencoded",
         decryptionProof: "0xproof" as `0x${string}`,
       };
       mockPool.publicDecrypt.mockResolvedValue(mockResult);
 
-      const result = await relayer.publicDecrypt(["h1"]);
+      const result = await relayer.publicDecrypt([HANDLE]);
 
       expect(result).toEqual(mockResult);
-      expect(mockPool.publicDecrypt).toHaveBeenCalledWith(["h1"]);
+      expect(mockPool.publicDecrypt).toHaveBeenCalledWith([HANDLE]);
     });
 
     it("createDelegatedUserDecryptEIP712 delegates to pool", async () => {
@@ -715,7 +763,7 @@ describe("RelayerNode", () => {
       mockPool.createDelegatedUserDecryptEIP712.mockResolvedValue(mockData);
 
       const result = await relayer.createDelegatedUserDecryptEIP712(
-        "pk",
+        "0xpk",
         ["0xC" as `0x${string}`],
         "0xDelegator",
         1000,
@@ -724,7 +772,7 @@ describe("RelayerNode", () => {
 
       expect(result).toBe(mockData);
       expect(mockPool.createDelegatedUserDecryptEIP712).toHaveBeenCalledWith({
-        publicKey: "pk",
+        publicKey: "0xpk",
         contractAddresses: ["0xC"],
         delegatorAddress: "0xDelegator",
         startTimestamp: 1000,
@@ -735,16 +783,16 @@ describe("RelayerNode", () => {
     it("delegatedUserDecrypt delegates to pool and returns clearValues", async () => {
       const relayer = createNodeRelayer();
       mockPool.delegatedUserDecrypt.mockResolvedValue({
-        clearValues: { h1: 200n },
+        clearValues: { [HANDLE]: 200n },
       });
 
       const params = {
-        handles: ["h1"],
+        handles: [HANDLE],
         contractAddress: "0xC" as `0x${string}`,
         signedContractAddresses: ["0xC" as `0x${string}`],
-        privateKey: "sk",
-        publicKey: "pk",
-        signature: "sig",
+        privateKey: "0xsk" as `0x${string}`,
+        publicKey: "0xpk" as `0x${string}`,
+        signature: "0xsig" as `0x${string}`,
         delegatorAddress: "0xD" as `0x${string}`,
         delegateAddress: "0xE" as `0x${string}`,
         startTimestamp: 1000,
@@ -752,7 +800,7 @@ describe("RelayerNode", () => {
       };
       const result = await relayer.delegatedUserDecrypt(params);
 
-      expect(result).toEqual({ h1: 200n });
+      expect(result).toEqual({ [HANDLE]: 200n });
     });
 
     it("requestZKProofVerification delegates to pool", async () => {

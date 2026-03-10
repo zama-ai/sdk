@@ -1,25 +1,9 @@
 "use client";
 
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery } from "../utils/query";
 import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/sdk";
-import {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-} from "@zama-fhe/sdk";
+import { activityFeedQueryOptions, deriveActivityFeedLogsKey } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
-
-/**
- * Query key factory for activity feed queries.
- * Use with `queryClient.invalidateQueries()` / `resetQueries()`.
- */
-export const activityFeedQueryKeys = {
-  /** Match all activity feed queries. */
-  all: ["activityFeed"] as const,
-  /** Match activity feed queries for a specific token. */
-  token: (tokenAddress: string) => ["activityFeed", tokenAddress] as const,
-} as const;
 
 /** Configuration for {@link useActivityFeed}. */
 export interface UseActivityFeedConfig {
@@ -53,37 +37,18 @@ export interface UseActivityFeedConfig {
  * });
  * ```
  */
-export function useActivityFeed(
-  config: UseActivityFeedConfig,
-): UseQueryResult<ActivityItem[], Error> {
+export function useActivityFeed(config: UseActivityFeedConfig) {
   const { tokenAddress, userAddress, logs, decrypt: decryptOpt } = config;
   const token = useReadonlyToken(tokenAddress);
   const decrypt = decryptOpt ?? true;
-  const enabled = logs !== undefined && userAddress !== undefined;
+  const logsKey = deriveActivityFeedLogsKey(logs);
 
-  return useQuery<ActivityItem[], Error>({
-    queryKey: [
-      ...activityFeedQueryKeys.token(tokenAddress),
-      userAddress ?? "",
-      logs?.map((l) => `${l.transactionHash ?? ""}:${l.logIndex ?? ""}`).join(",") ?? "",
-    ],
-    queryFn: async () => {
-      if (!logs || !userAddress) return [];
-
-      // Phase 1: Parse and classify (sync)
-      const items = sortByBlockNumber(parseActivityFeed(logs, userAddress));
-
-      if (!decrypt) return items;
-
-      // Phase 2: Batch decrypt encrypted handles
-      const handles = extractEncryptedHandles(items);
-      if (handles.length === 0) return items;
-
-      const decryptedMap = await token.decryptHandles(handles as Address[], userAddress);
-
-      return applyDecryptedValues(items, decryptedMap);
-    },
-    enabled: enabled,
-    staleTime: Infinity,
+  return useQuery<ActivityItem[]>({
+    ...activityFeedQueryOptions(token, {
+      userAddress,
+      logs,
+      decrypt,
+      logsKey,
+    }),
   });
 }

@@ -15,10 +15,11 @@
     "@tanstack/react-query": "^5.90.21",
     "@zama-fhe/react-sdk": "workspace:*",
     "@zama-fhe/test-components": "workspace:*",
+    "@zama-fhe/sdk": "workspace:*",
     "next": "^16.1.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "viem": "^2.46.3",
+    "viem": "^2.47.0",
     "wagmi": "^3.5.0"
   },
   "devDependencies": {

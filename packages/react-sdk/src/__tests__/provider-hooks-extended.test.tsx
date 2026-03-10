@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { useUnderlyingAllowance } from "../token/use-underlying-allowance";
@@ -7,23 +7,23 @@ import { useUnshieldAll } from "../token/use-unshield-all";
 import { useMetadataSuspense } from "../token/use-metadata";
 import { useTotalSupplySuspense } from "../token/use-total-supply";
 import { useWrapperDiscoverySuspense } from "../token/use-wrapper-discovery";
-import { renderWithProviders, createMockSigner } from "./test-utils";
-
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
 
 describe("useUnderlyingAllowance", () => {
-  it("returns allowance value", async () => {
-    const signer = createMockSigner();
+  it("returns allowance value", async ({
+    signer,
+    tokenAddress,
+    wrapperAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
-      .mockResolvedValueOnce(5000n); // allowance()
+      .mockResolvedValueOnce("0x5555555555555555555555555555555555555555")
+      .mockResolvedValueOnce(5000n);
 
     const { result } = renderWithProviders(
       () =>
         useUnderlyingAllowance({
-          tokenAddress: TOKEN,
-          wrapperAddress: WRAPPER,
+          tokenAddress,
+          wrapperAddress,
         }),
       { signer },
     );
@@ -35,10 +35,8 @@ describe("useUnderlyingAllowance", () => {
 });
 
 describe("useUnshield", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useUnshield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
+  it("provides mutate function", ({ tokenAddress, wrapperAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnshield({ tokenAddress, wrapperAddress }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
@@ -46,10 +44,8 @@ describe("useUnshield", () => {
 });
 
 describe("useUnshieldAll", () => {
-  it("provides mutate function", () => {
-    const { result } = renderWithProviders(() =>
-      useUnshieldAll({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
-    );
+  it("provides mutate function", ({ tokenAddress, wrapperAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnshieldAll({ tokenAddress, wrapperAddress }));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
@@ -57,14 +53,15 @@ describe("useUnshieldAll", () => {
 });
 
 describe("useMetadataSuspense", () => {
-  it("returns metadata via suspense", async () => {
-    const signer = createMockSigner();
+  it("returns metadata via suspense", async ({ signer, tokenAddress, renderWithProviders }) => {
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce("TestToken")
       .mockResolvedValueOnce("TT")
       .mockResolvedValueOnce(18);
 
-    const { result } = renderWithProviders(() => useMetadataSuspense(TOKEN), { signer });
+    const { result } = renderWithProviders(() => useMetadataSuspense(tokenAddress), {
+      signer,
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });
@@ -72,11 +69,12 @@ describe("useMetadataSuspense", () => {
 });
 
 describe("useTotalSupplySuspense", () => {
-  it("returns total supply via suspense", async () => {
-    const signer = createMockSigner();
+  it("returns total supply via suspense", async ({ signer, tokenAddress, renderWithProviders }) => {
     vi.mocked(signer.readContract).mockResolvedValue(100000n);
 
-    const { result } = renderWithProviders(() => useTotalSupplySuspense(TOKEN), { signer });
+    const { result } = renderWithProviders(() => useTotalSupplySuspense(tokenAddress), {
+      signer,
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(100000n);
@@ -84,8 +82,11 @@ describe("useTotalSupplySuspense", () => {
 });
 
 describe("useWrapperDiscoverySuspense", () => {
-  it("returns wrapper address via suspense", async () => {
-    const signer = createMockSigner();
+  it("returns wrapper address via suspense", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(signer.readContract).mockResolvedValue(
       "0x4444444444444444444444444444444444444444" as Address,
     );
@@ -93,7 +94,7 @@ describe("useWrapperDiscoverySuspense", () => {
     const { result } = renderWithProviders(
       () =>
         useWrapperDiscoverySuspense({
-          tokenAddress: TOKEN,
+          tokenAddress,
           coordinatorAddress: "0x5555555555555555555555555555555555555555" as Address,
         }),
       { signer },

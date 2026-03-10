@@ -1,6 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { ClearValueType, Handle } from "@zama-fhe/sdk";
+import { hashFn } from "@zama-fhe/sdk/query";
 import { decryptionKeys } from "./decryption-cache";
 
 /**
@@ -8,9 +10,10 @@ import { decryptionKeys } from "./decryption-cache";
  * Values are populated automatically when useUserDecrypt or usePublicDecrypt succeed.
  * You can also populate manually via queryClient.setQueryData(decryptionKeys.value(handle), value).
  */
-export function useUserDecryptedValue(handle: string | undefined) {
-  return useQuery<bigint>({
-    queryKey: decryptionKeys.value(handle ?? ""),
+export function useUserDecryptedValue(handle: Handle | undefined) {
+  return useQuery<ClearValueType>({
+    queryKey: decryptionKeys.value(handle ?? "0x"),
+    queryKeyHashFn: hashFn,
     queryFn: () => undefined as never,
     enabled: false,
   });
