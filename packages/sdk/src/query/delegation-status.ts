@@ -15,6 +15,19 @@ export interface DelegationStatusQueryConfig {
   query?: Record<string, unknown>;
 }
 
+const PERMANENT = 2n ** 64n - 1n;
+
+function deriveDelegationFromExpiry(expiryTimestamp: bigint) {
+  if (expiryTimestamp === 0n) {
+    return false;
+  }
+  if (expiryTimestamp === PERMANENT) {
+    return true;
+  }
+  const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+  return expiryTimestamp >= nowSeconds;
+}
+
 export function delegationStatusQueryOptions(
   readonlyToken: ReadonlyToken,
   config: DelegationStatusQueryConfig,
@@ -36,7 +49,9 @@ export function delegationStatusQueryOptions(
         config.delegator,
         config.delegate,
       );
-      const isDelegated = await readonlyToken.isDelegated(config.delegator, config.delegate);
+      // Derive isDelegated locally to avoid a redundant RPC call
+      // (isDelegated() internally calls getDelegationExpiry() again)
+      const isDelegated = deriveDelegationFromExpiry(expiryTimestamp);
       return { isDelegated, expiryTimestamp };
     },
     enabled: config.query?.enabled !== false,
