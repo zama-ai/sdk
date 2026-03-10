@@ -31,9 +31,7 @@ export interface UseActivityFeedConfig {
  * Phase 1: Instantly parses raw logs into classified {@link ActivityItem}s (sync, cheap).
  * Phase 2: Batch-decrypts encrypted transfer amounts via the relayer (async).
  */
-export function useActivityFeed(
-  config: UseActivityFeedConfig,
-): UseQueryResult<ActivityItem[]> {
+export function useActivityFeed(config: UseActivityFeedConfig): UseQueryResult<ActivityItem[]> {
   const { tokenAddress, userAddress, logs, decrypt: decryptOpt } = config;
   const token = useReadonlyToken(tokenAddress);
   const decrypt = decryptOpt ?? true;
@@ -41,10 +39,7 @@ export function useActivityFeed(
     logs?.map((log) => `${log.transactionHash ?? ""}:${log.logIndex ?? ""}`).join(",") ?? "";
 
   return useQuery<ActivityItem[]>({
-    queryKey: [
-      "activityFeed",
-      { tokenAddress, userAddress, logsKey, decrypt },
-    ],
+    queryKey: ["activityFeed", { tokenAddress, userAddress, logsKey, decrypt }],
     queryKeyHashFn: hashFn,
     queryFn: async () => {
       if (!logs || !userAddress) return [];

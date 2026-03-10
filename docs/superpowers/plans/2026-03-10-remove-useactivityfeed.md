@@ -15,12 +15,14 @@
 ## File Structure
 
 ### New files (in `packages/test-components/src/activity-feed/`)
+
 - `activity.ts` — copied from `packages/sdk/src/activity.ts`, imports adjusted
 - `use-activity-feed.ts` — rewritten from `packages/react-sdk/src/token/use-activity-feed.ts`, inlines query logic
 - `__tests__/activity.test.ts` — copied from `packages/sdk/src/__tests__/activity.test.ts`, imports adjusted
 - `index.ts` — barrel export
 
 ### Modified files
+
 - `packages/test-components/src/activity-feed-panel.tsx` — update imports
 - `packages/test-components/package.json` — add `@tanstack/react-query` peer dep
 - `packages/sdk/src/index.ts:166-179` — remove activity feed exports
@@ -34,6 +36,7 @@
 - `packages/react-sdk/src/token/__tests__/use-confidential-transfer-from.test.tsx` — remove `activityFeed` key assertion
 
 ### Deleted files
+
 - `packages/sdk/src/activity.ts`
 - `packages/sdk/src/query/activity-feed.ts`
 - `packages/sdk/src/__tests__/activity.test.ts`
@@ -48,6 +51,7 @@
 ### Task 1: Create `activity.ts` in test-components
 
 **Files:**
+
 - Create: `packages/test-components/src/activity-feed/activity.ts`
 
 - [ ] **Step 1: Copy activity.ts with adjusted imports**
@@ -83,6 +87,7 @@ git commit -m "refactor: copy activity feed parsing logic to test-components"
 ### Task 2: Create `use-activity-feed.ts` in test-components
 
 **Files:**
+
 - Create: `packages/test-components/src/activity-feed/use-activity-feed.ts`
 
 - [ ] **Step 1: Write the hook with inlined query logic**
@@ -123,9 +128,7 @@ export interface UseActivityFeedConfig {
  * Phase 1: Instantly parses raw logs into classified {@link ActivityItem}s (sync, cheap).
  * Phase 2: Batch-decrypts encrypted transfer amounts via the relayer (async).
  */
-export function useActivityFeed(
-  config: UseActivityFeedConfig,
-): UseQueryResult<ActivityItem[]> {
+export function useActivityFeed(config: UseActivityFeedConfig): UseQueryResult<ActivityItem[]> {
   const { tokenAddress, userAddress, logs, decrypt: decryptOpt } = config;
   const token = useReadonlyToken(tokenAddress);
   const decrypt = decryptOpt ?? true;
@@ -133,10 +136,7 @@ export function useActivityFeed(
     logs?.map((log) => `${log.transactionHash ?? ""}:${log.logIndex ?? ""}`).join(",") ?? "";
 
   return useQuery<ActivityItem[]>({
-    queryKey: [
-      "activityFeed",
-      { tokenAddress, userAddress, logsKey, decrypt },
-    ],
+    queryKey: ["activityFeed", { tokenAddress, userAddress, logsKey, decrypt }],
     queryKeyHashFn: hashFn,
     queryFn: async () => {
       if (!logs || !userAddress) return [];
@@ -168,6 +168,7 @@ git commit -m "refactor: create self-contained useActivityFeed hook in test-comp
 ### Task 3: Create barrel export and update dependencies
 
 **Files:**
+
 - Create: `packages/test-components/src/activity-feed/index.ts`
 - Modify: `packages/test-components/package.json`
 
@@ -209,6 +210,7 @@ git commit -m "refactor: add activity-feed barrel export and tanstack peer dep"
 ### Task 4: Move activity.test.ts to test-components
 
 **Files:**
+
 - Create: `packages/test-components/src/activity-feed/__tests__/activity.test.ts`
 
 - [ ] **Step 1: Copy activity.test.ts with adjusted imports**
@@ -260,6 +262,7 @@ git commit -m "refactor: copy activity feed tests to test-components"
 ### Task 5: Update ActivityFeedPanel to use local imports
 
 **Files:**
+
 - Modify: `packages/test-components/src/activity-feed-panel.tsx`
 
 - [ ] **Step 1: Update imports in activity-feed-panel.tsx**
@@ -299,6 +302,7 @@ git commit -m "refactor: update ActivityFeedPanel to use local activity-feed imp
 ### Task 6: Remove from core SDK exports
 
 **Files:**
+
 - Modify: `packages/sdk/src/index.ts:166-179`
 
 - [ ] **Step 1: Remove activity feed exports from sdk/src/index.ts**
@@ -334,6 +338,7 @@ git commit -m "refactor: remove activity feed exports from @zama-fhe/sdk"
 ### Task 7: Remove from query subpath exports
 
 **Files:**
+
 - Modify: `packages/sdk/src/query/index.ts:72-76,101-102`
 
 - [ ] **Step 1: Remove activity feed query exports from query/index.ts**
@@ -367,6 +372,7 @@ git commit -m "refactor: remove activity feed exports from @zama-fhe/sdk/query"
 ### Task 8: Remove activity feed query keys
 
 **Files:**
+
 - Modify: `packages/sdk/src/query/query-keys.ts:145-159`
 
 - [ ] **Step 1: Remove activityFeed section from zamaQueryKeys**
@@ -403,6 +409,7 @@ git commit -m "refactor: remove activityFeed query keys from zamaQueryKeys"
 ### Task 9: Remove activity feed invalidation calls
 
 **Files:**
+
 - Modify: `packages/sdk/src/query/invalidation.ts:30,46,53,58,72`
 
 - [ ] **Step 1: Remove activityFeed invalidation from each function**
@@ -410,28 +417,33 @@ git commit -m "refactor: remove activityFeed query keys from zamaQueryKeys"
 Remove these 5 lines (one per function):
 
 In `invalidateAfterUnwrap` (line 30):
+
 ```typescript
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 ```
 
 In `invalidateAfterShield` (line 46):
+
 ```typescript
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 ```
 
 In `invalidateAfterUnshield` (line 53):
+
 ```typescript
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 ```
 
 In `invalidateAfterTransfer` (line 58):
+
 ```typescript
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 ```
 
 In `invalidateAfterApprove` (line 72):
+
 ```typescript
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 ```
 
 - [ ] **Step 2: Commit**
@@ -446,11 +458,13 @@ git commit -m "refactor: remove activityFeed invalidation from mutation helpers"
 ### Task 10: Remove from react-sdk exports
 
 **Files:**
+
 - Modify: `packages/react-sdk/src/index.ts:230,271,331-344`
 
 - [ ] **Step 1: Remove activity feed hook export (line 230)**
 
 Delete:
+
 ```typescript
 export { useActivityFeed, type UseActivityFeedConfig } from "./token/use-activity-feed";
 ```
@@ -458,6 +472,7 @@ export { useActivityFeed, type UseActivityFeedConfig } from "./token/use-activit
 - [ ] **Step 2: Remove activityFeedQueryOptions re-export (line 271)**
 
 In the large re-export block from `@zama-fhe/sdk/query`, remove:
+
 ```typescript
   activityFeedQueryOptions,
 ```
@@ -465,6 +480,7 @@ In the large re-export block from `@zama-fhe/sdk/query`, remove:
 - [ ] **Step 3: Remove activity feed type/function re-exports (lines 331-344)**
 
 Delete the entire "Re-export activity feed types and helpers" section:
+
 ```typescript
 // Re-export activity feed types and helpers from core SDK
 export type {
@@ -496,6 +512,7 @@ git commit -m "refactor: remove activity feed exports from @zama-fhe/react-sdk"
 ### Task 11: Delete activity feed source files
 
 **Files:**
+
 - Delete: `packages/sdk/src/activity.ts`
 - Delete: `packages/sdk/src/query/activity-feed.ts`
 - Delete: `packages/react-sdk/src/token/use-activity-feed.ts`
@@ -520,6 +537,7 @@ git commit -m "refactor: delete activity feed source files from SDK"
 ### Task 12: Delete activity feed test files
 
 **Files:**
+
 - Delete: `packages/sdk/src/__tests__/activity.test.ts`
 - Delete: `packages/sdk/src/query/__tests__/activity-feed.test.ts`
 - Delete: `packages/react-sdk/src/token/__tests__/use-activity-feed.test.tsx`
@@ -544,6 +562,7 @@ git commit -m "refactor: delete activity feed test files from SDK"
 ### Task 13: Update remaining test files
 
 **Files:**
+
 - Modify: `packages/sdk/src/query/__tests__/query-keys.test.ts`
 - Modify: `packages/sdk/src/query/__tests__/invalidation.test.ts`
 - Modify: `packages/react-sdk/src/token/__tests__/use-confidential-transfer.test.tsx`
@@ -631,6 +650,7 @@ pnpm api-report
 ```
 
 This should update:
+
 - `packages/sdk/etc/sdk.api.md`
 - `packages/sdk/etc/sdk-query.api.md`
 - `packages/react-sdk/etc/react-sdk.api.md`
@@ -647,6 +667,7 @@ git commit -m "docs: regenerate API reports after activity feed removal"
 ### Task 16: Update README files
 
 **Files:**
+
 - Modify: `packages/sdk/README.md`
 - Modify: `packages/react-sdk/README.md`
 

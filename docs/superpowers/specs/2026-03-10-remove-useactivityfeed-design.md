@@ -11,11 +11,11 @@
 
 All activity feed code moves to `packages/test-components/src/activity-feed/`:
 
-| Current location | New location |
-|-----------------|-------------|
-| `packages/sdk/src/activity.ts` | `packages/test-components/src/activity-feed/activity.ts` |
-| `packages/react-sdk/src/token/use-activity-feed.ts` | `packages/test-components/src/activity-feed/use-activity-feed.ts` |
-| `packages/sdk/src/__tests__/activity.test.ts` | `packages/test-components/src/activity-feed/__tests__/activity.test.ts` |
+| Current location                                                    | New location                                                                      |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `packages/sdk/src/activity.ts`                                      | `packages/test-components/src/activity-feed/activity.ts`                          |
+| `packages/react-sdk/src/token/use-activity-feed.ts`                 | `packages/test-components/src/activity-feed/use-activity-feed.ts`                 |
+| `packages/sdk/src/__tests__/activity.test.ts`                       | `packages/test-components/src/activity-feed/__tests__/activity.test.ts`           |
 | `packages/react-sdk/src/token/__tests__/use-activity-feed.test.tsx` | `packages/test-components/src/activity-feed/__tests__/use-activity-feed.test.tsx` |
 
 ## What stays in core SDK
@@ -63,6 +63,7 @@ packages/test-components/src/activity-feed/
 The current `useActivityFeed` depends on `activityFeedQueryOptions` from `@zama-fhe/sdk/query`. Since that query factory is being removed, the hook will inline the query logic directly — a `useQuery` call with parse/decrypt as the query function. This removes the dependency on SDK query keys.
 
 The moved code still imports from `@zama-fhe/sdk` (via `@zama-fhe/react-sdk`'s re-exports):
+
 - `decodeOnChainEvent` (for parsing raw logs)
 - `RawLog`, `OnChainEvent` types
 - `Handle`, `ZERO_HANDLE`
