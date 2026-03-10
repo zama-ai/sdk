@@ -42,6 +42,14 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      # Pre-install Bun and Claude CLI before sandbox lockdown.
+      # Node.js native fetch() does not honor HTTP_PROXY, so oven-sh/setup-bun
+      # and npm install would fail behind the iptables egress block.
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@3d267786b128fe76c2f16a390aa2448b815359f3 # v2.0.2
+        with:
+          bun-version: 1.3.6
+
       - name: Cache Squid Docker image
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
@@ -58,6 +66,7 @@ jobs:
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           prompt: "/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          path_to_bun_executable: bun
         env:
           HTTP_PROXY: http://127.0.0.1:3128
           HTTPS_PROXY: http://127.0.0.1:3128
