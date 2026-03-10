@@ -31,7 +31,12 @@ const EXECUTOR_ABI = parseAbi(["function plaintexts(bytes32 handle) view returns
 type MockClientOptions = {
   persistAllowed?: (handle: string, account: string) => boolean;
   isAllowedForDecryption?: (handle: string) => boolean;
-  isHandleDelegatedForUserDecryption?: (delegator: string, delegate: string, contractAddress: string, handle: string) => boolean;
+  isHandleDelegatedForUserDecryption?: (
+    delegator: string,
+    delegate: string,
+    contractAddress: string,
+    handle: string,
+  ) => boolean;
   plaintexts?: Record<string, bigint>;
 };
 type MockCall = { method: string; params: unknown[] };
@@ -678,12 +683,12 @@ describe("RelayerCleartext", () => {
     expect(typedData.message.contractAddresses).toEqual([CONTRACT_ADDRESS]);
   });
 
-  it("delegatedUserDecrypt throws when delegator is not authorized", async () => {
+  it("delegatedUserDecrypt throws when delegation check returns false", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
     const { fhevm, calls } = createInstance({
-      persistAllowed: () => false,
+      isHandleDelegatedForUserDecryption: () => false,
     });
 
     await expect(
@@ -699,97 +704,19 @@ describe("RelayerCleartext", () => {
         startTimestamp: 1,
         durationDays: 1,
       }),
-    ).rejects.toThrow(/Delegator.*not authorized/i);
+    ).rejects.toThrow(/not delegated/i);
 
     const plaintextCalls = filterEthCallsTo(calls, hardhatCleartextConfig.executorAddress);
     expect(plaintextCalls).toHaveLength(0);
   });
 
-  it("delegatedUserDecrypt throws when contract is not authorized", async () => {
-    const handle = asHandle("0x" + "12".repeat(32));
-    const delegatorAddress = USER_ADDRESS;
-    const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const { fhevm } = createInstance({
-      persistAllowed: (_handle, account) =>
-        account.toLowerCase() !== CONTRACT_ADDRESS.toLowerCase(),
-    });
-
-    await expect(
-      fhevm.delegatedUserDecrypt({
-        handles: [handle],
-        contractAddress: CONTRACT_ADDRESS,
-        signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: `0x${"01".repeat(32)}` as `0x${string}`,
-        publicKey: `0x${"02".repeat(32)}` as `0x${string}`,
-        signature: `0x${"03".repeat(65)}` as `0x${string}`,
-        delegatorAddress,
-        delegateAddress,
-        startTimestamp: 1,
-        durationDays: 1,
-      }),
-    ).rejects.toThrow(/Contract.*not authorized/i);
-  });
-
-  it("delegatedUserDecrypt throws when delegator equals contract", async () => {
-    const handle = asHandle("0x" + "12".repeat(32));
-    const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const { fhevm } = createInstance({
-      persistAllowed: () => true,
-    });
-
-    await expect(
-      fhevm.delegatedUserDecrypt({
-        handles: [handle],
-        contractAddress: CONTRACT_ADDRESS,
-        signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: `0x${"01".repeat(32)}` as `0x${string}`,
-        publicKey: `0x${"02".repeat(32)}` as `0x${string}`,
-        signature: `0x${"03".repeat(65)}` as `0x${string}`,
-        delegatorAddress: CONTRACT_ADDRESS,
-        delegateAddress,
-        startTimestamp: 1,
-        durationDays: 1,
-      }),
-    ).rejects.toThrow(/must not equal contract address/i);
-  });
-
-  it("delegatedUserDecrypt succeeds even when delegate is not authorized (delegate not checked)", async () => {
-    const handle = asHandle("0x" + "12".repeat(32));
-    const delegatorAddress = USER_ADDRESS;
-    const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const { fhevm } = createInstance({
-      persistAllowed: (_handle, account) => account.toLowerCase() !== delegateAddress.toLowerCase(),
-      plaintexts: { [handle.toLowerCase()]: 42n },
-    });
-
-    const result = await fhevm.delegatedUserDecrypt({
-      handles: [handle],
-      contractAddress: CONTRACT_ADDRESS,
-      signedContractAddresses: [CONTRACT_ADDRESS],
-      privateKey: `0x${"01".repeat(32)}`,
-      publicKey: `0x${"02".repeat(32)}`,
-      signature: `0x${"03".repeat(65)}`,
-      delegatorAddress,
-      delegateAddress,
-      startTimestamp: 1,
-      durationDays: 1,
-    });
-
-    expect(result[handle]).toBe(42n);
-  });
-
-  it("delegatedUserDecrypt checks persistAllowed for delegator and contract per handle", async () => {
+  it("delegatedUserDecrypt calls isHandleDelegatedForUserDecryption per handle", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const persistAllowedCalls: Array<{ handle: string; account: string }> = [];
 
     const { fhevm, calls } = createInstance({
-      persistAllowed: (handle, account) => {
-        persistAllowedCalls.push({ handle, account });
-        return true;
-      },
       plaintexts: {
         [handleA.toLowerCase()]: 7n,
         [handleB.toLowerCase()]: 11n,
@@ -811,12 +738,6 @@ describe("RelayerCleartext", () => {
 
     expect(result[handleA]).toBe(7n);
     expect(result[handleB]).toBe(11n);
-
-    // 2 handles × 2 checks (delegator + contract) = 4 persistAllowed calls
-    expect(persistAllowedCalls).toHaveLength(4);
-    const accounts = persistAllowedCalls.map((c) => c.account.toLowerCase());
-    expect(accounts.filter((a) => a === delegatorAddress.toLowerCase())).toHaveLength(2);
-    expect(accounts.filter((a) => a === CONTRACT_ADDRESS.toLowerCase())).toHaveLength(2);
 
     const callNames = calls
       .filter((call) => call.method === "eth_call")
@@ -840,10 +761,8 @@ describe("RelayerCleartext", () => {
         return "unknown";
       });
     expect(callNames).toEqual([
-      "persistAllowed",
-      "persistAllowed",
-      "persistAllowed",
-      "persistAllowed",
+      "isHandleDelegatedForUserDecryption",
+      "isHandleDelegatedForUserDecryption",
       "plaintexts",
       "plaintexts",
     ]);
@@ -880,14 +799,20 @@ describe("RelayerCleartext", () => {
       }),
     ).rejects.toThrow(new RegExp(normalizedB));
 
-    const delegationCalls = filterEthCallsTo(calls, getAddress(hardhatCleartextConfig.aclContractAddress)).filter((call) => {
+    const delegationCalls = filterEthCallsTo(
+      calls,
+      getAddress(hardhatCleartextConfig.aclContractAddress),
+    ).filter((call) => {
       const tx = call.params[0] as { data: string };
       const parsed = decodeFunctionData({ abi: ACL_ABI, data: tx.data as `0x${string}` });
       return parsed?.functionName === "isHandleDelegatedForUserDecryption";
     });
     expect(delegationCalls).toHaveLength(2);
 
-    const executorCalls = filterEthCallsTo(calls, getAddress(hardhatCleartextConfig.executorAddress));
+    const executorCalls = filterEthCallsTo(
+      calls,
+      getAddress(hardhatCleartextConfig.executorAddress),
+    );
     expect(executorCalls).toHaveLength(0);
   });
 

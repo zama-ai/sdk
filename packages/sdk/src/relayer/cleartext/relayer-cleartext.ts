@@ -58,6 +58,7 @@ import {
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
   "function isAllowedForDecryption(bytes32 handle) view returns (bool)",
+  "function isHandleDelegatedForUserDecryption(address delegator, address delegate, address contractAddress, bytes32 handle) view returns (bool)",
 ]);
 
 const EXECUTOR_ABI = parseAbi(["function plaintexts(bytes32 handle) view returns (uint256)"]);
@@ -251,16 +252,15 @@ export class RelayerCleartext implements RelayerSDK {
   }
 
   async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    const normalizedHandles = params.handles.map(normalizeHandle);
     await this.#assertDecryptAuthorization(
-      normalizedHandles,
+      params.handles,
       getAddress(params.signerAddress),
       getAddress(params.contractAddress),
       "User",
       "user decrypt",
     );
 
-    return this.#decryptHandles(normalizedHandles);
+    return this.#decryptHandles(params.handles);
   }
 
   async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
@@ -341,16 +341,14 @@ export class RelayerCleartext implements RelayerSDK {
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {
-    const normalizedHandles = params.handles.map(normalizeHandle);
-    await this.#assertDecryptAuthorization(
-      normalizedHandles,
+    await this.#assertDelegation(
+      params.handles,
       getAddress(params.delegatorAddress),
+      getAddress(params.delegateAddress),
       getAddress(params.contractAddress),
-      "Delegator",
-      "delegated decrypt",
     );
 
-    return this.#decryptHandles(normalizedHandles);
+    return this.#decryptHandles(params.handles);
   }
 
   async requestZKProofVerification(_zkProof: ZKProofLike): Promise<InputProofBytesType> {
@@ -417,6 +415,32 @@ export class RelayerCleartext implements RelayerSDK {
       if (!contractAllowed) {
         throw new DecryptionFailedError(
           `Contract ${contractAddress} is not authorized for ${operationLabel} of handle ${normalizedHandles[i]!}`,
+        );
+      }
+    }
+  }
+
+  async #assertDelegation(
+    handles: Handle[],
+    delegatorAddress: Address,
+    delegateAddress: Address,
+    contractAddress: Address,
+  ): Promise<void> {
+    const results = await Promise.all(
+      handles.map((handle) =>
+        this.#client.readContract({
+          address: this.#config.aclContractAddress,
+          abi: ACL_ABI,
+          functionName: "isHandleDelegatedForUserDecryption",
+          args: [delegatorAddress, delegateAddress, contractAddress, handle],
+        }),
+      ),
+    );
+
+    for (let i = 0; i < handles.length; i++) {
+      if (!results[i]) {
+        throw new DecryptionFailedError(
+          `Handle ${handles[i]!} is not delegated for user decryption`,
         );
       }
     }
