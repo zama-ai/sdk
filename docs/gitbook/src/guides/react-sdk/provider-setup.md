@@ -199,10 +199,10 @@ Disconnect:   WagmiSigner auto-revokes; viem/ethers call sdk.revokeSession()
 To avoid multiple popups when your app shows several token balances, pre-authorize all tokens at once:
 
 ```tsx
-const { mutateAsync: allow } = useAllow();
+const { mutateAsync: allowTokens } = useAllowTokens();
 
 // Call this early, e.g. after loading the token list
-await allow(allTokenAddresses);
+await allowTokens(allTokenAddresses);
 // All balance decrypts reuse the cached session signature
 ```
 

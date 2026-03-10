@@ -156,14 +156,14 @@ If you need to control each step separately:
 
 ## Authorization
 
-### `useAllow`
+### `useAllowTokens`
 
 Pre-authorize FHE keypair for multiple tokens with one wallet signature. Call this early so balance decrypts don't prompt the wallet individually. Automatically invalidates `isAllowed` queries on success.
 
 ```tsx
-const { mutateAsync: allow } = useAllow();
+const { mutateAsync: allowTokens } = useAllowTokens();
 
-await allow(["0xTokenA", "0xTokenB", "0xTokenC"]);
+await allowTokens(["0xTokenA", "0xTokenB", "0xTokenC"]);
 // All subsequent balance reads reuse the cached credential
 ```
 
@@ -178,21 +178,21 @@ const { data: allowed } = useIsAllowed("0xToken");
 // allowed === true → decrypts won't prompt the wallet
 ```
 
-### `useRevoke`
+### `useRevokeTokens`
 
 Revoke the session signature for the connected wallet. Stored credentials remain intact, but the next decrypt will require a fresh wallet signature. Automatically invalidates `isAllowed` queries on success.
 
 ```tsx
-import { useRevoke } from "@zama-fhe/react-sdk";
+import { useRevokeTokens } from "@zama-fhe/react-sdk";
 
-const { mutate: revoke } = useRevoke();
+const { mutate: revokeTokens } = useRevokeTokens();
 
-revoke(["0xTokenA", "0xTokenB"]);
+revokeTokens(["0xTokenA", "0xTokenB"]);
 ```
 
 ### `useRevokeSession`
 
-Revoke the entire session for the connected wallet. Unlike `useRevoke` which targets specific tokens, this clears the session-level signature.
+Revoke the entire session for the connected wallet. Unlike `useRevokeTokens` which targets specific tokens, this clears the session-level signature.
 
 ```tsx
 import { useRevokeSession } from "@zama-fhe/react-sdk";
@@ -202,7 +202,7 @@ const { mutate: revokeSession } = useRevokeSession();
 revokeSession();
 ```
 
-> **Note:** If you use `WagmiSigner`, the SDK automatically revokes the session on wallet disconnect or account change — you don't need to call `useRevoke` or `useRevokeSession` manually for that case.
+> **Note:** If you use `WagmiSigner`, the SDK automatically revokes the session on wallet disconnect or account change — you don't need to call `useRevokeTokens` or `useRevokeSession` manually for that case.
 
 ### Session management
 
@@ -247,6 +247,34 @@ await delegate({
   options: { expirationDate: new Date("2025-12-31") },
 });
 ```
+
+### `useRevokeDelegation`
+
+Revoke a previously granted decryption delegation.
+
+```tsx
+const { mutateAsync: revoke } = useRevokeDelegation({
+  tokenAddress: "0xToken",
+});
+
+await revoke({ delegate: "0xDelegate" });
+```
+
+### `useDelegationStatus`
+
+Query whether a delegation is active between a delegator and delegate for a token.
+
+```tsx
+const { data, isLoading } = useDelegationStatus({
+  tokenAddress: "0xToken",
+  delegator: "0xDelegator",
+  delegate: "0xDelegate",
+});
+// data?.isDelegated => boolean
+// data?.expiryTimestamp => bigint (0n = none, 2^64-1 = permanent)
+```
+
+The query is automatically disabled until both `delegator` and `delegate` addresses are provided.
 
 ### `useDecryptBalanceAs`
 

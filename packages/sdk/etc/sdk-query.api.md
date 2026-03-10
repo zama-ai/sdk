@@ -395,6 +395,27 @@ export interface DelegatedUserDecryptParams {
     startTimestamp: number;
 }
 
+// @public (undocumented)
+export interface DelegationStatusData {
+    // (undocumented)
+    expiryTimestamp: bigint;
+    // (undocumented)
+    isDelegated: boolean;
+}
+
+// @public (undocumented)
+export interface DelegationStatusQueryConfig {
+    // (undocumented)
+    delegate: Address;
+    // (undocumented)
+    delegator: Address;
+    // (undocumented)
+    query?: Record<string, unknown>;
+}
+
+// @public (undocumented)
+export function delegationStatusQueryOptions(readonlyToken: ReadonlyToken, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
+
 // @public
 export interface EIP712TypedData {
     // (undocumented)
@@ -767,6 +788,15 @@ export interface ResumeUnshieldParams {
     callbacks?: UnshieldCallbacks;
     // (undocumented)
     unwrapTxHash: Hex;
+}
+
+// @public (undocumented)
+export function revokeDelegationMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.revokeDelegation", Address], RevokeDelegationParams, TransactionResult>;
+
+// @public
+export interface RevokeDelegationParams {
+    // (undocumented)
+    delegate: Address;
 }
 
 // @public (undocumented)
@@ -1294,6 +1324,17 @@ export const zamaQueryKeys: {
         readonly all: readonly ["zama.publicParams"];
         readonly bits: (bits: number) => readonly ["zama.publicParams", {
             readonly bits: number;
+        }];
+    };
+    readonly delegationStatus: {
+        readonly all: readonly ["zama.delegationStatus"];
+        readonly token: (tokenAddress: string) => readonly ["zama.delegationStatus", {
+            readonly tokenAddress: `0x${string}`;
+        }];
+        readonly scope: (tokenAddress: string, delegator: string, delegate: string) => readonly ["zama.delegationStatus", {
+            readonly tokenAddress: `0x${string}`;
+            readonly delegator: string;
+            readonly delegate: string;
         }];
     };
     readonly decryption: {

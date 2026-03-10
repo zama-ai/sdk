@@ -75,6 +75,9 @@ import { DecryptStartEvent } from '@zama-fhe/sdk';
 import { delegateDecryptionMutationOptions } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegatedUserDecryptParams } from '@zama-fhe/sdk';
+import { DelegationStatusData } from '@zama-fhe/sdk/query';
+import { DelegationStatusQueryConfig } from '@zama-fhe/sdk/query';
+import { delegationStatusQueryOptions } from '@zama-fhe/sdk/query';
 import { DEPLOYMENT_COORDINATOR_ABI } from '@zama-fhe/sdk';
 import { deploymentCoordinatorContract } from '@zama-fhe/sdk';
 import { EIP712TypedData } from '@zama-fhe/sdk';
@@ -160,6 +163,8 @@ import { RelayerWebConfig } from '@zama-fhe/sdk';
 import { RelayerWebSecurityConfig } from '@zama-fhe/sdk';
 import { resumeUnshieldMutationOptions } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
+import { revokeDelegationMutationOptions } from '@zama-fhe/sdk/query';
+import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { revokeMutationOptions } from '@zama-fhe/sdk/query';
 import { revokeSessionMutationOptions } from '@zama-fhe/sdk/query';
 import { savePendingUnshield } from '@zama-fhe/sdk';
@@ -421,6 +426,12 @@ export { DelegateDecryptionParams }
 
 export { DelegatedUserDecryptParams }
 
+export { DelegationStatusData }
+
+export { DelegationStatusQueryConfig }
+
+export { delegationStatusQueryOptions }
+
 export { DEPLOYMENT_COORDINATOR_ABI }
 
 export { deploymentCoordinatorContract }
@@ -608,6 +619,10 @@ export { resumeUnshieldMutationOptions }
 
 export { ResumeUnshieldParams }
 
+export { revokeDelegationMutationOptions }
+
+export { RevokeDelegationParams }
+
 export { revokeMutationOptions }
 
 export { revokeSessionMutationOptions }
@@ -734,7 +749,7 @@ export interface UseActivityFeedConfig {
 }
 
 // @public
-export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+export function useAllowTokens(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
@@ -1156,6 +1171,16 @@ export function useDelegateDecryption(config: UseZamaConfig, options?: UseMutati
 export function useDelegatedUserDecrypt(): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptParams, unknown>;
 
 // @public
+export function useDelegationStatus(config: UseDelegationStatusConfig): _tanstack_react_query0.UseQueryResult<DelegationStatusData, Error>;
+
+// @public (undocumented)
+export interface UseDelegationStatusConfig {
+    delegate?: Address;
+    delegator?: Address;
+    tokenAddress: Address;
+}
+
+// @public
 export function useEncrypt(): _tanstack_react_query0.UseMutationResult<EncryptResult, Error, EncryptParams, unknown>;
 
 // @public
@@ -1240,10 +1265,13 @@ export function useRequestZKProofVerification(): _tanstack_react_query0.UseMutat
 export function useResumeUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
 
 // @public
-export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+export function useRevokeDelegation(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, RevokeDelegationParams>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, RevokeDelegationParams, unknown>;
 
 // @public
 export function useRevokeSession(options?: UseMutationOptions<void, Error, void>): _tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
+
+// @public
+export function useRevokeTokens(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useShield(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, OptimisticMutateContext>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ShieldParams, OptimisticMutateContext>;
