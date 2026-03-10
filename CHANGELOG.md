@@ -1,5 +1,7 @@
 # Changelog
 
+## [1.0.0-alpha.19](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.18...v1.0.0-alpha.19) (2026-03-10)
+
 ## [1.0.0-alpha.18](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.17...v1.0.0-alpha.18) (2026-03-10)
 
 ### Performance Improvements
