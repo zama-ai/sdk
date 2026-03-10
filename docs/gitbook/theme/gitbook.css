@@ -1,0 +1,280 @@
+/* ── Zama SDK Docs – GitBook-like theme for mdbook ── */
+
+/* Hint / callout blocks */
+.hint {
+  padding: 16px 20px;
+  margin: 20px 0;
+  border-radius: 6px;
+  border-left: 4px solid;
+  line-height: 1.6;
+}
+.hint p {
+  margin: 4px 0;
+}
+.hint p:first-child {
+  margin-top: 0;
+}
+.hint p:last-child {
+  margin-bottom: 0;
+}
+
+.hint-info {
+  background: #eff8ff;
+  border-color: #3b82f6;
+}
+.hint-warning {
+  background: #fffbeb;
+  border-color: #f59e0b;
+}
+.hint-danger {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+.hint-success {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+
+/* Dark theme overrides */
+.ayu .hint-info,
+.coal .hint-info,
+.navy .hint-info {
+  background: #1e293b;
+  border-color: #60a5fa;
+}
+.ayu .hint-warning,
+.coal .hint-warning,
+.navy .hint-warning {
+  background: #2a2317;
+  border-color: #fbbf24;
+}
+.ayu .hint-danger,
+.coal .hint-danger,
+.navy .hint-danger {
+  background: #2a1717;
+  border-color: #f87171;
+}
+.ayu .hint-success,
+.coal .hint-success,
+.navy .hint-success {
+  background: #172a1a;
+  border-color: #4ade80;
+}
+
+/* ── Tab groups ── */
+.tab-group {
+  border: 1px solid var(--table-border-color, #e5e7eb);
+  border-radius: 8px;
+  margin: 20px 0;
+  overflow: hidden;
+}
+
+.tab-headers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  background: var(--sidebar-bg, #f9fafb);
+  border-bottom: 1px solid var(--table-border-color, #e5e7eb);
+  padding: 0 4px;
+}
+
+.tab-header {
+  padding: 10px 18px;
+  font-size: 0.85em;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--sidebar-fg, #6b7280);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.tab-header:hover {
+  color: var(--links, #3b82f6);
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.tab-header.active {
+  color: var(--links, #3b82f6);
+  font-weight: 600;
+  border-bottom-color: var(--links, #3b82f6);
+  background: var(--bg, white);
+}
+
+.tab-content {
+  display: none;
+  padding: 20px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Code blocks inside tabs – remove extra margin */
+.tab-content > pre {
+  margin: 0;
+  border-radius: 0;
+}
+
+.tab-content > pre:first-child {
+  margin-top: 0;
+}
+
+.tab-content > pre:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Code block improvements ── */
+pre {
+  border-radius: 6px;
+  border: 1px solid var(--table-border-color, #e5e7eb);
+}
+
+code {
+  font-size: 0.88em;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+}
+
+/* Inline code */
+:not(pre) > code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--inline-code-color, #f3f4f6);
+  font-size: 0.88em;
+}
+
+/* ── Typography ── */
+.content main {
+  max-width: 800px;
+  line-height: 1.7;
+}
+
+.content main h1 {
+  font-size: 2em;
+  margin-top: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--table-border-color, #e5e7eb);
+}
+
+.content main h2 {
+  margin-top: 2em;
+}
+
+.content main h3 {
+  margin-top: 1.5em;
+}
+
+/* Horizontal rules as section separators */
+.content main hr {
+  border: none;
+  border-top: 1px solid var(--table-border-color, #e5e7eb);
+  margin: 2em 0;
+}
+
+/* ── Tables ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.9em;
+}
+
+table th {
+  text-align: left;
+  font-weight: 600;
+  padding: 10px 12px;
+  background: var(--sidebar-bg, #f9fafb);
+  border-bottom: 2px solid var(--table-border-color, #e5e7eb);
+}
+
+table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--table-border-color, #e5e7eb);
+}
+
+/* ── Sidebar refinements ── */
+.sidebar-scrollbox {
+  font-size: 0.9em;
+}
+
+/* ── Rust theme overrides ── */
+.rust .tab-headers {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.rust .tab-header {
+  color: #6b5f50;
+}
+
+.rust .tab-header.active {
+  background: var(--bg);
+  color: var(--links);
+}
+
+.rust table th {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.rust :not(pre) > code {
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+}
+
+.rust .hint-info {
+  background: #dce8f0;
+  border-color: #2b79a2;
+}
+.rust .hint-warning {
+  background: #f0e4c8;
+  border-color: #d4a017;
+}
+.rust .hint-danger {
+  background: #f0d4d4;
+  border-color: #c0392b;
+}
+.rust .hint-success {
+  background: #d4ecd8;
+  border-color: #27ae60;
+}
+
+/* ── Light theme overrides ── */
+.light .tab-headers {
+  background: #f3f4f6;
+}
+
+.light table th {
+  background: #f3f4f6;
+}
+
+.light :not(pre) > code {
+  background: #e8eaed;
+  color: #1a1a1a;
+}
+
+/* ── Ensure tab/table backgrounds work on all dark themes ── */
+.ayu .tab-headers,
+.coal .tab-headers,
+.navy .tab-headers {
+  background: var(--sidebar-bg);
+}
+
+.ayu table th,
+.coal table th,
+.navy table th {
+  background: var(--sidebar-bg);
+}
+
+/* ── Print styles ── */
+@media print {
+  .tab-content {
+    display: block !important;
+  }
+  .tab-headers {
+    display: none;
+  }
+  .tab-group {
+    border: none;
+  }
+}
