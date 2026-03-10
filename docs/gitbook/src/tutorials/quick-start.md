@@ -246,6 +246,7 @@ const sdk = new ZamaSDK({
 {% tab title="React + wagmi" %}
 
 ```tsx
+import { useState, type FormEvent } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import {
@@ -262,16 +263,33 @@ function MyTokenPage() {
   const { disconnect } = useDisconnect();
 
   const { data: meta } = useMetadata(TOKEN);
-  const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: TOKEN,
-  });
-  const { mutateAsync: shield } = useShield({ tokenAddress: TOKEN });
-  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
+  const { data: balance, isLoading } = useConfidentialBalance({ tokenAddress: TOKEN });
+  const { mutateAsync: shield, isPending: isShielding } = useShield({ tokenAddress: TOKEN });
+  const { mutateAsync: transfer, isPending: isSending } = useConfidentialTransfer({
     tokenAddress: TOKEN,
   });
 
+  const [shieldAmount, setShieldAmount] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+
   if (!isConnected) {
     return <button onClick={() => connect({ connector: injected() })}>Connect Wallet</button>;
+  }
+
+  async function handleShield(e: FormEvent) {
+    e.preventDefault();
+    if (!shieldAmount) return;
+    await shield({ amount: BigInt(shieldAmount) });
+    setShieldAmount("");
+  }
+
+  async function handleTransfer(e: FormEvent) {
+    e.preventDefault();
+    if (!recipient || !transferAmount) return;
+    await transfer({ to: recipient as `0x${string}`, amount: BigInt(transferAmount) });
+    setRecipient("");
+    setTransferAmount("");
   }
 
   return (
@@ -282,11 +300,43 @@ function MyTokenPage() {
           Token: {meta.name} ({meta.symbol})
         </p>
       )}
-      <p>Balance: {isLoading ? "Decrypting..." : balance?.toString()}</p>
-      <button onClick={() => shield({ amount: 1000n })}>Shield 1,000 tokens</button>
-      <button disabled={isPending} onClick={() => transfer({ to: "0xRecipient", amount: 100n })}>
-        Send 100 (private)
-      </button>
+      <p>Balance: {isLoading ? "Decrypting…" : balance?.toString()}</p>
+
+      <form onSubmit={handleShield}>
+        <fieldset disabled={isShielding}>
+          <legend>Shield</legend>
+          <input
+            type="number"
+            placeholder="Amount"
+            value={shieldAmount}
+            onChange={(e) => setShieldAmount(e.target.value)}
+            required
+          />
+          <button type="submit">{isShielding ? "Shielding…" : "Shield"}</button>
+        </fieldset>
+      </form>
+
+      <form onSubmit={handleTransfer}>
+        <fieldset disabled={isSending}>
+          <legend>Confidential Transfer</legend>
+          <input
+            type="text"
+            placeholder="Recipient (0x…)"
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            required
+          />
+          <input
+            type="number"
+            placeholder="Amount"
+            value={transferAmount}
+            onChange={(e) => setTransferAmount(e.target.value)}
+            required
+          />
+          <button type="submit">{isSending ? "Sending…" : "Send"}</button>
+        </fieldset>
+      </form>
+
       <button onClick={() => disconnect()}>Disconnect</button>
     </div>
   );
