@@ -21,7 +21,7 @@ import { useConfidentialApprove } from "@zama-fhe/react-sdk";
 ```tsx
 import { useConfidentialApprove } from "@zama-fhe/react-sdk";
 
-function ApproveOperator({ tokenAddress }: { tokenAddress: Address }) {
+function ApproveOperator({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: approve, isPending } = useConfidentialApprove({ tokenAddress });
 
   const handleApprove = async () => {

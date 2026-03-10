@@ -26,9 +26,9 @@ function UnshieldForm({
   userAddress,
   wrapperAddress,
 }: {
-  feeManagerAddress: Address;
-  userAddress: Address;
-  wrapperAddress: Address;
+  feeManagerAddress: `0x${string}`;
+  userAddress: `0x${string}`;
+  wrapperAddress: `0x${string}`;
 }) {
   const amount = 500n;
 

@@ -17,6 +17,8 @@ Call `token.unshield()` with the amount you want to convert back to public token
 {% tab title="SDK" %}
 
 ```ts
+import { ZamaSDK } from "@zama-fhe/sdk";
+
 const sdk = new ZamaSDK({ relayer, signer, storage });
 const token = sdk.createToken("0xEncryptedERC20");
 

@@ -17,6 +17,8 @@ Call `balanceOf()` on a `Token` or `ReadonlyToken` instance. The SDK fetches the
 {% tab title="SDK" %}
 
 ```ts
+import { ZamaSDK } from "@zama-fhe/sdk";
+
 const sdk = new ZamaSDK({ relayer, signer, storage });
 const token = sdk.createToken("0xEncryptedERC20");
 
@@ -39,6 +41,8 @@ You can pre-authorize multiple tokens with a single signature using `ReadonlyTok
 {% tab title="SDK" %}
 
 ```ts
+import { ReadonlyToken } from "@zama-fhe/sdk";
+
 const tokenA = sdk.createReadonlyToken("0xTokenA");
 const tokenB = sdk.createReadonlyToken("0xTokenB");
 
@@ -118,6 +122,8 @@ When your app manages a portfolio of confidential tokens, use batch operations t
 {% tab title="SDK" %}
 
 ```ts
+import { ReadonlyToken } from "@zama-fhe/sdk";
+
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 
 // One wallet signature covers all tokens

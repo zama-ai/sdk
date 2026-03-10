@@ -21,7 +21,7 @@ Instance creation via [`ZamaSDK.createReadonlyToken()`](/reference/sdk/ZamaSDK#c
 {% tab title="app.ts" %}
 
 ```ts
-import { ReadonlyToken } from "@zama-fhe/sdk";
+import { ReadonlyToken, ZamaSDK } from "@zama-fhe/sdk";
 
 const sdk = new ZamaSDK({ relayer, signer, storage });
 const tokens = addresses.map((a) => sdk.createReadonlyToken(a));

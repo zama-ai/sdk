@@ -23,7 +23,7 @@ import { useIsAllowed } from "@zama-fhe/react-sdk";
 ```tsx
 import { useIsAllowed, useAllow } from "@zama-fhe/react-sdk";
 
-function AuthGuard({ tokenAddress }: { tokenAddress: Address }) {
+function AuthGuard({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { data: allowed, isLoading } = useIsAllowed();
   const { mutateAsync: allow } = useAllow();
 

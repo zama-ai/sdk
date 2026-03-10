@@ -21,7 +21,13 @@ import { useConfidentialIsApproved } from "@zama-fhe/react-sdk";
 ```tsx
 import { useConfidentialIsApproved } from "@zama-fhe/react-sdk";
 
-function ApprovalStatus({ tokenAddress, spender }: { tokenAddress: Address; spender: Address }) {
+function ApprovalStatus({
+  tokenAddress,
+  spender,
+}: {
+  tokenAddress: `0x${string}`;
+  spender: `0x${string}`;
+}) {
   const { data: isApproved, isLoading } = useConfidentialIsApproved({
     tokenAddress,
     spender,
@@ -77,7 +83,13 @@ Use `useConfidentialIsApprovedSuspense` inside a `<Suspense>` boundary. The hook
 import { useConfidentialIsApprovedSuspense } from "@zama-fhe/react-sdk";
 import { Suspense } from "react";
 
-function ApprovalCheck({ tokenAddress, spender }: Props) {
+function ApprovalCheck({
+  tokenAddress,
+  spender,
+}: {
+  tokenAddress: `0x${string}`;
+  spender: `0x${string}`;
+}) {
   const { data: isApproved } = useConfidentialIsApprovedSuspense({
     tokenAddress,
     spender,

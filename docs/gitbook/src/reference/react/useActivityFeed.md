@@ -21,15 +21,14 @@ import { useActivityFeed } from "@zama-fhe/react-sdk";
 ```tsx
 import { useActivityFeed } from "@zama-fhe/react-sdk";
 import { usePublicClient } from "wagmi";
-import { parseAbiItem } from "viem";
 import { useEffect, useState } from "react";
 
 function ActivityList({
   tokenAddress,
   userAddress,
 }: {
-  tokenAddress: Address;
-  userAddress: Address;
+  tokenAddress: `0x${string}`;
+  userAddress: `0x${string}`;
 }) {
   const [logs, setLogs] = useState([]);
   const publicClient = usePublicClient();

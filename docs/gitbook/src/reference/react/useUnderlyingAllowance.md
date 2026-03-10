@@ -21,7 +21,7 @@ import { useUnderlyingAllowance } from "@zama-fhe/react-sdk";
 ```tsx
 import { useUnderlyingAllowance } from "@zama-fhe/react-sdk";
 
-function AllowanceDisplay({ tokenAddress }: { tokenAddress: Address }) {
+function AllowanceDisplay({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { data: allowance, isLoading } = useUnderlyingAllowance({
     tokenAddress,
   });
@@ -90,7 +90,7 @@ Use `useUnderlyingAllowanceSuspense` inside a `<Suspense>` boundary. The hook th
 import { useUnderlyingAllowanceSuspense } from "@zama-fhe/react-sdk";
 import { Suspense } from "react";
 
-function Allowance({ tokenAddress }: { tokenAddress: Address }) {
+function Allowance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { data: allowance } = useUnderlyingAllowanceSuspense({
     tokenAddress,
   });

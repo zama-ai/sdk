@@ -26,6 +26,7 @@ interface GenericStorage {
 ## Usage
 
 ```ts
+import { ZamaSDK } from "@zama-fhe/sdk";
 import type { GenericStorage } from "@zama-fhe/sdk";
 
 const redisStorage: GenericStorage = {

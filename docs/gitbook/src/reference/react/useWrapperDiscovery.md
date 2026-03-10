@@ -21,7 +21,7 @@ import { useWrapperDiscovery } from "@zama-fhe/react-sdk";
 ```tsx
 import { useWrapperDiscovery } from "@zama-fhe/react-sdk";
 
-function WrapperInfo({ tokenAddress }: { tokenAddress: Address }) {
+function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const {
     data: wrapperAddress,
     isLoading,
@@ -86,7 +86,7 @@ Use `useWrapperDiscoverySuspense` inside a `<Suspense>` boundary to avoid manual
 ```tsx
 import { useWrapperDiscoverySuspense } from "@zama-fhe/react-sdk";
 
-function WrapperInfo({ tokenAddress }: { tokenAddress: Address }) {
+function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { data: wrapperAddress } = useWrapperDiscoverySuspense({
     tokenAddress,
     coordinatorAddress: "0xCoordinator",

@@ -21,7 +21,7 @@ import { useMetadata } from "@zama-fhe/react-sdk";
 ```tsx
 import { useMetadata } from "@zama-fhe/react-sdk";
 
-function TokenHeader({ tokenAddress }: { tokenAddress: Address }) {
+function TokenHeader({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { data: meta, isLoading } = useMetadata(tokenAddress);
 
   if (isLoading) return <p>Loading metadata...</p>;
@@ -74,7 +74,7 @@ Use `useMetadataSuspense` inside a `<Suspense>` boundary to avoid manual loading
 ```tsx
 import { useMetadataSuspense } from "@zama-fhe/react-sdk";
 
-function TokenHeader({ tokenAddress }: { tokenAddress: Address }) {
+function TokenHeader({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { data: meta } = useMetadataSuspense(tokenAddress);
 
   return (

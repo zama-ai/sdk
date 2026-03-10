@@ -34,6 +34,9 @@ const sdk = new ZamaSDK({
 {% tab title="config.ts" %}
 
 ```ts
+import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
