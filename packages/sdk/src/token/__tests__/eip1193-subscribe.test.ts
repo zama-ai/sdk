@@ -1,9 +1,10 @@
 /* eslint-disable no-empty-pattern */
 import type { Address } from "../../relayer/relayer-sdk.types";
-import { test as base, describe, expect, vi } from "../../test-fixtures";
+import { test as base, it, describe, expect, vi } from "../../test-fixtures";
 import { eip1193Subscribe } from "../eip1193-subscribe";
 
 const ADDR_A = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" as Address;
+const ADDR_B = "0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" as Address;
 
 /** Minimal fake EIP-1193 provider with manual event dispatch. */
 function createFakeProvider() {
@@ -20,6 +21,9 @@ function createFakeProvider() {
       for (const fn of listeners.get(event) ?? []) {
         (fn as (...a: unknown[]) => void)(...args);
       }
+    },
+    listenerCount(event: string) {
+      return listeners.get(event)?.size ?? 0;
     },
   };
 }
@@ -105,5 +109,102 @@ describe("eip1193Subscribe", () => {
 
     expect(onChainChange).toHaveBeenCalledOnce();
     expect(onChainChange).toHaveBeenCalledWith(1);
+  });
+
+  it("returns a no-op unsubscribe when provider is undefined", () => {
+    const unsub = eip1193Subscribe(undefined, () => Promise.resolve(ADDR_A), {});
+    expect(unsub).toBeTypeOf("function");
+    unsub();
+  });
+
+  eit(
+    "does not fire onAccountChange when same address reconnects without disconnect",
+    async ({ provider, onAccountChange }) => {
+      eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
+        onAccountChange: onAccountChange as (a: Address) => void,
+      });
+      await vi.waitFor(() => {});
+
+      provider.emit("accountsChanged", [ADDR_A]);
+      expect(onAccountChange).not.toHaveBeenCalled();
+    },
+  );
+
+  eit(
+    "fires onAccountChange when a different address connects",
+    async ({ provider, onAccountChange }) => {
+      eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
+        onAccountChange: onAccountChange as (a: Address) => void,
+      });
+      await vi.waitFor(() => {});
+
+      provider.emit("accountsChanged", [ADDR_B]);
+      expect(onAccountChange).toHaveBeenCalledWith(ADDR_B);
+    },
+  );
+
+  eit(
+    "case-insensitive address comparison prevents duplicate fires",
+    async ({ provider, onAccountChange }) => {
+      eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
+        onAccountChange: onAccountChange as (a: Address) => void,
+      });
+      await vi.waitFor(() => {});
+
+      provider.emit("accountsChanged", [ADDR_A.toLowerCase()]);
+      expect(onAccountChange).not.toHaveBeenCalled();
+    },
+  );
+
+  eit("fires onDisconnect on 'disconnect' event", async ({ provider, onDisconnect }) => {
+    eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
+      onDisconnect: onDisconnect as () => void,
+    });
+
+    provider.emit("disconnect");
+    expect(onDisconnect).toHaveBeenCalledOnce();
+  });
+
+  it("does not subscribe to chainChanged when onChainChange is not provided", () => {
+    const provider = createFakeProvider();
+    eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {});
+    expect(provider.listenerCount("chainChanged")).toBe(0);
+  });
+
+  it("unsubscribe removes all listeners including chainChanged", () => {
+    const provider = createFakeProvider();
+    const unsub = eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {
+      onChainChange: () => {},
+    });
+
+    expect(provider.listenerCount("accountsChanged")).toBe(1);
+    expect(provider.listenerCount("disconnect")).toBe(1);
+    expect(provider.listenerCount("chainChanged")).toBe(1);
+
+    unsub();
+
+    expect(provider.listenerCount("accountsChanged")).toBe(0);
+    expect(provider.listenerCount("disconnect")).toBe(0);
+    expect(provider.listenerCount("chainChanged")).toBe(0);
+  });
+
+  eit("handles getAddress rejection gracefully", async ({ provider, onAccountChange }) => {
+    eip1193Subscribe(provider, () => Promise.reject(new Error("no wallet")), {
+      onAccountChange: onAccountChange as (a: Address) => void,
+    });
+    await vi.waitFor(() => {});
+
+    provider.emit("accountsChanged", [ADDR_A]);
+    expect(onAccountChange).toHaveBeenCalledWith(ADDR_A);
+  });
+
+  it("uses default no-op callbacks when not provided", async () => {
+    const provider = createFakeProvider();
+    eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {});
+    await vi.waitFor(() => {});
+
+    provider.emit("accountsChanged", []);
+    provider.emit("accountsChanged", [ADDR_B]);
+    provider.emit("disconnect");
   });
 });
