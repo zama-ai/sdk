@@ -1,7 +1,8 @@
-import type { Address, GenericSigner } from "../token/token.types";
+import type { GenericSigner } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
+import type { Address } from "viem";
 
 const signerScopes = new WeakMap<GenericSigner, number>();
 let nextSignerScope = 1;

@@ -1,6 +1,7 @@
 import { Topics } from "../../events";
+import type { RawLog } from "../../events";
 import { describe, expect, it, vi } from "../../test-fixtures";
-import { Address } from "../token.types";
+import type { Address } from "viem";
 
 const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address;
 const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Address;
@@ -122,7 +123,7 @@ describe("Integration: multi-step workflows", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValueOnce({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
             data: BURN_HANDLE,
           },
         ],
@@ -154,10 +155,10 @@ describe("Integration: multi-step workflows", () => {
       // unwrap() now calls waitForTransactionReceipt (1st call),
       // then #waitAndFinalizeUnshield calls it again (2nd call) to parse the event,
       // then finalizeUnwrap calls it (3rd call) for the finalize receipt.
-      const eventReceipt = {
+      const eventReceipt: { logs: RawLog[] } = {
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
             data: BURN_HANDLE,
           },
         ],

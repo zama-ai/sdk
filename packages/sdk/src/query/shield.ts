@@ -1,6 +1,7 @@
 import type { Token } from "../token/token";
-import type { Address, ShieldCallbacks, TransactionResult } from "../token/token.types";
+import type { ShieldCallbacks, TransactionResult } from "../token/token.types";
 import type { MutationFactoryOptions } from "./factory-types";
+import type { Address } from "viem";
 
 /** Variables for {@link shieldMutationOptions}. */
 export interface ShieldParams {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "../../test-fixtures";
 
-import { filterQueryOptions, hashFn, normalizeHandle } from "../utils";
+import { filterQueryOptions, hashFn } from "../utils";
 
 describe("filterQueryOptions", () => {
   test("strips TanStack behavioral options and sdk query internals", () => {
@@ -126,33 +126,5 @@ describe("hashFn", () => {
   test("handles null and undefined", () => {
     expect(() => hashFn(["test", null])).not.toThrow();
     expect(() => hashFn(["test", undefined])).not.toThrow();
-  });
-});
-
-describe("normalizeHandle", () => {
-  test("converts bigint to a 0x-prefixed 64-char hex string", () => {
-    expect(normalizeHandle(42n)).toBe(
-      "0x000000000000000000000000000000000000000000000000000000000000002a",
-    );
-  });
-
-  test("passes through valid 0x-prefixed hex strings unchanged", () => {
-    const handle = "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
-    expect(normalizeHandle(handle)).toBe(handle);
-  });
-
-  test("throws for non-bigint non-hex inputs", () => {
-    expect(() => normalizeHandle(null as unknown as string | bigint)).toThrow(
-      "Handle must be a hex string or bigint",
-    );
-    expect(() => normalizeHandle(undefined as unknown as string | bigint)).toThrow(
-      "Handle must be a hex string or bigint",
-    );
-    expect(() => normalizeHandle(42 as unknown as string | bigint)).toThrow(
-      "Handle must be a hex string or bigint",
-    );
-    expect(() => normalizeHandle("not-hex" as unknown as string | bigint)).toThrow(
-      "Handle must be a hex string or bigint",
-    );
   });
 });

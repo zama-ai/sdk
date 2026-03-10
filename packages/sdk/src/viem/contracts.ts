@@ -1,5 +1,5 @@
-import type { PublicClient, WalletClient } from "viem";
-import type { Address, Handle, Hex } from "../relayer/relayer-sdk.types";
+import type { PublicClient, WalletClient, Address, Hex } from "viem";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { BatchTransferData } from "../contracts";
 import {
   confidentialBalanceOfContract,

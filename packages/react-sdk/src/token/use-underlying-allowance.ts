@@ -42,7 +42,7 @@ export function useUnderlyingAllowance(
   const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(token.signer),
   });
-  const owner = addressQuery.data as Address | undefined;
+  const owner = addressQuery.data;
 
   const baseOpts = underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
     owner,
@@ -78,7 +78,7 @@ export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceCon
   const addressQuery = useSuspenseQuery<Address>({
     ...signerAddressQueryOptions(token.signer),
   });
-  const owner = addressQuery.data as Address;
+  const owner = addressQuery.data;
 
   return useSuspenseQuery<bigint>({
     ...underlyingAllowanceQueryOptions(token.signer, tokenAddress, {

@@ -1,5 +1,5 @@
+import type { Address } from "viem";
 import { describe, expect, it, vi } from "../../test-fixtures";
-import type { Address } from "../../relayer/relayer-sdk.types";
 
 const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
 

@@ -1,7 +1,9 @@
-import type { Address } from "../../relayer/relayer-sdk.types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
 import type { ZamaSDKEvent } from "../../events/sdk-events";
+import type { Address } from "viem";
+
+const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 
 describe("Session TTL", () => {
   beforeEach(() => {
@@ -27,12 +29,12 @@ describe("Session TTL", () => {
       sessionStorage,
       keypairTTL: 604800,
     });
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
     // Advance 6 days — within default 30-day TTL and keypairTTL (7 days)
     vi.advanceTimersByTime(6 * 86400 * 1000);
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
@@ -52,12 +54,12 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
     // Advance 30 minutes — still valid
     vi.advanceTimersByTime(30 * 60 * 1000);
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
@@ -80,12 +82,12 @@ describe("Session TTL", () => {
       sessionTTL: 3600,
       onEvent: (e) => emitted.push(e),
     });
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
     // Advance past TTL
     vi.advanceTimersByTime(3601 * 1000);
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2); // re-signed
 
     // SessionExpired event should have fired
@@ -110,13 +112,13 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 0,
     });
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
 
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
   });
 
@@ -136,7 +138,7 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
 
     const address = await signer.getAddress();
     const chainId = await signer.getChainId();
@@ -146,7 +148,7 @@ describe("Session TTL", () => {
 
     // Expire the session
     vi.advanceTimersByTime(3601 * 1000);
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
 
     // Persistent storage should still have the FHE keypair
     const storedAfter = await storage.get(storeKey);
@@ -171,7 +173,7 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
 
     // Disconnect (revoke) before TTL expires
     vi.advanceTimersByTime(10 * 60 * 1000); // 10 minutes
@@ -179,7 +181,7 @@ describe("Session TTL", () => {
     expect(await manager.isAllowed()).toBe(false);
 
     // Next allow should re-sign (not regenerate)
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
   });
@@ -200,7 +202,7 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(await manager.isAllowed()).toBe(true);
 
     vi.advanceTimersByTime(3601 * 1000);
@@ -225,7 +227,7 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager1.allow("0xtoken" as Address);
+    await manager1.allow(TOKEN_A);
 
     // Advance 30 minutes
     vi.advanceTimersByTime(30 * 60 * 1000);
@@ -241,7 +243,7 @@ describe("Session TTL", () => {
     });
 
     // Old session should still be valid (uses its recorded 3600s TTL)
-    await manager2.allow("0xtoken" as Address);
+    await manager2.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // no re-sign
   });
 
@@ -262,7 +264,7 @@ describe("Session TTL", () => {
       keypairTTL: 604800,
       sessionTTL: 3600,
     });
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
 
     // Switch chain — new signer returns different chainId
     const signer2 = createMockSigner({
@@ -279,12 +281,12 @@ describe("Session TTL", () => {
     });
 
     // Different chain — should generate new keypair
-    await manager2.allow("0xtoken" as Address);
+    await manager2.allow(TOKEN_A);
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
 
     // Original chain session should still be valid
     vi.advanceTimersByTime(30 * 60 * 1000);
-    await manager.allow("0xtoken" as Address);
+    await manager.allow(TOKEN_A);
     expect(signer.signTypedData).toHaveBeenCalledOnce(); // original signer, no re-sign
   });
 });

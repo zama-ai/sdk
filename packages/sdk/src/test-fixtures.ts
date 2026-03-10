@@ -1,7 +1,8 @@
 /* eslint-disable no-empty-pattern */
 import { test as base, vi } from "vitest";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
-import type { Address } from "./relayer/relayer-sdk.types";
+import type { Handle } from "./relayer/relayer-sdk.types";
+import type { Address, Hex } from "viem";
 import { CredentialsManager, CredentialsManagerConfig } from "./token/credentials-manager";
 import { MemoryStorage } from "./token/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
@@ -11,10 +12,10 @@ import { ZamaSDK, ZamaSDKConfig } from "./token/zama-sdk";
 import { ZamaSDKEvents } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
+const TOKEN: Address = "0x1111111111111111111111111111111111abCDEF";
+const WRAPPER: Address = "0x4444444444444444444444444444444444444Abc";
+const USER: Address = "0x2222222222222222222222222222222222abCDEF";
+const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Handle;
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
@@ -101,7 +102,7 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     signer,
     decryptBalance: vi.fn().mockResolvedValue(123n),
     decryptHandles: vi.fn().mockResolvedValue(new Map()),
-    confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Address),
+    confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
     name: vi.fn().mockResolvedValue("Test"),
     symbol: vi.fn().mockResolvedValue("TST"),
     decimals: vi.fn().mockResolvedValue(18),
@@ -114,10 +115,10 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
 }
 
 interface SdkFixtures {
-  userAddress: typeof USER;
-  tokenAddress: typeof TOKEN;
-  wrapperAddress: typeof WRAPPER;
-  handle: typeof VALID_HANDLE;
+  userAddress: Address;
+  tokenAddress: Address;
+  wrapperAddress: Address;
+  handle: Handle;
   relayer: RelayerSDK;
   signer: GenericSigner;
   token: Token;
@@ -224,7 +225,7 @@ export const test = base.extend<SdkFixtures>({
   },
   createMockToken: async ({ tokenAddress, signer }, use) => {
     const defaultTxResult: TransactionResult = {
-      txHash: ("0x" + "11".repeat(32)) as Address,
+      txHash: ("0x" + "11".repeat(32)) as Hex,
       receipt: { logs: [] },
     };
     function factory(
