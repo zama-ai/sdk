@@ -1,8 +1,19 @@
 [book]
 title = "Zama SDK"
+description = "Confidential ERC-20 tokens with FHE"
 authors = ["Zama"]
 language = "en"
 src = "src"
 
+[build]
+build-dir = "build"
+
+[preprocessor.gitbook]
+command = "node scripts/mdbook-gitbook-preprocessor.mjs"
+
 [output.html]
-no-section-label = true
+default-theme = "light"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/zama-ai/token-sdk"
+additional-css = ["theme/gitbook.css"]
+additional-js = ["theme/tabs.js"]
