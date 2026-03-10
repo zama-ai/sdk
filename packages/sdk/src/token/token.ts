@@ -14,6 +14,7 @@ import {
   unwrapFromBalanceContract,
   wrapContract,
   wrapETHContract,
+  MAX_UINT64,
 } from "../contracts";
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -697,7 +698,7 @@ export class Token extends ReadonlyToken {
     // uint64 max → no practical expiry
     const expDate = expirationDate
       ? BigInt(Math.floor(expirationDate.getTime() / 1000))
-      : 2n ** 64n - 1n;
+      : MAX_UINT64;
 
     try {
       const txHash = await this.signer.writeContract(

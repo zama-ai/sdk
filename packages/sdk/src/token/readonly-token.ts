@@ -5,6 +5,7 @@ import {
   allowanceContract,
   confidentialBalanceOfContract,
   decimalsContract,
+  MAX_UINT64,
   getDelegationExpiryContract,
   getWrapperContract,
   nameContract,
@@ -529,7 +530,7 @@ export class ReadonlyToken {
     const expiry = await this.getDelegationExpiry(params);
     if (expiry === 0n) return false;
     // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
-    if (expiry === 2n ** 64n - 1n) return true;
+    if (expiry === MAX_UINT64) return true;
     const now = await this.signer.getBlockTimestamp();
     return expiry >= now;
   }

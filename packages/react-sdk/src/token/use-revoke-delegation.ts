@@ -2,7 +2,11 @@
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";
-import { revokeDelegationMutationOptions, type RevokeDelegationParams } from "@zama-fhe/sdk/query";
+import {
+  revokeDelegationMutationOptions,
+  zamaQueryKeys,
+  type RevokeDelegationParams,
+} from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
 
 /**
@@ -26,5 +30,9 @@ export function useRevokeDelegation(
   return useMutation<TransactionResult, Error, RevokeDelegationParams>({
     ...revokeDelegationMutationOptions(token),
     ...options,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      options?.onSuccess?.(data, variables, onMutateResult, context);
+      context.client.invalidateQueries({ queryKey: zamaQueryKeys.delegationStatus.all });
+    },
   });
 }

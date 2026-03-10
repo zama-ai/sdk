@@ -4,6 +4,7 @@ import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";
 import {
   delegateDecryptionMutationOptions,
+  zamaQueryKeys,
   type DelegateDecryptionParams,
 } from "@zama-fhe/sdk/query";
 import { useToken, type UseZamaConfig } from "./use-token";
@@ -29,5 +30,9 @@ export function useDelegateDecryption(
   return useMutation<TransactionResult, Error, DelegateDecryptionParams>({
     ...delegateDecryptionMutationOptions(token),
     ...options,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      options?.onSuccess?.(data, variables, onMutateResult, context);
+      context.client.invalidateQueries({ queryKey: zamaQueryKeys.delegationStatus.all });
+    },
   });
 }
