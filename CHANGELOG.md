@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.0-alpha.20](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.19...v1.0.0-alpha.20) (2026-03-10)
+
+### Features
+
+- **sdk:** cleartext flat config refactor ([#78](https://github.com/zama-ai/sdk/issues/78)) ([b052bb9](https://github.com/zama-ai/sdk/commit/b052bb926c007c10dfccfd891a9ff995facc521d))
+
 ## [1.0.0-alpha.19](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.18...v1.0.0-alpha.19) (2026-03-10)
 
 ## [1.0.0-alpha.18](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.17...v1.0.0-alpha.18) (2026-03-10)
