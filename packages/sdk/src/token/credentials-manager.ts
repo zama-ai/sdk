@@ -477,11 +477,7 @@ export class CredentialsManager {
   }
 
   /** Decrypts AES-GCM encrypted data using a key derived from the wallet signature. */
-  async #decrypt(
-    encrypted: EncryptedData,
-    signature: Hex,
-    address: Address,
-  ): Promise<Hex> {
+  async #decrypt(encrypted: EncryptedData, signature: Hex, address: Address): Promise<Hex> {
     const key = await this.#deriveKey(signature, address);
     const iv = Uint8Array.from(atob(encrypted.iv), (c) => c.charCodeAt(0));
     const ciphertext = Uint8Array.from(atob(encrypted.ciphertext), (c) => c.charCodeAt(0));
