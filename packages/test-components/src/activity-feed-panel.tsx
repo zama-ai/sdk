@@ -9,7 +9,7 @@ import {
   type ActivityItem,
 } from "@zama-fhe/react-sdk";
 import { useAccount, usePublicClient } from "wagmi";
-import { formatUnits } from "viem";
+import { formatUnits, type Hex } from "viem";
 
 function formatAmount(item: ActivityItem, decimals: number): string {
   if (item.amount.type === "clear") {
@@ -27,9 +27,9 @@ export function ActivityFeedPanel({ tokenAddress }: { tokenAddress: Address }) {
   const publicClient = usePublicClient();
   const [logs, setLogs] = useState<
     | {
-        topics: string[];
-        data: string;
-        transactionHash: string;
+        topics: readonly Hex[];
+        data: Hex;
+        transactionHash: Hex;
         blockNumber: bigint;
         logIndex: number;
       }[]
@@ -53,7 +53,7 @@ export function ActivityFeedPanel({ tokenAddress }: { tokenAddress: Address }) {
       .then((rawLogs) => {
         setLogs(
           rawLogs.map((log) => ({
-            topics: log.topics as string[],
+            topics: log.topics as readonly Hex[],
             data: log.data,
             transactionHash: log.transactionHash!,
             blockNumber: BigInt(log.blockNumber!),

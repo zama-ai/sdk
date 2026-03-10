@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-alpha.19](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.18...v1.0.0-alpha.19) (2026-03-10)
+
+## [1.0.0-alpha.18](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.17...v1.0.0-alpha.18) (2026-03-10)
+
+### Performance Improvements
+
+- speed up vitest by 40% ([#88](https://github.com/zama-ai/sdk/issues/88)) ([33a9b68](https://github.com/zama-ai/sdk/commit/33a9b68b6c86e2b176f78caca23c721884a1ef8b))
+
 ## [1.0.0-alpha.17](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.16...v1.0.0-alpha.17) (2026-03-09)
 
 ### Bug Fixes

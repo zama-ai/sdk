@@ -1,37 +1,5 @@
 import { describe, it, expect } from "../test-fixtures";
-import { assertAddress, assertObject, assertString, assertArray } from "../utils";
-
-describe("assertAddress", () => {
-  it("accepts a valid checksummed address", () => {
-    expect(() => assertAddress("0x1234567890abcdef1234567890abcdef12345678", "test")).not.toThrow();
-  });
-
-  it("accepts a valid uppercase address", () => {
-    expect(() => assertAddress("0xABCDEF1234567890ABCDEF1234567890ABCDEF12", "test")).not.toThrow();
-  });
-
-  it("throws for missing 0x prefix", () => {
-    expect(() => assertAddress("1234567890abcdef1234567890abcdef12345678", "ctx")).toThrow(
-      TypeError,
-    );
-  });
-
-  it("throws for too-short address", () => {
-    expect(() => assertAddress("0x1234", "ctx")).toThrow("ctx must be a valid address");
-  });
-
-  it("throws for too-long address", () => {
-    expect(() => assertAddress("0x" + "a".repeat(41), "ctx")).toThrow(
-      "ctx must be a valid address",
-    );
-  });
-
-  it("throws for non-hex characters", () => {
-    expect(() => assertAddress("0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG", "ctx")).toThrow(
-      TypeError,
-    );
-  });
-});
+import { assertObject, assertString, assertArray } from "../utils";
 
 describe("assertObject", () => {
   it("accepts a plain object", () => {

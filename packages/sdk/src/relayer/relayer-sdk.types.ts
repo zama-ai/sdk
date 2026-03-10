@@ -1,5 +1,5 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
-import type { Address } from "@zama-fhe/relayer-sdk/bundle";
+import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
 
 // ============================================================================
@@ -59,7 +59,7 @@ export interface EncryptResult {
 }
 
 /** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). */
-export type Handle = SDK.Bytes32Hex;
+export type Handle = `0x${string}`;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
@@ -89,9 +89,9 @@ export interface UserDecryptParams {
   handles: Handle[];
   contractAddress: Address;
   signedContractAddresses: Address[];
-  privateKey: string;
-  publicKey: string;
-  signature: string;
+  privateKey: Hex;
+  publicKey: Hex;
+  signature: Hex;
   signerAddress: Address;
   startTimestamp: number;
   durationDays: number;
@@ -118,11 +118,11 @@ export interface EIP712TypedData {
   };
   primaryType?: string;
   message: {
-    publicKey: string;
-    contractAddresses: readonly string[];
+    publicKey: Hex;
+    contractAddresses: readonly Address[];
     startTimestamp: bigint;
     durationDays: bigint;
-    extraData: string;
+    extraData: Hex;
   };
 }
 
@@ -131,9 +131,9 @@ export interface DelegatedUserDecryptParams {
   handles: Handle[];
   contractAddress: Address;
   signedContractAddresses: Address[];
-  privateKey: string;
-  publicKey: string;
-  signature: string;
+  privateKey: Hex;
+  publicKey: Hex;
+  signature: Hex;
   delegatorAddress: Address;
   delegateAddress: Address;
   startTimestamp: number;
@@ -142,7 +142,3 @@ export interface DelegatedUserDecryptParams {
 
 /** SDK status */
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
-
-export type * from "@zama-fhe/relayer-sdk/bundle";
-// Explicit re-exports needed for rolldown-plugin-dts namespace generation
-export type { Address, Hex } from "@zama-fhe/relayer-sdk/bundle";

@@ -1,16 +1,17 @@
 import { describe, expect, it, vi } from "../../test-fixtures";
 import { Topics } from "../../events";
-import type { Address } from "../../relayer/relayer-sdk.types";
+
 import { DecryptionFailedError, TransactionRevertedError } from "../errors";
 import type { GenericSigner } from "../token.types";
+import type { Address } from "viem";
 
 describe("Unshield callbacks (P4)", () => {
   function mockReceiptWithUnwrapRequested(signer: GenericSigner, userAddress: Address) {
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
       logs: [
         {
-          topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
-          data: "0x" + "ff".repeat(32),
+          topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+          data: `0x${"ff".repeat(32)}`,
         },
       ],
     });

@@ -1,8 +1,8 @@
 /* eslint-disable no-empty-pattern */
-import type { PublicClient, WalletClient } from "viem";
-import type { Address } from "../../relayer/relayer-sdk.types";
+import type { PublicClient, WalletClient, Address, Hex } from "viem";
+import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
 import { test as base, describe, expect, vi } from "../../test-fixtures";
-import type { Hex } from "../../token/token.types";
+
 import {
   readConfidentialBalanceOfContract,
   readSupportsInterfaceContract,
@@ -22,7 +22,7 @@ import { ViemSigner } from "../viem-signer";
 
 // ── Constants ────────────────────────────────────────────
 
-const ACCOUNT_ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+const ACCOUNT_ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
 const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
 const BATCHER = "0x7777777777777777777777777777777777777777" as Address;
@@ -103,13 +103,13 @@ describe("ViemSigner", () => {
   });
 
   describe("signTypedData", () => {
-    function createTypedData(tokenAddress: Address) {
+    function createTypedData(tokenAddress: Address): EIP712TypedData {
       return {
         domain: { name: "Test", version: "1", chainId: 1, verifyingContract: tokenAddress },
         types: { Transfer: [{ name: "to", type: "address" }] },
         message: {
           publicKey: "0xkey",
-          contractAddresses: ["0x1"],
+          contractAddresses: ["0x1" as Address],
           startTimestamp: 1000n,
           durationDays: 1n,
           extraData: "0x",
@@ -252,12 +252,12 @@ describe("ViemSigner read-only mode (no walletClient)", () => {
 
   vit("signTypedData throws without walletClient", async ({ tokenAddress, publicClient }) => {
     const readOnlySigner = new ViemSigner({ publicClient });
-    const typedData = {
+    const typedData: EIP712TypedData = {
       domain: { name: "Test", version: "1", chainId: 1, verifyingContract: tokenAddress },
       types: { Transfer: [{ name: "to", type: "address" }] },
       message: {
         publicKey: "0xkey",
-        contractAddresses: ["0x1"],
+        contractAddresses: ["0x1" as Address],
         startTimestamp: 1000n,
         durationDays: 1n,
         extraData: "0x",

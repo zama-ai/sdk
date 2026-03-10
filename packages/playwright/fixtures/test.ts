@@ -13,7 +13,7 @@ import { hardhat } from "viem/chains";
 import { mockRelayerSdk } from "./fhevm";
 import { TEST_PRIVATE_KEY, MINTED } from "./constants";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
-import type { Address } from "viem";
+import { type Address } from "viem";
 
 const privateKey = TEST_PRIVATE_KEY;
 

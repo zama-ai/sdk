@@ -1,9 +1,10 @@
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { ReadonlyToken } from "../../token/readonly-token";
 import { DecryptionFailedError } from "../../token/errors";
-import type { Address } from "../../token/token.types";
+
 import { confidentialBalancesQueryOptions } from "../confidential-balances";
 import { zamaQueryKeys } from "../query-keys";
+import type { Address } from "viem";
 
 describe("confidentialBalancesQueryOptions", () => {
   const tokenA = "0x1111111111111111111111111111111111111111";
@@ -16,8 +17,8 @@ describe("confidentialBalancesQueryOptions", () => {
     const options = confidentialBalancesQueryOptions([t1, t2], {
       owner,
       handles: [
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
       ],
     });
 
@@ -27,8 +28,8 @@ describe("confidentialBalancesQueryOptions", () => {
         tokenAddresses: [tokenA, tokenB],
         owner,
         handles: [
-          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
         ],
       },
     ]);
@@ -81,8 +82,8 @@ describe("confidentialBalancesQueryOptions", () => {
     const options = confidentialBalancesQueryOptions([t1, t2], {
       owner,
       handles: [
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
       ],
       maxConcurrency: 3,
     });
@@ -94,8 +95,8 @@ describe("confidentialBalancesQueryOptions", () => {
       expect.objectContaining({
         owner,
         handles: [
-          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
         ],
         maxConcurrency: 3,
       }),
@@ -118,10 +119,10 @@ describe("confidentialBalancesQueryOptions", () => {
 
     const options = confidentialBalancesQueryOptions([t1], {
       owner,
-      handles: ["0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+      handles: ["0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa"],
     });
     const key = zamaQueryKeys.confidentialBalances.tokens([tokenA], owner, [
-      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
     ]);
 
     await options.queryFn(mockQueryContext(key));
@@ -130,7 +131,7 @@ describe("confidentialBalancesQueryOptions", () => {
       [t1],
       expect.objectContaining({
         owner,
-        handles: ["0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+        handles: ["0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb"],
         maxConcurrency: undefined,
       }),
     );
@@ -159,8 +160,8 @@ describe("confidentialBalancesQueryOptions", () => {
     const options = confidentialBalancesQueryOptions([t1, t2], {
       owner,
       handles: [
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
       ],
     });
 
@@ -196,8 +197,8 @@ describe("confidentialBalancesQueryOptions", () => {
     const options = confidentialBalancesQueryOptions([t1, t2], {
       owner,
       handles: [
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb",
       ],
     });
 

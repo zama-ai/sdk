@@ -1,5 +1,6 @@
 import { describe, it, expect } from "../test-fixtures";
 import { toHex } from "viem";
+import { prefixHex, unprefixHex } from "../utils";
 
 describe("toHex", () => {
   it("converts empty Uint8Array to 0x", () => {
@@ -22,5 +23,19 @@ describe("toHex", () => {
   it("converts a 32-byte value", () => {
     const bytes = new Uint8Array(32).fill(0xab);
     expect(toHex(bytes)).toBe("0x" + "ab".repeat(32));
+  });
+});
+
+describe("hex prefix helpers", () => {
+  it("adds a prefix when the relayer SDK returns bare hex", () => {
+    expect(prefixHex("abcd")).toBe("0xabcd");
+  });
+
+  it("preserves an existing 0x prefix", () => {
+    expect(prefixHex("0xabcd")).toBe("0xabcd");
+  });
+
+  it("removes the 0x prefix for relayer SDK inputs", () => {
+    expect(unprefixHex("0xabcd")).toBe("abcd");
   });
 });

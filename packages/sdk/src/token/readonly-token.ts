@@ -12,14 +12,15 @@ import {
   getWrapperContract,
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Address, Handle } from "../relayer/relayer-sdk.types";
-import { normalizeHandle, pLimit, validateAddress } from "../utils";
+import type { Handle } from "../relayer/relayer-sdk.types";
+import { pLimit } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credentials-manager";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import { getAddress, type Address } from "viem";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -82,7 +83,7 @@ export class ReadonlyToken {
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
-    const address = validateAddress(config.address, "address");
+    const address = getAddress(config.address);
     this.credentials =
       config.credentials ??
       new CredentialsManager({
@@ -126,7 +127,7 @@ export class ReadonlyToken {
    * ```
    */
   async balanceOf(owner?: Address): Promise<bigint> {
-    const ownerAddress = owner ? validateAddress(owner, "owner") : await this.signer.getAddress();
+    const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
 
     if (this.isZeroHandle(handle)) return BigInt(0);
@@ -189,7 +190,7 @@ export class ReadonlyToken {
    * ```
    */
   async confidentialBalanceOf(owner?: Address): Promise<Handle> {
-    const ownerAddress = owner ? validateAddress(owner, "owner") : await this.signer.getAddress();
+    const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
     return this.readConfidentialBalanceOf(ownerAddress);
   }
 
@@ -372,7 +373,7 @@ export class ReadonlyToken {
    * ```
    */
   async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
-    const coordinator = validateAddress(coordinatorAddress, "coordinatorAddress");
+    const coordinator = getAddress(coordinatorAddress);
     const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
     if (!exists) return null;
     return this.signer.readContract(getWrapperContract(coordinator, this.address));
@@ -405,9 +406,9 @@ export class ReadonlyToken {
    * ```
    */
   async allowance(wrapper: Address, owner?: Address): Promise<bigint> {
-    const normalizedWrapper = validateAddress(wrapper, "wrapper");
+    const normalizedWrapper = getAddress(wrapper);
     const underlying = await this.signer.readContract(underlyingContract(normalizedWrapper));
-    const userAddress = owner ? validateAddress(owner, "owner") : await this.signer.getAddress();
+    const userAddress = owner ? getAddress(owner) : await this.signer.getAddress();
     return this.signer.readContract(allowanceContract(underlying, userAddress, normalizedWrapper));
   }
 
@@ -510,9 +511,9 @@ export class ReadonlyToken {
   }
 
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
-    return normalizeHandle(
-      await this.signer.readContract(confidentialBalanceOfContract(this.address, owner)),
-    );
+    return (await this.signer.readContract(
+      confidentialBalanceOfContract(this.address, owner),
+    )) as Handle;
   }
 
   isZeroHandle(handle: string): handle is typeof ZERO_HANDLE | `0x` {

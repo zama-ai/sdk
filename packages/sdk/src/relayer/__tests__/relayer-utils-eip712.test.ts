@@ -34,7 +34,7 @@ vi.mock("../../worker/worker.client", () => ({
 }));
 
 import { RelayerWeb } from "../relayer-web";
-import type { Address } from "../relayer-sdk.types";
+import { type Address } from "viem";
 
 const MOCK_EIP712 = {
   domain: {

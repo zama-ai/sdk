@@ -7,10 +7,10 @@ describe("finalizeUnwrapMutationOptions", () => {
 
     expect(options.mutationKey).toEqual(["zama.finalizeUnwrap", mockToken.address]);
     await options.mutationFn({
-      burnAmountHandle: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      burnAmountHandle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     });
     expect(mockToken.finalizeUnwrap).toHaveBeenCalledWith(
-      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
   });
 });
