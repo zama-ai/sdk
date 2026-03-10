@@ -2211,7 +2211,7 @@ var hljs = (function () {
         PARAMS_CONTAINS: h,
         CLASS_REFERENCE: y,
       },
-      illegal: /#(?![$_A-z])/,
+      illegal: /#(?![$_A-Za-z])/,
       contains: [
         e.SHEBANG({ label: "shebang", binary: "node", relevance: 5 }),
         {
@@ -7884,7 +7884,7 @@ var hljs = (function () {
               },
             ],
           },
-          e.COMMENT(/<!--/, /-->/, { relevance: 10 }),
+          e.COMMENT(/<!--/, /--!?>/, { relevance: 10 }),
           { begin: /<!\[CDATA\[/, end: /\]\]>/, relevance: 10 },
           a,
           {
