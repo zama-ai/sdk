@@ -19,42 +19,6 @@ import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
-// @public
-export type ActivityAmount = {
-    readonly type: "clear";
-    readonly value: bigint;
-} | {
-    readonly type: "encrypted";
-    readonly handle: Handle; /** Populated after batch decryption via {@link applyDecryptedValues}. */
-    readonly decryptedValue?: bigint;
-};
-
-// @public
-export type ActivityDirection = "incoming" | "outgoing" | "self";
-
-// @public
-export interface ActivityItem {
-    readonly amount: ActivityAmount;
-    readonly direction: ActivityDirection;
-    readonly fee?: bigint;
-    readonly from?: string;
-    readonly metadata: ActivityLogMetadata;
-    readonly rawEvent: OnChainEvent;
-    readonly success?: boolean;
-    readonly to?: string;
-    readonly type: ActivityType;
-}
-
-// @public
-export interface ActivityLogMetadata {
-    readonly blockNumber?: bigint | number;
-    readonly logIndex?: number;
-    readonly transactionHash?: string;
-}
-
-// @public
-export type ActivityType = "transfer" | "shield" | "unshield_requested" | "unshield_started" | "unshield_finalized";
-
 export { Address }
 
 // @public
@@ -106,9 +70,6 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
     readonly functionName: "allowance";
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
-
-// @public
-export function applyDecryptedValues(items: readonly ActivityItem[], decryptedMap: ReadonlyMap<Handle, bigint>): ActivityItem[];
 
 // @public
 export class ApprovalFailedError extends ZamaError {
@@ -10521,9 +10482,6 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 // @public
 export const ERC7984_WRAPPER_INTERFACE_ID: "0xd04584ba";
 
-// @public
-export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[];
-
 // @public (undocumented)
 export const FEE_MANAGER_ABI: readonly [{
     readonly inputs: readonly [{
@@ -17836,9 +17794,6 @@ export class NoCiphertextError extends ZamaError {
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
 
 // @public
-export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMetadata>)[], userAddress: string): ActivityItem[];
-
-// @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
     clearValues: Readonly<Record<Handle, SDK.ClearValueType>>;
 };
@@ -22453,9 +22408,6 @@ export class SigningFailedError extends ZamaError {
 export class SigningRejectedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
-
-// @public
-export function sortByBlockNumber(items: readonly ActivityItem[]): ActivityItem[];
 
 // @public
 export interface StoredCredentials {

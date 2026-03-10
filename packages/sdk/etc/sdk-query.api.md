@@ -21,63 +21,6 @@ import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { skipToken } from '@tanstack/query-core';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
-// @public
-export type ActivityAmount = {
-    readonly type: "clear";
-    readonly value: bigint;
-} | {
-    readonly type: "encrypted";
-    readonly handle: Handle; /** Populated after batch decryption via {@link applyDecryptedValues}. */
-    readonly decryptedValue?: bigint;
-};
-
-// @public
-export type ActivityDirection = "incoming" | "outgoing" | "self";
-
-// @public (undocumented)
-export interface ActivityFeedConfig {
-    // (undocumented)
-    decrypt?: boolean;
-    // (undocumented)
-    logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[];
-    // (undocumented)
-    logsKey?: string;
-    // (undocumented)
-    userAddress?: Address;
-}
-
-// @public (undocumented)
-export interface ActivityFeedQueryConfig {
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// @public
-export function activityFeedQueryOptions(token: ReadonlyToken, config: ActivityFeedConfig, queryConfig?: ActivityFeedQueryConfig): QueryFactoryOptions<ActivityItem[], Error, ActivityItem[], ReturnType<typeof zamaQueryKeys.activityFeed.scope>>;
-
-// @public
-export interface ActivityItem {
-    readonly amount: ActivityAmount;
-    readonly direction: ActivityDirection;
-    readonly fee?: bigint;
-    readonly from?: string;
-    readonly metadata: ActivityLogMetadata;
-    readonly rawEvent: OnChainEvent;
-    readonly success?: boolean;
-    readonly to?: string;
-    readonly type: ActivityType;
-}
-
-// @public
-export interface ActivityLogMetadata {
-    readonly blockNumber?: bigint | number;
-    readonly logIndex?: number;
-    readonly transactionHash?: string;
-}
-
-// @public
-export type ActivityType = "transfer" | "shield" | "unshield_requested" | "unshield_started" | "unshield_finalized";
-
 // @public (undocumented)
 export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
 
@@ -117,6 +60,7 @@ export interface BaseEvent {
 
 // @public
 export interface BatchDecryptOptions {
+    // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
     handles?: Handle[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
@@ -1200,18 +1144,6 @@ export const zamaQueryKeys: {
             readonly tokenAddress: `0x${string}`;
         }];
     };
-    readonly activityFeed: {
-        readonly all: readonly ["zama.activityFeed"];
-        readonly token: (tokenAddress: string) => readonly ["zama.activityFeed", {
-            readonly tokenAddress: `0x${string}`;
-        }];
-        readonly scope: (tokenAddress: string, userAddress: string, logsKey: string, decrypt: boolean) => readonly ["zama.activityFeed", {
-            readonly tokenAddress: `0x${string}`;
-            readonly userAddress: string;
-            readonly logsKey: string;
-            readonly decrypt: boolean;
-        }];
-    };
     readonly fees: {
         readonly all: readonly ["zama.fees"];
         readonly shieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) => readonly ["zama.fees", {
@@ -1338,10 +1270,6 @@ export const ZamaSDKEvents: {
 
 // @public (undocumented)
 export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
-
-// Warnings were encountered during analysis:
-//
-// dist/activity-CmR2x4Bb.d.ts:912:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
