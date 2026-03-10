@@ -10,6 +10,7 @@ import {
   parseAbi,
   toBytes,
   toHex,
+  type Address,
   type Hex,
   type PublicClient,
 } from "viem";
@@ -33,7 +34,6 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "../relayer-sdk.types";
-import type { Address, Hex } from "viem";
 import {
   DELEGATED_USER_DECRYPT_EIP712,
   INPUT_VERIFICATION_EIP712,
