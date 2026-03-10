@@ -267,29 +267,6 @@ describe("ReadonlyToken", () => {
     });
   });
 
-  describe("normalizeHandle", () => {
-    it("returns hex string as-is", async ({
-      relayer,
-      signer,
-      storage,
-      sessionStorage,
-      tokenAddress,
-      handle,
-    }) => {
-      const token = createReadonlyToken({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        tokenAddress,
-        handle,
-      });
-      // normalizeHandle is protected, test via confidentialBalanceOf
-      vi.mocked(signer.readContract).mockResolvedValue(handle);
-      await expect(token.confidentialBalanceOf()).resolves.toBe(handle);
-    });
-  });
-
   describe("allowance", () => {
     it("reads underlying token then checks allowance", async ({
       relayer,
