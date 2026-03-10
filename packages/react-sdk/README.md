@@ -652,38 +652,6 @@ const { data: meta } = useTokenMetadata("0xTokenAddress");
 // meta?.name, meta?.symbol, meta?.decimals
 ```
 
-### Activity Feed
-
-#### `useActivityFeed`
-
-Parse raw event logs into a classified, optionally decrypted activity feed.
-
-```ts
-function useActivityFeed(config: UseActivityFeedConfig): UseQueryResult<ActivityItem[], Error>;
-
-interface UseActivityFeedConfig {
-  tokenAddress: Address;
-  userAddress: Address | undefined;
-  logs: readonly (RawLog & Partial<ActivityLogMetadata>)[] | undefined;
-  decrypt?: boolean; // default: true — batch-decrypt encrypted amounts
-}
-```
-
-Enabled when both `logs` and `userAddress` are defined. When `decrypt` is `true` (default), encrypted transfer amounts are automatically decrypted via the relayer.
-
-```tsx
-const { data: feed } = useActivityFeed({
-  tokenAddress: "0xTokenAddress",
-  logs, // from getLogs or a similar source
-  userAddress,
-  decrypt: true,
-});
-
-feed?.forEach((item) => {
-  console.log(item.type, item.direction, item.amount);
-});
-```
-
 ### Fee Hooks
 
 #### `useShieldFee`
@@ -808,7 +776,6 @@ import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 | `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
 | `zamaQueryKeys.isAllowed`            | `.all`                                                                                   | Session signature status.           |
 | `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                             | Underlying ERC-20 allowance.        |
-| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)`              | Activity feed items.                |
 | `zamaQueryKeys.fees`                 | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
 | `decryptionKeys`                     | `.value(handle)`                                                                         | Individual decrypted handle values. |
 
@@ -998,7 +965,5 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 **Events:** `RawLog`, `ConfidentialTransferEvent`, `WrappedEvent`, `UnwrapRequestedEvent`, `UnwrappedFinalizedEvent`, `UnwrappedStartedEvent`, `OnChainEvent`, `Topics`, `TOKEN_TOPICS`.
 
 **Event decoders:** `decodeConfidentialTransfer`, `decodeWrapped`, `decodeUnwrapRequested`, `decodeUnwrappedFinalized`, `decodeUnwrappedStarted`, `decodeOnChainEvent`, `decodeOnChainEvents`, `findUnwrapRequested`, `findWrapped`.
-
-**Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
 
 **Contract call builders:** All 31 builders — `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `confidentialBatchTransferContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `getWrapperContract`, `wrapperExistsContract`, `underlyingContract`, `wrapContract`, `wrapETHContract`, `supportsInterfaceContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`, `deploymentCoordinatorContract`, `isFinalizeUnwrapOperatorContract`, `setFinalizeUnwrapOperatorContract`, `getWrapFeeContract`, `getUnwrapFeeContract`, `getBatchTransferFeeContract`, `getFeeRecipientContract`.
