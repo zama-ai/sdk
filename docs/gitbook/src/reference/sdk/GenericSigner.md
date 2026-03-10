@@ -20,8 +20,8 @@ interface GenericSigner {
   getChainId(): Promise<number>;
   getAddress(): Promise<Address>;
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-  writeContract(config: ContractCallConfig): Promise<Hex>;
-  readContract(config: ContractCallConfig): Promise<unknown>;
+  writeContract(config: WriteContractConfig): Promise<Hex>;
+  readContract(config: ReadContractConfig): Promise<unknown>;
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   subscribe?(callbacks: SignerLifecycleCallbacks): () => void;
 }
@@ -83,15 +83,15 @@ Sign an EIP-712 typed data payload and return the signature. The SDK uses this t
 ### writeContract
 
 ```ts
-writeContract(config: ContractCallConfig): Promise<Hex>
+writeContract(config: WriteContractConfig): Promise<Hex>
 ```
 
-Submit a contract write transaction and return the transaction hash. `ContractCallConfig` contains `address`, `abi`, `functionName`, and `args`.
+Submit a contract write transaction and return the transaction hash. `WriteContractConfig` contains `address`, `abi`, `functionName`, `args`, and optionally `value` and `gas`.
 
 ### readContract
 
 ```ts
-readContract(config: ContractCallConfig): Promise<unknown>
+readContract(config: ReadContractConfig): Promise<unknown>
 ```
 
 Perform a read-only contract call and return the result. Must work in all modes, including read-only signers.
@@ -110,12 +110,13 @@ Wait for a transaction to be mined and return the receipt.
 subscribe?(callbacks: SignerLifecycleCallbacks): () => void
 ```
 
-Subscribe to wallet lifecycle events (disconnect, account change). Returns an unsubscribe function.
+Subscribe to wallet lifecycle events (disconnect, account change, chain change). Returns an unsubscribe function.
 
 The SDK calls `subscribe()` during initialization if it exists. The callbacks object contains:
 
 - `onDisconnect()` -- called when the wallet disconnects or locks. The SDK revokes the session.
 - `onAccountChange()` -- called when the user switches accounts. The SDK revokes the previous account's session.
+- `onChainChange(newChainId: number)` -- called when the user switches chains.
 
 {% hint style="info" %}
 Implementing `subscribe()` is optional but recommended. Without it, stale sessions persist until TTL expiry, which can create confusing UX when users switch accounts. See [`WagmiSigner`](https://github.com/zama-ai/token-sdk/blob/main/packages/react-sdk/src/wagmi/wagmi-signer.ts) for a reference implementation.

@@ -30,10 +30,7 @@ function TokenActions() {
   }
 
   async function handleTransfer() {
-    const txHash = await token.transfer({
-      to: "0xRecipient",
-      amount: 500n,
-    });
+    const { txHash } = await token.confidentialTransfer("0xRecipient", 500n);
     console.log("Transfer:", txHash);
   }
 
@@ -59,8 +56,12 @@ const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
-      [11155111]: {
+      [1]: {
         relayerUrl: "https://your-app.com/api/relayer/1",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
+      [11155111]: {
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -76,7 +77,7 @@ const sdk = new ZamaSDK({
 ## Parameters
 
 ```ts
-import { type UseTokenParameters } from "@zama-fhe/react-sdk";
+import { type UseZamaConfig } from "@zama-fhe/react-sdk";
 ```
 
 ### tokenAddress

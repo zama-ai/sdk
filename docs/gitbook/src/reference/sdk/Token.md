@@ -29,16 +29,21 @@ await token.confidentialTransfer("0xRecipient", 500n);
 {% tab title="config.ts" %}
 
 ```ts
-import { ZamaSDK, indexedDBStorage, RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { ZamaSDK, indexedDBStorage, RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const signer = new ViemSigner({ walletClient, publicClient });
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
+    [MainnetConfig.chainId]: {
+      ...MainnetConfig,
+      relayerUrl: "https://your-app.com/api/relayer/1",
+      network: "https://mainnet.infura.io/v3/YOUR_KEY",
+    },
     [SepoliaConfig.chainId]: {
       ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -52,7 +57,7 @@ const relayer = new RelayerWeb({
 
 ### shield
 
-`(amount: bigint, opts?: { approvalStrategy: "exact" | "max" | "skip" }) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
+`(amount: bigint, opts?: { approvalStrategy?: "exact" | "max" | "skip"; fees?: bigint; to?: Address; callbacks?: ShieldCallbacks }) => Promise<TransactionResult>`
 
 Converts public ERC-20 tokens into their encrypted form. The SDK handles the ERC-20 approval automatically based on the strategy.
 
@@ -69,9 +74,9 @@ await token.shield(1000n, { approvalStrategy: "skip" });
 
 ### shieldETH
 
-`(amount: bigint) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
+`(amount: bigint, value?: bigint) => Promise<TransactionResult>`
 
-Shields native ETH into a confidential ETH wrapper contract. No approval needed.
+Shields native ETH into a confidential ETH wrapper contract. No approval needed. Pass `value` to override the amount of ETH sent (defaults to `amount`).
 
 ```ts
 await token.shieldETH(1000n);
@@ -103,7 +108,7 @@ const handle = await token.confidentialBalanceOf();
 
 ### confidentialTransfer
 
-`(to: Address, amount: bigint) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
+`(to: Address, amount: bigint, callbacks?: TransferCallbacks) => Promise<TransactionResult>`
 
 Transfers encrypted tokens. The amount is encrypted before hitting the chain.
 
@@ -113,7 +118,7 @@ await token.confidentialTransfer("0xRecipient", 500n);
 
 ### confidentialTransferFrom
 
-`(from: Address, to: Address, amount: bigint) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
+`(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks) => Promise<TransactionResult>`
 
 Operator transfer on behalf of an address that has approved you.
 
@@ -150,7 +155,7 @@ await token.unshieldAll();
 
 ### resumeUnshield
 
-`(unwrapTxHash: Hex) => Promise<{ txHash: Hex; receipt: TransactionReceipt }>`
+`(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
 
 Resumes an interrupted unshield from the finalize step. Use when the user closed the page between unwrap and finalize.
 
@@ -180,9 +185,9 @@ await token.approve("0xSpender", futureTimestamp);
 
 ### isApproved
 
-`(spender: Address) => Promise<boolean>`
+`(spender: Address, holder?: Address) => Promise<boolean>`
 
-Checks whether a spender is currently approved.
+Checks whether a spender is currently approved. Optionally pass `holder` to check on behalf of another address.
 
 ```ts
 const approved = await token.isApproved("0xSpender");
@@ -220,7 +225,7 @@ const allowed = await token.isAllowed();
 
 ### decryptBalance
 
-`(handle: Hex) => Promise<bigint>`
+`(handle: Hex, owner?: Address) => Promise<bigint>`
 
 Decrypts a raw encrypted handle into a plaintext balance value. Results are cached automatically.
 
@@ -231,7 +236,7 @@ const value = await token.decryptBalance(handle);
 
 ### decryptHandles
 
-`(handles: Hex[]) => Promise<Map<Hex, bigint>>`
+`(handles: Hex[], owner?: Address) => Promise<Map<Hex, bigint>>`
 
 Decrypts multiple encrypted handles in a single call.
 
@@ -250,6 +255,47 @@ const handle = await token.confidentialBalanceOf();
 if (token.isZeroHandle(handle)) {
   console.log("No confidential balance yet");
 }
+```
+
+### approveUnderlying
+
+`(amount?: bigint) => Promise<TransactionResult>`
+
+Approves the wrapper contract to spend the underlying ERC-20. Defaults to max approval. Call before `shield()` with `approvalStrategy: "skip"`.
+
+```ts
+await token.approveUnderlying(); // max approval
+await token.approveUnderlying(1000n); // exact amount
+```
+
+### unwrap
+
+`(amount: bigint) => Promise<TransactionResult>`
+
+Requests an unwrap (phase 1 of unshield). Use `unshield()` for the full orchestrated flow.
+
+```ts
+await token.unwrap(500n);
+```
+
+### unwrapAll
+
+`() => Promise<TransactionResult>`
+
+Requests an unwrap of the entire confidential balance (phase 1).
+
+```ts
+await token.unwrapAll();
+```
+
+### finalizeUnwrap
+
+`(burnAmountHandle: Handle) => Promise<TransactionResult>`
+
+Completes an unwrap (phase 2) after the decryption proof is available. Use `unshield()` for the full orchestrated flow.
+
+```ts
+await token.finalizeUnwrap(burnAmountHandle);
 ```
 
 ## Related

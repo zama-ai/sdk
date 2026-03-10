@@ -62,7 +62,7 @@ In browser environments, proxy relayer requests through your backend to avoid ex
 ```ts
 {
   ...SepoliaConfig,
-  relayerUrl: "https://your-app.com/api/relayer/1",
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
 }
 ```
@@ -72,7 +72,8 @@ In browser environments, proxy relayer requests through your backend to avoid ex
 On the server, use `RelayerNode` and add authentication:
 
 ```ts
-import { RelayerNode, SepoliaConfig } from "@zama-fhe/sdk";
+import { RelayerNode } from "@zama-fhe/sdk/node";
+import { SepoliaConfig } from "@zama-fhe/sdk";
 
 const relayer = new RelayerNode({
   getChainId: async () => 11155111,
@@ -96,10 +97,7 @@ import { HardhatConfig } from "@zama-fhe/sdk";
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
-    [HardhatConfig.chainId]: {
-      ...HardhatConfig,
-      network: "http://localhost:8545",
-    },
+    [HardhatConfig.chainId]: HardhatConfig,
   },
 });
 ```

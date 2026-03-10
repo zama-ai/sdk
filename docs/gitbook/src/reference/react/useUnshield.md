@@ -56,8 +56,12 @@ const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
-      [11155111]: {
+      [1]: {
         relayerUrl: "https://your-app.com/api/relayer/1",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
+      [11155111]: {
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -73,7 +77,7 @@ const sdk = new ZamaSDK({
 ## Parameters
 
 ```ts
-import { type UseUnshieldParameters } from "@zama-fhe/react-sdk";
+import { type UnshieldParams } from "@zama-fhe/react-sdk";
 ```
 
 ### tokenAddress
@@ -132,7 +136,7 @@ await unshield({
 ## Return Type
 
 ```ts
-import { type UseUnshieldReturnType } from "@zama-fhe/react-sdk";
+import { type UnshieldParams } from "@zama-fhe/react-sdk";
 ```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.

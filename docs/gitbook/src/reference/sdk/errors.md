@@ -39,14 +39,14 @@ const message = matchZamaError(error, {
   ENCRYPTION_FAILED: () => "Encryption failed — try again",
   TRANSACTION_REVERTED: (e) => `Transaction failed: ${e.message}`,
   NO_CIPHERTEXT: () => "No confidential balance — shield tokens first",
-  _: (e) => `Unexpected error: ${e.code}`,
+  _: (e) => `Unexpected error: ${e}`,
 });
 ```
 
-| Parameter  | Type                                            | Description                             |
-| ---------- | ----------------------------------------------- | --------------------------------------- |
-| `error`    | `unknown`                                       | The caught error                        |
-| `handlers` | `Record<ErrorCode \| "_", (e: ZamaError) => T>` | Map of error codes to handler functions |
+| Parameter  | Type                                                                 | Description                             |
+| ---------- | -------------------------------------------------------------------- | --------------------------------------- |
+| `error`    | `unknown`                                                            | The caught error                        |
+| `handlers` | `Record<ErrorCode, (e: ZamaError) => T> & { _?: (e: unknown) => T }` | Map of error codes to handler functions |
 
 The `_` wildcard catches any `ZamaError` not explicitly handled.
 
@@ -64,7 +64,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `KeypairExpiredError`       | `KEYPAIR_EXPIRED`        | FHE keypair expired — user must re-sign           |
 | `NoCiphertextError`         | `NO_CIPHERTEXT`          | No encrypted balance for this account             |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP request failed                       |
-| `ConfigurationError`        | `CONFIGURATION_ERROR`    | Invalid SDK configuration                         |
+| `ConfigurationError`        | `CONFIGURATION`          | Invalid SDK configuration                         |
 
 ## Error details
 

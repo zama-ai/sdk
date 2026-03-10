@@ -35,7 +35,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/1",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -69,7 +69,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/1",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -137,7 +137,7 @@ Session signature lifetime in seconds. After expiry the user re-signs once to un
 
 ### onEvent
 
-`((event: ZamaEvent) => void) | undefined`
+`ZamaSDKEventListener | undefined`
 
 Callback fired for SDK lifecycle events (keypair generation, signing, encryption, decryption). Useful for analytics and debugging.
 

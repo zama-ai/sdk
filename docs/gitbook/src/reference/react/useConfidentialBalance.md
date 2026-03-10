@@ -49,8 +49,12 @@ const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
-      [11155111]: {
+      [1]: {
         relayerUrl: "https://your-app.com/api/relayer/1",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
+      [11155111]: {
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -66,7 +70,7 @@ const sdk = new ZamaSDK({
 ## Parameters
 
 ```ts
-import { type UseConfidentialBalanceParameters } from "@zama-fhe/react-sdk";
+import { type UseConfidentialBalanceConfig } from "@zama-fhe/react-sdk";
 ```
 
 ### tokenAddress
@@ -132,7 +136,7 @@ const { data } = useConfidentialBalance({
 ## Return Type
 
 ```ts
-import { type UseConfidentialBalanceReturnType } from "@zama-fhe/react-sdk";
+import { type UseConfidentialBalanceOptions } from "@zama-fhe/react-sdk";
 ```
 
 The `data` property is `bigint | undefined` -- the decrypted token balance.

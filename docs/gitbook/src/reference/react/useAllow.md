@@ -79,9 +79,7 @@ await allow(["0xTokenA", "0xTokenB", "0xTokenC"]);
 
 ## Return Type
 
-```ts
-import { type UseAllowReturnType } from "@zama-fhe/react-sdk";
-```
+Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

@@ -17,8 +17,8 @@ import type { GenericStorage } from "@zama-fhe/sdk";
 
 ```ts
 interface GenericStorage {
-  get(key: string): Promise<string | null>;
-  set(key: string, value: string): Promise<void>;
+  get<T = unknown>(key: string): Promise<T | null>;
+  set<T = unknown>(key: string, value: T): Promise<void>;
   delete(key: string): Promise<void>;
 }
 ```
@@ -52,18 +52,18 @@ const sdk = new ZamaSDK({
 ### get
 
 ```ts
-get(key: string): Promise<string | null>
+get<T = unknown>(key: string): Promise<T | null>
 ```
 
-Retrieve a value by key. Return `null` if the key does not exist.
+Retrieve a value by key. Return `null` if the key does not exist. The generic `T` allows typed reads.
 
 ### set
 
 ```ts
-set(key: string, value: string): Promise<void>
+set<T = unknown>(key: string, value: T): Promise<void>
 ```
 
-Store a value under the given key. Overwrites any existing value.
+Store a value under the given key. Overwrites any existing value. Accepts any serializable type.
 
 ### delete
 

@@ -20,7 +20,7 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 
 ```ts
 import { ZamaSDK, indexedDBStorage } from "@zama-fhe/sdk";
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const sdk = new ZamaSDK({
@@ -37,9 +37,14 @@ const sdk = new ZamaSDK({
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
+    [MainnetConfig.chainId]: {
+      ...MainnetConfig,
+      relayerUrl: "https://your-app.com/api/relayer/1",
+      network: "https://mainnet.infura.io/v3/YOUR_KEY",
+    },
     [SepoliaConfig.chainId]: {
       ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -151,7 +156,7 @@ const sdk = new ZamaSDK({
 
 ### onEvent
 
-`((event: SdkEvent) => void) | undefined`
+`ZamaSDKEventListener | undefined`
 
 Lifecycle event callback for debugging and telemetry. Events never contain sensitive data.
 

@@ -37,16 +37,21 @@ const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });
 {% tab title="config.ts" %}
 
 ```ts
-import { ZamaSDK, indexedDBStorage, RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { ZamaSDK, indexedDBStorage, RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const signer = new ViemSigner({ walletClient, publicClient });
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
+    [MainnetConfig.chainId]: {
+      ...MainnetConfig,
+      relayerUrl: "https://your-app.com/api/relayer/1",
+      network: "https://mainnet.infura.io/v3/YOUR_KEY",
+    },
     [SepoliaConfig.chainId]: {
       ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -160,9 +165,9 @@ const isWrapper = await readonlyToken.isWrapper();
 
 ### discoverWrapper
 
-`(coordinatorAddress: Address) => Promise<Address>`
+`(coordinatorAddress: Address) => Promise<Address | null>`
 
-Finds the wrapper contract for a public token via the deployment coordinator.
+Finds the wrapper contract for a public token via the deployment coordinator. Returns `null` if no wrapper exists.
 
 ```ts
 const wrapper = await readonlyToken.discoverWrapper("0xCoordinatorAddress");
@@ -223,7 +228,7 @@ const allowed = await readonlyToken.isAllowed();
 
 ### decryptBalance
 
-`(handle: Hex) => Promise<bigint>`
+`(handle: Hex, owner?: Address) => Promise<bigint>`
 
 Decrypts a raw encrypted handle into a plaintext balance value. Results are cached.
 
@@ -234,7 +239,7 @@ const value = await readonlyToken.decryptBalance(handle);
 
 ### decryptHandles
 
-`(handles: Hex[]) => Promise<Map<Hex, bigint>>`
+`(handles: Hex[], owner?: Address) => Promise<Map<Hex, bigint>>`
 
 Decrypts multiple encrypted handles in a single call.
 

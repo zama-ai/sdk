@@ -17,7 +17,7 @@ The relayer requires an API key. In browser apps, proxy requests through your ba
 
 ```ts
 // Browser apps: proxy through your backend (recommended)
-relayerUrl: "https://your-app.com/api/relayer/1"
+relayerUrl: "https://your-app.com/api/relayer/11155111"
 
 // Server-side / prototyping: pass the key directly
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
@@ -91,7 +91,7 @@ const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
     [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/1",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -135,7 +135,7 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [sepolia.id]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
@@ -159,7 +159,7 @@ const sdk = new ZamaSDK({
     getChainId: () => signer.getChainId(),
     transports: {
       [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },

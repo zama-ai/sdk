@@ -84,14 +84,19 @@ The relayer needs a `getChainId` callback and a transport map. Use the built-in 
 {% tab title="Browser (RelayerWeb)" %}
 
 ```ts
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
+    [MainnetConfig.chainId]: {
+      ...MainnetConfig,
+      relayerUrl: "https://your-app.com/api/relayer/1",
+      network: "https://mainnet.infura.io/v3/YOUR_KEY",
+    },
     [SepoliaConfig.chainId]: {
       ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -151,7 +156,7 @@ With the three pieces ready, assemble the SDK:
 {% tab title="Browser (viem)" %}
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage, SepoliaConfig } from "@zama-fhe/sdk";
+import { ZamaSDK, RelayerWeb, indexedDBStorage, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const signer = new ViemSigner({ walletClient, publicClient });
@@ -160,9 +165,14 @@ const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
+      [MainnetConfig.chainId]: {
+        ...MainnetConfig,
+        relayerUrl: "https://your-app.com/api/relayer/1",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
       [SepoliaConfig.chainId]: {
         ...SepoliaConfig,
-        relayerUrl: "https://your-app.com/api/relayer/1",
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },

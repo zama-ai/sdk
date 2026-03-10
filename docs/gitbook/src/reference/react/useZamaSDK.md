@@ -26,12 +26,10 @@ function AdvancedOperations() {
 
   async function handleCustomOperation() {
     // Access the SDK directly for operations not covered by hooks
-    const token = sdk.getToken({
-      tokenAddress: "0xToken",
-      wrapperAddress: "0xWrapper",
-    });
-    const metadata = await token.getMetadata();
-    console.log(metadata.name, metadata.symbol);
+    const token = sdk.createToken("0xToken", "0xWrapper");
+    const name = await token.name();
+    const symbol = await token.symbol();
+    console.log(name, symbol);
   }
 
   return <button onClick={handleCustomOperation}>Run</button>;
@@ -51,8 +49,12 @@ const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
-      [11155111]: {
+      [1]: {
         relayerUrl: "https://your-app.com/api/relayer/1",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
+      [11155111]: {
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },

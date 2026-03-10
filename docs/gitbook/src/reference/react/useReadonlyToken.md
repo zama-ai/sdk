@@ -25,8 +25,10 @@ function TokenInfo() {
   const readonlyToken = useReadonlyToken("0xToken");
 
   async function handleFetchMetadata() {
-    const metadata = await readonlyToken.getMetadata();
-    console.log(metadata.name, metadata.symbol, metadata.decimals);
+    const name = await readonlyToken.name();
+    const symbol = await readonlyToken.symbol();
+    const decimals = await readonlyToken.decimals();
+    console.log(name, symbol, decimals);
   }
 
   async function handleCheckAllowed() {
@@ -56,8 +58,12 @@ const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
-      [11155111]: {
+      [1]: {
         relayerUrl: "https://your-app.com/api/relayer/1",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
+      [11155111]: {
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },

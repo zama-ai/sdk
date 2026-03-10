@@ -5,7 +5,7 @@ description: Query hook that checks whether a session signature is cached and va
 
 # useIsAllowed
 
-Query hook that checks whether a session signature is cached and valid for a given token.
+Query hook that checks whether a session signature is cached and valid.
 
 Returns `true` if decrypt operations can proceed without a wallet prompt. Returns `false` once the `sessionTTL` has expired (default: 30 days).
 
@@ -24,7 +24,7 @@ import { useIsAllowed } from "@zama-fhe/react-sdk";
 import { useIsAllowed, useAllow } from "@zama-fhe/react-sdk";
 
 function AuthGuard({ tokenAddress }: { tokenAddress: Address }) {
-  const { data: allowed, isLoading } = useIsAllowed(tokenAddress);
+  const { data: allowed, isLoading } = useIsAllowed();
   const { mutateAsync: allow } = useAllow();
 
   if (isLoading) return <span>Checking session...</span>;
@@ -42,24 +42,16 @@ function AuthGuard({ tokenAddress }: { tokenAddress: Address }) {
 
 ## Parameters
 
-```ts
-import { type UseIsAllowedParameters } from "@zama-fhe/react-sdk";
-```
-
-### tokenAddress
-
-`Address`
-
-Address of the confidential token wrapper contract to check.
+`useIsAllowed` takes no parameters. The session state applies globally to the SDK instance (not per-token).
 
 ```tsx
-const { data: allowed } = useIsAllowed("0xToken");
+const { data: allowed } = useIsAllowed();
 ```
 
 ## Return Type
 
 ```ts
-import { type UseIsAllowedReturnType } from "@zama-fhe/react-sdk";
+// Returns UseQueryResult<boolean, Error>
 ```
 
 `data` is a `boolean`:

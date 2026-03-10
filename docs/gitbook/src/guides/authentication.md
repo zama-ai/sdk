@@ -75,14 +75,19 @@ You can adapt this pattern to any server framework (Fastify, Hono, Next.js API r
 Point the `relayerUrl` at your backend endpoint instead of the relayer directly:
 
 ```ts
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
+    [MainnetConfig.chainId]: {
+      ...MainnetConfig,
+      relayerUrl: "https://your-app.com/api/relayer/1",
+      network: "https://mainnet.infura.io/v3/YOUR_KEY",
+    },
     [SepoliaConfig.chainId]: {
       ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },

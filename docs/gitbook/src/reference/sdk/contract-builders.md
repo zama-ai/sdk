@@ -5,14 +5,19 @@ description: Low-level builders that return raw contract call configs for viem, 
 
 # Contract Call Builders
 
-Every builder returns a `ContractCallConfig` — a plain object with the contract address, ABI fragment, function name, and encoded args:
+Every builder returns a `ReadContractConfig` or `WriteContractConfig` — a plain object with the contract address, ABI fragment, function name, and encoded args:
 
 ```ts
-type ContractCallConfig = {
+type ReadContractConfig = {
   address: Address;
   abi: Abi;
   functionName: string;
   args: readonly unknown[];
+};
+
+type WriteContractConfig = ReadContractConfig & {
+  value?: bigint;
+  gas?: bigint;
 };
 ```
 
@@ -143,7 +148,7 @@ const handle = await readConfidentialBalanceOfContract(provider, tokenAddress, u
 const txHash = await writeWrapContract(signer, wrapperAddress, recipient, amount);
 ```
 
-### With raw ContractCallConfig
+### With raw config objects
 
 If you use neither viem nor ethers, destructure the config and pass it to your execution layer:
 

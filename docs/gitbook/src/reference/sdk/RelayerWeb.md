@@ -19,14 +19,19 @@ import { RelayerWeb } from "@zama-fhe/sdk";
 {% tab title="app.ts" %}
 
 ```ts
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
+    [MainnetConfig.chainId]: {
+      ...MainnetConfig,
+      relayerUrl: "https://your-app.com/api/relayer/1",
+      network: "https://mainnet.infura.io/v3/YOUR_KEY",
+    },
     [SepoliaConfig.chainId]: {
       ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
@@ -78,15 +83,15 @@ import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
   transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
     [MainnetConfig.chainId]: {
       ...MainnetConfig,
       relayerUrl: "https://your-app.com/api/relayer/1",
       network: "https://mainnet.infura.io/v3/YOUR_KEY",
+    },
+    [SepoliaConfig.chainId]: {
+      ...SepoliaConfig,
+      relayerUrl: "https://your-app.com/api/relayer/11155111",
+      network: "https://sepolia.infura.io/v3/YOUR_KEY",
     },
   },
 });

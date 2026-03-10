@@ -82,21 +82,36 @@ const signer = new ViemSigner({
 });
 ```
 
+### ethereum
+
+`EIP1193Provider | undefined`
+
+Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, `subscribe()` listens for disconnect and account changes. Omit if you handle lifecycle events manually.
+
+```ts
+const signer = new ViemSigner({
+  walletClient,
+  publicClient,
+  ethereum: window.ethereum,
+});
+```
+
 ## Methods
 
 All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
 
-| Method                        | Read-only | Full  |
-| ----------------------------- | --------- | ----- |
-| `getChainId()`                | Works     | Works |
-| `getAddress()`                | Throws    | Works |
-| `signTypedData()`             | Throws    | Works |
-| `writeContract()`             | Throws    | Works |
-| `readContract()`              | Works     | Works |
-| `waitForTransactionReceipt()` | Works     | Works |
+| Method                        | Read-only | Full                        |
+| ----------------------------- | --------- | --------------------------- |
+| `getChainId()`                | Works     | Works                       |
+| `getAddress()`                | Throws    | Works                       |
+| `signTypedData()`             | Throws    | Works                       |
+| `writeContract()`             | Throws    | Works                       |
+| `readContract()`              | Works     | Works                       |
+| `waitForTransactionReceipt()` | Works     | Works                       |
+| `subscribe()`                 | N/A       | Works (requires `ethereum`) |
 
 {% hint style="info" %}
-`ViemSigner` does not implement `subscribe()`. Wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](/guides/configuration#viem--ethers-users-manual-wiring).
+`subscribe()` is only available when you pass the `ethereum` option. Without it, wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](/guides/configuration#viem--ethers-users-manual-wiring).
 {% endhint %}
 
 ## Related
