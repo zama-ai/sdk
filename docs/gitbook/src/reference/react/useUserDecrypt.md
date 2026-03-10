@@ -33,9 +33,11 @@ function DecryptHandle({ handle }: { handle: string }) {
       handles: [handle],
       contractAddress: "0xContract",
       signedContractAddresses: ["0xContract"],
-      privateKey: "...",
-      publicKey: "...",
+      privateKey: "0x...",
+      publicKey: "0x...",
       signature: "0x...",
+      signerAddress: "0xUser",
+      startTimestamp: Math.floor(Date.now() / 1000),
       durationDays: 30,
     });
     console.log("Decrypted:", result[handle]);
@@ -84,9 +86,9 @@ Contract addresses covered by the EIP-712 signature.
 
 ### privateKey / publicKey
 
-`string`
+`Hex`
 
-The user's FHE keypair. Generate with [`useGenerateKeypair`](/reference/react/useGenerateKeypair).
+The user's FHE keypair (hex-encoded). Generate with [`useGenerateKeypair`](/reference/react/useGenerateKeypair).
 
 ### signature
 
@@ -94,11 +96,23 @@ The user's FHE keypair. Generate with [`useGenerateKeypair`](/reference/react/us
 
 EIP-712 wallet signature authorizing the decrypt.
 
+### signerAddress
+
+`Address`
+
+The address of the wallet that signed the EIP-712 authorization.
+
+### startTimestamp
+
+`number`
+
+Unix timestamp (in seconds) marking the start of the credential validity window. Typically `Math.floor(Date.now() / 1000)`.
+
 ### durationDays
 
 `number`
 
-Validity window of the signature in days.
+Validity window of the credential in days (from `startTimestamp`).
 
 ## Return Type
 
