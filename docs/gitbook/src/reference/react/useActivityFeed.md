@@ -21,6 +21,7 @@ import { useActivityFeed } from "@zama-fhe/react-sdk";
 ```tsx
 import { useActivityFeed } from "@zama-fhe/react-sdk";
 import { usePublicClient } from "wagmi";
+import { type Log } from "viem";
 import { useEffect, useState } from "react";
 
 function ActivityList({
@@ -30,7 +31,7 @@ function ActivityList({
   tokenAddress: `0x${string}`;
   userAddress: `0x${string}`;
 }) {
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState<Log[]>([]);
   const publicClient = usePublicClient();
 
   useEffect(() => {

@@ -111,7 +111,7 @@ All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
 | `subscribe()`                 | N/A       | Works (requires `ethereum`) |
 
 {% hint style="info" %}
-`subscribe()` is only available when you pass the `ethereum` option. Without it, wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](/guides/configuration#viem--ethers-users-manual-wiring).
+`subscribe()` is only available when you pass the `ethereum` option. Without it, wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](/guides/configuration).
 {% endhint %}
 
 ## Related

@@ -20,8 +20,6 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 
 ```ts
 import { ZamaSDK, indexedDBStorage } from "@zama-fhe/sdk";
-import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const sdk = new ZamaSDK({
   relayer,
@@ -36,6 +34,8 @@ const sdk = new ZamaSDK({
 ```ts
 import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
+
+const signer = new ViemSigner({ walletClient, publicClient });
 
 const relayer = new RelayerWeb({
   getChainId: () => signer.getChainId(),
@@ -52,8 +52,6 @@ const relayer = new RelayerWeb({
     },
   },
 });
-
-const signer = new ViemSigner({ walletClient, publicClient });
 ```
 
 {% endtab %}

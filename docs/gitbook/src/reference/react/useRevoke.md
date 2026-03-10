@@ -21,7 +21,7 @@ import { useRevoke } from "@zama-fhe/react-sdk";
 ```tsx
 import { useRevoke } from "@zama-fhe/react-sdk";
 
-function RevokeButton({ tokens }: { tokens: Address[] }) {
+function RevokeButton({ tokens }: { tokens: `0x${string}`[] }) {
   const { mutate: revoke, isPending, isSuccess } = useRevoke();
 
   return (

@@ -82,7 +82,7 @@ export const WRAPPER_ADDRESS = "0xYourWrapperAddress" as const;
 {% endtab %}
 {% endtabs %}
 
-Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the relayer URL to point at your backend proxy. See [Configuration > Authentication](/guides/configuration#authentication) for proxy setup details.
+Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the relayer URL to point at your backend proxy. See the [Authentication guide](/guides/authentication) for proxy setup details.
 
 ## 4. Create the App layout with providers
 

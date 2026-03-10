@@ -73,7 +73,7 @@ import {
   useConfidentialTransferFrom,
 } from "@zama-fhe/react-sdk";
 
-function ApprovalPanel({ tokenAddress }: { tokenAddress: string }) {
+function ApprovalPanel({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: approve, isPending: isApproving } = useConfidentialApprove({ tokenAddress });
 
   const { data: isApproved } = useConfidentialIsApproved({ tokenAddress, spender: "0xSpender" });

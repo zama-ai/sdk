@@ -304,4 +304,4 @@ await token.finalizeUnwrap(burnAmountHandle);
 
 - [ZamaSDK](/reference/sdk/ZamaSDK) — creates `Token` via `createToken()`
 - [ReadonlyToken](/reference/sdk/ReadonlyToken) — read-only variant with batch operations
-- [Token operations guide](/reference/sdk/Token)
+- [Shield Tokens guide](/guides/shield-tokens) — step-by-step shielding walkthrough

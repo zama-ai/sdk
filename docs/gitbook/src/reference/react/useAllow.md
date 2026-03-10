@@ -23,7 +23,7 @@ import { useAllow } from "@zama-fhe/react-sdk";
 ```tsx
 import { useAllow } from "@zama-fhe/react-sdk";
 
-function AllowButton({ tokens }: { tokens: Address[] }) {
+function AllowButton({ tokens }: { tokens: `0x${string}`[] }) {
   const { mutateAsync: allow, isPending } = useAllow();
 
   const handleAllow = async () => {
@@ -46,7 +46,7 @@ function AllowButton({ tokens }: { tokens: Address[] }) {
 import { useAllow } from "@zama-fhe/react-sdk";
 import { useEffect } from "react";
 
-function AuthOnConnect({ tokens }: { tokens: Address[] }) {
+function AuthOnConnect({ tokens }: { tokens: `0x${string}`[] }) {
   const { mutateAsync: allow } = useAllow();
 
   useEffect(() => {
@@ -88,4 +88,4 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 - [`useIsAllowed`](/reference/react/useIsAllowed) -- check whether a session signature is cached
 - [`useRevoke`](/reference/react/useRevoke) -- revoke session credentials for specific tokens
 - [`useRevokeSession`](/reference/react/useRevokeSession) -- revoke the entire session
-- [Session management](/guides/configuration#session-management) -- security model and TTL configuration
+- [Session Model](/concepts/session-model) -- security model and TTL configuration

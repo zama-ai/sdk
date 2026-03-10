@@ -239,7 +239,7 @@ To solve this, pass `chromeSessionStorage` as the `sessionStorage` option. This 
 - Is shared across popup, background, and content script contexts.
 - Is automatically cleared when the browser closes.
 
-See the [Configuration guide](/guides/configuration#web-extensions) for the full setup.
+See the [Web Extensions guide](/guides/web-extensions) for the full setup.
 
 ## Security properties
 

@@ -62,6 +62,7 @@ function App() {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { sepolia } from "viem/chains";
 
 const signer = new ViemSigner({ walletClient, publicClient });
 const relayer = new RelayerWeb({
@@ -111,7 +112,7 @@ Signer that provides wallet connectivity for signing FHE keypair authorizations 
 
 `GenericStorage`
 
-Persistent storage backend for encrypted FHE keypairs and cached balances. Use `indexedDBStorage` for browsers or `MemoryStorage` for tests.
+Persistent storage backend for encrypted FHE keypairs and cached balances. Use `indexedDBStorage` for browsers or `memoryStorage` for tests.
 
 ---
 
@@ -119,7 +120,7 @@ Persistent storage backend for encrypted FHE keypairs and cached balances. Use `
 
 `GenericStorage | undefined`
 
-Storage backend for wallet session signatures. Defaults to in-memory storage. Pass `ChromeSessionStorage` for web extensions so signatures survive service worker restarts.
+Storage backend for wallet session signatures. Defaults to in-memory storage. Pass `chromeSessionStorage` for web extensions so signatures survive service worker restarts.
 
 ### keypairTTL
 
@@ -141,6 +142,5 @@ Callback fired for SDK lifecycle events (keypair generation, signing, encryption
 
 ## Related
 
-- [Provider Setup guide](/guides/configuration)
 - [Configuration guide](/guides/configuration)
 - [Session Model](/concepts/session-model)

@@ -136,7 +136,7 @@ const balances = await ReadonlyToken.batchDecryptBalances(tokens, {
 // Returns Map<Address, bigint>
 
 // If you already have the handles, pass them to skip the RPC reads
-const balances = await ReadonlyToken.batchDecryptBalances(tokens, {
+const balancesWithHandles = await ReadonlyToken.batchDecryptBalances(tokens, {
   handles,
   owner: userAddress,
 });

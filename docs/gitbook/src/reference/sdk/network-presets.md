@@ -81,7 +81,7 @@ const relayer = new RelayerNode({
     [SepoliaConfig.chainId]: {
       ...SepoliaConfig,
       network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { apiKey: process.env.RELAYER_API_KEY },
+      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
     },
   },
 });
