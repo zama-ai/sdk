@@ -405,13 +405,13 @@ export class CredentialsManager {
       contractAddresses: merged,
       signature,
     };
-    await this.#persistExtended(storeKey, extended);
+    await this.#persistCredentials(storeKey, extended);
     this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: requiredContracts });
     return extended;
   }
 
-  /** Re-encrypt and persist updated credentials. */
-  async #persistExtended(storeKey: string, creds: StoredCredentials): Promise<void> {
+  /** Re-encrypt and persist credentials (best-effort — failures are swallowed). */
+  async #persistCredentials(storeKey: string, creds: StoredCredentials): Promise<void> {
     try {
       const encrypted = await this.#encryptCredentials(creds);
       await this.#storage.set(storeKey, encrypted);
@@ -462,12 +462,7 @@ export class CredentialsManager {
         durationDays,
       };
 
-      try {
-        const encrypted = await this.#encryptCredentials(creds);
-        await this.#storage.set(storeKey, encrypted);
-      } catch {
-        // Store write failed — credentials still usable in memory
-      }
+      await this.#persistCredentials(storeKey, creds);
 
       this.#emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
