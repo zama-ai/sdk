@@ -10,10 +10,10 @@ describe("decryptBalanceAsMutationOptions", () => {
     await options.mutationFn({
       delegatorAddress: "0x2222222222222222222222222222222222222222",
     });
-    expect(readonlyToken.decryptBalanceAs).toHaveBeenCalledWith(
-      "0x2222222222222222222222222222222222222222",
-      undefined,
-    );
+    expect(readonlyToken.decryptBalanceAs).toHaveBeenCalledWith({
+      delegatorAddress: "0x2222222222222222222222222222222222222222",
+      owner: undefined,
+    });
   });
 
   test("passes options through", async ({ createMockReadonlyToken }) => {
@@ -22,11 +22,11 @@ describe("decryptBalanceAsMutationOptions", () => {
 
     await options.mutationFn({
       delegatorAddress: "0x2222222222222222222222222222222222222222",
-      options: { owner: "0x3333333333333333333333333333333333333333" },
+      owner: "0x3333333333333333333333333333333333333333",
     });
-    expect(readonlyToken.decryptBalanceAs).toHaveBeenCalledWith(
-      "0x2222222222222222222222222222222222222222",
-      { owner: "0x3333333333333333333333333333333333333333" },
-    );
+    expect(readonlyToken.decryptBalanceAs).toHaveBeenCalledWith({
+      delegatorAddress: "0x2222222222222222222222222222222222222222",
+      owner: "0x3333333333333333333333333333333333333333",
+    });
   });
 });

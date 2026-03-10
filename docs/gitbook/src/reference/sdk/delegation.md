@@ -113,10 +113,13 @@ The delegate calls `decryptBalanceAs` to read the delegator's balance. This uses
 
 ```ts
 // Decrypt the delegator's balance (owner defaults to delegator)
-const balance = await readonlyToken.decryptBalanceAs("0xDelegator");
+const balance = await readonlyToken.decryptBalanceAs({
+  delegatorAddress: "0xDelegator",
+});
 
 // Decrypt a specific owner's balance (when owner differs from delegator)
-const balance = await readonlyToken.decryptBalanceAs("0xDelegator", {
+const balance = await readonlyToken.decryptBalanceAs({
+  delegatorAddress: "0xDelegator",
   owner: "0xOwner",
 });
 ```

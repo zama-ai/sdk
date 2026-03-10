@@ -244,7 +244,7 @@ describe("decryptBalanceAs", () => {
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
 
-    const balance = await readonlyToken.decryptBalanceAs(delegatorAddress);
+    const balance = await readonlyToken.decryptBalanceAs({ delegatorAddress });
 
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     expect(balance).toBe(0n);
@@ -276,7 +276,7 @@ describe("decryptBalanceAs", () => {
       [handle]: 500n,
     });
 
-    const balance = await readonlyToken.decryptBalanceAs(delegatorAddress);
+    const balance = await readonlyToken.decryptBalanceAs({ delegatorAddress });
 
     expect(balance).toBe(500n);
     expect(relayer.generateKeypair).toHaveBeenCalled();
@@ -306,7 +306,7 @@ describe("decryptBalanceAs", () => {
     vi.mocked(signer.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockRejectedValue(new Error("fail"));
 
-    await expect(readonlyToken.decryptBalanceAs(delegatorAddress)).rejects.toThrow(
+    await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
       expect.objectContaining({ code: "DECRYPTION_FAILED" }),
     );
   });
@@ -337,11 +337,11 @@ describe("decryptBalanceAs", () => {
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [handle]: 42n });
 
     // First call populates cache keyed by owner (userAddress), not delegator.
-    await readonlyToken.decryptBalanceAs(delegatorAddress, { owner: userAddress });
+    await readonlyToken.decryptBalanceAs({ delegatorAddress, owner: userAddress });
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
 
     // Second call with same owner should hit cache — no second decrypt call.
-    const balance = await readonlyToken.decryptBalanceAs(delegatorAddress, { owner: userAddress });
+    const balance = await readonlyToken.decryptBalanceAs({ delegatorAddress, owner: userAddress });
     expect(balance).toBe(42n);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
   });

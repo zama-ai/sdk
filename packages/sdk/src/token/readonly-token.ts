@@ -575,14 +575,17 @@ export class ReadonlyToken {
    * const balance = await token.decryptBalanceAs("0xDelegator");
    * ```
    */
-  async decryptBalanceAs(
-    delegatorAddress: Address,
-    options?: { owner?: Address },
-  ): Promise<bigint> {
+  async decryptBalanceAs({
+    delegatorAddress,
+    owner,
+  }: {
+    delegatorAddress: Address;
+    owner?: Address;
+  }): Promise<bigint> {
     const normalizedDelegator = getAddress(delegatorAddress);
-    const owner = options?.owner ? getAddress(options.owner) : normalizedDelegator;
+    const normalizedOwner = owner ? getAddress(owner) : normalizedDelegator;
 
-    const handle = await this.readConfidentialBalanceOf(owner);
+    const handle = await this.readConfidentialBalanceOf(normalizedOwner);
     if (this.isZeroHandle(handle)) return 0n;
 
     // Check persistent cache keyed by (token, owner, handle).
@@ -591,7 +594,7 @@ export class ReadonlyToken {
     const cached = await loadCachedBalance({
       storage: this.storage,
       tokenAddress: this.address,
-      owner,
+      owner: normalizedOwner,
       handle,
     });
     if (cached !== null) return cached;
@@ -652,7 +655,7 @@ export class ReadonlyToken {
       await saveCachedBalance({
         storage: this.storage,
         tokenAddress: this.address,
-        owner,
+        owner: normalizedOwner,
         handle,
         value,
       });
