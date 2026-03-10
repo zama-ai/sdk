@@ -1,52 +1,96 @@
+---
+description: TypeScript SDK for confidential ERC-20 tokens — shield, transfer, and unshield with Fully Homomorphic Encryption.
+---
+
 # Zama SDK
 
-Add private token balances and transfers to your dApp. Users can shield ERC-20 tokens so their balances and transfer amounts are encrypted on-chain using [Fully Homomorphic Encryption](https://docs.zama.org/protocol/protocol/overview) — nobody can see how much they hold or send.
+Integrate the Zama fhEVM into your app
 
-## What you can build
+TypeScript SDK for confidential ERC-20 tokens — shield, transfer, and unshield with Fully Homomorphic Encryption.
 
-- **Private balances** — users shield public ERC-20 tokens into encrypted form, and unshield them back when needed
-- **Confidential transfers** — send tokens without revealing the amount on-chain
-- **Activity feeds** — parse on-chain events and decrypt amounts for the user's own UI
+## Features
+
+### Shield & Unshield
+
+Convert public ERC-20 tokens into encrypted form and back. The SDK handles approvals, encryption, and the two-step unshield flow.
+
+### Confidential Transfers
+
+Encrypt amounts client-side before submitting on-chain. On-chain observers see the transaction but never the value.
+
+### React Hooks
+
+TanStack Query-based hooks with two-phase polling, automatic cache invalidation, and one-signature session management.
 
 ## Two packages, one import
 
-| Package                                               | Use when...                                                                  |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](guides/sdk/overview.md)             | You're building with vanilla TypeScript, Node.js, or any non-React framework |
-| [`@zama-fhe/react-sdk`](guides/react-sdk/overview.md) | You're building a React app (includes everything from the core SDK)          |
+| Package                                                | Use when...                                                                   |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| [`@zama-fhe/sdk`](/reference/sdk/ZamaSDK)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
+| [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (includes everything from the core SDK)          |
 
-If you're using React, you only need `@zama-fhe/react-sdk` — it re-exports everything from the core SDK, so you never import from both.
+If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (hooks, providers, `RelayerWeb`, storage singletons). You still import signer adapters from their sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
 
 ## Install
 
-```bash
+{% tabs %}
+{% tab title="pnpm" %}
+
+```sh
 # React app
 pnpm add @zama-fhe/react-sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 pnpm add @zama-fhe/sdk
-
-# (or substitute npm install / yarn add)
 ```
+
+{% endtab %}
+{% tab title="npm" %}
+
+```sh
+# React app
+npm install @zama-fhe/react-sdk @tanstack/react-query
+
+# Vanilla TypeScript / Node.js
+npm install @zama-fhe/sdk
+```
+
+{% endtab %}
+{% tab title="yarn" %}
+
+```sh
+# React app
+yarn add @zama-fhe/react-sdk @tanstack/react-query
+
+# Vanilla TypeScript / Node.js
+yarn add @zama-fhe/sdk
+```
+
+{% endtab %}
+{% endtabs %}
 
 ## Your first confidential transfer in 30 seconds
 
 ```ts
-import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const sdk = new ZamaSDK({
   relayer: new RelayerWeb({
     getChainId: () => signer.getChainId(),
     transports: {
+      [1]: {
+        relayerUrl: "https://your-app.com/api/relayer/1",
+        network: "https://mainnet.infura.io/v3/YOUR_KEY",
+      },
       [11155111]: {
         relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: YOUR_RPC_URL,
+        network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
   }),
-  signer: new ViemSigner({ walletClient, publicClient }), // walletClient is optional for read-only
-  storage: new IndexedDBStorage(),
+  signer: new ViemSigner({ walletClient, publicClient }),
+  storage: indexedDBStorage,
 });
 
 const token = sdk.createToken("0xYourEncryptedERC20");
@@ -57,4 +101,4 @@ await token.confidentialTransfer("0xRecipient", 500n); // private send
 await token.unshield(500n); // withdraw back to public
 ```
 
-Ready? Jump to the [Quick Start](guides/quick-start.md) for a full working example with your stack.
+Ready to build? Jump to the [Quick Start](/tutorials/quick-start) for a full working example with your stack.
