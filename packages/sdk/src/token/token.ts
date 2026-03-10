@@ -1,4 +1,4 @@
-import { hexToBigInt } from "viem";
+import { Address, getAddress, Hex, hexToBigInt } from "viem";
 import {
   allowanceContract,
   approveContract,
@@ -17,8 +17,7 @@ import {
 } from "../contracts";
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { Address, Handle, Hex } from "../relayer/relayer-sdk.types";
-import { validateAddress } from "../utils";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import {
   ApprovalFailedError,
   DecryptionFailedError,
@@ -61,7 +60,7 @@ export class Token extends ReadonlyToken {
 
   constructor(config: TokenConfig) {
     super(config);
-    this.wrapper = config.wrapper ? validateAddress(config.wrapper, "wrapper") : this.address;
+    this.wrapper = config.wrapper ? getAddress(config.wrapper) : this.address;
   }
 
   async #getUnderlying(): Promise<Address> {
@@ -104,7 +103,7 @@ export class Token extends ReadonlyToken {
     amount: bigint,
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
-    const normalizedTo = validateAddress(to, "to");
+    const normalizedTo = getAddress(to);
 
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
@@ -177,8 +176,8 @@ export class Token extends ReadonlyToken {
     amount: bigint,
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
-    const normalizedFrom = validateAddress(from, "from");
-    const normalizedTo = validateAddress(to, "to");
+    const normalizedFrom = getAddress(from);
+    const normalizedTo = getAddress(to);
 
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
@@ -250,7 +249,7 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async approve(spender: Address, until?: number): Promise<TransactionResult> {
-    const normalizedSpender = validateAddress(spender, "spender");
+    const normalizedSpender = getAddress(spender);
     try {
       const txHash = await this.signer.writeContract(
         setOperatorContract(this.address, normalizedSpender, until),
@@ -288,10 +287,8 @@ export class Token extends ReadonlyToken {
    * ```
    */
   async isApproved(spender: Address, holder?: Address): Promise<boolean> {
-    const normalizedSpender = validateAddress(spender, "spender");
-    const resolvedHolder = holder
-      ? validateAddress(holder, "holder")
-      : await this.signer.getAddress();
+    const normalizedSpender = getAddress(spender);
+    const resolvedHolder = holder ? getAddress(holder) : await this.signer.getAddress();
     return this.signer.readContract(
       isOperatorContract(this.address, resolvedHolder, normalizedSpender),
     );
@@ -338,9 +335,7 @@ export class Token extends ReadonlyToken {
     }
 
     try {
-      const recipient = options?.to
-        ? validateAddress(options.to, "to")
-        : await this.signer.getAddress();
+      const recipient = options?.to ? getAddress(options.to) : await this.signer.getAddress();
       const txHash = await this.signer.writeContract(wrapContract(this.wrapper, recipient, amount));
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
       safeCallback(() => options?.callbacks?.onShieldSubmitted?.(txHash));
@@ -697,7 +692,7 @@ export class Token extends ReadonlyToken {
     options?: { expirationDate?: Date },
   ): Promise<TransactionResult> {
     const acl = await this.requireAclAddress();
-    const normalizedDelegate = validateAddress(delegate, "delegate");
+    const normalizedDelegate = getAddress(delegate);
     // uint64 max → no practical expiry
     const expirationDate = options?.expirationDate
       ? BigInt(Math.floor(options.expirationDate.getTime() / 1000))
@@ -728,7 +723,7 @@ export class Token extends ReadonlyToken {
    */
   async revokeDelegation(delegate: Address): Promise<TransactionResult> {
     const acl = await this.requireAclAddress();
-    const normalizedDelegate = validateAddress(delegate, "delegate");
+    const normalizedDelegate = getAddress(delegate);
 
     try {
       const txHash = await this.signer.writeContract(

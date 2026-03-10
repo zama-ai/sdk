@@ -1,4 +1,4 @@
-export { filterQueryOptions, hashFn, normalizeHandle, ZERO_HANDLE } from "./utils";
+export { filterQueryOptions, hashFn, ZERO_HANDLE } from "./utils";
 export type { StrippedQueryOptionKeys } from "./utils";
 export type { QueryFactoryOptions, MutationFactoryOptions } from "./factory-types";
 export { zamaQueryKeys } from "./query-keys";
@@ -71,6 +71,7 @@ export {
 } from "./confidential-balances";
 export {
   activityFeedQueryOptions,
+  deriveActivityFeedLogsKey,
   type ActivityFeedConfig,
   type ActivityFeedQueryConfig,
 } from "./activity-feed";
@@ -140,7 +141,6 @@ export type { CredentialsManagerConfig } from "../token/credentials-manager";
 export type {
   GenericSigner,
   GenericStorage,
-  Hex,
   ShieldCallbacks,
   SignerLifecycleCallbacks,
   StoredCredentials,

@@ -5,14 +5,14 @@
 ```ts
 
 import { Abi } from 'viem';
-import { Address } from '@zama-fhe/relayer-sdk/bundle';
+import { Address } from 'viem';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
-import { Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
@@ -94,11 +94,11 @@ export interface ActivityItem {
     readonly amount: ActivityAmount;
     readonly direction: ActivityDirection;
     readonly fee?: bigint;
-    readonly from?: string;
+    readonly from?: Address;
     readonly metadata: ActivityLogMetadata;
     readonly rawEvent: OnChainEvent;
     readonly success?: boolean;
-    readonly to?: string;
+    readonly to?: Address;
     readonly type: ActivityType;
 }
 
@@ -106,7 +106,7 @@ export interface ActivityItem {
 export interface ActivityLogMetadata {
     readonly blockNumber?: bigint | number;
     readonly logIndex?: number;
-    readonly transactionHash?: string;
+    readonly transactionHash?: Hex;
 }
 
 // @public
@@ -5761,8 +5761,8 @@ export interface ConfidentialTransferEvent {
     readonly encryptedAmountHandle: Handle;
     // (undocumented)
     readonly eventName: "ConfidentialTransfer";
-    readonly from: string;
-    readonly to: string;
+    readonly from: Address;
+    readonly to: Address;
 }
 
 // @public
@@ -7293,7 +7293,7 @@ export class CredentialsManager {
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
     clear(): Promise<void>;
     // (undocumented)
-    static computeStoreKey(address: string, chainId: number): Promise<string>;
+    static computeStoreKey(address: Address, chainId: number): Promise<string>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
     isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
@@ -7416,11 +7416,11 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     handles: Handle[];
     // (undocumented)
-    privateKey: string;
+    privateKey: Hex;
     // (undocumented)
-    publicKey: string;
+    publicKey: Hex;
     // (undocumented)
-    signature: string;
+    signature: Hex;
     // (undocumented)
     signedContractAddresses: Address[];
     // (undocumented)
@@ -9023,11 +9023,11 @@ export interface EIP712TypedData {
     };
     // (undocumented)
     message: {
-        publicKey: string;
-        contractAddresses: readonly string[];
+        publicKey: Hex;
+        contractAddresses: readonly Address[];
         startTimestamp: bigint;
         durationDays: bigint;
-        extraData: string;
+        extraData: Hex;
     };
     // (undocumented)
     primaryType?: string;
@@ -14923,7 +14923,7 @@ export function getWrapperContract(coordinator: Address, tokenAddress: Address):
 };
 
 // @public
-export type Handle = SDK.Bytes32Hex;
+export type Handle = `0x${string}`;
 
 // @public
 export const HardhatConfig: {
@@ -18039,7 +18039,7 @@ export class NoCiphertextError extends ZamaError {
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
 
 // @public
-export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMetadata>)[], userAddress: string): ActivityItem[];
+export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMetadata>)[], userAddress: Address): ActivityItem[];
 
 // @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
@@ -19519,8 +19519,8 @@ export function rateContract(tokenAddress: Address): {
 
 // @public
 export interface RawLog {
-    readonly data: string;
-    readonly topics: readonly string[];
+    readonly data: Hex;
+    readonly topics: readonly Hex[];
 }
 
 // @public (undocumented)
@@ -19603,11 +19603,11 @@ export class RelayerRequestFailedError extends ZamaError {
 
 // @public
 export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<string>>;
+    generateKeypair(): Promise<KeypairType<Hex>>;
     getAclAddress(): Promise<Address>;
     getPublicKey(): Promise<{
         publicKeyId: string;
@@ -19629,11 +19629,11 @@ export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 // @public
 export class RelayerWeb implements RelayerSDK {
     constructor(config: RelayerWebConfig);
-    createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<string>>;
+    generateKeypair(): Promise<KeypairType<Hex>>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
     getPublicKey(): Promise<{
@@ -22737,9 +22737,9 @@ export function sortByBlockNumber(items: readonly ActivityItem[]): ActivityItem[
 export interface StoredCredentials {
     contractAddresses: Address[];
     durationDays: number;
-    privateKey: string;
-    publicKey: string;
-    signature: string;
+    privateKey: Hex;
+    publicKey: Hex;
+    signature: Hex;
     startTimestamp: number;
 }
 
@@ -28955,11 +28955,11 @@ export interface UnwrappedStartedEvent {
     readonly burnAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrappedStarted";
-    readonly refund: string;
+    readonly refund: Address;
     readonly requestedAmount: Handle;
     readonly requestId: bigint;
     readonly returnVal: boolean;
-    readonly to: string;
+    readonly to: Address;
     readonly txId: bigint;
 }
 
@@ -28968,7 +28968,7 @@ export interface UnwrapRequestedEvent {
     readonly encryptedAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrapRequested";
-    readonly receiver: string;
+    readonly receiver: Address;
 }
 
 // @public (undocumented)
@@ -28988,11 +28988,11 @@ export interface UserDecryptParams {
     // (undocumented)
     handles: Handle[];
     // (undocumented)
-    privateKey: string;
+    privateKey: Hex;
     // (undocumented)
-    publicKey: string;
+    publicKey: Hex;
     // (undocumented)
-    signature: string;
+    signature: Hex;
     // (undocumented)
     signedContractAddresses: Address[];
     // (undocumented)
@@ -31860,7 +31860,7 @@ export interface WrappedEvent {
     readonly feeAmount: bigint;
     readonly mintAmount: bigint;
     readonly mintTxId: bigint;
-    readonly to: string;
+    readonly to: Address;
 }
 
 // @public (undocumented)

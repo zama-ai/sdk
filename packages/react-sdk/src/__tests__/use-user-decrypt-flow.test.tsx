@@ -75,8 +75,8 @@ describe("useUserDecryptFlow", () => {
   });
 
   it("groups handles by contract address", async ({ relayer, signer, renderWithProviders }) => {
-    const CONTRACT_A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
-    const CONTRACT_B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
+    const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+    const CONTRACT_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
     vi.mocked(relayer.userDecrypt)
       .mockResolvedValueOnce({ "0xh1": 10n })

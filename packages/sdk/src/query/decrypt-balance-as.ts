@@ -1,5 +1,5 @@
 import type { ReadonlyToken } from "../token/readonly-token";
-import type { Address } from "../token/token.types";
+import type { Address } from "viem";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link decryptBalanceAsMutationOptions}. */

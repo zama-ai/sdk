@@ -1,18 +1,19 @@
 import { concat, encodePacked, keccak256, pad, toBytes, toHex, type Hex } from "viem";
-import type { Address } from "../relayer-sdk.types";
-import { FHE_BIT_WIDTHS, FheType, HANDLE_VERSION, PREHANDLE_MASK } from "./constants";
+import { HANDLE_VERSION, PREHANDLE_MASK } from "./constants";
+import { encryptionBitsFromFheTypeId, type FheTypeId } from "./fhe-type";
 import { EncryptionFailedError } from "../../token/errors";
+import type { Address } from "viem";
 
 const RAW_CT_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_rct");
 const HANDLE_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_hdl");
 
-function cleartextToBytes(cleartext: bigint, fheType: FheType): Uint8Array {
-  const byteLength = Math.ceil(FHE_BIT_WIDTHS[fheType] / 8);
+function cleartextToBytes(cleartext: bigint, fheType: FheTypeId): Uint8Array {
+  const byteLength = Math.ceil(encryptionBitsFromFheTypeId(fheType) / 8);
   return toBytes(pad(toHex(cleartext), { size: byteLength }));
 }
 
 export function computeMockCiphertext(
-  fheType: FheType,
+  fheType: FheTypeId,
   cleartext: bigint,
   random32: Uint8Array,
 ): Hex {
@@ -31,7 +32,7 @@ export function computeMockCiphertext(
 export function computeInputHandle(
   mockCiphertext: Hex,
   index: number,
-  fheType: FheType,
+  fheType: FheTypeId,
   aclAddress: Address,
   chainId: bigint,
 ): Hex {

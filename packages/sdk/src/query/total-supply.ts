@@ -1,8 +1,9 @@
 import { totalSupplyContract } from "../contracts";
-import type { Address, GenericSigner } from "../token/token.types";
+import type { GenericSigner } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
+import type { Address } from "viem";
 
 export interface TotalSupplyQueryConfig {
   query?: Record<string, unknown>;
@@ -20,7 +21,7 @@ export function totalSupplyQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
-      return signer.readContract(totalSupplyContract(keyTokenAddress as Address));
+      return signer.readContract(totalSupplyContract(keyTokenAddress));
     },
     staleTime: 30_000,
     enabled: config?.query?.enabled !== false,

@@ -2,7 +2,8 @@
 import { test as base, vi } from "vitest";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
-import type { Address } from "./relayer/relayer-sdk.types";
+import type { Handle } from "./relayer/relayer-sdk.types";
+import type { Address, Hex } from "viem";
 import { CredentialsManager, CredentialsManagerConfig } from "./token/credentials-manager";
 import { MemoryStorage } from "./token/memory-storage";
 import { ReadonlyToken, ReadonlyTokenConfig } from "./token/readonly-token";
@@ -107,7 +108,7 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     decryptBalance: vi.fn().mockResolvedValue(123n),
     decryptBalanceAs: vi.fn().mockResolvedValue(123n),
     decryptHandles: vi.fn().mockResolvedValue(new Map()),
-    confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Address),
+    confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
     name: vi.fn().mockResolvedValue("Test"),
     symbol: vi.fn().mockResolvedValue("TST"),
     decimals: vi.fn().mockResolvedValue(18),
@@ -255,7 +256,7 @@ export const test = base.extend<SdkFixtures>({
   },
   createMockToken: async ({ tokenAddress, signer }, use) => {
     const defaultTxResult: TransactionResult = {
-      txHash: ("0x" + "11".repeat(32)) as Address,
+      txHash: ("0x" + "11".repeat(32)) as Hex,
       receipt: { logs: [] },
     };
     function factory(

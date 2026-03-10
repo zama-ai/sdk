@@ -2,7 +2,7 @@
 
 import { useQuery } from "../utils/query";
 import { type UseQueryOptions } from "@tanstack/react-query";
-import type { Address, Hex } from "@zama-fhe/sdk";
+import type { Address, Handle } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryOptions,
   confidentialHandleQueryOptions,
@@ -52,7 +52,7 @@ export function useConfidentialBalance(
     ...signerAddressQueryOptions(token.signer),
   });
 
-  const owner = addressQuery.data as Address | undefined;
+  const owner = addressQuery.data;
 
   // Phase 1: Poll the encrypted handle (cheap RPC read, no signing)
   const baseHandleQueryOptions = confidentialHandleQueryOptions(token.signer, tokenAddress, {
@@ -60,13 +60,13 @@ export function useConfidentialBalance(
     pollingInterval: handleRefetchInterval,
   });
   const handleFactoryEnabled = baseHandleQueryOptions.enabled ?? true;
-  const handleQuery = useQuery<Hex>({
+  const handleQuery = useQuery<Handle>({
     ...baseHandleQueryOptions,
     enabled: handleFactoryEnabled && (userEnabled ?? true),
   });
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
-  const handle = handleQuery.data as Hex | undefined;
+  const handle = handleQuery.data;
   const baseBalanceQueryOptions = confidentialBalanceQueryOptions(token, {
     handle,
     owner,

@@ -55,7 +55,7 @@ export function useConfidentialIsApproved(
     ...signerAddressQueryOptions(token.signer),
     enabled: holder === undefined,
   });
-  const resolvedHolder = holder ?? (holderQuery.data as Address | undefined);
+  const resolvedHolder = holder ?? holderQuery.data;
 
   const baseOpts =
     spender && resolvedHolder
@@ -98,7 +98,7 @@ export function useConfidentialIsApprovedSuspense(config: UseConfidentialIsAppro
   const addressQuery = useSuspenseQuery<Address>({
     ...signerAddressQueryOptions(token.signer),
   });
-  const resolvedHolder = holder ?? (addressQuery.data as Address);
+  const resolvedHolder = holder ?? addressQuery.data;
 
   return useSuspenseQuery<boolean>({
     ...confidentialIsApprovedQueryOptions(token.signer, token.address, {

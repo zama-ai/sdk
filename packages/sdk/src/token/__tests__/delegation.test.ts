@@ -1,9 +1,9 @@
 import { createMockRelayer, describe, expect, it, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
-import type { Address } from "../token.types";
 import { ConfigurationError } from "../errors";
 import { MemoryStorage } from "../memory-storage";
+import { Address } from "viem";
 
 describe("delegation read methods", () => {
   it("getDelegationExpiry reads from ACL contract", async ({

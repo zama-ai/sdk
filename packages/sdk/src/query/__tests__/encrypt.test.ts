@@ -1,7 +1,8 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { ZamaSDK } from "../../token/zama-sdk";
-import type { Address } from "../../token/token.types";
+
 import { encryptMutationOptions } from "../encrypt";
+import type { Address } from "viem";
 
 describe("encryptMutationOptions", () => {
   test("delegates sdk.relayer.encrypt", async ({ signer, relayer, storage }) => {

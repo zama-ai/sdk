@@ -1,5 +1,5 @@
 import { describe, it, expect } from "../../test-fixtures";
-import type { Address } from "../../relayer/relayer-sdk.types";
+import type { Address } from "viem";
 
 import {
   delegateForUserDecryptionContract,

@@ -1,6 +1,5 @@
+import type { Address } from "viem";
 import { ACL_ABI } from "../abi/acl.abi";
-import type { Address } from "../relayer/relayer-sdk.types";
-import { assertAddress } from "../utils";
 import { FHE_GAS_LIMIT } from "./gas";
 
 /**
@@ -19,9 +18,6 @@ export function delegateForUserDecryptionContract(
   contractAddress: Address,
   expirationDate: bigint,
 ) {
-  assertAddress(aclAddress, "aclAddress");
-  assertAddress(delegate, "delegate");
-  assertAddress(contractAddress, "contractAddress");
   return {
     address: aclAddress,
     abi: ACL_ABI,
@@ -46,9 +42,6 @@ export function revokeDelegationContract(
   delegate: Address,
   contractAddress: Address,
 ) {
-  assertAddress(aclAddress, "aclAddress");
-  assertAddress(delegate, "delegate");
-  assertAddress(contractAddress, "contractAddress");
   return {
     address: aclAddress,
     abi: ACL_ABI,
@@ -74,10 +67,6 @@ export function getDelegationExpiryContract(
   delegate: Address,
   contractAddress: Address,
 ) {
-  assertAddress(aclAddress, "aclAddress");
-  assertAddress(delegator, "delegator");
-  assertAddress(delegate, "delegate");
-  assertAddress(contractAddress, "contractAddress");
   return {
     address: aclAddress,
     abi: ACL_ABI,

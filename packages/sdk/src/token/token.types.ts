@@ -1,14 +1,12 @@
 import type { RawLog } from "../events/onchain-events";
-import type { Address, EIP712TypedData, Hex } from "../relayer/relayer-sdk.types";
+import type { Address, Hex } from "viem";
+import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   Abi,
   ContractFunctionArgs,
   ContractFunctionName,
   ContractFunctionReturnType,
 } from "viem";
-export type { Address } from "../relayer/relayer-sdk.types";
-export type { Handle } from "../relayer/relayer-sdk.types";
-export type { Hex } from "../relayer/relayer-sdk.types";
 
 /** Framework-agnostic transaction receipt (only the fields the SDK needs). */
 export interface TransactionReceipt {
@@ -171,11 +169,11 @@ export interface GenericStorage {
 /** Stored FHE credential data (serialized as JSON in the credential store). */
 export interface StoredCredentials {
   /** FHE public key (hex-encoded). */
-  publicKey: string;
+  publicKey: Hex;
   /** FHE private key (hex-encoded, encrypted at rest via AES-GCM). */
-  privateKey: string;
+  privateKey: Hex;
   /** EIP-712 signature authorizing decryption. */
-  signature: string;
+  signature: Hex;
   /** Contract addresses this credential is authorized for. */
   contractAddresses: Address[];
   /** Unix timestamp (seconds) when the credential became valid. */
@@ -209,23 +207,3 @@ export interface TransferCallbacks {
   /** Fired after the transfer transaction is submitted. */
   onTransferSubmitted?: (txHash: Hex) => void;
 }
-
-// Re-export errors for backward compatibility
-export {
-  ZamaErrorCode,
-  type ZamaErrorCode as ZamaErrorCodeType,
-  ZamaError,
-  SigningRejectedError,
-  SigningFailedError,
-  EncryptionFailedError,
-  DecryptionFailedError,
-  ApprovalFailedError,
-  TransactionRevertedError,
-  InvalidKeypairError,
-  NoCiphertextError,
-  RelayerRequestFailedError,
-  DelegationSelfNotAllowedError,
-  DelegationCooldownError,
-  DelegationNotFoundError,
-  DelegationExpiredError,
-} from "./errors";

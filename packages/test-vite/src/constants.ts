@@ -18,10 +18,10 @@ export const ERC20_TOKENS: { address: Address; wrapper: Address }[] = [
 ];
 
 export const DEFAULTS = {
-  token: deployments.USDT, // USDT (ERC-20)
-  wrapper: deployments.cUSDT, // cUSDT
-  confidentialToken: deployments.cUSDT, // cUSDT
-  feeManager: deployments.feeManager,
+  token: deployments.USDT as Address, // USDT (ERC-20)
+  wrapper: deployments.cUSDT as Address, // cUSDT
+  confidentialToken: deployments.cUSDT as Address, // cUSDT
+  feeManager: deployments.feeManager as Address,
 };
 
-export const TRANSFER_BATCHER_ADDRESS = deployments.transferBatcher;
+export const TRANSFER_BATCHER_ADDRESS = deployments.transferBatcher as Address;

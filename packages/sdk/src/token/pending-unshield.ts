@@ -1,9 +1,10 @@
-import type { Address, GenericStorage, Hex } from "./token.types";
+import type { Address, Hex } from "viem";
+import type { GenericStorage } from "./token.types";
 
 const STORAGE_PREFIX = "zama:pending-unshield:";
 
 function storageKey(wrapperAddress: Address): string {
-  return `${STORAGE_PREFIX}${wrapperAddress.toLowerCase()}`;
+  return `${STORAGE_PREFIX}${wrapperAddress}`;
 }
 
 /**

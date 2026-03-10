@@ -2,7 +2,7 @@
 
 import { useQuery } from "../utils/query";
 import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/sdk";
-import { activityFeedQueryOptions } from "@zama-fhe/sdk/query";
+import { activityFeedQueryOptions, deriveActivityFeedLogsKey } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
 
 /** Configuration for {@link useActivityFeed}. */
@@ -41,8 +41,7 @@ export function useActivityFeed(config: UseActivityFeedConfig) {
   const { tokenAddress, userAddress, logs, decrypt: decryptOpt } = config;
   const token = useReadonlyToken(tokenAddress);
   const decrypt = decryptOpt ?? true;
-  const logsKey =
-    logs?.map((log) => `${log.transactionHash ?? ""}:${log.logIndex ?? ""}`).join(",") ?? "";
+  const logsKey = deriveActivityFeedLogsKey(logs);
 
   return useQuery<ActivityItem[]>({
     ...activityFeedQueryOptions(token, {

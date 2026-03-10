@@ -5,11 +5,11 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+import type { Address, Hex } from "viem";
 import { EncryptionFailedError, ZamaError } from "../token/errors";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
-  Address,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -217,7 +217,7 @@ export class RelayerWeb implements RelayerSDK {
   /**
    * Generate a keypair for FHE operations.
    */
-  async generateKeypair(): Promise<KeypairType<string>> {
+  async generateKeypair(): Promise<KeypairType<Hex>> {
     const worker = await this.#ensureWorker();
     const result = await worker.generateKeypair();
     return {
@@ -230,7 +230,7 @@ export class RelayerWeb implements RelayerSDK {
    * Create EIP712 typed data for user decryption authorization.
    */
   async createEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
     durationDays: number = 7,
@@ -315,9 +315,9 @@ export class RelayerWeb implements RelayerSDK {
    * Create EIP712 typed data for delegated user decryption authorization.
    */
   async createDelegatedUserDecryptEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
-    delegatorAddress: string,
+    delegatorAddress: Address,
     startTimestamp: number,
     durationDays: number = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {

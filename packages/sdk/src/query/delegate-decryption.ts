@@ -1,5 +1,6 @@
 import type { Token } from "../token/token";
-import type { Address, TransactionResult } from "../token/token.types";
+import type { Address } from "viem";
+import type { TransactionResult } from "../token/token.types";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link delegateDecryptionMutationOptions}. */

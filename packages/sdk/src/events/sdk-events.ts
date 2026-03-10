@@ -1,4 +1,4 @@
-import type { Address, Hex } from "../relayer/relayer-sdk.types";
+import { type Address, type Hex } from "viem";
 
 /**
  * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.

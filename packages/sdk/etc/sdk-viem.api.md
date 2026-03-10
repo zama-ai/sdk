@@ -5,100 +5,17 @@
 ```ts
 
 import { Abi } from 'viem';
-import { Address } from '@zama-fhe/relayer-sdk/bundle';
+import { Address } from 'viem';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
-import { Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { Hex } from 'viem';
 import { PublicClient } from 'viem';
-import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { WalletClient } from 'viem';
-
-// @public
-export interface BatchTransferData {
-    // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    encryptedAmount: Handle;
-    // (undocumented)
-    inputProof: Hex;
-    // (undocumented)
-    retryFor: bigint;
-    // (undocumented)
-    to: Address;
-}
-
-// @public (undocumented)
-export type ContractAbi = Abi | readonly unknown[];
-
-// @public
-export interface EIP712TypedData {
-    // (undocumented)
-    domain: {
-        name: string;
-        version: string;
-        chainId: number;
-        verifyingContract: Address;
-    };
-    // (undocumented)
-    message: {
-        publicKey: string;
-        contractAddresses: readonly string[];
-        startTimestamp: bigint;
-        durationDays: bigint;
-        extraData: string;
-    };
-    // (undocumented)
-    primaryType?: string;
-    // (undocumented)
-    types: {
-        [key: string]: ReadonlyArray<{
-            readonly name: string;
-            readonly type: string;
-        }>;
-    };
-}
-
-// @public
-export interface GenericSigner {
-    getAddress: () => Promise<Address>;
-    getBlockTimestamp?: () => Promise<bigint>;
-    getChainId(): Promise<number>;
-    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
-}
-
-export { Hex }
-
-// @public
-export interface RawLog {
-    readonly data: string;
-    readonly topics: readonly string[];
-}
 
 // @public (undocumented)
 export function readConfidentialBalanceOfContract(client: PublicClient, tokenAddress: Address, userAddress: Address): Promise<`0x${string}`>;
-
-// @public (undocumented)
-export type ReadContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>> = ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>;
-
-// @public
-export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>, TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>> {
-    readonly abi: TAbi;
-    readonly address: Address;
-    readonly args: TArgs;
-    readonly functionName: TFunctionName;
-}
-
-// @public (undocumented)
-export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>, TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>> = ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>;
-
-// @public (undocumented)
-export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
 
 // @public (undocumented)
 export function readSupportsInterfaceContract(client: PublicClient, tokenAddress: Address, interfaceId: Address): Promise<boolean>;
@@ -112,18 +29,8 @@ export function readWrapperExistsContract(client: PublicClient, coordinator: Add
 // @public (undocumented)
 export function readWrapperForTokenContract(client: PublicClient, coordinator: Address, tokenAddress: Address): Promise<`0x${string}`>;
 
-// @public
-export interface SignerLifecycleCallbacks {
-    onAccountChange?: (newAddress: Address) => void;
-    onChainChange?: (newChainId: number) => void;
-    onDisconnect?: () => void;
-}
-
-// @public
-export interface TransactionReceipt {
-    readonly logs: readonly RawLog[];
-}
-
+// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
+//
 // @public
 export class ViemSigner implements GenericSigner {
     constructor(config: ViemSignerConfig);
@@ -133,14 +40,24 @@ export class ViemSigner implements GenericSigner {
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
     getChainId(): Promise<number>;
+    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
+    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     subscribe(callbacks: SignerLifecycleCallbacks): () => void;
+    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     writeContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">, const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
@@ -154,30 +71,18 @@ export interface ViemSignerConfig {
     walletClient?: WalletClient;
 }
 
+// Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
 export function writeConfidentialBatchTransferContract(client: WalletClient, batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[], fees: bigint): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
 
-// @public (undocumented)
-export type WriteContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>> = ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>;
-
-// @public
-export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>, TArgs extends WriteContractArgs<TAbi, TFunctionName> = WriteContractArgs<TAbi, TFunctionName>> {
-    readonly abi: TAbi;
-    readonly address: Address;
-    readonly args: TArgs;
-    readonly functionName: TFunctionName;
-    readonly gas?: bigint;
-    readonly value?: bigint;
-}
-
+// Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
 export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
-
-// @public (undocumented)
-export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "nonpayable" | "payable">;
 
 // @public (undocumented)
 export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;
