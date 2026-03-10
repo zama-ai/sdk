@@ -522,8 +522,11 @@ export class ReadonlyToken {
    * @param delegateAddress - The address that received delegation rights.
    * @returns `true` if the delegation exists and has not expired.
    */
-  async isDelegated(delegatorAddress: Address, delegateAddress: Address): Promise<boolean> {
-    const expiry = await this.getDelegationExpiry(delegatorAddress, delegateAddress);
+  async isDelegated(params: {
+    delegatorAddress: Address;
+    delegateAddress: Address;
+  }): Promise<boolean> {
+    const expiry = await this.getDelegationExpiry(params);
     if (expiry === 0n) return false;
     // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
     if (expiry === 2n ** 64n - 1n) return true;
@@ -538,7 +541,13 @@ export class ReadonlyToken {
    * @param delegateAddress - The address that received delegation rights.
    * @returns Unix timestamp as bigint. `0n` = no delegation. `2^64 - 1` = permanent.
    */
-  async getDelegationExpiry(delegatorAddress: Address, delegateAddress: Address): Promise<bigint> {
+  async getDelegationExpiry({
+    delegatorAddress,
+    delegateAddress,
+  }: {
+    delegatorAddress: Address;
+    delegateAddress: Address;
+  }): Promise<bigint> {
     const acl = await this.getAclAddress();
     return this.signer.readContract(
       getDelegationExpiryContract(

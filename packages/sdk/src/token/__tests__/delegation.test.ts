@@ -15,7 +15,7 @@ describe("delegation read methods", () => {
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(1700000000n);
 
-    const expiry = await readonlyToken.getDelegationExpiry(delegatorAddress, delegateAddress);
+    const expiry = await readonlyToken.getDelegationExpiry({ delegatorAddress, delegateAddress });
 
     expect(signer.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -36,7 +36,7 @@ describe("delegation read methods", () => {
     const futureTimestamp = BigInt(Math.floor(Date.now() / 1000) + 3600);
     vi.mocked(signer.readContract).mockResolvedValue(futureTimestamp);
 
-    expect(await readonlyToken.isDelegated(delegatorAddress, delegateAddress)).toBe(true);
+    expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(true);
   });
 
   it("isDelegated returns false when expiry is 0", async ({
@@ -47,7 +47,7 @@ describe("delegation read methods", () => {
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(0n);
 
-    expect(await readonlyToken.isDelegated(delegatorAddress, delegateAddress)).toBe(false);
+    expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(false);
   });
 
   it("isDelegated returns false when expiry is in the past", async ({
@@ -58,7 +58,7 @@ describe("delegation read methods", () => {
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(1000n);
 
-    expect(await readonlyToken.isDelegated(delegatorAddress, delegateAddress)).toBe(false);
+    expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(false);
   });
 
   it("isDelegated short-circuits for permanent delegation without fetching block timestamp", async ({
@@ -69,7 +69,7 @@ describe("delegation read methods", () => {
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(2n ** 64n - 1n);
 
-    expect(await readonlyToken.isDelegated(delegatorAddress, delegateAddress)).toBe(true);
+    expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(true);
     // getBlockTimestamp should NOT have been called — permanent delegation skips it.
     expect(signer.getBlockTimestamp).not.toHaveBeenCalled();
   });
@@ -93,7 +93,7 @@ describe("delegation read methods", () => {
       address: tokenAddress,
     });
 
-    await expect(token.getDelegationExpiry(delegatorAddress, delegateAddress)).rejects.toThrow(
+    await expect(token.getDelegationExpiry({ delegatorAddress, delegateAddress })).rejects.toThrow(
       "no transport config",
     );
   });

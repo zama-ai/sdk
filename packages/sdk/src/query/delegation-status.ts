@@ -45,10 +45,10 @@ export function delegationStatusQueryOptions(
       config.delegateAddress,
     ),
     queryFn: async () => {
-      const expiryTimestamp = await readonlyToken.getDelegationExpiry(
-        config.delegatorAddress,
-        config.delegateAddress,
-      );
+      const expiryTimestamp = await readonlyToken.getDelegationExpiry({
+        delegatorAddress: config.delegatorAddress,
+        delegateAddress: config.delegateAddress,
+      });
       // Derive isDelegated locally to avoid a redundant RPC call
       // (isDelegated() internally calls getDelegationExpiry() again)
       const isDelegated = deriveDelegationFromExpiry(expiryTimestamp);

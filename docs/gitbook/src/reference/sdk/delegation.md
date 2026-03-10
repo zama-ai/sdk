@@ -94,11 +94,17 @@ These read methods are available on both `Token` and `ReadonlyToken`:
 
 ```ts
 // Check if a delegation is active
-const delegated = await readonlyToken.isDelegated("0xDelegator", "0xDelegate");
+const delegated = await readonlyToken.isDelegated({
+  delegatorAddress: "0xDelegator",
+  delegateAddress: "0xDelegate",
+});
 // true if delegation exists and hasn't expired
 
 // Get the raw expiry timestamp
-const expiry = await readonlyToken.getDelegationExpiry("0xDelegator", "0xDelegate");
+const expiry = await readonlyToken.getDelegationExpiry({
+  delegatorAddress: "0xDelegator",
+  delegateAddress: "0xDelegate",
+});
 // 0n = no delegation
 // 2^64 - 1 = permanent
 // otherwise = UTC Unix timestamp in seconds
