@@ -227,7 +227,6 @@ export {
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
 export { useMetadata, useMetadataSuspense, type TokenMetadata } from "./token/use-metadata";
-export { useActivityFeed, type UseActivityFeedConfig } from "./token/use-activity-feed";
 export { useApproveUnderlying } from "./token/use-approve-underlying";
 export {
   useIsConfidential,
@@ -268,7 +267,6 @@ export {
   confidentialHandlesQueryOptions,
   confidentialBalancesQueryOptions,
   type ConfidentialBalancesData,
-  activityFeedQueryOptions,
   shieldMutationOptions,
   type ShieldParams,
   shieldETHMutationOptions,
@@ -326,21 +324,6 @@ export {
   decodeOnChainEvents,
   findUnwrapRequested,
   findWrapped,
-} from "@zama-fhe/sdk";
-
-// Re-export activity feed types and helpers from core SDK
-export type {
-  ActivityDirection,
-  ActivityType,
-  ActivityAmount,
-  ActivityLogMetadata,
-  ActivityItem,
-} from "@zama-fhe/sdk";
-export {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
 } from "@zama-fhe/sdk";
 
 // Re-export token types from core SDK

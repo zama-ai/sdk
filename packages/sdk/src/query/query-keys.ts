@@ -142,22 +142,6 @@ export const zamaQueryKeys = {
       ["zama.totalSupply", { tokenAddress: getAddress(tokenAddress) }] as const,
   },
 
-  activityFeed: {
-    all: ["zama.activityFeed"] as const,
-    token: (tokenAddress: string) =>
-      ["zama.activityFeed", { tokenAddress: getAddress(tokenAddress) }] as const,
-    scope: (tokenAddress: string, userAddress: string, logsKey: string, decrypt: boolean) =>
-      [
-        "zama.activityFeed",
-        {
-          tokenAddress: getAddress(tokenAddress),
-          userAddress: normalizeAddressIfPresent(userAddress),
-          logsKey,
-          decrypt,
-        },
-      ] as const,
-  },
-
   fees: {
     all: ["zama.fees"] as const,
     shieldFee: (feeManagerAddress: string, amount?: string, from?: string, to?: string) =>

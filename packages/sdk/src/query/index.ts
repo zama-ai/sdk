@@ -69,12 +69,6 @@ export {
   type ConfidentialBalancesData,
   type ConfidentialBalancesQueryConfig,
 } from "./confidential-balances";
-export {
-  activityFeedQueryOptions,
-  type ActivityFeedConfig,
-  type ActivityFeedQueryConfig,
-} from "./activity-feed";
-
 export { shieldMutationOptions, type ShieldParams } from "./shield";
 export { shieldETHMutationOptions, type ShieldETHParams } from "./shield-eth";
 export { confidentialTransferMutationOptions, type ConfidentialTransferParams } from "./transfer";
@@ -98,8 +92,6 @@ export { allowMutationOptions } from "./allow";
 export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokeMutationOptions } from "./revoke";
 export { revokeSessionMutationOptions } from "./revoke-session";
-export type { ActivityItem, ActivityLogMetadata } from "../activity";
-export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,

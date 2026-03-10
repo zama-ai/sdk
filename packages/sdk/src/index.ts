@@ -162,22 +162,6 @@ export {
   findUnwrapRequested,
   findWrapped,
 } from "./events/onchain-events";
-
-// Activity feed helpers and types
-export type {
-  ActivityDirection,
-  ActivityType,
-  ActivityAmount,
-  ActivityLogMetadata,
-  ActivityItem,
-} from "./activity";
-export {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-} from "./activity";
-
 // Contract call builders
 export {
   confidentialBalanceOfContract,

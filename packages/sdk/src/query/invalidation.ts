@@ -27,7 +27,6 @@ export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateBalanceQueries(queryClient: QueryClientLike, tokenAddress: string): void {
@@ -43,19 +42,16 @@ export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: string): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: string): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterApproveUnderlying(
@@ -69,7 +65,6 @@ export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddres
   queryClient.invalidateQueries({
     queryKey: zamaQueryKeys.confidentialIsApproved.token(tokenAddress),
   });
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 function isZamaQuery(query: QueryLike): boolean {
