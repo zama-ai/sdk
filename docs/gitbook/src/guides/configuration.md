@@ -146,7 +146,7 @@ import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 // import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-For full storage options including `chromeSessionStorage` for MV3 extensions, see the [GenericStorage](/reference/sdk/GenericStorage) reference.
+For full storage options see the [GenericStorage](/reference/sdk/GenericStorage) reference.
 
 ### 5. Create the SDK instance
 
@@ -207,6 +207,42 @@ const sdk = new ZamaSDK({
   storage: memoryStorage,
 });
 ```
+
+{% endtab %}
+{% tab title="Web Extensions" %}
+
+MV3 Chrome extensions need a second storage backend for session signatures, because the service worker can be terminated at any time and in-memory state is lost. Use `chromeSessionStorage` alongside `indexedDBStorage`:
+
+```ts
+import {
+  ZamaSDK,
+  RelayerWeb,
+  indexedDBStorage,
+  chromeSessionStorage,
+  SepoliaConfig,
+} from "@zama-fhe/sdk";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+
+const signer = new ViemSigner({ walletClient, publicClient });
+
+const sdk = new ZamaSDK({
+  relayer: new RelayerWeb({
+    getChainId: () => signer.getChainId(),
+    transports: {
+      [SepoliaConfig.chainId]: {
+        ...SepoliaConfig,
+        relayerUrl: "https://your-app.com/api/relayer/11155111",
+        network: "https://sepolia.infura.io/v3/YOUR_KEY",
+      },
+    },
+  }),
+  signer,
+  storage: indexedDBStorage, // encrypted keypair — persistent
+  sessionStorage: chromeSessionStorage, // wallet signature — survives SW restarts
+});
+```
+
+Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](/guides/web-extensions) for manifest configuration, multi-context sharing, and browser close behavior.
 
 {% endtab %}
 {% endtabs %}
