@@ -166,5 +166,5 @@ All builders validate addresses at call time. A malformed address throws immedia
 
 ## Related
 
-- [Token operations guide](/reference/sdk/Token) — high-level API that wraps these builders
-- [Contract call builders guide](/reference/sdk/contract-builders) — when and why to use builders
+- [Token](/reference/sdk/Token) — high-level API that wraps these builders
+- [Event Decoders](/reference/sdk/event-decoders) — decode on-chain logs into typed events

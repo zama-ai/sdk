@@ -421,4 +421,4 @@ The hooks and SDK methods handle FHE encryption, wallet signing, ERC-20 approval
 - [Shield Tokens](/guides/shield-tokens) -- move tokens into confidential form
 - [Network Presets](/reference/sdk/network-presets) -- pre-configured contract addresses for Sepolia, Mainnet, and Hardhat
 - [React Hooks](/reference/react/ZamaProvider) -- provider setup and all available hooks
-- [How FHE Works](/concepts/how-fhe-works) -- understand the cryptography
+- [Security Model](/concepts/security-model) -- understand the cryptography and trust assumptions

@@ -8,7 +8,7 @@ description: Low-level mutation hook that finalizes an unwrap with the decryptio
 Low-level mutation hook that finalizes an unwrap with the decryption proof. Call this after [`useUnwrap`](/reference/react/useUnwrap) or [`useUnwrapAll`](/reference/react/useUnwrapAll) has submitted the initial unwrap transaction.
 
 {% hint style="info" %}
-Most apps should use [`useUnshield`](/reference/react/query-keys#useunshield) instead, which orchestrates both steps (unwrap + finalize) in a single call. Use this hook for custom multi-step flows where you need control over each phase.
+Most apps should use [`useUnshield`](/reference/react/useUnshield) instead, which orchestrates both steps (unwrap + finalize) in a single call. Use this hook for custom multi-step flows where you need control over each phase.
 {% endhint %}
 
 ## Import
@@ -92,5 +92,5 @@ import { type UseFinalizeUnwrapReturnType } from "@zama-fhe/react-sdk";
 
 - [`useUnwrap`](/reference/react/useUnwrap) -- request unwrap for a specific amount
 - [`useUnwrapAll`](/reference/react/useUnwrapAll) -- request unwrap for the full balance
-- [`useResumeUnshield`](/reference/react/query-keys#useresumeunshield) -- resume an interrupted unshield
-- [`useUnshield`](/reference/react/query-keys#useunshield) -- high-level hook that handles both steps
+- [`useResumeUnshield`](/reference/react/useResumeUnshield) -- resume an interrupted unshield
+- [`useUnshield`](/reference/react/useUnshield) -- high-level hook that handles both steps

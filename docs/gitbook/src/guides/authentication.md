@@ -26,23 +26,31 @@ Create an endpoint that forwards relayer requests and injects the API key. Store
 
 ```bash
 RELAYER_API_KEY=your-api-key
-RELAYER_URL_TESTNET=https://relayer.testnet.zama.org
-RELAYER_URL_MAINNET=https://relayer.mainnet.zama.org
 ```
 
 Here is a minimal Express proxy:
 
 ```ts
 import express from "express";
+import { MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 const app = express();
 app.use(express.json());
 
-const RELAYER_URL = process.env.RELAYER_URL!; // e.g. "https://relayer.testnet.zama.org"
+// Map chain IDs to their network config
+const Configs = {
+  [MainnetConfig.chainId]: MainnetConfig,
+  [SepoliaConfig.chainId]: SepoliaConfig,
+} as const;
 
-app.use("https://your-app.com/api/relayer/1", async (req, res) => {
-  // req.url contains the path after the mount point, e.g. "/some/endpoint?query=1"
-  const url = new URL(req.url, RELAYER_URL);
+app.use("/api/relayer/:chainId", async (req, res) => {
+  const config = Configs[req.params.chainId];
+  if (!config) {
+    res.status(400).send("Unsupported chain");
+    return;
+  }
+
+  const url = new URL(req.url, config.relayerUrl);
   const body = ["GET", "HEAD"].includes(req.method) ? undefined : JSON.stringify(req.body);
 
   const response = await fetch(url, {

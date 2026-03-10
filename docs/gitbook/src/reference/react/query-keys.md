@@ -157,5 +157,5 @@ queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialHandle.all });
 
 ## Related
 
-- [Hooks overview](/reference/react/query-keys#query-keys) — summary table of all query key factories
+- [ZamaProvider](/reference/react/ZamaProvider) — provider setup and hook overview
 - [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — the hook whose cache these keys control

@@ -226,6 +226,6 @@ queryClient.invalidateQueries({
 
 ## Next steps
 
-- See [Token Operations](/reference/sdk/Token.md) for the full `Token.balanceOf` and `ReadonlyToken` API.
-- See [Hooks](/reference/react/query-keys.md) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
+- See [Token Operations](/reference/sdk/Token) for the full `Token.balanceOf` and `ReadonlyToken` API.
+- See [Hooks](/reference/react/query-keys) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
 - To handle `NoCiphertextError` and other failures, see [Handle Errors](handle-errors.md).

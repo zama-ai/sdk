@@ -8,7 +8,7 @@ description: Low-level mutation hook that requests an unwrap for a specific amou
 Low-level mutation hook that requests an unwrap for a specific amount. You must finalize manually with [`useFinalizeUnwrap`](/reference/react/useFinalizeUnwrap).
 
 {% hint style="info" %}
-Most apps should use [`useUnshield`](/reference/react/query-keys#useunshield) instead, which orchestrates both steps (unwrap + finalize) in a single call.
+Most apps should use [`useUnshield`](/reference/react/useUnshield) instead, which orchestrates both steps (unwrap + finalize) in a single call.
 {% endhint %}
 
 ## Import
@@ -91,4 +91,4 @@ The mutation resolves with a transaction hash (`Hex`).
 
 - [`useFinalizeUnwrap`](/reference/react/useFinalizeUnwrap) -- finalize the unwrap with a decryption proof
 - [`useUnwrapAll`](/reference/react/useUnwrapAll) -- unwrap the full balance
-- [`useUnshield`](/reference/react/query-keys#useunshield) -- high-level hook that handles both steps
+- [`useUnshield`](/reference/react/useUnshield) -- high-level hook that handles both steps

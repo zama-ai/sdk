@@ -110,5 +110,5 @@ function App() {
 
 ## Related
 
-- [`useShield`](/reference/react/query-keys#useshield) — shield tokens (handles approval automatically)
-- [`zamaQueryKeys.underlyingAllowance`](/reference/react/query-keys#query-keys) — cache keys for manual invalidation
+- [`useShield`](/reference/react/useShield) — shield tokens (handles approval automatically)
+- [`zamaQueryKeys.underlyingAllowance`](/reference/react/query-keys) — cache keys for manual invalidation

@@ -64,5 +64,5 @@ const { data: allowed } = useIsAllowed();
 ## Related
 
 - [`useAllow`](/reference/react/useAllow) -- pre-authorize tokens with one wallet signature
-- [`useRevoke`](/reference/react/query-keys#userevoke) -- revoke session credentials
+- [`useRevoke`](/reference/react/useRevoke) -- revoke session credentials
 - [Session management](/guides/configuration#session-management) -- security model and TTL configuration

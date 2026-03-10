@@ -164,6 +164,6 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ## Next steps
 
-- See [Error Handling](/guides/handle-errors.md) for the full error type reference.
-- See [Hooks](/reference/react/query-keys.md) for error handling patterns with React Query.
+- See [Error types reference](/reference/sdk/errors) for the full error type reference.
+- See [Hooks](/reference/react/query-keys) for error handling patterns with React Query.
 - For interrupted unshields specifically, see [Unshield Tokens](unshield-tokens.md).

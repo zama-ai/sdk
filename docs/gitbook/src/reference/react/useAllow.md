@@ -86,6 +86,6 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 ## Related
 
 - [`useIsAllowed`](/reference/react/useIsAllowed) -- check whether a session signature is cached
-- [`useRevoke`](/reference/react/query-keys#userevoke) -- revoke session credentials for specific tokens
-- [`useRevokeSession`](/reference/react/query-keys#userevokesession) -- revoke the entire session
+- [`useRevoke`](/reference/react/useRevoke) -- revoke session credentials for specific tokens
+- [`useRevokeSession`](/reference/react/useRevokeSession) -- revoke the entire session
 - [Session management](/guides/configuration#session-management) -- security model and TTL configuration

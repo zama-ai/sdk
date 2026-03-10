@@ -173,6 +173,6 @@ All mutation hooks automatically invalidate balance queries on success, so your 
 
 ## Next steps
 
-- See [Token Operations](/reference/sdk/Token.md) for the full `Token.unshield` and `Token.unshieldAll` API.
-- See [Hooks](/reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
+- See [Token Operations](/reference/sdk/Token) for the full `Token.unshield` and `Token.unshieldAll` API.
+- See [Hooks](/reference/react/query-keys) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
 - If your unshield fails, see [Handle Errors](handle-errors.md) for troubleshooting `TransactionRevertedError` and related issues.

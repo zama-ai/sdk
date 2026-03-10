@@ -189,6 +189,6 @@ queryClient.invalidateQueries({
 
 ## Next steps
 
-- See [Token Operations](/reference/sdk/Token.md) for the event decoder API (`decodeOnChainEvents`, `TOKEN_TOPICS`, individual decoders).
-- See [Hooks](/reference/react/query-keys.md) for `useActivityFeed` details and query key reference.
+- See [Event Decoders](/reference/sdk/event-decoders) for the event decoder API (`decodeOnChainEvents`, `TOKEN_TOPICS`, individual decoders).
+- See [Hooks](/reference/react/query-keys) for `useActivityFeed` details and query key reference.
 - To handle decryption errors during feed building, see [Handle Errors](handle-errors.md).

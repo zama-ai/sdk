@@ -47,9 +47,8 @@ function App() {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
-          {" "}
           <YourApp />
-        </ZamaProvider>{" "}
+        </ZamaProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -80,9 +79,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
-        {" "}
         <YourApp />
-      </ZamaProvider>{" "}
+      </ZamaProvider>
     </QueryClientProvider>
   );
 }

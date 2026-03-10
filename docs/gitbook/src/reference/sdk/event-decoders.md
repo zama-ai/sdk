@@ -228,5 +228,5 @@ const feed = sortByBlockNumber(enrichedItems);
 
 ## Related
 
-- [Token operations guide](/guides/activity-feeds) — activity feed usage in context
-- [Token operations guide](/reference/sdk/event-decoders) — event decoder usage in context
+- [Activity Feeds guide](/guides/activity-feeds) — activity feed usage in context
+- [Token](/reference/sdk/Token) — high-level API for token operations

@@ -70,6 +70,6 @@ If you use [`WagmiSigner`](/reference/sdk/WagmiSigner), the SDK auto-revokes on 
 ## Related
 
 - [`useRevokeSession`](/reference/react/useRevokeSession) — revoke the entire session instead of specific tokens
-- [`useAllow`](/reference/react/query-keys#useallow) — pre-authorize tokens with a single wallet signature
-- [`useIsAllowed`](/reference/react/query-keys#useisallowed) — check whether a session signature is valid
+- [`useAllow`](/reference/react/useAllow) — pre-authorize tokens with a single wallet signature
+- [`useIsAllowed`](/reference/react/useIsAllowed) — check whether a session signature is valid
 - [`Token.revoke()`](/reference/sdk/Token#revoke) — imperative equivalent on the SDK class
