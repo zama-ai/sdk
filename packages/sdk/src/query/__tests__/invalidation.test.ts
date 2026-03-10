@@ -93,7 +93,6 @@ describe("invalidation", () => {
       zamaQueryKeys.confidentialHandles.all,
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -112,7 +111,6 @@ describe("invalidation", () => {
       zamaQueryKeys.confidentialHandle.token(OTHER_TOKEN),
       zamaQueryKeys.confidentialBalance.token(OTHER_TOKEN),
       zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN),
-      zamaQueryKeys.activityFeed.token(OTHER_TOKEN),
     ];
 
     for (const key of otherKeys) {
@@ -125,7 +123,7 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterUnshield invalidates balance keys, wagmi, underlyingAllowance, and activityFeed", () => {
+  test("invalidateAfterUnshield invalidates balance keys, wagmi, and underlyingAllowance", () => {
     const qc = createQueryClient();
     const keys = [
       zamaQueryKeys.confidentialHandle.token(TOKEN),
@@ -133,7 +131,6 @@ describe("invalidation", () => {
       zamaQueryKeys.confidentialHandles.all,
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -146,14 +143,13 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterTransfer invalidates balance keys and activityFeed", () => {
+  test("invalidateAfterTransfer invalidates balance keys", () => {
     const qc = createQueryClient();
     const keys = [
       zamaQueryKeys.confidentialHandle.token(TOKEN),
       zamaQueryKeys.confidentialBalance.token(TOKEN),
       zamaQueryKeys.confidentialHandles.all,
       zamaQueryKeys.confidentialBalances.all,
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -187,7 +183,6 @@ describe("invalidation", () => {
       zamaQueryKeys.confidentialHandles.all,
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -209,16 +204,6 @@ describe("invalidation", () => {
 
     expect(qc.getQueryData(approvalKey)).toBe(true);
     expect(qc.getQueryState(approvalKey)?.isInvalidated).toBe(true);
-  });
-
-  test("invalidateAfterApprove invalidates activityFeed.token", () => {
-    const qc = createQueryClient();
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
-
-    qc.setQueryData(activityKey, [{ id: "evt-1" }]);
-    invalidateAfterApprove(qc, TOKEN);
-
-    expect(qc.getQueryState(activityKey)?.isInvalidated).toBe(true);
   });
 
   test("invalidateAfterApproveUnderlying invalidates underlying allowance and keeps data", () => {

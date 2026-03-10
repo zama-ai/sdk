@@ -38,26 +38,19 @@ describe("useConfidentialTransfer", () => {
 
     const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
     const otherHandleKey = zamaQueryKeys.confidentialHandle.token(OTHER_TOKEN);
     const otherBalanceKey = zamaQueryKeys.confidentialBalance.owner(OTHER_TOKEN, USER, HANDLE);
-    const otherActivityKey = zamaQueryKeys.activityFeed.token(OTHER_TOKEN);
-    const seededActivity = [{ id: "evt-1" }];
-    const seededOtherActivity = [{ id: "evt-2" }];
 
     queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 1000n);
-    queryClient.setQueryData(activityKey, seededActivity);
     queryClient.setQueryData(otherHandleKey, HANDLE);
     queryClient.setQueryData(otherBalanceKey, 777n);
-    queryClient.setQueryData(otherActivityKey, seededOtherActivity);
 
     await act(() => result.current.mutateAsync({ to: RECIPIENT, amount: 500n }));
 
-    expectInvalidatedQueries(queryClient, [handleKey, balanceKey, activityKey]);
+    expectInvalidatedQueries(queryClient, [handleKey, balanceKey]);
     expectCacheUntouched(queryClient, otherHandleKey, HANDLE);
     expectCacheUntouched(queryClient, otherBalanceKey, 777n);
-    expectCacheUntouched(queryClient, otherActivityKey, seededOtherActivity);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
@@ -65,7 +58,6 @@ describe("useConfidentialTransfer", () => {
 
     const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
@@ -74,12 +66,11 @@ describe("useConfidentialTransfer", () => {
 
     queryClient.setQueryData(handleKey, HANDLE);
     queryClient.setQueryData(balanceKey, 1000n);
-    queryClient.setQueryData(activityKey, [{ id: "evt-1" }]);
 
     await mutateAndExpectOnSuccess(
       () => result.current.mutateAsync({ to: RECIPIENT, amount: 500n }),
       onSuccess,
-      (client) => expectInvalidatedQueries(client, [handleKey, balanceKey, activityKey]),
+      (client) => expectInvalidatedQueries(client, [handleKey, balanceKey]),
     );
   });
 
