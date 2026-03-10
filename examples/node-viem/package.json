@@ -6,7 +6,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@zama-fhe/sdk": "git+https://github.com/zama-ai/sdk.git",
+    "@zama-fhe/sdk": "1.0.0-alpha.16",
     "viem": "^2.30.0"
   },
   "devDependencies": {

@@ -55,7 +55,7 @@ async function main() {
 
     // 4. Shield (wrap public tokens into confidential)
     console.log("Shielding 1000 tokens...");
-    const shieldTx = await token.wrap(1000n);
+    const shieldTx = await token.shield(1000n);
     console.log("Shield tx:", shieldTx);
 
     // 5. Confidential transfer
