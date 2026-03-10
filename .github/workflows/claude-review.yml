@@ -97,39 +97,54 @@ jobs:
 
       - name: Fetch PR/issue metadata
         run: |
-          CONTEXT_EOF="CTX_$(openssl rand -hex 8)"
-
-          # Sanitize attacker-controlled fields: strip non-printable chars, XML-like tags, cap length
+          # Sanitize attacker-controlled fields: strip non-printable chars, XML-like tags, cap length.
+          # Uses printf to avoid echo flag misinterpretation (e.g. input starting with -n/-e).
           sanitize() {
-            echo "$1" | tr -cd '[:print:]' | head -c 200 | sed 's/<[^>]*>//g'
+            printf '%s' "$1" | tr -cd '[:print:]' | head -c 200 | sed 's/<[^>]*>//g'
           }
+
+          # Build formatted context into a temp file first, so we can validate
+          # that the heredoc delimiter does not appear in the content.
+          CONTEXT_FILE=$(mktemp)
+          trap 'rm -f "$CONTEXT_FILE"' EXIT
 
           if [[ -n "$ISSUE_PR_URL" ]]; then
             PR_NUMBER="$ISSUE_NUMBER_INPUT"
             PR_DATA=$(gh pr view "$PR_NUMBER" --json title,author,headRefName,baseRefName,state,additions,deletions,commits,files)
 
             {
-              echo "FORMATTED_CONTEXT<<${CONTEXT_EOF}"
-              echo "PR Title: $(sanitize "$(echo "$PR_DATA" | jq -r '.title')")"
-              echo "PR Author: $(sanitize "$(echo "$PR_DATA" | jq -r '.author.login')")"
+              echo "PR Title: $(sanitize "$(printf '%s' "$PR_DATA" | jq -r '.title')")"
+              echo "PR Author: $(sanitize "$(printf '%s' "$PR_DATA" | jq -r '.author.login')")"
               echo "PR Number: ${PR_NUMBER}"
-              echo "PR Branch: $(sanitize "$(echo "$PR_DATA" | jq -r '.headRefName')") -> $(sanitize "$(echo "$PR_DATA" | jq -r '.baseRefName')")"
-              echo "PR State: $(echo "$PR_DATA" | jq -r '.state | ascii_upcase')"
-              echo "PR Additions: $(echo "$PR_DATA" | jq -r '.additions')"
-              echo "PR Deletions: $(echo "$PR_DATA" | jq -r '.deletions')"
-              echo "Total Commits: $(echo "$PR_DATA" | jq -r '.commits | length')"
-              echo "Changed Files: $(echo "$PR_DATA" | jq '.files | length') files"
-              echo "${CONTEXT_EOF}"
-            } >> "$GITHUB_ENV"
+              echo "PR Branch: $(sanitize "$(printf '%s' "$PR_DATA" | jq -r '.headRefName')") -> $(sanitize "$(printf '%s' "$PR_DATA" | jq -r '.baseRefName')")"
+              echo "PR State: $(printf '%s' "$PR_DATA" | jq -r '.state | ascii_upcase')"
+              echo "PR Additions: $(printf '%s' "$PR_DATA" | jq -r '.additions')"
+              echo "PR Deletions: $(printf '%s' "$PR_DATA" | jq -r '.deletions')"
+              echo "Total Commits: $(printf '%s' "$PR_DATA" | jq -r '.commits | length')"
+              echo "Changed Files: $(printf '%s' "$PR_DATA" | jq '.files | length') files"
+            } > "$CONTEXT_FILE"
           else
             {
-              echo "FORMATTED_CONTEXT<<${CONTEXT_EOF}"
               echo "Issue Title: $(sanitize "${ISSUE_TITLE_INPUT}")"
               echo "Issue Author: $(sanitize "${ISSUE_AUTHOR_INPUT}")"
-              echo "Issue State: ${ISSUE_STATE_INPUT^^}"
-              echo "${CONTEXT_EOF}"
-            } >> "$GITHUB_ENV"
+              echo "Issue State: $(sanitize "${ISSUE_STATE_INPUT^^}")"
+            } > "$CONTEXT_FILE"
           fi
+
+          # Generate a high-entropy delimiter (32 hex chars) and verify it does
+          # not appear in the content — prevents an attacker from prematurely
+          # closing the heredoc and injecting KEY=VALUE env vars.
+          CONTEXT_EOF="CTX_$(openssl rand -hex 16)"
+          if grep -qF "$CONTEXT_EOF" "$CONTEXT_FILE"; then
+            echo "::error::Delimiter collision detected in context content (re-run the workflow)"
+            exit 1
+          fi
+
+          {
+            echo "FORMATTED_CONTEXT<<${CONTEXT_EOF}"
+            cat "$CONTEXT_FILE"
+            echo "${CONTEXT_EOF}"
+          } >> "$GITHUB_ENV"
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_PR_URL: ${{ github.event.issue.pull_request.url || github.event.pull_request.url || '' }}
@@ -167,11 +182,19 @@ jobs:
           <formatted_context>
           ${FORMATTED_CONTEXT}
           </formatted_context>"
-          PROMPT_EOF="PROMPT_$(openssl rand -hex 8)"
+          PROMPT_FILE=$(mktemp)
+          trap 'rm -f "$PROMPT_FILE"' EXIT
+          printf '%s' "$SYSTEM_PROMPT" > "$PROMPT_FILE"
+
+          PROMPT_EOF="PROMPT_$(openssl rand -hex 16)"
+          if grep -qF "$PROMPT_EOF" "$PROMPT_FILE"; then
+            echo "::error::Delimiter collision detected in system prompt (re-run the workflow)"
+            exit 1
+          fi
 
           {
             echo "CUSTOM_SYSTEM_PROMPT<<${PROMPT_EOF}"
-            echo "$SYSTEM_PROMPT"
+            cat "$PROMPT_FILE"
             echo "${PROMPT_EOF}"
           } >> "$GITHUB_ENV"
 
@@ -387,10 +410,19 @@ jobs:
           echo "User prompt extracted (${#USER_PROMPT} chars)"
           echo "route=run" >> "$GITHUB_OUTPUT"
 
-          PROMPT_EOF="PROMPT_$(openssl rand -hex 8)"
+          PROMPT_FILE=$(mktemp)
+          trap 'rm -f "$PROMPT_FILE"' EXIT
+          printf '%s' "$USER_PROMPT" > "$PROMPT_FILE"
+
+          PROMPT_EOF="PROMPT_$(openssl rand -hex 16)"
+          if grep -qF "$PROMPT_EOF" "$PROMPT_FILE"; then
+            echo "::error::Delimiter collision detected in user prompt (re-run the workflow)"
+            exit 1
+          fi
+
           {
             echo "CLAUDE_PROMPT<<${PROMPT_EOF}"
-            echo "$USER_PROMPT"
+            cat "$PROMPT_FILE"
             echo "${PROMPT_EOF}"
           } >> "$GITHUB_ENV"
         env:
