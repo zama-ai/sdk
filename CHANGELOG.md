@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Breaking Changes
+
+- **Removed `useActivityFeed` and activity feed helpers from SDK.** The following exports have been removed from `@zama-fhe/sdk` and `@zama-fhe/react-sdk`:
+  - `useActivityFeed`, `UseActivityFeedConfig`
+  - `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`
+  - `ActivityItem`, `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`
+  - `activityFeedQueryOptions`, `ActivityFeedConfig`, `ActivityFeedQueryConfig`
+  - `zamaQueryKeys.activityFeed`
+
+  Activity feed logic is app-specific. See `packages/test-components/src/activity-feed/` for a reference implementation.
+
 ## [1.0.0-alpha.17](https://github.com/zama-ai/sdk/compare/v1.0.0-alpha.16...v1.0.0-alpha.17) (2026-03-09)
 
 ### Bug Fixes
