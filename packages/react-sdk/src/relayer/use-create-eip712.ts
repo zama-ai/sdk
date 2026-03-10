@@ -3,13 +3,14 @@
 import type { EIP712TypedData } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useZamaSDK } from "../provider";
+import { type Address } from "@zama-fhe/sdk";
 
 /** Parameters for {@link useCreateEIP712}. */
 export interface CreateEIP712Params {
   /** The FHE public key (hex-encoded). */
-  publicKey: string;
+  publicKey: `0x${string}`;
   /** Contract addresses the credential authorizes decryption for. */
-  contractAddresses: `0x${string}`[];
+  contractAddresses: Address[];
   /** Unix timestamp (seconds) when the credential becomes valid. */
   startTimestamp: number;
   /** Number of days the credential remains valid. Default: 1. */

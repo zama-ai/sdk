@@ -1,10 +1,11 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
-import type { Address } from "../../token/token.types";
+
 import { ZamaSDK } from "../../token/zama-sdk";
 import { allowMutationOptions } from "../allow";
 import { revokeMutationOptions } from "../revoke";
 import { revokeSessionMutationOptions } from "../revoke-session";
 import { isAllowedQueryOptions } from "../is-allowed";
+import type { Address } from "viem";
 
 describe("allowMutationOptions", () => {
   test("calls sdk.allow with provided addresses", async ({ signer, relayer, storage }) => {

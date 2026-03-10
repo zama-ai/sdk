@@ -9,7 +9,7 @@ describe("fee hooks", () => {
     feeManagerAddress: FEE_MANAGER,
     amount: 1000n,
     from: "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
-    to: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+    to: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
   };
 
   describe("useShieldFee", () => {

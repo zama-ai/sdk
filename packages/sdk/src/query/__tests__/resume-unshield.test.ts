@@ -7,10 +7,10 @@ describe("resumeUnshieldMutationOptions", () => {
 
     expect(options.mutationKey).toEqual(["zama.resumeUnshield", mockToken.address]);
     await options.mutationFn({
-      unwrapTxHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      unwrapTxHash: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     });
     expect(mockToken.resumeUnshield).toHaveBeenCalledWith(
-      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
       undefined,
     );
   });

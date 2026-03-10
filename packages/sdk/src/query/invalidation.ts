@@ -1,3 +1,4 @@
+import { type Address } from "viem";
 import { zamaQueryKeys } from "./query-keys";
 
 export interface QueryLike {
@@ -16,21 +17,24 @@ export interface QueryClientLike {
 
 function invalidateUnderlyingAllowanceQueries(
   queryClient: QueryClientLike,
-  tokenAddress: string,
+  tokenAddress: Address,
 ): void {
   queryClient.invalidateQueries({
     queryKey: zamaQueryKeys.underlyingAllowance.token(tokenAddress),
   });
 }
 
-export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: string): void {
+export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
   queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
-export function invalidateBalanceQueries(queryClient: QueryClientLike, tokenAddress: string): void {
+export function invalidateBalanceQueries(
+  queryClient: QueryClientLike,
+  tokenAddress: Address,
+): void {
   queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialHandle.token(tokenAddress) });
   queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialHandles.all });
   queryClient.invalidateQueries({
@@ -39,33 +43,33 @@ export function invalidateBalanceQueries(queryClient: QueryClientLike, tokenAddr
   queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
 }
 
-export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress: string): void {
+export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
   queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
-export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: string): void {
+export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
   queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
-export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: string): void {
+export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterApproveUnderlying(
   queryClient: QueryClientLike,
-  tokenAddress: string,
+  tokenAddress: Address,
 ): void {
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
 }
 
-export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddress: string): void {
+export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddress: Address): void {
   queryClient.invalidateQueries({
     queryKey: zamaQueryKeys.confidentialIsApproved.token(tokenAddress),
   });

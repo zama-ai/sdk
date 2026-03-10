@@ -1,11 +1,12 @@
 import type { ReadonlyToken } from "../token/readonly-token";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { Address } from "../token/token.types";
-import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions, normalizeHandle } from "./utils";
-import { zamaQueryKeys } from "./query-keys";
 
-export type EncryptedBalanceHandle = Handle | bigint;
+import type { QueryFactoryOptions } from "./factory-types";
+import { filterQueryOptions } from "./utils";
+import { zamaQueryKeys } from "./query-keys";
+import type { Address } from "viem";
+
+export type EncryptedBalanceHandle = Handle;
 
 export interface ConfidentialBalanceQueryConfig {
   owner?: Address;
@@ -22,8 +23,9 @@ export function confidentialBalanceQueryOptions(
   bigint,
   ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>
 > {
-  const ownerKey = config?.owner ?? "";
-  const handleKey = config?.handle === undefined ? undefined : normalizeHandle(config.handle);
+  const ownerKey = config?.owner;
+  const handleKey = config?.handle;
+  const queryEnabled = config?.query?.enabled !== false;
   const queryKey = zamaQueryKeys.confidentialBalance.owner(token.address, ownerKey, handleKey);
 
   return {
@@ -31,9 +33,11 @@ export function confidentialBalanceQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
-      return token.decryptBalance(keyHandle as Handle, keyOwner as Address);
+      if (!keyOwner) throw new Error("owner is required");
+      if (!keyHandle) throw new Error("handle is required");
+      return token.decryptBalance(keyHandle, keyOwner);
     },
-    enabled: Boolean(ownerKey && handleKey) && config?.query?.enabled !== false,
+    enabled: Boolean(ownerKey && handleKey) && queryEnabled,
     staleTime: Infinity,
   };
 }

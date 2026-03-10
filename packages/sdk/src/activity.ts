@@ -17,6 +17,7 @@ import {
   type UnwrappedFinalizedEvent,
   type UnwrappedStartedEvent,
 } from "./events/onchain-events";
+import type { Address, Hex } from "viem";
 import type { Handle } from "./relayer/relayer-sdk.types";
 import { ZERO_HANDLE } from "./token/readonly-token";
 
@@ -48,7 +49,7 @@ export type ActivityAmount =
 /** On-chain metadata attached to each activity item. */
 export interface ActivityLogMetadata {
   /** Transaction hash containing this event. */
-  readonly transactionHash?: string;
+  readonly transactionHash?: Hex;
   /** Block number where this event was emitted. */
   readonly blockNumber?: bigint | number;
   /** Log index within the transaction. */
@@ -67,9 +68,9 @@ export interface ActivityItem {
   /** Transfer amount (clear or encrypted). */
   readonly amount: ActivityAmount;
   /** Sender address (if applicable). */
-  readonly from?: string;
+  readonly from?: Address;
   /** Receiver address (if applicable). */
-  readonly to?: string;
+  readonly to?: Address;
   /** Fee deducted (for shield/unshield events). */
   readonly fee?: bigint;
   /** Whether the on-chain operation succeeded (for unshield events). */
@@ -84,14 +85,14 @@ export interface ActivityItem {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function addressesEqual(a: string, b: string): boolean {
+function addressesEqual(a: Address, b: Address): boolean {
   return a.toLowerCase() === b.toLowerCase();
 }
 
 function classifyDirection(
-  userAddress: string,
-  from: string | undefined,
-  to: string | undefined,
+  userAddress: Address,
+  from: Address | undefined,
+  to: Address | undefined,
 ): ActivityDirection {
   const isFrom = from !== undefined && addressesEqual(userAddress, from);
   const isTo = to !== undefined && addressesEqual(userAddress, to);
@@ -103,7 +104,7 @@ function classifyDirection(
 
 function eventToActivityItem(
   event: OnChainEvent,
-  userAddress: string,
+  userAddress: Address,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
   switch (event.eventName) {
@@ -122,7 +123,7 @@ function eventToActivityItem(
 
 function buildTransfer(
   event: ConfidentialTransferEvent,
-  userAddress: string,
+  userAddress: Address,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
   return {
@@ -138,7 +139,7 @@ function buildTransfer(
 
 function buildShield(
   event: WrappedEvent,
-  userAddress: string,
+  userAddress: Address,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
   return {
@@ -154,7 +155,7 @@ function buildShield(
 
 function buildUnshieldRequested(
   event: UnwrapRequestedEvent,
-  userAddress: string,
+  userAddress: Address,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
   return {
@@ -169,7 +170,7 @@ function buildUnshieldRequested(
 
 function buildUnshieldStarted(
   event: UnwrappedStartedEvent,
-  userAddress: string,
+  userAddress: Address,
   metadata: ActivityLogMetadata,
 ): ActivityItem {
   return {
@@ -209,7 +210,7 @@ function buildUnshieldFinalized(
  */
 export function parseActivityFeed(
   logs: readonly (RawLog & Partial<ActivityLogMetadata>)[],
-  userAddress: string,
+  userAddress: Address,
 ): ActivityItem[] {
   const items: ActivityItem[] = [];
   for (const log of logs) {

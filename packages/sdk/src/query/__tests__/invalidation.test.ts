@@ -251,7 +251,7 @@ describe("invalidation", () => {
     const signerKey = zamaQueryKeys.signerAddress.all;
     const balanceKey = zamaQueryKeys.confidentialBalance.token(TOKEN);
     const decryptionKey = zamaQueryKeys.decryption.handle(
-      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
 

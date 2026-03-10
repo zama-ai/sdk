@@ -1,4 +1,5 @@
 import type { TypedDataDomain } from "viem";
+import type { Address } from "viem";
 import type {
   CoprocessorEIP712TypesType,
   KmsDelegatedUserDecryptEIP712TypesType,
@@ -6,20 +7,20 @@ import type {
   KmsUserDecryptEIP712TypesType,
 } from "@zama-fhe/relayer-sdk/bundle";
 
-type DomainFactory = (chainId: number | bigint, verifyingContract: string) => TypedDataDomain;
+type DomainFactory = (chainId: number | bigint, verifyingContract: Address) => TypedDataDomain;
 
 const inputDomain: DomainFactory = (chainId, verifyingContract) => ({
   name: "InputVerification",
   version: "1",
   chainId: Number(chainId),
-  verifyingContract: verifyingContract as `0x${string}`,
+  verifyingContract,
 });
 
 const decryptionDomain: DomainFactory = (chainId, verifyingContract) => ({
   name: "Decryption",
   version: "1",
   chainId: Number(chainId),
-  verifyingContract: verifyingContract as `0x${string}`,
+  verifyingContract,
 });
 
 export const INPUT_VERIFICATION_EIP712 = {

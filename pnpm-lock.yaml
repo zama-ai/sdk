@@ -179,6 +179,9 @@ importers:
       rolldown-plugin-dts:
         specifier: ^0.22.3
         version: 0.22.3(rolldown@1.0.0-rc.6)(typescript@5.9.3)
+      viem:
+        specifier: ^2.47.0
+        version: 2.47.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.6)
 
   packages/sdk:
     dependencies:

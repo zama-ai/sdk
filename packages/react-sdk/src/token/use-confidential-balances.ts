@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "../utils/query";
 import { type UseQueryOptions } from "@tanstack/react-query";
-import type { Address, Hex } from "@zama-fhe/sdk";
+import type { Address, Handle } from "@zama-fhe/sdk";
 import {
   confidentialBalancesQueryOptions,
   confidentialHandlesQueryOptions,
@@ -65,7 +65,7 @@ export function useConfidentialBalances(
     ...signerAddressQueryOptions(sdk.signer),
   });
 
-  const owner = addressQuery.data as Address | undefined;
+  const owner = addressQuery.data;
 
   const tokens = useMemo(
     () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
@@ -78,13 +78,13 @@ export function useConfidentialBalances(
     pollingInterval: handleRefetchInterval,
   });
   const handlesFactoryEnabled = baseHandlesQueryOptions.enabled ?? true;
-  const handlesQuery = useQuery<Hex[]>({
+  const handlesQuery = useQuery<Handle[]>({
     ...baseHandlesQueryOptions,
     enabled: handlesFactoryEnabled && (userEnabled ?? true),
   });
 
   // Phase 2: Batch decrypt only when any handle changes
-  const handles = handlesQuery.data as Hex[] | undefined;
+  const handles = handlesQuery.data;
   const handlesReady = Array.isArray(handles) && handles.length === tokenAddresses.length;
   const baseBalancesQueryOptions = confidentialBalancesQueryOptions(tokens, {
     owner,

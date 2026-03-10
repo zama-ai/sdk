@@ -1,8 +1,7 @@
 import { vi } from "vitest";
-import { encodeAbiParameters } from "viem";
+import { encodeAbiParameters, Address, Hex } from "viem";
 import { test as base, describe, expect } from "../../test-fixtures";
-import type { Address } from "../../relayer/relayer-sdk.types";
-import type { Hex } from "../../token/token.types";
+import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
 
 // ── Mock ethers ──────────────────────────────────────────────
 
@@ -210,7 +209,7 @@ describe("EthersSigner", () => {
         const signer = createEthersMockSigner();
         const ethersSigner = new EthersSigner({ signer: signer as never });
 
-        const typedData = {
+        const typedData: EIP712TypedData = {
           domain: {
             name: "Test",
             version: "1",
@@ -246,7 +245,7 @@ describe("EthersSigner", () => {
       signer.signTypedData.mockResolvedValue("notHex");
       const ethersSigner = new EthersSigner({ signer: signer as never });
 
-      const typedData = {
+      const typedData: EIP712TypedData = {
         domain: {
           name: "Test",
           version: "1",

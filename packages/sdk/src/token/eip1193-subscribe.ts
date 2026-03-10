@@ -1,5 +1,5 @@
 import type { EIP1193EventMap, EIP1193Provider } from "viem";
-import type { Address } from "../relayer/relayer-sdk.types";
+import { getAddress as checksumAddress, type Address } from "viem";
 import type { SignerLifecycleCallbacks } from "./token.types";
 
 /**
@@ -19,7 +19,7 @@ export function eip1193Subscribe(
 ): () => void {
   if (!provider) return () => {};
 
-  let currentAddress: string | undefined;
+  let currentAddress: Address | undefined;
   getAddress()
     .then((addr) => {
       currentAddress = addr;
@@ -31,13 +31,17 @@ export function eip1193Subscribe(
       currentAddress = undefined;
       return onDisconnect();
     }
-    if (
-      accounts[0] &&
-      (!currentAddress || accounts[0].toLowerCase() !== currentAddress.toLowerCase())
-    ) {
-      onAccountChange(accounts[0]);
+    if (!accounts[0]) return;
+    let nextAddress: Address;
+    try {
+      nextAddress = checksumAddress(accounts[0]);
+    } catch {
+      return;
     }
-    currentAddress = accounts[0];
+    if (!currentAddress || nextAddress !== currentAddress) {
+      onAccountChange(nextAddress);
+    }
+    currentAddress = nextAddress;
   };
   const handleDisconnect: EIP1193EventMap["disconnect"] = () => onDisconnect();
   const handleChainChanged = onChainChange

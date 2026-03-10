@@ -4,12 +4,12 @@
 
 ```ts
 
-import { Address } from '@zama-fhe/relayer-sdk/bundle';
+import { Address } from 'viem';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType as ClearValueType_2 } from '@zama-fhe/relayer-sdk/node';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig as FhevmInstanceConfig_2 } from '@zama-fhe/relayer-sdk/node';
-import { Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { InputProofBytesType as InputProofBytesType_2 } from '@zama-fhe/relayer-sdk/node';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
@@ -21,6 +21,8 @@ import { Worker as Worker_2 } from 'node:worker_threads';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike as ZKProofLike_2 } from '@zama-fhe/relayer-sdk/node';
 
+// Warning: (ae-forgotten-export) The symbol "GenericStorage" needs to be exported by the entry point index.d.ts
+//
 // @public
 export class AsyncLocalMapStorage implements GenericStorage {
     // (undocumented)
@@ -84,10 +86,8 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     //
     // (undocumented)
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData>;
-    // Warning: (ae-forgotten-export) The symbol "relayer_sdk_types_d_exports" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    requestZKProofVerification(zkProof: relayer_sdk_types_d_exports.ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
+    requestZKProofVerification(zkProof: ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
     // (undocumented)
     protected sendRequest<T>(type: WorkerRequestType, payload: WorkerRequest["payload"], timeoutMs?: number): Promise<T>;
     // (undocumented)
@@ -107,9 +107,9 @@ export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload
 export interface CreateDelegatedEIP712Request extends BaseRequest {
     // (undocumented)
     payload: {
-        publicKey: string;
+        publicKey: Hex;
         contractAddresses: Address[];
-        delegatorAddress: string;
+        delegatorAddress: Address;
         startTimestamp: number;
         durationDays: number;
     };
@@ -127,7 +127,7 @@ export type CreateEIP712Payload = CreateEIP712Request["payload"];
 export interface CreateEIP712Request extends BaseRequest {
     // (undocumented)
     payload: {
-        publicKey: string;
+        publicKey: Hex;
         contractAddresses: Address[];
         startTimestamp: number;
         durationDays: number;
@@ -147,11 +147,11 @@ export interface CreateEIP712ResponseData {
     };
     // (undocumented)
     message: {
-        publicKey: string;
+        publicKey: Hex;
         contractAddresses: Address[];
         startTimestamp: bigint;
         durationDays: bigint;
-        extraData: string;
+        extraData: Hex;
     };
     // (undocumented)
     types: {
@@ -175,11 +175,11 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     handles: Handle[];
     // (undocumented)
-    privateKey: string;
+    privateKey: Hex;
     // (undocumented)
-    publicKey: string;
+    publicKey: Hex;
     // (undocumented)
-    signature: string;
+    signature: Hex;
     // (undocumented)
     signedContractAddresses: Address[];
     // (undocumented)
@@ -196,9 +196,9 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
         handles: Handle[];
         contractAddress: Address;
         signedContractAddresses: Address[];
-        privateKey: string;
-        publicKey: string;
-        signature: string;
+        privateKey: Hex;
+        publicKey: Hex;
+        signature: Hex;
         delegatorAddress: Address;
         delegateAddress: Address;
         startTimestamp: number;
@@ -225,11 +225,11 @@ export interface EIP712TypedData {
     };
     // (undocumented)
     message: {
-        publicKey: string;
-        contractAddresses: readonly string[];
+        publicKey: Hex;
+        contractAddresses: readonly Address[];
         startTimestamp: bigint;
         durationDays: bigint;
-        extraData: string;
+        extraData: Hex;
     };
     // (undocumented)
     primaryType?: string;
@@ -305,9 +305,9 @@ export interface GenerateKeypairRequest extends BaseRequest {
 // @public (undocumented)
 export interface GenerateKeypairResponseData {
     // (undocumented)
-    privateKey: string;
+    privateKey: Hex;
     // (undocumented)
-    publicKey: string;
+    publicKey: Hex;
 }
 
 // @public
@@ -320,16 +320,6 @@ export interface GenericLogger {
     info: (message: string, data?: Record<string, unknown>) => void;
     // (undocumented)
     warn: (message: string, data?: Record<string, unknown>) => void;
-}
-
-// @public
-export interface GenericStorage {
-    // (undocumented)
-    delete(key: string): Promise<void>;
-    // (undocumented)
-    get<T = unknown>(key: string): Promise<T | null>;
-    // (undocumented)
-    set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
 // @public (undocumented)
@@ -395,8 +385,6 @@ export interface InitRequest extends BaseRequest {
     type: "INIT";
 }
 
-export { KeypairType }
-
 // @public
 export const MainnetConfig: {
     readonly chainId: 1;
@@ -445,7 +433,7 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker_2, NodeWorkerClien
 // @public (undocumented)
 export interface NodeWorkerClientConfig {
     // (undocumented)
-    fhevmConfig: relayer_sdk_types_d_exports.FhevmInstanceConfig;
+    fhevmConfig: FhevmInstanceConfig;
     logger?: GenericLogger;
 }
 
@@ -473,7 +461,7 @@ export class NodeWorkerPool {
     // (undocumented)
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData>;
     // (undocumented)
-    requestZKProofVerification(zkProof: relayer_sdk_types_d_exports.ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
+    requestZKProofVerification(zkProof: ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
     // (undocumented)
     terminate(): void;
     // (undocumented)
@@ -515,15 +503,15 @@ export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> 
 export class RelayerNode implements RelayerSDK {
     constructor(config: RelayerNodeConfig);
     // (undocumented)
-    createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type_2>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type_2>;
     // (undocumented)
-    createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // (undocumented)
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType_2>>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
-    generateKeypair(): Promise<KeypairType_2<string>>;
+    generateKeypair(): Promise<KeypairType_2<Hex>>;
     // (undocumented)
     getPublicKey(): Promise<{
         publicKeyId: string;
@@ -556,11 +544,11 @@ export interface RelayerNodeConfig {
 
 // @public
 export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: string, contractAddresses: Address[], delegatorAddress: string, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: string, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<string>>;
+    generateKeypair(): Promise<KeypairType<Hex>>;
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;
@@ -628,11 +616,11 @@ export interface UserDecryptParams {
     // (undocumented)
     handles: Handle[];
     // (undocumented)
-    privateKey: string;
+    privateKey: Hex;
     // (undocumented)
-    publicKey: string;
+    publicKey: Hex;
     // (undocumented)
-    signature: string;
+    signature: Hex;
     // (undocumented)
     signedContractAddresses: Address[];
     // (undocumented)
@@ -651,9 +639,9 @@ export interface UserDecryptRequest extends BaseRequest {
         handles: Handle[];
         contractAddress: Address;
         signedContractAddresses: Address[];
-        privateKey: string;
-        publicKey: string;
-        signature: string;
+        privateKey: Hex;
+        publicKey: Hex;
+        signature: Hex;
         signerAddress: Address;
         startTimestamp: number;
         durationDays: number;

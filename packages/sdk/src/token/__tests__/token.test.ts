@@ -1,7 +1,7 @@
 import { Topics } from "../../events";
 import { Token } from "../token";
-import type { Address } from "../token.types";
-import { ZamaError, ZamaErrorCode } from "../token.types";
+import { getAddress, type Address } from "viem";
+import { ZamaError, ZamaErrorCode } from "../errors";
 import { describe, expect, it, vi } from "../../test-fixtures";
 
 const ZERO_HANDLE = "0x" + "0".repeat(64);
@@ -53,7 +53,7 @@ describe("Token", () => {
       await token.balanceOf(otherAddress);
 
       expect(signer.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({ args: [otherAddress] }),
+        expect.objectContaining({ args: [getAddress(otherAddress)] }),
       );
     });
   });
@@ -92,7 +92,7 @@ describe("Token", () => {
   });
 
   describe("batchDecryptBalances", () => {
-    const TOKEN2 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+    const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
     const handle2 = "0x" + "cd".repeat(32);
 
     it("returns empty map for empty array", async () => {
@@ -127,7 +127,7 @@ describe("Token", () => {
       });
 
       expect(result.get(tokenAddress)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(2000n);
+      expect(result.get(getAddress(TOKEN2))).toBe(2000n);
       expect(signer.readContract).not.toHaveBeenCalled();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
     });
@@ -155,7 +155,7 @@ describe("Token", () => {
       });
 
       expect(result.get(tokenAddress)).toBe(1000n);
-      expect(result.get(TOKEN2)).toBe(0n);
+      expect(result.get(getAddress(TOKEN2))).toBe(0n);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
     });
 
@@ -577,8 +577,8 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
-            data: "0x" + "ff".repeat(32),
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            data: `0x${"ff".repeat(32)}`,
           },
         ],
       });
@@ -648,8 +648,8 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
-            data: "0x" + "ff".repeat(32),
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            data: `0x${"ff".repeat(32)}`,
           },
         ],
       });
@@ -753,14 +753,14 @@ describe("Token", () => {
       tokenAddress,
     }) => {
       const from = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
-      const to = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
+      const to = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
       const result = await token.confidentialTransferFrom(from, to, 200n);
 
       expect(relayer.encrypt).toHaveBeenCalledWith({
         values: [{ value: 200n, type: "euint64" }],
         contractAddress: tokenAddress,
-        userAddress: from,
+        userAddress: getAddress(from),
       });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -777,7 +777,7 @@ describe("Token", () => {
       await expect(
         token.confidentialTransferFrom(
           "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
-          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
           200n,
         ),
       ).rejects.toSatisfy((err: ZamaError) => {
@@ -796,7 +796,7 @@ describe("Token", () => {
       await expect(
         token.confidentialTransferFrom(
           "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
-          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
           200n,
         ),
       ).rejects.toBe(original);
@@ -815,7 +815,7 @@ describe("Token", () => {
       await expect(
         token.confidentialTransferFrom(
           "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
-          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
           200n,
         ),
       ).rejects.toMatchObject({
@@ -831,7 +831,7 @@ describe("Token", () => {
       await expect(
         token.confidentialTransferFrom(
           "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
-          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
           200n,
         ),
       ).rejects.toBe(original);
@@ -846,7 +846,7 @@ describe("Token", () => {
       await expect(
         token.confidentialTransferFrom(
           "0xcccccccccccccccccccccccccccccccccccccccc" as Address,
-          "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
+          "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
           200n,
         ),
       ).rejects.toMatchObject({
@@ -1338,8 +1338,8 @@ describe("Token", () => {
       vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
-            topics: [Topics.UnwrapRequested, "0x000000000000000000000000" + userAddress.slice(2)],
-            data: "0x" + "ff".repeat(32),
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            data: `0x${"ff".repeat(32)}`,
           },
         ],
       });
