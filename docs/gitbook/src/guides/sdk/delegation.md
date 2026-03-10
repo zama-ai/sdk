@@ -118,7 +118,7 @@ const balance = await readonlyToken.decryptBalanceAs("0xDelegator", {
 });
 ```
 
-Decrypted values are cached in storage (keyed by token + owner + handle), so subsequent reads are instant.
+Decrypted values are cached in storage, keyed by `(token, owner, handle)`. Because every on-chain balance change produces a new encrypted handle, stale cache entries are never served — no TTL or manual invalidation needed. If the delegator's balance changes in another app, the next `decryptBalanceAs` call will see a different handle and perform a fresh decryption.
 
 ## Error handling
 

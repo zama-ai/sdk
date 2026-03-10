@@ -597,7 +597,9 @@ export class ReadonlyToken {
     const handle = await this.readConfidentialBalanceOf(owner);
     if (this.isZeroHandle(handle)) return 0n;
 
-    // Check persistent cache keyed by balance owner.
+    // Check persistent cache keyed by (token, owner, handle).
+    // When the on-chain balance changes the encrypted handle changes too,
+    // so stale entries are never served — no TTL needed.
     const cached = await loadCachedBalance({
       storage: this.storage,
       tokenAddress: this.address,
