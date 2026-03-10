@@ -139,8 +139,6 @@ export const test = base.extend<TestFixtures>({
 
     const id = await viemClient.snapshot();
 
-    await mockRelayerSdk(page, baseURL);
-
     // Inject wallet private key for the burner-connector
     await page.addInitScript((pk) => {
       window.localStorage.setItem("burnerWallet.pk", pk);

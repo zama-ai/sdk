@@ -1,21 +1,17 @@
-import type { EIP1193Provider } from "viem";
-import { type Address } from "viem";
-
-export interface CleartextContracts {
-  acl: Address;
-  executor: Address;
-  inputVerifier: Address;
-  kmsVerifier: Address;
-  verifyingInputVerifier: Address;
-  verifyingDecryption: Address;
-}
+import type { Address, EIP1193Provider, Hex } from "viem";
 
 export interface CleartextConfig {
-  chainId: bigint;
+  chainId: number;
+  network: EIP1193Provider | string;
   gatewayChainId: number;
-  contracts: CleartextContracts;
-}
-
-export interface CleartextChainConfig extends CleartextConfig {
-  rpcUrl: string | EIP1193Provider;
+  aclContractAddress: Address;
+  executorAddress: Address;
+  /** Address of the Decryption contract on the gateway chain. */
+  verifyingContractAddressDecryption: Address;
+  /** Address of the InputVerification contract on the gateway chain. */
+  verifyingContractAddressInputVerification: Address;
+  /** Private key of the KMS signer used for EIP-712 verification of the decryption. */
+  kmsSignerPrivateKey?: Hex;
+  /** Private key of the input signer used for EIP-712 verification of the input verification. */
+  inputSignerPrivateKey?: Hex;
 }
