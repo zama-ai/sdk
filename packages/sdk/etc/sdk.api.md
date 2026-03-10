@@ -19572,10 +19572,10 @@ export class ReadonlyToken {
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
     // (undocumented)
+    protected readonly relayer: RelayerSDK;
+    // (undocumented)
     protected requireAclAddress(): Promise<Address>;
     revoke(...contractAddresses: Address[]): Promise<void>;
-    // (undocumented)
-    protected readonly sdk: RelayerSDK;
     // (undocumented)
     readonly signer: GenericSigner;
     protected get storage(): GenericStorage;
