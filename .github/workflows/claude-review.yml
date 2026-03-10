@@ -1,0 +1,68 @@
+name: Claude Auto Review
+
+# Automatic code review on PRs targeting main/prerelease.
+#
+# Security model:
+#   - Network sandbox: Squid proxy (L7 domain allowlist) + iptables egress block
+#   - CODEOWNERS + branch protection as HITL protection
+#   - Workflow and sandbox config changes require @zama-ai/infosec approval
+#
+# Secrets:
+#   - CLAUDE_CODE_OAUTH_TOKEN: Anthropic API auth
+
+on:
+  pull_request:
+    branches: [main, prerelease]
+    types: [opened, synchronize, ready_for_review, reopened]
+
+permissions: {}
+
+concurrency:
+  group: claude-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SQUID_IMAGE: ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Cache Squid Docker image
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: /tmp/squid-image.tar
+          key: squid-image-${{ env.SQUID_IMAGE }}
+
+      - name: Start network sandbox
+        run: bash .github/scripts/sandbox-up.sh
+
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@64c7a0ef71df67b14cb4471f4d9c8565c61042bf # v1.0.66
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
+          plugins: "code-review@claude-code-plugins"
+          prompt: "/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+        env:
+          HTTP_PROXY: http://127.0.0.1:3128
+          HTTPS_PROXY: http://127.0.0.1:3128
+          NO_PROXY: 127.0.0.1,localhost
+
+      - name: Tear down network sandbox
+        if: always()
+        run: bash .github/scripts/sandbox-down.sh

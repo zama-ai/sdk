@@ -1,0 +1,5 @@
+# Enforces changes in Sandboxed AI CI/CD
+
+.github/squid/sandbox-*.conf @zama-ai/infosec @zama-ai/product-integrations
+.github/scripts/sandbox-*.sh @zama-ai/infosec @zama-ai/product-integrations
+.github/workflows/claude*.yml @zama-ai/infosec @zama-ai/product-integrations
