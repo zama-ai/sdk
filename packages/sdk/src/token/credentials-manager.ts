@@ -76,9 +76,10 @@ export class CredentialsManager {
   #cachedDerivedKeyIdentity: string | null = null;
 
   static async computeStoreKey(address: Address, chainId: number): Promise<string> {
+    const normalizedAddress = getAddress(address);
     const hash = await crypto.subtle.digest(
       "SHA-256",
-      new TextEncoder().encode(`${address}:${chainId}`),
+      new TextEncoder().encode(`${normalizedAddress}:${chainId}`),
     );
     const hex = Array.from(new Uint8Array(hash))
       .map((b) => b.toString(16).padStart(2, "0"))
@@ -124,6 +125,9 @@ export class CredentialsManager {
    * ```
    */
   async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
+    contractAddresses = [
+      ...new Set(contractAddresses.map((address) => getAddress(address))),
+    ].sort();
     const storeKey = await this.#storeKey();
     this.#emit({ type: ZamaSDKEvents.CredentialsLoading, contractAddresses });
     try {
@@ -185,7 +189,7 @@ export class CredentialsManager {
       }
     }
 
-    const key = contractAddresses.map(getAddress).sort().join(",");
+    const key = contractAddresses.join(",");
     if (!this.#createPromise || this.#createPromiseKey !== key) {
       this.#createPromiseKey = key;
       this.#createPromise = this.create(contractAddresses)
@@ -301,7 +305,7 @@ export class CredentialsManager {
   async #storeKey(): Promise<string> {
     const address = await this.#signer.getAddress();
     const chainId = await this.#signer.getChainId();
-    const identity = `${address}:${chainId}`;
+    const identity = `${getAddress(address)}:${chainId}`;
     if (this.#cachedStoreKey && this.#cachedStoreKeyIdentity === identity) {
       return this.#cachedStoreKey;
     }
@@ -378,8 +382,8 @@ export class CredentialsManager {
 
   /** Check if the signed address set covers all required addresses. */
   #coversContracts(signedAddresses: Address[], requiredContracts: Address[]): boolean {
-    const required = new Set(requiredContracts.map((a) => a.toLowerCase()));
-    return required.isSubsetOf(new Set(signedAddresses.map((a) => a.toLowerCase())));
+    const required = new Set(requiredContracts.map((address) => getAddress(address)));
+    return required.isSubsetOf(new Set(signedAddresses.map((address) => getAddress(address))));
   }
 
   async #sign(encrypted: EncryptedCredentials): Promise<Hex> {
@@ -402,7 +406,7 @@ export class CredentialsManager {
 
   /** Merge two contract address lists into a deduplicated sorted array. */
   #mergeContracts(existing: Address[], incoming: Address[]): Address[] {
-    return [...new Set([...existing, ...incoming].map((a) => a.toLowerCase() as Address))].sort();
+    return [...new Set([...existing, ...incoming].map((address) => getAddress(address)))].sort();
   }
 
   /**
@@ -454,6 +458,9 @@ export class CredentialsManager {
    * ```
    */
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
+    contractAddresses = [
+      ...new Set(contractAddresses.map((address) => getAddress(address))),
+    ].sort();
     this.#emit({ type: ZamaSDKEvents.CredentialsCreating, contractAddresses });
     try {
       const storeKey = await this.#storeKey();

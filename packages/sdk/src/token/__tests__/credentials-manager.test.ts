@@ -6,22 +6,11 @@ import { KeypairExpiredError } from "../errors";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { GenericSigner } from "../token.types";
 import { ZamaSDKEvents } from "../../events";
+import { getAddress } from "viem";
 import type { Address } from "viem";
 
 const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const TOKEN_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
-
-/** Compute the truncated SHA-256 store key used by CredentialManager. */
-async function computeStoreKey(address: Address, chainId: number = 31337): Promise<string> {
-  const hash = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(`${address}:${chainId}`),
-  );
-  const hex = Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hex.slice(0, 32);
-}
 
 /** Override fixture mock return values to match test expectations. */
 function setupMocks(relayer: RelayerSDK, signer: GenericSigner) {
@@ -74,9 +63,9 @@ describe("CredentialsManager", () => {
     // Re-signed with the extended address set
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
     // Merged contract addresses include both tokens (checksummed by getAddress)
-    const normalized = creds.contractAddresses.map((a: string) => a.toLowerCase());
-    expect(normalized).toContain(TOKEN_A.toLowerCase());
-    expect(normalized).toContain(TOKEN_B.toLowerCase());
+    const normalized = creds.contractAddresses.map((a: string) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
   }, 30000);
 
   it("persists credentials to store with hashed key", async ({
@@ -86,7 +75,7 @@ describe("CredentialsManager", () => {
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await credentialManager.allow(TOKEN_A);
 
@@ -160,7 +149,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // Create credentials to get valid encrypted data
     await manager.allow(TOKEN_A);
@@ -197,7 +186,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // First call creates credentials — which get stored under the hashed key
     await manager.allow(TOKEN_A);
@@ -225,7 +214,7 @@ describe("CredentialsManager", () => {
 
   it("clears credentials", async ({ relayer, signer, storage, credentialManager }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await credentialManager.allow(TOKEN_A);
     await credentialManager.clear();
@@ -326,7 +315,7 @@ describe("CredentialsManager", () => {
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // Write garbage to the store
     await storage.set(storeKey, "not-valid-json{{{{");
@@ -349,7 +338,7 @@ describe("CredentialsManager", () => {
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // Write corrupted data to trigger the catch path
     await storage.set(storeKey, "corrupted");
@@ -381,7 +370,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await manager.allow(TOKEN_A);
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -439,7 +428,7 @@ describe("CredentialsManager", () => {
         sessionStorage: createMockStorage(),
         keypairTTL: 86400,
       });
-      const storeKey = await computeStoreKey(await signer.getAddress());
+      const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
       await manager.allow(TOKEN_A);
 
@@ -493,7 +482,7 @@ describe("CredentialsManager", () => {
       credentialManager,
     }) => {
       setupMocks(relayer, signer);
-      const storeKey = await computeStoreKey(await signer.getAddress());
+      const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
       await storage.set(storeKey, "corrupted-json{{{");
       expect(await credentialManager.isExpired()).toBe(false);
     });
@@ -519,7 +508,7 @@ describe("CredentialsManager", () => {
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await credentialManager.allow(TOKEN_A);
     expect(await credentialManager.isAllowed()).toBe(true);
@@ -626,9 +615,9 @@ describe("contract address extension", () => {
     expect(extended.publicKey).toBe(first.publicKey);
     expect(extended.privateKey).toBe(first.privateKey);
     // Merged addresses
-    const normalized = extended.contractAddresses.map((a) => a.toLowerCase());
-    expect(normalized).toContain(TOKEN_A.toLowerCase());
-    expect(normalized).toContain(TOKEN_B.toLowerCase());
+    const normalized = extended.contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
   });
 
   it("extends contracts after revoke (no session path)", async ({
@@ -646,9 +635,9 @@ describe("contract address extension", () => {
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // Original sign + old-address sign for decrypt + merged-address sign for extend
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
-    const normalized = extended.contractAddresses.map((a) => a.toLowerCase());
-    expect(normalized).toContain(TOKEN_A.toLowerCase());
-    expect(normalized).toContain(TOKEN_B.toLowerCase());
+    const normalized = extended.contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
   });
 
   it("extends contracts after page reload (new session storage, no session)", async ({
@@ -681,9 +670,9 @@ describe("contract address extension", () => {
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // Original sign + old-address sign for decrypt + merged-address sign for extend
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
-    const normalized = extended.contractAddresses.map((a) => a.toLowerCase());
-    expect(normalized).toContain(TOKEN_A.toLowerCase());
-    expect(normalized).toContain(TOKEN_B.toLowerCase());
+    const normalized = extended.contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
   });
 
   it("caches extended credentials — third call with same set does not re-sign", async ({
@@ -746,10 +735,10 @@ describe("contract address extension", () => {
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     // 3 signatures: initial + extend to B + extend to C
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
-    const normalized = final.contractAddresses.map((a) => a.toLowerCase());
-    expect(normalized).toContain(TOKEN_A.toLowerCase());
-    expect(normalized).toContain(TOKEN_B.toLowerCase());
-    expect(normalized).toContain(TOKEN_C.toLowerCase());
+    const normalized = final.contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
+    expect(normalized).toContain(getAddress(TOKEN_C));
   });
 
   it("subset of already-allowed contracts does not re-sign", async ({
@@ -820,9 +809,9 @@ describe("contract address extension", () => {
     // Second createEIP712 call should include both tokens
     const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1]!;
     const contractAddresses = secondCall[1] as Address[];
-    const normalized = contractAddresses.map((a) => a.toLowerCase());
-    expect(normalized).toContain(TOKEN_A.toLowerCase());
-    expect(normalized).toContain(TOKEN_B.toLowerCase());
+    const normalized = contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
   });
 });
 
@@ -934,6 +923,37 @@ describe("storeKey caching", () => {
 
     const sha256Calls = digestSpy.mock.calls.filter(([algo]) => algo === "SHA-256").length;
     expect(sha256Calls).toBeGreaterThanOrEqual(1);
+
+    digestSpy.mockRestore();
+  });
+
+  it("reuses the same store key when signer address casing changes", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    const digestSpy = vi.spyOn(crypto.subtle, "digest");
+
+    vi.mocked(signer.getAddress).mockResolvedValue(
+      "0x2222222222222222222222222222222222ABCDEF" as Address,
+    );
+
+    await manager.allow(TOKEN_A);
+
+    const sha256Calls = digestSpy.mock.calls.filter(([algo]) => algo === "SHA-256").length;
+    expect(sha256Calls).toBe(0);
 
     digestSpy.mockRestore();
   });
@@ -1072,7 +1092,7 @@ describe("unified #isValid", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await manager.allow(TOKEN_A);
 
