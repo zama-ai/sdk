@@ -1,6 +1,6 @@
-import { decodeFunctionResult, encodeFunctionData, isHex, type Abi } from "viem";
-import type { Hex } from "../token/token.types";
-import type { Address, Handle } from "../relayer/relayer-sdk.types";
+import { decodeFunctionResult, encodeFunctionData, isHex, type Abi, Hex, Address } from "viem";
+
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { BatchTransferData } from "../contracts";
 import {
   confidentialBalanceOfContract,

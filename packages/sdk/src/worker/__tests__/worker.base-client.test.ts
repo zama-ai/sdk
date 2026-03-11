@@ -315,9 +315,9 @@ describe("BaseWorkerClient", () => {
       handles: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
-      privateKey: "sk",
-      publicKey: "pk",
-      signature: "sig",
+      privateKey: "0xsk" as `0x${string}`,
+      publicKey: "0xpk" as `0x${string}`,
+      signature: "0xsig" as `0x${string}`,
       signerAddress: "0xA" as `0x${string}`,
       startTimestamp: 100,
       durationDays: 7,
@@ -404,7 +404,7 @@ describe("BaseWorkerClient", () => {
     autoResolvePostMessage(client, {});
 
     const params = {
-      publicKey: "pk",
+      publicKey: "0xpk" as `0x${string}`,
       contractAddresses: ["0x1" as `0x${string}`],
       startTimestamp: 1000,
       durationDays: 7,
@@ -421,7 +421,7 @@ describe("BaseWorkerClient", () => {
     autoResolvePostMessage(client, {});
 
     const params = {
-      publicKey: "pk",
+      publicKey: "0xpk" as `0x${string}`,
       contractAddresses: ["0x1" as `0x${string}`],
       delegatorAddress: "0xD" as `0x${string}`,
       startTimestamp: 100,
@@ -442,9 +442,9 @@ describe("BaseWorkerClient", () => {
       handles: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
-      privateKey: "sk",
-      publicKey: "pk",
-      signature: "sig",
+      privateKey: "0xsk" as `0x${string}`,
+      publicKey: "0xpk" as `0x${string}`,
+      signature: "0xsig" as `0x${string}`,
       delegatorAddress: "0xD" as `0x${string}`,
       delegateAddress: "0xE" as `0x${string}`,
       startTimestamp: 100,

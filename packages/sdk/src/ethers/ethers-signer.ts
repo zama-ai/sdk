@@ -4,19 +4,19 @@ import type {
   ContractFunctionArgs,
   ContractFunctionName,
   ContractFunctionReturnType,
+  Hex,
 } from "viem";
-import { getAddress, isHex } from "viem";
-import type { Address, EIP712TypedData } from "../relayer/relayer-sdk.types";
+import { getAddress, isHex, type Address } from "viem";
+import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   GenericSigner,
-  Hex,
   ReadContractConfig,
   SignerLifecycleCallbacks,
   TransactionReceipt,
   WriteContractConfig,
 } from "../token/token.types";
 import { eip1193Subscribe } from "../token/eip1193-subscribe";
-import { EIP1193Provider } from "./ethers.types";
+import type { EIP1193Provider } from "viem";
 
 /**
  * Configuration for {@link EthersSigner}.
@@ -138,8 +138,8 @@ export class EthersSigner implements GenericSigner {
     if (!receipt) throw new Error("Transaction receipt not found");
     return {
       logs: receipt.logs.map((log) => ({
-        topics: log.topics.filter((t): t is string => t !== null),
-        data: log.data,
+        topics: log.topics.filter((t): t is Hex => t !== null),
+        data: log.data as Hex,
       })),
     };
   }

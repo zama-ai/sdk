@@ -9,9 +9,10 @@ import {
   useEncrypt,
   type Address,
 } from "@zama-fhe/react-sdk";
+import { type Hex } from "viem";
 
 export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {
-  const [keypairPublicKey, setKeypairPublicKey] = useState<string | null>(null);
+  const [keypairPublicKey, setKeypairPublicKey] = useState<Hex | null>(null);
 
   const generateKeypair = useGenerateKeypair();
   const createEIP712 = useCreateEIP712();

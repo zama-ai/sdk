@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RelayerWeb, ZamaProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
-import { type ReactNode, useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { createPublicClient, createWalletClient, custom, http } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 

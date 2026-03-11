@@ -6,7 +6,6 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type {
-  Address,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -15,6 +14,7 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "./relayer-sdk.types";
+import type { Address, Hex } from "viem";
 
 /**
  * Interface for FHE relayer operations.
@@ -22,11 +22,11 @@ import type {
  */
 export interface RelayerSDK {
   /** Generate an FHE keypair (public + private key). */
-  generateKeypair(): Promise<KeypairType<string>>;
+  generateKeypair(): Promise<KeypairType<Hex>>;
 
   /** Create EIP-712 typed data for signing an FHE decrypt credential. */
   createEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
     durationDays?: number,
@@ -43,9 +43,9 @@ export interface RelayerSDK {
 
   /** Create EIP-712 typed data for a delegated user decrypt credential. */
   createDelegatedUserDecryptEIP712(
-    publicKey: string,
+    publicKey: Hex,
     contractAddresses: Address[],
-    delegatorAddress: string,
+    delegatorAddress: Address,
     startTimestamp: number,
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type>;

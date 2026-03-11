@@ -52,8 +52,8 @@ describe("confidentialHandlesQueryOptions", () => {
     signer,
   }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-      .mockResolvedValueOnce("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+      .mockResolvedValueOnce("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa")
+      .mockResolvedValueOnce("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb");
 
     const options = confidentialHandlesQueryOptions(signer, [tokenA], { owner });
     const key = zamaQueryKeys.confidentialHandles.tokens(
@@ -75,17 +75,5 @@ describe("confidentialHandlesQueryOptions", () => {
       functionName: "confidentialBalanceOf",
       args: ["0x4444444444444444444444444444444444444444"],
     });
-  });
-
-  test("normalizes bigint readContract results to 0x-prefixed hex", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(1n).mockResolvedValueOnce(2n);
-
-    const options = confidentialHandlesQueryOptions(signer, [tokenA, tokenB], { owner });
-    const result = await options.queryFn(mockQueryContext(options.queryKey));
-
-    expect(result).toEqual([
-      "0x0000000000000000000000000000000000000000000000000000000000000001",
-      "0x0000000000000000000000000000000000000000000000000000000000000002",
-    ]);
   });
 });

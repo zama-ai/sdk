@@ -17,6 +17,26 @@ describe("confidentialIsApprovedQueryOptions", () => {
     expect(options.enabled).toBe(true);
   });
 
+  test("is disabled when holder or spender is missing", ({ signer }) => {
+    const missingHolder = confidentialIsApprovedQueryOptions(
+      signer,
+      "0x1111111111111111111111111111111111111111",
+      {
+        spender: "0x3333333333333333333333333333333333333333",
+      },
+    );
+    const missingSpender = confidentialIsApprovedQueryOptions(
+      signer,
+      "0x1111111111111111111111111111111111111111",
+      {
+        holder: "0x2222222222222222222222222222222222222222",
+      },
+    );
+
+    expect(missingHolder.enabled).toBe(false);
+    expect(missingSpender.enabled).toBe(false);
+  });
+
   test("checks operator approval", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue(true);
 
@@ -68,8 +88,8 @@ describe("confidentialIsApprovedQueryOptions", () => {
     );
 
     const key = zamaQueryKeys.confidentialIsApproved.scope(
-      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+      "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
       "0xcccccccccccccccccccccccccccccccccccccccc",
     );
 
@@ -77,10 +97,10 @@ describe("confidentialIsApprovedQueryOptions", () => {
 
     expect(vi.mocked(signer.readContract)).toHaveBeenCalledWith(
       expect.objectContaining({
-        address: getAddress("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+        address: getAddress("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"),
         functionName: "isOperator",
         args: [
-          getAddress("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+          getAddress("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"),
           getAddress("0xcccccccccccccccccccccccccccccccccccccccc"),
         ],
       }),
@@ -137,5 +157,26 @@ describe("confidentialIsApprovedQueryOptions", () => {
         ],
       }),
     );
+  });
+
+  test("queryFn throws when required params are missing from context.queryKey", async ({
+    signer,
+  }) => {
+    const options = confidentialIsApprovedQueryOptions(
+      signer,
+      "0x1111111111111111111111111111111111111111",
+      {
+        holder: "0x2222222222222222222222222222222222222222",
+        spender: "0x3333333333333333333333333333333333333333",
+      },
+    );
+
+    await expect(
+      options.queryFn(
+        mockQueryContext(
+          zamaQueryKeys.confidentialIsApproved.scope(options.queryKey[1].tokenAddress),
+        ),
+      ),
+    ).rejects.toThrow("holder is required");
   });
 });

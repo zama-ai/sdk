@@ -1,4 +1,5 @@
-import type { EIP712TypedData, FhevmInstanceConfig } from "./relayer-sdk.types";
+import type { EIP712TypedData } from "./relayer-sdk.types";
+import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
@@ -82,7 +83,13 @@ export const SepoliaConfig = {
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
 } as const satisfies FhevmInstanceConfig;
 
-/** Hardhat local network configuration (chainId 31337). */
+/**
+ * Hardhat local network configuration (chainId 31337).
+ *
+ * The addresses in this configuration must match those of your deployment.
+ * Ensure that the executor address and other contract addresses correspond to
+ * the contracts deployed on your Hardhat network.
+ */
 export const HardhatConfig = {
   chainId: 31337,
   gatewayChainId: 10901,

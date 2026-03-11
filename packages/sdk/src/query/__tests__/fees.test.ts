@@ -38,8 +38,18 @@ describe("fee query options", () => {
   test("fee queries are enabled by default when feeManagerAddress is defined", ({ signer }) => {
     const feeManagerAddress = "0x1111111111111111111111111111111111111111";
 
-    const shieldOptions = shieldFeeQueryOptions(signer, { feeManagerAddress });
-    const unshieldOptions = unshieldFeeQueryOptions(signer, { feeManagerAddress });
+    const shieldOptions = shieldFeeQueryOptions(signer, {
+      feeManagerAddress,
+      amount: 1n,
+      from: "0x2222222222222222222222222222222222222222",
+      to: "0x3333333333333333333333333333333333333333",
+    });
+    const unshieldOptions = unshieldFeeQueryOptions(signer, {
+      feeManagerAddress,
+      amount: 1n,
+      from: "0x2222222222222222222222222222222222222222",
+      to: "0x3333333333333333333333333333333333333333",
+    });
     const batchOptions = batchTransferFeeQueryOptions(signer, feeManagerAddress);
     const recipientOptions = feeRecipientQueryOptions(signer, feeManagerAddress);
 
@@ -49,12 +59,21 @@ describe("fee query options", () => {
     expect(recipientOptions.enabled).toBe(true);
   });
 
-  test("shield fee returns zero when amount is omitted", async ({ signer }) => {
+  test("shield fee query is disabled when amount is omitted", ({ signer }) => {
     const options = shieldFeeQueryOptions(signer, {
       feeManagerAddress: "0x1111111111111111111111111111111111111111",
     });
 
-    expect(await options.queryFn(mockQueryContext(options.queryKey))).toBe(0n);
+    expect(options.enabled).toBe(false);
+  });
+
+  test("unshield fee query is disabled when recipient params are omitted", ({ signer }) => {
+    const options = unshieldFeeQueryOptions(signer, {
+      feeManagerAddress: "0x1111111111111111111111111111111111111111",
+      amount: 12n,
+    });
+
+    expect(options.enabled).toBe(false);
   });
 
   test("unshield fee reads contract when params provided", async ({ signer }) => {
@@ -102,5 +121,20 @@ describe("fee query options", () => {
     expect(await recipientOptions.queryFn(mockQueryContext(recipientOptions.queryKey))).toBe(
       "0x4444444444444444444444444444444444444444",
     );
+  });
+
+  test("shield fee queryFn throws explicit invariant errors from context.queryKey", async ({
+    signer,
+  }) => {
+    const options = shieldFeeQueryOptions(signer, {
+      feeManagerAddress: "0x1111111111111111111111111111111111111111",
+      amount: 1n,
+      from: "0x2222222222222222222222222222222222222222",
+      to: "0x3333333333333333333333333333333333333333",
+    });
+
+    await expect(
+      options.queryFn(mockQueryContext(["zama.fees", { type: "shield" }] as const)),
+    ).rejects.toThrow("feeManagerAddress is required");
   });
 });

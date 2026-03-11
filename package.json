@@ -103,16 +103,16 @@
       "@walletconnect/ethereum-provider": "^2.23.7"
     }
   },
-  "packageManager": "pnpm@10.30.2",
-  "engines": {
-    "node": ">=22",
-    "pnpm": ">=10"
-  },
   "overrides": {
     "minimatch": "10.2.4"
   },
   "workspaces": [
     "packages/*",
     "tools/*"
-  ]
+  ],
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  }
 }
