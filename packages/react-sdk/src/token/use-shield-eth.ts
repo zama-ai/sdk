@@ -47,6 +47,11 @@ export function useShieldETH(
   return useMutation<TransactionResult, Error, ShieldETHParams, OptimisticMutateContext>({
     ...shieldETHMutationOptions(token),
     ...options,
-    ...optimisticBalanceCallbacks(config.optimistic, config.tokenAddress, queryClient, options),
+    ...optimisticBalanceCallbacks({
+      optimistic: config.optimistic,
+      tokenAddress: config.tokenAddress,
+      queryClient,
+      options,
+    }),
   });
 }

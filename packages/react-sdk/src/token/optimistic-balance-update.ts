@@ -52,14 +52,19 @@ export function rollbackOptimisticBalanceDelta(
  * Wraps the caller's `onMutate`/`onError`/`onSuccess`/`onSettled` with snapshot/rollback logic
  * and returns overrides ready to spread into `useMutation`.
  */
-export function optimisticBalanceCallbacks<TParams extends { amount: bigint }>(
-  optimistic: boolean | undefined,
-  tokenAddress: Address,
-  queryClient: QueryClient,
+export function optimisticBalanceCallbacks<TParams extends { amount: bigint }>({
+  optimistic,
+  tokenAddress,
+  queryClient,
+  options,
+}: {
+  optimistic: boolean | undefined;
+  tokenAddress: Address;
+  queryClient: QueryClient;
   options:
     | UseMutationOptions<TransactionResult, Error, TParams, OptimisticMutateContext>
-    | undefined,
-): Pick<
+    | undefined;
+}): Pick<
   UseMutationOptions<TransactionResult, Error, TParams, OptimisticMutateContext>,
   "onMutate" | "onError" | "onSuccess" | "onSettled"
 > {

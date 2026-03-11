@@ -48,6 +48,11 @@ export function useShield(
   return useMutation<TransactionResult, Error, ShieldParams, OptimisticMutateContext>({
     ...shieldMutationOptions(token),
     ...options,
-    ...optimisticBalanceCallbacks(config.optimistic, config.tokenAddress, queryClient, options),
+    ...optimisticBalanceCallbacks({
+      optimistic: config.optimistic,
+      tokenAddress: config.tokenAddress,
+      queryClient,
+      options,
+    }),
   });
 }
