@@ -1,0 +1,70 @@
+direction: right
+
+title: {
+  label: "Credential Encryption at Rest"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- Inputs ---
+signature: "EIP-712 Signature\n(raw bytes)" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+address: "Wallet Address\n(lowercase, as salt)" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+# --- KDF ---
+pbkdf2: "PBKDF2\n600k iterations · SHA-256" {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.font-size: 14
+}
+
+# --- Output ---
+aes-key: "AES-256-GCM Key\n(transient, never stored)" {
+  style.fill: "#FCE4EC"
+  style.stroke: "#C62828"
+  style.font-size: 14
+  style.bold: true
+}
+
+# --- Storage ---
+privkey: "FHE Private Key\n(plaintext)" {
+  style.fill: "#FFCDD2"
+  style.stroke: "#C62828"
+  style.font-size: 14
+}
+
+encrypted: "Encrypted Private Key\n(IV + ciphertext)" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+}
+
+storage: "Persistent Storage\n(IndexedDB / Memory)" {
+  shape: cylinder
+  style.fill: "#E8EAF6"
+  style.stroke: "#283593"
+  style.font-size: 14
+}
+
+# --- Connections ---
+signature -> pbkdf2: "input"
+address -> pbkdf2: "salt"
+pbkdf2 -> aes-key
+aes-key -> encrypted: "encrypt" {
+  style.stroke: "#388E3C"
+}
+privkey -> encrypted: "AES-GCM" {
+  style.stroke: "#388E3C"
+  style.stroke-dash: 5
+}
+encrypted -> storage: "persisted"
