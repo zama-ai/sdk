@@ -114,7 +114,7 @@ jobs:
             "Bash(git checkout*)"
             "Bash(git switch*)"
             "Bash(git branch*)"
-            "Bash(git push origin HEAD*)"
+            "Bash(git push origin HEAD)"
         env:
           HTTP_PROXY: http://127.0.0.1:3128
           HTTPS_PROXY: http://127.0.0.1:3128
