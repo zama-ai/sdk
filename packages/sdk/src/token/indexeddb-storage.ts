@@ -69,7 +69,11 @@ export class IndexedDBStorage implements GenericStorage {
       const tx = db.transaction(this.#storeName, mode);
       tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
       const request = fn(tx.objectStore(this.#storeName));
-      request.onsuccess = () => resolve(request.result);
+      if (mode === "readonly") {
+        request.onsuccess = () => resolve(request.result);
+      } else {
+        tx.oncomplete = () => resolve(request.result);
+      }
       request.onerror = () => reject(request.error);
     });
   }

@@ -702,38 +702,38 @@ describe("contract address extension", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
   });
 
-  it("persists extended credentials across instances", async ({
+  it("persists extended credentials across instances (simulated reload)", async ({
     relayer,
     signer,
     storage,
-    sessionStorage,
-    createCredentialManager,
+    createMockStorage,
   }) => {
     setupMocks(relayer, signer);
 
-    const manager1 = createCredentialManager({
+    const sharedSessionStorage = createMockStorage();
+    const manager1 = new CredentialsManager({
       relayer,
       signer,
       storage,
-      sessionStorage,
+      sessionStorage: sharedSessionStorage,
       keypairTTL: 86400,
     });
     await manager1.allow(TOKEN_A);
     await manager1.allow(TOKEN_A, TOKEN_B);
 
-    // New instance, same storage backends
-    const manager2 = createCredentialManager({
+    // Simulate page reload: fresh session storage, same persistent storage
+    const manager2 = new CredentialsManager({
       relayer,
       signer,
       storage,
-      sessionStorage,
+      sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
     await manager2.allow(TOKEN_A, TOKEN_B);
 
-    // No additional keypair or signature — all cached
+    // Keypair reused, but re-signed due to lost session
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    expect(signer.signTypedData).toHaveBeenCalledTimes(3);
   });
 
   it("extends incrementally: A → A,B → A,B,C", async ({ relayer, signer, credentialManager }) => {
@@ -940,7 +940,7 @@ describe("storeKey caching", () => {
 });
 
 describe("deriveKey caching", () => {
-  it("caches the PBKDF2 derived key across decrypt operations", async ({
+  it("caches the PBKDF2 derived key across decrypt and encrypt operations", async ({
     relayer,
     signer,
     storage,
@@ -972,11 +972,9 @@ describe("deriveKey caching", () => {
 
     const firstDeriveCalls = deriveKeySpy.mock.calls.length;
 
-    // Third call on same manager2 — should use cached derived key
-    // Need to add TOKEN_B to force re-sign (otherwise in-memory cache returns)
-    // Instead, revoke to force re-sign path which re-decrypts
-    await manager2.revoke();
-    await manager2.allow(TOKEN_A);
+    // Extend to TOKEN_B — forces decrypt (to read existing) + encrypt (to persist extended).
+    // Both #deriveKey calls use the same signature+address, so the cache should hit.
+    await manager2.allow(TOKEN_A, TOKEN_B);
 
     const secondDeriveCalls = deriveKeySpy.mock.calls.length;
 

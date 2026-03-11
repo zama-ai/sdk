@@ -6,7 +6,7 @@ import { SigningRejectedError, SigningFailedError } from "./errors";
 import { assertObject, assertString, assertArray, assertCondition, prefixHex } from "../utils";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, isAddress, type Address, type Hex } from "viem";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
 interface EncryptedData {
@@ -253,6 +253,7 @@ export class CredentialsManager {
   async revoke(...contractAddresses: Address[]): Promise<void> {
     const storeKey = await this.#storeKey();
     await this.#sessionStorage.delete(storeKey);
+    this.#clearCryptoCache();
     this.#emit({
       type: ZamaSDKEvents.CredentialsRevoked,
       ...(contractAddresses.length > 0 && { contractAddresses }),
@@ -280,11 +281,20 @@ export class CredentialsManager {
   async clear(): Promise<void> {
     const storeKey = await this.#storeKey();
     await this.#sessionStorage.delete(storeKey);
+    this.#clearCryptoCache();
     try {
       await this.#storage.delete(storeKey);
     } catch {
       // Best effort
     }
+  }
+
+  /** Clear cached cryptographic material (store key, derived key). */
+  #clearCryptoCache(): void {
+    this.#cachedStoreKey = null;
+    this.#cachedStoreKeyIdentity = null;
+    this.#cachedDerivedKey = null;
+    this.#cachedDerivedKeyIdentity = null;
   }
 
   /** Returns a truncated SHA-256 hash of the address and chainId to avoid leaking it in storage. */
@@ -340,6 +350,12 @@ export class CredentialsManager {
     assertObject(data, "Stored credentials");
     assertString(data.publicKey, "credentials.publicKey");
     assertArray(data.contractAddresses, "credentials.contractAddresses");
+    for (const addr of data.contractAddresses) {
+      assertCondition(
+        typeof addr === "string" && isAddress(addr, { strict: false }),
+        `Expected each contractAddress to be a valid hex address`,
+      );
+    }
     assertObject(data.encryptedPrivateKey, "credentials.encryptedPrivateKey");
     assertString(data.encryptedPrivateKey.iv, "encryptedPrivateKey.iv");
     assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
@@ -362,8 +378,8 @@ export class CredentialsManager {
 
   /** Check if the signed address set covers all required addresses. */
   #coversContracts(signedAddresses: Address[], requiredContracts: Address[]): boolean {
-    const signedSet = new Set(signedAddresses.map((a) => a.toLowerCase()));
-    return requiredContracts.every((addr) => signedSet.has(addr.toLowerCase()));
+    const signed = new Set(signedAddresses.map((a) => a.toLowerCase()));
+    return requiredContracts.every((addr) => signed.has(addr.toLowerCase()));
   }
 
   async #sign(encrypted: EncryptedCredentials): Promise<Hex> {
@@ -386,8 +402,11 @@ export class CredentialsManager {
 
   /** Merge two contract address lists into a deduplicated sorted array. */
   #mergeContracts(existing: Address[], incoming: Address[]): Address[] {
-    const set = new Set([...existing, ...incoming].map(getAddress));
-    return [...set].sort();
+    const seen = new Map<string, Address>();
+    for (const addr of [...existing, ...incoming]) {
+      seen.set(addr.toLowerCase(), addr);
+    }
+    return [...seen.values()].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
   }
 
   /**
