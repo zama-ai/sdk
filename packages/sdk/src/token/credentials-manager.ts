@@ -70,6 +70,10 @@ export class CredentialsManager {
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
+  #cachedStoreKey: string | null = null;
+  #cachedStoreKeyIdentity: string | null = null;
+  #cachedDerivedKey: CryptoKey | null = null;
+  #cachedDerivedKeyIdentity: string | null = null;
 
   static async computeStoreKey(address: Address, chainId: number): Promise<string> {
     const hash = await crypto.subtle.digest(
@@ -145,7 +149,7 @@ export class CredentialsManager {
           }
         }
         // No session signature or TTL expired — need to re-sign
-        if (this.#isValidWithoutDecrypt(encrypted, contractAddresses)) {
+        if (this.#isValid(encrypted, contractAddresses)) {
           const signature = await this.#sign(encrypted);
           await this.#setSessionEntry(storeKey, signature);
           const creds = await this.#decryptCredentials(encrypted, signature);
@@ -207,7 +211,7 @@ export class CredentialsManager {
       this.#assertEncryptedCredentials(encrypted);
 
       const requiredContracts = contractAddress ? [contractAddress] : [];
-      return !this.#isValidWithoutDecrypt(encrypted, requiredContracts);
+      return !this.#isValid(encrypted, requiredContracts);
     } catch {
       return false;
     }
@@ -269,7 +273,14 @@ export class CredentialsManager {
   async #storeKey(): Promise<string> {
     const address = await this.#signer.getAddress();
     const chainId = await this.#signer.getChainId();
-    return CredentialsManager.computeStoreKey(address, chainId);
+    const identity = `${address}:${chainId}`;
+    if (this.#cachedStoreKey && this.#cachedStoreKeyIdentity === identity) {
+      return this.#cachedStoreKey;
+    }
+    const key = await CredentialsManager.computeStoreKey(address, chainId);
+    this.#cachedStoreKeyIdentity = identity;
+    this.#cachedStoreKey = key;
+    return key;
   }
 
   /** Check if a session entry has expired based on its recorded TTL. */
@@ -316,20 +327,15 @@ export class CredentialsManager {
     assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
   }
 
-  #isValid(creds: StoredCredentials, requiredContracts: Address[]): boolean {
+  #isValid(
+    creds: Pick<StoredCredentials, "startTimestamp" | "durationDays" | "contractAddresses">,
+    requiredContracts: Address[],
+  ): boolean {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const expiresAt = creds.startTimestamp + creds.durationDays * 86400;
     if (nowSeconds >= expiresAt) return false;
 
     const signedSet = new Set(creds.contractAddresses.map(getAddress));
-    return requiredContracts.every((addr) => signedSet.has(getAddress(addr)));
-  }
-
-  #isValidWithoutDecrypt(encrypted: EncryptedCredentials, requiredContracts: Address[]): boolean {
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    const expiresAt = encrypted.startTimestamp + encrypted.durationDays * 86400;
-    if (nowSeconds >= expiresAt) return false;
-    const signedSet = new Set(encrypted.contractAddresses.map(getAddress));
     return requiredContracts.every((addr) => signedSet.has(getAddress(addr)));
   }
 
@@ -435,6 +441,11 @@ export class CredentialsManager {
    * meaningful encryption protection for the stored private key.
    */
   async #deriveKey(signature: Hex, address: Address): Promise<CryptoKey> {
+    const identity = `${signature}:${address}`;
+    if (this.#cachedDerivedKey && this.#cachedDerivedKeyIdentity === identity) {
+      return this.#cachedDerivedKey;
+    }
+
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
       "raw",
@@ -444,7 +455,7 @@ export class CredentialsManager {
       ["deriveKey"],
     );
 
-    return crypto.subtle.deriveKey(
+    const key = await crypto.subtle.deriveKey(
       {
         name: "PBKDF2",
         salt: encoder.encode(address),
@@ -456,6 +467,10 @@ export class CredentialsManager {
       false,
       ["encrypt", "decrypt"],
     );
+
+    this.#cachedDerivedKeyIdentity = identity;
+    this.#cachedDerivedKey = key;
+    return key;
   }
 
   /** Encrypts a string using AES-GCM with a key derived from the wallet signature. */

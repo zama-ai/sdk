@@ -601,6 +601,281 @@ describe("session allow/revoke", () => {
   });
 });
 
+describe("storeKey caching", () => {
+  it("caches the SHA-256 store key across multiple allow() calls", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+    const digestSpy = vi.spyOn(crypto.subtle, "digest");
+
+    await credentialManager.allow(TOKEN_A);
+    const digestCallsAfterFirst = digestSpy.mock.calls.filter(
+      ([algo]) => algo === "SHA-256",
+    ).length;
+
+    await credentialManager.allow(TOKEN_A);
+    const digestCallsAfterSecond = digestSpy.mock.calls.filter(
+      ([algo]) => algo === "SHA-256",
+    ).length;
+
+    // Second allow() should not trigger another SHA-256 digest for the store key
+    expect(digestCallsAfterSecond).toBe(digestCallsAfterFirst);
+
+    digestSpy.mockRestore();
+  });
+
+  it("reuses cached store key for isExpired() after allow()", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+
+    // Reset call counts to measure only isExpired() calls
+    vi.mocked(signer.getAddress).mockClear();
+    vi.mocked(signer.getChainId).mockClear();
+    const digestSpy = vi.spyOn(crypto.subtle, "digest");
+
+    await credentialManager.isExpired();
+
+    // getAddress/getChainId are still called (to build identity string for comparison),
+    // but SHA-256 digest should NOT be called again because the cache hits
+    const sha256Calls = digestSpy.mock.calls.filter(([algo]) => algo === "SHA-256").length;
+    expect(sha256Calls).toBe(0);
+
+    digestSpy.mockRestore();
+  });
+
+  it("invalidates store key cache when signer address changes", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    // Change the signer address
+    vi.mocked(signer.getAddress).mockResolvedValue(
+      "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address,
+    );
+
+    const digestSpy = vi.spyOn(crypto.subtle, "digest");
+
+    await manager.allow(TOKEN_A);
+
+    // Should have recomputed the store key (new SHA-256 call)
+    const sha256Calls = digestSpy.mock.calls.filter(([algo]) => algo === "SHA-256").length;
+    expect(sha256Calls).toBeGreaterThanOrEqual(1);
+
+    digestSpy.mockRestore();
+  });
+
+  it("invalidates store key cache when chain ID changes", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    // Change the chain ID
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
+
+    const digestSpy = vi.spyOn(crypto.subtle, "digest");
+
+    await manager.allow(TOKEN_A);
+
+    const sha256Calls = digestSpy.mock.calls.filter(([algo]) => algo === "SHA-256").length;
+    expect(sha256Calls).toBeGreaterThanOrEqual(1);
+
+    digestSpy.mockRestore();
+  });
+});
+
+describe("deriveKey caching", () => {
+  it("caches the PBKDF2 derived key across decrypt operations", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    // First call creates and encrypts credentials (deriveKey called for encrypt)
+    await manager.allow(TOKEN_A);
+
+    const deriveKeySpy = vi.spyOn(crypto.subtle, "deriveKey");
+
+    // Simulate reload: new manager reads from storage and decrypts
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    await manager2.allow(TOKEN_A);
+
+    const firstDeriveCalls = deriveKeySpy.mock.calls.length;
+
+    // Third call on same manager2 — should use cached derived key
+    // Need to add TOKEN_B to force re-sign (otherwise in-memory cache returns)
+    // Instead, revoke to force re-sign path which re-decrypts
+    await manager2.revoke();
+    await manager2.allow(TOKEN_A);
+
+    const secondDeriveCalls = deriveKeySpy.mock.calls.length;
+
+    // deriveKey should NOT have been called again because signature+address are the same
+    expect(secondDeriveCalls).toBe(firstDeriveCalls);
+
+    deriveKeySpy.mockRestore();
+  });
+
+  it("recomputes derived key when signature changes", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    const deriveKeySpy = vi.spyOn(crypto.subtle, "deriveKey");
+
+    // Change signature for re-sign
+    vi.mocked(signer.signTypedData).mockResolvedValue("0xnewsig999");
+
+    // New manager forces re-sign with new signature
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    // This will fail to decrypt with the wrong signature, causing regeneration
+    // which triggers a new deriveKey call for encryption
+    await manager2.allow(TOKEN_A);
+
+    expect(deriveKeySpy).toHaveBeenCalled();
+
+    deriveKeySpy.mockRestore();
+  });
+});
+
+describe("unified #isValid", () => {
+  it("isExpired validates EncryptedCredentials from storage (without decryption)", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    // New manager without session — isExpired reads EncryptedCredentials directly
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    // Should report not expired (credentials are fresh)
+    expect(await manager2.isExpired()).toBe(false);
+    // Should report expired for uncovered contract
+    expect(await manager2.isExpired(TOKEN_B)).toBe(true);
+  });
+
+  it("isExpired handles expired EncryptedCredentials without needing to decrypt", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    const storeKey = await computeStoreKey(await signer.getAddress());
+
+    await manager.allow(TOKEN_A);
+
+    // Tamper stored data to simulate expiration
+    const stored = await storage.get(storeKey);
+    const parsed = { ...(stored as Record<string, unknown>) };
+    parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
+    await storage.set(storeKey, parsed);
+
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    // No decrypt calls should be needed — #isValid works on EncryptedCredentials directly
+    const decryptSpy = vi.spyOn(crypto.subtle, "decrypt");
+    expect(await manager2.isExpired()).toBe(true);
+    expect(decryptSpy).not.toHaveBeenCalled();
+
+    decryptSpy.mockRestore();
+  });
+});
+
 describe("KeypairExpiredError", () => {
   it("has the correct error code", () => {
     const error = new KeypairExpiredError("credentials expired");

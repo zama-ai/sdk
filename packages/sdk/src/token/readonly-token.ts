@@ -21,6 +21,7 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { getAddress, type Address } from "viem";
+import { toError } from "../utils";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -129,53 +130,7 @@ export class ReadonlyToken {
   async balanceOf(owner?: Address): Promise<bigint> {
     const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
-
-    if (this.isZeroHandle(handle)) return BigInt(0);
-
-    // Check persistent cache first.
-    const cached = await loadCachedBalance({
-      storage: this.#storage,
-      tokenAddress: this.address,
-      owner: ownerAddress,
-      handle,
-    });
-    if (cached !== null) return cached;
-
-    const creds = await this.credentials.allow(this.address);
-
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const result = await this.sdk.userDecrypt({
-        handles: [handle],
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress: ownerAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
-      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
-
-      const value = (result[handle] as bigint | undefined) ?? BigInt(0);
-      await saveCachedBalance({
-        storage: this.#storage,
-        tokenAddress: this.address,
-        owner: ownerAddress,
-        handle,
-        value,
-      });
-      return value;
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-      });
-      throw wrapDecryptError(error, "Failed to decrypt balance");
-    }
+    return this.decryptBalance(handle, ownerAddress);
   }
 
   /**
@@ -289,23 +244,26 @@ export class ReadonlyToken {
     const errors: Array<{ address: Address; error: Error }> = [];
     const decryptFns: Array<() => Promise<void>> = [];
 
+    // Parallel cache lookups — avoids sequential IDB round-trips.
+    const cachedValues = await Promise.all(
+      tokens.map((token, i) => {
+        const handle = resolvedHandles[i]!;
+        if (token.isZeroHandle(handle)) return Promise.resolve(BigInt(0));
+        return loadCachedBalance({
+          storage: tokenStorage,
+          tokenAddress: token.address,
+          owner: signerAddress,
+          handle,
+        });
+      }),
+    );
+
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i]!;
       const handle = resolvedHandles[i]!;
+      const cached = cachedValues[i];
 
-      if (token.isZeroHandle(handle)) {
-        results.set(token.address, BigInt(0));
-        continue;
-      }
-
-      // Check persistent cache — avoids re-decryption after page reload.
-      const cached = await loadCachedBalance({
-        storage: tokenStorage,
-        tokenAddress: token.address,
-        owner: signerAddress,
-        handle,
-      });
-      if (cached !== null) {
+      if (cached !== null && cached !== undefined) {
         results.set(token.address, cached);
         continue;
       }
@@ -648,11 +606,6 @@ export class ReadonlyToken {
  * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
  * other HTTP errors, or the generic DecryptionFailedError as fallback).
  */
-/** Coerce an unknown caught value to an Error instance. */
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
-}
-
 function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   if (error instanceof NoCiphertextError || error instanceof RelayerRequestFailedError) {
     return error;
