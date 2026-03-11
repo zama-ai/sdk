@@ -1,0 +1,83 @@
+direction: down
+
+title: {
+  label: "Two-Phase Balance Polling"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- Phase 1 ---
+phase1: "Phase 1 — Poll Encrypted Handle (cheap)" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+
+  timer: "refetchInterval\n(default 10s)" {
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+  }
+  rpc: "readContract\n(eth_call)" {
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+  }
+  compare: "Compare handle\nto last known" {
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+  }
+
+  timer -> rpc: "confidentialBalanceOf"
+  rpc -> compare: "bytes32 handle"
+}
+
+# --- Decision ---
+same: "Handle unchanged\n→ return cached balance\n(no network call)" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+}
+
+# --- Phase 2 ---
+phase2: "Phase 2 — Decrypt via Relayer (expensive)" {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.font-size: 14
+
+  send: "Send handle + credentials\nto Relayer KMS" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+  }
+  reencrypt: "KMS re-encrypts\nunder user's public key" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+  }
+  decrypt: "WASM decrypts locally\nwith FHE private key" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+  }
+  cache: "Cache plaintext\n(staleTime: Infinity)" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+  }
+
+  send -> reencrypt
+  reencrypt -> decrypt
+  decrypt -> cache
+}
+
+result: "Return decrypted balance\n→ UI updates" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+  style.bold: true
+}
+
+# --- Connections ---
+phase1.compare -> same: "same" {
+  style.stroke: "#388E3C"
+}
+phase1.compare -> phase2: "changed" {
+  style.stroke: "#6A1B9A"
+}
+phase2.cache -> result
