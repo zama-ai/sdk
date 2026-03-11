@@ -10,17 +10,20 @@
  * Usage: node scripts/docs/generate-diagrams.mjs
  */
 
-import { readFileSync, writeFileSync, copyFileSync, readdirSync, existsSync } from "node:fs";
-import { join, basename, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { D2 } from "@terrastruct/d2";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..");
 const DIAGRAMS_DIR = join(REPO_ROOT, "docs", "diagrams");
 const GITBOOK_IMAGES = join(REPO_ROOT, "docs", "gitbook", "src", "images");
 
-const d2Files = readdirSync(DIAGRAMS_DIR).filter((f) => f.endsWith(".d2"));
+const IN = DIAGRAMS_DIR;
+const OUT = GITBOOK_IMAGES;
+
+const d2Files = readdirSync(IN).filter((f) => f.endsWith(".d2"));
 
 if (d2Files.length === 0) {
   console.log("No .d2 files found in docs/diagrams/");
@@ -31,8 +34,8 @@ const d2 = new D2();
 let errors = 0;
 
 for (const file of d2Files) {
-  const src = join(DIAGRAMS_DIR, file);
-  const out = join(DIAGRAMS_DIR, file.replace(/\.d2$/, ".svg"));
+  const src = join(IN, file);
+  const out = join(OUT, file.replace(/\.d2$/, ".svg"));
   const outName = basename(out);
 
   try {
@@ -47,19 +50,13 @@ for (const file of d2Files) {
   }
 }
 
-// Copy SVGs to gitbook images
-if (existsSync(GITBOOK_IMAGES)) {
-  for (const file of readdirSync(DIAGRAMS_DIR).filter((f) => f.endsWith(".svg"))) {
-    copyFileSync(join(DIAGRAMS_DIR, file), join(GITBOOK_IMAGES, file));
-  }
-  console.log("Copied SVGs to docs/gitbook/src/images/");
-}
-
 // Summary
-const svgCount = readdirSync(DIAGRAMS_DIR).filter((f) => f.endsWith(".svg")).length;
-console.log(`\nGenerated ${svgCount} SVG files in docs/diagrams/`);
+const svgCount = readdirSync(OUT).filter((f) => f.endsWith(".svg")).length;
+console.log(`\nGenerated ${svgCount} SVG files in ${OUT.toString()}`);
 
 if (errors) {
   console.error("Some diagrams failed to render. See errors above.");
   process.exit(1);
 }
+
+process.exit(0);
