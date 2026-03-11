@@ -386,12 +386,8 @@ export class CredentialsManager {
 
   /** Merge two contract address lists into a deduplicated sorted array. */
   #mergeContracts(existing: Address[], incoming: Address[]): Address[] {
-    const map = new Map<string, Address>();
-    for (const addr of [...existing, ...incoming]) {
-      const key = addr.toLowerCase();
-      if (!map.has(key)) map.set(key, getAddress(addr));
-    }
-    return [...map.values()].sort();
+    const set = new Set([...existing, ...incoming].map(getAddress));
+    return [...set].sort();
   }
 
   /**
