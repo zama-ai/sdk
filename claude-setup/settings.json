@@ -1,4 +1,15 @@
 {
+  "extraKnownMarketplaces": {
+    "zama-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "zama-ai/zama-marketplace"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "zama-developer@zama-marketplace": true
+  },
   "permissions": {
     "allow": [
       "Bash(git diff:*)",
