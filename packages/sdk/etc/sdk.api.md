@@ -7240,6 +7240,7 @@ export class CredentialsManager {
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
     isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
+    get keypairTTL(): number;
     revoke(...contractAddresses: Address[]): Promise<void>;
 }
 
