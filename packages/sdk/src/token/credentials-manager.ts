@@ -378,8 +378,8 @@ export class CredentialsManager {
 
   /** Check if the signed address set covers all required addresses. */
   #coversContracts(signedAddresses: Address[], requiredContracts: Address[]): boolean {
-    const signed = new Set(signedAddresses.map((a) => a.toLowerCase()));
-    return requiredContracts.every((addr) => signed.has(addr.toLowerCase()));
+    const required = new Set(requiredContracts.map((a) => a.toLowerCase()));
+    return required.isSubsetOf(new Set(signedAddresses.map((a) => a.toLowerCase())));
   }
 
   async #sign(encrypted: EncryptedCredentials): Promise<Hex> {
@@ -402,11 +402,7 @@ export class CredentialsManager {
 
   /** Merge two contract address lists into a deduplicated sorted array. */
   #mergeContracts(existing: Address[], incoming: Address[]): Address[] {
-    const seen = new Map<string, Address>();
-    for (const addr of [...existing, ...incoming]) {
-      seen.set(addr.toLowerCase(), addr);
-    }
-    return [...seen.values()].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    return [...new Set([...existing, ...incoming].map((a) => a.toLowerCase() as Address))].sort();
   }
 
   /**
