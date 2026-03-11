@@ -93,28 +93,16 @@ export function useConfidentialTransfer(
         if (wrappedContext) {
           rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
         }
-        // callerContext is the user's original onMutate return — cast required by wrapper pattern
-        options?.onError?.(
-          error,
-          variables,
-          callerContext as OptimisticMutateContext | undefined,
-          context,
-        );
+        options?.onError?.(error, variables, callerContext, context);
       },
       onSuccess: (data, variables, rawContext, context) => {
         const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-        options?.onSuccess?.(data, variables, callerContext as OptimisticMutateContext, context);
+        options?.onSuccess?.(data, variables, callerContext!, context);
         invalidateAfterTransfer(context.client, config.tokenAddress);
       },
       onSettled: (data, error, variables, rawContext, context) => {
         const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-        options?.onSettled?.(
-          data,
-          error,
-          variables,
-          callerContext as OptimisticMutateContext | undefined,
-          context,
-        );
+        options?.onSettled?.(data, error, variables, callerContext, context);
       },
     },
   );
