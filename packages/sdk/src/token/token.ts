@@ -33,11 +33,7 @@ import type {
   TransferCallbacks,
   UnshieldCallbacks,
 } from "./token.types";
-
-/** Coerce an unknown caught value to an Error instance. */
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
-}
+import { toError } from "../utils";
 
 /**
  * ERC-20-like interface for a single confidential token.

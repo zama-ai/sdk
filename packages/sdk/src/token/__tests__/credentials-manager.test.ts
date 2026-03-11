@@ -6,22 +6,11 @@ import { KeypairExpiredError } from "../errors";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { GenericSigner } from "../token.types";
 import { ZamaSDKEvents } from "../../events";
+import { getAddress } from "viem";
 import type { Address } from "viem";
 
 const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const TOKEN_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
-
-/** Compute the truncated SHA-256 store key used by CredentialManager. */
-async function computeStoreKey(address: Address, chainId: number = 31337): Promise<string> {
-  const hash = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(`${address}:${chainId}`),
-  );
-  const hex = Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hex.slice(0, 32);
-}
 
 /** Override fixture mock return values to match test expectations. */
 function setupMocks(relayer: RelayerSDK, signer: GenericSigner) {
@@ -59,7 +48,7 @@ describe("CredentialsManager", () => {
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
   });
 
-  it("re-signs when new contract not in signed list", async ({
+  it("re-signs when new contract not in signed list but reuses keypair", async ({
     relayer,
     signer,
     credentialManager,
@@ -67,10 +56,16 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
 
     await credentialManager.allow(TOKEN_A);
-    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const creds = await credentialManager.allow(TOKEN_A, TOKEN_B);
 
-    expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
+    // Keypair is reused — only one generation
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // Re-signed with the extended address set
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    // Merged contract addresses include both tokens (checksummed by getAddress)
+    const normalized = creds.contractAddresses.map((a: string) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
   }, 30000);
 
   it("persists credentials to store with hashed key", async ({
@@ -80,7 +75,7 @@ describe("CredentialsManager", () => {
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await credentialManager.allow(TOKEN_A);
 
@@ -154,7 +149,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // Create credentials to get valid encrypted data
     await manager.allow(TOKEN_A);
@@ -191,7 +186,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // First call creates credentials — which get stored under the hashed key
     await manager.allow(TOKEN_A);
@@ -219,7 +214,7 @@ describe("CredentialsManager", () => {
 
   it("clears credentials", async ({ relayer, signer, storage, credentialManager }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await credentialManager.allow(TOKEN_A);
     await credentialManager.clear();
@@ -320,7 +315,7 @@ describe("CredentialsManager", () => {
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // Write garbage to the store
     await storage.set(storeKey, "not-valid-json{{{{");
@@ -343,7 +338,7 @@ describe("CredentialsManager", () => {
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     // Write corrupted data to trigger the catch path
     await storage.set(storeKey, "corrupted");
@@ -375,7 +370,7 @@ describe("CredentialsManager", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await manager.allow(TOKEN_A);
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
@@ -433,7 +428,7 @@ describe("CredentialsManager", () => {
         sessionStorage: createMockStorage(),
         keypairTTL: 86400,
       });
-      const storeKey = await computeStoreKey(await signer.getAddress());
+      const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
       await manager.allow(TOKEN_A);
 
@@ -487,7 +482,7 @@ describe("CredentialsManager", () => {
       credentialManager,
     }) => {
       setupMocks(relayer, signer);
-      const storeKey = await computeStoreKey(await signer.getAddress());
+      const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
       await storage.set(storeKey, "corrupted-json{{{");
       expect(await credentialManager.isExpired()).toBe(false);
     });
@@ -513,7 +508,7 @@ describe("CredentialsManager", () => {
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
-    const storeKey = await computeStoreKey(await signer.getAddress());
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
 
     await credentialManager.allow(TOKEN_A);
     expect(await credentialManager.isAllowed()).toBe(true);
@@ -598,6 +593,567 @@ describe("session allow/revoke", () => {
     await manager2.revoke();
 
     expect(events).toContain(ZamaSDKEvents.CredentialsRevoked);
+  });
+});
+
+describe("contract address extension", () => {
+  const TOKEN_C = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+
+  it("extends contracts with active session, reusing keypair", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const first = await credentialManager.allow(TOKEN_A);
+    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    // Same keypair
+    expect(extended.publicKey).toBe(first.publicKey);
+    expect(extended.privateKey).toBe(first.privateKey);
+    // Merged addresses
+    const normalized = extended.contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
+  });
+
+  it("extends contracts after revoke (no session path)", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.revoke();
+    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    // Keypair reused — only one generation
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // Original sign + old-address sign for decrypt + merged-address sign for extend
+    expect(signer.signTypedData).toHaveBeenCalledTimes(3);
+    const normalized = extended.contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
+  });
+
+  it("extends contracts after page reload (new session storage, no session)", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const manager1 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    await manager1.allow(TOKEN_A);
+
+    // Simulate reload: new session storage, same persistent storage
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    const extended = await manager2.allow(TOKEN_A, TOKEN_B);
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // Original sign + old-address sign for decrypt + merged-address sign for extend
+    expect(signer.signTypedData).toHaveBeenCalledTimes(3);
+    const normalized = extended.contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
+  });
+
+  it("caches extended credentials — third call with same set does not re-sign", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // Only 2 signatures: initial + extend. Third call is cached.
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+  });
+
+  it("persists extended credentials across instances (simulated reload)", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const sharedSessionStorage = createMockStorage();
+    const manager1 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: sharedSessionStorage,
+      keypairTTL: 86400,
+    });
+    await manager1.allow(TOKEN_A);
+    await manager1.allow(TOKEN_A, TOKEN_B);
+
+    // Simulate page reload: fresh session storage, same persistent storage
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    await manager2.allow(TOKEN_A, TOKEN_B);
+
+    // Keypair reused, but re-signed due to lost session
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    expect(signer.signTypedData).toHaveBeenCalledTimes(3);
+  });
+
+  it("extends incrementally: A → A,B → A,B,C", async ({ relayer, signer, credentialManager }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const final = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // 3 signatures: initial + extend to B + extend to C
+    expect(signer.signTypedData).toHaveBeenCalledTimes(3);
+    const normalized = final.contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
+    expect(normalized).toContain(getAddress(TOKEN_C));
+  });
+
+  it("subset of already-allowed contracts does not re-sign", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    await credentialManager.allow(TOKEN_A); // subset
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  it("fully regenerates when credentials are time-expired even with missing contracts", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    const storeKey = await CredentialsManager.computeStoreKey(
+      await signer.getAddress(),
+      await signer.getChainId(),
+    );
+
+    await manager.allow(TOKEN_A);
+
+    // Tamper stored data to simulate time expiration
+    const stored = await storage.get(storeKey);
+    const parsed = { ...(stored as Record<string, unknown>) };
+    parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
+    await storage.set(storeKey, parsed);
+
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    await manager2.allow(TOKEN_A, TOKEN_B);
+
+    // Time-expired → full regeneration, not extension
+    expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
+  }, 30000);
+
+  it("EIP-712 is created with the merged contract set", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    // Second createEIP712 call should include both tokens
+    const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1]!;
+    const contractAddresses = secondCall[1] as Address[];
+    const normalized = contractAddresses.map((a) => getAddress(a));
+    expect(normalized).toContain(getAddress(TOKEN_A));
+    expect(normalized).toContain(getAddress(TOKEN_B));
+  });
+
+  it("concurrent extensions don't drop contract addresses", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+
+    // Launch two extensions concurrently with different contracts
+    const [resultB, resultC] = await Promise.all([
+      credentialManager.allow(TOKEN_A, TOKEN_B),
+      credentialManager.allow(TOKEN_A, TOKEN_C),
+    ]);
+
+    // The last result should cover all three contracts (no address dropped)
+    const finalContracts = resultC.contractAddresses.map((a) => getAddress(a));
+    expect(finalContracts).toContain(getAddress(TOKEN_A));
+    expect(finalContracts).toContain(getAddress(TOKEN_B));
+    expect(finalContracts).toContain(getAddress(TOKEN_C));
+
+    // First concurrent result covers at least A and B
+    const firstContracts = resultB.contractAddresses.map((a) => getAddress(a));
+    expect(firstContracts).toContain(getAddress(TOKEN_A));
+    expect(firstContracts).toContain(getAddress(TOKEN_B));
+  });
+
+  it("persists ciphertext before session signature during extension", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const sessionStorage = createMockStorage();
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 86400,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    // After the initial allow(), record the order of set() calls during
+    // the extension. storage.set = ciphertext write, sessionStorage.set = session write.
+    const writeOrder: string[] = [];
+
+    storage.set = vi.fn(async () => {
+      writeOrder.push("ciphertext");
+    });
+    sessionStorage.set = vi.fn(async () => {
+      writeOrder.push("session");
+    });
+
+    await manager.allow(TOKEN_A, TOKEN_B);
+
+    // Extension should write ciphertext before updating the session signature
+    expect(writeOrder).toEqual(["ciphertext", "session"]);
+  });
+});
+
+describe("storeKey caching", () => {
+  it("caches the store key across multiple allow() calls", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
+
+    await credentialManager.allow(TOKEN_A);
+    expect(computeSpy).toHaveBeenCalledOnce();
+
+    await credentialManager.allow(TOKEN_A);
+    // Second allow() should not recompute the store key
+    expect(computeSpy).toHaveBeenCalledOnce();
+
+    computeSpy.mockRestore();
+  });
+
+  it("reuses cached store key for isExpired() after allow()", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
+
+    await credentialManager.allow(TOKEN_A);
+    expect(computeSpy).toHaveBeenCalledOnce();
+
+    await credentialManager.isExpired();
+    // isExpired() should reuse the cached store key
+    expect(computeSpy).toHaveBeenCalledOnce();
+
+    computeSpy.mockRestore();
+  });
+
+  it("invalidates store key cache when signer address changes", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
+
+    await manager.allow(TOKEN_A);
+    expect(computeSpy).toHaveBeenCalledOnce();
+
+    // Change the signer address
+    vi.mocked(signer.getAddress).mockResolvedValue(
+      "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address,
+    );
+
+    await manager.allow(TOKEN_A);
+    // Should have recomputed the store key for the new address
+    expect(computeSpy).toHaveBeenCalledTimes(2);
+
+    computeSpy.mockRestore();
+  });
+
+  it("invalidates store key cache when chain ID changes", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
+
+    await manager.allow(TOKEN_A);
+    expect(computeSpy).toHaveBeenCalledOnce();
+
+    // Change the chain ID
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
+
+    await manager.allow(TOKEN_A);
+    expect(computeSpy).toHaveBeenCalledTimes(2);
+
+    computeSpy.mockRestore();
+  });
+
+  it("reuses the same store key when signer address casing changes", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
+
+    await manager.allow(TOKEN_A);
+    expect(computeSpy).toHaveBeenCalledOnce();
+
+    vi.mocked(signer.getAddress).mockResolvedValue(
+      "0x2222222222222222222222222222222222ABCDEF" as Address,
+    );
+
+    await manager.allow(TOKEN_A);
+    // getAddress normalization means casing change doesn't invalidate cache
+    expect(computeSpy).toHaveBeenCalledOnce();
+
+    computeSpy.mockRestore();
+  });
+});
+
+describe("deriveKey caching", () => {
+  it("does not re-derive the encryption key when extending contracts with same signature", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    // First call creates and encrypts credentials
+    await manager.allow(TOKEN_A);
+
+    // Simulate reload: new manager reads from storage and decrypts
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    await manager2.allow(TOKEN_A);
+
+    const deriveKeySpy = vi.spyOn(crypto.subtle, "deriveKey");
+
+    // Extend to TOKEN_B — the signature (mock-deterministic "0xsig789") and
+    // address haven't changed, so the cached derived key should be reused.
+    await manager2.allow(TOKEN_A, TOKEN_B);
+
+    expect(deriveKeySpy).not.toHaveBeenCalled();
+
+    deriveKeySpy.mockRestore();
+  });
+
+  it("re-derives the encryption key when signature changes", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    const deriveKeySpy = vi.spyOn(crypto.subtle, "deriveKey");
+
+    // Change signature — simulates a wallet that produces a different sig
+    vi.mocked(signer.signTypedData).mockResolvedValue("0xnewsig999");
+
+    // New manager forces re-sign with new signature, which fails to decrypt
+    // the stored credentials (wrong key), causing full regeneration
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    await manager2.allow(TOKEN_A);
+
+    expect(deriveKeySpy).toHaveBeenCalled();
+
+    deriveKeySpy.mockRestore();
+  });
+});
+
+describe("unified #isValid", () => {
+  it("isExpired validates EncryptedCredentials from storage (without decryption)", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    // New manager without session — isExpired reads EncryptedCredentials directly
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    // Should report not expired (credentials are fresh)
+    expect(await manager2.isExpired()).toBe(false);
+    // Should report expired for uncovered contract
+    expect(await manager2.isExpired(TOKEN_B)).toBe(true);
+  });
+
+  it("isExpired handles expired EncryptedCredentials without needing to decrypt", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
+
+    await manager.allow(TOKEN_A);
+
+    // Tamper stored data to simulate expiration
+    const stored = await storage.get(storeKey);
+    const parsed = { ...(stored as Record<string, unknown>) };
+    parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
+    await storage.set(storeKey, parsed);
+
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    // No decrypt calls should be needed — #isValid works on EncryptedCredentials directly
+    const decryptSpy = vi.spyOn(crypto.subtle, "decrypt");
+    expect(await manager2.isExpired()).toBe(true);
+    expect(decryptSpy).not.toHaveBeenCalled();
+
+    decryptSpy.mockRestore();
   });
 });
 
