@@ -862,14 +862,11 @@ describe("contract address extension", () => {
     // After the initial allow(), record the order of set() calls during
     // the extension. storage.set = ciphertext write, sessionStorage.set = session write.
     const writeOrder: string[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const storageMock = storage as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sessionMock = sessionStorage as any;
-    storageMock.set = vi.fn(async () => {
+
+    storage.set = vi.fn(async () => {
       writeOrder.push("ciphertext");
     });
-    sessionMock.set = vi.fn(async () => {
+    sessionStorage.set = vi.fn(async () => {
       writeOrder.push("session");
     });
 
