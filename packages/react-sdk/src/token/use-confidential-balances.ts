@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery } from "../utils/query";
+import { mergeEnabled, useQuery } from "../utils/query";
 import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address, Handle } from "@zama-fhe/sdk";
 import {
@@ -77,10 +77,9 @@ export function useConfidentialBalances(
     owner,
     pollingInterval: handleRefetchInterval,
   });
-  const handlesFactoryEnabled = baseHandlesQueryOptions.enabled ?? true;
   const handlesQuery = useQuery<Handle[]>({
     ...baseHandlesQueryOptions,
-    enabled: handlesFactoryEnabled && (userEnabled ?? true),
+    enabled: mergeEnabled(baseHandlesQueryOptions.enabled, userEnabled),
   });
 
   // Phase 2: Batch decrypt only when any handle changes
