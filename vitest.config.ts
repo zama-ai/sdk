@@ -1,16 +1,16 @@
 import { defineConfig, type Plugin } from "vitest/config";
 import path from "path";
 
-/** Stub `?inline` imports in tests — returns an empty string instead of file contents. */
-function inline(): Plugin {
+/** Stub `?iife` imports in tests — returns an empty string instead of file contents. */
+function iifeStub(): Plugin {
   return {
-    name: "inline-stub",
+    name: "iife-stub",
     resolveId(source) {
-      if (source.endsWith("?inline")) return `\0${source}`;
+      if (source.endsWith("?iife")) return `\0${source}`;
       return null;
     },
     load(id) {
-      if (id.startsWith("\0") && id.endsWith("?inline")) return "export default '';";
+      if (id.startsWith("\0") && id.endsWith("?iife")) return "export default '';";
       return null;
     },
   };
@@ -60,7 +60,7 @@ export default defineConfig({
   test: {
     projects: [
       {
-        plugins: [inline()],
+        plugins: [iifeStub()],
         test: {
           name: "sdk",
           environment: "node",
@@ -73,7 +73,7 @@ export default defineConfig({
         resolve: sharedResolve,
       },
       {
-        plugins: [inline()],
+        plugins: [iifeStub()],
         test: {
           name: "react-sdk",
           environment: "happy-dom",

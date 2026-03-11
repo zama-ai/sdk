@@ -1,6 +1,6 @@
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
-import { inline } from "./inline-plugin";
+import { iife } from "./iife-plugin";
 
 const shared = {
   external: [/^viem/, /^ethers/, /^@zama-fhe\/relayer-sdk/, /^@tanstack\/query-core/, /^node:/],
@@ -27,5 +27,5 @@ export default defineConfig({
     minify: true,
   },
   ...shared,
-  plugins: [inline({ tsconfig: "tsconfig.build.json" }), dts({ tsconfig: "tsconfig.build.json" })],
+  plugins: [iife({ tsconfig: "tsconfig.build.json" }), dts({ tsconfig: "tsconfig.build.json" })],
 });

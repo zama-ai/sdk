@@ -7,7 +7,7 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
-import workerCode from "./relayer-sdk.worker.ts?inline";
+import workerCode from "./relayer-sdk.worker.ts?iife";
 
 const workerBlobUrl = /* @__PURE__ */ URL.createObjectURL(
   new Blob([workerCode], { type: "application/javascript" }),
