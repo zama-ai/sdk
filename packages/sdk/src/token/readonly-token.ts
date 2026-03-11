@@ -77,7 +77,7 @@ export interface ReadonlyTokenConfig {
  */
 export class ReadonlyToken {
   protected readonly credentials: CredentialsManager;
-  protected readonly sdk: RelayerSDK;
+  protected readonly relayer: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
   readonly #storage: GenericStorage;
@@ -95,7 +95,7 @@ export class ReadonlyToken {
         keypairTTL: config.keypairTTL ?? 86400,
         onEvent: config.onEvent,
       });
-    this.sdk = config.relayer;
+    this.relayer = config.relayer;
     this.signer = config.signer;
     this.address = address;
     this.#storage = config.storage;
@@ -223,8 +223,9 @@ export class ReadonlyToken {
 
     const { handles, owner, onError, maxConcurrency } = options ?? {};
 
-    const sdk = tokens[0]!.sdk;
-    const signer = tokens[0]!.signer;
+    const firstToken = tokens[0]!;
+    const sdk = firstToken.relayer;
+    const signer = firstToken.signer;
     const signerAddress = owner ?? (await signer.getAddress());
 
     const resolvedHandles =
@@ -236,7 +237,7 @@ export class ReadonlyToken {
       );
     }
 
-    const tokenStorage = tokens[0]!.storage;
+    const tokenStorage = firstToken.storage;
     const results = new Map<Address, bigint>();
 
     // Parallel cache lookups — avoids sequential IDB round-trips.
@@ -271,7 +272,7 @@ export class ReadonlyToken {
     if (uncached.length === 0) return results;
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const creds = await tokens[0]!.credentials.allow(...uncachedAddresses);
+    const creds = await firstToken.credentials.allow(...uncachedAddresses);
 
     const errors: Array<{ address: Address; error: Error }> = [];
     const decryptFns: Array<() => Promise<void>> = [];
@@ -521,7 +522,7 @@ export class ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const result = await this.sdk.userDecrypt({
+      const result = await this.relayer.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
         signedContractAddresses: creds.contractAddresses,
@@ -581,7 +582,7 @@ export class ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const decrypted = await this.sdk.userDecrypt({
+      const decrypted = await this.relayer.userDecrypt({
         handles: nonZeroHandles,
         contractAddress: this.address,
         signedContractAddresses: creds.contractAddresses,
