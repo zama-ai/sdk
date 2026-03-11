@@ -659,7 +659,12 @@ export class ReadonlyToken {
 
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
-      const value = (result[handle] as bigint | undefined) ?? 0n;
+      const value = result[handle] as bigint | undefined;
+      if (value === undefined) {
+        throw new DecryptionFailedError(
+          `Delegated decryption returned no value for handle ${handle}`,
+        );
+      }
 
       // Cache keyed by balance owner.
       await saveCachedBalance({
