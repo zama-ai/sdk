@@ -90,10 +90,13 @@ export function useConfidentialTransfer<TContext = unknown>(
         config.optimistic,
         rawContext,
       );
-      if (wrappedContext) {
-        rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
+      try {
+        if (wrappedContext) {
+          rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
+        }
+      } finally {
+        options?.onError?.(error, variables, callerContext as TContext, context);
       }
-      options?.onError?.(error, variables, callerContext as TContext, context);
     },
     onSuccess: (data, variables, rawContext, context) => {
       const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);

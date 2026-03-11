@@ -97,14 +97,17 @@ export function optimisticBalanceCallbacks<TParams extends { amount: bigint }>({
         optimistic,
         rawContext,
       );
-      if (wrappedContext) {
-        rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
+      try {
+        if (wrappedContext) {
+          rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
+        }
+      } finally {
+        options?.onError?.(error, variables, callerContext, context);
       }
-      options?.onError?.(error, variables, callerContext, context);
     },
     onSuccess: (data, variables, rawContext, context) => {
       const { callerContext } = unwrapOptimisticCallerContext(optimistic, rawContext);
-      options?.onSuccess?.(data, variables, callerContext!, context);
+      options?.onSuccess?.(data, variables, callerContext, context);
       invalidateAfterShield(context.client, tokenAddress);
     },
     onSettled: (data, error, variables, rawContext, context) => {
