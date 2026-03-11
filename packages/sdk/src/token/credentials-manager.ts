@@ -113,6 +113,10 @@ export class CredentialsManager {
     this.#onEvent({ ...partial, timestamp: Date.now() } as never);
   }
 
+  #normalizeAddresses(addresses: Address[]) {
+    return [...new Set(addresses.map((address) => getAddress(address)))].sort();
+  }
+
   /**
    * Authorize FHE credentials for one or more contract addresses.
    * Returns cached credentials if still valid and covering all addresses,
@@ -126,9 +130,7 @@ export class CredentialsManager {
    * ```
    */
   async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
-    const normalizedContractAddresses = [
-      ...new Set(contractAddresses.map((address) => getAddress(address))),
-    ].sort();
+    const normalizedContractAddresses = this.#normalizeAddresses(contractAddresses);
     const storeKey = await this.#storeKey();
 
     this.#emit({
@@ -432,7 +434,8 @@ export class CredentialsManager {
 
   /** Merge two contract address lists into a deduplicated sorted array. */
   #mergeContracts(existing: Address[], incoming: Address[]): Address[] {
-    return [...new Set([...existing, ...incoming].map((address) => getAddress(address)))].sort();
+    const merged = new Set([...existing, ...incoming]);
+    return this.#normalizeAddresses([...merged]);
   }
 
   /**
@@ -523,9 +526,7 @@ export class CredentialsManager {
    * ```
    */
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
-    const normalizedContractAddresses = [
-      ...new Set(contractAddresses.map((address) => getAddress(address))),
-    ].sort();
+    const normalizedContractAddresses = this.#normalizeAddresses(contractAddresses);
 
     this.#emit({
       type: ZamaSDKEvents.CredentialsCreating,
