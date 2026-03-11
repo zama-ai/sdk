@@ -840,6 +840,44 @@ describe("contract address extension", () => {
     expect(firstContracts).toContain(getAddress(TOKEN_A));
     expect(firstContracts).toContain(getAddress(TOKEN_B));
   });
+
+  it("persists ciphertext before session signature during extension", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const sessionStorage = createMockStorage();
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 86400,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    // After the initial allow(), record the order of set() calls during
+    // the extension. storage.set = ciphertext write, sessionStorage.set = session write.
+    const writeOrder: string[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const storageMock = storage as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sessionMock = sessionStorage as any;
+    storageMock.set = vi.fn(async () => {
+      writeOrder.push("ciphertext");
+    });
+    sessionMock.set = vi.fn(async () => {
+      writeOrder.push("session");
+    });
+
+    await manager.allow(TOKEN_A, TOKEN_B);
+
+    // Extension should write ciphertext before updating the session signature
+    expect(writeOrder).toEqual(["ciphertext", "session"]);
+  });
 });
 
 describe("storeKey caching", () => {
