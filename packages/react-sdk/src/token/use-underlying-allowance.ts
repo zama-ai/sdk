@@ -1,6 +1,6 @@
 "use client";
 
-import { mergeEnabled, useQuery, useSuspenseQuery } from "../utils/query";
+import { useQuery, useSuspenseQuery } from "../utils/query";
 import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { signerAddressQueryOptions, underlyingAllowanceQueryOptions } from "@zama-fhe/sdk/query";
@@ -51,7 +51,7 @@ export function useUnderlyingAllowance(
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: mergeEnabled(baseOpts.enabled, options?.enabled),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 

@@ -9,7 +9,6 @@ import {
 } from "@zama-fhe/sdk/query";
 import {
   applyOptimisticBalanceDelta,
-  type OptimisticMutateContext,
   rollbackOptimisticBalanceDelta,
   unwrapOptimisticCallerContext,
 } from "./optimistic-balance-update";
@@ -57,53 +56,45 @@ export interface UseConfidentialTransferConfig extends UseZamaConfig {
  */
 export function useConfidentialTransfer(
   config: UseConfidentialTransferConfig,
-  // Context type is OptimisticMutateContext because our onMutate wraps the caller's
-  // context inside { snapshot, callerContext }. Caller callbacks receive the unwrapped callerContext.
-  options?: UseMutationOptions<
-    TransactionResult,
-    Error,
-    ConfidentialTransferParams,
-    OptimisticMutateContext
-  >,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, any>,
 ) {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<TransactionResult, Error, ConfidentialTransferParams, OptimisticMutateContext>(
-    {
-      ...confidentialTransferMutationOptions(token),
-      ...options,
-      onMutate: config.optimistic
-        ? async (variables, mutationContext) => {
-            const snapshot = await applyOptimisticBalanceDelta({
-              queryClient,
-              tokenAddress: config.tokenAddress,
-              amount: variables.amount,
-              mode: "subtract",
-            });
-            const callerContext = await options?.onMutate?.(variables, mutationContext);
-            return { snapshot, callerContext };
-          }
-        : options?.onMutate,
-      onError: (error, variables, rawContext, context) => {
-        const { wrappedContext, callerContext } = unwrapOptimisticCallerContext(
-          config.optimistic,
-          rawContext,
-        );
-        if (wrappedContext) {
-          rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
+  return useMutation({
+    ...confidentialTransferMutationOptions(token),
+    ...options,
+    onMutate: config.optimistic
+      ? async (variables, mutationContext) => {
+          const snapshot = await applyOptimisticBalanceDelta({
+            queryClient,
+            tokenAddress: config.tokenAddress,
+            amount: variables.amount,
+            mode: "subtract",
+          });
+          const callerContext = await options?.onMutate?.(variables, mutationContext);
+          return { snapshot, callerContext };
         }
-        options?.onError?.(error, variables, callerContext, context);
-      },
-      onSuccess: (data, variables, rawContext, context) => {
-        const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-        options?.onSuccess?.(data, variables, callerContext!, context);
-        invalidateAfterTransfer(context.client, config.tokenAddress);
-      },
-      onSettled: (data, error, variables, rawContext, context) => {
-        const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-        options?.onSettled?.(data, error, variables, callerContext, context);
-      },
+      : options?.onMutate,
+    onError: (error, variables, rawContext, context) => {
+      const { wrappedContext, callerContext } = unwrapOptimisticCallerContext(
+        config.optimistic,
+        rawContext,
+      );
+      if (wrappedContext) {
+        rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
+      }
+      options?.onError?.(error, variables, callerContext, context);
     },
-  );
+    onSuccess: (data, variables, rawContext, context) => {
+      const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
+      options?.onSuccess?.(data, variables, callerContext!, context);
+      invalidateAfterTransfer(context.client, config.tokenAddress);
+    },
+    onSettled: (data, error, variables, rawContext, context) => {
+      const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
+      options?.onSettled?.(data, error, variables, callerContext, context);
+    },
+  });
 }

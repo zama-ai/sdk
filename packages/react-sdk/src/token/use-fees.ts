@@ -1,6 +1,6 @@
 "use client";
 
-import { mergeEnabled, useQuery } from "../utils/query";
+import { useQuery } from "../utils/query";
 import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import {
@@ -57,7 +57,7 @@ export function useShieldFee(
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: mergeEnabled(baseOpts.enabled, options?.enabled),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -88,7 +88,7 @@ export function useUnshieldFee(
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: mergeEnabled(baseOpts.enabled, options?.enabled),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -114,7 +114,7 @@ export function useBatchTransferFee(
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: mergeEnabled(baseOpts.enabled, options?.enabled),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -140,6 +140,6 @@ export function useFeeRecipient(
   return useQuery<Address>({
     ...baseOpts,
     ...options,
-    enabled: mergeEnabled(baseOpts.enabled, options?.enabled),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { mergeEnabled, useQuery, useSuspenseQuery } from "../utils/query";
+import { useQuery, useSuspenseQuery } from "../utils/query";
 import { skipToken, type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import {
@@ -70,7 +70,7 @@ export function useConfidentialIsApproved(
   return useQuery({
     ...baseOpts,
     ...options,
-    enabled: mergeEnabled("enabled" in baseOpts ? baseOpts.enabled : true, userEnabled),
+    enabled: ("enabled" in baseOpts ? (baseOpts.enabled ?? true) : true) && (userEnabled ?? true),
   });
 }
 

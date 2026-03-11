@@ -1,6 +1,6 @@
 "use client";
 
-import { mergeEnabled, useQuery } from "../utils/query";
+import { useQuery } from "../utils/query";
 import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address, Handle } from "@zama-fhe/sdk";
 import {
@@ -61,7 +61,7 @@ export function useConfidentialBalance(
   });
   const handleQuery = useQuery<Handle>({
     ...baseHandleQueryOptions,
-    enabled: mergeEnabled(baseHandleQueryOptions.enabled, userEnabled),
+    enabled: (baseHandleQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
@@ -73,7 +73,7 @@ export function useConfidentialBalance(
   const balanceQuery = useQuery<bigint>({
     ...baseBalanceQueryOptions,
     ...options,
-    enabled: mergeEnabled(baseBalanceQueryOptions.enabled, userEnabled),
+    enabled: (baseBalanceQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   return { ...balanceQuery, handleQuery };

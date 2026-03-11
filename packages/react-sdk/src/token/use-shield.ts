@@ -3,10 +3,7 @@
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";
 import { shieldMutationOptions, type ShieldParams } from "@zama-fhe/sdk/query";
-import {
-  type OptimisticMutateContext,
-  optimisticBalanceCallbacks,
-} from "./optimistic-balance-update";
+import { optimisticBalanceCallbacks } from "./optimistic-balance-update";
 import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Configuration for {@link useShield}. */
@@ -40,12 +37,13 @@ export interface UseShieldConfig extends UseZamaConfig {
  */
 export function useShield(
   config: UseShieldConfig,
-  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, OptimisticMutateContext>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, any>,
 ) {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<TransactionResult, Error, ShieldParams, OptimisticMutateContext>({
+  return useMutation({
     ...shieldMutationOptions(token),
     ...options,
     ...optimisticBalanceCallbacks({

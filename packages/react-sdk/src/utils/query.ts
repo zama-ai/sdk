@@ -32,26 +32,6 @@ export function useQuery<TData = unknown, TError = DefaultError>(
   }) as UseQueryResult<TData, TError>;
 }
 
-/**
- * Combine a factory's `enabled` flag with the user's override.
- * Both default to `true` when not provided — the query only runs when both are truthy.
- *
- * TanStack Query v5's `enabled` can be a boolean or a `(query) => boolean` function.
- * When the factory returns a function, eager evaluation is not possible here,
- * so we fall back to treating functions as `true` (the factory's queryFn
- * guards will still prevent execution via skipToken).
- *
- * Accepts `unknown` because TanStack's `Enabled<T>` is generic and the concrete
- * type parameters vary per call-site — only runtime shape matters here.
- */
-export function mergeEnabled(factoryEnabled: unknown, userEnabled: unknown): boolean {
-  const factory =
-    typeof factoryEnabled === "function" ? true : factoryEnabled === undefined || !!factoryEnabled;
-  const user =
-    typeof userEnabled === "function" ? true : userEnabled === undefined || !!userEnabled;
-  return factory && user;
-}
-
 export function useSuspenseQuery<TData = unknown, TError = DefaultError>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   options: any,

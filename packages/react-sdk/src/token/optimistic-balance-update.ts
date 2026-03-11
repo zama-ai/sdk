@@ -13,12 +13,13 @@ export interface OptimisticMutateContext {
 
 export function unwrapOptimisticCallerContext(
   optimistic: boolean | undefined,
-  rawContext: OptimisticMutateContext | undefined,
+  rawContext: unknown,
 ): {
   wrappedContext: OptimisticMutateContext | undefined;
   callerContext: OptimisticMutateContext | undefined;
 } {
-  const wrappedContext = optimistic ? rawContext : undefined;
+  const typed = rawContext as OptimisticMutateContext | undefined;
+  const wrappedContext = optimistic ? typed : undefined;
   const callerContext = (optimistic ? wrappedContext?.callerContext : rawContext) as
     | OptimisticMutateContext
     | undefined;
