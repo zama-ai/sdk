@@ -1,12 +1,12 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 
-import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
-import { MemoryStorage } from "./memory-storage";
-import { SigningRejectedError, SigningFailedError } from "./errors";
-import { assertObject, assertString, assertArray, assertCondition, prefixHex } from "../utils";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { getAddress, isAddress, type Address, type Hex } from "viem";
+import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import { assertArray, assertCondition, assertObject, assertString, prefixHex } from "../utils";
+import { SigningFailedError, SigningRejectedError } from "./errors";
+import { MemoryStorage } from "./memory-storage";
+import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
 interface EncryptedData {
@@ -126,15 +126,18 @@ export class CredentialsManager {
    * ```
    */
   async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
-    contractAddresses = [
+    const normalizedContractAddresses = [
       ...new Set(contractAddresses.map((address) => getAddress(address))),
     ].sort();
     const storeKey = await this.#storeKey();
-    this.#emit({ type: ZamaSDKEvents.CredentialsLoading, contractAddresses });
+
+    this.#emit({
+      type: ZamaSDKEvents.CredentialsLoading,
+      contractAddresses: normalizedContractAddresses,
+    });
     try {
-      const stored = await this.#storage.get(storeKey);
-      if (stored) {
-        const encrypted = stored as unknown;
+      const encrypted = await this.#storage.get<EncryptedCredentials>(storeKey);
+      if (encrypted) {
         this.#assertEncryptedCredentials(encrypted);
 
         const sessionEntry = await this.#getSessionEntry(storeKey);
@@ -145,9 +148,15 @@ export class CredentialsManager {
             this.#emit({ type: ZamaSDKEvents.SessionExpired, reason: "ttl" });
           } else {
             const creds = await this.#decryptCredentials(encrypted, sessionEntry.signature);
-            if (this.#isValid(creds, contractAddresses)) {
-              this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
-              this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
+            if (this.#isValid(creds, normalizedContractAddresses)) {
+              this.#emit({
+                type: ZamaSDKEvents.CredentialsCached,
+                contractAddresses: normalizedContractAddresses,
+              });
+              this.#emit({
+                type: ZamaSDKEvents.CredentialsAllowed,
+                contractAddresses: normalizedContractAddresses,
+              });
               return creds;
             }
             // Keypair still time-valid but missing contracts — extend and re-sign
@@ -155,20 +164,29 @@ export class CredentialsManager {
               return this.#extendContracts({
                 storeKey,
                 credentials: creds,
-                requiredContracts: contractAddresses,
+                requiredContracts: normalizedContractAddresses,
               });
             }
-            this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
+            this.#emit({
+              type: ZamaSDKEvents.CredentialsExpired,
+              contractAddresses: normalizedContractAddresses,
+            });
           }
         }
         // No session signature or TTL expired — need to re-sign
         if (this.#isTimeValid(encrypted)) {
-          if (this.#coversContracts(encrypted.contractAddresses, contractAddresses)) {
+          if (this.#coversContracts(encrypted.contractAddresses, normalizedContractAddresses)) {
             const signature = await this.#sign(encrypted);
             await this.#setSessionEntry(storeKey, signature);
             const creds = await this.#decryptCredentials(encrypted, signature);
-            this.#emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses });
-            this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
+            this.#emit({
+              type: ZamaSDKEvents.CredentialsCached,
+              contractAddresses: normalizedContractAddresses,
+            });
+            this.#emit({
+              type: ZamaSDKEvents.CredentialsAllowed,
+              contractAddresses: normalizedContractAddresses,
+            });
             return creds;
           }
           // Time-valid but missing contracts and no session — sign with old addresses to decrypt, then extend
@@ -177,10 +195,13 @@ export class CredentialsManager {
           return this.#extendContracts({
             storeKey,
             credentials: creds,
-            requiredContracts: contractAddresses,
+            requiredContracts: normalizedContractAddresses,
           });
         }
-        this.#emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses });
+        this.#emit({
+          type: ZamaSDKEvents.CredentialsExpired,
+          contractAddresses: normalizedContractAddresses,
+        });
       }
     } catch {
       try {
@@ -190,12 +211,15 @@ export class CredentialsManager {
       }
     }
 
-    const key = contractAddresses.join(",");
+    const key = normalizedContractAddresses.join(",");
     if (!this.#createPromise || this.#createPromiseKey !== key) {
       this.#createPromiseKey = key;
-      this.#createPromise = this.create(contractAddresses)
+      this.#createPromise = this.create(normalizedContractAddresses)
         .then((creds) => {
-          this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses });
+          this.#emit({
+            type: ZamaSDKEvents.CredentialsAllowed,
+            contractAddresses: normalizedContractAddresses,
+          });
           return creds;
         })
         .finally(() => {
@@ -323,7 +347,7 @@ export class CredentialsManager {
   }
 
   async #getSessionEntry(storeKey: string): Promise<SessionEntry | null> {
-    const raw = await this.#sessionStorage.get(storeKey);
+    const raw = await this.#sessionStorage.get<SessionEntry>(storeKey);
     if (raw === null) return null;
     this.#assertSessionEntry(raw);
     return raw;
@@ -384,7 +408,8 @@ export class CredentialsManager {
   /** Check if the signed address set covers all required addresses. */
   #coversContracts(signedAddresses: Address[], requiredContracts: Address[]): boolean {
     const required = new Set(requiredContracts.map((address) => getAddress(address)));
-    return required.isSubsetOf(new Set(signedAddresses.map((address) => getAddress(address))));
+    const signed = new Set(signedAddresses.map((address) => getAddress(address)));
+    return required.isSubsetOf(signed);
   }
 
   async #sign(encrypted: EncryptedCredentials): Promise<Hex> {
@@ -498,10 +523,14 @@ export class CredentialsManager {
    * ```
    */
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
-    contractAddresses = [
+    const normalizedContractAddresses = [
       ...new Set(contractAddresses.map((address) => getAddress(address))),
     ].sort();
-    this.#emit({ type: ZamaSDKEvents.CredentialsCreating, contractAddresses });
+
+    this.#emit({
+      type: ZamaSDKEvents.CredentialsCreating,
+      contractAddresses: normalizedContractAddresses,
+    });
     try {
       const storeKey = await this.#storeKey();
       const keypair = await this.#relayer.generateKeypair();
@@ -514,7 +543,7 @@ export class CredentialsManager {
 
       const eip712 = await this.#relayer.createEIP712(
         publicKey,
-        contractAddresses,
+        normalizedContractAddresses,
         startTimestamp,
         durationDays,
       );
@@ -534,7 +563,10 @@ export class CredentialsManager {
       await this.#persistCredentials(storeKey, creds);
       await this.#setSessionEntry(storeKey, signature);
 
-      this.#emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
+      this.#emit({
+        type: ZamaSDKEvents.CredentialsCreated,
+        contractAddresses: normalizedContractAddresses,
+      });
       return creds;
     } catch (error) {
       const isRejected =
