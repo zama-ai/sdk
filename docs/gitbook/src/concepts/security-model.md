@@ -91,7 +91,9 @@ Wallet addresses are hashed before use as storage keys. The storage backend (Ind
 
 `RelayerWeb` loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
 
-![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg) This protects against CDN compromise or man-in-the-middle injection of modified WASM.
+![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
+
+This protects against CDN compromise or man-in-the-middle injection of modified WASM.
 
 Integrity checking is enabled by default. Disable it only in test environments:
 
