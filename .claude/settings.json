@@ -2,6 +2,9 @@
   "env": {
     "ENABLE_LSP_TOOL": "1"
   },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true
+  },
   "permissions": {
     "allow": [
       "Bash(git diff:*)",
