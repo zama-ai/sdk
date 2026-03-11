@@ -1,0 +1,89 @@
+direction: right
+
+title: {
+  label: "@zama-fhe/sdk Module Map"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- Modules ---
+token: "token/" {
+  zama-sdk: "ZamaSDK\n(factory)"
+  tok: "Token\n(write ops)"
+  readonly: "ReadonlyToken\n(read ops)"
+  creds: "CredentialsManager"
+  cache: "BalanceCache"
+
+  zama-sdk -> tok: creates
+  zama-sdk -> readonly: creates
+  tok -> creds: loads credentials
+  readonly -> creds: loads credentials
+  readonly -> cache: caches balances
+}
+
+query: "query/" {
+  keys: "zamaQueryKeys\n(key factory)"
+  opts: "queryOptions\n(read factories)"
+  mutations: "mutationOptions\n(write factories)"
+  invalidation: "invalidation\n(cache helpers)"
+
+  opts -> keys: uses
+  mutations -> keys: uses
+  invalidation -> keys: uses
+}
+
+contracts: "contracts/" {
+  erc20: "ERC-20 builders"
+  wrapper: "Wrapper builders"
+  encryption: "Encryption builders"
+  fee: "Fee builders"
+  batcher: "Transfer batcher"
+  erc165: "Interface detection"
+  coordinator: "Deployment coordinator"
+}
+
+relayer: "relayer/" {
+  web: "RelayerWeb\n(browser)"
+  node: "RelayerNode\n(server)"
+  cleartext: "RelayerCleartext\n(testing)"
+  utils: "relayer-utils"
+}
+
+worker: "worker/" {
+  browser: "WorkerClient\n(Web Worker + WASM)"
+  nodepool: "NodeWorkerPool\n(worker_threads)"
+}
+
+events: "events/" {
+  sdk-events: "ZamaSDKEvents"
+  onchain: "On-chain decoders"
+}
+
+abi: "abi/" {
+  label: "ABI definitions\n(pure data)"
+  style.fill: "#ECEFF1"
+}
+
+storage: "storage/" {
+  indexeddb: "IndexedDBStorage"
+  memory: "MemoryStorage"
+  async-local: "AsyncLocalStorage"
+  chrome: "ChromeSessionStorage"
+}
+
+signers: "viem/ · ethers/" {
+  viem-signer: "ViemSigner"
+  ethers-signer: "EthersSigner"
+}
+
+# --- Dependencies ---
+query -> token: "wraps SDK calls"
+token -> relayer: "encrypt/decrypt"
+token -> events: "emit events"
+contracts -> abi: "ABI constants"
+relayer -> worker: "FHE operations"
+signers -> relayer: "Address/Hex types"
+signers -> contracts: "BatchTransferData"
+token -> storage: "credential persistence"
