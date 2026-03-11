@@ -2,16 +2,10 @@
 
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";
+import { shieldETHMutationOptions, type ShieldETHParams } from "@zama-fhe/sdk/query";
 import {
-  invalidateAfterShield,
-  shieldETHMutationOptions,
-  type ShieldETHParams,
-} from "@zama-fhe/sdk/query";
-import {
-  applyOptimisticBalanceDelta,
   type OptimisticMutateContext,
-  rollbackOptimisticBalanceDelta,
-  unwrapOptimisticCallerContext,
+  optimisticShieldCallbacks,
 } from "./optimistic-balance-update";
 import { useToken, type UseZamaConfig } from "./use-token";
 
@@ -53,47 +47,6 @@ export function useShieldETH(
   return useMutation<TransactionResult, Error, ShieldETHParams, OptimisticMutateContext>({
     ...shieldETHMutationOptions(token),
     ...options,
-    onMutate: config.optimistic
-      ? async (variables, mutationContext) => {
-          const snapshot = await applyOptimisticBalanceDelta(
-            queryClient,
-            config.tokenAddress,
-            variables.amount,
-            "add",
-          );
-          const callerContext = await options?.onMutate?.(variables, mutationContext);
-          return { snapshot, callerContext };
-        }
-      : options?.onMutate,
-    onError: (error, variables, rawContext, context) => {
-      const { wrappedContext, callerContext } = unwrapOptimisticCallerContext(
-        config.optimistic,
-        rawContext,
-      );
-      if (wrappedContext) {
-        rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
-      }
-      options?.onError?.(
-        error,
-        variables,
-        callerContext as OptimisticMutateContext | undefined,
-        context,
-      );
-    },
-    onSuccess: (data, variables, rawContext, context) => {
-      const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-      options?.onSuccess?.(data, variables, callerContext as OptimisticMutateContext, context);
-      invalidateAfterShield(context.client, config.tokenAddress);
-    },
-    onSettled: (data, error, variables, rawContext, context) => {
-      const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-      options?.onSettled?.(
-        data,
-        error,
-        variables,
-        callerContext as OptimisticMutateContext | undefined,
-        context,
-      );
-    },
+    ...optimisticShieldCallbacks(config.optimistic, config.tokenAddress, queryClient, options),
   });
 }
