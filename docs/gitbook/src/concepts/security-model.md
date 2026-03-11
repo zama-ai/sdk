@@ -58,11 +58,7 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 The FHE private key is encrypted with AES-256-GCM before being written to storage (typically IndexedDB in browsers). The encryption key is derived from the wallet's EIP-712 signature using PBKDF2.
 
-```
-EIP-712 signature (raw bytes) ─┐
-                                ├──▶ PBKDF2 (600,000 iterations, SHA-256) ──▶ AES-256-GCM key
-Wallet address (lowercase)  ───┘     (used as salt)
-```
+![Credential Encryption at Rest](../images/security-key-derivation.svg)
 
 | Parameter     | Value                          |
 | ------------- | ------------------------------ |
@@ -78,13 +74,7 @@ The signature itself is never persisted. It lives only in the in-memory session 
 
 ### Storage key privacy
 
-Wallet addresses are hashed before use as storage keys:
-
-```
-0xAbCd...1234 → toLowerCase → SHA-256 → truncate to 32 hex chars → storage key
-```
-
-The storage backend (IndexedDB, memory, or custom) never sees the raw wallet address.
+Wallet addresses are hashed before use as storage keys. The storage backend (IndexedDB, memory, or custom) never sees the raw wallet address.
 
 ### Limitations
 
@@ -99,13 +89,9 @@ The storage backend (IndexedDB, memory, or custom) never sees the raw wallet add
 
 ## WASM bundle integrity
 
-`RelayerWeb` loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code.
+`RelayerWeb` loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
 
-```
-Fetch WASM from CDN → compute SHA-384 → compare to pinned hash → execute or reject
-```
-
-If the hashes do not match, initialization fails with a clear error. This protects against CDN compromise or man-in-the-middle injection of modified WASM.
+![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg) This protects against CDN compromise or man-in-the-middle injection of modified WASM.
 
 Integrity checking is enabled by default. Disable it only in test environments:
 
