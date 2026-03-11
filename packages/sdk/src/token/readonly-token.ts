@@ -236,15 +236,11 @@ export class ReadonlyToken {
       );
     }
 
-    const allAddresses = tokens.map((t) => t.address);
-    const creds = await tokens[0]!.credentials.allow(...allAddresses);
-
     const tokenStorage = tokens[0]!.storage;
     const results = new Map<Address, bigint>();
-    const errors: Array<{ address: Address; error: Error }> = [];
-    const decryptFns: Array<() => Promise<void>> = [];
 
     // Parallel cache lookups — avoids sequential IDB round-trips.
+    const uncached: Array<{ token: ReadonlyToken; handle: Address }> = [];
     const cachedValues = await Promise.all(
       tokens.map((token, i) => {
         const handle = resolvedHandles[i]!;
@@ -268,6 +264,19 @@ export class ReadonlyToken {
         continue;
       }
 
+      uncached.push({ token, handle });
+    }
+
+    // All balances resolved from cache — no credentials needed.
+    if (uncached.length === 0) return results;
+
+    const uncachedAddresses = uncached.map((entry) => entry.token.address);
+    const creds = await tokens[0]!.credentials.allow(...uncachedAddresses);
+
+    const errors: Array<{ address: Address; error: Error }> = [];
+    const decryptFns: Array<() => Promise<void>> = [];
+
+    for (const { token, handle } of uncached) {
       decryptFns.push(() =>
         sdk
           .userDecrypt({

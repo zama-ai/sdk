@@ -59,7 +59,7 @@ describe("CredentialsManager", () => {
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
   });
 
-  it("re-signs when new contract not in signed list", async ({
+  it("re-signs when new contract not in signed list but reuses keypair", async ({
     relayer,
     signer,
     credentialManager,
@@ -67,10 +67,16 @@ describe("CredentialsManager", () => {
     setupMocks(relayer, signer);
 
     await credentialManager.allow(TOKEN_A);
-    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const creds = await credentialManager.allow(TOKEN_A, TOKEN_B);
 
-    expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
+    // Keypair is reused — only one generation
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // Re-signed with the extended address set
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    // Merged contract addresses include both tokens (checksummed by getAddress)
+    const normalized = creds.contractAddresses.map((a: string) => a.toLowerCase());
+    expect(normalized).toContain(TOKEN_A.toLowerCase());
+    expect(normalized).toContain(TOKEN_B.toLowerCase());
   }, 30000);
 
   it("persists credentials to store with hashed key", async ({
@@ -598,6 +604,225 @@ describe("session allow/revoke", () => {
     await manager2.revoke();
 
     expect(events).toContain(ZamaSDKEvents.CredentialsRevoked);
+  });
+});
+
+describe("contract address extension", () => {
+  const TOKEN_C = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+
+  it("extends contracts with active session, reusing keypair", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const first = await credentialManager.allow(TOKEN_A);
+    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    // Same keypair
+    expect(extended.publicKey).toBe(first.publicKey);
+    expect(extended.privateKey).toBe(first.privateKey);
+    // Merged addresses
+    const normalized = extended.contractAddresses.map((a) => a.toLowerCase());
+    expect(normalized).toContain(TOKEN_A.toLowerCase());
+    expect(normalized).toContain(TOKEN_B.toLowerCase());
+  });
+
+  it("extends contracts after revoke (no session path)", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.revoke();
+    const extended = await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    // Keypair reused — only one generation
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // Original sign + old-address sign for decrypt + merged-address sign for extend
+    expect(signer.signTypedData).toHaveBeenCalledTimes(3);
+    const normalized = extended.contractAddresses.map((a) => a.toLowerCase());
+    expect(normalized).toContain(TOKEN_A.toLowerCase());
+    expect(normalized).toContain(TOKEN_B.toLowerCase());
+  });
+
+  it("extends contracts after page reload (new session storage, no session)", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const manager1 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    await manager1.allow(TOKEN_A);
+
+    // Simulate reload: new session storage, same persistent storage
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    const extended = await manager2.allow(TOKEN_A, TOKEN_B);
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // Original sign + old-address sign for decrypt + merged-address sign for extend
+    expect(signer.signTypedData).toHaveBeenCalledTimes(3);
+    const normalized = extended.contractAddresses.map((a) => a.toLowerCase());
+    expect(normalized).toContain(TOKEN_A.toLowerCase());
+    expect(normalized).toContain(TOKEN_B.toLowerCase());
+  });
+
+  it("caches extended credentials — third call with same set does not re-sign", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // Only 2 signatures: initial + extend. Third call is cached.
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+  });
+
+  it("persists extended credentials across instances", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const manager1 = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 86400,
+    });
+    await manager1.allow(TOKEN_A);
+    await manager1.allow(TOKEN_A, TOKEN_B);
+
+    // New instance, same storage backends
+    const manager2 = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 86400,
+    });
+    await manager2.allow(TOKEN_A, TOKEN_B);
+
+    // No additional keypair or signature — all cached
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+  });
+
+  it("extends incrementally: A → A,B → A,B,C", async ({ relayer, signer, credentialManager }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    const final = await credentialManager.allow(TOKEN_A, TOKEN_B, TOKEN_C);
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    // 3 signatures: initial + extend to B + extend to C
+    expect(signer.signTypedData).toHaveBeenCalledTimes(3);
+    const normalized = final.contractAddresses.map((a) => a.toLowerCase());
+    expect(normalized).toContain(TOKEN_A.toLowerCase());
+    expect(normalized).toContain(TOKEN_B.toLowerCase());
+    expect(normalized).toContain(TOKEN_C.toLowerCase());
+  });
+
+  it("subset of already-allowed contracts does not re-sign", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    await credentialManager.allow(TOKEN_A); // subset
+
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  it("fully regenerates when credentials are time-expired even with missing contracts", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    const storeKey = await CredentialsManager.computeStoreKey(
+      await signer.getAddress(),
+      await signer.getChainId(),
+    );
+
+    await manager.allow(TOKEN_A);
+
+    // Tamper stored data to simulate time expiration
+    const stored = await storage.get(storeKey);
+    const parsed = { ...(stored as Record<string, unknown>) };
+    parsed.startTimestamp = Math.floor(Date.now() / 1000) - 8 * 86400;
+    await storage.set(storeKey, parsed);
+
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    await manager2.allow(TOKEN_A, TOKEN_B);
+
+    // Time-expired → full regeneration, not extension
+    expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
+  }, 30000);
+
+  it("EIP-712 is created with the merged contract set", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+
+    // Second createEIP712 call should include both tokens
+    const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1]!;
+    const contractAddresses = secondCall[1] as Address[];
+    const normalized = contractAddresses.map((a) => a.toLowerCase());
+    expect(normalized).toContain(TOKEN_A.toLowerCase());
+    expect(normalized).toContain(TOKEN_B.toLowerCase());
   });
 });
 

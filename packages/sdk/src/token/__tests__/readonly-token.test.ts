@@ -6,6 +6,7 @@ import type { GenericSigner, GenericStorage } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 
 import { DecryptionFailedError } from "../errors";
+import { saveCachedBalance } from "../balance-cache";
 import { getAddress, type Address } from "viem";
 
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
@@ -456,6 +457,118 @@ describe("ReadonlyToken", () => {
           handles: [handle as Address, VALID_HANDLE2 as Address],
         }),
       ).rejects.toThrow(/tokens\.length.*must equal.*handles\.length/);
+    });
+  });
+
+  describe("batchDecryptBalances (cache-aware allow)", () => {
+    const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+
+    it("skips allow() entirely when all balances are cached", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const token2 = new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        address: TOKEN2,
+      });
+
+      const signerAddress = await signer.getAddress();
+
+      // Pre-populate cache for both tokens
+      await saveCachedBalance({
+        storage,
+        tokenAddress,
+        owner: signerAddress,
+        handle: handle as Address,
+        value: 1000n,
+      });
+      await saveCachedBalance({
+        storage,
+        tokenAddress: TOKEN2,
+        owner: signerAddress,
+        handle: VALID_HANDLE2,
+        value: 2000n,
+      });
+
+      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+        handles: [handle as Address, VALID_HANDLE2],
+      });
+
+      expect(result.get(tokenAddress)).toBe(1000n);
+      expect(result.get(getAddress(TOKEN2))).toBe(2000n);
+      // No credentials needed — no keypair generation or signing
+      expect(relayer.generateKeypair).not.toHaveBeenCalled();
+      expect(signer.signTypedData).not.toHaveBeenCalled();
+    });
+
+    it("calls allow() only with uncached token addresses", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const token2 = new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        address: TOKEN2,
+      });
+
+      const signerAddress = await signer.getAddress();
+
+      // Pre-populate cache only for token1
+      await saveCachedBalance({
+        storage,
+        tokenAddress,
+        owner: signerAddress,
+        handle: handle as Address,
+        value: 1000n,
+      });
+
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({
+        [VALID_HANDLE2]: 2000n,
+      } as never);
+
+      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+        handles: [handle as Address, VALID_HANDLE2],
+      });
+
+      expect(result.get(tokenAddress)).toBe(1000n);
+      expect(result.get(getAddress(TOKEN2))).toBe(2000n);
+      // Credentials generated only for the uncached token
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
+      // createEIP712 called with only token2's address
+      const eip712Call = vi.mocked(relayer.createEIP712).mock.calls[0]!;
+      const signedAddresses = eip712Call[1] as Address[];
+      expect(signedAddresses).toHaveLength(1);
+      expect(signedAddresses[0]!.toLowerCase()).toBe(TOKEN2.toLowerCase());
     });
   });
 
