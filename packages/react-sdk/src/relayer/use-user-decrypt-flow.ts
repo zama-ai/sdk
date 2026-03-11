@@ -15,7 +15,7 @@ export interface DecryptHandle {
 export interface UserDecryptFlowParams {
   /** Encrypted handles to decrypt. */
   handles: DecryptHandle[];
-  /** Number of days the credential remains valid. Default: 1. */
+  /** Number of days the credential remains valid. Defaults to `Math.ceil(keypairTTL / 86400)`. */
   durationDays?: number;
 }
 
@@ -54,7 +54,6 @@ export interface UseUserDecryptFlowConfig {
  * });
  * decryptFlow.mutate({
  *   handles: [{ handle: "0xHandle", contractAddress: "0xContract" }],
- *   durationDays: 7,
  * });
  * ```
  */
@@ -65,7 +64,10 @@ export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig) {
 
   return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptFlowParams>({
     mutationKey: ["userDecryptFlow"],
-    mutationFn: async ({ handles, durationDays = 1 }) => {
+    mutationFn: async ({
+      handles,
+      durationDays = Math.ceil(sdk.credentials.keypairTTL / 86400),
+    }) => {
       // Step 1: Generate keypair
       const keypair = await sdk.relayer.generateKeypair();
       callbacks?.onKeypairGenerated?.();

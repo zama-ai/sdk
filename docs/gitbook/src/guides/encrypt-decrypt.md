@@ -289,7 +289,6 @@ function DecryptExample() {
     try {
       const result = await decrypt.mutateAsync({
         handles,
-        durationDays: 1, // credential validity (default: 1 day)
       });
     } catch {
       setStatus("Decrypt Balance");

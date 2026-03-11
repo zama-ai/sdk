@@ -82,6 +82,11 @@ export class CredentialsManager {
     return hex.slice(0, 32);
   }
 
+  /** The configured keypair TTL in seconds. */
+  get keypairTTL(): number {
+    return this.#keypairTTL;
+  }
+
   constructor(config: CredentialsManagerConfig) {
     this.#relayer = config.relayer;
     this.#signer = config.signer;
