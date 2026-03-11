@@ -5,7 +5,7 @@ import type { TransactionResult } from "@zama-fhe/sdk";
 import { shieldETHMutationOptions, type ShieldETHParams } from "@zama-fhe/sdk/query";
 import {
   type OptimisticMutateContext,
-  optimisticShieldCallbacks,
+  optimisticBalanceCallbacks,
 } from "./optimistic-balance-update";
 import { useToken, type UseZamaConfig } from "./use-token";
 
@@ -47,6 +47,6 @@ export function useShieldETH(
   return useMutation<TransactionResult, Error, ShieldETHParams, OptimisticMutateContext>({
     ...shieldETHMutationOptions(token),
     ...options,
-    ...optimisticShieldCallbacks(config.optimistic, config.tokenAddress, queryClient, options),
+    ...optimisticBalanceCallbacks(config.optimistic, config.tokenAddress, queryClient, options),
   });
 }
