@@ -233,7 +233,7 @@ const sdk = new ZamaSDK({
 
 ## Architecture
 
-> See [docs/architecture.md](docs/architecture.md) for full documentation including module maps and design patterns.
+> See the [Architecture](docs/gitbook/src/concepts/architecture.md) and [Security Model](docs/gitbook/src/concepts/security-model.md) concept pages for full documentation.
 
 ### Entry Points
 
