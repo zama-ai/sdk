@@ -1,0 +1,53 @@
+direction: down
+
+title: {
+  label: "Mutation-Triggered Invalidation"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- Mutation ---
+mutation: "User calls mutation\nshield() / transfer() / unshield()" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+tx-confirm: "Transaction confirmed\non-chain" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+invalidate: "SDK invalidates\nhandle query cache" {
+  style.fill: "#FCE4EC"
+  style.stroke: "#C62828"
+  style.font-size: 14
+}
+
+phase1: "Phase 1 fires immediately\n→ detects new handle" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+phase2: "Phase 2 decrypts\nnew balance" {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.font-size: 14
+}
+
+ui: "UI updates\n(within seconds)" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+  style.bold: true
+}
+
+mutation -> tx-confirm
+tx-confirm -> invalidate: "onSuccess callback"
+invalidate -> phase1: "bypasses polling interval"
+phase1 -> phase2: "handle changed"
+phase2 -> ui

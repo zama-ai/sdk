@@ -37,6 +37,7 @@
     "e2e:test:ui": "pnpm --filter @zama-fhe/playwright e2e:test:ui",
     "e2e:test:nextjs": "pnpm --filter @zama-fhe/playwright e2e:test:nextjs",
     "e2e:test:vite": "pnpm --filter @zama-fhe/playwright e2e:test:vite",
+    "docs:diagrams": "node scripts/docs/generate-diagrams.mjs",
     "docs:preview": "mdbook serve docs/gitbook --open",
     "docs:build": "mdbook build docs/gitbook",
     "typedoc": "typedoc",
@@ -46,11 +47,13 @@
     "api-report:check": "pnpm build && pnpm api-report:check:sdk && pnpm api-report:check:react-sdk",
     "api-report:check:sdk": "cd packages/sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json",
     "api-report:check:react-sdk": "cd packages/react-sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json",
+    "setup:claude": "bash scripts/setup-claude.sh",
     "size": "size-limit",
     "size:json": "size-limit --json"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@terrastruct/d2": "^0.1.33",
     "@faker-js/faker": "^10.3.0",
     "@microsoft/api-extractor": "^7.57.6",
     "@semantic-release/changelog": "^6.0.3",
@@ -91,6 +94,7 @@
     "typedoc-plugin-markdown": "^4.10.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
+    "typescript-language-server": "^5.1.3",
     "vitest": "^4.0.18"
   },
   "lint-staged": {

@@ -23,6 +23,8 @@ The cost compounds with multiple tokens. A portfolio page showing 10 token balan
 
 ## The two-phase solution
 
+![Two-Phase Balance Polling](../images/two-phase-polling.svg)
+
 ### Phase 1: Poll the encrypted handle (cheap)
 
 The SDK reads the encrypted handle from the contract via a standard RPC call every 10 seconds (configurable). This is a normal `eth_call` to `confidentialBalanceOf` — no FHE, no relayer, no wallet signature. It costs the same as reading any public view function.
@@ -46,36 +48,6 @@ Handle changed?
 ```
 
 This means the expensive decryption runs only when a balance actually changes — typically after a user's own transaction or an incoming transfer.
-
-## Flow diagram
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Phase 1 (cheap)                     │
-│                                                         │
-│   Poll encrypted handle via RPC every 10 seconds        │
-│   ┌──────────┐    ┌───────────┐    ┌────────────────┐   │
-│   │ setTimer  │───▶│ readContract│───▶│ compare handle │  │
-│   │ (10s)    │    │ (eth_call) │    │ to last known  │   │
-│   └──────────┘    └───────────┘    └───────┬────────┘   │
-│                                            │            │
-└────────────────────────────────────────────┼────────────┘
-                                             │
-                              ┌──────────────┴──────────────┐
-                              │                             │
-                         Handle same                   Handle changed
-                              │                             │
-                              ▼                             ▼
-                    Return cached balance     ┌─────────────────────────┐
-                    (no network call)         │     Phase 2 (expensive)  │
-                                              │                         │
-                                              │  Send to relayer KMS    │
-                                              │  KMS re-encrypts        │
-                                              │  WASM decrypts locally  │
-                                              │  Cache new plaintext    │
-                                              │                         │
-                                              └─────────────────────────┘
-```
 
 ## How caching works
 
@@ -101,24 +73,7 @@ The handle query uses `staleTime` defaults (0 by default), so it refetches on mo
 
 When you call a mutation hook — `useConfidentialTransfer`, `useShield`, or `useUnshield` — the SDK automatically invalidates the handle query cache on transaction success. This triggers an immediate Phase 1 poll, which detects the new handle and kicks off Phase 2 decryption.
 
-```
-User calls shield(1000n)
-        │
-        ▼
-Transaction confirmed
-        │
-        ▼
-SDK invalidates handle query cache
-        │
-        ▼
-Phase 1 fires immediately → detects new handle
-        │
-        ▼
-Phase 2 decrypts new balance
-        │
-        ▼
-UI updates
-```
+![Mutation-Triggered Invalidation](../images/two-phase-invalidation.svg)
 
 This means balance updates appear within seconds of a confirmed transaction, without waiting for the next polling interval.
 
@@ -154,18 +109,7 @@ Set `handleRefetchInterval` to `false` to disable automatic polling entirely. Th
 
 ## Multi-token polling
 
-The `useConfidentialBalances` hook applies the same two-phase strategy to multiple tokens in a single hook call. It polls all handles together and decrypts only the ones that changed.
-
-```
-Poll handles for [TokenA, TokenB, TokenC]
-        │
-        ▼
-TokenA: same handle → skip
-TokenB: new handle  → decrypt
-TokenC: same handle → skip
-```
-
-This is more efficient than mounting separate `useConfidentialBalance` hooks for each token, because the batch hook can coordinate polling and decryption.
+The `useConfidentialBalances` hook applies the same two-phase strategy to multiple tokens in a single hook call. It polls all handles together and decrypts only the ones that changed. This is more efficient than mounting separate `useConfidentialBalance` hooks for each token, because the batch hook can coordinate polling and decryption.
 
 ## Why this architecture matters
 

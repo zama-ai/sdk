@@ -17,8 +17,8 @@ export const hoodiCleartextConfig = {
   chainId: 560048,
   network: "https://rpc.hoodi.ethpandaops.io",
   gatewayChainId: HardhatConfig.gatewayChainId,
-  aclContractAddress: "0xCC505dF6f244AcBf12C915888eC046939a439dB5",
-  executorAddress: "0xfeec4C7e8Ad0Af0F42b594A453F4dB6da01e21D6",
+  aclContractAddress: "0x6D3FAf6f86e1fF9F3B0831Dda920AbA1cBd5bd68",
+  executorAddress: "0xC316692627de536368d82e9121F1D44a550894E6",
   // The values used when configuring the deployments are the same as those used for a hardhat deployment, since there's no gateway chain.
   verifyingContractAddressDecryption: HardhatConfig.verifyingContractAddressDecryption,
   verifyingContractAddressInputVerification:

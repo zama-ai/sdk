@@ -1,0 +1,76 @@
+direction: down
+
+title: {
+  label: "Two-Layer Authorization Model"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- Layer 1: Keypair (persistent) ---
+keypair: "Layer 1 — FHE Keypair (persistent)" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+
+  pubkey: "FHE Public Key\n(sent to relayer)" {
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+  }
+  privkey: "FHE Private Key\n(encrypted at rest)" {
+    style.fill: "#BBDEFB"
+    style.stroke: "#1565C0"
+  }
+  storage: "IndexedDB / Memory\n/ AsyncLocalStorage" {
+    shape: cylinder
+    style.fill: "#E8EAF6"
+    style.stroke: "#283593"
+  }
+
+  pubkey -> storage: "stored plaintext"
+  privkey -> storage: "stored as AES-GCM ciphertext"
+}
+
+# --- Layer 2: Session (ephemeral) ---
+session: "Layer 2 — Session Signature (ephemeral)" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+
+  wallet: "Wallet Signer" {
+    style.fill: "#FFE0B2"
+    style.stroke: "#E65100"
+  }
+  eip712: "EIP-712 Typed Data\n(contracts, timestamp, duration)" {
+    style.fill: "#FFE0B2"
+    style.stroke: "#E65100"
+  }
+  signature: "Signature\n(in-memory only)" {
+    style.fill: "#FFCC80"
+    style.stroke: "#E65100"
+    style.bold: true
+  }
+
+  wallet -> eip712: "signTypedData"
+  eip712 -> signature
+}
+
+# --- Key Derivation ---
+derive: "PBKDF2\n600k iterations, SHA-256" {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.font-size: 14
+}
+
+aes-key: "AES-256-GCM Key\n(transient, never stored)" {
+  style.fill: "#FCE4EC"
+  style.stroke: "#C62828"
+  style.font-size: 14
+  style.bold: true
+}
+
+# --- Connections ---
+session.signature -> derive: "raw bytes as input"
+derive -> aes-key
+aes-key -> keypair.privkey: "encrypts / decrypts"

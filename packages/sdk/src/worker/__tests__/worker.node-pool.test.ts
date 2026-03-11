@@ -228,4 +228,65 @@ describe("NodeWorkerPool", () => {
     await pool.generateKeypair();
     expect(instances[0].generateKeypair).toHaveBeenCalledTimes(2);
   });
+
+  it("throws when dispatching without init", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 1 });
+    await expect(pool.generateKeypair()).rejects.toThrow(
+      "NodeWorkerPool not initialized. Call initPool() first.",
+    );
+  });
+
+  it("concurrent initPool calls share the same promise", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 1 });
+
+    await Promise.all([pool.initPool(), pool.initPool()]);
+
+    expect(NodeWorkerClient).toHaveBeenCalledTimes(1);
+  });
+
+  it("initPool is idempotent after completion", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 1 });
+
+    await pool.initPool();
+    await pool.initPool();
+
+    expect(NodeWorkerClient).toHaveBeenCalledTimes(1);
+  });
+
+  it("cleans up all workers when init fails and allows re-init", async () => {
+    const terminateFns: ReturnType<typeof vi.fn>[] = [];
+
+    vi.mocked(NodeWorkerClient).mockImplementation(function () {
+      const terminateFn = vi.fn();
+      terminateFns.push(terminateFn);
+      return {
+        initWorker: vi.fn().mockImplementation(() => {
+          if (terminateFns.length > 1) return Promise.reject(new Error("init failed"));
+          return Promise.resolve(undefined);
+        }),
+        terminate: terminateFn,
+        generateKeypair: vi.fn(),
+      } as never;
+    });
+
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 2 });
+
+    await expect(pool.initPool()).rejects.toThrow("init failed");
+
+    for (const fn of terminateFns) {
+      expect(fn).toHaveBeenCalledOnce();
+    }
+
+    // Can re-init after failure
+    vi.mocked(NodeWorkerClient).mockImplementation(function () {
+      return {
+        initWorker: vi.fn().mockResolvedValue(undefined),
+        terminate: vi.fn(),
+        generateKeypair: vi.fn().mockResolvedValue({ publicKey: "pk", privateKey: "sk" }),
+      } as never;
+    });
+
+    await pool.initPool();
+    await expect(pool.generateKeypair()).resolves.toBeDefined();
+  });
 });

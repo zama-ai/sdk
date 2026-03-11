@@ -8,10 +8,7 @@ import type { GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "./token.types";
-
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
-}
+import { toError } from "../utils";
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
