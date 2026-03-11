@@ -1,0 +1,65 @@
+direction: down
+
+title: {
+  label: "Session Lifecycle"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- States ---
+disconnected: "Disconnected\n(no wallet)" {
+  style.fill: "#ECEFF1"
+  style.stroke: "#37474F"
+  style.font-size: 14
+}
+
+no-keypair: "No Keypair\n(wallet connected, first visit)" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+no-session: "Keypair Stored\n(no active session)" {
+  style.fill: "#FFFDE7"
+  style.stroke: "#F57F17"
+  style.font-size: 14
+}
+
+active: "Active Session\n(keypair + signature cached)" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+  style.bold: true
+}
+
+# --- Transitions ---
+disconnected -> no-keypair: "wallet connects" {
+  style.stroke: "#1565C0"
+}
+
+no-keypair -> active: "allow() / balanceOf()\n→ generate keypair (WASM)\n→ sign EIP-712\n→ encrypt & store keypair\n→ cache signature" {
+  style.stroke: "#388E3C"
+}
+
+no-session -> active: "allow() / balanceOf()\n→ re-sign EIP-712\n→ decrypt keypair\n→ cache signature" {
+  style.stroke: "#388E3C"
+}
+
+active -> no-session: "page reload\nrevoke()\nsessionTTL expires" {
+  style.stroke: "#E65100"
+}
+
+active -> no-keypair: "keypairTTL expires" {
+  style.stroke: "#BF360C"
+}
+
+active -> disconnected: "wallet disconnect\naccount switch" {
+  style.stroke: "#37474F"
+}
+
+active -> active: "balanceOf() / transfer()\n→ reuse cached signature\n(no wallet popup)" {
+  style.stroke: "#388E3C"
+  style.stroke-dash: 5
+}
