@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "../utils/query";
+import { mergeEnabled, useQuery } from "../utils/query";
 import { type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import {
@@ -52,14 +52,12 @@ export function useShieldFee(
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const userEnabled = options?.enabled;
   const baseOpts = shieldFeeQueryOptions(sdk.signer, config);
-  const factoryEnabled = baseOpts.enabled ?? true;
 
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: mergeEnabled(baseOpts.enabled, options?.enabled),
   });
 }
 
@@ -85,14 +83,12 @@ export function useUnshieldFee(
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const userEnabled = options?.enabled;
   const baseOpts = unshieldFeeQueryOptions(sdk.signer, config);
-  const factoryEnabled = baseOpts.enabled ?? true;
 
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: mergeEnabled(baseOpts.enabled, options?.enabled),
   });
 }
 
@@ -113,14 +109,12 @@ export function useBatchTransferFee(
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const userEnabled = options?.enabled;
   const baseOpts = batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress);
-  const factoryEnabled = baseOpts.enabled ?? true;
 
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: mergeEnabled(baseOpts.enabled, options?.enabled),
   });
 }
 
@@ -141,13 +135,11 @@ export function useFeeRecipient(
   options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const userEnabled = options?.enabled;
   const baseOpts = feeRecipientQueryOptions(sdk.signer, feeManagerAddress);
-  const factoryEnabled = baseOpts.enabled ?? true;
 
   return useQuery<Address>({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: mergeEnabled(baseOpts.enabled, options?.enabled),
   });
 }

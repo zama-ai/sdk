@@ -1,5 +1,6 @@
-import { act } from "@testing-library/react";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { act, waitFor } from "@testing-library/react";
+import { TransactionRevertedError } from "@zama-fhe/sdk";
+import { shieldETHMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
 import { useShieldETH } from "../use-shield-eth";
@@ -86,6 +87,239 @@ describe("useShieldETH", () => {
         expectCacheInvalidated(client, allowanceKey);
         expectCacheInvalidated(client, WAGMI_BALANCE_KEY);
       },
+    );
+  });
+
+  test("behavior: forwards raw onMutate context to onSuccess without optimistic flag", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+
+    const expectedContext = { requestId: "shield-eth-success-raw" } as const;
+    const onMutate = vi.fn().mockReturnValue(expectedContext);
+    const onSuccess = vi.fn();
+
+    const { result } = renderWithProviders(() =>
+      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }, { onMutate, onSuccess }),
+    );
+
+    await act(() => result.current.mutateAsync({ amount: 1000000000000000000n }));
+
+    expect(onMutate).toHaveBeenCalledOnce();
+    expect(onSuccess).toHaveBeenCalledOnce();
+    const onSuccessContext = onSuccess.mock.calls[0]?.[2];
+    expect(onSuccessContext).toBe(expectedContext);
+  });
+
+  test("behavior: forwards raw onMutate context to onError without optimistic flag", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield ETH failed"));
+
+    const expectedContext = { requestId: "shield-eth-error-raw" } as const;
+    const onMutate = vi.fn().mockReturnValue(expectedContext);
+    const onError = vi.fn();
+
+    const { result } = renderWithProviders(() =>
+      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }, { onMutate, onError }),
+    );
+
+    await act(async () => {
+      await expect(result.current.mutateAsync({ amount: 1000000000000000000n })).rejects.toThrow();
+    });
+
+    expect(onMutate).toHaveBeenCalledOnce();
+    expect(onError).toHaveBeenCalledOnce();
+    const onErrorContext = onError.mock.calls[0]?.[2];
+    expect(onErrorContext).toBe(expectedContext);
+  });
+
+  test("behavior: forwards raw onMutate context to onSettled without optimistic flag", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+
+    const expectedContext = { requestId: "shield-eth-settled-raw" } as const;
+    const onMutate = vi.fn().mockReturnValue(expectedContext);
+    const onSettled = vi.fn();
+
+    const { result } = renderWithProviders(() =>
+      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }, { onMutate, onSettled }),
+    );
+
+    await act(() => result.current.mutateAsync({ amount: 1000000000000000000n }));
+
+    expect(onMutate).toHaveBeenCalledOnce();
+    expect(onSettled).toHaveBeenCalledOnce();
+    const onSettledContext = onSettled.mock.calls[0]?.[3];
+    expect(onSettledContext).toBe(expectedContext);
+  });
+
+  test("behavior: unwraps caller context for onSuccess with optimistic flag", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+
+    const expectedContext = { requestId: "shield-eth-success-optimistic" } as const;
+    const onMutate = vi.fn().mockReturnValue(expectedContext);
+    const onSuccess = vi.fn();
+
+    const { result } = renderWithProviders(() =>
+      useShieldETH(
+        { tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true },
+        { onMutate, onSuccess },
+      ),
+    );
+
+    await act(() => result.current.mutateAsync({ amount: 1000000000000000000n }));
+
+    expect(onMutate).toHaveBeenCalledOnce();
+    expect(onSuccess).toHaveBeenCalledOnce();
+    const onSuccessContext = onSuccess.mock.calls[0]?.[2];
+    expect(onSuccessContext).toBe(expectedContext);
+  });
+
+  test("behavior: unwraps caller context for onError with optimistic flag", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield ETH failed"));
+
+    const expectedContext = { requestId: "shield-eth-error-optimistic" } as const;
+    const onMutate = vi.fn().mockReturnValue(expectedContext);
+    const onError = vi.fn();
+
+    const { result } = renderWithProviders(() =>
+      useShieldETH(
+        { tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true },
+        { onMutate, onError },
+      ),
+    );
+
+    await act(async () => {
+      await expect(result.current.mutateAsync({ amount: 1000000000000000000n })).rejects.toThrow();
+    });
+
+    expect(onMutate).toHaveBeenCalledOnce();
+    expect(onError).toHaveBeenCalledOnce();
+    const onErrorContext = onError.mock.calls[0]?.[2];
+    expect(onErrorContext).toBe(expectedContext);
+  });
+
+  test("behavior: unwraps caller context for onSettled with optimistic flag", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+
+    const expectedContext = { requestId: "shield-eth-settled-optimistic" } as const;
+    const onMutate = vi.fn().mockReturnValue(expectedContext);
+    const onSettled = vi.fn();
+
+    const { result } = renderWithProviders(() =>
+      useShieldETH(
+        { tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true },
+        { onMutate, onSettled },
+      ),
+    );
+
+    await act(() => result.current.mutateAsync({ amount: 1000000000000000000n }));
+
+    expect(onMutate).toHaveBeenCalledOnce();
+    expect(onSettled).toHaveBeenCalledOnce();
+    const onSettledContext = onSettled.mock.calls[0]?.[3];
+    expect(onSettledContext).toBe(expectedContext);
+  });
+});
+
+describe("useShieldETH optimistic updates", () => {
+  test("behavior: optimistic add on mutate", async ({ renderWithProviders, signer }) => {
+    let resolveWrap: (value: string) => void;
+    vi.mocked(signer.writeContract).mockReturnValue(
+      new Promise((resolve) => {
+        resolveWrap = resolve as (value: string) => void;
+      }),
+    );
+
+    const { result, queryClient } = renderWithProviders(() =>
+      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+    );
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    queryClient.setQueryData(balanceKey, 3000n);
+    const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
+    const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
+
+    await act(async () => {
+      result.current.mutate({ amount: 500n });
+    });
+
+    await waitFor(() => {
+      expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3500n);
+    });
+    expect(cancelSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
+      }),
+    );
+    expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
+    expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
+    );
+
+    await act(async () => {
+      resolveWrap!("0xtxhash");
+    });
+  });
+
+  test("behavior: rolls back optimistic on error", async ({ renderWithProviders, signer }) => {
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield ETH failed"));
+
+    const { result, queryClient } = renderWithProviders(() =>
+      useShieldETH({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+    );
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    queryClient.setQueryData(balanceKey, 3000n);
+    const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
+    const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
+
+    await act(async () => {
+      result.current.mutate({ amount: 500n });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(queryClient.getQueryData(balanceKey)).toBe(3000n);
+    expect(cancelSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
+      }),
+    );
+    expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
+    expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
+    );
+    expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3500n);
+    expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3000n);
+  });
+});
+
+describe("useShieldETH error propagation", () => {
+  test("shieldETH surfaces TransactionRevertedError", async ({ token }) => {
+    const error = new TransactionRevertedError("Shield ETH transaction failed");
+    vi.mocked(token.shieldETH).mockRejectedValueOnce(error);
+
+    const opts = shieldETHMutationOptions(token);
+
+    await expect(opts.mutationFn({ amount: 1000000000000000000n })).rejects.toThrow(
+      TransactionRevertedError,
     );
   });
 });

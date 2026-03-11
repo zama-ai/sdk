@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { hashFn, publicKeyQueryOptions } from "@zama-fhe/sdk/query";
+import { useQuery } from "../utils/query";
+import { publicKeyQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 export { publicKeyQueryOptions };
@@ -28,8 +28,7 @@ export interface PublicKeyData {
  */
 export function usePublicKey() {
   const sdk = useZamaSDK();
-  return useQuery({
+  return useQuery<PublicKeyData | null>({
     ...publicKeyQueryOptions(sdk),
-    queryKeyHashFn: hashFn,
   });
 }
