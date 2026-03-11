@@ -24,8 +24,8 @@ on:
 permissions: {}
 
 concurrency:
-  group: claude-${{ github.ref }}
-  cancel-in-progress: true
+  group: claude-${{ github.event.issue.number || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
 
 jobs:
   claude:

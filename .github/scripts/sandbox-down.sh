@@ -27,7 +27,7 @@ if [ "${RUNNER_DEBUG:-0}" = "1" ]; then
     docker exec sandbox-proxy sh -lc '
       LOG=/var/log/squid/access.log
       test -f "$LOG" || { echo "No $LOG found"; exit 0; }
-      tail -n 800 "$LOG" | egrep "TCP_DENIED| CONNECT "
+      tail -n 800 "$LOG" | grep -E "TCP_DENIED| CONNECT "
     ' || true
   fi
 fi
