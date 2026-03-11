@@ -203,8 +203,9 @@ describe("eip1193Subscribe", () => {
     eip1193Subscribe(provider, () => Promise.resolve(ADDR_A), {});
     await vi.waitFor(() => {});
 
-    provider.emit("accountsChanged", []);
-    provider.emit("accountsChanged", [ADDR_B]);
-    provider.emit("disconnect");
+    // These should not throw with default no-op callbacks
+    expect(() => provider.emit("accountsChanged", [])).not.toThrow();
+    expect(() => provider.emit("accountsChanged", [ADDR_B])).not.toThrow();
+    expect(() => provider.emit("disconnect")).not.toThrow();
   });
 });

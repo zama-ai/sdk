@@ -70,8 +70,9 @@ describe("ChromeSessionStorage", () => {
     expect(await storage.get("complex")).toEqual(obj);
   });
 
-  it("returns null when chrome.storage.session.get returns empty object", async () => {
-    // Key not present → get returns {} → result[key] is undefined → ?? null
-    expect(await storage.get("nonexistent")).toBeNull();
+  it("returns null for falsy stored values via nullish coalescing", async () => {
+    // Verify ?? null coalescing: explicitly stored undefined should still return null
+    store.set("falsy", undefined);
+    expect(await storage.get("falsy")).toBeNull();
   });
 });

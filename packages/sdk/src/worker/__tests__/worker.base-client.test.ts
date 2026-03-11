@@ -399,42 +399,46 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.payload).toEqual({ handles: [HANDLE] });
   });
 
-  it("createEIP712 sends correct type", async () => {
+  it("createEIP712 sends correct type and payload", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, {});
 
-    await client.createEIP712({
+    const params = {
       publicKey: "pk",
       contractAddresses: ["0x1" as `0x${string}`],
       startTimestamp: 1000,
       durationDays: 7,
-    });
+    };
+    await client.createEIP712(params);
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
     expect(lastCall.type).toBe("CREATE_EIP712");
+    expect(lastCall.payload).toEqual(params);
   });
 
-  it("createDelegatedUserDecryptEIP712 sends correct type", async () => {
+  it("createDelegatedUserDecryptEIP712 sends correct type and payload", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, {});
 
-    await client.createDelegatedUserDecryptEIP712({
+    const params = {
       publicKey: "pk",
       contractAddresses: ["0x1" as `0x${string}`],
       delegatorAddress: "0xD" as `0x${string}`,
       startTimestamp: 100,
       durationDays: 7,
-    });
+    };
+    await client.createDelegatedUserDecryptEIP712(params);
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
     expect(lastCall.type).toBe("CREATE_DELEGATED_EIP712");
+    expect(lastCall.payload).toEqual(params);
   });
 
-  it("delegatedUserDecrypt sends correct type", async () => {
+  it("delegatedUserDecrypt sends correct type and payload", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, { clearValues: {} });
 
-    await client.delegatedUserDecrypt({
+    const params = {
       handles: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
@@ -445,10 +449,12 @@ describe("BaseWorkerClient", () => {
       delegateAddress: "0xE" as `0x${string}`,
       startTimestamp: 100,
       durationDays: 7,
-    });
+    };
+    await client.delegatedUserDecrypt(params);
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
     expect(lastCall.type).toBe("DELEGATED_USER_DECRYPT");
+    expect(lastCall.payload).toEqual(params);
   });
 
   it("requestZKProofVerification sends correct type", async () => {
