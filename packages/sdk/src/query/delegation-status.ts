@@ -32,10 +32,11 @@ export function delegationStatusQueryOptions(
       config.delegatorAddress,
       config.delegateAddress,
     ),
-    queryFn: async () => {
+    queryFn: async (context) => {
+      const [, { delegatorAddress, delegateAddress }] = context.queryKey;
       const expiryTimestamp = await readonlyToken.getDelegationExpiry({
-        delegatorAddress: config.delegatorAddress,
-        delegateAddress: config.delegateAddress,
+        delegatorAddress,
+        delegateAddress,
       });
       // Derive isDelegated from expiry + chain time to stay consistent
       // with ReadonlyToken.isDelegated() (avoids client-clock skew).

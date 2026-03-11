@@ -224,8 +224,8 @@ export const zamaQueryKeys = {
         "zama.delegationStatus",
         {
           tokenAddress: getAddress(tokenAddress),
-          delegator: getAddress(delegator),
-          delegate: getAddress(delegate),
+          delegatorAddress: getAddress(delegator),
+          delegateAddress: getAddress(delegate),
         },
       ] as const,
   },

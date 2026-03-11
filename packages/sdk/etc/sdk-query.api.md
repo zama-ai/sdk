@@ -1336,8 +1336,8 @@ export const zamaQueryKeys: {
         }];
         readonly scope: (tokenAddress: string, delegator: string, delegate: string) => readonly ["zama.delegationStatus", {
             readonly tokenAddress: `0x${string}`;
-            readonly delegator: `0x${string}`;
-            readonly delegate: `0x${string}`;
+            readonly delegatorAddress: `0x${string}`;
+            readonly delegateAddress: `0x${string}`;
         }];
     };
     readonly decryption: {
