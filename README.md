@@ -229,9 +229,7 @@ const sdk = new ZamaSDK({
 
 ## Architecture
 
-<picture>
-  <img alt="Zama SDK Architecture Layers" src="docs/diagrams/layers.svg">
-</picture>
+![Zama SDK Architecture Layers](docs/diagrams/layers.svg)
 
 > See the [Architecture](docs/gitbook/src/concepts/architecture.md) and [Security Model](docs/gitbook/src/concepts/security-model.md) concept pages for full documentation.
 
