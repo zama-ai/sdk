@@ -37,6 +37,7 @@
     "e2e:test:ui": "pnpm --filter @zama-fhe/playwright e2e:test:ui",
     "e2e:test:nextjs": "pnpm --filter @zama-fhe/playwright e2e:test:nextjs",
     "e2e:test:vite": "pnpm --filter @zama-fhe/playwright e2e:test:vite",
+    "docs:diagrams": "node scripts/docs/generate-diagrams.mjs",
     "docs:preview": "mdbook serve docs/gitbook --open",
     "docs:build": "mdbook build docs/gitbook",
     "typedoc": "typedoc",
@@ -52,6 +53,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@terrastruct/d2": "^0.1.33",
     "@faker-js/faker": "^10.3.0",
     "@microsoft/api-extractor": "^7.57.6",
     "@semantic-release/changelog": "^6.0.3",

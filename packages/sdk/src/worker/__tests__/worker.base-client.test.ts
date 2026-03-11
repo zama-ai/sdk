@@ -332,4 +332,190 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.type).toBe("USER_DECRYPT");
     expect(lastCall.payload).toEqual(params);
   });
+
+  it("error response includes statusCode when present", async () => {
+    const client = await initClient();
+
+    client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
+      Promise.resolve().then(() => {
+        client.simulateResponse({
+          id: req.id,
+          type: req.type,
+          success: false,
+          error: "rate limited",
+          statusCode: 429,
+        } as WorkerResponse<unknown> & { statusCode: number });
+      });
+    });
+
+    try {
+      await client.generateKeypair();
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect((err as Error).message).toBe("rate limited");
+      expect((err as Error & { statusCode?: number }).statusCode).toBe(429);
+    }
+  });
+
+  it("terminate is a no-op when no worker exists", () => {
+    const client = new TestWorkerClient();
+    client.terminate();
+  });
+
+  it("handleWorkerError without existing worker does not throw", () => {
+    const client = new TestWorkerClient();
+    client.simulateWorkerError("crash!");
+  });
+
+  it("handleWorkerMessageError without existing worker does not throw", () => {
+    const client = new TestWorkerClient();
+    client.simulateMessageError();
+  });
+
+  it("encrypt sends correct type", async () => {
+    const client = await initClient();
+    autoResolvePostMessage(client, { handles: [], inputProof: "0x" });
+
+    const params = {
+      values: [{ value: 1n, type: "euint8" as const }],
+      contractAddress: "0xC" as `0x${string}`,
+      userAddress: "0xU" as `0x${string}`,
+    };
+    const result = await client.encrypt(params);
+    expect(result).toEqual({ handles: [], inputProof: "0x" });
+
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    expect(lastCall.type).toBe("ENCRYPT");
+  });
+
+  it("publicDecrypt sends correct type and payload", async () => {
+    const client = await initClient();
+    autoResolvePostMessage(client, { clearValues: {} });
+
+    await client.publicDecrypt([HANDLE]);
+
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    expect(lastCall.type).toBe("PUBLIC_DECRYPT");
+    expect(lastCall.payload).toEqual({ handles: [HANDLE] });
+  });
+
+  it("createEIP712 sends correct type and payload", async () => {
+    const client = await initClient();
+    autoResolvePostMessage(client, {});
+
+    const params = {
+      publicKey: "0xpk" as `0x${string}`,
+      contractAddresses: ["0x1" as `0x${string}`],
+      startTimestamp: 1000,
+      durationDays: 7,
+    };
+    await client.createEIP712(params);
+
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    expect(lastCall.type).toBe("CREATE_EIP712");
+    expect(lastCall.payload).toEqual(params);
+  });
+
+  it("createDelegatedUserDecryptEIP712 sends correct type and payload", async () => {
+    const client = await initClient();
+    autoResolvePostMessage(client, {});
+
+    const params = {
+      publicKey: "0xpk" as `0x${string}`,
+      contractAddresses: ["0x1" as `0x${string}`],
+      delegatorAddress: "0xD" as `0x${string}`,
+      startTimestamp: 100,
+      durationDays: 7,
+    };
+    await client.createDelegatedUserDecryptEIP712(params);
+
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    expect(lastCall.type).toBe("CREATE_DELEGATED_EIP712");
+    expect(lastCall.payload).toEqual(params);
+  });
+
+  it("delegatedUserDecrypt sends correct type and payload", async () => {
+    const client = await initClient();
+    autoResolvePostMessage(client, { clearValues: {} });
+
+    const params = {
+      handles: [HANDLE],
+      contractAddress: "0xC" as `0x${string}`,
+      signedContractAddresses: ["0xS" as `0x${string}`],
+      privateKey: "0xsk" as `0x${string}`,
+      publicKey: "0xpk" as `0x${string}`,
+      signature: "0xsig" as `0x${string}`,
+      delegatorAddress: "0xD" as `0x${string}`,
+      delegateAddress: "0xE" as `0x${string}`,
+      startTimestamp: 100,
+      durationDays: 7,
+    };
+    await client.delegatedUserDecrypt(params);
+
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    expect(lastCall.type).toBe("DELEGATED_USER_DECRYPT");
+    expect(lastCall.payload).toEqual(params);
+  });
+
+  it("requestZKProofVerification sends correct type", async () => {
+    const client = await initClient();
+    autoResolvePostMessage(client, "0xproof");
+
+    await client.requestZKProofVerification({ proof: "0x" } as never);
+
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    expect(lastCall.type).toBe("REQUEST_ZK_PROOF_VERIFICATION");
+  });
+
+  it("getPublicKey sends correct type", async () => {
+    const client = await initClient();
+    autoResolvePostMessage(client, { result: null });
+
+    await client.getPublicKey();
+
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    expect(lastCall.type).toBe("GET_PUBLIC_KEY");
+  });
+
+  it("getPublicParams sends correct type and bits", async () => {
+    const client = await initClient();
+    autoResolvePostMessage(client, { result: null });
+
+    await client.getPublicParams(2048);
+
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    expect(lastCall.type).toBe("GET_PUBLIC_PARAMS");
+    expect(lastCall.payload).toEqual({ bits: 2048 });
+  });
+
+  it("worker error during init terminates the worker", async () => {
+    const client = new TestWorkerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.spyOn(client as any, "createWorker").mockImplementation(() => {
+      const worker: TestWorker = {
+        postMessage: vi.fn().mockImplementation((req: WorkerRequest) => {
+          Promise.resolve().then(() => {
+            client.simulateResponse({
+              id: req.id,
+              type: req.type,
+              success: false,
+              error: "WASM failed",
+            });
+          });
+        }),
+        terminate: vi.fn(),
+      };
+      client.lastWorker = worker;
+      return worker;
+    });
+
+    await expect(client.initWorker()).rejects.toThrow("WASM failed");
+    expect(client.lastWorker!.terminate).toHaveBeenCalledOnce();
+  });
+
+  it("sendRequest auto-initializes worker if not yet initialized", async () => {
+    const client = createAutoResolvingClient();
+    const result = await client.generateKeypair();
+    expect(result).toEqual({ initialized: true });
+  });
 });
