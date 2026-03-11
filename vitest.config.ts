@@ -77,7 +77,7 @@ export default defineConfig({
         test: {
           name: "react-sdk",
           environment: "happy-dom",
-          pool: "vmThreads",
+          pool: process.env.CI ? undefined : "vmForks",
           include: [
             "packages/react-sdk/**/*.test.{ts,tsx}",
             "packages/sdk/src/worker/__tests__/*.test.ts",
