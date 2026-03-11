@@ -30,11 +30,7 @@ import type {
   ShieldCallbacks,
   TransferCallbacks,
 } from "./token.types";
-
-/** Coerce an unknown caught value to an Error instance. */
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
-}
+import { toError } from "../utils";
 
 /**
  * ERC-20-like interface for a single confidential token.
@@ -108,7 +104,7 @@ export class Token extends ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
-      ({ handles, inputProof } = await this.sdk.encrypt({
+      ({ handles, inputProof } = await this.relayer.encrypt({
         values: [{ value: amount, type: "euint64" }],
         contractAddress: this.address,
         userAddress: await this.signer.getAddress(),
@@ -182,7 +178,7 @@ export class Token extends ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
-      ({ handles, inputProof } = await this.sdk.encrypt({
+      ({ handles, inputProof } = await this.relayer.encrypt({
         values: [{ value: amount, type: "euint64" }],
         contractAddress: this.address,
         userAddress: normalizedFrom,
@@ -409,7 +405,7 @@ export class Token extends ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.EncryptStart });
-      ({ handles, inputProof } = await this.sdk.encrypt({
+      ({ handles, inputProof } = await this.relayer.encrypt({
         values: [{ value: amount, type: "euint64" }],
         contractAddress: this.wrapper,
         userAddress,
@@ -580,7 +576,7 @@ export class Token extends ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const result = await this.sdk.publicDecrypt([burnAmountHandle]);
+      const result = await this.relayer.publicDecrypt([burnAmountHandle]);
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
       decryptionProof = result.decryptionProof;
       try {
