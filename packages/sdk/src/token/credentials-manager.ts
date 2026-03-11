@@ -70,6 +70,7 @@ export class CredentialsManager {
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<StoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
+  #extendPromise: Promise<StoredCredentials> | null = null;
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
   #cachedDerivedKey: CryptoKey | null = null;
@@ -412,8 +413,44 @@ export class CredentialsManager {
   /**
    * Extend credentials with additional contract addresses: re-sign with the
    * merged set and persist, reusing the existing keypair.
+   *
+   * Serialized via `#extendPromise` so that concurrent `allow()` calls with
+   * different addresses don't race on read-modify-write of the contract list.
    */
   async #extendContracts({
+    storeKey,
+    credentials,
+    requiredContracts,
+  }: {
+    storeKey: string;
+    credentials: StoredCredentials;
+    requiredContracts: Address[];
+  }): Promise<StoredCredentials> {
+    // Serialize concurrent extensions to prevent last-write-wins races.
+    if (this.#extendPromise) {
+      const previous = await this.#extendPromise;
+      // Previous extension may already cover our required contracts.
+      if (this.#coversContracts(previous.contractAddresses, requiredContracts)) {
+        this.#emit({
+          type: ZamaSDKEvents.CredentialsAllowed,
+          contractAddresses: requiredContracts,
+        });
+        return previous;
+      }
+      // Use the latest state as our base so we don't drop its addresses.
+      credentials = previous;
+    }
+
+    const promise = this.#performExtend({ storeKey, credentials, requiredContracts });
+    this.#extendPromise = promise;
+    try {
+      return await promise;
+    } finally {
+      if (this.#extendPromise === promise) this.#extendPromise = null;
+    }
+  }
+
+  async #performExtend({
     storeKey,
     credentials,
     requiredContracts,

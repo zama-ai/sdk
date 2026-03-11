@@ -813,31 +813,52 @@ describe("contract address extension", () => {
     expect(normalized).toContain(getAddress(TOKEN_A));
     expect(normalized).toContain(getAddress(TOKEN_B));
   });
-});
 
-describe("storeKey caching", () => {
-  it("caches the SHA-256 store key across multiple allow() calls", async ({
+  it("concurrent extensions don't drop contract addresses", async ({
     relayer,
     signer,
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
-    const digestSpy = vi.spyOn(crypto.subtle, "digest");
 
     await credentialManager.allow(TOKEN_A);
-    const digestCallsAfterFirst = digestSpy.mock.calls.filter(
-      ([algo]) => algo === "SHA-256",
-    ).length;
+
+    // Launch two extensions concurrently with different contracts
+    const [resultB, resultC] = await Promise.all([
+      credentialManager.allow(TOKEN_A, TOKEN_B),
+      credentialManager.allow(TOKEN_A, TOKEN_C),
+    ]);
+
+    // The last result should cover all three contracts (no address dropped)
+    const finalContracts = resultC.contractAddresses.map((a) => getAddress(a));
+    expect(finalContracts).toContain(getAddress(TOKEN_A));
+    expect(finalContracts).toContain(getAddress(TOKEN_B));
+    expect(finalContracts).toContain(getAddress(TOKEN_C));
+
+    // First concurrent result covers at least A and B
+    const firstContracts = resultB.contractAddresses.map((a) => getAddress(a));
+    expect(firstContracts).toContain(getAddress(TOKEN_A));
+    expect(firstContracts).toContain(getAddress(TOKEN_B));
+  });
+});
+
+describe("storeKey caching", () => {
+  it("caches the store key across multiple allow() calls", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
     await credentialManager.allow(TOKEN_A);
-    const digestCallsAfterSecond = digestSpy.mock.calls.filter(
-      ([algo]) => algo === "SHA-256",
-    ).length;
+    expect(computeSpy).toHaveBeenCalledOnce();
 
-    // Second allow() should not trigger another SHA-256 digest for the store key
-    expect(digestCallsAfterSecond).toBe(digestCallsAfterFirst);
+    await credentialManager.allow(TOKEN_A);
+    // Second allow() should not recompute the store key
+    expect(computeSpy).toHaveBeenCalledOnce();
 
-    digestSpy.mockRestore();
+    computeSpy.mockRestore();
   });
 
   it("reuses cached store key for isExpired() after allow()", async ({
@@ -846,22 +867,16 @@ describe("storeKey caching", () => {
     credentialManager,
   }) => {
     setupMocks(relayer, signer);
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
     await credentialManager.allow(TOKEN_A);
-
-    // Reset call counts to measure only isExpired() calls
-    vi.mocked(signer.getAddress).mockClear();
-    vi.mocked(signer.getChainId).mockClear();
-    const digestSpy = vi.spyOn(crypto.subtle, "digest");
+    expect(computeSpy).toHaveBeenCalledOnce();
 
     await credentialManager.isExpired();
+    // isExpired() should reuse the cached store key
+    expect(computeSpy).toHaveBeenCalledOnce();
 
-    // getAddress/getChainId are still called (to build identity string for comparison),
-    // but SHA-256 digest should NOT be called again because the cache hits
-    const sha256Calls = digestSpy.mock.calls.filter(([algo]) => algo === "SHA-256").length;
-    expect(sha256Calls).toBe(0);
-
-    digestSpy.mockRestore();
+    computeSpy.mockRestore();
   });
 
   it("invalidates store key cache when signer address changes", async ({
@@ -878,23 +893,21 @@ describe("storeKey caching", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
     await manager.allow(TOKEN_A);
+    expect(computeSpy).toHaveBeenCalledOnce();
 
     // Change the signer address
     vi.mocked(signer.getAddress).mockResolvedValue(
       "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address,
     );
 
-    const digestSpy = vi.spyOn(crypto.subtle, "digest");
-
     await manager.allow(TOKEN_A);
+    // Should have recomputed the store key for the new address
+    expect(computeSpy).toHaveBeenCalledTimes(2);
 
-    // Should have recomputed the store key (new SHA-256 call)
-    const sha256Calls = digestSpy.mock.calls.filter(([algo]) => algo === "SHA-256").length;
-    expect(sha256Calls).toBeGreaterThanOrEqual(1);
-
-    digestSpy.mockRestore();
+    computeSpy.mockRestore();
   });
 
   it("invalidates store key cache when chain ID changes", async ({
@@ -911,20 +924,18 @@ describe("storeKey caching", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
     await manager.allow(TOKEN_A);
+    expect(computeSpy).toHaveBeenCalledOnce();
 
     // Change the chain ID
     vi.mocked(signer.getChainId).mockResolvedValue(1);
 
-    const digestSpy = vi.spyOn(crypto.subtle, "digest");
-
     await manager.allow(TOKEN_A);
+    expect(computeSpy).toHaveBeenCalledTimes(2);
 
-    const sha256Calls = digestSpy.mock.calls.filter(([algo]) => algo === "SHA-256").length;
-    expect(sha256Calls).toBeGreaterThanOrEqual(1);
-
-    digestSpy.mockRestore();
+    computeSpy.mockRestore();
   });
 
   it("reuses the same store key when signer address casing changes", async ({
@@ -941,26 +952,25 @@ describe("storeKey caching", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
+    const computeSpy = vi.spyOn(CredentialsManager, "computeStoreKey");
 
     await manager.allow(TOKEN_A);
-
-    const digestSpy = vi.spyOn(crypto.subtle, "digest");
+    expect(computeSpy).toHaveBeenCalledOnce();
 
     vi.mocked(signer.getAddress).mockResolvedValue(
       "0x2222222222222222222222222222222222ABCDEF" as Address,
     );
 
     await manager.allow(TOKEN_A);
+    // getAddress normalization means casing change doesn't invalidate cache
+    expect(computeSpy).toHaveBeenCalledOnce();
 
-    const sha256Calls = digestSpy.mock.calls.filter(([algo]) => algo === "SHA-256").length;
-    expect(sha256Calls).toBe(0);
-
-    digestSpy.mockRestore();
+    computeSpy.mockRestore();
   });
 });
 
 describe("deriveKey caching", () => {
-  it("caches the PBKDF2 derived key across decrypt and encrypt operations", async ({
+  it("does not re-derive the encryption key when extending contracts with same signature", async ({
     relayer,
     signer,
     storage,
@@ -975,10 +985,8 @@ describe("deriveKey caching", () => {
       keypairTTL: 86400,
     });
 
-    // First call creates and encrypts credentials (deriveKey called for encrypt)
+    // First call creates and encrypts credentials
     await manager.allow(TOKEN_A);
-
-    const deriveKeySpy = vi.spyOn(crypto.subtle, "deriveKey");
 
     // Simulate reload: new manager reads from storage and decrypts
     const manager2 = new CredentialsManager({
@@ -990,21 +998,18 @@ describe("deriveKey caching", () => {
     });
     await manager2.allow(TOKEN_A);
 
-    const firstDeriveCalls = deriveKeySpy.mock.calls.length;
+    const deriveKeySpy = vi.spyOn(crypto.subtle, "deriveKey");
 
-    // Extend to TOKEN_B — forces decrypt (to read existing) + encrypt (to persist extended).
-    // Both #deriveKey calls use the same signature+address, so the cache should hit.
+    // Extend to TOKEN_B — the signature (mock-deterministic "0xsig789") and
+    // address haven't changed, so the cached derived key should be reused.
     await manager2.allow(TOKEN_A, TOKEN_B);
 
-    const secondDeriveCalls = deriveKeySpy.mock.calls.length;
-
-    // deriveKey should NOT have been called again because signature+address are the same
-    expect(secondDeriveCalls).toBe(firstDeriveCalls);
+    expect(deriveKeySpy).not.toHaveBeenCalled();
 
     deriveKeySpy.mockRestore();
   });
 
-  it("recomputes derived key when signature changes", async ({
+  it("re-derives the encryption key when signature changes", async ({
     relayer,
     signer,
     storage,
@@ -1023,10 +1028,11 @@ describe("deriveKey caching", () => {
 
     const deriveKeySpy = vi.spyOn(crypto.subtle, "deriveKey");
 
-    // Change signature for re-sign
+    // Change signature — simulates a wallet that produces a different sig
     vi.mocked(signer.signTypedData).mockResolvedValue("0xnewsig999");
 
-    // New manager forces re-sign with new signature
+    // New manager forces re-sign with new signature, which fails to decrypt
+    // the stored credentials (wrong key), causing full regeneration
     const manager2 = new CredentialsManager({
       relayer,
       signer,
@@ -1034,9 +1040,6 @@ describe("deriveKey caching", () => {
       sessionStorage: createMockStorage(),
       keypairTTL: 86400,
     });
-
-    // This will fail to decrypt with the wrong signature, causing regeneration
-    // which triggers a new deriveKey call for encryption
     await manager2.allow(TOKEN_A);
 
     expect(deriveKeySpy).toHaveBeenCalled();
