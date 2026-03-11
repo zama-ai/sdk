@@ -1,5 +1,6 @@
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
+import { inline } from "./inline-plugin";
 
 const shared = {
   external: [/^viem/, /^ethers/, /^@zama-fhe\/relayer-sdk/, /^@tanstack\/query-core/, /^node:/],
@@ -10,6 +11,22 @@ const shared = {
 };
 
 export default defineConfig([
+  // Worker IIFE — must build first so the main build can inline it.
+  {
+    input: {
+      "relayer-sdk.worker": "src/worker/relayer-sdk.worker.ts",
+    },
+    output: {
+      dir: "dist",
+      format: "iife",
+      sourcemap: true,
+      entryFileNames: "[name].js",
+      minify: true,
+    },
+    ...shared,
+    external: [],
+  },
+  // Main ESM build — inlines the worker code via the virtual module.
   {
     input: {
       index: "src/index.ts",
@@ -27,20 +44,6 @@ export default defineConfig([
       minify: true,
     },
     ...shared,
-    plugins: [dts({ tsconfig: "tsconfig.build.json" })],
-  },
-  {
-    input: {
-      "relayer-sdk.worker": "src/worker/relayer-sdk.worker.ts",
-    },
-    output: {
-      dir: "dist",
-      format: "iife",
-      sourcemap: true,
-      entryFileNames: "[name].js",
-      minify: true,
-    },
-    ...shared,
-    external: [],
+    plugins: [inline(), dts({ tsconfig: "tsconfig.build.json" })],
   },
 ]);

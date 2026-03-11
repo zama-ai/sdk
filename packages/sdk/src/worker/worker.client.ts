@@ -7,6 +7,11 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
+import workerCode from "relayer-sdk.worker.js?inline";
+
+const workerBlobUrl = /* @__PURE__ */ URL.createObjectURL(
+  new Blob([workerCode], { type: "application/javascript" }),
+);
 
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
@@ -31,7 +36,7 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
   }
 
   protected createWorker(): Worker {
-    return new Worker(new URL("./relayer-sdk.worker.js", import.meta.url));
+    return new Worker(workerBlobUrl);
   }
 
   protected wireEvents(worker: Worker): void {

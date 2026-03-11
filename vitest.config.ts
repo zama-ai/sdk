@@ -1,5 +1,20 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, type Plugin } from "vitest/config";
 import path from "path";
+
+/** Stub `?inline` imports in tests — returns an empty string instead of file contents. */
+function inlineStubPlugin(): Plugin {
+  return {
+    name: "inline-stub",
+    resolveId(source) {
+      if (source.endsWith("?inline")) return `\0${source}`;
+      return null;
+    },
+    load(id) {
+      if (id.startsWith("\0") && id.endsWith("?inline")) return "export default '';";
+      return null;
+    },
+  };
+}
 
 const sharedResolve = {
   dedupe: ["wagmi", "react", "react-dom", "@tanstack/react-query"],
@@ -45,6 +60,7 @@ export default defineConfig({
   test: {
     projects: [
       {
+        plugins: [inlineStubPlugin()],
         test: {
           name: "sdk",
           environment: "node",
@@ -57,6 +73,7 @@ export default defineConfig({
         resolve: sharedResolve,
       },
       {
+        plugins: [inlineStubPlugin()],
         test: {
           name: "react-sdk",
           environment: "happy-dom",
