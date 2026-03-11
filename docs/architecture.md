@@ -76,27 +76,9 @@ Browser: a Web Worker running `@zama-fhe/relayer-sdk` WASM for FHE computation, 
 
 ## React SDK Module Map
 
-```mermaid
-graph TD
-    subgraph react-sdk["@zama-fhe/react-sdk"]
-        ZP["ZamaProvider"]
-        CTX["ZamaContext"]
-        Q["Query Hooks<br/><i>useConfidentialBalance · useMetadata<br/>useTotalSupply · useIsConfidential · useActivityFeed</i>"]
-        M["Mutation Hooks<br/><i>useShield · useConfidentialTransfer<br/>useUnshield · useAllow · useRevoke</i>"]
-        A["Signer Sub-path<br/><i>/wagmi</i>"]
+> D2 source: [`docs/diagrams/react-sdk-modules.d2`](diagrams/react-sdk-modules.d2)
 
-        ZP --> CTX
-    end
-
-    SDK["@zama-fhe/sdk<br/>ZamaSDK · Token · ReadonlyToken"]
-    QF["@zama-fhe/sdk/query<br/>queryOptions · mutationOptions"]
-
-    ZP -->|"initializes"| SDK
-    Q -->|"uses"| QF
-    M -->|"uses"| QF
-    QF -->|"calls"| SDK
-    A -->|"GenericSigner"| SDK
-```
+![React SDK Module Map](diagrams/react-sdk-modules.svg)
 
 `ZamaProvider` creates and holds the `ZamaSDK` instance. Query and mutation hooks consume the query/mutation factories from `@zama-fhe/sdk/query`. The `/wagmi` sub-path provides `WagmiSigner`.
 
