@@ -20,12 +20,17 @@ export function unwrapOptimisticCallerContext(
   return { wrappedContext, callerContext };
 }
 
-export async function applyOptimisticBalanceDelta(
-  queryClient: QueryClient,
-  tokenAddress: Address,
-  amount: bigint,
-  mode: BalanceDeltaMode,
-): Promise<OptimisticBalanceSnapshot> {
+export async function applyOptimisticBalanceDelta({
+  queryClient,
+  tokenAddress,
+  amount,
+  mode,
+}: {
+  queryClient: QueryClient;
+  tokenAddress: Address;
+  amount: bigint;
+  mode: BalanceDeltaMode;
+}): Promise<OptimisticBalanceSnapshot> {
   const balanceKey = zamaQueryKeys.confidentialBalance.token(tokenAddress);
   await queryClient.cancelQueries({ queryKey: balanceKey });
   const previous = queryClient.getQueriesData<bigint>({ queryKey: balanceKey });
@@ -71,12 +76,12 @@ export function optimisticBalanceCallbacks<TParams extends { amount: bigint }>({
   return {
     onMutate: optimistic
       ? async (variables, mutationContext) => {
-          const snapshot = await applyOptimisticBalanceDelta(
+          const snapshot = await applyOptimisticBalanceDelta({
             queryClient,
             tokenAddress,
-            variables.amount,
-            "add",
-          );
+            amount: variables.amount,
+            mode: "add",
+          });
           const callerContext = await options?.onMutate?.(variables, mutationContext);
           return { snapshot, callerContext };
         }

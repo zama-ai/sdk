@@ -75,12 +75,12 @@ export function useConfidentialTransfer(
       ...options,
       onMutate: config.optimistic
         ? async (variables, mutationContext) => {
-            const snapshot = await applyOptimisticBalanceDelta(
+            const snapshot = await applyOptimisticBalanceDelta({
               queryClient,
-              config.tokenAddress,
-              variables.amount,
-              "subtract",
-            );
+              tokenAddress: config.tokenAddress,
+              amount: variables.amount,
+              mode: "subtract",
+            });
             const callerContext = await options?.onMutate?.(variables, mutationContext);
             return { snapshot, callerContext };
           }
