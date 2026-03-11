@@ -461,14 +461,17 @@ export class CredentialsManager {
   }): Promise<StoredCredentials> {
     const merged = this.#mergeContracts(credentials.contractAddresses, requiredContracts);
     const signature = await this.#signWithContracts(credentials, merged);
-    await this.#setSessionEntry(storeKey, signature);
 
     const extended: StoredCredentials = {
       ...credentials,
       contractAddresses: merged,
       signature,
     };
+    // Persist ciphertext before updating the session signature to prevent a
+    // window where a concurrent reader sees the new signature but finds
+    // ciphertext encrypted with the old one, fails decrypt, and regenerates.
     await this.#persistCredentials(storeKey, extended);
+    await this.#setSessionEntry(storeKey, signature);
     this.#emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: requiredContracts });
     return extended;
   }
@@ -517,7 +520,6 @@ export class CredentialsManager {
       );
 
       const signature = await this.#signer.signTypedData(eip712);
-      await this.#setSessionEntry(storeKey, signature);
 
       const creds: StoredCredentials = {
         publicKey,
@@ -528,7 +530,9 @@ export class CredentialsManager {
         durationDays,
       };
 
+      // Persist ciphertext before session signature (same rationale as #performExtend).
       await this.#persistCredentials(storeKey, creds);
+      await this.#setSessionEntry(storeKey, signature);
 
       this.#emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
