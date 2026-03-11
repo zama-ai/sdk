@@ -10,40 +10,22 @@ const shared = {
   treeshake: true,
 };
 
-export default defineConfig([
-  // Worker IIFE — must build first so the main build can inline it.
-  {
-    input: {
-      "relayer-sdk.worker": "src/worker/relayer-sdk.worker.ts",
-    },
-    output: {
-      dir: "dist",
-      format: "iife",
-      sourcemap: true,
-      entryFileNames: "[name].js",
-      minify: true,
-    },
-    ...shared,
-    external: [],
+export default defineConfig({
+  input: {
+    index: "src/index.ts",
+    "cleartext/index": "src/relayer/cleartext/index.ts",
+    "query/index": "src/query/index.ts",
+    "viem/index": "src/viem/index.ts",
+    "ethers/index": "src/ethers/index.ts",
+    "node/index": "src/node/index.ts",
+    "relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
   },
-  // Main ESM build — inlines the worker code via the virtual module.
-  {
-    input: {
-      index: "src/index.ts",
-      "cleartext/index": "src/relayer/cleartext/index.ts",
-      "query/index": "src/query/index.ts",
-      "viem/index": "src/viem/index.ts",
-      "ethers/index": "src/ethers/index.ts",
-      "node/index": "src/node/index.ts",
-      "relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
-    },
-    output: {
-      dir: "dist",
-      format: "esm",
-      sourcemap: true,
-      minify: true,
-    },
-    ...shared,
-    plugins: [inline(), dts({ tsconfig: "tsconfig.build.json" })],
+  output: {
+    dir: "dist",
+    format: "esm",
+    sourcemap: true,
+    minify: true,
   },
-]);
+  ...shared,
+  plugins: [inline({ tsconfig: "tsconfig.build.json" }), dts({ tsconfig: "tsconfig.build.json" })],
+});

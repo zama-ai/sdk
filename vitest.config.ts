@@ -2,7 +2,7 @@ import { defineConfig, type Plugin } from "vitest/config";
 import path from "path";
 
 /** Stub `?inline` imports in tests — returns an empty string instead of file contents. */
-function inlineStubPlugin(): Plugin {
+function inline(): Plugin {
   return {
     name: "inline-stub",
     resolveId(source) {
@@ -60,11 +60,11 @@ export default defineConfig({
   test: {
     projects: [
       {
-        plugins: [inlineStubPlugin()],
+        plugins: [inline()],
         test: {
           name: "sdk",
           environment: "node",
-          pool: "vmThreads",
+          pool: "vmForks",
           include: ["packages/sdk/**/*.test.{ts,tsx}"],
           exclude: ["**/integration.test.ts", "**/node_modules/**", "**/worker/__tests__/**"],
           globals: true,
@@ -73,10 +73,11 @@ export default defineConfig({
         resolve: sharedResolve,
       },
       {
-        plugins: [inlineStubPlugin()],
+        plugins: [inline()],
         test: {
           name: "react-sdk",
           environment: "happy-dom",
+          pool: "vmThreads",
           include: [
             "packages/react-sdk/**/*.test.{ts,tsx}",
             "packages/sdk/src/worker/__tests__/*.test.ts",
