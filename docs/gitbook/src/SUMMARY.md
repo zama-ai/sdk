@@ -71,6 +71,7 @@
   - [useGenerateKeypair](reference/react/useGenerateKeypair.md)
   - [Query Keys](reference/react/query-keys.md)
 - [Concepts](concepts/README.md)
+  - [Architecture](concepts/architecture.md)
   - [Session Model](concepts/session-model.md)
   - [Two-Phase Polling](concepts/two-phase-polling.md)
   - [Security Model](concepts/security-model.md)

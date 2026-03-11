@@ -1,4 +1,19 @@
 {
+  "env": {
+    "ENABLE_LSP_TOOL": "1"
+  },
+  "extraKnownMarketplaces": {
+    "zama-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "zama-ai/zama-marketplace"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "zama-developer@zama-marketplace": true,
+    "typescript-lsp@claude-plugins-official": true
+  },
   "permissions": {
     "allow": [
       "Bash(git diff:*)",

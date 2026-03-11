@@ -1,0 +1,67 @@
+direction: right
+
+title: {
+  label: "WASM Bundle Integrity Check"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- Flow ---
+cdn: "cdn.zama.org\n(TFHE WASM bundle)" {
+  shape: cloud
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+fetch: "Fetch WASM\n(Web Worker)" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+sha384: "Compute SHA-384\ndigest" {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.font-size: 14
+}
+
+pinned: "Pinned hash\n(compiled into SDK)" {
+  style.fill: "#FFFDE7"
+  style.stroke: "#F57F17"
+  style.font-size: 14
+}
+
+compare: "Compare\nhashes" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+match: "Execute WASM\n(safe)" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+  style.bold: true
+}
+
+reject: "Reject\n(initialization fails)" {
+  style.fill: "#FFCDD2"
+  style.stroke: "#C62828"
+  style.font-size: 14
+  style.bold: true
+}
+
+# --- Connections ---
+cdn -> fetch: "HTTPS"
+fetch -> sha384: "raw bytes"
+sha384 -> compare
+pinned -> compare
+compare -> match: "match" {
+  style.stroke: "#388E3C"
+}
+compare -> reject: "mismatch" {
+  style.stroke: "#C62828"
+}
