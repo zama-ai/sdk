@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  UseMutationOptions,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";
 import {
   confidentialTransferMutationOptions,
@@ -54,15 +59,18 @@ export interface UseConfidentialTransferConfig extends UseZamaConfig {
  * );
  * ```
  */
-export function useConfidentialTransfer(
+export function useConfidentialTransfer<TContext = unknown>(
   config: UseConfidentialTransferConfig,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, any>,
-) {
+  options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, TContext>,
+): UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext> {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation({
+  // Internal mutation uses `any` for TContext because optimistic mode wraps
+  // the caller's context in OptimisticMutateContext; the public return type
+  // is cast back to the caller's TContext.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return useMutation<TransactionResult, Error, ConfidentialTransferParams, any>({
     ...confidentialTransferMutationOptions(token),
     ...options,
     onMutate: config.optimistic
@@ -85,16 +93,16 @@ export function useConfidentialTransfer(
       if (wrappedContext) {
         rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
       }
-      options?.onError?.(error, variables, callerContext, context);
+      options?.onError?.(error, variables, callerContext as TContext, context);
     },
     onSuccess: (data, variables, rawContext, context) => {
       const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-      options?.onSuccess?.(data, variables, callerContext!, context);
+      options?.onSuccess?.(data, variables, callerContext as TContext, context);
       invalidateAfterTransfer(context.client, config.tokenAddress);
     },
     onSettled: (data, error, variables, rawContext, context) => {
       const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-      options?.onSettled?.(data, error, variables, callerContext, context);
+      options?.onSettled?.(data, error, variables, callerContext as TContext, context);
     },
-  });
+  }) as UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext>;
 }

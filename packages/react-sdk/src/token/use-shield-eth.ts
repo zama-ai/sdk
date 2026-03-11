@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  UseMutationOptions,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";
 import { shieldETHMutationOptions, type ShieldETHParams } from "@zama-fhe/sdk/query";
 import { optimisticBalanceCallbacks } from "./optimistic-balance-update";
@@ -34,11 +39,10 @@ export interface UseShieldETHConfig extends UseZamaConfig {
  * shieldETH.mutate({ amount: 1000000000000000000n }); // 1 ETH
  * ```
  */
-export function useShieldETH(
+export function useShieldETH<TContext = unknown>(
   config: UseShieldETHConfig,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, any>,
-) {
+  options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, TContext>,
+): UseMutationResult<TransactionResult, Error, ShieldETHParams, TContext> {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
@@ -49,7 +53,7 @@ export function useShieldETH(
       optimistic: config.optimistic,
       tokenAddress: config.tokenAddress,
       queryClient,
-      options: options,
+      options,
     }),
-  });
+  }) as UseMutationResult<TransactionResult, Error, ShieldETHParams, TContext>;
 }

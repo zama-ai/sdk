@@ -72,11 +72,11 @@ export function optimisticBalanceCallbacks<TParams extends { amount: bigint }>({
   optimistic: boolean | undefined;
   tokenAddress: Address;
   queryClient: QueryClient;
-  options:
-    | UseMutationOptions<TransactionResult, Error, TParams, OptimisticMutateContext>
-    | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  options: UseMutationOptions<TransactionResult, Error, TParams, any> | undefined;
 }): Pick<
-  UseMutationOptions<TransactionResult, Error, TParams, OptimisticMutateContext>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  UseMutationOptions<TransactionResult, Error, TParams, any>,
   "onMutate" | "onError" | "onSuccess" | "onSettled"
 > {
   return {

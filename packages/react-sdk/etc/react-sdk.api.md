@@ -216,6 +216,7 @@ import { UnwrappedStartedEvent } from '@zama-fhe/sdk';
 import { UnwrapRequestedEvent } from '@zama-fhe/sdk';
 import { UnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
+import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
 import { wrapContract } from '@zama-fhe/sdk';
@@ -1113,7 +1114,7 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
 }
 
 // @public
-export function useConfidentialTransfer(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, any>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, any>;
+export function useConfidentialTransfer<TContext = unknown>(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, TContext>): UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext>;
 
 // @public
 export interface UseConfidentialTransferConfig extends UseZamaConfig {
@@ -1222,7 +1223,7 @@ export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>):
 export function useRevokeSession(options?: UseMutationOptions<void, Error, void>): _tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
 
 // @public
-export function useShield(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, any>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ShieldParams, OptimisticMutateContext>;
+export function useShield<TContext = unknown>(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;
 
 // @public
 export interface UseShieldConfig extends UseZamaConfig {
@@ -1230,7 +1231,7 @@ export interface UseShieldConfig extends UseZamaConfig {
 }
 
 // @public
-export function useShieldETH(config: UseShieldETHConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, any>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ShieldETHParams, OptimisticMutateContext>;
+export function useShieldETH<TContext = unknown>(config: UseShieldETHConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldETHParams, TContext>;
 
 // @public
 export interface UseShieldETHConfig extends UseZamaConfig {

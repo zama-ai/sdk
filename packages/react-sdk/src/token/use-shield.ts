@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  UseMutationOptions,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";
 import { shieldMutationOptions, type ShieldParams } from "@zama-fhe/sdk/query";
 import { optimisticBalanceCallbacks } from "./optimistic-balance-update";
@@ -35,11 +40,10 @@ export interface UseShieldConfig extends UseZamaConfig {
  * shield.mutate({ amount: 1000n });
  * ```
  */
-export function useShield(
+export function useShield<TContext = unknown>(
   config: UseShieldConfig,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, any>,
-) {
+  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>,
+): UseMutationResult<TransactionResult, Error, ShieldParams, TContext> {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
@@ -52,5 +56,5 @@ export function useShield(
       queryClient,
       options,
     }),
-  });
+  }) as UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;
 }
