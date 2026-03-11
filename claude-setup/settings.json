@@ -1,4 +1,7 @@
 {
+  "env": {
+    "ENABLE_LSP_TOOL": "1"
+  },
   "extraKnownMarketplaces": {
     "zama-marketplace": {
       "source": {
@@ -8,7 +11,8 @@
     }
   },
   "enabledPlugins": {
-    "zama-developer@zama-marketplace": true
+    "zama-developer@zama-marketplace": true,
+    "typescript-lsp@claude-plugins-official": true
   },
   "permissions": {
     "allow": [
