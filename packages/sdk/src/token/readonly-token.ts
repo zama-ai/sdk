@@ -82,6 +82,8 @@ export interface ReadonlyTokenConfig {
   address: Address;
   /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
   keypairTTL?: number;
+  /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). `0` means never expire for delegated credentials. */
+  sessionTTL?: number;
   /** Optional structured event listener for debugging and telemetry. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -107,6 +109,7 @@ export class ReadonlyToken {
       storage: config.storage,
       sessionStorage: config.sessionStorage,
       keypairTTL: config.keypairTTL ?? 86400,
+      sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: config.onEvent,
     });
     this.delegatedCredentials = new DelegatedCredentialsManager({
@@ -115,6 +118,7 @@ export class ReadonlyToken {
       storage: config.storage,
       sessionStorage: config.sessionStorage,
       keypairTTL: config.keypairTTL ?? 86400,
+      sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: config.onEvent,
     });
     this.relayer = config.relayer;
