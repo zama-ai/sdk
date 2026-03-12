@@ -104,6 +104,10 @@ export {
   type DelegateDecryptionParams,
 } from "./delegate-decryption";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
+export {
+  batchDecryptBalancesAsMutationOptions,
+  type BatchDecryptBalancesAsParams,
+} from "./batch-decrypt-balances-as";
 export { revokeDelegationMutationOptions, type RevokeDelegationParams } from "./revoke-delegation";
 export {
   delegationStatusQueryOptions,
@@ -130,7 +134,11 @@ export type {
   UserDecryptParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type { BatchDecryptOptions, ReadonlyTokenConfig } from "../token/readonly-token";
+export type {
+  BatchDecryptOptions,
+  BatchDecryptAsOptions,
+  ReadonlyTokenConfig,
+} from "../token/readonly-token";
 export type { ReadonlyToken } from "../token/readonly-token";
 export type { TokenConfig } from "../token/token";
 export type { Token } from "../token/token";
