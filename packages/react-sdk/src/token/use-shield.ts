@@ -1,18 +1,14 @@
 "use client";
 
-import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  UseMutationOptions,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";
-import {
-  invalidateAfterShield,
-  shieldMutationOptions,
-  type ShieldParams,
-} from "@zama-fhe/sdk/query";
-import {
-  applyOptimisticBalanceDelta,
-  type OptimisticMutateContext,
-  rollbackOptimisticBalanceDelta,
-  unwrapOptimisticCallerContext,
-} from "./optimistic-balance-update";
+import { shieldMutationOptions, type ShieldParams } from "@zama-fhe/sdk/query";
+import { optimisticBalanceCallbacks } from "./optimistic-balance-update";
 import { useToken, type UseZamaConfig } from "./use-token";
 
 /** Configuration for {@link useShield}. */
@@ -44,58 +40,21 @@ export interface UseShieldConfig extends UseZamaConfig {
  * shield.mutate({ amount: 1000n });
  * ```
  */
-export function useShield(
+export function useShield<TContext = unknown>(
   config: UseShieldConfig,
-  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, OptimisticMutateContext>,
-) {
+  options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>,
+): UseMutationResult<TransactionResult, Error, ShieldParams, TContext> {
   const token = useToken(config);
   const queryClient = useQueryClient();
 
-  return useMutation<TransactionResult, Error, ShieldParams, OptimisticMutateContext>({
+  return useMutation({
     ...shieldMutationOptions(token),
     ...options,
-    onMutate: config.optimistic
-      ? async (variables, mutationContext) => {
-          const snapshot = await applyOptimisticBalanceDelta(
-            queryClient,
-            config.tokenAddress,
-            variables.amount,
-            "add",
-          );
-          const callerContext = await options?.onMutate?.(variables, mutationContext);
-          return { snapshot, callerContext };
-        }
-      : options?.onMutate,
-    onError: (error, variables, rawContext, context) => {
-      const { wrappedContext, callerContext } = unwrapOptimisticCallerContext(
-        config.optimistic,
-        rawContext,
-      );
-      if (wrappedContext) {
-        rollbackOptimisticBalanceDelta(queryClient, wrappedContext.snapshot);
-      }
-      // callerContext is the user's original onMutate return — cast required by wrapper pattern
-      options?.onError?.(
-        error,
-        variables,
-        callerContext as OptimisticMutateContext | undefined,
-        context,
-      );
-    },
-    onSuccess: (data, variables, rawContext, context) => {
-      const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-      options?.onSuccess?.(data, variables, callerContext as OptimisticMutateContext, context);
-      invalidateAfterShield(context.client, config.tokenAddress);
-    },
-    onSettled: (data, error, variables, rawContext, context) => {
-      const { callerContext } = unwrapOptimisticCallerContext(config.optimistic, rawContext);
-      options?.onSettled?.(
-        data,
-        error,
-        variables,
-        callerContext as OptimisticMutateContext | undefined,
-        context,
-      );
-    },
-  });
+    ...optimisticBalanceCallbacks({
+      optimistic: config.optimistic,
+      tokenAddress: config.tokenAddress,
+      queryClient,
+      options,
+    }),
+  }) as UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;
 }

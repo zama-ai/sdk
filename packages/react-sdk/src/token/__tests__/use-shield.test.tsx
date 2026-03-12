@@ -325,6 +325,52 @@ describe("useShield optimistic updates", () => {
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3500n);
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3000n);
   });
+
+  test("behavior: no optimistic update without flag", async ({ renderWithProviders, signer }) => {
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+
+    let resolveWrap: (value: string) => void;
+    vi.mocked(signer.writeContract).mockReturnValue(
+      new Promise((resolve) => {
+        resolveWrap = resolve as (value: string) => void;
+      }),
+    );
+
+    const { result, queryClient } = renderWithProviders(() =>
+      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
+    );
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    queryClient.setQueryData(balanceKey, 3000n);
+
+    await act(async () => {
+      result.current.mutate({ amount: 500n });
+    });
+
+    expect(queryClient.getQueryData(balanceKey)).toBe(3000n);
+
+    await act(async () => {
+      resolveWrap!("0xtxhash");
+    });
+  });
+
+  test("optimistic: no error when balance cache is empty", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+
+    const { result, queryClient } = renderWithProviders(() =>
+      useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER, optimistic: true }),
+    );
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+
+    await act(() => result.current.mutateAsync({ amount: 500n }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(balanceKey)).toBeUndefined();
+  });
 });
 
 describe("useShield error propagation", () => {
