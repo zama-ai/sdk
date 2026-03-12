@@ -48,6 +48,7 @@ export {
   IndexedDBStorage,
   indexedDBStorage,
   CredentialsManager,
+  DelegatedCredentialsManager,
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "@zama-fhe/sdk";
@@ -83,6 +84,9 @@ export type {
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
+  DelegatedCredentialsManagerConfig,
+  DelegatedStoredCredentials,
+  BatchDecryptAsOptions,
   CredentialsManagerConfig,
   ZamaSDKEventType,
   ZamaSDKEvent,
@@ -232,6 +236,7 @@ export { useDelegateDecryption } from "./token/use-delegate-decryption";
 export { useRevokeDelegation } from "./token/use-revoke-delegation";
 export { useDelegationStatus, type UseDelegationStatusConfig } from "./token/use-delegation-status";
 export { useDecryptBalanceAs } from "./token/use-decrypt-balance-as";
+export { useBatchDecryptBalancesAs } from "./token/use-batch-decrypt-balances-as";
 export { useApproveUnderlying } from "./token/use-approve-underlying";
 export {
   useIsConfidential,
@@ -305,6 +310,8 @@ export {
   type DelegateDecryptionParams,
   decryptBalanceAsMutationOptions,
   type DecryptBalanceAsParams,
+  batchDecryptBalancesAsMutationOptions,
+  type BatchDecryptBalancesAsParams,
   revokeDelegationMutationOptions,
   type RevokeDelegationParams,
   delegationStatusQueryOptions,
