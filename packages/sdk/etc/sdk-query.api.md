@@ -307,7 +307,7 @@ export interface CredentialsLoadingEvent extends BaseEvent {
 // Warning: (ae-forgotten-export) The symbol "BaseCredentialsManager" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "EncryptedCredentials$1" needs to be exported by the entry point index.d.ts
 //
-// @public (undocumented)
+// @public
 export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
     constructor(config: CredentialsManagerConfig);
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
@@ -316,7 +316,6 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     clear(): Promise<void>;
     // (undocumented)
     protected clearCaches(): void;
-    // (undocumented)
     static computeStoreKey(address: Address, chainId: number): Promise<string>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
     // (undocumented)
@@ -771,7 +770,8 @@ export class ReadonlyToken {
     revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner;
-    protected get storage(): GenericStorage;
+    // (undocumented)
+    readonly storage: GenericStorage;
     symbol(): Promise<string>;
     underlyingToken(): Promise<Address>;
 }
@@ -942,8 +942,13 @@ export class Token extends ReadonlyToken {
     finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    revokeDelegation(delegateAddress: Address): Promise<TransactionResult>;
-    static revokeDelegationBatch(tokens: Token[], delegateAddress: Address): Promise<Map<Address, TransactionResult | ZamaError>>;
+    revokeDelegation(input: {
+        delegateAddress: Address;
+    }): Promise<TransactionResult>;
+    static revokeDelegationBatch(input: {
+        tokens: Token[];
+        delegateAddress: Address;
+    }): Promise<Map<Address, TransactionResult | ZamaError>>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
@@ -1468,7 +1473,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/activity-Bkr-Gw2I.d.ts:1358:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/activity-BlQMSDMf.d.ts:1403:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

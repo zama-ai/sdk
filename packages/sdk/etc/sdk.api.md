@@ -7296,7 +7296,7 @@ export interface CredentialsLoadingEvent extends BaseEvent {
 // Warning: (ae-forgotten-export) The symbol "BaseCredentialsManager" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "EncryptedCredentials$1" needs to be exported by the entry point index.d.ts
 //
-// @public (undocumented)
+// @public
 export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
     constructor(config: CredentialsManagerConfig);
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
@@ -7305,7 +7305,6 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     clear(): Promise<void>;
     // (undocumented)
     protected clearCaches(): void;
-    // (undocumented)
     static computeStoreKey(address: Address, chainId: number): Promise<string>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
     // (undocumented)
@@ -7431,7 +7430,6 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<Delegate
     clear(delegatorAddress: Address): Promise<void>;
     // (undocumented)
     protected clearCaches(): void;
-    // (undocumented)
     static computeStoreKey(delegateAddress: Address, delegatorAddress: Address, chainId: number): Promise<string>;
     // (undocumented)
     protected decryptCredentials(encrypted: EncryptedCredentials, signature: Hex): Promise<DelegatedStoredCredentials>;
@@ -7440,10 +7438,10 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<Delegate
     isAllowed(delegatorAddress: Address): Promise<boolean>;
     isExpired(delegatorAddress: Address, contractAddress?: Address): Promise<boolean>;
     revoke(delegatorAddress: Address): Promise<void>;
+    // Warning: (ae-forgotten-export) The symbol "DelegatedSigningMeta" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    protected signForContracts(meta: SigningMeta & {
-        delegatorAddress: Address;
-    }, contractAddresses: Address[]): Promise<Hex>;
+    protected signForContracts(meta: DelegatedSigningMeta, contractAddresses: Address[]): Promise<Hex>;
 }
 
 // @public
@@ -19637,7 +19635,8 @@ export class ReadonlyToken {
     revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner;
-    protected get storage(): GenericStorage;
+    // (undocumented)
+    readonly storage: GenericStorage;
     symbol(): Promise<string>;
     underlyingToken(): Promise<Address>;
 }
@@ -22877,8 +22876,13 @@ export class Token extends ReadonlyToken {
     finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    revokeDelegation(delegateAddress: Address): Promise<TransactionResult>;
-    static revokeDelegationBatch(tokens: Token[], delegateAddress: Address): Promise<Map<Address, TransactionResult | ZamaError>>;
+    revokeDelegation(input: {
+        delegateAddress: Address;
+    }): Promise<TransactionResult>;
+    static revokeDelegationBatch(input: {
+        tokens: Token[];
+        delegateAddress: Address;
+    }): Promise<Map<Address, TransactionResult | ZamaError>>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
