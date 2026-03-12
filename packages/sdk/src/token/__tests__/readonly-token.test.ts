@@ -285,12 +285,12 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
+      const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(UNDERLYING) // underlying()
         .mockResolvedValueOnce(500n); // allowance()
 
-      const result = await token.allowance("0x4444444444444444444444444444444444444444" as Address);
+      const result = await token.allowance("0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address);
 
       expect(result).toBe(500n);
       expect(signer.readContract).toHaveBeenCalledTimes(2);

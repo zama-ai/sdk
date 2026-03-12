@@ -7,10 +7,10 @@ describe("delegateDecryptionMutationOptions", () => {
 
     expect(options.mutationKey).toEqual(["zama.delegateDecryption", mockToken.address]);
     await options.mutationFn({
-      delegateAddress: "0x2222222222222222222222222222222222222222",
+      delegateAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
     });
     expect(mockToken.delegateDecryption).toHaveBeenCalledWith({
-      delegateAddress: "0x2222222222222222222222222222222222222222",
+      delegateAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       expirationDate: undefined,
     });
   });
@@ -20,11 +20,11 @@ describe("delegateDecryptionMutationOptions", () => {
     const expirationDate = new Date("2030-01-01");
 
     await options.mutationFn({
-      delegateAddress: "0x2222222222222222222222222222222222222222",
+      delegateAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       expirationDate,
     });
     expect(mockToken.delegateDecryption).toHaveBeenCalledWith({
-      delegateAddress: "0x2222222222222222222222222222222222222222",
+      delegateAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       expirationDate,
     });
   });

@@ -7,10 +7,10 @@ describe("confidentialIsApprovedQueryOptions", () => {
   test("stays enabled with a resolved holder", ({ signer }) => {
     const options = confidentialIsApprovedQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        holder: "0x2222222222222222222222222222222222222222",
-        spender: "0x3333333333333333333333333333333333333333",
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -20,16 +20,16 @@ describe("confidentialIsApprovedQueryOptions", () => {
   test("is disabled when holder or spender is missing", ({ signer }) => {
     const missingHolder = confidentialIsApprovedQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        spender: "0x3333333333333333333333333333333333333333",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
     const missingSpender = confidentialIsApprovedQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        holder: "0x2222222222222222222222222222222222222222",
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       },
     );
 
@@ -42,10 +42,10 @@ describe("confidentialIsApprovedQueryOptions", () => {
 
     const options = confidentialIsApprovedQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        holder: "0x2222222222222222222222222222222222222222",
-        spender: "0x3333333333333333333333333333333333333333",
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -56,19 +56,19 @@ describe("confidentialIsApprovedQueryOptions", () => {
   test("includes holder and spender in queryKey", ({ signer }) => {
     const options = confidentialIsApprovedQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        holder: "0x2222222222222222222222222222222222222222",
-        spender: "0x3333333333333333333333333333333333333333",
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
     expect(options.queryKey).toEqual([
       "zama.confidentialIsApproved",
       {
-        tokenAddress: "0x1111111111111111111111111111111111111111",
-        holder: "0x2222222222222222222222222222222222222222",
-        spender: "0x3333333333333333333333333333333333333333",
+        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     ]);
   });
@@ -80,10 +80,10 @@ describe("confidentialIsApprovedQueryOptions", () => {
 
     const options = confidentialIsApprovedQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        holder: "0x2222222222222222222222222222222222222222",
-        spender: "0x3333333333333333333333333333333333333333",
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -112,10 +112,10 @@ describe("confidentialIsApprovedQueryOptions", () => {
 
     const options = confidentialIsApprovedQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        holder: "0x2222222222222222222222222222222222222222",
-        spender: "0x3333333333333333333333333333333333333333",
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -126,8 +126,8 @@ describe("confidentialIsApprovedQueryOptions", () => {
       expect.objectContaining({
         functionName: "isOperator",
         args: [
-          "0x2222222222222222222222222222222222222222",
-          "0x3333333333333333333333333333333333333333",
+          "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+          "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
         ],
       }),
     );
@@ -138,10 +138,10 @@ describe("confidentialIsApprovedQueryOptions", () => {
 
     const options = confidentialIsApprovedQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        holder: "0x2222222222222222222222222222222222222222",
-        spender: "0x3333333333333333333333333333333333333333",
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -152,8 +152,8 @@ describe("confidentialIsApprovedQueryOptions", () => {
       expect.objectContaining({
         functionName: "isOperator",
         args: [
-          "0x2222222222222222222222222222222222222222",
-          "0x3333333333333333333333333333333333333333",
+          "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+          "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
         ],
       }),
     );
@@ -164,10 +164,10 @@ describe("confidentialIsApprovedQueryOptions", () => {
   }) => {
     const options = confidentialIsApprovedQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        holder: "0x2222222222222222222222222222222222222222",
-        spender: "0x3333333333333333333333333333333333333333",
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 

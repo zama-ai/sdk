@@ -5,17 +5,17 @@ describe("wrapperDiscoveryQueryOptions", () => {
   test("includes coordinatorAddress in query key", ({ signer }) => {
     const options = wrapperDiscoveryQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        coordinatorAddress: "0x3333333333333333333333333333333333333333",
+        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
     expect(options.queryKey).toEqual([
       "zama.wrapperDiscovery",
       {
-        tokenAddress: "0x1111111111111111111111111111111111111111",
-        coordinatorAddress: "0x3333333333333333333333333333333333333333",
+        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     ]);
   });
@@ -25,9 +25,9 @@ describe("wrapperDiscoveryQueryOptions", () => {
 
     const options = wrapperDiscoveryQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        coordinatorAddress: "0x3333333333333333333333333333333333333333",
+        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -38,18 +38,18 @@ describe("wrapperDiscoveryQueryOptions", () => {
   test("reads wrapper when it exists", async ({ signer }) => {
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce("0x4444444444444444444444444444444444444444");
+      .mockResolvedValueOnce("0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D");
 
     const options = wrapperDiscoveryQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        coordinatorAddress: "0x3333333333333333333333333333333333333333",
+        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
     const wrapper = await options.queryFn(mockQueryContext(options.queryKey));
-    expect(wrapper).toBe("0x4444444444444444444444444444444444444444");
+    expect(wrapper).toBe("0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D");
   });
 
   test("queryFn uses coordinatorAddress from context.queryKey", async ({ signer }) => {
@@ -57,25 +57,25 @@ describe("wrapperDiscoveryQueryOptions", () => {
 
     const options = wrapperDiscoveryQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        coordinatorAddress: "0x3333333333333333333333333333333333333333",
+        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
     const queryKey = [
       "zama.wrapperDiscovery",
       {
-        tokenAddress: "0x1111111111111111111111111111111111111111",
-        coordinatorAddress: "0x5555555555555555555555555555555555555555",
+        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+        coordinatorAddress: "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e",
       },
     ] as const;
 
     await options.queryFn(mockQueryContext(queryKey));
 
     expect(vi.mocked(signer.readContract).mock.calls[0]?.[0]).toMatchObject({
-      address: "0x5555555555555555555555555555555555555555",
-      args: ["0x1111111111111111111111111111111111111111"],
+      address: "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e",
+      args: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
     });
   });
 });

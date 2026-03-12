@@ -338,7 +338,7 @@ describe("Token event emissions", () => {
         createToken,
       );
       await token.confidentialTransfer(
-        "0x8888888888888888888888888888888888888888" as Address,
+        "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
       );
 
@@ -372,7 +372,7 @@ describe("Token event emissions", () => {
         createToken,
       );
       await token.confidentialTransfer(
-        "0x8888888888888888888888888888888888888888" as Address,
+        "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
       );
 
@@ -401,7 +401,7 @@ describe("Token event emissions", () => {
         createToken,
       );
       await token.confidentialTransfer(
-        "0x8888888888888888888888888888888888888888" as Address,
+        "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
       );
 
@@ -432,7 +432,7 @@ describe("Token event emissions", () => {
       );
 
       await expect(
-        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n),
       ).rejects.toThrow();
 
       const errorEvent = events.find((e) => e.type === ZamaSDKEvents.EncryptError);
@@ -464,7 +464,7 @@ describe("Token event emissions", () => {
       );
 
       await expect(
-        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n),
       ).rejects.toThrow();
 
       const types = events.map((e) => e.type);
@@ -532,7 +532,7 @@ describe("Token event emissions", () => {
         sessionStorage,
         createToken,
       );
-      await token.approve("0x3333333333333333333333333333333333333333" as Address);
+      await token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
 
       const types = events.map((e) => e.type);
       expect(types).toContain(ZamaSDKEvents.ApproveSubmitted);
@@ -557,7 +557,7 @@ describe("Token event emissions", () => {
         sessionStorage,
         createToken,
       );
-      await token.approve("0x3333333333333333333333333333333333333333" as Address);
+      await token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address);
 
       const submitted = events.find((e) => e.type === ZamaSDKEvents.ApproveSubmitted);
       expect(submitted).toBeDefined();
@@ -586,7 +586,7 @@ describe("Token event emissions", () => {
         createToken,
       );
       vi.mocked(signer.readContract).mockResolvedValueOnce(
-        "0x9999999999999999999999999999999999999999",
+        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
       ); // underlying
 
       await token.shield(100n, { approvalStrategy: "skip" });
@@ -758,7 +758,7 @@ describe("Token event emissions", () => {
         createToken,
       );
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
       await token.approveUnderlying();
@@ -912,7 +912,7 @@ describe("Token event emissions", () => {
       const events: ZamaSDKEvent[] = [];
       const onEvent: ZamaSDKEventListener = (event) => events.push(event);
       vi.mocked(signer.readContract).mockResolvedValueOnce(
-        "0x9999999999999999999999999999999999999999",
+        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
       );
       vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
       const token = createTokenWithEvent(
@@ -954,7 +954,7 @@ describe("Token event emissions", () => {
       );
 
       await expect(
-        token.approve("0x3333333333333333333333333333333333333333" as Address),
+        token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
       ).rejects.toThrow();
 
       const txError = events.find((e) => e.type === ZamaSDKEvents.TransactionError);

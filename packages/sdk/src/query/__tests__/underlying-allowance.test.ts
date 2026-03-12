@@ -4,13 +4,13 @@ import { underlyingAllowanceQueryOptions } from "../underlying-allowance";
 import { zamaQueryKeys } from "../query-keys";
 
 describe("underlyingAllowanceQueryOptions", () => {
-  const UNDERLYING = "0x4444444444444444444444444444444444444444";
+  const UNDERLYING = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D";
 
   test("enabled false when owner missing", ({ signer }) => {
     const options = underlyingAllowanceQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
-      { wrapperAddress: "0x3333333333333333333333333333333333333333" },
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      { wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" },
     );
 
     expect(options.enabled).toBe(false);
@@ -19,9 +19,9 @@ describe("underlyingAllowanceQueryOptions", () => {
   test("enabled false when wrapperAddress is missing", ({ signer }) => {
     const options = underlyingAllowanceQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        owner: "0x2222222222222222222222222222222222222222",
+        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       },
     );
 
@@ -33,10 +33,10 @@ describe("underlyingAllowanceQueryOptions", () => {
 
     const options = underlyingAllowanceQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        owner: "0x2222222222222222222222222222222222222222",
-        wrapperAddress: "0x3333333333333333333333333333333333333333",
+        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -47,19 +47,19 @@ describe("underlyingAllowanceQueryOptions", () => {
   test("includes owner and wrapperAddress in queryKey", ({ signer }) => {
     const options = underlyingAllowanceQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        owner: "0x2222222222222222222222222222222222222222",
-        wrapperAddress: "0x3333333333333333333333333333333333333333",
+        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
     expect(options.queryKey).toEqual([
       "zama.underlyingAllowance",
       {
-        tokenAddress: "0x1111111111111111111111111111111111111111",
-        owner: "0x2222222222222222222222222222222222222222",
-        wrapperAddress: "0x3333333333333333333333333333333333333333",
+        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     ]);
   });
@@ -71,10 +71,10 @@ describe("underlyingAllowanceQueryOptions", () => {
 
     const options = underlyingAllowanceQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        owner: "0x2222222222222222222222222222222222222222",
-        wrapperAddress: "0x3333333333333333333333333333333333333333",
+        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -110,10 +110,10 @@ describe("underlyingAllowanceQueryOptions", () => {
   test("queryFn throws when params are missing from context.queryKey", async ({ signer }) => {
     const options = underlyingAllowanceQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        owner: "0x2222222222222222222222222222222222222222",
-        wrapperAddress: "0x3333333333333333333333333333333333333333",
+        owner: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        wrapperAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 

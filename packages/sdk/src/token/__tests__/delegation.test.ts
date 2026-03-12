@@ -349,7 +349,7 @@ describe("decryptBalanceAs", () => {
 });
 
 describe("batch delegation", () => {
-  const TOKEN2 = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" as Address;
+  const TOKEN2 = "0xeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeD" as Address;
 
   it("delegateDecryptionBatch calls delegateDecryption on each token", async ({
     signer,

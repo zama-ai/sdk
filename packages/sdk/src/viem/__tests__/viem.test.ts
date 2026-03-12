@@ -23,9 +23,9 @@ import { ViemSigner } from "../viem-signer";
 // ── Constants ────────────────────────────────────────────
 
 const ACCOUNT_ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
-const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
-const BATCHER = "0x7777777777777777777777777777777777777777" as Address;
+const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
+const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
+const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 const TX_HASH = "0xtxhash" as Hex;
 const MOCK_CHAIN = { id: 1, name: "mainnet" } as WalletClient["chain"];
 

@@ -6,7 +6,7 @@ describe("isConfidentialQueryOptions", () => {
     vi.mocked(signer.readContract).mockResolvedValue(true);
     const options = isConfidentialQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
 
     const value = await options.queryFn(mockQueryContext(options.queryKey));
@@ -16,7 +16,7 @@ describe("isConfidentialQueryOptions", () => {
 
   test("queries wrapper interface check", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue(false);
-    const options = isWrapperQueryOptions(signer, "0x1111111111111111111111111111111111111111");
+    const options = isWrapperQueryOptions(signer, "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
 
     const value = await options.queryFn(mockQueryContext(options.queryKey));
     expect(value).toBe(false);

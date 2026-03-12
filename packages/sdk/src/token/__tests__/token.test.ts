@@ -313,7 +313,7 @@ describe("Token", () => {
   });
 
   describe("discoverWrapper", () => {
-    const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
+    const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
     const WRAPPER_ADDR = "0xdiscoveredWrapper" as Address;
 
     it("returns wrapper address when it exists", async ({ signer, token }) => {
@@ -344,7 +344,7 @@ describe("Token", () => {
 
   describe("underlyingToken", () => {
     it("reads the underlying token address", async ({ signer, token }) => {
-      const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
+      const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
       vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING);
 
       const result = await token.underlyingToken();
@@ -414,7 +414,7 @@ describe("Token", () => {
       tokenAddress,
     }) => {
       const result = await token.confidentialTransfer(
-        "0x8888888888888888888888888888888888888888" as Address,
+        "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
         100n,
       );
 
@@ -436,7 +436,7 @@ describe("Token", () => {
   describe("shield", () => {
     it("checks allowance and shields", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
       const txHash = await token.shield(100n);
@@ -457,7 +457,7 @@ describe("Token", () => {
 
     it("skips approval when allowance is sufficient", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(200n); // enough allowance
 
       await token.shield(100n);
@@ -471,7 +471,7 @@ describe("Token", () => {
 
     it("skips approval when approvalStrategy is skip", async ({ signer, token }) => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(
-        "0x9999999999999999999999999999999999999999",
+        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
       ); // #getUnderlying
 
       await token.shield(100n, { approvalStrategy: "skip" });
@@ -684,7 +684,7 @@ describe("Token", () => {
       vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
 
       await expect(
-        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n),
       ).rejects.toSatisfy((err: ZamaError) => {
         return (
           err instanceof ZamaError &&
@@ -699,7 +699,7 @@ describe("Token", () => {
       vi.mocked(relayer.encrypt).mockRejectedValueOnce(original);
 
       await expect(
-        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n),
       ).rejects.toBe(original);
     });
 
@@ -714,7 +714,7 @@ describe("Token", () => {
       });
 
       await expect(
-        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n),
       ).rejects.toMatchObject({
         code: ZamaErrorCode.EncryptionFailed,
         message: "Encryption returned no handles",
@@ -726,7 +726,7 @@ describe("Token", () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(
-        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n),
       ).rejects.toBe(original);
     });
 
@@ -737,7 +737,7 @@ describe("Token", () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(
-        token.confidentialTransfer("0x8888888888888888888888888888888888888888" as Address, 100n),
+        token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n),
       ).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
         message: "Transfer transaction failed",
@@ -858,7 +858,7 @@ describe("Token", () => {
 
   describe("approve", () => {
     it("calls setOperatorContract with spender", async ({ signer, token }) => {
-      const spender = "0x3333333333333333333333333333333333333333" as Address;
+      const spender = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
       const result = await token.approve(spender);
 
@@ -876,7 +876,7 @@ describe("Token", () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(
-        token.approve("0x3333333333333333333333333333333333333333" as Address),
+        token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
       ).rejects.toSatisfy((err: ZamaError) => {
         return (
           err instanceof ZamaError &&
@@ -892,7 +892,7 @@ describe("Token", () => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(true);
 
       const result = await token.isApproved(
-        "0x3333333333333333333333333333333333333333" as Address,
+        "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address,
       );
 
       expect(result).toBe(true);
@@ -940,7 +940,7 @@ describe("Token", () => {
 
     it("approves max uint256 with approvalStrategy max", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
       await token.shield(100n, { approvalStrategy: "max" });
@@ -960,7 +960,7 @@ describe("Token", () => {
       token,
     }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(50n); // existing non-zero allowance < amount
 
       await token.shield(100n);
@@ -989,7 +989,7 @@ describe("Token", () => {
 
     it("wraps write failure in TransactionReverted", async ({ signer, token }) => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(
-        "0x9999999999999999999999999999999999999999",
+        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
       ); // #getUnderlying
       // skip approval
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
@@ -1007,7 +1007,7 @@ describe("Token", () => {
 
     it("wraps allowance check failure in ApprovalFailed", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying (cached for ensureAllowance)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying (cached for ensureAllowance)
         .mockResolvedValueOnce(0n); // allowance
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
@@ -1200,7 +1200,7 @@ describe("Token", () => {
   describe("approveUnderlying", () => {
     it("defaults to max uint256 approval", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
       await token.approveUnderlying();
@@ -1215,7 +1215,7 @@ describe("Token", () => {
 
     it("resets to zero first when existing non-zero allowance", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(50n); // currentAllowance > 0
 
       await token.approveUnderlying();
@@ -1239,7 +1239,7 @@ describe("Token", () => {
 
     it("accepts custom amount", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
       await token.approveUnderlying(500n);
@@ -1254,7 +1254,7 @@ describe("Token", () => {
 
     it("wraps error in ApprovalFailed", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
       vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("approve failed"));
@@ -1270,7 +1270,7 @@ describe("Token", () => {
 
     it("re-throws ZamaError from writeContract as-is", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying
         .mockResolvedValueOnce(0n); // currentAllowance
 
       const original = new ZamaError(ZamaErrorCode.ApprovalFailed, "already wrapped");
@@ -1281,7 +1281,7 @@ describe("Token", () => {
 
     it("skips allowance check when amount is 0n", async ({ signer, token }) => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(
-        "0x9999999999999999999999999999999999999999",
+        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
       ); // underlying
 
       await token.approveUnderlying(0n);
@@ -1297,7 +1297,7 @@ describe("Token", () => {
       vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(
-        token.approve("0x3333333333333333333333333333333333333333" as Address),
+        token.approve("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),
       ).rejects.toBe(original);
     });
   });
@@ -1305,7 +1305,7 @@ describe("Token", () => {
   describe("shield (ZamaError re-throw from ensureAllowance)", () => {
     it("re-throws ZamaError from approve in ensureAllowance as-is", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // #getUnderlying
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(0n); // allowance
 
       const original = new ZamaError(ZamaErrorCode.ApprovalFailed, "already wrapped");
@@ -1316,7 +1316,7 @@ describe("Token", () => {
 
     it("re-throws ZamaError from wrap writeContract as-is", async ({ signer, token }) => {
       vi.mocked(signer.readContract).mockResolvedValueOnce(
-        "0x9999999999999999999999999999999999999999",
+        "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c",
       ); // #getUnderlying
 
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");

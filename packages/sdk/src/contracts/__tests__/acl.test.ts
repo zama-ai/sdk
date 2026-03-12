@@ -7,8 +7,8 @@ import {
   getDelegationExpiryContract,
 } from "../acl";
 
-const ACL = "0x8888888888888888888888888888888888888888" as Address;
-const DELEGATE = "0x3333333333333333333333333333333333333333" as Address;
+const ACL = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
+const DELEGATE = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
 describe("ACL contract builders", () => {
   it("delegateForUserDecryptionContract", ({ tokenAddress }) => {

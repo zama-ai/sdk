@@ -12,12 +12,12 @@ import type { GenericSigner, GenericStorage, TransactionResult } from "./token/t
 import { ZamaSDK, ZamaSDKConfig } from "./token/zama-sdk";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
+const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+const WRAPPER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
 const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
 const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
+const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
