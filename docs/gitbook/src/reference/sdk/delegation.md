@@ -123,7 +123,10 @@ const balance = await readonlyToken.decryptBalanceAs({
   delegatorAddress: "0xDelegator",
 });
 
-// Decrypt a specific owner's balance (when owner differs from delegator)
+// Decrypt a specific owner's balance (when owner differs from delegator).
+// Note: the relayer validates ACL permissions against `delegatorAddress`,
+// not `owner`. The delegator must have been granted decrypt rights for
+// the contract, regardless of whose balance is being read.
 const balance = await readonlyToken.decryptBalanceAs({
   delegatorAddress: "0xDelegator",
   owner: "0xOwner",

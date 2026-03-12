@@ -1,6 +1,6 @@
 "use client";
 
-import { skipToken } from "@tanstack/react-query";
+import { skipToken, type UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import {
   delegationStatusQueryOptions,
@@ -23,6 +23,7 @@ export interface UseDelegationStatusConfig {
  * Query delegation status between a delegator and delegate for a token.
  *
  * @param config - Token address, delegator, and delegate addresses.
+ * @param options - React Query options (forwarded to `useQuery`).
  * @returns `{ isDelegated, expiryTimestamp, isLoading, error }`.
  *
  * @example
@@ -35,7 +36,10 @@ export interface UseDelegationStatusConfig {
  * // data?.isDelegated, data?.expiryTimestamp
  * ```
  */
-export function useDelegationStatus(config: UseDelegationStatusConfig) {
+export function useDelegationStatus(
+  config: UseDelegationStatusConfig,
+  options?: Omit<UseQueryOptions<DelegationStatusData, Error>, "queryKey" | "queryFn">,
+) {
   const readonlyToken = useReadonlyToken(config.tokenAddress);
 
   const enabled = Boolean(config.delegatorAddress && config.delegateAddress);
@@ -53,5 +57,6 @@ export function useDelegationStatus(config: UseDelegationStatusConfig) {
   return useQuery<DelegationStatusData>({
     ...baseOpts,
     enabled,
+    ...options,
   });
 }
