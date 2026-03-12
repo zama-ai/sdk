@@ -392,7 +392,7 @@ describe("decryptBalanceAs", () => {
 describe("batch delegation", () => {
   const TOKEN2 = "0xeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeD" as Address;
 
-  it("delegateDecryptionBatch calls delegateDecryption on each token", async ({
+  it("batchDelegateDecryption calls delegateDecryption on each token", async ({
     signer,
     relayer,
     token,
@@ -407,7 +407,7 @@ describe("batch delegation", () => {
       address: TOKEN2,
     });
 
-    const results = await Token.delegateDecryptionBatch({
+    const results = await Token.batchDelegateDecryption({
       tokens: [token, token2],
       delegateAddress,
     });
@@ -419,7 +419,7 @@ describe("batch delegation", () => {
     );
   });
 
-  it("delegateDecryptionBatch captures per-token errors", async ({
+  it("batchDelegateDecryption captures per-token errors", async ({
     signer,
     relayer,
     token,
@@ -438,7 +438,7 @@ describe("batch delegation", () => {
       address: TOKEN2,
     });
 
-    const results = await Token.delegateDecryptionBatch({
+    const results = await Token.batchDelegateDecryption({
       tokens: [token, token2],
       delegateAddress,
     });
@@ -447,8 +447,8 @@ describe("batch delegation", () => {
     expect(results.get(getAddress(TOKEN2))).toBeInstanceOf(Error);
   });
 
-  it("revokeDelegationBatch works", async ({ token, tokenAddress, delegateAddress }) => {
-    const results = await Token.revokeDelegationBatch({
+  it("batchRevokeDelegation works", async ({ token, tokenAddress, delegateAddress }) => {
+    const results = await Token.batchRevokeDelegation({
       tokens: [token],
       delegateAddress,
     });
@@ -457,7 +457,7 @@ describe("batch delegation", () => {
     expect(results.get(tokenAddress)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
   });
 
-  it("revokeDelegationBatch captures per-token errors", async ({
+  it("batchRevokeDelegation captures per-token errors", async ({
     signer,
     relayer,
     token,
@@ -476,7 +476,7 @@ describe("batch delegation", () => {
       address: TOKEN2,
     });
 
-    const results = await Token.revokeDelegationBatch({
+    const results = await Token.batchRevokeDelegation({
       tokens: [token, token2],
       delegateAddress,
     });
@@ -485,7 +485,7 @@ describe("batch delegation", () => {
     expect(results.get(getAddress(TOKEN2))).toBeInstanceOf(Error);
   });
 
-  it("delegateDecryptionBatch with expiration date", async ({
+  it("batchDelegateDecryption with expiration date", async ({
     signer,
     token,
     tokenAddress,
@@ -493,7 +493,7 @@ describe("batch delegation", () => {
   }) => {
     const expiry = new Date("2030-06-15");
 
-    const results = await Token.delegateDecryptionBatch({
+    const results = await Token.batchDelegateDecryption({
       tokens: [token],
       delegateAddress,
       expirationDate: expiry,

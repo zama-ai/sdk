@@ -767,7 +767,7 @@ export class Token extends ReadonlyToken {
    * @param options - Optional expiration date.
    * @returns Map from token address to TransactionResult or ZamaError.
    */
-  static async delegateDecryptionBatch({
+  static async batchDelegateDecryption({
     tokens,
     delegateAddress,
     expirationDate,
@@ -791,7 +791,7 @@ export class Token extends ReadonlyToken {
    * @param delegateAddress - Address to revoke delegation from.
    * @returns Map from token address to TransactionResult or ZamaError.
    */
-  static async revokeDelegationBatch({
+  static async batchRevokeDelegation({
     tokens,
     delegateAddress,
   }: {

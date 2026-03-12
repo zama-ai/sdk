@@ -221,13 +221,13 @@ Batch delegation (on `Token`):
 const tokens = addresses.map((a) => sdk.createToken(a));
 
 // Delegate across multiple tokens — returns Map<Address, TransactionResult | ZamaError>
-const results = await Token.delegateDecryptionBatch({
+const results = await Token.batchDelegateDecryption({
   tokens,
   delegateAddress: "0xDelegate",
 });
 
 // Revoke across multiple tokens
-const results = await Token.revokeDelegationBatch(tokens, "0xDelegate");
+const results = await Token.batchRevokeDelegation(tokens, "0xDelegate");
 ```
 
 ### Pending Unshield Persistence

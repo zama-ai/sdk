@@ -22862,27 +22862,27 @@ export class Token extends ReadonlyToken {
     constructor(config: TokenConfig);
     approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
+    static batchDelegateDecryption(input: {
+        tokens: Token[];
+        delegateAddress: Address;
+        expirationDate?: Date;
+    }): Promise<Map<Address, TransactionResult | ZamaError>>;
+    static batchRevokeDelegation(input: {
+        tokens: Token[];
+        delegateAddress: Address;
+    }): Promise<Map<Address, TransactionResult | ZamaError>>;
     confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
         delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<TransactionResult>;
-    static delegateDecryptionBatch(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
     finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
-    static revokeDelegationBatch(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */

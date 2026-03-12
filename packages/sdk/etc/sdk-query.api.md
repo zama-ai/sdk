@@ -927,28 +927,28 @@ export class Token extends ReadonlyToken {
     constructor(config: TokenConfig);
     approve(spender: Address, until?: number): Promise<TransactionResult>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
+    // Warning: (ae-forgotten-export) The symbol "ZamaError" needs to be exported by the entry point index.d.ts
+    static batchDelegateDecryption(input: {
+        tokens: Token[];
+        delegateAddress: Address;
+        expirationDate?: Date;
+    }): Promise<Map<Address, TransactionResult | ZamaError>>;
+    static batchRevokeDelegation(input: {
+        tokens: Token[];
+        delegateAddress: Address;
+    }): Promise<Map<Address, TransactionResult | ZamaError>>;
     confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
         delegateAddress: Address;
         expirationDate?: Date;
     }): Promise<TransactionResult>;
-    // Warning: (ae-forgotten-export) The symbol "ZamaError" needs to be exported by the entry point index.d.ts
-    static delegateDecryptionBatch(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
     finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
     isApproved(spender: Address, holder?: Address): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
-    static revokeDelegationBatch(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
     shield(amount: bigint, options?: {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
@@ -1473,7 +1473,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/activity-BlQMSDMf.d.ts:1403:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/activity-C-XHCKbh.d.ts:1403:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

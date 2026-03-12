@@ -63,7 +63,7 @@ import { Token, ZamaError } from "@zama-fhe/sdk";
 
 const tokens = addresses.map((a) => sdk.createToken(a));
 
-const results = await Token.delegateDecryptionBatch({
+const results = await Token.batchDelegateDecryption({
   tokens,
   delegateAddress: "0xDelegate",
   expirationDate: new Date("2025-12-31"),
@@ -87,7 +87,7 @@ await token.revokeDelegation({ delegateAddress: "0xDelegate" });
 Batch revocation works the same way:
 
 ```ts
-const results = await Token.revokeDelegationBatch({
+const results = await Token.batchRevokeDelegation({
   tokens,
   delegateAddress: "0xDelegate",
 });
