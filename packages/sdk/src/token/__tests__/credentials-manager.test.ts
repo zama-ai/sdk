@@ -484,7 +484,7 @@ describe("CredentialsManager", () => {
       setupMocks(relayer, signer);
       const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
       await storage.set(storeKey, "corrupted-json{{{");
-      expect(await credentialManager.isExpired()).toBe(false);
+      expect(await credentialManager.isExpired()).toBe(true);
     });
 
     it("works without session signature (checks timestamp only)", async ({

@@ -3,12 +3,13 @@ import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
-import { CredentialsManager } from "./credentials-manager";
+import { CredentialsManager, CredentialsManagerConfig } from "./credentials-manager";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "./token.types";
 import { toError } from "../utils";
+import { DelegatedCredentialsManager } from "../../dist";
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -54,6 +55,7 @@ export class ZamaSDK {
   readonly storage: GenericStorage;
   readonly sessionStorage: GenericStorage;
   readonly credentials: CredentialsManager;
+  readonly delegatedCredentials: DelegatedCredentialsManager;
   readonly #onEvent: ZamaSDKEventListener;
   #unsubscribeSigner?: () => void;
   #identityReady: Promise<void>;
@@ -66,7 +68,7 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.#onEvent = config.onEvent ?? function () {};
-    this.credentials = new CredentialsManager({
+    const credentialsConfig = {
       relayer: this.relayer,
       signer: this.signer,
       storage: this.storage,
@@ -78,7 +80,9 @@ export class ZamaSDK {
       })(),
       sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: this.#onEvent,
-    });
+    };
+    this.credentials = new CredentialsManager(credentialsConfig);
+    this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
     this.#identityReady = this.#initIdentity();
 
     if (this.signer.subscribe) {

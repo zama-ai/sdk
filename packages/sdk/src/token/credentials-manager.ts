@@ -123,6 +123,9 @@ export class CredentialsManager {
    * otherwise generates a fresh keypair and requests an EIP-712 signature.
    * The wallet signature is cached in session storage.
    *
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   * @throws {@link SigningFailedError} if the signing operation fails for any other reason.
+   *
    * @example
    * ```ts
    * const creds = await credentials.allow("0xTokenAddress");
@@ -205,7 +208,10 @@ export class CredentialsManager {
           contractAddresses: normalizedContractAddresses,
         });
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof SigningRejectedError || error instanceof SigningFailedError) {
+        throw error;
+      }
       try {
         await this.#storage.delete(storeKey);
       } catch {
@@ -233,9 +239,12 @@ export class CredentialsManager {
   }
 
   /**
-   * Check if stored credentials exist and are expired.
-   * Returns `true` if credentials are stored but past their expiration time.
-   * Returns `false` if no credentials are stored or if they are still valid.
+   * Check if stored credentials exist and are expired or unusable.
+   *
+   * Returns `false` only when credentials are stored, parseable, and still valid.
+   * Returns `true` if credentials are expired, corrupted, or if storage is inaccessible
+   * (treats unknown state as expired — the safer default to trigger re-authorization).
+   * Returns `false` if no credentials are stored (nothing to expire).
    *
    * Use this to proactively detect expiration and show appropriate UI
    * (e.g. "Re-authorizing..." instead of a generic loading state).
@@ -262,7 +271,7 @@ export class CredentialsManager {
       const requiredContracts = contractAddress ? [contractAddress] : [];
       return !this.#isValid(encrypted, requiredContracts);
     } catch {
-      return false;
+      return true;
     }
   }
 

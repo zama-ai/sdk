@@ -67,6 +67,8 @@ export class DelegatedCredentialsManager {
   #createPromise: Promise<DelegatedStoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
   #extendPromise: Promise<DelegatedStoredCredentials> | null = null;
+  #cachedStoreKey: string | null = null;
+  #cachedStoreKeyIdentity: string | null = null;
   #cachedDerivedKey: CryptoKey | null = null;
   #cachedDerivedKeyIdentity: string | null = null;
 
@@ -109,6 +111,12 @@ export class DelegatedCredentialsManager {
    * Authorize FHE delegated credentials for one or more contract addresses.
    * Returns cached credentials if still valid and covering all addresses,
    * otherwise generates a fresh keypair and requests an EIP-712 signature.
+   *
+   * @param delegatorAddress - The address of the account that granted delegation.
+   * @param contractAddresses - One or more token contract addresses to authorize.
+   * @returns The delegated credentials including keypair, signature, and delegation metadata.
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   * @throws {@link SigningFailedError} if the signing operation fails for any other reason.
    */
   async allow(
     delegatorAddress: Address,
@@ -187,7 +195,10 @@ export class DelegatedCredentialsManager {
           contractAddresses: normalizedContractAddresses,
         });
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof SigningRejectedError || error instanceof SigningFailedError) {
+        throw error;
+      }
       try {
         await this.#storage.delete(storeKey);
       } catch {
@@ -215,9 +226,15 @@ export class DelegatedCredentialsManager {
   }
 
   /**
-   * Check if stored credentials exist and are expired.
-   * Returns `true` if credentials are stored but past their expiration time.
-   * Returns `false` if no credentials are stored or if they are still valid.
+   * Check if stored delegated credentials exist and are expired or unusable.
+   *
+   * Returns `false` only when credentials are stored, parseable, and still valid.
+   * Returns `true` if credentials are expired, corrupted, or if storage is inaccessible
+   * (treats unknown state as expired — the safer default to trigger re-authorization).
+   * Returns `false` if no credentials are stored (nothing to expire).
+   *
+   * @param delegatorAddress - The address of the account that granted delegation.
+   * @param contractAddress - Optional contract address to check coverage for.
    */
   async isExpired(delegatorAddress: Address, contractAddress?: Address): Promise<boolean> {
     const normalizedDelegator = getAddress(delegatorAddress);
@@ -232,13 +249,15 @@ export class DelegatedCredentialsManager {
       const requiredContracts = contractAddress ? [contractAddress] : [];
       return !this.#isValid(encrypted, requiredContracts);
     } catch {
-      return false;
+      return true;
     }
   }
 
   /**
    * Revoke the session signature for a delegator. Stored credentials
    * remain intact, but the next call to `allow` will require a fresh wallet signature.
+   *
+   * @param delegatorAddress - The address of the account that granted delegation.
    */
   async revoke(delegatorAddress: Address): Promise<void> {
     const normalizedDelegator = getAddress(delegatorAddress);
@@ -250,6 +269,9 @@ export class DelegatedCredentialsManager {
 
   /**
    * Whether a session signature is currently cached for a delegator.
+   *
+   * @param delegatorAddress - The address of the account that granted delegation.
+   * @returns `true` if a non-expired session signature exists for this delegator.
    */
   async isAllowed(delegatorAddress: Address): Promise<boolean> {
     const normalizedDelegator = getAddress(delegatorAddress);
@@ -261,6 +283,9 @@ export class DelegatedCredentialsManager {
 
   /**
    * Delete all stored credentials for a delegator (best-effort).
+   * Clears both the session signature and the persisted encrypted credentials.
+   *
+   * @param delegatorAddress - The address of the account that granted delegation.
    */
   async clear(delegatorAddress: Address): Promise<void> {
     const normalizedDelegator = getAddress(delegatorAddress);
@@ -276,6 +301,8 @@ export class DelegatedCredentialsManager {
 
   /** Clear cached cryptographic material. */
   #clearCryptoCache(): void {
+    this.#cachedStoreKey = null;
+    this.#cachedStoreKeyIdentity = null;
     this.#cachedDerivedKey = null;
     this.#cachedDerivedKeyIdentity = null;
   }
@@ -284,7 +311,18 @@ export class DelegatedCredentialsManager {
   async #storeKey(delegatorAddress: Address): Promise<string> {
     const delegateAddress = await this.#signer.getAddress();
     const chainId = await this.#signer.getChainId();
-    return DelegatedCredentialsManager.computeStoreKey(delegateAddress, delegatorAddress, chainId);
+    const identity = `${getAddress(delegateAddress)}:${getAddress(delegatorAddress)}:${chainId}`;
+    if (this.#cachedStoreKey && this.#cachedStoreKeyIdentity === identity) {
+      return this.#cachedStoreKey;
+    }
+    const key = await DelegatedCredentialsManager.computeStoreKey(
+      delegateAddress,
+      delegatorAddress,
+      chainId,
+    );
+    this.#cachedStoreKeyIdentity = identity;
+    this.#cachedStoreKey = key;
+    return key;
   }
 
   /** Check if a session entry has expired based on its recorded TTL. `0` = always expired, `"infinite"` = never expires. */
@@ -339,6 +377,21 @@ export class DelegatedCredentialsManager {
     assertObject(data.encryptedPrivateKey, "credentials.encryptedPrivateKey");
     assertString(data.encryptedPrivateKey.iv, "encryptedPrivateKey.iv");
     assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
+    assertCondition(
+      typeof data.delegatorAddress === "string" &&
+        isAddress(data.delegatorAddress, { strict: false }),
+      "Expected credentials.delegatorAddress to be a valid address",
+    );
+    assertCondition(
+      typeof data.delegateAddress === "string" &&
+        isAddress(data.delegateAddress, { strict: false }),
+      "Expected credentials.delegateAddress to be a valid address",
+    );
+    assertCondition(
+      typeof data.startTimestamp === "number",
+      "Expected startTimestamp to be a number",
+    );
+    assertCondition(typeof data.durationDays === "number", "Expected durationDays to be a number");
   }
 
   #isValid(

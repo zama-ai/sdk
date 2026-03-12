@@ -137,17 +137,25 @@ Decrypted values are cached in storage, keyed by `(token, owner, handle)`. Becau
 
 ## Error handling
 
-| Error                           | When                                                                   |
-| ------------------------------- | ---------------------------------------------------------------------- |
-| `TransactionRevertedError`      | Delegation or revocation transaction fails                             |
-| `DecryptionFailedError`         | Delegated decryption fails                                             |
-| `DelegationSelfNotAllowedError` | Delegation target is the caller (`delegate === msg.sender`)            |
-| `DelegationCooldownError`       | Only one delegate/revoke per (delegator, delegate, contract) per block |
-| `DelegationNotFoundError`       | No active delegation for this (delegator, delegate, contract)          |
-| `DelegationExpiredError`        | The delegation has expired                                             |
+| Error                           | When                                                                        |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| `TransactionRevertedError`      | Delegation or revocation transaction fails                                  |
+| `DecryptionFailedError`         | Delegated decryption fails or relayer returns no value for a handle         |
+| `SigningRejectedError`          | User rejects the wallet signature prompt (e.g. clicks "Reject" in MetaMask) |
+| `SigningFailedError`            | Signing operation fails for any other reason                                |
+| `NoCiphertextError`             | Relayer returns HTTP 400 — no ciphertext exists for this account            |
+| `RelayerRequestFailedError`     | Relayer returns a non-400 HTTP error                                        |
+| `DelegationSelfNotAllowedError` | Delegation target is the caller (`delegate === msg.sender`)                 |
+| `DelegationCooldownError`       | Only one delegate/revoke per (delegator, delegate, contract) per block      |
+| `DelegationNotFoundError`       | No active delegation for this (delegator, delegate, contract)               |
+| `DelegationExpiredError`        | The delegation has expired                                                  |
 
 ```ts
-import { TransactionRevertedError, DecryptionFailedError } from "@zama-fhe/sdk";
+import {
+  TransactionRevertedError,
+  DecryptionFailedError,
+  SigningRejectedError,
+} from "@zama-fhe/sdk";
 
 try {
   await token.delegateDecryption({ delegateAddress: "0xDelegate" });
@@ -162,10 +170,14 @@ try {
     delegatorAddress: "0xDelegator",
   });
 } catch (error) {
-  if (error instanceof DecryptionFailedError) {
+  if (error instanceof SigningRejectedError) {
+    // user cancelled the wallet prompt — do not retry automatically
+  } else if (error instanceof DecryptionFailedError) {
     // delegated decryption failed
   }
 }
 ```
+
+> **Note:** `SigningRejectedError` is always propagated — if the user rejects a wallet prompt, the SDK never silently retries or falls through to a fresh credential flow. This ensures users can always cancel.
 
 > **Note:** The delegation-specific errors (`DelegationSelfNotAllowedError`, `DelegationCooldownError`, etc.) are not auto-mapped from ACL contract reverts. They are exported so dApp code can catch and re-throw them when parsing on-chain revert reasons (e.g. via viem's `decodeErrorResult`).

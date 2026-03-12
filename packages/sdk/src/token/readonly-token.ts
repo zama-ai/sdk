@@ -78,6 +78,8 @@ export interface ReadonlyTokenConfig {
   sessionStorage: GenericStorage;
   /** Shared CredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for credential creation. */
   credentials?: CredentialsManager;
+  /** Shared DelegatedCredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for delegated credential creation. */
+  delegatedCredentials?: DelegatedCredentialsManager;
   /** Address of the confidential token contract. */
   address: Address;
   /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
@@ -112,8 +114,9 @@ export class ReadonlyToken {
       sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: config.onEvent,
     };
-    this.credentials = new CredentialsManager(credentialsConfig);
-    this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
+    this.credentials = config.credentials ?? new CredentialsManager(credentialsConfig);
+    this.delegatedCredentials =
+      config.delegatedCredentials ?? new DelegatedCredentialsManager(credentialsConfig);
     this.relayer = config.relayer;
     this.signer = config.signer;
     this.address = getAddress(config.address);
@@ -214,12 +217,15 @@ export class ReadonlyToken {
    *
    * **Error handling:** If a per-token decryption fails and no `onError` callback
    * is provided, errors are collected and thrown as an aggregated
-   * `DecryptionFailedError`. Pass `onError: () => 0n` for the old silent behavior.
+   * `DecryptionFailedError`. When the relayer returns no value for a handle,
+   * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
+   * Pass `onError: () => 0n` to opt into the silent zero behavior.
    *
    * @param tokens - Array of ReadonlyToken instances to decrypt balances for.
    * @param options - Optional configuration for handles, owner, error handling, and concurrency.
    * @returns A Map from token address to decrypted balance.
    * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` callback is provided.
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
    *
    * @example
    * ```ts
@@ -311,7 +317,12 @@ export class ReadonlyToken {
             durationDays: creds.durationDays,
           })
           .then(async (result) => {
-            const value = (result[handle] as bigint | undefined) ?? BigInt(0);
+            const value = result[handle] as bigint | undefined;
+            if (value === undefined) {
+              throw new DecryptionFailedError(
+                `Decryption returned no value for handle ${handle} on token ${token.address}`,
+              );
+            }
             results.set(token.address, value);
             await saveCachedBalance({
               storage: tokenStorage,
@@ -348,10 +359,25 @@ export class ReadonlyToken {
    * Batch decrypt confidential balances as a delegate across multiple tokens.
    * Mirrors {@link batchDecryptBalances} but uses delegated credentials.
    *
+   * **Error handling:** If a per-token decryption fails and no `onError` callback
+   * is provided, errors are collected and thrown as an aggregated
+   * `DecryptionFailedError`. When the relayer returns no value for a handle,
+   * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
+   * Pass `onError: () => 0n` to opt into the silent zero behavior.
+   *
    * @param tokens - Array of ReadonlyToken instances to decrypt balances for.
    * @param options - Delegated decryption configuration.
    * @returns A Map from token address to decrypted balance.
    * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` callback is provided.
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   *
+   * @example
+   * ```ts
+   * const balances = await ReadonlyToken.batchDecryptBalancesAs(tokens, {
+   *   delegatorAddress: "0xDelegator",
+   *   onError: (err, addr) => { console.error(addr, err); return 0n; },
+   * });
+   * ```
    */
   static async batchDecryptBalancesAs(
     tokens: ReadonlyToken[],
@@ -432,7 +458,12 @@ export class ReadonlyToken {
             durationDays: creds.durationDays,
           })
           .then(async (result) => {
-            const value = (result[handle] as bigint | undefined) ?? BigInt(0);
+            const value = result[handle] as bigint | undefined;
+            if (value === undefined) {
+              throw new DecryptionFailedError(
+                `Delegated decryption returned no value for handle ${handle} on token ${token.address}`,
+              );
+            }
             results.set(token.address, value);
             await saveCachedBalance({
               storage: tokenStorage,
@@ -681,14 +712,23 @@ export class ReadonlyToken {
    * The connected signer acts as the delegate who has been granted permission
    * by the delegator to decrypt their balance.
    *
+   * Decrypted values are cached in storage keyed by `(token, owner, handle)`.
+   * Cache write failures are silently ignored — they do not affect the returned value.
+   *
    * @param delegatorAddress - The address of the account that delegated decryption rights.
-   * @param options - Optional configuration: `owner` sets the balance owner address (defaults to the delegator).
+   * @param owner - Optional balance owner address. Defaults to the delegator address.
    * @returns The decrypted plaintext balance as a bigint.
-   * @throws {@link DecryptionFailedError} if delegated decryption fails.
+   * @throws {@link DecryptionFailedError} if delegated decryption fails or the relayer returns no value.
+   * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
+   * @throws {@link SigningFailedError} if the signing operation fails.
+   * @throws {@link NoCiphertextError} if the relayer returns HTTP 400 (no ciphertext for this account).
+   * @throws {@link RelayerRequestFailedError} if the relayer returns a non-400 HTTP error.
    *
    * @example
    * ```ts
-   * const balance = await token.decryptBalanceAs("0xDelegator");
+   * const balance = await token.decryptBalanceAs({
+   *   delegatorAddress: "0xDelegator",
+   * });
    * ```
    */
   async decryptBalanceAs({
@@ -719,7 +759,7 @@ export class ReadonlyToken {
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
 
-      const creds = await this.delegatedCredentials.allow(delegatorAddress, this.address);
+      const creds = await this.delegatedCredentials.allow(normalizedDelegator, this.address);
 
       const result = await this.relayer.delegatedUserDecrypt({
         handles: [handle],
@@ -743,13 +783,17 @@ export class ReadonlyToken {
         );
       }
 
-      await saveCachedBalance({
-        storage: this.storage,
-        tokenAddress: this.address,
-        owner: normalizedOwner,
-        handle,
-        value,
-      });
+      try {
+        await saveCachedBalance({
+          storage: this.storage,
+          tokenAddress: this.address,
+          owner: normalizedOwner,
+          handle,
+          value,
+        });
+      } catch {
+        // Cache write failure should not invalidate a successful decryption
+      }
 
       return value;
     } catch (error) {
