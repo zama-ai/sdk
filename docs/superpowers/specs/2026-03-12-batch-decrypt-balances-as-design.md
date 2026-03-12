@@ -49,9 +49,9 @@ interface DelegatedCredentialsManagerConfig {
 
 Same shape as `CredentialsManagerConfig`. Caller constructs one instance and passes it around.
 
-**Store key:** `hash(delegateAddress, delegatorAddress, chainId)` — one credential set per delegator.
+**Store key:** `hash(delegateAddress, delegatorAddress, chainId)` — one credential set per delegator. `delegateAddress` and `chainId` are obtained from `signer.getAddress()` and `signer.getChainId()` respectively, same as `CredentialsManager`.
 
-**EIP-712:** Uses `relayer.createDelegatedUserDecryptEIP712(publicKey, contractAddresses, delegatorAddress, startTimestamp, durationDays)` instead of `createEIP712`.
+**EIP-712:** Uses `relayer.createDelegatedUserDecryptEIP712(publicKey, contractAddresses, delegatorAddress, startTimestamp, durationDays)` instead of `createEIP712`. `durationDays` is derived from `keypairTTL` as `Math.ceil(keypairTTL / 86400)`, same as `CredentialsManager`.
 
 **Stored credentials type:**
 
@@ -61,6 +61,8 @@ interface DelegatedStoredCredentials extends StoredCredentials {
   delegateAddress: Address;
 }
 ```
+
+**Return type:** All `allow()` calls return `DelegatedStoredCredentials`, which includes `delegatorAddress` and `delegateAddress`. Callers (including `batchDecryptBalancesAs` and `decryptBalanceAs`) use these fields when calling `relayer.delegatedUserDecrypt(...)`.
 
 **Public API:**
 
@@ -76,8 +78,10 @@ interface DelegatedStoredCredentials extends StoredCredentials {
 
 - Keypair persisted with AES-GCM encryption (key derived from wallet signature via PBKDF2)
 - Session signature stored separately with TTL
-- Contract set auto-extended when new tokens are added (re-sign, reuse keypair)
+- Contract set auto-extended when new tokens are added (re-sign with `createDelegatedUserDecryptEIP712`, reuse existing keypair and `startTimestamp`)
 - Stale credentials detected via `keypairTTL`, session expiry detected via `sessionTTL`
+
+**`sessionTTL` sentinel:** A `sessionTTL` of `0` means "never expire" (infinite session). This avoids `Infinity` serialization issues with JSON storage. The `#isSessionExpired` check returns `false` when `ttl === 0`.
 
 ### 2. `ReadonlyToken.batchDecryptBalancesAs` (static method)
 
@@ -176,7 +180,7 @@ const delegatedCreds = new DelegatedCredentialsManager({
   storage: persistentStorage, // IndexedDB, etc.
   sessionStorage: sessionStore,
   keypairTTL: 86400 * 365, // 1 year
-  sessionTTL: Infinity, // never expire session
+  sessionTTL: 0, // 0 = never expire session
 });
 
 // Dfns iterates their customers (level 1 — no SDK method needed)
@@ -191,9 +195,15 @@ for (const delegator of [guillaume, corentin, ankur]) {
 }
 ```
 
+## Constraints
+
+- All tokens passed to `batchDecryptBalancesAs` must share the same chain (same relayer/signer). This matches `batchDecryptBalances`.
+- If an on-chain delegation is revoked or expired but cached credentials are still valid, the relayer will reject the `delegatedUserDecrypt` call. The error propagates through `onError` callback or is thrown as an aggregated error. No proactive delegation-status check is performed.
+
 ## Out of scope
 
 - Level-1 batching across delegators — Dfns loops themselves
 - Changes to `CredentialsManager` — completely separate class
 - Changes to the relayer interface — `delegatedUserDecrypt` and `createDelegatedUserDecryptEIP712` already exist
 - Changes to delegation grant/revoke methods
+- Proactive on-chain delegation status validation within `DelegatedCredentialsManager`
