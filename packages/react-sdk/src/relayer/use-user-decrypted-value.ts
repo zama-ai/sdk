@@ -1,8 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "../utils/query";
 import type { ClearValueType, Handle } from "@zama-fhe/sdk";
-import { hashFn } from "@zama-fhe/sdk/query";
 import { decryptionKeys } from "./decryption-cache";
 
 /**
@@ -13,7 +12,6 @@ import { decryptionKeys } from "./decryption-cache";
 export function useUserDecryptedValue(handle: Handle | undefined) {
   return useQuery<ClearValueType>({
     queryKey: decryptionKeys.value(handle ?? "0x"),
-    queryKeyHashFn: hashFn,
     queryFn: () => undefined as never,
     enabled: false,
   });

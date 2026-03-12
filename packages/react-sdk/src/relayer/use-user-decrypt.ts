@@ -11,6 +11,11 @@ import { useZamaSDK } from "../provider";
  * For the full orchestration (signature management, EIP712 signing),
  * see the app-level useUserDecryptFlow hook.
  *
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link DecryptionFailedError} — relayer decryption request failed
+ * - {@link InvalidKeypairError} — the provided keypair is invalid
+ * - {@link KeypairExpiredError} — the re-encryption keypair has expired
+ *
  * On success, populates the decryption cache so useUserDecryptedValue/useUserDecryptedValues
  * can read the results.
  */

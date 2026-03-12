@@ -425,6 +425,56 @@ describe("useConfidentialTransfer optimistic updates", () => {
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3800n);
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 5000n);
   });
+
+  test("behavior: onError still fires when rollback throws (try/finally resilience)", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
+
+    const onError = vi.fn();
+
+    const { result, queryClient } = renderWithProviders(() =>
+      useConfidentialTransfer({ tokenAddress: TOKEN, optimistic: true }, { onError }),
+    );
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    queryClient.setQueryData(balanceKey, 5000n);
+
+    // Sabotage setQueryData after the optimistic write so rollback throws
+    const originalSetQueryData = queryClient.setQueryData.bind(queryClient);
+    let callCount = 0;
+    vi.spyOn(queryClient, "setQueryData").mockImplementation((key, value) => {
+      callCount++;
+      // First call is the optimistic subtract, let it through.
+      // Second call (rollback) should throw.
+      if (callCount <= 1) return originalSetQueryData(key, value);
+      throw new Error("rollback boom");
+    });
+
+    // Suppress the expected unhandled rejection from the rollback error
+    // propagating through the mutation executor.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const suppress = (reason: any) => {
+      if (reason instanceof Error && reason.message === "rollback boom") return;
+      throw reason;
+    };
+    process.on("unhandledRejection", suppress);
+
+    try {
+      await act(async () => {
+        result.current.mutate({ to: RECIPIENT, amount: 500n });
+      });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // The caller's onError must have been called despite the rollback failure
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+    } finally {
+      process.removeListener("unhandledRejection", suppress);
+    }
+  });
 });
 
 describe("useConfidentialTransfer error propagation", () => {
