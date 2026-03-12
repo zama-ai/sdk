@@ -5,6 +5,10 @@ import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { Handle } from "./relayer/relayer-sdk.types";
 import type { Address, Hex } from "viem";
 import { CredentialsManager, CredentialsManagerConfig } from "./token/credentials-manager";
+import {
+  DelegatedCredentialsManager,
+  DelegatedCredentialsManagerConfig,
+} from "./token/delegated-credentials-manager";
 import { MemoryStorage } from "./token/memory-storage";
 import { ReadonlyToken, ReadonlyTokenConfig } from "./token/readonly-token";
 import { Token, TokenConfig } from "./token/token";
@@ -134,6 +138,7 @@ interface SdkFixtures {
   readonlyToken: ReadonlyToken;
   mockToken: Token;
   credentialManager: CredentialsManager;
+  delegatedCredentialManager: DelegatedCredentialsManager;
   storage: GenericStorage;
   sessionStorage: GenericStorage;
   createMockRelayer: typeof createMockRelayer;
@@ -150,6 +155,9 @@ interface SdkFixtures {
   ) => Token;
   createMockReadonlyToken: (address?: Address) => ReadonlyToken;
   createCredentialManager: (config: CredentialsManagerConfig) => CredentialsManager;
+  createDelegatedCredentialManager: (
+    config: DelegatedCredentialsManagerConfig,
+  ) => DelegatedCredentialsManager;
   createToken: (config: TokenConfig) => Token;
   createReadonlyToken: (config: ReadonlyTokenConfig) => ReadonlyToken;
   sdk: ZamaSDK;
@@ -244,6 +252,35 @@ export const test = base.extend<SdkFixtures>({
       });
     }
     await use(factory);
+  },
+  createDelegatedCredentialManager: async ({}, use) => {
+    function factory(config: DelegatedCredentialsManagerConfig) {
+      return new DelegatedCredentialsManager({
+        relayer: config.relayer,
+        signer: config.signer,
+        storage: config.storage,
+        sessionStorage: config.sessionStorage,
+        keypairTTL: config.keypairTTL ?? 86400,
+        sessionTTL: config.sessionTTL ?? 2592000,
+        onEvent: config.onEvent,
+      });
+    }
+    await use(factory);
+  },
+  delegatedCredentialManager: async (
+    { relayer, signer, storage, sessionStorage, createDelegatedCredentialManager },
+    use,
+  ) => {
+    await use(
+      createDelegatedCredentialManager({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        keypairTTL: 86400,
+        sessionTTL: 2592000,
+      }),
+    );
   },
   createToken: async ({}, use) => {
     await use((config: TokenConfig) => new Token(config));

@@ -57,13 +57,19 @@ export type { ZamaSDKConfig } from "./token/zama-sdk";
 export { Token } from "./token/token";
 export type { TokenConfig } from "./token/token";
 export { ReadonlyToken } from "./token/readonly-token";
-export type { ReadonlyTokenConfig, BatchDecryptOptions } from "./token/readonly-token";
+export type {
+  ReadonlyTokenConfig,
+  BatchDecryptOptions,
+  BatchDecryptAsOptions,
+} from "./token/readonly-token";
 export { ZERO_HANDLE } from "./token/readonly-token";
 export { MemoryStorage, memoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { ChromeSessionStorage, chromeSessionStorage } from "./token/chrome-session-storage";
 export { CredentialsManager } from "./token/credentials-manager";
 export type { CredentialsManagerConfig } from "./token/credentials-manager";
+export { DelegatedCredentialsManager } from "./token/delegated-credentials-manager";
+export type { DelegatedCredentialsManagerConfig } from "./token/delegated-credentials-manager";
 export {
   savePendingUnshield,
   loadPendingUnshield,
@@ -74,6 +80,7 @@ export type {
   GenericStorage,
   SignerLifecycleCallbacks,
   StoredCredentials,
+  DelegatedStoredCredentials,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,
