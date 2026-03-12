@@ -56,16 +56,14 @@ export interface BatchDecryptOptions {
 export interface BatchDecryptAsOptions {
   /** The address of the account that delegated decryption rights. */
   delegatorAddress: Address;
-  /** Credential manager for caching delegated credentials. */
-  credentials: DelegatedCredentialsManager;
   /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
   handles?: Handle[];
   /** Balance owner address. Defaults to the delegator address. */
   owner?: Address;
-  /** Called when decryption fails for a single token. Return a fallback bigint. */
-  onError?: (error: Error, address: Address) => bigint;
   /** Maximum number of concurrent decrypt calls. Default: Infinity. */
   maxConcurrency?: number;
+  /** Called when decryption fails for a single token. Return a fallback bigint. */
+  onError?: (error: Error, address: Address) => bigint;
 }
 
 /** Configuration for constructing a {@link ReadonlyToken}. */
@@ -95,6 +93,7 @@ export interface ReadonlyTokenConfig {
  */
 export class ReadonlyToken {
   protected readonly credentials: CredentialsManager;
+  protected readonly delegatedCredentials: DelegatedCredentialsManager;
   protected readonly relayer: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
@@ -102,20 +101,25 @@ export class ReadonlyToken {
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
-    const address = getAddress(config.address);
-    this.credentials =
-      config.credentials ??
-      new CredentialsManager({
-        relayer: config.relayer,
-        signer: config.signer,
-        storage: config.storage,
-        sessionStorage: config.sessionStorage,
-        keypairTTL: config.keypairTTL ?? 86400,
-        onEvent: config.onEvent,
-      });
+    this.credentials = new CredentialsManager({
+      relayer: config.relayer,
+      signer: config.signer,
+      storage: config.storage,
+      sessionStorage: config.sessionStorage,
+      keypairTTL: config.keypairTTL ?? 86400,
+      onEvent: config.onEvent,
+    });
+    this.delegatedCredentials = new DelegatedCredentialsManager({
+      relayer: config.relayer,
+      signer: config.signer,
+      storage: config.storage,
+      sessionStorage: config.sessionStorage,
+      keypairTTL: config.keypairTTL ?? 86400,
+      onEvent: config.onEvent,
+    });
     this.relayer = config.relayer;
     this.signer = config.signer;
-    this.address = address;
+    this.address = getAddress(config.address);
     this.#storage = config.storage;
     this.#onEvent = config.onEvent;
   }
@@ -358,7 +362,7 @@ export class ReadonlyToken {
   ): Promise<Map<Address, bigint>> {
     if (tokens.length === 0) return new Map();
 
-    const { delegatorAddress, credentials, handles, owner, onError, maxConcurrency } = options;
+    const { delegatorAddress, handles, owner, onError, maxConcurrency } = options;
     const ownerAddress = owner ?? delegatorAddress;
 
     const firstToken = tokens[0]!;
@@ -407,7 +411,10 @@ export class ReadonlyToken {
     if (uncached.length === 0) return results;
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const creds = await credentials.allow(delegatorAddress, ...uncachedAddresses);
+    const creds = await firstToken.delegatedCredentials.allow(
+      delegatorAddress,
+      ...uncachedAddresses,
+    );
 
     const errors: Array<{ address: Address; error: Error }> = [];
     const decryptFns: Array<() => Promise<void>> = [];
@@ -690,11 +697,9 @@ export class ReadonlyToken {
   async decryptBalanceAs({
     delegatorAddress,
     owner,
-    credentials,
   }: {
     delegatorAddress: Address;
     owner?: Address;
-    credentials?: DelegatedCredentialsManager;
   }): Promise<bigint> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedOwner = owner ? getAddress(owner) : normalizedDelegator;
@@ -713,101 +718,23 @@ export class ReadonlyToken {
     });
     if (cached !== null) return cached;
 
-    // When a DelegatedCredentialsManager is provided, use it for cached credentials.
-    if (credentials) {
-      const t0 = Date.now();
-      try {
-        this.emit({ type: ZamaSDKEvents.DecryptStart });
-
-        const creds = await credentials.allow(delegatorAddress, this.address);
-
-        const result = await this.relayer.delegatedUserDecrypt({
-          handles: [handle],
-          contractAddress: this.address,
-          signedContractAddresses: creds.contractAddresses,
-          privateKey: creds.privateKey,
-          publicKey: creds.publicKey,
-          signature: creds.signature,
-          delegatorAddress: creds.delegatorAddress,
-          delegateAddress: creds.delegateAddress,
-          startTimestamp: creds.startTimestamp,
-          durationDays: creds.durationDays,
-        });
-
-        this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
-
-        const value = result[handle] as bigint | undefined;
-        if (value === undefined) {
-          throw new DecryptionFailedError(
-            `Delegated decryption returned no value for handle ${handle}`,
-          );
-        }
-
-        await saveCachedBalance({
-          storage: this.storage,
-          tokenAddress: this.address,
-          owner: normalizedOwner,
-          handle,
-          value,
-        });
-
-        return value;
-      } catch (error) {
-        this.emit({
-          type: ZamaSDKEvents.DecryptError,
-          error: toError(error),
-          durationMs: Date.now() - t0,
-        });
-        throw wrapDecryptError(error, "Failed to decrypt delegated balance");
-      }
-    }
-
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
 
-      // Generate a fresh keypair for the delegated decrypt request.
-      const { publicKey, privateKey } = await this.relayer.generateKeypair();
-      const delegateAddress = await this.signer.getAddress();
-      const startTimestamp = Math.floor(Date.now() / 1000);
-      const durationDays = 1;
+      const creds = await this.delegatedCredentials.allow(delegatorAddress, this.address);
 
-      // Create delegated EIP-712 typed data.
-      const delegatedEIP712 = await this.relayer.createDelegatedUserDecryptEIP712(
-        publicKey,
-        [this.address],
-        normalizedDelegator,
-        startTimestamp,
-        durationDays,
-      );
-
-      // Sign the delegated EIP-712 with the delegate's signer.
-      // Convert KMS types (bigint chainId, string timestamps) to EIP712TypedData format.
-      const signature = await this.signer.signTypedData({
-        domain: {
-          ...delegatedEIP712.domain,
-          chainId: Number(delegatedEIP712.domain.chainId),
-        },
-        types: delegatedEIP712.types,
-        message: {
-          ...delegatedEIP712.message,
-          startTimestamp: BigInt(delegatedEIP712.message.startTimestamp),
-          durationDays: BigInt(delegatedEIP712.message.durationDays),
-        },
-      });
-
-      // Perform delegated decryption.
       const result = await this.relayer.delegatedUserDecrypt({
         handles: [handle],
         contractAddress: this.address,
-        signedContractAddresses: [this.address],
-        privateKey,
-        publicKey,
-        signature,
-        delegatorAddress: normalizedDelegator,
-        delegateAddress,
-        startTimestamp,
-        durationDays,
+        signedContractAddresses: creds.contractAddresses,
+        privateKey: creds.privateKey,
+        publicKey: creds.publicKey,
+        signature: creds.signature,
+        delegatorAddress: creds.delegatorAddress,
+        delegateAddress: creds.delegateAddress,
+        startTimestamp: creds.startTimestamp,
+        durationDays: creds.durationDays,
       });
 
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
@@ -819,7 +746,6 @@ export class ReadonlyToken {
         );
       }
 
-      // Cache keyed by balance owner.
       await saveCachedBalance({
         storage: this.storage,
         tokenAddress: this.address,

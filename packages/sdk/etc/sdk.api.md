@@ -1127,6 +1127,15 @@ export const BATCH_SWAP_ABI: readonly [{
 }];
 
 // @public
+export interface BatchDecryptAsOptions {
+    delegatorAddress: Address;
+    handles?: Handle[];
+    maxConcurrency?: number;
+    onError?: (error: Error, address: Address) => bigint;
+    owner?: Address;
+}
+
+// @public
 export interface BatchDecryptOptions {
     handles?: Handle[];
     maxConcurrency?: number;
@@ -7401,6 +7410,35 @@ export class DecryptionFailedError extends ZamaError {
 export interface DecryptStartEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
+}
+
+// @public
+export class DelegatedCredentialsManager {
+    constructor(config: DelegatedCredentialsManagerConfig);
+    allow(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<DelegatedStoredCredentials>;
+    clear(delegatorAddress: Address): Promise<void>;
+    // (undocumented)
+    static computeStoreKey(delegateAddress: Address, delegatorAddress: Address, chainId: number): Promise<string>;
+    isAllowed(delegatorAddress: Address): Promise<boolean>;
+    isExpired(delegatorAddress: Address, contractAddress?: Address): Promise<boolean>;
+    revoke(delegatorAddress: Address): Promise<void>;
+}
+
+// @public
+export interface DelegatedCredentialsManagerConfig {
+    keypairTTL?: number;
+    onEvent?: ZamaSDKEventListener;
+    relayer: RelayerSDK;
+    sessionStorage: GenericStorage;
+    sessionTTL?: number;
+    signer: GenericSigner;
+    storage: GenericStorage;
+}
+
+// @public
+export interface DelegatedStoredCredentials extends StoredCredentials {
+    delegateAddress: Address;
+    delegatorAddress: Address;
 }
 
 // @public
@@ -19550,6 +19588,7 @@ export class ReadonlyToken {
     allowance(wrapper: Address, owner?: Address): Promise<bigint>;
     balanceOf(owner?: Address): Promise<bigint>;
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
+    static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
@@ -19560,6 +19599,8 @@ export class ReadonlyToken {
         owner?: Address;
     }): Promise<bigint>;
     decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
+    // (undocumented)
+    protected readonly delegatedCredentials: DelegatedCredentialsManager;
     discoverWrapper(coordinatorAddress: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
     // (undocumented)

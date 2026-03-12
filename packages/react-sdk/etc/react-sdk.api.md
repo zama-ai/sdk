@@ -23,6 +23,9 @@ import { ApproveUnderlyingSubmittedEvent } from '@zama-fhe/sdk';
 import { balanceOfContract } from '@zama-fhe/sdk';
 import { BaseEvent } from '@zama-fhe/sdk';
 import { BATCH_SWAP_ABI } from '@zama-fhe/sdk';
+import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
+import { batchDecryptBalancesAsMutationOptions } from '@zama-fhe/sdk/query';
+import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { BatchDecryptOptions } from '@zama-fhe/sdk';
 import { BatchTransferData } from '@zama-fhe/sdk';
 import { batchTransferFeeQueryOptions } from '@zama-fhe/sdk/query';
@@ -72,8 +75,11 @@ import { DecryptEndEvent } from '@zama-fhe/sdk';
 import { DecryptErrorEvent } from '@zama-fhe/sdk';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
 import { DecryptStartEvent } from '@zama-fhe/sdk';
+import { DelegatedCredentialsManager } from '@zama-fhe/sdk';
+import { DelegatedCredentialsManagerConfig } from '@zama-fhe/sdk';
 import { delegateDecryptionMutationOptions } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
+import { DelegatedStoredCredentials } from '@zama-fhe/sdk';
 import { DelegatedUserDecryptParams } from '@zama-fhe/sdk';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { DelegationStatusQueryConfig } from '@zama-fhe/sdk/query';
@@ -289,6 +295,12 @@ export { BaseEvent }
 
 export { BATCH_SWAP_ABI }
 
+export { BatchDecryptAsOptions }
+
+export { batchDecryptBalancesAsMutationOptions }
+
+export { BatchDecryptBalancesAsParams }
+
 export { BatchDecryptOptions }
 
 export { BatchTransferData }
@@ -420,9 +432,15 @@ export const decryptionKeys: {
 
 export { DecryptStartEvent }
 
+export { DelegatedCredentialsManager }
+
+export { DelegatedCredentialsManagerConfig }
+
 export { delegateDecryptionMutationOptions }
 
 export { DelegateDecryptionParams }
+
+export { DelegatedStoredCredentials }
 
 export { DelegatedUserDecryptParams }
 
@@ -753,6 +771,9 @@ export function useAllowTokens(options?: UseMutationOptions<void, Error, Address
 
 // @public
 export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
+
+// @public
+export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptAsOptions>): _tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, BatchDecryptAsOptions, unknown>;
 
 // @public
 export function useBatchTransferFee(feeManagerAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<bigint, Error>;

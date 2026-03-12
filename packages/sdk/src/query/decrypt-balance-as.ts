@@ -1,13 +1,11 @@
-import type { ReadonlyToken } from "../token/readonly-token";
-import type { DelegatedCredentialsManager } from "../token/delegated-credentials-manager";
 import type { Address } from "viem";
+import type { ReadonlyToken } from "../token/readonly-token";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link decryptBalanceAsMutationOptions}. */
 export interface DecryptBalanceAsParams {
   delegatorAddress: Address;
   owner?: Address;
-  credentials?: DelegatedCredentialsManager;
 }
 
 export function decryptBalanceAsMutationOptions(
@@ -19,7 +17,7 @@ export function decryptBalanceAsMutationOptions(
 > {
   return {
     mutationKey: ["zama.decryptBalanceAs", readonlyToken.address] as const,
-    mutationFn: async ({ delegatorAddress, owner, credentials }) =>
-      readonlyToken.decryptBalanceAs({ delegatorAddress, owner, credentials }),
+    mutationFn: async ({ delegatorAddress, owner }) =>
+      readonlyToken.decryptBalanceAs({ delegatorAddress, owner }),
   };
 }

@@ -115,6 +115,21 @@ export interface BaseEvent {
 }
 
 // @public
+export interface BatchDecryptAsOptions {
+    delegatorAddress: Address;
+    handles?: Handle[];
+    maxConcurrency?: number;
+    onError?: (error: Error, address: Address) => bigint;
+    owner?: Address;
+}
+
+// @public (undocumented)
+export function batchDecryptBalancesAsMutationOptions(tokens: ReadonlyToken[]): MutationFactoryOptions<readonly ["zama.batchDecryptBalancesAs"], BatchDecryptBalancesAsParams, Map<Address, bigint>>;
+
+// @public
+export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
+
+// @public
 export interface BatchDecryptOptions {
     handles?: Handle[];
     maxConcurrency?: number;
@@ -703,6 +718,7 @@ export class ReadonlyToken {
     allowance(wrapper: Address, owner?: Address): Promise<bigint>;
     balanceOf(owner?: Address): Promise<bigint>;
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
+    static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
@@ -713,6 +729,10 @@ export class ReadonlyToken {
         owner?: Address;
     }): Promise<bigint>;
     decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
+    // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    protected readonly delegatedCredentials: DelegatedCredentialsManager;
     discoverWrapper(coordinatorAddress: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
     // (undocumented)
@@ -1429,7 +1449,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/activity-Ds18_ThD.d.ts:1138:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/activity-D-3Mh8CN.d.ts:1219:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
