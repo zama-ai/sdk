@@ -25,7 +25,7 @@ function mockDelegatedEIP712(relayer: ReturnType<typeof createMockRelayer>) {
 
 function createManager(
   relayer: ReturnType<typeof createMockRelayer>,
-  overrides: { sessionTTL?: number } = {},
+  overrides: { sessionTTL?: number | "infinite" } = {},
 ) {
   const signer = createMockSigner(DELEGATE);
   const storage = createMockStorage();
@@ -131,9 +131,9 @@ describe("DelegatedCredentialsManager", () => {
     expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
   });
 
-  test("sessionTTL: 0 means never expire", async ({ relayer }) => {
+  test("sessionTTL: 'infinite' means never expire", async ({ relayer }) => {
     vi.useFakeTimers();
-    const { manager } = createManager(relayer, { sessionTTL: 0 });
+    const { manager } = createManager(relayer, { sessionTTL: "infinite" });
 
     await manager.allow(DELEGATOR, TOKEN_A);
 
@@ -142,5 +142,18 @@ describe("DelegatedCredentialsManager", () => {
 
     // Session should still be valid
     expect(await manager.isAllowed(DELEGATOR)).toBe(true);
+  });
+
+  test("sessionTTL: 0 means every operation triggers signing", async ({ relayer }) => {
+    const { manager, signer } = createManager(relayer, { sessionTTL: 0 });
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+
+    await manager.allow(DELEGATOR, TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledTimes(3);
   });
 });

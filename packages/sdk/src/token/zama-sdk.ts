@@ -34,9 +34,10 @@ export interface ZamaSDKConfig {
    * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
    * Default: `2592000` (30 days).
    * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
+   * - `"infinite"`: session never expires.
    * - Positive number: seconds until the session signature expires and requires re-authentication.
    */
-  sessionTTL?: number;
+  sessionTTL?: number | "infinite";
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
   /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */

@@ -26,8 +26,8 @@ interface SessionEntry {
   signature: Hex;
   /** Epoch seconds when the session was created. */
   createdAt: number;
-  /** TTL at creation time (not current config). */
-  ttl: number;
+  /** TTL at creation time (not current config). `0` = always expired, `"infinite"` = never expires. */
+  ttl: number | "infinite";
 }
 
 /** Configuration for constructing a {@link DelegatedCredentialsManager}. */
@@ -42,8 +42,8 @@ export interface DelegatedCredentialsManagerConfig {
   sessionStorage: GenericStorage;
   /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day) */
   keypairTTL?: number;
-  /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). `0` means never expire. */
-  sessionTTL?: number;
+  /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). `0` means every operation triggers a signing prompt. `"infinite"` means the session never expires. */
+  sessionTTL?: number | "infinite";
   /** Optional structured event listener. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -62,7 +62,7 @@ export class DelegatedCredentialsManager {
   #storage: GenericStorage;
   #sessionStorage: GenericStorage;
   #keypairTTL: number;
-  #sessionTTL: number;
+  #sessionTTL: number | "infinite";
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<DelegatedStoredCredentials> | null = null;
   #createPromiseKey: string | null = null;
@@ -287,11 +287,10 @@ export class DelegatedCredentialsManager {
     return DelegatedCredentialsManager.computeStoreKey(delegateAddress, delegatorAddress, chainId);
   }
 
-  /** Check if a session entry has expired based on its recorded TTL. `ttl === 0` means never expire. */
+  /** Check if a session entry has expired based on its recorded TTL. `0` = always expired, `"infinite"` = never expires. */
   #isSessionExpired(entry: SessionEntry): boolean {
-    // Intentionally returns false for ttl === 0 (infinite session) —
-    // this differs from CredentialsManager where 0 means "expired immediately".
-    if (entry.ttl === 0) return false;
+    if (entry.ttl === "infinite") return false;
+    if (entry.ttl === 0) return true;
     return Math.floor(Date.now() / 1000) - entry.createdAt >= entry.ttl;
   }
 
@@ -309,7 +308,10 @@ export class DelegatedCredentialsManager {
       typeof data.createdAt === "number",
       `Expected session.createdAt to be a number`,
     );
-    assertCondition(typeof data.ttl === "number", `Expected session.ttl to be a number`);
+    assertCondition(
+      typeof data.ttl === "number" || data.ttl === "infinite",
+      `Expected session.ttl to be a number or "infinite"`,
+    );
   }
 
   /** Create and store a session entry with current TTL config. */
