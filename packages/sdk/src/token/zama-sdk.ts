@@ -1,15 +1,14 @@
 import { getAddress, type Address } from "viem";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import { Token } from "./token";
-import { ReadonlyToken } from "./readonly-token";
-import { MemoryStorage } from "./memory-storage";
-import { CredentialsManager, CredentialsManagerConfig } from "./credentials-manager";
-import type { GenericSigner, GenericStorage } from "./token.types";
-import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
-import type { SignerLifecycleCallbacks } from "./token.types";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { toError } from "../utils";
-import { DelegatedCredentialsManager } from "../../dist";
+import { CredentialsManager } from "./credentials-manager";
+import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
+import { MemoryStorage } from "./memory-storage";
+import { ReadonlyToken } from "./readonly-token";
+import { Token } from "./token";
+import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./token.types";
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -172,6 +171,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
+      delegatedCredentials: this.delegatedCredentials,
       address: getAddress(address),
       onEvent: this.#onEvent,
     });

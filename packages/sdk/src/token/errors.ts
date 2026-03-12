@@ -195,6 +195,23 @@ export class DelegationExpiredError extends ZamaError {
 }
 
 /**
+ * Wrap a signing error as {@link SigningRejectedError} or {@link SigningFailedError}.
+ * Detects user rejection via EIP-1193 code 4001 or message heuristics.
+ */
+export function wrapSigningError(error: unknown, context: string): never {
+  const isRejected =
+    (error instanceof Error && "code" in error && error.code === 4001) ||
+    (error instanceof Error &&
+      (error.message.includes("rejected") || error.message.includes("denied")));
+  if (isRejected) {
+    throw new SigningRejectedError(context, { cause: error });
+  }
+  throw new SigningFailedError(context, {
+    cause: error instanceof Error ? error : undefined,
+  });
+}
+
+/**
  * Pattern-match on a {@link ZamaError} by its error code.
  * Falls through to the `_` wildcard handler if no specific handler matches.
  * Returns `undefined` if the error is not a `ZamaError` and no `_` handler is provided.
