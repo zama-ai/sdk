@@ -7,7 +7,6 @@
   "author": "Zama",
   "scripts": {
     "dev": "next dev --port 3100",
-    "dev:e2e": "next dev --port 3100",
     "build": "next build",
     "start": "next start --port 3100"
   },
