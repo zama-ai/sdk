@@ -135,6 +135,68 @@ const balance = await readonlyToken.decryptBalanceAs({
 
 Decrypted values are cached in storage, keyed by `(token, owner, handle)`. Because every on-chain balance change produces a new encrypted handle, stale cache entries are never served — no TTL or manual invalidation needed. If the delegator's balance changes in another app, the next `decryptBalanceAs` call will see a different handle and perform a fresh decryption.
 
+### Batch decryption as delegate
+
+Decrypt balances across multiple tokens in a single call:
+
+```ts
+const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
+
+const balances = await ReadonlyToken.batchDecryptBalancesAs(tokens, {
+  delegatorAddress: "0xDelegator",
+});
+
+// balances is a Map<Address, bigint>
+for (const [address, balance] of balances) {
+  console.log(`${address}: ${balance}`);
+}
+```
+
+#### BatchDecryptAsOptions
+
+| Property           | Type                                                      | Description                                                                      |
+| ------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `delegatorAddress` | `Address`                                                 | The address that granted delegation rights.                                      |
+| `handles`          | `Handle[] \| undefined`                                   | Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. |
+| `owner`            | `Address \| undefined`                                    | Balance owner address. Defaults to the delegator address.                        |
+| `maxConcurrency`   | `number \| undefined`                                     | Maximum number of concurrent decrypt calls. Default: `Infinity`.                 |
+| `onError`          | `(error: Error, address: Address) => bigint \| undefined` | Called when decryption fails for a single token. Return a fallback value.        |
+
+```ts
+// With pre-fetched handles and error handling
+const balances = await ReadonlyToken.batchDecryptBalancesAs(tokens, {
+  delegatorAddress: "0xDelegator",
+  handles: preloadedHandles,
+  maxConcurrency: 3,
+  onError: (err, addr) => {
+    console.error(addr, err);
+    return 0n;
+  },
+});
+```
+
+## Events
+
+The SDK emits events during delegation operations. Subscribe via the standard event emitter on `Token`:
+
+| Event                       | When                        |
+| --------------------------- | --------------------------- |
+| `DelegationSubmitted`       | Delegation transaction sent |
+| `RevokeDelegationSubmitted` | Revocation transaction sent |
+
+```ts
+import { ZamaSDKEvents } from "@zama-fhe/sdk";
+
+token.on((event) => {
+  if (event.type === ZamaSDKEvents.DelegationSubmitted) {
+    console.log("Delegation tx:", event.txHash);
+  }
+  if (event.type === ZamaSDKEvents.RevokeDelegationSubmitted) {
+    console.log("Revocation tx:", event.txHash);
+  }
+});
+```
+
 ## Error handling
 
 | Error                           | When                                                                        |
@@ -181,3 +243,12 @@ try {
 > **Note:** `SigningRejectedError` is always propagated — if the user rejects a wallet prompt, the SDK never silently retries or falls through to a fresh credential flow. This ensures users can always cancel.
 
 > **Note:** The delegation-specific errors (`DelegationSelfNotAllowedError`, `DelegationCooldownError`, etc.) are not auto-mapped from ACL contract reverts. They are exported so dApp code can catch and re-throw them when parsing on-chain revert reasons (e.g. via viem's `decodeErrorResult`).
+
+## Related
+
+- [Contract Builders](/reference/sdk/contract-builders#delegation) — low-level ACL delegation builders
+- [useDelegateDecryption](/reference/react/useDelegateDecryption) — React hook to grant delegation
+- [useRevokeDelegation](/reference/react/useRevokeDelegation) — React hook to revoke delegation
+- [useDelegationStatus](/reference/react/useDelegationStatus) — React hook to query delegation status
+- [useDecryptBalanceAs](/reference/react/useDecryptBalanceAs) — React hook to decrypt as a delegate
+- [useBatchDecryptBalancesAs](/reference/react/useBatchDecryptBalancesAs) — React hook for batch delegation decryption
