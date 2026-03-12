@@ -1171,7 +1171,7 @@ export function useDelegateDecryption(config: UseZamaConfig, options?: UseMutati
 export function useDelegatedUserDecrypt(): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptParams, unknown>;
 
 // @public
-export function useDelegationStatus(config: UseDelegationStatusConfig): _tanstack_react_query0.UseQueryResult<DelegationStatusData, Error>;
+export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData, Error>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<DelegationStatusData, Error>;
 
 // @public (undocumented)
 export interface UseDelegationStatusConfig {
