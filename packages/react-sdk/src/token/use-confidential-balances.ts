@@ -77,10 +77,9 @@ export function useConfidentialBalances(
     owner,
     pollingInterval: handleRefetchInterval,
   });
-  const handlesFactoryEnabled = baseHandlesQueryOptions.enabled ?? true;
   const handlesQuery = useQuery<Handle[]>({
     ...baseHandlesQueryOptions,
-    enabled: handlesFactoryEnabled && (userEnabled ?? true),
+    enabled: (baseHandlesQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   // Phase 2: Batch decrypt only when any handle changes

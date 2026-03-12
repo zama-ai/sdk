@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.0-alpha.3](https://github.com/zama-ai/sdk/compare/v1.1.0-alpha.2...v1.1.0-alpha.3) (2026-03-12)
+
+### Features
+
+- **react-sdk:** audit improvements — consistent imports, optimistic shieldETH, error docs, mergeEnabled (Vibe Kanban) ([#100](https://github.com/zama-ai/sdk/issues/100)) ([d6efb4f](https://github.com/zama-ai/sdk/commit/d6efb4f76092f83078772cea463ad845c07b7f36))
+
 ## [1.1.0-alpha.2](https://github.com/zama-ai/sdk/compare/v1.1.0-alpha.1...v1.1.0-alpha.2) (2026-03-11)
 
 ## [1.1.0-alpha.1](https://github.com/zama-ai/sdk/compare/v1.0.1...v1.1.0-alpha.1) (2026-03-10)

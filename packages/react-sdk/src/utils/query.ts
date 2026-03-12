@@ -9,11 +9,16 @@ import { hashFn } from "@zama-fhe/sdk/query";
 
 /**
  * Thin wrapper around TanStack's useQuery that injects our custom queryKeyHashFn.
- * Mirrors the wagmi pattern: a single `as any` here replaces per-hook casts.
+ * Mirrors the wagmi pattern — the type safety boundary is at the factory and hook levels.
  *
- * TanStack's useQuery has discriminated overloads around `initialData` that make
- * it extremely hard to pass inferred types through. We bypass that by casting
- * internally — the type safety boundary is at the factory and hook levels.
+ * The `options` parameter is typed as `any` because TanStack Query v5 has:
+ * 1. Discriminated overloads around `initialData` (Defined vs Undefined)
+ * 2. Function-typed fields (`staleTime`, `enabled`, `gcTime`) that are generic over `TQueryKey`
+ *
+ * Our factories produce options with specific tuple keys (e.g. `readonly ["zama.totalSupply", {...}]`)
+ * whose function-typed fields are contravariant with `QueryKey` (`readonly unknown[]`).
+ * Typing the parameter as `UseQueryOptions<TData, TError, TData, any>` still fails because
+ * the query-key variance leaks through `staleTime`, `enabled`, etc.
  *
  * Hooks must pass explicit generics: `useQuery<DataType>({...})`.
  */

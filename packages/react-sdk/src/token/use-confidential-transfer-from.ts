@@ -13,6 +13,11 @@ import { useToken, type UseZamaConfig } from "./use-token";
  * Operator transfer on behalf of another address. Caller must be an approved operator.
  * Invalidates balance caches on success.
  *
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link EncryptionFailedError} — FHE encryption of the transfer amount failed
+ * - {@link TransactionRevertedError} — on-chain transaction reverted
+ *
  * @param config - Token address (and optional wrapper) identifying the token.
  * @param options - React Query mutation options.
  *
