@@ -7,6 +7,8 @@ description: How the SDK manages FHE keypairs, wallet signatures, and session li
 
 The SDK uses a two-layer authorization model to protect FHE credentials. An FHE keypair is generated once and persisted in encrypted form. A wallet signature — the session — unlocks that keypair for the current browsing session. This separation means the expensive keypair generation happens rarely, while the lightweight signing step repeats once per session.
 
+![Two-Layer Authorization Model](../images/session-two-layers.svg)
+
 ## The two layers
 
 ### Layer 1: FHE keypair (persistent)
@@ -26,67 +28,32 @@ By default, the session signature lives in memory only. It is lost on page reloa
 
 ## Lifecycle flow
 
+![Session Lifecycle](../images/session-lifecycle.svg)
+
 ### First visit
 
-```
-User connects wallet
-        │
-        ▼
-SDK generates FHE keypair (via WASM)
-        │
-        ▼
-SDK builds EIP-712 typed data (includes contract addresses, timestamp, duration)
-        │
-        ▼
-Wallet signs EIP-712 → signature
-        │
-        ├──▶ Derive AES-256-GCM key via PBKDF2 (signature + address as salt)
-        │           │
-        │           ▼
-        │    Encrypt FHE private key → store to IndexedDB
-        │
-        └──▶ Cache signature in memory (session map)
-        │
-        ▼
-Ready — decrypts reuse cached signature, no further popups
-```
+1. User connects wallet.
+2. SDK generates an FHE keypair via WASM.
+3. SDK builds EIP-712 typed data (includes contract addresses, timestamp, duration).
+4. Wallet signs EIP-712 → signature.
+5. Derive AES-256-GCM key via PBKDF2 (signature + address as salt) → encrypt FHE private key → store to IndexedDB.
+6. Cache signature in memory (session map).
+7. Ready — decrypts reuse cached signature, no further popups.
 
 ### Subsequent page load
 
-```
-Page loads
-        │
-        ▼
-SDK loads encrypted keypair from IndexedDB
-        │
-        ▼
-SDK checks session map → empty (memory was cleared)
-        │
-        ▼
-SDK prompts wallet to re-sign EIP-712 → signature
-        │
-        ├──▶ Derive AES key → decrypt FHE private key
-        │
-        └──▶ Cache signature in session map
-        │
-        ▼
-Ready — same session, no further popups
-```
+1. Page loads → SDK loads encrypted keypair from IndexedDB.
+2. SDK checks session map → empty (memory was cleared).
+3. SDK prompts wallet to re-sign EIP-712 → signature.
+4. Derive AES key → decrypt FHE private key. Cache signature in session map.
+5. Ready — same session, no further popups.
 
 ### Same session (already authorized)
 
-```
-Balance request arrives
-        │
-        ▼
-SDK checks session map → signature found
-        │
-        ▼
-Decrypt FHE private key from storage using cached signature
-        │
-        ▼
-Decrypt balance via relayer — no wallet popup
-```
+1. Balance request arrives.
+2. SDK checks session map → signature found.
+3. Decrypt FHE private key from storage using cached signature.
+4. Decrypt balance via relayer — no wallet popup.
 
 ## What lives where
 
@@ -138,22 +105,11 @@ Each session entry records its TTL at creation time. If you change the `sessionT
 
 ## The allow / revoke flow
 
+![Allow / Revoke Flow](../images/session-allow-revoke.svg)
+
 ### Allow (pre-authorize)
 
 Call `allow()` early — ideally right after wallet connect — to prompt the signature upfront rather than during a balance read.
-
-```
-sdk.allow("0xTokenA", "0xTokenB")
-        │
-        ▼
-SDK builds EIP-712 typed data covering both contracts
-        │
-        ▼
-Wallet signs → one signature for all listed contracts
-        │
-        ▼
-Signature cached → all future decrypts for TokenA and TokenB proceed silently
-```
 
 A single signature covers all contract addresses passed to `allow()`. The signed EIP-712 message includes the exact set of contracts. If you later call `allow()` with a contract not in the original set, the SDK generates a fresh keypair and requests a new wallet signature.
 
@@ -164,16 +120,6 @@ Batch all token addresses into a single `allow()` call. Each call with a new con
 ### Revoke (clear session)
 
 Revocation clears the cached signature. The encrypted keypair in persistent storage is not affected.
-
-```
-sdk.revokeSession()
-        │
-        ▼
-Clear signature from session map
-        │
-        ▼
-Next decrypt will prompt wallet to re-sign
-```
 
 Three methods exist for different use cases:
 
@@ -196,16 +142,6 @@ The user switches from address A to address B. The previous account's session is
 ### Chain switch
 
 The user switches networks (e.g., Sepolia to Mainnet) while keeping the same address. Session signatures are **not** revoked. Credentials are keyed by `address + chainId`, so each chain maintains independent sessions. Switching back to the original chain finds the session still active.
-
-```
-Address A on Sepolia  → session active
-        │
-        ▼ (switch to Mainnet)
-Address A on Mainnet  → independent session (may need signing)
-        │
-        ▼ (switch back to Sepolia)
-Address A on Sepolia  → original session still active, no re-sign
-```
 
 ### Automatic vs manual wiring
 

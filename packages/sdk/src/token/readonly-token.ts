@@ -21,6 +21,7 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { getAddress, type Address } from "viem";
+import { toError } from "../utils";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -76,7 +77,7 @@ export interface ReadonlyTokenConfig {
  */
 export class ReadonlyToken {
   protected readonly credentials: CredentialsManager;
-  protected readonly sdk: RelayerSDK;
+  protected readonly relayer: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
   readonly #storage: GenericStorage;
@@ -94,7 +95,7 @@ export class ReadonlyToken {
         keypairTTL: config.keypairTTL ?? 86400,
         onEvent: config.onEvent,
       });
-    this.sdk = config.relayer;
+    this.relayer = config.relayer;
     this.signer = config.signer;
     this.address = address;
     this.#storage = config.storage;
@@ -129,53 +130,7 @@ export class ReadonlyToken {
   async balanceOf(owner?: Address): Promise<bigint> {
     const ownerAddress = owner ? getAddress(owner) : await this.signer.getAddress();
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
-
-    if (this.isZeroHandle(handle)) return BigInt(0);
-
-    // Check persistent cache first.
-    const cached = await loadCachedBalance({
-      storage: this.#storage,
-      tokenAddress: this.address,
-      owner: ownerAddress,
-      handle,
-    });
-    if (cached !== null) return cached;
-
-    const creds = await this.credentials.allow(this.address);
-
-    const t0 = Date.now();
-    try {
-      this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const result = await this.sdk.userDecrypt({
-        handles: [handle],
-        contractAddress: this.address,
-        signedContractAddresses: creds.contractAddresses,
-        privateKey: creds.privateKey,
-        publicKey: creds.publicKey,
-        signature: creds.signature,
-        signerAddress: ownerAddress,
-        startTimestamp: creds.startTimestamp,
-        durationDays: creds.durationDays,
-      });
-      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
-
-      const value = (result[handle] as bigint | undefined) ?? BigInt(0);
-      await saveCachedBalance({
-        storage: this.#storage,
-        tokenAddress: this.address,
-        owner: ownerAddress,
-        handle,
-        value,
-      });
-      return value;
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
-        durationMs: Date.now() - t0,
-      });
-      throw wrapDecryptError(error, "Failed to decrypt balance");
-    }
+    return this.decryptBalance(handle, ownerAddress);
   }
 
   /**
@@ -268,8 +223,9 @@ export class ReadonlyToken {
 
     const { handles, owner, onError, maxConcurrency } = options ?? {};
 
-    const sdk = tokens[0]!.sdk;
-    const signer = tokens[0]!.signer;
+    const firstToken = tokens[0]!;
+    const sdk = firstToken.relayer;
+    const signer = firstToken.signer;
     const signerAddress = owner ?? (await signer.getAddress());
 
     const resolvedHandles =
@@ -281,35 +237,47 @@ export class ReadonlyToken {
       );
     }
 
-    const allAddresses = tokens.map((t) => t.address);
-    const creds = await tokens[0]!.credentials.allow(...allAddresses);
-
-    const tokenStorage = tokens[0]!.storage;
+    const tokenStorage = firstToken.storage;
     const results = new Map<Address, bigint>();
-    const errors: Array<{ address: Address; error: Error }> = [];
-    const decryptFns: Array<() => Promise<void>> = [];
+
+    // Parallel cache lookups — avoids sequential IDB round-trips.
+    const uncached: Array<{ token: ReadonlyToken; handle: Address }> = [];
+    const cachedValues = await Promise.all(
+      tokens.map((token, i) => {
+        const handle = resolvedHandles[i]!;
+        if (token.isZeroHandle(handle)) return Promise.resolve(BigInt(0));
+        return loadCachedBalance({
+          storage: tokenStorage,
+          tokenAddress: token.address,
+          owner: signerAddress,
+          handle,
+        });
+      }),
+    );
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i]!;
       const handle = resolvedHandles[i]!;
+      const cached = cachedValues[i];
 
-      if (token.isZeroHandle(handle)) {
-        results.set(token.address, BigInt(0));
-        continue;
-      }
-
-      // Check persistent cache — avoids re-decryption after page reload.
-      const cached = await loadCachedBalance({
-        storage: tokenStorage,
-        tokenAddress: token.address,
-        owner: signerAddress,
-        handle,
-      });
-      if (cached !== null) {
+      if (cached !== null && cached !== undefined) {
         results.set(token.address, cached);
         continue;
       }
 
+      uncached.push({ token, handle });
+    }
+
+    // All balances resolved from cache — no credentials needed.
+    if (uncached.length === 0) return results;
+
+    const uncachedAddresses = uncached.map((entry) => entry.token.address);
+    const creds = await firstToken.credentials.allow(...uncachedAddresses);
+
+    const errors: Array<{ address: Address; error: Error }> = [];
+    const decryptFns: Array<() => Promise<void>> = [];
+
+    for (const { token, handle } of uncached) {
       decryptFns.push(() =>
         sdk
           .userDecrypt({
@@ -554,7 +522,7 @@ export class ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const result = await this.sdk.userDecrypt({
+      const result = await this.relayer.userDecrypt({
         handles: [handle],
         contractAddress: this.address,
         signedContractAddresses: creds.contractAddresses,
@@ -614,7 +582,7 @@ export class ReadonlyToken {
     const t0 = Date.now();
     try {
       this.emit({ type: ZamaSDKEvents.DecryptStart });
-      const decrypted = await this.sdk.userDecrypt({
+      const decrypted = await this.relayer.userDecrypt({
         handles: nonZeroHandles,
         contractAddress: this.address,
         signedContractAddresses: creds.contractAddresses,
@@ -648,11 +616,6 @@ export class ReadonlyToken {
  * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
  * other HTTP errors, or the generic DecryptionFailedError as fallback).
  */
-/** Coerce an unknown caught value to an Error instance. */
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
-}
-
 function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   if (error instanceof NoCiphertextError || error instanceof RelayerRequestFailedError) {
     return error;

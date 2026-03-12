@@ -19364,9 +19364,9 @@ export class ReadonlyToken {
     name(): Promise<string>;
     // (undocumented)
     protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
-    revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
-    protected readonly sdk: RelayerSDK;
+    protected readonly relayer: RelayerSDK;
+    revoke(...contractAddresses: Address[]): Promise<void>;
     // (undocumented)
     readonly signer: GenericSigner;
     protected get storage(): GenericStorage;

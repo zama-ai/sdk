@@ -1,0 +1,85 @@
+direction: down
+
+title: {
+  label: "Allow / Revoke Flow"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- Allow flow ---
+allow: "allow(\"0xTokenA\", \"0xTokenB\")" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+}
+
+build-eip712: "Build EIP-712 typed data\n(contract addresses, timestamp, duration)" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+wallet-sign: "Wallet signs\n→ one signature for all contracts" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+cache-sig: "Cache signature\nin session storage" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+}
+
+ready: "Ready — TokenA & TokenB\ndecrypts proceed silently" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+  style.bold: true
+}
+
+allow -> build-eip712
+build-eip712 -> wallet-sign
+wallet-sign -> cache-sig
+cache-sig -> ready
+
+# --- Revoke flow ---
+revoke: "revokeSession()" {
+  style.fill: "#FBE9E7"
+  style.stroke: "#BF360C"
+  style.font-size: 14
+}
+
+clear-sig: "Clear signature\nfrom session storage" {
+  style.fill: "#FFCCBC"
+  style.stroke: "#BF360C"
+  style.font-size: 14
+}
+
+next-decrypt: "Next decrypt\n→ wallet re-sign prompt" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+revoke -> clear-sig
+clear-sig -> next-decrypt
+
+# --- Note about new contracts ---
+new-contract: "allow(\"0xTokenC\")\n(not in original set)" {
+  style.fill: "#FFFDE7"
+  style.stroke: "#F57F17"
+  style.font-size: 14
+}
+
+new-keypair: "New keypair generated\n+ new signature\n(covers A, B, C)" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+new-contract -> new-keypair: "triggers fresh keypair & sign" {
+  style.stroke: "#F57F17"
+}
