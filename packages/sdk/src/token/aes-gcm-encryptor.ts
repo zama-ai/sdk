@@ -1,6 +1,6 @@
 import type { Address, Hex } from "viem";
 import type { CredentialEncryptor, EncryptionContext } from "./token.types";
-import { prefixHex } from "../utils";
+import { assertObject, assertString, prefixHex } from "../utils";
 
 /** Encrypted data format with IV for AES-GCM decryption. */
 export interface EncryptedData {
@@ -33,18 +33,29 @@ export class AesGcmEncryptor implements CredentialEncryptor {
   }
 
   async decrypt(sealed: unknown, context: EncryptionContext): Promise<Hex> {
-    const data = sealed as EncryptedData;
+    this.#assertEncryptedData(sealed);
     const key = await this.#deriveKey(context.signature, context.address);
-    const iv = Uint8Array.from(atob(data.iv), (c) => c.charCodeAt(0));
-    const ciphertext = Uint8Array.from(atob(data.ciphertext), (c) => c.charCodeAt(0));
+    const iv = Uint8Array.from(atob(sealed.iv), (c) => c.charCodeAt(0));
+    const ciphertext = Uint8Array.from(atob(sealed.ciphertext), (c) => c.charCodeAt(0));
     const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
     return prefixHex(new TextDecoder().decode(plaintext));
   }
 
   isValidEncryptedData(sealed: unknown): sealed is EncryptedData {
-    if (typeof sealed !== "object" || sealed === null) return false;
-    const obj = sealed as Record<string, unknown>;
-    return typeof obj.iv === "string" && typeof obj.ciphertext === "string";
+    try {
+      assertObject(sealed, "sealed");
+      assertString(sealed.id, "sealed.id");
+      assertString(sealed.ciphertext, "sealed.ciphertext");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  #assertEncryptedData(sealed: unknown): asserts sealed is EncryptedData {
+    if (!this.isValidEncryptedData(sealed)) {
+      throw TypeError("sealed data is not a valid EncryptedData");
+    }
   }
 
   /** PBKDF2 derivation — 600k iterations, SHA-256, salted with address. */

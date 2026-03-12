@@ -21,7 +21,7 @@ describe("AesGcmEncryptor", () => {
     expect(decrypted).toBe(privateKey);
   });
 
-  it("decrypt normalizes non-0x-prefixed plaintext", async () => {
+  it("decrypt returns 0x-prefixed hex output", async () => {
     const encryptor = new AesGcmEncryptor();
     const privateKey = "0xabcdef" as Hex;
 
@@ -29,6 +29,7 @@ describe("AesGcmEncryptor", () => {
     const decrypted = await encryptor.decrypt(sealed, CONTEXT);
 
     expect(decrypted).toBe("0xabcdef");
+    expect(decrypted.startsWith("0x")).toBe(true);
   });
 
   it("different contexts produce different ciphertexts", async () => {

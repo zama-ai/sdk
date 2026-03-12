@@ -162,7 +162,7 @@ export interface GenericStorage {
 export interface StoredCredentials {
   /** FHE public key (hex-encoded). */
   publicKey: Hex;
-  /** FHE private key (hex-encoded, encrypted at rest via AES-GCM). */
+  /** FHE private key (hex-encoded, encrypted at rest by the configured {@link CredentialEncryptor}). */
   privateKey: Hex;
   /** EIP-712 signature authorizing decryption. */
   signature: Hex;
