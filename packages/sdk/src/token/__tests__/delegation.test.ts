@@ -3,6 +3,7 @@ import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
 import { MemoryStorage } from "../memory-storage";
 import { getAddress, type Address } from "viem";
+import { MAX_UINT64 } from "../../contracts/constants";
 
 describe("delegation read methods", () => {
   it("getDelegationExpiry reads from ACL contract", async ({
@@ -67,7 +68,7 @@ describe("delegation read methods", () => {
     delegatorAddress,
     delegateAddress,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(2n ** 64n - 1n);
+    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
 
     expect(await readonlyToken.isDelegated({ delegatorAddress, delegateAddress })).toBe(true);
     // getBlockTimestamp should NOT have been called — permanent delegation skips it.
@@ -131,7 +132,7 @@ describe("delegation write methods", () => {
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "delegateForUserDecryption",
-        args: [delegateAddress, tokenAddress, 2n ** 64n - 1n],
+        args: [delegateAddress, tokenAddress, MAX_UINT64],
       }),
     );
   });

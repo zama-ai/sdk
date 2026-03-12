@@ -134,10 +134,14 @@ Decrypted values are cached in storage, keyed by `(token, owner, handle)`. Becau
 
 ## Error handling
 
-| Error                      | When                                       |
-| -------------------------- | ------------------------------------------ |
-| `TransactionRevertedError` | Delegation or revocation transaction fails |
-| `DecryptionFailedError`    | Delegated decryption fails                 |
+| Error                           | When                                                                   |
+| ------------------------------- | ---------------------------------------------------------------------- |
+| `TransactionRevertedError`      | Delegation or revocation transaction fails                             |
+| `DecryptionFailedError`         | Delegated decryption fails                                             |
+| `DelegationSelfNotAllowedError` | Delegation target is the caller (`delegate === msg.sender`)            |
+| `DelegationCooldownError`       | Only one delegate/revoke per (delegator, delegate, contract) per block |
+| `DelegationNotFoundError`       | No active delegation for this (delegator, delegate, contract)          |
+| `DelegationExpiredError`        | The delegation has expired                                             |
 
 ```ts
 import { TransactionRevertedError, DecryptionFailedError } from "@zama-fhe/sdk";
@@ -151,10 +155,14 @@ try {
 }
 
 try {
-  const balance = await readonlyToken.decryptBalanceAs("0xDelegator");
+  const balance = await readonlyToken.decryptBalanceAs({
+    delegatorAddress: "0xDelegator",
+  });
 } catch (error) {
   if (error instanceof DecryptionFailedError) {
     // delegated decryption failed
   }
 }
 ```
+
+> **Note:** The delegation-specific errors (`DelegationSelfNotAllowedError`, `DelegationCooldownError`, etc.) are not auto-mapped from ACL contract reverts. They are exported so dApp code can catch and re-throw them when parsing on-chain revert reasons (e.g. via viem's `decodeErrorResult`).

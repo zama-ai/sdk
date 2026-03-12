@@ -583,8 +583,9 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
     console.error("[Worker] DelegatedUserDecrypt error:", message);
-    sendError(id, type, message);
+    sendError(id, type, message, statusCode);
   }
 }
 

@@ -797,7 +797,7 @@ export class Token extends ReadonlyToken {
           outcome.reason instanceof ZamaError
             ? outcome.reason
             : new TransactionRevertedError(errorMessage, {
-                cause: outcome.reason instanceof Error ? outcome.reason : undefined,
+                cause: outcome.reason,
               });
         results.set(tokens[i]!.address, err);
       }

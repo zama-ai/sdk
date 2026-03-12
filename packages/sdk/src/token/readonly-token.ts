@@ -782,7 +782,11 @@ export class ReadonlyToken {
  * other HTTP errors, or the generic DecryptionFailedError as fallback).
  */
 function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
-  if (error instanceof NoCiphertextError || error instanceof RelayerRequestFailedError) {
+  if (
+    error instanceof DecryptionFailedError ||
+    error instanceof NoCiphertextError ||
+    error instanceof RelayerRequestFailedError
+  ) {
     return error;
   }
 

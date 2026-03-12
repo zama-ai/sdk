@@ -579,10 +579,8 @@ function useDelegateDecryption(
 ): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams>;
 
 interface DelegateDecryptionParams {
-  delegate: Address;
-  options?: {
-    expirationDate: Date;
-  };
+  delegateAddress: Address;
+  expirationDate?: Date;
 }
 ```
 
@@ -592,12 +590,12 @@ const { mutateAsync: delegate, isPending } = useDelegateDecryption({
 });
 
 // Permanent delegation
-await delegate({ delegate: "0xDelegate" });
+await delegate({ delegateAddress: "0xDelegate" });
 
 // With expiration
 await delegate({
-  delegate: "0xDelegate",
-  options: { expirationDate: new Date("2025-12-31") },
+  delegateAddress: "0xDelegate",
+  expirationDate: new Date("2025-12-31"),
 });
 ```
 
@@ -612,10 +610,8 @@ function useDecryptBalanceAs(
 ): UseMutationResult<bigint, Error, DecryptBalanceAsParams>;
 
 interface DecryptBalanceAsParams {
-  delegator: Address;
-  options?: {
-    owner: Address;
-  };
+  delegatorAddress: Address;
+  owner?: Address;
 }
 ```
 
@@ -623,7 +619,7 @@ interface DecryptBalanceAsParams {
 const { mutateAsync: decryptAs, data: balance } = useDecryptBalanceAs("0xToken");
 
 // Decrypt the delegator's balance
-const result = await decryptAs({ delegator: "0xDelegator" });
+const result = await decryptAs({ delegatorAddress: "0xDelegator" });
 // result => bigint
 ```
 

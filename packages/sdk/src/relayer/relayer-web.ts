@@ -6,7 +6,7 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import { EncryptionFailedError, ZamaError } from "../token/errors";
+import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
@@ -381,6 +381,9 @@ export class RelayerWeb implements RelayerSDK {
   async getAclAddress(): Promise<Address> {
     const chainId = await this.#config.getChainId();
     const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+    if (!config.aclContractAddress) {
+      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
+    }
     return config.aclContractAddress as Address;
   }
 }
