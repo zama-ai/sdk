@@ -136,6 +136,7 @@ export class EthersSigner implements GenericSigner {
   async getBlockTimestamp(): Promise<bigint> {
     const block = await this.#requireProvider().getBlock("latest");
     if (!block) throw new Error("Failed to fetch latest block");
+    if (block.timestamp == null) throw new Error("Latest block has no timestamp");
     return BigInt(block.timestamp);
   }
 

@@ -1,18 +1,18 @@
 import { type Address, type Hex } from "viem";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import { SigningFailedError, SigningRejectedError, wrapSigningError } from "./errors";
-import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
 import { CredentialCrypto } from "./credential-crypto";
-import { SessionSignatures } from "./session-signatures";
+import { deleteCredentials, persistCredentials } from "./credential-persistence";
 import type { BaseEncryptedCredentials } from "./credential-validation";
 import {
-  isTimeValid,
-  isCredentialValid,
   coversContracts,
+  isCredentialValid,
+  isTimeValid,
   normalizeAddresses,
 } from "./credential-validation";
-import { persistCredentials, deleteCredentials } from "./credential-persistence";
+import { SigningFailedError, SigningRejectedError, wrapSigningError } from "./errors";
+import { SessionSignatures } from "./session-signatures";
+import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
 
 /** Shared configuration accepted by both credential manager variants. */
 export interface CredentialsConfig {
@@ -76,7 +76,7 @@ export abstract class BaseCredentialsManager<
 
   /** Sign an EIP-712 authorization for the given contract addresses. */
   protected abstract signForContracts(
-    meta: { publicKey: Hex; startTimestamp: number; durationDays: number },
+    meta: TEncrypted | TCreds,
     contractAddresses: Address[],
   ): Promise<Hex>;
 
