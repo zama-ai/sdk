@@ -212,6 +212,5 @@ export {
   getUnwrapFeeContract,
   getBatchTransferFeeContract,
   getFeeRecipientContract,
-  FHE_GAS_LIMIT,
 } from "./contracts";
 export type { BatchTransferData } from "./contracts";
