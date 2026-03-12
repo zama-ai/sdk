@@ -1,22 +1,23 @@
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 
-import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
+import type {
+  GenericSigner,
+  GenericStorage,
+  StoredCredentials,
+  CredentialEncryptor,
+  EncryptionContext,
+} from "./token.types";
+import { AesGcmEncryptor } from "./aes-gcm-encryptor";
 import { MemoryStorage } from "./memory-storage";
 import { SigningRejectedError, SigningFailedError } from "./errors";
-import { assertObject, assertString, assertArray, assertCondition, prefixHex } from "../utils";
+import { assertObject, assertString, assertArray, assertCondition } from "../utils";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { getAddress, isAddress, type Address, type Hex } from "viem";
 
-/** Encrypted data format with IV for AES-GCM decryption. */
-interface EncryptedData {
-  iv: string; // Base64-encoded IV
-  ciphertext: string; // Base64-encoded encrypted data
-}
-
 /** Internal storage shape — privateKey and signature are excluded; only encrypted privateKey is stored. */
 interface EncryptedCredentials extends Omit<StoredCredentials, "privateKey" | "signature"> {
-  encryptedPrivateKey: EncryptedData;
+  encryptedPrivateKey: unknown;
 }
 
 /** Structured session entry stored in session storage. */
@@ -32,8 +33,8 @@ interface SessionEntry {
  * Manages FHE decrypt credentials (keypair + EIP-712 signature).
  * Generates and refreshes credentials transparently.
  *
- * The privateKey is encrypted with AES-GCM (key derived from the
- * wallet signature via PBKDF2) before being written to the store.
+ * The privateKey is sealed at rest by a pluggable {@link CredentialEncryptor}
+ * (defaults to AES-256-GCM derived from the wallet signature via PBKDF2).
  */
 /** Configuration for constructing a {@link CredentialsManager}. */
 export interface CredentialsManagerConfig {
@@ -49,6 +50,8 @@ export interface CredentialsManagerConfig {
   keypairTTL?: number;
   /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). */
   sessionTTL?: number;
+  /** Pluggable encryption backend for FHE credentials. Defaults to AES-256-GCM. */
+  encryptor?: CredentialEncryptor;
   /** Optional structured event listener. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -73,8 +76,7 @@ export class CredentialsManager {
   #extendPromise: Promise<StoredCredentials> | null = null;
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
-  #cachedDerivedKey: CryptoKey | null = null;
-  #cachedDerivedKeyIdentity: string | null = null;
+  #encryptor: CredentialEncryptor;
 
   static async computeStoreKey(address: Address, chainId: number): Promise<string> {
     const normalizedAddress = getAddress(address);
@@ -96,6 +98,7 @@ export class CredentialsManager {
     this.#onEvent = config.onEvent ?? Boolean;
     this.#keypairTTL = config.keypairTTL ?? 86400;
     this.#sessionTTL = config.sessionTTL ?? 2592000;
+    this.#encryptor = config.encryptor ?? new AesGcmEncryptor();
 
     // Warn when using in-memory session storage inside a Chrome extension context
     const chromeNamespace =
@@ -294,12 +297,10 @@ export class CredentialsManager {
     }
   }
 
-  /** Clear cached cryptographic material (store key, derived key). */
+  /** Clear cached cryptographic material (store key). */
   #clearCryptoCache(): void {
     this.#cachedStoreKey = null;
     this.#cachedStoreKeyIdentity = null;
-    this.#cachedDerivedKey = null;
-    this.#cachedDerivedKeyIdentity = null;
   }
 
   /** Returns a truncated SHA-256 hash of the address and chainId to avoid leaking it in storage. */
@@ -361,9 +362,10 @@ export class CredentialsManager {
         `Expected each contractAddress to be a valid hex address`,
       );
     }
-    assertObject(data.encryptedPrivateKey, "credentials.encryptedPrivateKey");
-    assertString(data.encryptedPrivateKey.iv, "encryptedPrivateKey.iv");
-    assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
+    assertCondition(
+      this.#encryptor.isValidEncryptedData(data.encryptedPrivateKey),
+      "encryptedPrivateKey failed encryptor validation",
+    );
   }
 
   #isValid(
@@ -552,11 +554,11 @@ export class CredentialsManager {
     }
   }
 
-  // ── AES-GCM encryption  ─────────────
+  // ── Credential encryption (delegated to pluggable encryptor) ─────────────
 
   async #encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials> {
-    const address = await this.#signer.getAddress();
-    const encryptedPrivateKey = await this.#encrypt(creds.privateKey, creds.signature, address);
+    const context = await this.#encryptionContext(creds.signature, creds.publicKey);
+    const encryptedPrivateKey = await this.#encryptor.encrypt(creds.privateKey, context);
     const { privateKey: _, signature: _sig, ...rest } = creds;
     return { ...rest, encryptedPrivateKey };
   }
@@ -565,76 +567,18 @@ export class CredentialsManager {
     encrypted: EncryptedCredentials,
     signature: Hex,
   ): Promise<StoredCredentials> {
-    const address = await this.#signer.getAddress();
-    const privateKey = await this.#decrypt(encrypted.encryptedPrivateKey, signature, address);
+    const context = await this.#encryptionContext(signature, encrypted.publicKey);
+    const privateKey = await this.#encryptor.decrypt(encrypted.encryptedPrivateKey, context);
     const { encryptedPrivateKey: _, ...rest } = encrypted;
     return { ...rest, privateKey, signature };
   }
 
-  /**
-   * Derives an AES-GCM encryption key from a wallet signature using PBKDF2.
-   * The signature is a secret known only to the wallet holder, providing
-   * meaningful encryption protection for the stored private key.
-   */
-  async #deriveKey(signature: Hex, address: Address): Promise<CryptoKey> {
-    const identity = `${signature}:${address}`;
-    if (this.#cachedDerivedKey && this.#cachedDerivedKeyIdentity === identity) {
-      return this.#cachedDerivedKey;
-    }
-
-    const encoder = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(signature),
-      "PBKDF2",
-      false,
-      ["deriveKey"],
-    );
-
-    const key = await crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt: encoder.encode(address),
-        iterations: 600_000,
-        hash: "SHA-256",
-      },
-      keyMaterial,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["encrypt", "decrypt"],
-    );
-
-    this.#cachedDerivedKeyIdentity = identity;
-    this.#cachedDerivedKey = key;
-    return key;
-  }
-
-  /** Encrypts a string using AES-GCM with a key derived from the wallet signature. */
-  async #encrypt(plaintext: Hex, signature: Hex, address: Address): Promise<EncryptedData> {
-    const key = await this.#deriveKey(signature, address);
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encoder = new TextEncoder();
-
-    const ciphertext = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv },
-      key,
-      encoder.encode(plaintext),
-    );
-
+  async #encryptionContext(signature: Hex, publicKey: Hex): Promise<EncryptionContext> {
     return {
-      iv: btoa(String.fromCharCode(...iv)),
-      ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+      address: await this.#signer.getAddress(),
+      signature,
+      chainId: await this.#signer.getChainId(),
+      publicKey,
     };
-  }
-
-  /** Decrypts AES-GCM encrypted data using a key derived from the wallet signature. */
-  async #decrypt(encrypted: EncryptedData, signature: Hex, address: Address): Promise<Hex> {
-    const key = await this.#deriveKey(signature, address);
-    const iv = Uint8Array.from(atob(encrypted.iv), (c) => c.charCodeAt(0));
-    const ciphertext = Uint8Array.from(atob(encrypted.ciphertext), (c) => c.charCodeAt(0));
-
-    const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-
-    return prefixHex(new TextDecoder().decode(plaintext));
   }
 }

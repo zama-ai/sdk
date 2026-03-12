@@ -44,7 +44,7 @@ export class AesGcmEncryptor implements CredentialEncryptor {
   isValidEncryptedData(sealed: unknown): sealed is EncryptedData {
     try {
       assertObject(sealed, "sealed");
-      assertString(sealed.id, "sealed.id");
+      assertString(sealed.iv, "sealed.iv");
       assertString(sealed.ciphertext, "sealed.ciphertext");
       return true;
     } catch {
@@ -53,8 +53,12 @@ export class AesGcmEncryptor implements CredentialEncryptor {
   }
 
   #assertEncryptedData(sealed: unknown): asserts sealed is EncryptedData {
-    if (!this.isValidEncryptedData(sealed)) {
-      throw TypeError("sealed data is not a valid EncryptedData");
+    try {
+      assertObject(sealed, "sealed");
+      assertString(sealed.iv, "sealed.iv");
+      assertString(sealed.ciphertext, "sealed.ciphertext");
+    } catch (error) {
+      throw new TypeError("sealed data is not a valid EncryptedData", { cause: error });
     }
   }
 

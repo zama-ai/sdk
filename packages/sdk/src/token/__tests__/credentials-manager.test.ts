@@ -1165,3 +1165,169 @@ describe("KeypairExpiredError", () => {
     expect(error).toBeInstanceOf(ZamaError);
   });
 });
+
+describe("custom CredentialEncryptor", () => {
+  /** A trivial mock encryptor that just base64-encodes the private key. */
+  function createMockEncryptor() {
+    return {
+      encrypt: vi.fn(async (privateKey: string, _context: unknown) => ({
+        wrapped: btoa(privateKey),
+      })),
+      decrypt: vi.fn(async (sealed: unknown, _context: unknown) => {
+        const data = sealed as { wrapped: string };
+        return atob(data.wrapped) as `0x${string}`;
+      }),
+      isValidEncryptedData: vi.fn((sealed: unknown): boolean => {
+        if (typeof sealed !== "object" || sealed === null) return false;
+        return typeof (sealed as Record<string, unknown>).wrapped === "string";
+      }),
+    };
+  }
+
+  it("uses custom encryptor for encrypt/decrypt", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const encryptor = createMockEncryptor();
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+      encryptor,
+    });
+
+    const creds = await manager.allow(TOKEN_A);
+
+    expect(encryptor.encrypt).toHaveBeenCalledOnce();
+    expect(creds.privateKey).toBe("0xpriv456");
+    expect(creds.publicKey).toBe("0xpub123");
+  });
+
+  it("passes correct EncryptionContext to encrypt", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const encryptor = createMockEncryptor();
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+      encryptor,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    const [, context] = encryptor.encrypt.mock.calls[0]!;
+    expect(context).toMatchObject({
+      address: await signer.getAddress(),
+      signature: "0xsig789",
+      chainId: 31337,
+      publicKey: "0xpub123",
+    });
+  });
+
+  it("calls isValidEncryptedData during storage read", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const encryptor = createMockEncryptor();
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+      encryptor,
+    });
+
+    await manager.allow(TOKEN_A);
+
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+      encryptor,
+    });
+    await manager2.allow(TOKEN_A);
+
+    expect(encryptor.isValidEncryptedData).toHaveBeenCalled();
+  });
+
+  it("encryptor switch triggers re-keying (old blob rejected)", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+
+    // Create credentials with default AES-GCM encryptor
+    const manager1 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+    await manager1.allow(TOKEN_A);
+    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+
+    // Switch to custom encryptor — old blob fails isValidEncryptedData
+    const customEncryptor = createMockEncryptor();
+    const manager2 = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+      encryptor: customEncryptor,
+    });
+    await manager2.allow(TOKEN_A);
+
+    // Should regenerate: old AES-GCM blob fails custom encryptor's validation
+    expect(relayer.generateKeypair).toHaveBeenCalledTimes(2);
+    expect(customEncryptor.encrypt).toHaveBeenCalledOnce();
+  });
+
+  it("default behavior (no encryptor) is identical to current AES-GCM behavior", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+    });
+
+    const creds = await manager.allow(TOKEN_A);
+    expect(creds.publicKey).toBe("0xpub123");
+    expect(creds.privateKey).toBe("0xpriv456");
+
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
+    const stored = (await storage.get(storeKey)) as Record<string, unknown>;
+    const epk = stored.encryptedPrivateKey as Record<string, unknown>;
+    expect(typeof epk.iv).toBe("string");
+    expect(typeof epk.ciphertext).toBe("string");
+  });
+});
