@@ -1,7 +1,6 @@
 import { toHex, Address } from "viem";
 import { ENCRYPTION_ABI } from "../abi/encryption.abi";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { FHE_GAS_LIMIT } from "./gas";
 
 /**
  * Returns the contract config to read an encrypted balance.
@@ -43,7 +42,6 @@ export function confidentialTransferContract(
     abi: ENCRYPTION_ABI,
     functionName: "confidentialTransfer",
     args: [to, toHex(handle), toHex(inputProof)],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -69,7 +67,6 @@ export function confidentialTransferFromContract(
     abi: ENCRYPTION_ABI,
     functionName: "confidentialTransferFrom",
     args: [from, to, toHex(handle), toHex(inputProof)],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -110,7 +107,6 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
     abi: ENCRYPTION_ABI,
     functionName: "setOperator",
     args: [spender, until],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -136,7 +132,6 @@ export function unwrapContract(
     abi: ENCRYPTION_ABI,
     functionName: "unwrap",
     args: [from, to, toHex(encryptedAmount), toHex(inputProof)],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -161,7 +156,6 @@ export function unwrapFromBalanceContract(
     abi: ENCRYPTION_ABI,
     functionName: "unwrap",
     args: [from, to, encryptedBalance],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -284,6 +278,5 @@ export function setFinalizeUnwrapOperatorContract(
     abi: ENCRYPTION_ABI,
     functionName: "setFinalizeUnwrapOperator",
     args: [operator, until],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
