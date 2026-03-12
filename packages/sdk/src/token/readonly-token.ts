@@ -21,9 +21,9 @@ import type { Handle } from "../relayer/relayer-sdk.types";
 import { pLimit, toError } from "../utils";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { CredentialsManager } from "./credentials-manager";
-import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
-import { DelegatedStoredCredentials, GenericSigner, GenericStorage } from "./token.types";
 import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
+import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
+import { GenericSigner, GenericStorage } from "./token.types";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -103,7 +103,7 @@ export class ReadonlyToken {
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
-    this.credentials = new CredentialsManager({
+    const credentialsConfig = {
       relayer: config.relayer,
       signer: config.signer,
       storage: config.storage,
@@ -111,16 +111,9 @@ export class ReadonlyToken {
       keypairTTL: config.keypairTTL ?? 86400,
       sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: config.onEvent,
-    });
-    this.delegatedCredentials = new DelegatedCredentialsManager({
-      relayer: config.relayer,
-      signer: config.signer,
-      storage: config.storage,
-      sessionStorage: config.sessionStorage,
-      keypairTTL: config.keypairTTL ?? 86400,
-      sessionTTL: config.sessionTTL ?? 2592000,
-      onEvent: config.onEvent,
-    });
+    };
+    this.credentials = new CredentialsManager(credentialsConfig);
+    this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
     this.relayer = config.relayer;
     this.signer = config.signer;
     this.address = getAddress(config.address);

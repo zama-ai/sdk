@@ -27,11 +27,11 @@ function mockCredsResult(contractAddresses: Address[]) {
 
 function stubDelegatedCredentials(token: ReadonlyToken, contractAddresses: Address[]) {
   const allowMock = vi.fn().mockResolvedValue(mockCredsResult(contractAddresses));
-  // Access protected property for testing
-  (token as unknown as { delegatedCredentials: { allow: typeof allowMock } }).delegatedCredentials =
-    {
-      allow: allowMock,
-    } as never;
+  // Override the lazy getter for testing
+  Object.defineProperty(token, "delegatedCredentials", {
+    value: { allow: allowMock },
+    configurable: true,
+  });
   return allowMock;
 }
 

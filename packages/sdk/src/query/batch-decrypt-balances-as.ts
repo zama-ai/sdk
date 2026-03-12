@@ -8,12 +8,12 @@ export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 export function batchDecryptBalancesAsMutationOptions(
   tokens: ReadonlyToken[],
 ): MutationFactoryOptions<
-  readonly ["zama.batchDecryptBalancesAs"],
+  readonly ["zama.batchDecryptBalancesAs", ...Address[]],
   BatchDecryptBalancesAsParams,
   Map<Address, bigint>
 > {
   return {
-    mutationKey: ["zama.batchDecryptBalancesAs"] as const,
+    mutationKey: ["zama.batchDecryptBalancesAs", ...tokens.map((t) => t.address)] as const,
     mutationFn: async (params) => ReadonlyToken.batchDecryptBalancesAs(tokens, params),
   };
 }
