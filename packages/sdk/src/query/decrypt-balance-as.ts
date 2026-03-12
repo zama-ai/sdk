@@ -1,5 +1,5 @@
 import type { ReadonlyToken } from "../token/readonly-token";
-import type { DelegatedStoredCredentials } from "../token/token.types";
+import type { DelegatedCredentialsManager } from "../token/delegated-credentials-manager";
 import type { Address } from "viem";
 import type { MutationFactoryOptions } from "./factory-types";
 
@@ -7,12 +7,7 @@ import type { MutationFactoryOptions } from "./factory-types";
 export interface DecryptBalanceAsParams {
   delegatorAddress: Address;
   owner?: Address;
-  credentials?: {
-    allow(
-      delegatorAddress: Address,
-      ...contractAddresses: Address[]
-    ): Promise<DelegatedStoredCredentials>;
-  };
+  credentials?: DelegatedCredentialsManager;
 }
 
 export function decryptBalanceAsMutationOptions(

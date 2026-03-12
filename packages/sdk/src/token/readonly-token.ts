@@ -23,6 +23,7 @@ import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { CredentialsManager } from "./credentials-manager";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { DelegatedStoredCredentials, GenericSigner, GenericStorage } from "./token.types";
+import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -48,6 +49,22 @@ export interface BatchDecryptOptions {
    */
   onError?: (error: Error, address: Address) => bigint;
   /** Maximum number of concurrent decrypt calls. Default: `Infinity` (no limit). */
+  maxConcurrency?: number;
+}
+
+/** Options for {@link ReadonlyToken.batchDecryptBalancesAs}. */
+export interface BatchDecryptAsOptions {
+  /** The address of the account that delegated decryption rights. */
+  delegatorAddress: Address;
+  /** Credential manager for caching delegated credentials. */
+  credentials: DelegatedCredentialsManager;
+  /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
+  handles?: Handle[];
+  /** Balance owner address. Defaults to the delegator address. */
+  owner?: Address;
+  /** Called when decryption fails for a single token. Return a fallback bigint. */
+  onError?: (error: Error, address: Address) => bigint;
+  /** Maximum number of concurrent decrypt calls. Default: Infinity. */
   maxConcurrency?: number;
 }
 
@@ -327,6 +344,124 @@ export class ReadonlyToken {
   }
 
   /**
+   * Batch decrypt confidential balances as a delegate across multiple tokens.
+   * Mirrors {@link batchDecryptBalances} but uses delegated credentials.
+   *
+   * @param tokens - Array of ReadonlyToken instances to decrypt balances for.
+   * @param options - Delegated decryption configuration.
+   * @returns A Map from token address to decrypted balance.
+   * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` callback is provided.
+   */
+  static async batchDecryptBalancesAs(
+    tokens: ReadonlyToken[],
+    options: BatchDecryptAsOptions,
+  ): Promise<Map<Address, bigint>> {
+    if (tokens.length === 0) return new Map();
+
+    const { delegatorAddress, credentials, handles, owner, onError, maxConcurrency } = options;
+    const ownerAddress = owner ?? delegatorAddress;
+
+    const firstToken = tokens[0]!;
+
+    const resolvedHandles =
+      handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress))));
+
+    if (tokens.length !== resolvedHandles.length) {
+      throw new DecryptionFailedError(
+        `tokens.length (${tokens.length}) must equal handles.length (${resolvedHandles.length})`,
+      );
+    }
+
+    const tokenStorage = firstToken.storage;
+    const results = new Map<Address, bigint>();
+
+    // Parallel cache lookups
+    const uncached: Array<{ token: ReadonlyToken; handle: Address }> = [];
+    const cachedValues = await Promise.all(
+      tokens.map((token, i) => {
+        const handle = resolvedHandles[i]!;
+        if (token.isZeroHandle(handle)) return Promise.resolve(BigInt(0));
+        return loadCachedBalance({
+          storage: tokenStorage,
+          tokenAddress: token.address,
+          owner: ownerAddress,
+          handle,
+        });
+      }),
+    );
+
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i]!;
+      const handle = resolvedHandles[i]!;
+      const cached = cachedValues[i];
+
+      if (cached !== null && cached !== undefined) {
+        results.set(token.address, cached);
+        continue;
+      }
+
+      uncached.push({ token, handle });
+    }
+
+    // All balances resolved from cache — no credentials needed.
+    if (uncached.length === 0) return results;
+
+    const uncachedAddresses = uncached.map((entry) => entry.token.address);
+    const creds = await credentials.allow(delegatorAddress, ...uncachedAddresses);
+
+    const errors: Array<{ address: Address; error: Error }> = [];
+    const decryptFns: Array<() => Promise<void>> = [];
+
+    for (const { token, handle } of uncached) {
+      decryptFns.push(() =>
+        firstToken.relayer
+          .delegatedUserDecrypt({
+            handles: [handle],
+            contractAddress: token.address,
+            signedContractAddresses: creds.contractAddresses,
+            privateKey: creds.privateKey,
+            publicKey: creds.publicKey,
+            signature: creds.signature,
+            delegatorAddress: creds.delegatorAddress,
+            delegateAddress: creds.delegateAddress,
+            startTimestamp: creds.startTimestamp,
+            durationDays: creds.durationDays,
+          })
+          .then(async (result) => {
+            const value = (result[handle] as bigint | undefined) ?? BigInt(0);
+            results.set(token.address, value);
+            await saveCachedBalance({
+              storage: tokenStorage,
+              tokenAddress: token.address,
+              owner: ownerAddress,
+              handle,
+              value,
+            });
+          })
+          .catch((error) => {
+            const err = error instanceof Error ? error : new Error(String(error));
+            if (onError) {
+              results.set(token.address, onError(err, token.address));
+            } else {
+              errors.push({ address: token.address, error: err });
+            }
+          }),
+      );
+    }
+
+    await pLimit(decryptFns, maxConcurrency);
+
+    if (errors.length > 0) {
+      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
+      throw new DecryptionFailedError(
+        `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
+      );
+    }
+
+    return results;
+  }
+
+  /**
    * Look up the wrapper contract for this token via the deployment coordinator.
    * Returns `null` if no wrapper is deployed.
    *
@@ -559,12 +694,7 @@ export class ReadonlyToken {
   }: {
     delegatorAddress: Address;
     owner?: Address;
-    credentials?: {
-      allow(
-        delegatorAddress: Address,
-        ...contractAddresses: Address[]
-      ): Promise<DelegatedStoredCredentials>;
-    };
+    credentials?: DelegatedCredentialsManager;
   }): Promise<bigint> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedOwner = owner ? getAddress(owner) : normalizedDelegator;
