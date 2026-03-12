@@ -180,6 +180,14 @@ export interface StoredCredentials {
   durationDays: number;
 }
 
+/** Stored FHE credential data for delegated decryption. */
+export interface DelegatedStoredCredentials extends StoredCredentials {
+  /** The address that granted delegation rights. */
+  delegatorAddress: Address;
+  /** The delegate address performing decryption on behalf of the delegator. */
+  delegateAddress: Address;
+}
+
 /** Progress callbacks for multi-step unshield operations. */
 export interface UnshieldCallbacks {
   /** Fired after the unwrap transaction is submitted. */
