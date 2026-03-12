@@ -2,7 +2,11 @@ import { getAddress, type Address, type Hex } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { StoredCredentials } from "./token.types";
 import { MemoryStorage } from "./memory-storage";
-import { BaseCredentialsManager, type CredentialsConfig } from "./credential-manager-base";
+import {
+  BaseCredentialsManager,
+  type CredentialsConfig,
+  type SigningMeta,
+} from "./credential-manager-base";
 import {
   type BaseEncryptedCredentials,
   assertBaseEncryptedCredentials,
@@ -64,10 +68,13 @@ export class CredentialsManager extends BaseCredentialsManager<
    */
   async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
     const normalized = normalizeAddresses(contractAddresses);
-    const storeKey = await this.#storeKey();
-    return this.resolveCredentials(storeKey, normalized, normalized.join(","), () =>
-      this.create(normalized),
-    );
+    const key = await this.#storeKey();
+    return this.resolveCredentials({
+      key,
+      contracts: normalized,
+      createKey: normalized.join(","),
+      createFn: () => this.create(normalized),
+    });
   }
 
   /** Check if stored credentials are expired or unusable. */
@@ -79,7 +86,7 @@ export class CredentialsManager extends BaseCredentialsManager<
   async revoke(...contractAddresses: Address[]): Promise<void> {
     await this.revokeSession(
       await this.#storeKey(),
-      contractAddresses.length > 0 ? { contractAddresses } : undefined,
+      contractAddresses.length > 0 ? contractAddresses : undefined,
     );
   }
 
@@ -99,11 +106,11 @@ export class CredentialsManager extends BaseCredentialsManager<
    */
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
     const normalized = normalizeAddresses(contractAddresses);
-    const storeKey = await this.#storeKey();
-    return this.createFreshCredentials(
-      storeKey,
-      normalized,
-      async () => {
+    const key = await this.#storeKey();
+    return this.createCredentials({
+      key,
+      contractAddresses: normalized,
+      buildFn: async () => {
         const keypair = await this.#relayer.generateKeypair();
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);
@@ -125,8 +132,8 @@ export class CredentialsManager extends BaseCredentialsManager<
           durationDays,
         };
       },
-      "Failed to create decrypt credentials",
-    );
+      errorContext: "Failed to create decrypt credentials",
+    });
   }
 
   // ── Abstract implementations ──────────────────────────────────
@@ -135,10 +142,7 @@ export class CredentialsManager extends BaseCredentialsManager<
     assertBaseEncryptedCredentials(data);
   }
 
-  protected async signForContracts(
-    meta: { publicKey: Hex; startTimestamp: number; durationDays: number },
-    contractAddresses: Address[],
-  ): Promise<Hex> {
+  protected async signForContracts(meta: SigningMeta, contractAddresses: Address[]): Promise<Hex> {
     const eip712 = await this.#relayer.createEIP712(
       meta.publicKey,
       contractAddresses,
@@ -148,7 +152,7 @@ export class CredentialsManager extends BaseCredentialsManager<
     return this.signer.signTypedData(eip712);
   }
 
-  protected async encryptCreds(creds: StoredCredentials): Promise<EncryptedCredentials> {
+  protected async encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials> {
     const address = await this.signer.getAddress();
     const encryptedPrivateKey = await this.crypto.encrypt(
       creds.privateKey,
@@ -159,7 +163,7 @@ export class CredentialsManager extends BaseCredentialsManager<
     return { ...rest, encryptedPrivateKey };
   }
 
-  protected async decryptCreds(
+  protected async decryptCredentials(
     encrypted: EncryptedCredentials,
     signature: Hex,
   ): Promise<StoredCredentials> {

@@ -2,7 +2,6 @@ import { type Address, type Hex } from "viem";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import { CredentialCrypto } from "./credential-crypto";
-import { deleteCredentials, persistCredentials } from "./credential-persistence";
 import type { BaseEncryptedCredentials } from "./credential-validation";
 import {
   coversContracts,
@@ -23,6 +22,29 @@ export interface CredentialsConfig {
   keypairTTL?: number;
   sessionTTL?: number | "infinite";
   onEvent?: ZamaSDKEventListener;
+}
+
+/** Minimal fields needed to produce an EIP-712 signing request. */
+export interface SigningMeta {
+  publicKey: Hex;
+  startTimestamp: number;
+  durationDays: number;
+}
+
+/** Options for {@link BaseCredentialsManager.resolveCredentials}. */
+interface ResolveCredentialsOptions<TCreds> {
+  key: string;
+  contracts: Address[];
+  createKey: string;
+  createFn: () => Promise<TCreds>;
+}
+
+/** Options for {@link BaseCredentialsManager.createCredentials}. */
+interface CreateCredentialsOptions<TCreds> {
+  key: string;
+  contractAddresses: Address[];
+  buildFn: () => Promise<TCreds>;
+  errorContext: string;
 }
 
 /**
@@ -57,6 +79,7 @@ export abstract class BaseCredentialsManager<
     this.keypairTTL = config.keypairTTL ?? 86400;
     this.sessionTTL = config.sessionTTL ?? 2592000;
     this.#onEvent = config.onEvent ?? Boolean;
+
     if (typeof this.keypairTTL === "number" && this.keypairTTL < 0) {
       throw new Error("keypairTTL must be >= 0");
     }
@@ -76,42 +99,42 @@ export abstract class BaseCredentialsManager<
 
   /** Sign an EIP-712 authorization for the given contract addresses. */
   protected abstract signForContracts(
-    meta: TEncrypted | TCreds,
+    meta: SigningMeta,
     contractAddresses: Address[],
   ): Promise<Hex>;
 
   /** Encrypt credentials for persistent storage. */
-  protected abstract encryptCreds(creds: TCreds): Promise<TEncrypted>;
+  protected abstract encryptCredentials(creds: TCreds): Promise<TEncrypted>;
 
   /** Decrypt credentials from persistent storage. */
-  protected abstract decryptCreds(encrypted: TEncrypted, signature: Hex): Promise<TCreds>;
+  protected abstract decryptCredentials(encrypted: TEncrypted, signature: Hex): Promise<TCreds>;
 
   // ── Core credential resolution ────────────────────────────────
 
   /**
    * The allow() state machine: load → validate → extend/re-sign → or create fresh.
-   * Subclasses call this from their public `allow()` after computing the storeKey.
+   * Subclasses call this from their public `allow()` after computing the key.
    */
-  protected async resolveCredentials(
-    storeKey: string,
-    contracts: Address[],
-    createKey: string,
-    createFn: () => Promise<TCreds>,
-  ): Promise<TCreds> {
+  protected async resolveCredentials({
+    key,
+    contracts,
+    createKey,
+    createFn,
+  }: ResolveCredentialsOptions<TCreds>): Promise<TCreds> {
     this.emit({ type: ZamaSDKEvents.CredentialsLoading, contractAddresses: contracts });
 
     try {
-      const encrypted = await this.storage.get<TEncrypted>(storeKey);
+      const encrypted = await this.storage.get<TEncrypted>(key);
       if (encrypted) {
         this.assertEncrypted(encrypted);
 
-        const sessionEntry = await this.sessionSignatures.get(storeKey);
+        const sessionEntry = await this.sessionSignatures.get(key);
         if (sessionEntry) {
           if (this.sessionSignatures.isExpired(sessionEntry)) {
-            await this.sessionSignatures.delete(storeKey);
+            await this.sessionSignatures.delete(key);
             this.emit({ type: ZamaSDKEvents.SessionExpired, reason: "ttl" });
           } else {
-            const creds = await this.decryptCreds(encrypted, sessionEntry.signature);
+            const creds = await this.decryptCredentials(encrypted, sessionEntry.signature);
             if (isCredentialValid(creds, contracts)) {
               this.emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses: contracts });
               this.emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: contracts });
@@ -119,7 +142,7 @@ export abstract class BaseCredentialsManager<
             }
             if (isTimeValid(creds)) {
               return this.#extendContracts({
-                storeKey,
+                key,
                 credentials: creds,
                 requiredContracts: contracts,
               });
@@ -132,17 +155,17 @@ export abstract class BaseCredentialsManager<
         if (isTimeValid(encrypted)) {
           if (coversContracts(encrypted.contractAddresses, contracts)) {
             const signature = await this.signForContracts(encrypted, encrypted.contractAddresses);
-            await this.sessionSignatures.set(storeKey, signature, this.sessionTTL);
-            const creds = await this.decryptCreds(encrypted, signature);
+            await this.sessionSignatures.set({ key, signature, ttl: this.sessionTTL });
+            const creds = await this.decryptCredentials(encrypted, signature);
             this.emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses: contracts });
             this.emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: contracts });
             return creds;
           }
           // Time-valid but missing contracts — sign with old set to decrypt, then extend
           const oldSignature = await this.signForContracts(encrypted, encrypted.contractAddresses);
-          const creds = await this.decryptCreds(encrypted, oldSignature);
+          const creds = await this.decryptCredentials(encrypted, oldSignature);
           return this.#extendContracts({
-            storeKey,
+            key,
             credentials: creds,
             requiredContracts: contracts,
           });
@@ -155,7 +178,7 @@ export abstract class BaseCredentialsManager<
         throw error;
       }
       console.warn("[zama-sdk] Credential resolution failed, recreating:", error);
-      await deleteCredentials(this.storage, storeKey);
+      await this.#deleteCredentials(key);
     }
 
     // Nothing cached — create fresh (deduplicated)
@@ -176,41 +199,41 @@ export abstract class BaseCredentialsManager<
 
   // ── Shared public method implementations ──────────────────────
 
-  protected async checkExpired(storeKey: string, contractAddress?: Address): Promise<boolean> {
+  protected async checkExpired(key: string, contractAddress?: Address): Promise<boolean> {
     try {
-      const stored = await this.storage.get(storeKey);
+      const stored = await this.storage.get<TEncrypted>(key);
       if (!stored) return false;
-      this.assertEncrypted(stored as unknown);
+      this.assertEncrypted(stored);
       const requiredContracts = contractAddress ? [contractAddress] : [];
-      return !isCredentialValid(stored as TEncrypted, requiredContracts);
+      return !isCredentialValid(stored, requiredContracts);
     } catch (error) {
       console.warn("[zama-sdk] isExpired check failed, treating as expired:", error);
       return true;
     }
   }
 
-  protected async revokeSession(
-    storeKey: string,
-    eventExtra?: Record<string, unknown>,
-  ): Promise<void> {
-    await this.sessionSignatures.delete(storeKey);
+  protected async revokeSession(key: string, contractAddresses?: Address[]): Promise<void> {
+    await this.sessionSignatures.delete(key);
     this.clearCaches();
-    this.emit({ type: ZamaSDKEvents.CredentialsRevoked, ...eventExtra } as ZamaSDKEventInput);
+    this.emit({
+      type: ZamaSDKEvents.CredentialsRevoked,
+      ...(contractAddresses ? { contractAddresses } : {}),
+    } as ZamaSDKEventInput);
   }
 
-  protected async checkAllowed(storeKey: string): Promise<boolean> {
-    const entry = await this.sessionSignatures.get(storeKey);
+  protected async checkAllowed(key: string): Promise<boolean> {
+    const entry = await this.sessionSignatures.get(key);
     if (entry === null) return false;
     return !this.sessionSignatures.isExpired(entry);
   }
 
-  protected async clearAll(storeKey: string): Promise<void> {
-    await this.sessionSignatures.delete(storeKey);
+  protected async clearAll(key: string): Promise<void> {
+    await this.sessionSignatures.delete(key);
     this.clearCaches();
-    await deleteCredentials(this.storage, storeKey);
+    await this.#deleteCredentials(key);
   }
 
-  /** Override to also clear subclass-specific caches (e.g. storeKey cache). */
+  /** Override to also clear subclass-specific caches (e.g. key cache). */
   protected clearCaches(): void {
     this.crypto.clearCache();
   }
@@ -221,17 +244,21 @@ export abstract class BaseCredentialsManager<
    * Shared wrapper for fresh credential creation:
    * emits events, persists, saves session, and wraps signing errors.
    */
-  protected async createFreshCredentials(
-    storeKey: string,
-    contractAddresses: Address[],
-    buildFn: () => Promise<TCreds>,
-    errorContext: string,
-  ): Promise<TCreds> {
+  protected async createCredentials({
+    key,
+    contractAddresses,
+    buildFn,
+    errorContext,
+  }: CreateCredentialsOptions<TCreds>): Promise<TCreds> {
     this.emit({ type: ZamaSDKEvents.CredentialsCreating, contractAddresses });
     try {
       const creds = await buildFn();
-      await this.persistCreds(storeKey, creds);
-      await this.sessionSignatures.set(storeKey, creds.signature, this.sessionTTL);
+      await this.persistCredentials(key, creds);
+      await this.sessionSignatures.set({
+        key,
+        signature: creds.signature,
+        ttl: this.sessionTTL,
+      });
       this.emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
     } catch (error) {
@@ -242,11 +269,11 @@ export abstract class BaseCredentialsManager<
   // ── Contract extension ────────────────────────────────────────
 
   async #extendContracts({
-    storeKey,
+    key,
     credentials,
     requiredContracts,
   }: {
-    storeKey: string;
+    key: string;
     credentials: TCreds;
     requiredContracts: Address[];
   }): Promise<TCreds> {
@@ -259,7 +286,7 @@ export abstract class BaseCredentialsManager<
       credentials = previous;
     }
 
-    const promise = this.#performExtend({ storeKey, credentials, requiredContracts });
+    const promise = this.#extendCredentials({ key, credentials, requiredContracts });
     this.#extendPromise = promise;
     try {
       return await promise;
@@ -268,28 +295,46 @@ export abstract class BaseCredentialsManager<
     }
   }
 
-  async #performExtend({
-    storeKey,
+  async #extendCredentials({
+    key,
     credentials,
     requiredContracts,
   }: {
-    storeKey: string;
+    key: string;
     credentials: TCreds;
     requiredContracts: Address[];
   }): Promise<TCreds> {
     const merged = normalizeAddresses([...credentials.contractAddresses, ...requiredContracts]);
     const signature = await this.signForContracts(credentials, merged);
 
-    const extended = { ...credentials, contractAddresses: merged, signature } as TCreds;
+    const extended: TCreds = { ...credentials, contractAddresses: merged, signature };
     // Persist ciphertext before session signature to prevent a window where a
     // concurrent reader sees the new signature but finds old ciphertext.
-    await this.persistCreds(storeKey, extended);
-    await this.sessionSignatures.set(storeKey, signature, this.sessionTTL);
+    await this.persistCredentials(key, extended);
+    await this.sessionSignatures.set({
+      key,
+      signature,
+      ttl: this.sessionTTL,
+    });
     this.emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: requiredContracts });
     return extended;
   }
 
-  protected async persistCreds(storeKey: string, creds: TCreds): Promise<void> {
-    await persistCredentials(this.storage, storeKey, creds, (c) => this.encryptCreds(c));
+  protected async persistCredentials(key: string, credentials: TCreds): Promise<void> {
+    try {
+      const encrypted = await this.encryptCredentials(credentials);
+      await this.storage.set(key, encrypted);
+    } catch (error) {
+      console.warn("[zama-sdk] Failed to encrypt credentials for persistence:", error);
+      return;
+    }
+  }
+
+  async #deleteCredentials(key: string): Promise<void> {
+    try {
+      await this.storage.delete(key);
+    } catch (error) {
+      console.warn("[zama-sdk] Failed to delete credentials:", error);
+    }
   }
 }

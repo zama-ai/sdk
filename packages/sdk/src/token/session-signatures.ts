@@ -41,26 +41,26 @@ export class SessionSignatures {
   }
 
   /** Retrieve and validate a session entry, or `null` if none exists. */
-  async get(storeKey: string): Promise<SessionEntry | null> {
-    const raw = await this.#storage.get<SessionEntry>(storeKey);
+  async get(key: string): Promise<SessionEntry | null> {
+    const raw = await this.#storage.get<SessionEntry>(key);
     if (raw === null) return null;
     this.#assertSessionEntry(raw);
     return raw;
   }
 
   /** Create and store a session entry with the given TTL. */
-  async set(storeKey: string, signature: Hex, ttl: number | "infinite"): Promise<void> {
+  async set(params: { key: string; signature: Hex; ttl: number | "infinite" }): Promise<void> {
     const entry: SessionEntry = {
-      signature,
+      signature: params.signature,
       createdAt: Math.floor(Date.now() / 1000),
-      ttl,
+      ttl: params.ttl,
     };
-    await this.#storage.set(storeKey, entry);
+    await this.#storage.set(params.key, entry);
   }
 
   /** Delete a session entry. */
-  async delete(storeKey: string): Promise<void> {
-    await this.#storage.delete(storeKey);
+  async delete(key: string): Promise<void> {
+    await this.#storage.delete(key);
   }
 
   /**

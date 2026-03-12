@@ -1,7 +1,11 @@
 import { getAddress, type Address, type Hex } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { DelegatedStoredCredentials } from "./token.types";
-import { BaseCredentialsManager, type CredentialsConfig } from "./credential-manager-base";
+import {
+  BaseCredentialsManager,
+  type CredentialsConfig,
+  type SigningMeta,
+} from "./credential-manager-base";
 import {
   type BaseEncryptedCredentials,
   assertDelegatedFields,
@@ -60,13 +64,13 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   ): Promise<DelegatedStoredCredentials> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalized = normalizeAddresses(contractAddresses);
-    const storeKey = await this.#storeKey(normalizedDelegator);
-    return this.resolveCredentials(
-      storeKey,
-      normalized,
-      `${normalizedDelegator}:${normalized.join(",")}`,
-      () => this.#create(normalizedDelegator, normalized),
-    );
+    const key = await this.#storeKey(normalizedDelegator);
+    return this.resolveCredentials({
+      key,
+      contracts: normalized,
+      createKey: `${normalizedDelegator}:${normalized.join(",")}`,
+      createFn: () => this.#create(normalizedDelegator, normalized),
+    });
   }
 
   /** Check if stored delegated credentials are expired or unusable. */
@@ -95,11 +99,11 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     delegatorAddress: Address,
     contractAddresses: Address[],
   ): Promise<DelegatedStoredCredentials> {
-    const storeKey = await this.#storeKey(delegatorAddress);
-    return this.createFreshCredentials(
-      storeKey,
+    const key = await this.#storeKey(delegatorAddress);
+    return this.createCredentials({
+      key,
       contractAddresses,
-      async () => {
+      buildFn: async () => {
         const keypair = await this.#relayer.generateKeypair();
         const delegateAddress = await this.signer.getAddress();
         const startTimestamp = Math.floor(Date.now() / 1000);
@@ -121,8 +125,8 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
           delegateAddress,
         };
       },
-      "Failed to create delegated decrypt credentials",
-    );
+      errorContext: "Failed to create delegated decrypt credentials",
+    });
   }
 
   // ── Abstract implementations ──────────────────────────────────
@@ -132,18 +136,15 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   }
 
   protected async signForContracts(
-    meta: {
-      publicKey: Hex;
-      startTimestamp: number;
-      durationDays: number;
-      delegatorAddress: Address;
-    },
+    meta: SigningMeta & { delegatorAddress: Address },
     contractAddresses: Address[],
   ): Promise<Hex> {
     return this.#signDelegated(meta, contractAddresses);
   }
 
-  protected async encryptCreds(creds: DelegatedStoredCredentials): Promise<EncryptedCredentials> {
+  protected async encryptCredentials(
+    creds: DelegatedStoredCredentials,
+  ): Promise<EncryptedCredentials> {
     const address = await this.signer.getAddress();
     const encryptedPrivateKey = await this.crypto.encrypt(
       creds.privateKey,
@@ -154,7 +155,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     return { ...rest, encryptedPrivateKey };
   }
 
-  protected async decryptCreds(
+  protected async decryptCredentials(
     encrypted: EncryptedCredentials,
     signature: Hex,
   ): Promise<DelegatedStoredCredentials> {
@@ -190,12 +191,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   }
 
   async #signDelegated(
-    meta: {
-      publicKey: Hex;
-      startTimestamp: number;
-      durationDays: number;
-      delegatorAddress: Address;
-    },
+    meta: SigningMeta & { delegatorAddress: Address },
     contractAddresses: Address[],
   ): Promise<Hex> {
     const delegatedEIP712 = await this.#relayer.createDelegatedUserDecryptEIP712(
