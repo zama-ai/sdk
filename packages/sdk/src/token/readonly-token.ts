@@ -677,7 +677,7 @@ export class ReadonlyToken {
     // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
     if (expiry === MAX_UINT64) return true;
     const now = await this.signer.getBlockTimestamp();
-    return expiry >= now;
+    return expiry > now;
   }
 
   /**
@@ -865,13 +865,17 @@ export class ReadonlyToken {
       if (value === undefined) {
         throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
       }
-      await saveCachedBalance({
-        storage: this.#storage,
-        tokenAddress: this.address,
-        owner: signerAddress,
-        handle,
-        value,
-      });
+      try {
+        await saveCachedBalance({
+          storage: this.#storage,
+          tokenAddress: this.address,
+          owner: signerAddress,
+          handle,
+          value,
+        });
+      } catch {
+        // Cache write failure should not invalidate a successful decryption
+      }
       return value;
     } catch (error) {
       this.emit({

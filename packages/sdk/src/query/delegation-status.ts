@@ -47,7 +47,7 @@ export function delegationStatusQueryOptions(
         isDelegated = true;
       } else {
         const now = await readonlyToken.signer.getBlockTimestamp();
-        isDelegated = expiryTimestamp >= now;
+        isDelegated = expiryTimestamp > now;
       }
       return { isDelegated, expiryTimestamp };
     },
