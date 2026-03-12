@@ -25,6 +25,12 @@ export interface DelegatedCredentialsManagerConfig extends CredentialsConfig {
   relayer: RelayerSDK;
 }
 
+/** Signing metadata for delegated credentials, adding the delegator's address. */
+export interface DelegatedSigningMeta extends SigningMeta {
+  /** On-chain address of the account that delegated decryption rights. */
+  delegatorAddress: Address;
+}
+
 /**
  * Manages FHE decrypt credentials for delegated decryption.
  * Scoped to a (delegate, delegator) pair.
@@ -37,6 +43,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
 
+  /** Derive the deterministic storage key for a (delegate, delegator, chain) triple. */
   static async computeStoreKey(
     delegateAddress: Address,
     delegatorAddress: Address,
@@ -103,16 +110,19 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     return this.createCredentials({
       key,
       contractAddresses,
-      buildFn: async () => {
+      createFn: async () => {
         const keypair = await this.#relayer.generateKeypair();
         const delegateAddress = await this.signer.getAddress();
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);
 
-        const signature = await this.#signDelegated(
-          { publicKey: keypair.publicKey, startTimestamp, durationDays, delegatorAddress },
-          contractAddresses,
-        );
+        const meta = {
+          publicKey: keypair.publicKey,
+          startTimestamp,
+          durationDays,
+          delegatorAddress,
+        };
+        const signature = await this.#signDelegated(meta, contractAddresses);
 
         return {
           publicKey: keypair.publicKey,
@@ -136,7 +146,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   }
 
   protected async signForContracts(
-    meta: SigningMeta & { delegatorAddress: Address },
+    meta: DelegatedSigningMeta,
     contractAddresses: Address[],
   ): Promise<Hex> {
     return this.#signDelegated(meta, contractAddresses);
@@ -190,10 +200,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     return key;
   }
 
-  async #signDelegated(
-    meta: SigningMeta & { delegatorAddress: Address },
-    contractAddresses: Address[],
-  ): Promise<Hex> {
+  async #signDelegated(meta: DelegatedSigningMeta, contractAddresses: Address[]): Promise<Hex> {
     const delegatedEIP712 = await this.#relayer.createDelegatedUserDecryptEIP712(
       meta.publicKey,
       contractAddresses,

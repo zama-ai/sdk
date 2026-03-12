@@ -30,6 +30,11 @@ function hasExtensionRuntimeId(value: unknown): value is { runtime: { id: string
   return typeof Reflect.get(runtime, "id") === "string";
 }
 
+/**
+ * Manages FHE decrypt credentials for a single wallet.
+ * Handles keypair generation, EIP-712 authorization signing, and
+ * encrypted persistence scoped to a (wallet address, chain ID) pair.
+ */
 export class CredentialsManager extends BaseCredentialsManager<
   StoredCredentials,
   EncryptedCredentials
@@ -38,6 +43,7 @@ export class CredentialsManager extends BaseCredentialsManager<
   #cachedStoreKey: string | null = null;
   #cachedStoreKeyIdentity: string | null = null;
 
+  /** Derive the deterministic storage key for a given wallet address and chain. */
   static async computeStoreKey(address: Address, chainId: number): Promise<string> {
     return computeStoreKey(getAddress(address), chainId);
   }
@@ -110,7 +116,7 @@ export class CredentialsManager extends BaseCredentialsManager<
     return this.createCredentials({
       key,
       contractAddresses: normalized,
-      buildFn: async () => {
+      createFn: async () => {
         const keypair = await this.#relayer.generateKeypair();
         const startTimestamp = Math.floor(Date.now() / 1000);
         const durationDays = Math.ceil(this.keypairTTL / 86400);

@@ -15,35 +15,55 @@ import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.t
 
 /** Shared configuration accepted by both credential manager variants. */
 export interface CredentialsConfig {
+  /** Backend that generates FHE keypairs (public/private). */
   relayer: { generateKeypair(): Promise<{ publicKey: Hex; privateKey: Hex }> };
+  /** Wallet signer used for EIP-712 authorization signatures. */
   signer: GenericSigner;
+  /** Persistent storage for encrypted credentials. */
   storage: GenericStorage;
+  /** Storage for session signatures (shorter-lived than credentials). */
   sessionStorage: GenericStorage;
+  /** FHE keypair lifetime in seconds. Defaults to `86400` (1 day). */
   keypairTTL?: number;
+  /** Session signature lifetime. `0` = always re-sign, `"infinite"` = never expire. Defaults to `2592000` (30 days). */
   sessionTTL?: number | "infinite";
+  /** Optional listener for credential lifecycle events. */
   onEvent?: ZamaSDKEventListener;
 }
 
 /** Minimal fields needed to produce an EIP-712 signing request. */
 export interface SigningMeta {
+  /** FHE public key being authorized. */
   publicKey: Hex;
+  /** Epoch seconds when the keypair authorization begins. */
   startTimestamp: number;
+  /** Number of days the keypair authorization is valid for. */
   durationDays: number;
+  /** Delegator address, present only for delegated credentials. */
+  delegatorAddress?: string;
 }
 
 /** Options for {@link BaseCredentialsManager.resolveCredentials}. */
 interface ResolveCredentialsOptions<TCreds> {
+  /** Storage key identifying the credential entry. */
   key: string;
+  /** Contract addresses the caller needs access to. */
   contracts: Address[];
+  /** Deduplication key — concurrent calls with the same key share a single creation promise. */
   createKey: string;
+  /** Factory that creates fresh credentials when nothing usable is cached. */
   createFn: () => Promise<TCreds>;
 }
 
 /** Options for {@link BaseCredentialsManager.createCredentials}. */
 interface CreateCredentialsOptions<TCreds> {
+  /** Storage key identifying the credential entry. */
   key: string;
+  /** Contract addresses being authorized. */
   contractAddresses: Address[];
-  buildFn: () => Promise<TCreds>;
+  /** Factory that builds the credential payload (keypair + signature). */
+  createFn: () => Promise<TCreds>;
+  /** Human-readable context included in signing error messages. */
   errorContext: string;
 }
 
@@ -88,6 +108,7 @@ export abstract class BaseCredentialsManager<
     }
   }
 
+  /** Emit a credential lifecycle event, stamped with the current time. */
   protected emit(partial: ZamaSDKEventInput): void {
     this.#onEvent({ ...partial, timestamp: Date.now() } as never);
   }
@@ -199,6 +220,10 @@ export abstract class BaseCredentialsManager<
 
   // ── Shared public method implementations ──────────────────────
 
+  /**
+   * Check whether stored credentials are expired or don't cover the given contract.
+   * Returns `true` if credentials are missing, expired, or corrupted.
+   */
   protected async checkExpired(key: string, contractAddress?: Address): Promise<boolean> {
     try {
       const stored = await this.storage.get<TEncrypted>(key);
@@ -212,6 +237,7 @@ export abstract class BaseCredentialsManager<
     }
   }
 
+  /** Delete the session signature and clear caches, forcing a fresh wallet signature on next use. */
   protected async revokeSession(key: string, contractAddresses?: Address[]): Promise<void> {
     await this.sessionSignatures.delete(key);
     this.clearCaches();
@@ -247,12 +273,12 @@ export abstract class BaseCredentialsManager<
   protected async createCredentials({
     key,
     contractAddresses,
-    buildFn,
+    createFn,
     errorContext,
   }: CreateCredentialsOptions<TCreds>): Promise<TCreds> {
     this.emit({ type: ZamaSDKEvents.CredentialsCreating, contractAddresses });
     try {
-      const creds = await buildFn();
+      const creds = await createFn();
       await this.persistCredentials(key, creds);
       await this.sessionSignatures.set({
         key,
