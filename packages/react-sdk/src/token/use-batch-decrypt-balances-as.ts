@@ -14,7 +14,6 @@ import { ReadonlyToken, type Address, type BatchDecryptAsOptions } from "@zama-f
  * const batchDecryptAs = useBatchDecryptBalancesAs(tokens);
  * batchDecryptAs.mutate({
  *   delegatorAddress: "0xDelegator",
- *   credentials: delegatedCredsManager,
  * });
  * // batchDecryptAs.data => Map { "0xTokenA" => 100n, "0xTokenB" => 200n }
  * ```

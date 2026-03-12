@@ -12,19 +12,27 @@ const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 const HANDLE_A = ("0x" + "a1".repeat(32)) as Handle;
 const HANDLE_B = ("0x" + "b2".repeat(32)) as Handle;
 
-function mockCreds(contractAddresses: Address[]) {
+function mockCredsResult(contractAddresses: Address[]) {
   return {
-    allow: vi.fn().mockResolvedValue({
-      publicKey: "0xpub",
-      privateKey: "0xpriv",
-      signature: "0xsig",
-      contractAddresses,
-      startTimestamp: Math.floor(Date.now() / 1000),
-      durationDays: 1,
-      delegatorAddress: DELEGATOR,
-      delegateAddress: DELEGATE,
-    }),
+    publicKey: "0xpub",
+    privateKey: "0xpriv",
+    signature: "0xsig",
+    contractAddresses,
+    startTimestamp: Math.floor(Date.now() / 1000),
+    durationDays: 1,
+    delegatorAddress: DELEGATOR,
+    delegateAddress: DELEGATE,
   };
+}
+
+function stubDelegatedCredentials(token: ReadonlyToken, contractAddresses: Address[]) {
+  const allowMock = vi.fn().mockResolvedValue(mockCredsResult(contractAddresses));
+  // Access protected property for testing
+  (token as unknown as { delegatedCredentials: { allow: typeof allowMock } }).delegatedCredentials =
+    {
+      allow: allowMock,
+    } as never;
+  return allowMock;
 }
 
 describe("ReadonlyToken.batchDecryptBalancesAs", () => {
@@ -54,24 +62,22 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       address: TOKEN_B,
     });
 
-    const mockCredentials = mockCreds([TOKEN_A, TOKEN_B]);
+    const allowMock = stubDelegatedCredentials(tokenA, [TOKEN_A, TOKEN_B]);
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([tokenA, tokenB], {
       delegatorAddress: DELEGATOR,
-      credentials: mockCredentials as never,
     });
 
     expect(balances.get(TOKEN_A)).toBe(100n);
     expect(balances.get(TOKEN_B)).toBe(200n);
-    expect(mockCredentials.allow).toHaveBeenCalledOnce();
-    expect(mockCredentials.allow).toHaveBeenCalledWith(DELEGATOR, TOKEN_A, TOKEN_B);
+    expect(allowMock).toHaveBeenCalledOnce();
+    expect(allowMock).toHaveBeenCalledWith(DELEGATOR, TOKEN_A, TOKEN_B);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(2);
   });
 
   test("returns empty map for empty token list", async () => {
     const result = await ReadonlyToken.batchDecryptBalancesAs([], {
       delegatorAddress: DELEGATOR,
-      credentials: {} as never,
     });
     expect(result.size).toBe(0);
   });
@@ -85,15 +91,12 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO);
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
-    const mockCredentials = { allow: vi.fn() };
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
-      credentials: mockCredentials as never,
     });
 
     expect(balances.get(TOKEN_A)).toBe(0n);
-    expect(mockCredentials.allow).not.toHaveBeenCalled();
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
   });
 
@@ -106,12 +109,11 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
-    const mockCredentials = mockCreds([TOKEN_A]);
+    stubDelegatedCredentials(token, [TOKEN_A]);
     const onError = vi.fn().mockReturnValue(0n);
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
       delegatorAddress: DELEGATOR,
-      credentials: mockCredentials as never,
       onError,
     });
 
