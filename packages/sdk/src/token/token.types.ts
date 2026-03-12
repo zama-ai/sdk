@@ -199,3 +199,55 @@ export interface TransferCallbacks {
   /** Fired after the transfer transaction is submitted. */
   onTransferSubmitted?: (txHash: Hex) => void;
 }
+
+/**
+ * Context available to the encryptor for key derivation or scoping.
+ */
+export interface EncryptionContext {
+  /** Wallet address (checksummed). */
+  address: Address;
+  /** EIP-712 wallet signature authorizing the FHE keypair. */
+  signature: Hex;
+  /** Connected chain ID. */
+  chainId: number;
+  /** FHE public key (identifies which keypair is being sealed). */
+  publicKey: Hex;
+}
+
+/**
+ * Pluggable encryption backend for FHE credentials.
+ *
+ * Implementors control how the FHE private key is sealed at rest.
+ * The SDK persists whatever `encrypt()` returns via `GenericStorage`
+ * and passes it back to `decrypt()` on read.
+ *
+ * **Error contract:** If `decrypt()` throws, the SDK treats the stored
+ * credentials as corrupt, deletes them, and regenerates a fresh keypair
+ * (the user sees one extra wallet signature prompt). Encryptor authors
+ * do not need to handle recovery — just throw on failure.
+ *
+ * **Signature invariant:** The `context.signature` passed to `decrypt()`
+ * is always the same value that was passed to the corresponding
+ * `encrypt()` call. The SDK ensures this by persisting the encrypted
+ * blob and session signature atomically.
+ */
+export interface CredentialEncryptor {
+  /**
+   * Encrypt the FHE private key.
+   * The returned value is opaque to the SDK — it is persisted as-is
+   * and passed back to `decrypt()`.
+   */
+  encrypt(privateKey: Hex, context: EncryptionContext): Promise<unknown>;
+
+  /**
+   * Decrypt a previously sealed blob back to the FHE private key.
+   * `sealed` is whatever `encrypt()` returned.
+   */
+  decrypt(sealed: unknown, context: EncryptionContext): Promise<Hex>;
+
+  /**
+   * Type guard: return true if `sealed` is a valid encrypted blob
+   * produced by this encryptor. Called during storage read validation.
+   */
+  isValidEncryptedData(sealed: unknown): boolean;
+}
