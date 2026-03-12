@@ -108,7 +108,7 @@ export class ReadonlyToken {
   protected readonly relayer: RelayerSDK;
   readonly signer: GenericSigner;
   readonly address: Address;
-  readonly #storage: GenericStorage;
+  readonly storage: GenericStorage;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
@@ -127,13 +127,8 @@ export class ReadonlyToken {
     this.relayer = config.relayer;
     this.signer = config.signer;
     this.address = getAddress(config.address);
-    this.#storage = config.storage;
+    this.storage = config.storage;
     this.#onEvent = config.onEvent;
-  }
-
-  /** Access the storage backend (used by static batch methods). */
-  protected get storage(): GenericStorage {
-    return this.#storage;
   }
 
   /** Emit a structured event (no-op when no listener is registered). */
@@ -836,7 +831,7 @@ export class ReadonlyToken {
 
     // Check persistent cache — avoids the 2–5 s decrypt spinner on reload.
     const cached = await loadCachedBalance({
-      storage: this.#storage,
+      storage: this.storage,
       tokenAddress: this.address,
       owner: signerAddress,
       handle,
@@ -867,7 +862,7 @@ export class ReadonlyToken {
       }
       try {
         await saveCachedBalance({
-          storage: this.#storage,
+          storage: this.storage,
           tokenAddress: this.address,
           owner: signerAddress,
           handle,
