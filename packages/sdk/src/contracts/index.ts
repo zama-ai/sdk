@@ -55,5 +55,4 @@ export {
   getDelegationExpiryContract,
 } from "./acl";
 
-export { FHE_GAS_LIMIT } from "./gas";
 export { MAX_UINT64 } from "./constants";

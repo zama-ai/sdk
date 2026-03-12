@@ -212,7 +212,7 @@ export {
   type UseConfidentialIsApprovedSuspenseConfig,
 } from "./token/use-confidential-is-approved";
 export { useShield, type UseShieldConfig } from "./token/use-shield";
-export { useShieldETH } from "./token/use-shield-eth";
+export { useShieldETH, type UseShieldETHConfig } from "./token/use-shield-eth";
 export { useUnwrap } from "./token/use-unwrap";
 export { useUnwrapAll } from "./token/use-unwrap-all";
 export { useFinalizeUnwrap } from "./token/use-finalize-unwrap";

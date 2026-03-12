@@ -1,6 +1,5 @@
 import type { Address } from "viem";
 import { ACL_ABI } from "../abi/acl.abi";
-import { FHE_GAS_LIMIT } from "./gas";
 
 /**
  * Returns the contract config to delegate user decryption rights.
@@ -23,7 +22,6 @@ export function delegateForUserDecryptionContract(
     abi: ACL_ABI,
     functionName: "delegateForUserDecryption",
     args: [delegateAddress, contractAddress, expirationDate],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -47,7 +45,6 @@ export function revokeDelegationContract(
     abi: ACL_ABI,
     functionName: "revokeDelegationForUserDecryption",
     args: [delegateAddress, contractAddress],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
 

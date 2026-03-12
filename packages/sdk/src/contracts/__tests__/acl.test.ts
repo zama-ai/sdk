@@ -16,7 +16,6 @@ describe("ACL contract builders", () => {
     expect(config.address).toBe(ACL);
     expect(config.functionName).toBe("delegateForUserDecryption");
     expect(config.args).toEqual([DELEGATE, tokenAddress, 1000n]);
-    expect(config.gas).toBeDefined();
   });
 
   it("revokeDelegationContract", ({ tokenAddress }) => {
@@ -24,7 +23,6 @@ describe("ACL contract builders", () => {
     expect(config.address).toBe(ACL);
     expect(config.functionName).toBe("revokeDelegationForUserDecryption");
     expect(config.args).toEqual([DELEGATE, tokenAddress]);
-    expect(config.gas).toBeDefined();
   });
 
   it("getDelegationExpiryContract", ({ tokenAddress, userAddress }) => {
@@ -32,7 +30,5 @@ describe("ACL contract builders", () => {
     expect(config.address).toBe(ACL);
     expect(config.functionName).toBe("getUserDecryptionDelegationExpirationDate");
     expect(config.args).toEqual([userAddress, DELEGATE, tokenAddress]);
-    // read — no gas
-    expect((config as Record<string, unknown>).gas).toBeUndefined();
   });
 });

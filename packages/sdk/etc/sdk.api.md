@@ -2819,7 +2819,6 @@ export function confidentialBatchTransferContract(batcherAddress: Address, token
     readonly functionName: "confidentialBatchTransfer";
     readonly args: readonly [`0x${string}`, `0x${string}`, BatchTransferData[]];
     readonly value: bigint;
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -5762,7 +5761,6 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
     }];
     readonly functionName: "confidentialTransfer";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -7243,7 +7241,6 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
     }];
     readonly functionName: "confidentialTransferFrom";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -7296,28 +7293,39 @@ export interface CredentialsLoadingEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.CredentialsLoading;
 }
 
+// Warning: (ae-forgotten-export) The symbol "BaseCredentialsManager" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "EncryptedCredentials$1" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export class CredentialsManager {
+export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
     constructor(config: CredentialsManagerConfig);
     allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
+    // (undocumented)
+    protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials$1;
     clear(): Promise<void>;
+    // (undocumented)
+    protected clearCaches(): void;
     // (undocumented)
     static computeStoreKey(address: Address, chainId: number): Promise<string>;
     create(contractAddresses: Address[]): Promise<StoredCredentials>;
+    // (undocumented)
+    protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
+    // (undocumented)
+    protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
     isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
+    // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    protected signForContracts(meta: SigningMeta, contractAddresses: Address[]): Promise<Hex>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "CredentialsConfig" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface CredentialsManagerConfig {
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
+export interface CredentialsManagerConfig extends CredentialsConfig {
     relayer: RelayerSDK;
-    sessionStorage: GenericStorage;
-    sessionTTL?: number;
-    signer: GenericSigner;
-    storage: GenericStorage;
 }
 
 // @public (undocumented)
@@ -7412,27 +7420,35 @@ export interface DecryptStartEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptStart;
 }
 
+// Warning: (ae-forgotten-export) The symbol "EncryptedCredentials" needs to be exported by the entry point index.d.ts
+//
 // @public
-export class DelegatedCredentialsManager {
+export class DelegatedCredentialsManager extends BaseCredentialsManager<DelegatedStoredCredentials, EncryptedCredentials> {
     constructor(config: DelegatedCredentialsManagerConfig);
     allow(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<DelegatedStoredCredentials>;
+    // (undocumented)
+    protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials;
     clear(delegatorAddress: Address): Promise<void>;
     // (undocumented)
+    protected clearCaches(): void;
+    // (undocumented)
     static computeStoreKey(delegateAddress: Address, delegatorAddress: Address, chainId: number): Promise<string>;
+    // (undocumented)
+    protected decryptCredentials(encrypted: EncryptedCredentials, signature: Hex): Promise<DelegatedStoredCredentials>;
+    // (undocumented)
+    protected encryptCredentials(creds: DelegatedStoredCredentials): Promise<EncryptedCredentials>;
     isAllowed(delegatorAddress: Address): Promise<boolean>;
     isExpired(delegatorAddress: Address, contractAddress?: Address): Promise<boolean>;
     revoke(delegatorAddress: Address): Promise<void>;
+    // (undocumented)
+    protected signForContracts(meta: SigningMeta & {
+        delegatorAddress: Address;
+    }, contractAddresses: Address[]): Promise<Hex>;
 }
 
 // @public
-export interface DelegatedCredentialsManagerConfig {
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
+export interface DelegatedCredentialsManagerConfig extends CredentialsConfig {
     relayer: RelayerSDK;
-    sessionStorage: GenericStorage;
-    sessionTTL?: number;
-    signer: GenericSigner;
-    storage: GenericStorage;
 }
 
 // @public
@@ -7525,7 +7541,6 @@ export function delegateForUserDecryptionContract(aclAddress: Address, delegateA
     }];
     readonly functionName: "delegateForUserDecryption";
     readonly args: readonly [`0x${string}`, `0x${string}`, bigint];
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -11234,9 +11249,6 @@ export const FEE_MANAGER_ABI: readonly [{
     readonly type: "function";
 }];
 
-// @public
-export const FHE_GAS_LIMIT = 5000000n;
-
 export { FheTypeName }
 
 export { FhevmInstanceConfig }
@@ -12663,7 +12675,6 @@ export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, bu
     }];
     readonly functionName: "finalizeUnwrap";
     readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
-    readonly gas: 5000000n;
 };
 
 // @public (undocumented)
@@ -19635,10 +19646,12 @@ export class ReadonlyToken {
 export interface ReadonlyTokenConfig {
     address: Address;
     credentials?: CredentialsManager;
+    delegatedCredentials?: DelegatedCredentialsManager;
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage: GenericStorage;
+    sessionTTL?: number | "infinite";
     signer: GenericSigner;
     storage: GenericStorage;
 }
@@ -19777,7 +19790,6 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
     }];
     readonly functionName: "revokeDelegationForUserDecryption";
     readonly args: readonly [`0x${string}`, `0x${string}`];
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -21272,7 +21284,6 @@ export function setFinalizeUnwrapOperatorContract(tokenAddress: Address, operato
     }];
     readonly functionName: "setFinalizeUnwrapOperator";
     readonly args: readonly [`0x${string}`, number];
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -22744,7 +22755,6 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
     }];
     readonly functionName: "setOperator";
     readonly args: readonly [`0x${string}`, number];
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -27513,7 +27523,6 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
     }];
     readonly functionName: "unwrap";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -28985,7 +28994,6 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
     }];
     readonly functionName: "unwrap";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -30474,7 +30482,6 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
     }];
     readonly functionName: "wrap";
     readonly args: readonly [`0x${string}`, bigint];
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -31900,7 +31907,6 @@ export function wrapETHContract(wrapperAddress: Address, to: Address, amount: bi
     readonly functionName: "wrapETH";
     readonly args: readonly [`0x${string}`, bigint];
     readonly value: bigint;
-    readonly gas: 5000000n;
 };
 
 // @public
@@ -33421,6 +33427,8 @@ export class ZamaSDK {
     createToken(address: Address, wrapper?: Address): Token;
     // (undocumented)
     readonly credentials: CredentialsManager;
+    // (undocumented)
+    readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
     isAllowed(): Promise<boolean>;
     // (undocumented)
@@ -33442,14 +33450,17 @@ export interface ZamaSDKConfig {
     onEvent?: ZamaSDKEventListener;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
-    sessionTTL?: number;
+    sessionTTL?: number | "infinite";
     signer: GenericSigner;
     signerLifecycleCallbacks?: SignerLifecycleCallbacks;
     storage: GenericStorage;
 }
 
+// Warning: (ae-forgotten-export) The symbol "DelegationSubmittedEvent" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "RevokeDelegationSubmittedEvent" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -33481,6 +33492,8 @@ export const ZamaSDKEvents: {
     readonly ApproveUnderlyingSubmitted: "approveUnderlying:submitted";
     readonly UnwrapSubmitted: "unwrap:submitted";
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
+    readonly DelegationSubmitted: "delegation:submitted";
+    readonly RevokeDelegationSubmitted: "revokeDelegation:submitted";
     readonly UnshieldPhase1Submitted: "unshield:phase1_submitted";
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";

@@ -10,6 +10,10 @@ import { useZamaSDK } from "../provider";
  * A single wallet signature covers all addresses, so subsequent decrypt
  * operations on any of these tokens reuse cached credentials.
  *
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link KeypairExpiredError} — the re-encryption keypair has expired
+ *
  * @example
  * ```tsx
  * const { mutateAsync: allowTokens, isPending } = useAllowTokens();

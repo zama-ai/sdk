@@ -67,12 +67,10 @@ export function useConfidentialIsApproved(
           queryKey: zamaQueryKeys.confidentialIsApproved.token(config.tokenAddress),
           queryFn: skipToken,
         };
-  const factoryEnabled = "enabled" in baseOpts ? (baseOpts.enabled ?? true) : true;
-
   return useQuery({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: ("enabled" in baseOpts ? (baseOpts.enabled ?? true) : true) && (userEnabled ?? true),
   });
 }
 

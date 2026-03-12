@@ -231,6 +231,7 @@ import { UnwrappedStartedEvent } from '@zama-fhe/sdk';
 import { UnwrapRequestedEvent } from '@zama-fhe/sdk';
 import { UnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
+import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
 import { wrapContract } from '@zama-fhe/sdk';
@@ -1161,7 +1162,7 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
 }
 
 // @public
-export function useConfidentialTransfer(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, OptimisticMutateContext>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, OptimisticMutateContext>;
+export function useConfidentialTransfer<TContext = unknown>(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, TContext>): UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext>;
 
 // @public
 export interface UseConfidentialTransferConfig extends UseZamaConfig {
@@ -1246,16 +1247,10 @@ export function useMetadataSuspense(tokenAddress: Address): _tanstack_react_quer
 export function usePublicDecrypt(): _tanstack_react_query0.UseMutationResult<PublicDecryptResult, Error, `0x${string}`[], unknown>;
 
 // @public
-export function usePublicKey(): _tanstack_react_query0.UseQueryResult<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-} | null, Error>;
+export function usePublicKey(): _tanstack_react_query0.UseQueryResult<PublicKeyData | null, Error>;
 
 // @public
-export function usePublicParams(bits: number): _tanstack_react_query0.UseQueryResult<{
-    publicParams: Uint8Array;
-    publicParamsId: string;
-} | null, Error>;
+export function usePublicParams(bits: number): _tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
 
 // @public
 export interface UserDecryptFlowCallbacks {
@@ -1295,7 +1290,7 @@ export function useRevokeSession(options?: UseMutationOptions<void, Error, void>
 export function useRevokeTokens(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useShield(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, OptimisticMutateContext>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ShieldParams, OptimisticMutateContext>;
+export function useShield<TContext = unknown>(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;
 
 // @public
 export interface UseShieldConfig extends UseZamaConfig {
@@ -1303,7 +1298,12 @@ export interface UseShieldConfig extends UseZamaConfig {
 }
 
 // @public
-export function useShieldETH(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ShieldETHParams, `0x${string}`>;
+export function useShieldETH<TContext = unknown>(config: UseShieldETHConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldETHParams, TContext>;
+
+// @public
+export interface UseShieldETHConfig extends UseZamaConfig {
+    optimistic?: boolean;
+}
 
 // @public
 export function useShieldFee(config: UseFeeConfig, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<bigint, Error>;
