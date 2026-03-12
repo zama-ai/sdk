@@ -725,7 +725,7 @@ export class Token extends ReadonlyToken {
    * Revoke decryption delegation for this token.
    * Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
    *
-   * @param options.delegateAddress - Address to revoke delegation from.
+   * @param delegateAddress - Address to revoke delegation from.
    * @returns The transaction hash and mined receipt.
    * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
    */
@@ -764,7 +764,7 @@ export class Token extends ReadonlyToken {
    *
    * @param tokens - Array of Token instances to delegate on.
    * @param delegateAddress - Address to delegate decryption rights to.
-   * @param options - Optional expiration date.
+   * @param expirationDate - Optional expiration date.
    * @returns Map from token address to TransactionResult or ZamaError.
    */
   static async batchDelegateDecryption({
