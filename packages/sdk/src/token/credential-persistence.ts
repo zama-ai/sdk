@@ -29,11 +29,17 @@ export async function persistCredentials<TCreds, TEncrypted>(
   creds: TCreds,
   encryptFn: (creds: TCreds) => Promise<TEncrypted>,
 ): Promise<void> {
+  let encrypted: TEncrypted;
   try {
-    const encrypted = await encryptFn(creds);
+    encrypted = await encryptFn(creds);
+  } catch (error) {
+    console.warn("[zama-sdk] Failed to encrypt credentials for persistence:", error);
+    return;
+  }
+  try {
     await storage.set(storeKey, encrypted);
   } catch {
-    // Store write failed — credentials still usable in memory
+    // Storage write failed — credentials remain usable in memory.
   }
 }
 
@@ -44,7 +50,7 @@ export async function persistCredentials<TCreds, TEncrypted>(
 export async function deleteCredentials(storage: GenericStorage, storeKey: string): Promise<void> {
   try {
     await storage.delete(storeKey);
-  } catch {
-    // Best effort
+  } catch (error) {
+    console.warn("[zama-sdk] Failed to delete credentials:", error);
   }
 }

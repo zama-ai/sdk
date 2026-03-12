@@ -284,7 +284,7 @@ describe("Token", () => {
       );
     });
 
-    it("returns 0n when handle not found in decrypt result", async ({
+    it("throws when handle not found in decrypt result", async ({
       relayer,
 
       token,
@@ -292,9 +292,9 @@ describe("Token", () => {
     }) => {
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({});
 
-      const balance = await token.decryptBalance(handle as Address);
-
-      expect(balance).toBe(0n);
+      await expect(token.decryptBalance(handle as Address)).rejects.toThrow(
+        "Decryption returned no value for handle",
+      );
     });
   });
 

@@ -132,13 +132,15 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   }
 
   protected async signForContracts(
-    meta: { publicKey: Hex; startTimestamp: number; durationDays: number },
+    meta: {
+      publicKey: Hex;
+      startTimestamp: number;
+      durationDays: number;
+      delegatorAddress: Address;
+    },
     contractAddresses: Address[],
   ): Promise<Hex> {
-    // At runtime, meta is always EncryptedCredentials or DelegatedStoredCredentials
-    // which both carry delegatorAddress.
-    const delegatorAddress = (meta as unknown as { delegatorAddress: Address }).delegatorAddress;
-    return this.#signDelegated({ ...meta, delegatorAddress }, contractAddresses);
+    return this.#signDelegated(meta, contractAddresses);
   }
 
   protected async encryptCreds(creds: DelegatedStoredCredentials): Promise<EncryptedCredentials> {

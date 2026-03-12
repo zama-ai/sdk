@@ -38,10 +38,12 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.UnshieldPhase1Submitted).toBe("unshield:phase1_submitted");
     expect(ZamaSDKEvents.UnshieldPhase2Started).toBe("unshield:phase2_started");
     expect(ZamaSDKEvents.UnshieldPhase2Submitted).toBe("unshield:phase2_submitted");
+    expect(ZamaSDKEvents.DelegationSubmitted).toBe("delegation:submitted");
+    expect(ZamaSDKEvents.RevokeDelegationSubmitted).toBe("revokeDelegation:submitted");
   });
 
-  it("has exactly 25 event types", () => {
-    expect(Object.keys(ZamaSDKEvents)).toHaveLength(25);
+  it("has exactly 27 event types", () => {
+    expect(Object.keys(ZamaSDKEvents)).toHaveLength(27);
   });
 
   it("has unique event values", () => {

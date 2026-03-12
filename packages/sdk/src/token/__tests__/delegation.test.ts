@@ -297,7 +297,7 @@ describe("decryptBalanceAs", () => {
     );
   });
 
-  it("wraps errors as DecryptionFailedError", async ({
+  it("propagates SigningFailedError from credential creation", async ({
     signer,
     relayer,
     readonlyToken,
@@ -308,7 +308,7 @@ describe("decryptBalanceAs", () => {
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockRejectedValue(new Error("fail"));
 
     await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
-      expect.objectContaining({ code: "DECRYPTION_FAILED" }),
+      expect.objectContaining({ code: "SIGNING_FAILED" }),
     );
   });
 

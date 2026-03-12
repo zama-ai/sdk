@@ -22,7 +22,14 @@ import { pLimit, toError } from "../utils";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { CredentialsManager } from "./credentials-manager";
 import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
-import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
+import {
+  ConfigurationError,
+  DecryptionFailedError,
+  NoCiphertextError,
+  RelayerRequestFailedError,
+  SigningFailedError,
+  SigningRejectedError,
+} from "./errors";
 import { GenericSigner, GenericStorage } from "./token.types";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
@@ -249,7 +256,7 @@ export class ReadonlyToken {
     const { handles, owner, onError, maxConcurrency } = options ?? {};
 
     const firstToken = tokens[0]!;
-    const sdk = firstToken.relayer;
+    const sdk = ReadonlyToken.assertSameRelayer(tokens);
     const signer = firstToken.signer;
     const signerAddress = owner ?? (await signer.getAddress());
 
@@ -389,6 +396,7 @@ export class ReadonlyToken {
     const ownerAddress = owner ?? delegatorAddress;
 
     const firstToken = tokens[0]!;
+    ReadonlyToken.assertSameRelayer(tokens);
 
     const resolvedHandles =
       handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress))));
@@ -853,7 +861,10 @@ export class ReadonlyToken {
       });
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
-      const value = (result[handle] as bigint | undefined) ?? BigInt(0);
+      const value = result[handle] as bigint | undefined;
+      if (value === undefined) {
+        throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
+      }
       await saveCachedBalance({
         storage: this.#storage,
         tokenAddress: this.address,
@@ -914,7 +925,11 @@ export class ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
       for (const handle of nonZeroHandles) {
-        results.set(handle, (decrypted[handle] as bigint | undefined) ?? BigInt(0));
+        const value = decrypted[handle] as bigint | undefined;
+        if (value === undefined) {
+          throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
+        }
+        results.set(handle, value);
       }
     } catch (error) {
       this.emit({
@@ -927,6 +942,19 @@ export class ReadonlyToken {
 
     return results;
   }
+
+  /** Verify all tokens share the same relayer and return it. */
+  private static assertSameRelayer(tokens: ReadonlyToken[]): RelayerSDK {
+    const relayer = tokens[0]!.relayer;
+    for (let i = 1; i < tokens.length; i++) {
+      if (tokens[i]!.relayer !== relayer) {
+        throw new ConfigurationError(
+          "All tokens in a batch operation must share the same relayer instance",
+        );
+      }
+    }
+    return relayer;
+  }
 }
 
 /**
@@ -938,7 +966,9 @@ function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   if (
     error instanceof DecryptionFailedError ||
     error instanceof NoCiphertextError ||
-    error instanceof RelayerRequestFailedError
+    error instanceof RelayerRequestFailedError ||
+    error instanceof SigningRejectedError ||
+    error instanceof SigningFailedError
   ) {
     return error;
   }

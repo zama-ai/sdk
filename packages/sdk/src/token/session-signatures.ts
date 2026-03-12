@@ -27,11 +27,24 @@ export class SessionSignatures {
     this.#storage = storage;
   }
 
+  #assertSessionEntry(data: unknown): asserts data is SessionEntry {
+    assertObject(data, "Session entry");
+    assertString(data.signature, "session.signature");
+    assertCondition(
+      typeof data.createdAt === "number",
+      `Expected session.createdAt to be a number`,
+    );
+    assertCondition(
+      typeof data.ttl === "number" || data.ttl === "infinite",
+      `Expected session.ttl to be a number or "infinite"`,
+    );
+  }
+
   /** Retrieve and validate a session entry, or `null` if none exists. */
   async get(storeKey: string): Promise<SessionEntry | null> {
     const raw = await this.#storage.get<SessionEntry>(storeKey);
     if (raw === null) return null;
-    assertSessionEntry(raw);
+    this.#assertSessionEntry(raw);
     return raw;
   }
 
@@ -61,14 +74,4 @@ export class SessionSignatures {
     if (entry.ttl === 0) return true;
     return Math.floor(Date.now() / 1000) - entry.createdAt >= entry.ttl;
   }
-}
-
-function assertSessionEntry(data: unknown): asserts data is SessionEntry {
-  assertObject(data, "Session entry");
-  assertString(data.signature, "session.signature");
-  assertCondition(typeof data.createdAt === "number", `Expected session.createdAt to be a number`);
-  assertCondition(
-    typeof data.ttl === "number" || data.ttl === "infinite",
-    `Expected session.ttl to be a number or "infinite"`,
-  );
 }

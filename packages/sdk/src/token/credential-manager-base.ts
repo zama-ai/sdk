@@ -4,7 +4,7 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import { SigningFailedError, SigningRejectedError, wrapSigningError } from "./errors";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
 import { CredentialCrypto } from "./credential-crypto";
-import { SessionSignatures } from "./credential-session";
+import { SessionSignatures } from "./session-signatures";
 import type { BaseEncryptedCredentials } from "./credential-validation";
 import {
   isTimeValid,
@@ -57,6 +57,12 @@ export abstract class BaseCredentialsManager<
     this.keypairTTL = config.keypairTTL ?? 86400;
     this.sessionTTL = config.sessionTTL ?? 2592000;
     this.#onEvent = config.onEvent ?? Boolean;
+    if (typeof this.keypairTTL === "number" && this.keypairTTL < 0) {
+      throw new Error("keypairTTL must be >= 0");
+    }
+    if (typeof this.sessionTTL === "number" && this.sessionTTL < 0) {
+      throw new Error("sessionTTL must be >= 0");
+    }
   }
 
   protected emit(partial: ZamaSDKEventInput): void {
@@ -148,6 +154,7 @@ export abstract class BaseCredentialsManager<
       if (error instanceof SigningRejectedError || error instanceof SigningFailedError) {
         throw error;
       }
+      console.warn("[zama-sdk] Credential resolution failed, recreating:", error);
       await deleteCredentials(this.storage, storeKey);
     }
 
@@ -176,7 +183,8 @@ export abstract class BaseCredentialsManager<
       this.assertEncrypted(stored as unknown);
       const requiredContracts = contractAddress ? [contractAddress] : [];
       return !isCredentialValid(stored as TEncrypted, requiredContracts);
-    } catch {
+    } catch (error) {
+      console.warn("[zama-sdk] isExpired check failed, treating as expired:", error);
       return true;
     }
   }

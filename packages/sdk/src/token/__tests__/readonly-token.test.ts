@@ -238,9 +238,9 @@ describe("ReadonlyToken", () => {
       const unknownHandle = ("0x" + "ff".repeat(32)) as Address;
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({});
 
-      const result = await token.decryptHandles([unknownHandle as Address]);
-
-      expect(result.get(unknownHandle)).toBe(0n);
+      await expect(token.decryptHandles([unknownHandle as Address])).rejects.toThrow(
+        "Decryption returned no value for handle",
+      );
     });
 
     it("throws ZamaError on decryption failure", async ({

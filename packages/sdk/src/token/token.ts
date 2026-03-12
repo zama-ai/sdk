@@ -700,9 +700,15 @@ export class Token extends ReadonlyToken {
       const txHash = await this.signer.writeContract(
         delegateForUserDecryptionContract(acl, getAddress(delegateAddress), this.address, expDate),
       );
+      this.emit({ type: ZamaSDKEvents.DelegationSubmitted, txHash });
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "delegateDecryption",
+        error: toError(error),
+      });
       if (error instanceof ZamaError) throw error;
       throw new TransactionRevertedError("Delegation transaction failed", {
         cause: error instanceof Error ? error : undefined,
@@ -725,9 +731,15 @@ export class Token extends ReadonlyToken {
       const txHash = await this.signer.writeContract(
         revokeDelegationContract(acl, getAddress(delegateAddress), this.address),
       );
+      this.emit({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash });
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "revokeDelegation",
+        error: toError(error),
+      });
       if (error instanceof ZamaError) throw error;
       throw new TransactionRevertedError("Revoke delegation transaction failed", {
         cause: error instanceof Error ? error : undefined,
@@ -883,7 +895,7 @@ export class Token extends ReadonlyToken {
 function safeCallback(fn: () => void): void {
   try {
     fn();
-  } catch {
-    // Swallow – the caller must not be disrupted by listener errors.
+  } catch (error) {
+    console.warn("[zama-sdk] Callback threw:", error);
   }
 }

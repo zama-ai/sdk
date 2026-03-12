@@ -29,6 +29,9 @@ export const ZamaSDKEvents = {
   ApproveUnderlyingSubmitted: "approveUnderlying:submitted",
   UnwrapSubmitted: "unwrap:submitted",
   FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted",
+  // Delegation operations
+  DelegationSubmitted: "delegation:submitted",
+  RevokeDelegationSubmitted: "revokeDelegation:submitted",
   // Unshield orchestration
   UnshieldPhase1Submitted: "unshield:phase1_submitted",
   UnshieldPhase2Started: "unshield:phase2_started",
@@ -171,6 +174,16 @@ export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
   txHash: Hex;
 }
 
+export interface DelegationSubmittedEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.DelegationSubmitted;
+  txHash: Hex;
+}
+
+export interface RevokeDelegationSubmittedEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
+  txHash: Hex;
+}
+
 export interface UnshieldPhase1SubmittedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.UnshieldPhase1Submitted;
   txHash: Hex;
@@ -209,6 +222,8 @@ export type ZamaSDKEvent =
   | ApproveUnderlyingSubmittedEvent
   | UnwrapSubmittedEvent
   | FinalizeUnwrapSubmittedEvent
+  | DelegationSubmittedEvent
+  | RevokeDelegationSubmittedEvent
   | UnshieldPhase1SubmittedEvent
   | UnshieldPhase2StartedEvent
   | UnshieldPhase2SubmittedEvent;
