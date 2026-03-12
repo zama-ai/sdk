@@ -113,6 +113,8 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     decryptBalanceAs: vi.fn().mockResolvedValue(123n),
     decryptHandles: vi.fn().mockResolvedValue(new Map()),
     confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
+    isDelegated: vi.fn().mockResolvedValue(false),
+    getDelegationExpiry: vi.fn().mockResolvedValue(0n),
     name: vi.fn().mockResolvedValue("Test"),
     symbol: vi.fn().mockResolvedValue("TST"),
     decimals: vi.fn().mockResolvedValue(18),
@@ -326,6 +328,7 @@ export const test = base.extend<SdkFixtures>({
         unshieldAll: vi.fn().mockResolvedValue(txResult),
         resumeUnshield: vi.fn().mockResolvedValue(txResult),
         delegateDecryption: vi.fn().mockResolvedValue(txResult),
+        revokeDelegation: vi.fn().mockResolvedValue(txResult),
       } as unknown as Token;
     }
     await use(factory);

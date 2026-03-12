@@ -25,6 +25,8 @@ import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
 import {
   ConfigurationError,
   DecryptionFailedError,
+  DelegationExpiredError,
+  DelegationNotFoundError,
   NoCiphertextError,
   RelayerRequestFailedError,
   SigningFailedError,
@@ -711,6 +713,27 @@ export class ReadonlyToken {
       handle,
     });
     if (cached !== null) return cached;
+
+    // Pre-flight delegation check — avoids wasting a wallet signature on an
+    // expired or non-existent delegation.
+    const delegateAddress = await this.signer.getAddress();
+    const expiry = await this.getDelegationExpiry({
+      delegatorAddress: normalizedDelegator,
+      delegateAddress,
+    });
+    if (expiry === 0n) {
+      throw new DelegationNotFoundError(
+        `No active delegation from ${normalizedDelegator} to ${delegateAddress} for ${this.address}`,
+      );
+    }
+    if (expiry !== MAX_UINT64) {
+      const now = await this.signer.getBlockTimestamp();
+      if (expiry <= now) {
+        throw new DelegationExpiredError(
+          `Delegation from ${normalizedDelegator} to ${delegateAddress} for ${this.address} has expired`,
+        );
+      }
+    }
 
     const t0 = Date.now();
     try {

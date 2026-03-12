@@ -259,7 +259,9 @@ describe("decryptBalanceAs", () => {
     tokenAddress,
     delegatorAddress,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf
+      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (permanent → active)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },
@@ -304,7 +306,9 @@ describe("decryptBalanceAs", () => {
     handle,
     delegatorAddress,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf
+      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (permanent → active)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockRejectedValue(new Error("fail"));
 
     await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
@@ -321,7 +325,10 @@ describe("decryptBalanceAs", () => {
     delegatorAddress,
     userAddress,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (first call)
+      .mockResolvedValueOnce(handle); // confidentialBalanceOf (second call — cache hit skips delegation check)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },
@@ -345,6 +352,40 @@ describe("decryptBalanceAs", () => {
     const balance = await readonlyToken.decryptBalanceAs({ delegatorAddress, owner: userAddress });
     expect(balance).toBe(42n);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws DelegationNotFoundError when no delegation exists", async ({
+    signer,
+    relayer,
+    readonlyToken,
+    handle,
+    delegatorAddress,
+  }) => {
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf
+      .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
+
+    await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
+    );
+    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+  });
+
+  it("throws DelegationExpiredError when delegation has expired", async ({
+    signer,
+    relayer,
+    readonlyToken,
+    handle,
+    delegatorAddress,
+  }) => {
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf
+      .mockResolvedValueOnce(1000n); // getDelegationExpiry → expired (past timestamp)
+
+    await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "DELEGATION_EXPIRED" }),
+    );
+    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
   });
 });
 

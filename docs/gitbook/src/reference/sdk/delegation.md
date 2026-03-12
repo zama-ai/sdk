@@ -59,6 +59,8 @@ If no `expirationDate` is provided, the SDK uses `2^64 - 1` (effectively permane
 Grant delegation across multiple tokens in a single call:
 
 ```ts
+import { Token, ZamaError } from "@zama-fhe/sdk";
+
 const tokens = addresses.map((a) => sdk.createToken(a));
 
 const results = await Token.delegateDecryptionBatch({
