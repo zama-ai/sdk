@@ -17,6 +17,6 @@ export function revokeDelegationMutationOptions(
 > {
   return {
     mutationKey: ["zama.revokeDelegation", token.address] as const,
-    mutationFn: async ({ delegateAddress }) => token.revokeDelegation(delegateAddress),
+    mutationFn: async ({ delegateAddress }) => token.revokeDelegation({ delegateAddress }),
   };
 }

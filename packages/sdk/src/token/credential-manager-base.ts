@@ -98,7 +98,7 @@ export abstract class BaseCredentialsManager<
     this.crypto = new CredentialCrypto();
     this.keypairTTL = config.keypairTTL ?? 86400;
     this.sessionTTL = config.sessionTTL ?? 2592000;
-    this.#onEvent = config.onEvent ?? Boolean;
+    this.#onEvent = config.onEvent ?? (() => {});
 
     if (typeof this.keypairTTL === "number" && this.keypairTTL < 0) {
       throw new Error("keypairTTL must be >= 0");

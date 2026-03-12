@@ -21,6 +21,7 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import {
   ApprovalFailedError,
+  ConfigurationError,
   DecryptionFailedError,
   EncryptionFailedError,
   TransactionRevertedError,
@@ -690,6 +691,10 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
     expirationDate?: Date;
   }): Promise<TransactionResult> {
+    if (expirationDate && expirationDate.getTime() <= Date.now()) {
+      throw new ConfigurationError("Expiration date must be in the future");
+    }
+
     const acl = await this.getAclAddress();
     // uint64 max → no practical expiry
     const expDate = expirationDate
@@ -720,11 +725,15 @@ export class Token extends ReadonlyToken {
    * Revoke decryption delegation for this token.
    * Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
    *
-   * @param delegateAddress - Address to revoke delegation from.
+   * @param options.delegateAddress - Address to revoke delegation from.
    * @returns The transaction hash and mined receipt.
    * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
    */
-  async revokeDelegation(delegateAddress: Address): Promise<TransactionResult> {
+  async revokeDelegation({
+    delegateAddress,
+  }: {
+    delegateAddress: Address;
+  }): Promise<TransactionResult> {
     const acl = await this.getAclAddress();
 
     try {
@@ -782,13 +791,16 @@ export class Token extends ReadonlyToken {
    * @param delegateAddress - Address to revoke delegation from.
    * @returns Map from token address to TransactionResult or ZamaError.
    */
-  static async revokeDelegationBatch(
-    tokens: Token[],
-    delegateAddress: Address,
-  ): Promise<Map<Address, TransactionResult | ZamaError>> {
+  static async revokeDelegationBatch({
+    tokens,
+    delegateAddress,
+  }: {
+    tokens: Token[];
+    delegateAddress: Address;
+  }): Promise<Map<Address, TransactionResult | ZamaError>> {
     return Token.#batchDelegationOp(
       tokens,
-      (t) => t.revokeDelegation(delegateAddress),
+      (t) => t.revokeDelegation({ delegateAddress }),
       "Revoke delegation failed",
     );
   }

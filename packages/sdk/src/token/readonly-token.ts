@@ -249,112 +249,31 @@ export class ReadonlyToken {
     if (tokens.length === 0) return new Map();
 
     const { handles, owner, onError, maxConcurrency } = options ?? {};
-
     const firstToken = tokens[0]!;
     const sdk = ReadonlyToken.assertSameRelayer(tokens);
-    const signer = firstToken.signer;
-    const signerAddress = owner ?? (await signer.getAddress());
+    const signerAddress = owner ?? (await firstToken.signer.getAddress());
 
-    const resolvedHandles =
-      handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(signerAddress))));
-
-    if (tokens.length !== resolvedHandles.length) {
-      throw new DecryptionFailedError(
-        `tokens.length (${tokens.length}) must equal handles.length (${resolvedHandles.length})`,
-      );
-    }
-
-    const tokenStorage = firstToken.storage;
-    const results = new Map<Address, bigint>();
-
-    // Parallel cache lookups — avoids sequential IDB round-trips.
-    const uncached: Array<{ token: ReadonlyToken; handle: Address }> = [];
-    const cachedValues = await Promise.all(
-      tokens.map((token, i) => {
-        const handle = resolvedHandles[i]!;
-        if (token.isZeroHandle(handle)) return Promise.resolve(BigInt(0));
-        return loadCachedBalance({
-          storage: tokenStorage,
-          tokenAddress: token.address,
-          owner: signerAddress,
-          handle,
-        });
-      }),
-    );
-
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i]!;
-      const handle = resolvedHandles[i]!;
-      const cached = cachedValues[i];
-
-      if (cached !== null && cached !== undefined) {
-        results.set(token.address, cached);
-        continue;
-      }
-
-      uncached.push({ token, handle });
-    }
-
-    // All balances resolved from cache — no credentials needed.
-    if (uncached.length === 0) return results;
-
-    const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const creds = await firstToken.credentials.allow(...uncachedAddresses);
-
-    const errors: Array<{ address: Address; error: Error }> = [];
-    const decryptFns: Array<() => Promise<void>> = [];
-
-    for (const { token, handle } of uncached) {
-      decryptFns.push(() =>
-        sdk
-          .userDecrypt({
-            handles: [handle],
-            contractAddress: token.address,
-            signedContractAddresses: creds.contractAddresses,
-            privateKey: creds.privateKey,
-            publicKey: creds.publicKey,
-            signature: creds.signature,
-            signerAddress,
-            startTimestamp: creds.startTimestamp,
-            durationDays: creds.durationDays,
-          })
-          .then(async (result) => {
-            const value = result[handle] as bigint | undefined;
-            if (value === undefined) {
-              throw new DecryptionFailedError(
-                `Decryption returned no value for handle ${handle} on token ${token.address}`,
-              );
-            }
-            results.set(token.address, value);
-            await saveCachedBalance({
-              storage: tokenStorage,
-              tokenAddress: token.address,
-              owner: signerAddress,
-              handle,
-              value,
-            });
-          })
-          .catch((error) => {
-            const err = error instanceof Error ? error : new Error(String(error));
-            if (onError) {
-              results.set(token.address, onError(err, token.address));
-            } else {
-              errors.push({ address: token.address, error: err });
-            }
-          }),
-      );
-    }
-
-    await pLimit(decryptFns, maxConcurrency);
-
-    if (errors.length > 0) {
-      const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
-      throw new DecryptionFailedError(
-        `Batch decryption failed for ${errors.length} token(s): ${message}`,
-      );
-    }
-
-    return results;
+    return ReadonlyToken.#batchDecryptCore({
+      tokens,
+      handles,
+      ownerAddress: signerAddress,
+      onError,
+      maxConcurrency,
+      obtainCreds: (uncachedAddresses) => firstToken.credentials.allow(...uncachedAddresses),
+      decrypt: (creds, handle, contractAddress) =>
+        sdk.userDecrypt({
+          handles: [handle],
+          contractAddress,
+          signedContractAddresses: creds.contractAddresses,
+          privateKey: creds.privateKey,
+          publicKey: creds.publicKey,
+          signature: creds.signature,
+          signerAddress,
+          startTimestamp: creds.startTimestamp,
+          durationDays: creds.durationDays,
+        }),
+      errorPrefix: "Batch decryption",
+    });
   }
 
   /**
@@ -389,10 +308,60 @@ export class ReadonlyToken {
 
     const { delegatorAddress, handles, owner, onError, maxConcurrency } = options;
     const ownerAddress = owner ?? delegatorAddress;
-
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameRelayer(tokens);
 
+    return ReadonlyToken.#batchDecryptCore({
+      tokens,
+      handles,
+      ownerAddress,
+      onError,
+      maxConcurrency,
+      obtainCreds: (uncachedAddresses) =>
+        firstToken.delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses),
+      decrypt: (creds, handle, contractAddress) =>
+        firstToken.relayer.delegatedUserDecrypt({
+          handles: [handle],
+          contractAddress,
+          signedContractAddresses: creds.contractAddresses,
+          privateKey: creds.privateKey,
+          publicKey: creds.publicKey,
+          signature: creds.signature,
+          delegatorAddress: creds.delegatorAddress,
+          delegateAddress: creds.delegateAddress,
+          startTimestamp: creds.startTimestamp,
+          durationDays: creds.durationDays,
+        }),
+      errorPrefix: "Batch delegated decryption",
+    });
+  }
+
+  static async #batchDecryptCore<TCreds>(config: {
+    tokens: ReadonlyToken[];
+    handles: Handle[] | undefined;
+    ownerAddress: Address;
+    onError?: (error: Error, address: Address) => bigint;
+    maxConcurrency?: number;
+    obtainCreds: (uncachedAddresses: Address[]) => Promise<TCreds>;
+    decrypt: (
+      creds: TCreds,
+      handle: Address,
+      contractAddress: Address,
+    ) => Promise<Record<string, unknown>>;
+    errorPrefix: string;
+  }): Promise<Map<Address, bigint>> {
+    const {
+      tokens,
+      handles,
+      ownerAddress,
+      onError,
+      maxConcurrency,
+      obtainCreds,
+      decrypt,
+      errorPrefix,
+    } = config;
+
+    const firstToken = tokens[0]!;
     const resolvedHandles =
       handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress))));
 
@@ -405,7 +374,7 @@ export class ReadonlyToken {
     const tokenStorage = firstToken.storage;
     const results = new Map<Address, bigint>();
 
-    // Parallel cache lookups
+    // Parallel cache lookups — avoids sequential IDB round-trips.
     const uncached: Array<{ token: ReadonlyToken; handle: Address }> = [];
     const cachedValues = await Promise.all(
       tokens.map((token, i) => {
@@ -437,34 +406,19 @@ export class ReadonlyToken {
     if (uncached.length === 0) return results;
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
-    const creds = await firstToken.delegatedCredentials.allow(
-      delegatorAddress,
-      ...uncachedAddresses,
-    );
+    const creds = await obtainCreds(uncachedAddresses);
 
     const errors: Array<{ address: Address; error: Error }> = [];
     const decryptFns: Array<() => Promise<void>> = [];
 
     for (const { token, handle } of uncached) {
       decryptFns.push(() =>
-        firstToken.relayer
-          .delegatedUserDecrypt({
-            handles: [handle],
-            contractAddress: token.address,
-            signedContractAddresses: creds.contractAddresses,
-            privateKey: creds.privateKey,
-            publicKey: creds.publicKey,
-            signature: creds.signature,
-            delegatorAddress: creds.delegatorAddress,
-            delegateAddress: creds.delegateAddress,
-            startTimestamp: creds.startTimestamp,
-            durationDays: creds.durationDays,
-          })
+        decrypt(creds, handle, token.address)
           .then(async (result) => {
             const value = result[handle] as bigint | undefined;
             if (value === undefined) {
               throw new DecryptionFailedError(
-                `Delegated decryption returned no value for handle ${handle} on token ${token.address}`,
+                `${errorPrefix} returned no value for handle ${handle} on token ${token.address}`,
               );
             }
             results.set(token.address, value);
@@ -492,7 +446,7 @@ export class ReadonlyToken {
     if (errors.length > 0) {
       const message = errors.map((e) => `${e.address}: ${e.error.message}`).join("; ");
       throw new DecryptionFailedError(
-        `Batch delegated decryption failed for ${errors.length} token(s): ${message}`,
+        `${errorPrefix} failed for ${errors.length} token(s): ${message}`,
       );
     }
 

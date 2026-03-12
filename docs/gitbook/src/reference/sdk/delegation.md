@@ -79,13 +79,16 @@ for (const [address, result] of results) {
 ## Revoking delegation
 
 ```ts
-await token.revokeDelegation("0xDelegate");
+await token.revokeDelegation({ delegateAddress: "0xDelegate" });
 ```
 
 Batch revocation works the same way:
 
 ```ts
-const results = await Token.revokeDelegationBatch(tokens, "0xDelegate");
+const results = await Token.revokeDelegationBatch({
+  tokens,
+  delegateAddress: "0xDelegate",
+});
 ```
 
 ## Querying delegation status

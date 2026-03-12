@@ -149,7 +149,7 @@ describe("delegation write methods", () => {
     tokenAddress,
     delegateAddress,
   }) => {
-    await token.revokeDelegation(delegateAddress);
+    await token.revokeDelegation({ delegateAddress });
 
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -179,13 +179,13 @@ describe("delegation write methods", () => {
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("revert"));
 
-    await expect(token.revokeDelegation(delegateAddress)).rejects.toThrow(
+    await expect(token.revokeDelegation({ delegateAddress })).rejects.toThrow(
       expect.objectContaining({ code: "TRANSACTION_REVERTED" }),
     );
   });
 
   it("revokeDelegation returns TransactionResult", async ({ token, delegateAddress }) => {
-    const result = await token.revokeDelegation(delegateAddress);
+    const result = await token.revokeDelegation({ delegateAddress });
     expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
   });
 
@@ -230,7 +230,7 @@ describe("delegation write methods", () => {
       address: tokenAddress,
     });
 
-    await expect(tokenNoAcl.revokeDelegation(delegateAddress)).rejects.toThrow(
+    await expect(tokenNoAcl.revokeDelegation({ delegateAddress })).rejects.toThrow(
       "no transport config",
     );
   });
@@ -407,7 +407,10 @@ describe("batch delegation", () => {
   });
 
   it("revokeDelegationBatch works", async ({ token, tokenAddress, delegateAddress }) => {
-    const results = await Token.revokeDelegationBatch([token], delegateAddress);
+    const results = await Token.revokeDelegationBatch({
+      tokens: [token],
+      delegateAddress,
+    });
 
     expect(results.size).toBe(1);
     expect(results.get(tokenAddress)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
@@ -432,7 +435,10 @@ describe("batch delegation", () => {
       address: TOKEN2,
     });
 
-    const results = await Token.revokeDelegationBatch([token, token2], delegateAddress);
+    const results = await Token.revokeDelegationBatch({
+      tokens: [token, token2],
+      delegateAddress,
+    });
 
     expect(results.get(tokenAddress)).toEqual(expect.objectContaining({ txHash: "0xtxhash" }));
     expect(results.get(getAddress(TOKEN2))).toBeInstanceOf(Error);
@@ -459,5 +465,57 @@ describe("batch delegation", () => {
         args: [delegateAddress, tokenAddress, BigInt(Math.floor(expiry.getTime() / 1000))],
       }),
     );
+  });
+});
+
+describe("delegateDecryption validation", () => {
+  it("throws ConfigurationError when expiration date is in the past", async ({
+    token,
+    delegateAddress,
+  }) => {
+    const pastDate = new Date("2020-01-01");
+
+    await expect(
+      token.delegateDecryption({ delegateAddress, expirationDate: pastDate }),
+    ).rejects.toThrow(expect.objectContaining({ code: "CONFIGURATION" }));
+  });
+});
+
+describe("batchDecryptBalancesAs edge cases", () => {
+  const TOKEN2 = "0xeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeDeD" as Address;
+
+  it("throws when handles length does not match tokens length", async ({
+    readonlyToken,
+    delegatorAddress,
+  }) => {
+    await expect(
+      ReadonlyToken.batchDecryptBalancesAs([readonlyToken], {
+        delegatorAddress,
+        handles: [],
+      }),
+    ).rejects.toThrow("tokens.length (1) must equal handles.length (0)");
+  });
+
+  it("throws when tokens use different relayers", async ({
+    signer,
+    storage,
+    sessionStorage,
+    readonlyToken,
+    delegatorAddress,
+  }) => {
+    const otherRelayer = createMockRelayer();
+    const token2 = new ReadonlyToken({
+      relayer: otherRelayer,
+      signer,
+      storage,
+      sessionStorage,
+      address: TOKEN2,
+    });
+
+    await expect(
+      ReadonlyToken.batchDecryptBalancesAs([readonlyToken, token2], {
+        delegatorAddress,
+      }),
+    ).rejects.toThrow("All tokens in a batch operation must share the same relayer instance");
   });
 });
