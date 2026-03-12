@@ -63,6 +63,7 @@ export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { ChromeSessionStorage, chromeSessionStorage } from "./token/chrome-session-storage";
 export { CredentialsManager } from "./token/credentials-manager";
 export type { CredentialsManagerConfig } from "./token/credentials-manager";
+export { AesGcmEncryptor } from "./token/aes-gcm-encryptor";
 export {
   savePendingUnshield,
   loadPendingUnshield,
@@ -73,6 +74,8 @@ export type {
   GenericStorage,
   SignerLifecycleCallbacks,
   StoredCredentials,
+  CredentialEncryptor,
+  EncryptionContext,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,

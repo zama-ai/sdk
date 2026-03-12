@@ -50,6 +50,7 @@ export {
   CredentialsManager,
   ChromeSessionStorage,
   chromeSessionStorage,
+  AesGcmEncryptor,
 } from "@zama-fhe/sdk";
 
 // Re-export core types
@@ -84,6 +85,8 @@ export type {
   ShieldCallbacks,
   TransferCallbacks,
   CredentialsManagerConfig,
+  CredentialEncryptor,
+  EncryptionContext,
   ZamaSDKEventType,
   ZamaSDKEvent,
   ZamaSDKEventInput,

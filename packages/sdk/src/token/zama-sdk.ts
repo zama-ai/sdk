@@ -4,7 +4,7 @@ import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
 import { CredentialsManager } from "./credentials-manager";
-import type { GenericSigner, GenericStorage } from "./token.types";
+import type { CredentialEncryptor, GenericSigner, GenericStorage } from "./token.types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "./token.types";
@@ -39,6 +39,8 @@ export interface ZamaSDKConfig {
   sessionTTL?: number;
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
+  /** Pluggable encryption backend for FHE credentials. Defaults to AES-256-GCM. */
+  encryptor?: CredentialEncryptor;
   /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
   signerLifecycleCallbacks?: SignerLifecycleCallbacks;
 }
@@ -77,6 +79,7 @@ export class ZamaSDK {
       })(),
       sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: this.#onEvent,
+      encryptor: config.encryptor,
     });
     this.#identityReady = this.#initIdentity();
 

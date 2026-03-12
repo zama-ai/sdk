@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  CredentialEncryptor,
   GenericSigner,
   GenericStorage,
   RelayerSDK,
@@ -45,6 +46,8 @@ export interface ZamaProviderProps extends PropsWithChildren {
   sessionTTL?: number;
   /** Callback invoked on SDK lifecycle events. */
   onEvent?: ZamaSDKEventListener;
+  /** Pluggable encryption backend for FHE credentials. Defaults to AES-256-GCM. */
+  encryptor?: CredentialEncryptor;
 }
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
@@ -67,6 +70,7 @@ export function ZamaProvider({
   sessionStorage,
   keypairTTL,
   sessionTTL,
+  encryptor,
   onEvent,
 }: ZamaProviderProps) {
   const queryClient = useQueryClient();
@@ -98,10 +102,20 @@ export function ZamaProvider({
         sessionStorage,
         keypairTTL,
         sessionTTL,
+        encryptor,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,
       }),
-    [relayer, signer, storage, sessionStorage, keypairTTL, sessionTTL, signerLifecycleCallbacks],
+    [
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL,
+      sessionTTL,
+      encryptor,
+      signerLifecycleCallbacks,
+    ],
   );
 
   // Clean up signer subscriptions on unmount without terminating the
