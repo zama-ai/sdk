@@ -287,9 +287,11 @@ export class DelegatedCredentialsManager {
     return DelegatedCredentialsManager.computeStoreKey(delegateAddress, delegatorAddress, chainId);
   }
 
-  /** Check if a session entry has expired based on its recorded TTL. */
+  /** Check if a session entry has expired based on its recorded TTL. `ttl === 0` means never expire. */
   #isSessionExpired(entry: SessionEntry): boolean {
-    if (entry.ttl === 0) return true;
+    // Intentionally returns false for ttl === 0 (infinite session) —
+    // this differs from CredentialsManager where 0 means "expired immediately".
+    if (entry.ttl === 0) return false;
     return Math.floor(Date.now() / 1000) - entry.createdAt >= entry.ttl;
   }
 
