@@ -346,6 +346,42 @@ describe("decryptBalanceAs", () => {
     expect(balance).toBe(42n);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
   });
+
+  it("uses DelegatedCredentialsManager when credentials param is provided", async ({
+    readonlyToken,
+    relayer,
+    delegatorAddress,
+    handle,
+    signer,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(handle);
+    vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({
+      [handle]: 500n,
+    });
+
+    const mockCredentials = {
+      allow: vi.fn().mockResolvedValue({
+        publicKey: "0xpub",
+        privateKey: "0xpriv",
+        signature: "0xsig",
+        contractAddresses: [readonlyToken.address],
+        startTimestamp: Math.floor(Date.now() / 1000),
+        durationDays: 1,
+        delegatorAddress,
+        delegateAddress: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
+      }),
+    };
+
+    const result = await readonlyToken.decryptBalanceAs({
+      delegatorAddress,
+      credentials: mockCredentials as never,
+    });
+
+    expect(result).toBe(500n);
+    expect(mockCredentials.allow).toHaveBeenCalledWith(delegatorAddress, readonlyToken.address);
+    expect(relayer.generateKeypair).not.toHaveBeenCalled();
+    expect(relayer.createDelegatedUserDecryptEIP712).not.toHaveBeenCalled();
+  });
 });
 
 describe("batch delegation", () => {

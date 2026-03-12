@@ -22,7 +22,7 @@ import { pLimit, toError } from "../utils";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { CredentialsManager } from "./credentials-manager";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
-import { GenericSigner, GenericStorage } from "./token.types";
+import { DelegatedStoredCredentials, GenericSigner, GenericStorage } from "./token.types";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -555,9 +555,16 @@ export class ReadonlyToken {
   async decryptBalanceAs({
     delegatorAddress,
     owner,
+    credentials,
   }: {
     delegatorAddress: Address;
     owner?: Address;
+    credentials?: {
+      allow(
+        delegatorAddress: Address,
+        ...contractAddresses: Address[]
+      ): Promise<DelegatedStoredCredentials>;
+    };
   }): Promise<bigint> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedOwner = owner ? getAddress(owner) : normalizedDelegator;
@@ -575,6 +582,55 @@ export class ReadonlyToken {
       handle,
     });
     if (cached !== null) return cached;
+
+    // When a DelegatedCredentialsManager is provided, use it for cached credentials.
+    if (credentials) {
+      const t0 = Date.now();
+      try {
+        this.emit({ type: ZamaSDKEvents.DecryptStart });
+
+        const creds = await credentials.allow(delegatorAddress, this.address);
+
+        const result = await this.relayer.delegatedUserDecrypt({
+          handles: [handle],
+          contractAddress: this.address,
+          signedContractAddresses: creds.contractAddresses,
+          privateKey: creds.privateKey,
+          publicKey: creds.publicKey,
+          signature: creds.signature,
+          delegatorAddress: creds.delegatorAddress,
+          delegateAddress: creds.delegateAddress,
+          startTimestamp: creds.startTimestamp,
+          durationDays: creds.durationDays,
+        });
+
+        this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
+
+        const value = result[handle] as bigint | undefined;
+        if (value === undefined) {
+          throw new DecryptionFailedError(
+            `Delegated decryption returned no value for handle ${handle}`,
+          );
+        }
+
+        await saveCachedBalance({
+          storage: this.storage,
+          tokenAddress: this.address,
+          owner: normalizedOwner,
+          handle,
+          value,
+        });
+
+        return value;
+      } catch (error) {
+        this.emit({
+          type: ZamaSDKEvents.DecryptError,
+          error: toError(error),
+          durationMs: Date.now() - t0,
+        });
+        throw wrapDecryptError(error, "Failed to decrypt delegated balance");
+      }
+    }
 
     const t0 = Date.now();
     try {
