@@ -994,9 +994,7 @@ describe("storeKey caching", () => {
 
     // Change to the same address but with different casing (normalized form is 0x2222222222222222222222222222222222222222)
     // Test that getAddress normalization means casing change doesn't invalidate cache
-    vi.mocked(signer.getAddress).mockResolvedValue(
-      getAddress("0x2222222222222222222222222222222222222222"),
-    );
+    vi.mocked(signer.getAddress).mockResolvedValue("0x2222222222222222222222222222222222222222");
 
     await manager.allow(TOKEN_A);
     // getAddress normalization means casing change doesn't invalidate cache

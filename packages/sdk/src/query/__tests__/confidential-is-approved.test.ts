@@ -126,8 +126,8 @@ describe("confidentialIsApprovedQueryOptions", () => {
       expect.objectContaining({
         functionName: "isOperator",
         args: [
-          getAddress("0x2222222222222222222222222222222222222222"),
-          getAddress("0x3333333333333333333333333333333333333333"),
+          "0x2222222222222222222222222222222222222222",
+          "0x3333333333333333333333333333333333333333",
         ],
       }),
     );
@@ -152,8 +152,8 @@ describe("confidentialIsApprovedQueryOptions", () => {
       expect.objectContaining({
         functionName: "isOperator",
         args: [
-          getAddress("0x2222222222222222222222222222222222222222"),
-          getAddress("0x3333333333333333333333333333333333333333"),
+          "0x2222222222222222222222222222222222222222",
+          "0x3333333333333333333333333333333333333333",
         ],
       }),
     );
