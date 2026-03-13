@@ -19,8 +19,11 @@ contract Deploy is Script {
         SanctionsList sanctionsList = new SanctionsList();
         console.log("SanctionsList:", address(sanctionsList));
 
-        // 2. Deploy FeeManager (zero fees for tests)
-        FeeManager feeManager = new FeeManager(0, 0, 0, 0, msg.sender);
+        // 2. Deploy FeeManager (100 bps = 1% wrap/unwrap fee, matches computeFee in test fixtures)
+        // Fee recipient = Anvil account #3 ("royalties"), matching the old hardhat deploy.
+        // Must differ from the test account (account #0) so fees are actually deducted.
+        address feeRecipient = vm.addr(vm.deriveKey("test test test test test test test test test test test junk", 3));
+        FeeManager feeManager = new FeeManager(100, 100, 0, 0, feeRecipient);
         console.log("FeeManager:", address(feeManager));
 
         // 3. Deploy AdminProvider
@@ -36,7 +39,7 @@ contract Deploy is Script {
         console.log("Coordinator:", address(coordinator));
 
         // 6. Deploy test ERC20 tokens
-        TestERC20 usdc = new TestERC20("USD Coin", "USDC", 6);
+        TestERC20 usdc = new TestERC20("ERC20 Token", "ERC20", 6);
         console.log("USDC:", address(usdc));
 
         TestERC20 usdt = new TestERC20("Tether USD", "USDT", 6);

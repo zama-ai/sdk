@@ -11,7 +11,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { TEST_PRIVATE_KEY, MINTED } from "./constants";
+import { TEST_PRIVATE_KEY, MINTED, NEXTJS_ANVIL_PORT } from "./constants";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
 
 const privateKey = TEST_PRIVATE_KEY;
@@ -46,14 +46,18 @@ const mintAbi = [
   },
 ] as const;
 
-const viemClient = createTestClient({
-  account,
-  chain: foundry,
-  mode: "anvil",
-  transport: http(),
-})
-  .extend(walletActions)
-  .extend(publicActions);
+function createViemClient(port: number) {
+  return createTestClient({
+    account,
+    chain: foundry,
+    mode: "anvil",
+    transport: http(`http://127.0.0.1:${port}`),
+  })
+    .extend(walletActions)
+    .extend(publicActions);
+}
+
+type ViemClient = ReturnType<typeof createViemClient>;
 
 const erc20BalanceOfAbi = [
   {
@@ -65,21 +69,14 @@ const erc20BalanceOfAbi = [
   },
 ] as const;
 
-async function readErc20Balance(
-  tokenAddress: `0x${string}`,
-  owner: `0x${string}` = account.address,
-): Promise<bigint> {
-  return viemClient.readContract({
-    address: tokenAddress,
-    abi: erc20BalanceOfAbi,
-    functionName: "balanceOf",
-    args: [owner],
-  });
-}
-
 export interface ConfidentialBalances {
   cUSDT: bigint;
   cUSDC: bigint;
+}
+
+export interface WorkerFixtures {
+  anvilPort: number;
+  viemClient: ViemClient;
 }
 
 export interface TestFixtures {
@@ -87,22 +84,36 @@ export interface TestFixtures {
   baseURL: `http://${string}` | `https://${string}`;
   privateKey: typeof privateKey;
   account: typeof account;
-  viemClient: typeof viemClient;
   contracts: typeof contracts;
   formatUnits: typeof formatUnits;
   computeFee: typeof computeFee;
-  readErc20Balance: typeof readErc20Balance;
+  readErc20Balance: (tokenAddress: `0x${string}`, owner?: `0x${string}`) => Promise<bigint>;
   confidentialBalances: ConfidentialBalances;
 }
 
-export const test = base.extend<TestFixtures>({
+export const test = base.extend<TestFixtures, WorkerFixtures>({
+  anvilPort: [NEXTJS_ANVIL_PORT, { option: true, scope: "worker" }],
+  viemClient: [
+    async ({ anvilPort }, use) => {
+      await use(createViemClient(anvilPort));
+    },
+    { scope: "worker" },
+  ],
   privateKey,
   account,
-  viemClient,
   contracts,
   formatUnits: async ({}, use) => use(formatUnits),
   computeFee: async ({}, use) => use(computeFee),
-  readErc20Balance: async ({}, use) => use(readErc20Balance),
+  readErc20Balance: async ({ viemClient, account }, use) => {
+    await use((tokenAddress: `0x${string}`, owner: `0x${string}` = account.address) =>
+      viemClient.readContract({
+        address: tokenAddress,
+        abi: erc20BalanceOfAbi,
+        functionName: "balanceOf",
+        args: [owner],
+      }),
+    );
+  },
   confidentialBalances: async ({ page }, use) => {
     await page.goto("/wallet");
     await page.getByTestId("reveal-button").click();

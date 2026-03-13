@@ -32,7 +32,6 @@
     "submodule:update": "git submodule update --remote --merge",
     "contracts:deps": "cd contracts/lib/forge-fhevm && forge soldeer install",
     "contracts:build": "cd contracts && forge build",
-    "contracts:deploy": "cd contracts && ./deploy-local.sh",
     "anvil": "anvil --port 8545 --chain-id 31337 --silent",
     "e2e:test": "pnpm --filter @zama-fhe/playwright e2e:test",
     "e2e:test:ui": "pnpm --filter @zama-fhe/playwright e2e:test:ui",

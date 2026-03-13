@@ -95,6 +95,8 @@ jobs:
 
       - name: Build Next.js test-nextjs
         run: pnpm build:test-nextjs
+        env:
+          NEXT_PUBLIC_ANVIL_PORT: 8545
 
       - name: Save Next.js build cache
         if: steps.nextjs-build-cache.outputs.cache-hit != 'true'
