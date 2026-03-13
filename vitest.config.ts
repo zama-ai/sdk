@@ -6,11 +6,15 @@ function iifeStub(): Plugin {
   return {
     name: "iife-stub",
     resolveId(source) {
-      if (source.endsWith("?iife")) return `\0${source}`;
+      if (source.endsWith("?iife")) {
+        return `\0${source}`;
+      }
       return null;
     },
     load(id) {
-      if (id.startsWith("\0") && id.endsWith("?iife")) return "export default '';";
+      if (id.startsWith("\0") && id.endsWith("?iife")) {
+        return "export default ''; export const filename = 'stub.worker.js';";
+      }
       return null;
     },
   };
