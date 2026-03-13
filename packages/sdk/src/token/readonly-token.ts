@@ -313,33 +313,13 @@ export class ReadonlyToken {
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameRelayer(tokens);
 
-    // Pre-flight delegation check — avoids wasting a wallet signature on an
-    // expired or non-existent delegation.
-    const delegateAddress = await firstToken.signer.getAddress();
-    const expiry = await firstToken.getDelegationExpiry({
-      delegatorAddress: getAddress(delegatorAddress),
-      delegateAddress,
-    });
-    if (expiry === 0n) {
-      throw new DelegationNotFoundError(
-        `No active delegation from ${delegatorAddress} to ${delegateAddress}`,
-      );
-    }
-    if (expiry !== MAX_UINT64) {
-      const now = await firstToken.signer.getBlockTimestamp();
-      if (expiry <= now) {
-        throw new DelegationExpiredError(
-          `Delegation from ${delegatorAddress} to ${delegateAddress} has expired`,
-        );
-      }
-    }
-
     return ReadonlyToken.#batchDecryptCore({
       tokens,
       handles,
       ownerAddress,
       onError,
       maxConcurrency,
+      preFlightCheck: () => firstToken.#assertDelegationActive(delegatorAddress),
       obtainCreds: (uncachedAddresses) =>
         firstToken.delegatedCredentials.allow(delegatorAddress, ...uncachedAddresses),
       decrypt: (creds, handle, contractAddress) =>
@@ -365,6 +345,7 @@ export class ReadonlyToken {
     ownerAddress: Address;
     onError?: (error: Error, address: Address) => bigint;
     maxConcurrency?: number;
+    preFlightCheck?: () => Promise<void>;
     obtainCreds: (uncachedAddresses: Address[]) => Promise<TCreds>;
     decrypt: (
       creds: TCreds,
@@ -428,6 +409,11 @@ export class ReadonlyToken {
     // All balances resolved from cache — no credentials needed.
     if (uncached.length === 0) return results;
 
+    // Pre-flight check runs after cache lookups — skips RPC overhead when
+    // all balances are cached. Best-effort: checks the first token's contract
+    // only (delegations are typically granted per-delegator, not per-token).
+    if (config.preFlightCheck) await config.preFlightCheck();
+
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
     const creds = await obtainCreds(uncachedAddresses);
 
@@ -458,17 +444,14 @@ export class ReadonlyToken {
             }
           })
           .catch((error) => {
-            const err = error instanceof Error ? error : new Error(String(error));
+            const err = toError(error);
             if (onError) {
               try {
                 results.set(token.address, onError(err, token.address));
               } catch (callbackError) {
                 errors.push({
                   address: token.address,
-                  error:
-                    callbackError instanceof Error
-                      ? callbackError
-                      : new Error(String(callbackError)),
+                  error: toError(callbackError),
                 });
               }
             } else {
@@ -691,6 +674,31 @@ export class ReadonlyToken {
     );
   }
 
+  /**
+   * Throws if there is no active delegation from `delegatorAddress` to the
+   * connected signer for this token contract.
+   */
+  async #assertDelegationActive(delegatorAddress: Address): Promise<void> {
+    const delegateAddress = await this.signer.getAddress();
+    const expiry = await this.getDelegationExpiry({
+      delegatorAddress,
+      delegateAddress,
+    });
+    if (expiry === 0n) {
+      throw new DelegationNotFoundError(
+        `No active delegation from ${delegatorAddress} to ${delegateAddress} for ${this.address}`,
+      );
+    }
+    if (expiry !== MAX_UINT64) {
+      const now = await this.signer.getBlockTimestamp();
+      if (expiry <= now) {
+        throw new DelegationExpiredError(
+          `Delegation from ${delegatorAddress} to ${delegateAddress} for ${this.address} has expired`,
+        );
+      }
+    }
+  }
+
   protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
     return (await this.signer.readContract(
       confidentialBalanceOfContract(this.address, owner),
@@ -751,24 +759,7 @@ export class ReadonlyToken {
 
     // Pre-flight delegation check — avoids wasting a wallet signature on an
     // expired or non-existent delegation.
-    const delegateAddress = await this.signer.getAddress();
-    const expiry = await this.getDelegationExpiry({
-      delegatorAddress: normalizedDelegator,
-      delegateAddress,
-    });
-    if (expiry === 0n) {
-      throw new DelegationNotFoundError(
-        `No active delegation from ${normalizedDelegator} to ${delegateAddress} for ${this.address}`,
-      );
-    }
-    if (expiry !== MAX_UINT64) {
-      const now = await this.signer.getBlockTimestamp();
-      if (expiry <= now) {
-        throw new DelegationExpiredError(
-          `Delegation from ${normalizedDelegator} to ${delegateAddress} for ${this.address} has expired`,
-        );
-      }
-    }
+    await this.#assertDelegationActive(normalizedDelegator);
 
     const t0 = Date.now();
     try {
@@ -995,7 +986,7 @@ function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   if (statusCode === 400) {
     return new NoCiphertextError(
       error instanceof Error ? error.message : "No ciphertext for this account",
-      { cause: error instanceof Error ? error : undefined },
+      { cause: error },
     );
   }
 
@@ -1003,11 +994,11 @@ function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
     return new RelayerRequestFailedError(
       error instanceof Error ? error.message : fallbackMessage,
       statusCode,
-      { cause: error instanceof Error ? error : undefined },
+      { cause: error },
     );
   }
 
   return new DecryptionFailedError(fallbackMessage, {
-    cause: error instanceof Error ? error : undefined,
+    cause: error,
   });
 }

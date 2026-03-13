@@ -360,13 +360,17 @@ describe("decryptBalanceAs", () => {
     readonlyToken,
     handle,
     delegatorAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
 
     await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
-      expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
+      expect.objectContaining({
+        code: "DELEGATION_NOT_FOUND",
+        message: expect.stringContaining(tokenAddress),
+      }),
     );
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
   });
@@ -377,15 +381,90 @@ describe("decryptBalanceAs", () => {
     readonlyToken,
     handle,
     delegatorAddress,
+    tokenAddress,
   }) => {
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(1000n); // getDelegationExpiry → expired (past timestamp)
 
     await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
-      expect.objectContaining({ code: "DELEGATION_EXPIRED" }),
+      expect.objectContaining({
+        code: "DELEGATION_EXPIRED",
+        message: expect.stringContaining(tokenAddress),
+      }),
     );
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+  });
+
+  it("preserves non-Error cause from relayer rejection", async ({
+    signer,
+    relayer,
+    readonlyToken,
+    handle,
+    tokenAddress,
+    delegatorAddress,
+  }) => {
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf
+      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
+      domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
+      types: { DelegatedUserDecryptRequestVerification: [] },
+      message: {
+        publicKey: "0xpub",
+        contractAddresses: [tokenAddress],
+        delegatorAddress,
+        startTimestamp: "1000",
+        durationDays: "1",
+        extraData: "0x",
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce("raw string error");
+
+    try {
+      await readonlyToken.decryptBalanceAs({ delegatorAddress });
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      // wrapDecryptError must preserve non-Error causes (not drop them as undefined)
+      expect((err as { cause: unknown }).cause).toBe("raw string error");
+    }
+  });
+
+  it("preserves object cause with statusCode from relayer rejection", async ({
+    signer,
+    relayer,
+    readonlyToken,
+    handle,
+    tokenAddress,
+    delegatorAddress,
+  }) => {
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf
+      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
+      domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
+      types: { DelegatedUserDecryptRequestVerification: [] },
+      message: {
+        publicKey: "0xpub",
+        contractAddresses: [tokenAddress],
+        delegatorAddress,
+        startTimestamp: "1000",
+        durationDays: "1",
+        extraData: "0x",
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    const objError = { statusCode: 502, message: "bad gateway" };
+    vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(objError);
+
+    try {
+      await readonlyToken.decryptBalanceAs({ delegatorAddress });
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect((err as { cause: unknown }).cause).toBe(objError);
+      expect((err as { code: string }).code).toBe("RELAYER_REQUEST_FAILED");
+    }
   });
 });
 
