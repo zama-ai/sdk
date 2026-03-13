@@ -136,7 +136,7 @@ export class RelayerNode implements RelayerSDK {
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<EIP712TypedData> {
     const pool = await this.#ensurePool();
     const result = await pool.createEIP712({
@@ -202,7 +202,7 @@ export class RelayerNode implements RelayerSDK {
     contractAddresses: Address[],
     delegatorAddress: Address,
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const pool = await this.#ensurePool();
     return pool.createDelegatedUserDecryptEIP712({

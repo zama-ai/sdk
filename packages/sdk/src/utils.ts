@@ -53,11 +53,11 @@ export async function pLimit<T>(
   fns: (() => Promise<T>)[],
   maxConcurrency = Infinity,
 ): Promise<T[]> {
-  if (!isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
+  if (!Number.isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
     return Promise.all(fns.map((f) => f()));
   }
 
-  const results: T[] = new Array(fns.length);
+  const results: T[] = Array.from({ length: fns.length });
   let index = 0;
 
   async function worker() {

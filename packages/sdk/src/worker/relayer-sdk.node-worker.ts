@@ -78,6 +78,11 @@ async function handleNodeInit(request: NodeInitRequest): Promise<void> {
   }
 }
 
+/** Coerce a boolean to bigint for numeric FHE types. */
+function toBigInt(value: bigint | boolean): bigint {
+  return typeof value === "boolean" ? (value ? 1n : 0n) : value;
+}
+
 async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { id, type, payload } = request;
   const { values, contractAddress, userAddress } = payload;
@@ -96,25 +101,25 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
           input.addBool(typeof value === "boolean" ? value : value !== 0n);
           break;
         case "euint8":
-          input.add8(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add8(toBigInt(value));
           break;
         case "euint16":
-          input.add16(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add16(toBigInt(value));
           break;
         case "euint32":
-          input.add32(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add32(toBigInt(value));
           break;
         case "euint64":
-          input.add64(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add64(toBigInt(value));
           break;
         case "euint128":
-          input.add128(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add128(toBigInt(value));
           break;
         case "euint256":
-          input.add256(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add256(toBigInt(value));
           break;
         case "eaddress":
-          input.addAddress(typeof value === "boolean" ? String(value) : String(value));
+          input.addAddress(String(value));
           break;
         default:
           throw new Error(`Unsupported FHE type: ${fheType}`);

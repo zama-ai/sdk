@@ -175,7 +175,7 @@ export class RelayerCleartext implements RelayerSDK {
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<EIP712TypedData> {
     return {
       domain: USER_DECRYPT_EIP712.domain(
@@ -317,7 +317,7 @@ export class RelayerCleartext implements RelayerSDK {
     contractAddresses: Address[],
     delegatorAddress: Address,
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const message: KmsDelegatedUserDecryptEIP712Type["message"] = {
       publicKey: publicKey as KmsDelegatedUserDecryptEIP712Type["message"]["publicKey"],

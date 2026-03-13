@@ -42,8 +42,8 @@ let sdkGlobal: RelayerSDKGlobal | null = null;
 // Store relayer URL and CSRF token for fetch interception.
 // These globals are per-worker-instance. Do NOT convert to SharedWorker
 // without rearchitecting CSRF token management to be per-connection.
-let relayerUrlBase: string = "";
-let csrfTokenBase: string = "";
+let relayerUrlBase = "";
+let csrfTokenBase = "";
 
 // CSRF header name (must match server expectation)
 const CSRF_HEADER_NAME = "x-csrf-token";
@@ -273,7 +273,7 @@ async function handleInit(request: InitRequest): Promise<void> {
     sdkGlobal = self.relayerSDK;
 
     // Initialize WASM (optionally with a rayon thread pool for parallel FHE ops)
-    await sdkGlobal.initSDK(thread != null ? { thread } : undefined);
+    await sdkGlobal.initSDK(thread !== null && thread !== undefined ? { thread } : undefined);
 
     // Create SDK instance with caller-provided config
     const config: FhevmInstanceConfig = {
@@ -291,6 +291,11 @@ async function handleInit(request: InitRequest): Promise<void> {
   }
 }
 
+/** Coerce a boolean to bigint for numeric FHE types. */
+function toBigInt(value: bigint | boolean): bigint {
+  return typeof value === "boolean" ? (value ? 1n : 0n) : value;
+}
+
 /**
  * Add a single typed value to the encrypted input builder.
  */
@@ -304,25 +309,25 @@ function addTypedValue(
       input.addBool(typeof value === "boolean" ? value : value !== 0n);
       break;
     case "euint8":
-      input.add8(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add8(toBigInt(value));
       break;
     case "euint16":
-      input.add16(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add16(toBigInt(value));
       break;
     case "euint32":
-      input.add32(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add32(toBigInt(value));
       break;
     case "euint64":
-      input.add64(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add64(toBigInt(value));
       break;
     case "euint128":
-      input.add128(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add128(toBigInt(value));
       break;
     case "euint256":
-      input.add256(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add256(toBigInt(value));
       break;
     case "eaddress":
-      input.addAddress(typeof value === "boolean" ? String(value) : String(value));
+      input.addAddress(String(value));
       break;
     default:
       throw new Error(`Unsupported FHE type: ${fheType}`);
@@ -411,12 +416,12 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
  * Relayer SDK errors may carry a `status` or `statusCode` property.
  */
 function extractHttpStatus(error: unknown): number | undefined {
-  if (error == null || typeof error !== "object") return undefined;
+  if (error === null || error === undefined || typeof error !== "object") return undefined;
   const e = error as Record<string, unknown>;
   if (typeof e.statusCode === "number") return e.statusCode;
   if (typeof e.status === "number") return e.status;
   // Check nested cause
-  if (e.cause != null && typeof e.cause === "object") {
+  if (e.cause !== null && e.cause !== undefined && typeof e.cause === "object") {
     const cause = e.cause as Record<string, unknown>;
     if (typeof cause.statusCode === "number") return cause.statusCode;
     if (typeof cause.status === "number") return cause.status;

@@ -25,6 +25,7 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
   const mockGetSigner = vi.fn();
 
   class MockBrowserProvider {
+    // eslint-disable-next-line no-useless-constructor -- mock accepts provider arg to match BrowserProvider signature
     constructor(_provider: unknown) {}
     getSigner() {
       return mockGetSigner();

@@ -233,7 +233,7 @@ export class RelayerWeb implements RelayerSDK {
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<EIP712TypedData> {
     const worker = await this.#ensureWorker();
     const result = await worker.createEIP712({
@@ -319,7 +319,7 @@ export class RelayerWeb implements RelayerSDK {
     contractAddresses: Address[],
     delegatorAddress: Address,
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const worker = await this.#ensureWorker();
     return worker.createDelegatedUserDecryptEIP712({
