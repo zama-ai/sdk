@@ -10,9 +10,9 @@ import {
   walletActions,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { hardhat } from "viem/chains";
-import deployments from "../../../hardhat/deployments.json" with { type: "json" };
-import { MINTED, TEST_PRIVATE_KEY } from "./constants";
+import { foundry } from "viem/chains";
+import { TEST_PRIVATE_KEY, MINTED } from "./constants";
+import deployments from "../../../contracts/deployments.json" with { type: "json" };
 
 const privateKey = TEST_PRIVATE_KEY;
 
@@ -48,8 +48,8 @@ const mintAbi = [
 
 const viemClient = createTestClient({
   account,
-  chain: hardhat,
-  mode: "hardhat",
+  chain: foundry,
+  mode: "anvil",
   transport: http(),
 })
   .extend(walletActions)

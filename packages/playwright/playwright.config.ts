@@ -5,6 +5,7 @@ const VITE_PORT = 3200;
 const CI = !!process.env.CI;
 
 export default defineConfig({
+  globalSetup: "./global-setup.ts",
   testDir: "./tests",
   outputDir: "./test-results/",
   fullyParallel: false,
@@ -41,7 +42,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "npm --prefix ../../hardhat run node",
+      command: "anvil --port 8545 --chain-id 31337 --silent",
       port: 8545,
       reuseExistingServer: !CI,
     },
