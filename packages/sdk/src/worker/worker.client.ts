@@ -9,10 +9,6 @@ import type {
 import { BaseWorkerClient } from "./worker.base-client";
 import workerCode from "./relayer-sdk.worker.ts?iife";
 
-const workerBlobUrl = /* @__PURE__ */ URL.createObjectURL(
-  new Blob([workerCode], { type: "application/javascript" }),
-);
-
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
   cdnUrl: string;
@@ -36,7 +32,10 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
   }
 
   protected createWorker(): Worker {
-    return new Worker(workerBlobUrl);
+    const scriptUrl = URL.createObjectURL(
+      new Blob([workerCode], { type: "application/javascript" }),
+    );
+    return new Worker(scriptUrl);
   }
 
   protected wireEvents(worker: Worker): void {
