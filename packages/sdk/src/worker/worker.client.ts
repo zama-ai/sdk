@@ -38,7 +38,11 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
       return new Worker(runtime.getURL(workerFilename));
     }
     const blobUrl = URL.createObjectURL(new Blob([workerCode], { type: "application/javascript" }));
-    return new Worker(blobUrl);
+    try {
+      return new Worker(blobUrl);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
   }
 
   protected wireEvents(worker: Worker): void {

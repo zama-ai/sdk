@@ -88,18 +88,18 @@ export interface BrowserExtensionRuntime {
  * this to detect the environment and resolve file URLs via `runtime.getURL`.
  */
 export function getBrowserExtensionRuntime(): BrowserExtensionRuntime | undefined {
-  try {
-    const g = globalThis as unknown as Record<string, unknown>;
-    for (const ns of [g.chrome, g.browser]) {
+  const g = globalThis as unknown as Record<string, unknown>;
+  for (const ns of [g.chrome, g.browser]) {
+    try {
       assertObject(ns, "ns");
       const { runtime } = ns;
       assertObject(runtime, "runtime");
       assertStringProp(runtime, "id", "runtime.id");
       assertFunctionProp<"getURL", (path: string) => string>(runtime, "getURL", "runtime.getURL");
       return runtime;
+    } catch {
+      continue;
     }
-  } catch {
-    // Not in an extension context
   }
   return undefined;
 }
