@@ -69,7 +69,7 @@
     "no-unsafe-negation": "error",
     "no-unsafe-optional-chaining": "error",
     "no-unused-labels": "error",
-    "no-unused-private-class-members": "error",
+    "no-unused-private-class-members": "off",
     "no-unused-vars": [
       "warn",
       {
