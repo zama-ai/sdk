@@ -6,7 +6,7 @@ import { NEXTJS_ANVIL_PORT, VITE_ANVIL_PORT } from "./fixtures/constants";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contractsDir = resolve(__dirname, "../../contracts");
-const DEPLOYER_PK = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const ANVIL_DEPLOYER_PK = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // Anvil account #0
 
 function waitForPort(port: number, timeoutMs = 30_000): Promise<void> {
   const start = Date.now();
@@ -58,23 +58,13 @@ export default async function globalSetup() {
     timeout: 300_000,
     env: {
       ...process.env,
-      DEPLOYER_PRIVATE_KEY: DEPLOYER_PK,
-      DECRYPTION_ADDRESS: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
-      INPUT_VERIFICATION_ADDRESS: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-      CHAIN_ID_GATEWAY: "10901",
-      KMS_SIGNER_PRIVATE_KEY_0:
-        "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91",
-      PUBLIC_DECRYPTION_THRESHOLD: "1",
-      COPROCESSOR_SIGNER_PRIVATE_KEY_0:
-        "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901",
-      COPROCESSOR_THRESHOLD: "1",
     },
   });
 
   // Deploy test contracts (ERC20s, wrappers, FeeManager) to each instance.
   for (const port of ports) {
     execSync(
-      `forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:${port} --broadcast --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --private-key ${DEPLOYER_PK}`,
+      `forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:${port} --broadcast --silent --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --private-key ${ANVIL_DEPLOYER_PK}`,
       { cwd: contractsDir, stdio: "inherit", timeout: 300_000 },
     );
   }
