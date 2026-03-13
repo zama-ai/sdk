@@ -430,8 +430,8 @@ port.on("message", async (request: WorkerRequest) => {
       default:
         console.error("[NodeWorker] Unknown request type:", (request as WorkerRequest).type);
     }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     sendError(
       request?.id ?? "unknown",
       request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),

@@ -1,5 +1,5 @@
 import { toBytes } from "viem";
-import { describe, expect, it } from "vitest";
+
 import { HANDLE_VERSION } from "../constants";
 import { fheTypeIdFromName } from "../fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "../handle";
@@ -38,10 +38,10 @@ describe("handle", () => {
 
     expect(handleHex).toBe(expectedHandle);
     const handle = BigInt(handleHex);
-    expect(handle & 0xffn).toBe(BigInt(HANDLE_VERSION));
-    expect((handle >> 8n) & 0xffn).toBe(BigInt(fheTypeIdFromName("euint8")));
-    expect((handle >> 16n) & 0xffff_ffff_ffff_ffffn).toBe(31_337n);
-    expect((handle >> 80n) & 0xffn).toBe(5n);
+    expect(handle & 0xFFn).toBe(BigInt(HANDLE_VERSION));
+    expect((handle >> 8n) & 0xFFn).toBe(BigInt(fheTypeIdFromName("euint8")));
+    expect((handle >> 16n) & 0xFFFF_FFFF_FFFF_FFFFn).toBe(31_337n);
+    expect((handle >> 80n) & 0xFFn).toBe(5n);
   });
 
   it("computeMockCiphertext matches a precomputed test vector", () => {

@@ -62,7 +62,7 @@ function ERC20TokenRow({
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const { address: connectedAddress } = useConnection();
-  const enabled = !!connectedAddress;
+  const enabled = Boolean(connectedAddress);
   const { data, isLoading, error } = useReadContracts({
     contracts: [
       symbolContract(tokenAddress),
@@ -81,7 +81,7 @@ function ERC20TokenRow({
     <tr data-testid={`token-row-${symbol ?? tokenAddress}`}>
       <td className="px-4 py-2">{symbol ?? "..."}</td>
       <td className="px-4 py-2 font-mono text-right" data-testid="balance">
-        {error ? "Error" : isLoading ? "..." : (formatted ?? "...")}
+        {error ? "Error" : (isLoading ? "..." : (formatted ?? "..."))}
       </td>
       <td className="px-4 py-2 text-right">
         <LinkComponent

@@ -10,7 +10,7 @@ import type {
   Address,
   Hex,
 } from "viem";
-import { writeContract } from "viem/actions";
+import type { writeContract } from "viem/actions";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   GenericSigner,

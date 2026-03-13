@@ -1,5 +1,5 @@
 import { ERC165_ABI } from "../abi/erc165.abi";
-import { type Address } from "viem";
+import type { Address } from "viem";
 
 /** ERC-165 interface ID for IERC7984 (confidential fungible token). */
 export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;

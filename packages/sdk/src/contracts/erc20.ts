@@ -1,5 +1,5 @@
 import { ERC20_ABI, ERC20_METADATA_ABI } from "../abi/erc20.abi";
-import { type Address } from "viem";
+import type { Address } from "viem";
 
 /**
  * Returns the contract config to read a token's name.

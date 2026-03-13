@@ -123,7 +123,7 @@ const DOMAIN_FIELD_TYPES: Record<string, string> = {
  */
 export function buildEIP712DomainType(
   domain: EIP712TypedData["domain"],
-): Array<{ name: string; type: string }> {
+): { name: string; type: string }[] {
   return Object.keys(DOMAIN_FIELD_TYPES)
     .filter((k) => k in domain)
     .map((k) => ({ name: k, type: DOMAIN_FIELD_TYPES[k]! }));

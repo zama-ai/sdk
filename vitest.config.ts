@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import path from "path";
+import path from "node:path";
 
 const sharedResolve = {
   dedupe: ["wagmi", "react", "react-dom", "@tanstack/react-query"],

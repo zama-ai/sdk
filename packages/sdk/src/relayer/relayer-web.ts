@@ -95,7 +95,7 @@ export class RelayerWeb implements RelayerSDK {
       throw new Error(`Invalid thread count: ${threads}. Must be a positive integer.`);
     }
 
-    if (threads !== undefined && typeof globalThis.SharedArrayBuffer === "undefined") {
+    if (threads !== undefined && globalThis.SharedArrayBuffer === undefined) {
       this.#config.logger?.warn(
         "threads option requires SharedArrayBuffer (COOP/COEP headers). Falling back to single-threaded.",
       );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "../utils/query";
-import { type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import {
   batchTransferFeeQueryOptions,

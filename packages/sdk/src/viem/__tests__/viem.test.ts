@@ -390,8 +390,8 @@ describe("Viem write contract helpers", () => {
   vit(
     "writeConfidentialTransferContract calls writeContract with correct config",
     ({ tokenAddress, userAddress, walletClient }) => {
-      const handle = new Uint8Array([0xab, 0xcd]);
-      const proof = new Uint8Array([0xef]);
+      const handle = new Uint8Array([0xAB, 0xCD]);
+      const proof = new Uint8Array([0xEF]);
       writeConfidentialTransferContract(walletClient, tokenAddress, userAddress, handle, proof);
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -440,8 +440,8 @@ describe("Viem write contract helpers", () => {
   vit(
     "writeUnwrapContract calls writeContract with correct config",
     ({ tokenAddress, userAddress, walletClient }) => {
-      const handle = new Uint8Array([0xde, 0xad]);
-      const proof = new Uint8Array([0xbe, 0xef]);
+      const handle = new Uint8Array([0xDE, 0xAD]);
+      const proof = new Uint8Array([0xBE, 0xEF]);
       writeUnwrapContract(walletClient, tokenAddress, userAddress, SPENDER, handle, proof);
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({

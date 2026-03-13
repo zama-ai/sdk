@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+
 import { describe, it, expect, beforeEach } from "../../test-fixtures";
 import { EncryptionFailedError } from "../../token/errors";
 
@@ -51,11 +51,11 @@ const { mockWorkerClient, MockRelayerWorkerClient, mockPool, MockNodeWorkerPool 
   },
 );
 
-vi.mock("../../worker/worker.client", () => ({
+vi.mock(import('../../worker/worker.client'), () => ({
   RelayerWorkerClient: MockRelayerWorkerClient,
 }));
 
-vi.mock("../../worker/worker.node-pool", () => ({
+vi.mock(import('../../worker/worker.node-pool'), () => ({
   NodeWorkerPool: MockNodeWorkerPool,
 }));
 

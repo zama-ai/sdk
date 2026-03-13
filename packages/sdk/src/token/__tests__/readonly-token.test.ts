@@ -418,7 +418,7 @@ describe("ReadonlyToken", () => {
         .mockResolvedValueOnce({ [handle]: 1000n })
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
-      const captured: Array<{ error: Error; address: Address }> = [];
+      const captured: { error: Error; address: Address }[] = [];
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
         handles: [handle as Address, VALID_HANDLE2 as Address],
         onError: (error, address) => {

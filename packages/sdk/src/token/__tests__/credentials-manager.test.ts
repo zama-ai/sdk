@@ -239,8 +239,8 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -260,8 +260,8 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -281,8 +281,8 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -302,9 +302,9 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
-      expect((e as ZamaError).cause).toBeUndefined();
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
+      expect((error as ZamaError).cause).toBeUndefined();
     }
   });
 

@@ -31,7 +31,7 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
   }
 
   protected createWorker(): Worker {
-    return new Worker(new URL("./relayer-sdk.worker.js", import.meta.url));
+    return new Worker(new URL("relayer-sdk.worker.js", import.meta.url));
   }
 
   protected wireEvents(worker: Worker): void {

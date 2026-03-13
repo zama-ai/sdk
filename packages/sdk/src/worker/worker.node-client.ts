@@ -25,7 +25,7 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker, NodeWorkerClientC
   }
 
   protected createWorker(): Worker {
-    return new Worker(new URL("./relayer-sdk.node-worker.js", import.meta.url));
+    return new Worker(new URL("relayer-sdk.node-worker.js", import.meta.url));
   }
 
   protected wireEvents(worker: Worker): void {

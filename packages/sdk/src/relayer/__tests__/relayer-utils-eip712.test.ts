@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+
 import { describe, it, expect, beforeEach } from "../../test-fixtures";
 
 // ---------------------------------------------------------------------------
@@ -29,12 +29,12 @@ const { mockWorkerClient, MockRelayerWorkerClient } = vi.hoisted(() => {
   return { mockWorkerClient, MockRelayerWorkerClient };
 });
 
-vi.mock("../../worker/worker.client", () => ({
+vi.mock(import('../../worker/worker.client'), () => ({
   RelayerWorkerClient: MockRelayerWorkerClient,
 }));
 
 import { RelayerWeb } from "../relayer-web";
-import { type Address } from "viem";
+import type { Address } from "viem";
 
 const MOCK_EIP712 = {
   domain: {

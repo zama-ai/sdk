@@ -30,7 +30,7 @@ describe("CredentialsManager.computeStoreKey", () => {
       "SHA-256",
       new TextEncoder().encode(`${address}:${chainId}`),
     );
-    const hex = Array.from(new Uint8Array(hash))
+    const hex = [...new Uint8Array(hash)]
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
     const expected = hex.slice(0, 32);

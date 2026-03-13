@@ -139,9 +139,9 @@ export function BatchTransferForm({
       >
         {encrypt.isPending
           ? "Encrypting..."
-          : batchTransfer.isPending
+          : (batchTransfer.isPending
             ? "Transferring..."
-            : "Batch Transfer"}
+            : "Batch Transfer")}
       </button>
 
       {batchTransfer.isSuccess && (

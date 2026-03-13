@@ -1,4 +1,5 @@
-import { toHex, Address } from "viem";
+import type { Address } from "viem";
+import { toHex } from "viem";
 import { ENCRYPTION_ABI } from "../abi/encryption.abi";
 import type { Handle } from "../relayer/relayer-sdk.types";
 

@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { signerAddressQueryOptions } from "@zama-fhe/sdk/query";
-import { vi } from "vitest";
+
 import { beforeEach, describe, expect, test } from "../test-fixtures";
 import { useConfidentialBalances } from "../token/use-confidential-balances";
 
@@ -12,20 +12,20 @@ const OWNER = "0x3333333333333333333333333333333333333333" as Address;
 const HANDLE_A = `0x${"aa".repeat(32)}` as Address;
 const HANDLE_B = `0x${"bb".repeat(32)}` as Address;
 
-vi.mock("@tanstack/react-query", async () => {
+vi.mock(import('@tanstack/react-query'), async () => {
   const actual =
     await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
   return { ...actual, useQuery: vi.fn() };
 });
 
-vi.mock("../provider", () => ({
+vi.mock(import('../provider'), () => ({
   useZamaSDK: vi.fn(() => ({
     signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
     createReadonlyToken: vi.fn((address: Address) => ({ address })),
   })),
 }));
 
-vi.mock("@zama-fhe/sdk/query", () => ({
+vi.mock(import('@zama-fhe/sdk/query'), () => ({
   confidentialBalancesQueryOptions: vi.fn(() => ({
     queryKey: ["balances"],
     queryFn: vi.fn(),

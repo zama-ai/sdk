@@ -82,7 +82,7 @@ export class CredentialsManager {
       "SHA-256",
       new TextEncoder().encode(`${normalizedAddress}:${chainId}`),
     );
-    const hex = Array.from(new Uint8Array(hash))
+    const hex = [...new Uint8Array(hash)]
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
     return hex.slice(0, 32);
@@ -128,7 +128,7 @@ export class CredentialsManager {
   async allow(...contractAddresses: Address[]): Promise<StoredCredentials> {
     contractAddresses = [
       ...new Set(contractAddresses.map((address) => getAddress(address))),
-    ].sort();
+    ].toSorted();
     const storeKey = await this.#storeKey();
     this.#emit({ type: ZamaSDKEvents.CredentialsLoading, contractAddresses });
     try {
@@ -407,7 +407,7 @@ export class CredentialsManager {
 
   /** Merge two contract address lists into a deduplicated sorted array. */
   #mergeContracts(existing: Address[], incoming: Address[]): Address[] {
-    return [...new Set([...existing, ...incoming].map((address) => getAddress(address)))].sort();
+    return [...new Set([...existing, ...incoming].map((address) => getAddress(address)))].toSorted();
   }
 
   /**
@@ -500,7 +500,7 @@ export class CredentialsManager {
   async create(contractAddresses: Address[]): Promise<StoredCredentials> {
     contractAddresses = [
       ...new Set(contractAddresses.map((address) => getAddress(address))),
-    ].sort();
+    ].toSorted();
     this.#emit({ type: ZamaSDKEvents.CredentialsCreating, contractAddresses });
     try {
       const storeKey = await this.#storeKey();

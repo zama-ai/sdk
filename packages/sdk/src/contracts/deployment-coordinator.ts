@@ -1,5 +1,5 @@
 import { DEPLOYMENT_COORDINATOR_ABI } from "../abi/deployment-coordinator.abi";
-import { type Address } from "viem";
+import type { Address } from "viem";
 
 /**
  * Returns the contract config to look up a wrapper for a given ERC-20 token.

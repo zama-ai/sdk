@@ -11,7 +11,7 @@ import {
 } from "viem";
 import type { EIP1193Provider } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { describe, expect, it } from "vitest";
+
 import { RelayerCleartext } from "../relayer-cleartext";
 import type { Handle } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
@@ -28,7 +28,7 @@ const ACL_ABI = parseAbi([
 
 const EXECUTOR_ABI = parseAbi(["function plaintexts(bytes32 handle) view returns (uint256)"]);
 
-type MockClientOptions = {
+interface MockClientOptions {
   persistAllowed?: (handle: string, account: string) => boolean;
   isAllowedForDecryption?: (handle: string) => boolean;
   isHandleDelegatedForUserDecryption?: (
@@ -38,8 +38,8 @@ type MockClientOptions = {
     handle: string,
   ) => boolean;
   plaintexts?: Record<string, bigint>;
-};
-type MockCall = { method: string; params: unknown[] };
+}
+interface MockCall { method: string; params: unknown[] }
 type UserDecryptParams = Parameters<RelayerCleartext["userDecrypt"]>[0];
 const asHandle = (value: string): Handle => value as Handle;
 
@@ -167,7 +167,7 @@ function filterEthCallsTo(calls: MockCall[], to: string): MockCall[] {
   });
 }
 
-describe("RelayerCleartext", () => {
+describe(RelayerCleartext, () => {
   it("constructor uses kms/input private keys from config", () => {
     const customInputKey =
       "0x0000000000000000000000000000000000000000000000000000000000000001" as const;
@@ -558,7 +558,7 @@ describe("RelayerCleartext", () => {
 
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [boolHandle] }));
 
-    expect(result[boolHandle]).toBe(true);
+    expect(result[boolHandle]).toBeTruthy();
   });
 
   it("userDecrypt decodes ebool handle with value 0 as false", async () => {
@@ -570,12 +570,12 @@ describe("RelayerCleartext", () => {
 
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [boolHandle] }));
 
-    expect(result[boolHandle]).toBe(false);
+    expect(result[boolHandle]).toBeFalsy();
   });
 
   it("userDecrypt decodes eaddress handle as hex string", async () => {
     const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
-    const addressValue = BigInt("0x1000000000000000000000000000000000000001");
+    const addressValue = 0x1000000000000000000000000000000000000001n;
     const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [addressHandle.toLowerCase()]: addressValue },
@@ -584,7 +584,7 @@ describe("RelayerCleartext", () => {
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [addressHandle] }));
 
     const decoded = result[addressHandle];
-    expect(typeof decoded).toBe("string");
+    expectTypeOf(decoded).toBeString();
     expect(decoded).toMatch(/^0x[0-9a-f]{40}$/);
   });
 
@@ -847,7 +847,7 @@ describe("RelayerCleartext", () => {
   it("delegatedUserDecrypt decodes ebool and eaddress handles", async () => {
     const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
     const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
-    const addressValue = BigInt("0x1000000000000000000000000000000000000001");
+    const addressValue = 0x1000000000000000000000000000000000000001n;
 
     const { fhevm } = createInstance({
       persistAllowed: () => true,
@@ -870,9 +870,9 @@ describe("RelayerCleartext", () => {
       durationDays: 1,
     });
 
-    expect(result[boolHandle]).toBe(true);
+    expect(result[boolHandle]).toBeTruthy();
     const addressResult = result[addressHandle];
-    expect(typeof addressResult).toBe("string");
+    expectTypeOf(addressResult).toBeString();
     expect(addressResult).toMatch(/^0x[0-9a-f]{40}$/);
   });
 

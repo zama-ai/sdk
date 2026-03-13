@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+
 import { describe, it, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
 
@@ -29,12 +29,12 @@ const { MockNodeWorkerClass, nodeUuidFn } = vi.hoisted(() => {
   return { MockNodeWorkerClass, nodeUuidFn };
 });
 
-vi.mock("node:worker_threads", () => ({
+vi.mock(import('node:worker_threads'), () => ({
   default: { Worker: MockNodeWorkerClass },
   Worker: MockNodeWorkerClass,
 }));
 
-vi.mock("node:crypto", () => ({
+vi.mock(import('node:crypto'), () => ({
   default: { randomUUID: (...args: unknown[]) => nodeUuidFn(...args) },
   randomUUID: (...args: unknown[]) => nodeUuidFn(...args),
 }));

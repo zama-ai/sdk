@@ -1,9 +1,10 @@
 "use client";
 
+import type {
+  UseMutationOptions} from "@tanstack/react-query";
 import {
   useMutation,
   useQueryClient,
-  UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";

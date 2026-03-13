@@ -274,7 +274,7 @@ export function applyDecryptedValues(
  * Items without a block number are placed at the beginning (most recent).
  */
 export function sortByBlockNumber(items: readonly ActivityItem[]): ActivityItem[] {
-  return [...items].sort((a, b) => {
+  return [...items].toSorted((a, b) => {
     const aBlock = a.metadata.blockNumber;
     const bBlock = b.metadata.blockNumber;
 

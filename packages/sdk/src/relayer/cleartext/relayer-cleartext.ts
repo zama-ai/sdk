@@ -1,4 +1,5 @@
-import { PrivateKeyAccount, privateKeyToAccount } from "viem/accounts";
+import type { PrivateKeyAccount} from "viem/accounts";
+import { privateKeyToAccount } from "viem/accounts";
 import {
   concat,
   createPublicClient,
@@ -91,7 +92,7 @@ const EBOOL_ID: FheTypeId = 0;
 const EADDRESS_ID: FheTypeId = 7;
 
 function decodeClearValueType(handle: Handle, rawValue: bigint): ClearValueType {
-  const typeByte = Number((BigInt(handle) >> 8n) & 0xffn);
+  const typeByte = Number((BigInt(handle) >> 8n) & 0xFFn);
   if (typeByte === EBOOL_ID) return rawValue !== 0n;
   if (typeByte === EADDRESS_ID) return toHex(rawValue, { size: 20 });
   return rawValue;

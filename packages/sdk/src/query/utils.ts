@@ -7,7 +7,7 @@ function isPlainObject(value: any): value is Object {
 
   // If has modified constructor
   const ctor = value.constructor;
-  if (typeof ctor === "undefined") return true;
+  if (ctor === undefined) return true;
 
   // If has modified prototype
   const prot = ctor.prototype;
@@ -116,7 +116,7 @@ export function hashFn(queryKey: readonly unknown[]): string {
   return JSON.stringify(queryKey, (_, value) => {
     if (isPlainObject(value)) {
       return Object.keys(value)
-        .sort()
+        .toSorted()
         .reduce(
           (result, key) => {
             result[key] = value[key];

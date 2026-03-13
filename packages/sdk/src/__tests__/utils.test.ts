@@ -8,20 +8,20 @@ describe("toHex", () => {
   });
 
   it("converts single byte", () => {
-    expect(toHex(new Uint8Array([0xff]))).toBe("0xff");
+    expect(toHex(new Uint8Array([0xFF]))).toBe("0xff");
   });
 
   it("pads single-digit hex values with leading zero", () => {
-    expect(toHex(new Uint8Array([0x0a]))).toBe("0x0a");
+    expect(toHex(new Uint8Array([0x0A]))).toBe("0x0a");
     expect(toHex(new Uint8Array([0x00]))).toBe("0x00");
   });
 
   it("converts multiple bytes", () => {
-    expect(toHex(new Uint8Array([0xde, 0xad, 0xbe, 0xef]))).toBe("0xdeadbeef");
+    expect(toHex(new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF]))).toBe("0xdeadbeef");
   });
 
   it("converts a 32-byte value", () => {
-    const bytes = new Uint8Array(32).fill(0xab);
+    const bytes = new Uint8Array(32).fill(0xAB);
     expect(toHex(bytes)).toBe("0x" + "ab".repeat(32));
   });
 });

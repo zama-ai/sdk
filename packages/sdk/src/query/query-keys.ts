@@ -1,5 +1,5 @@
 import { getAddress } from "viem";
-import { type Address } from "viem";
+import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
 const normalizeAddresses = (addresses: Address[]): Address[] =>

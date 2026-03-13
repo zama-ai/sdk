@@ -1,7 +1,7 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { getAddress } from "viem";
-import { type Address } from "viem";
-import { expectTypeOf } from "vitest";
+import type { Address } from "viem";
+
 
 import { zamaQueryKeys } from "../query-keys";
 

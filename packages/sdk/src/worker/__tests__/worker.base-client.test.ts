@@ -182,8 +182,8 @@ describe("BaseWorkerClient", () => {
 
       // Start the request and attach rejection handler before advancing timers
       let rejectedError: Error | undefined;
-      const promise = client.generateKeypair().catch((e: Error) => {
-        rejectedError = e;
+      const promise = client.generateKeypair().catch((error: Error) => {
+        rejectedError = error;
       });
 
       await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
@@ -351,9 +351,9 @@ describe("BaseWorkerClient", () => {
     try {
       await client.generateKeypair();
       expect.unreachable("should have thrown");
-    } catch (err) {
-      expect((err as Error).message).toBe("rate limited");
-      expect((err as Error & { statusCode?: number }).statusCode).toBe(429);
+    } catch (error) {
+      expect((error as Error).message).toBe("rate limited");
+      expect((error as Error & { statusCode?: number }).statusCode).toBe(429);
     }
   });
 

@@ -241,11 +241,11 @@ export class ReadonlyToken {
     const results = new Map<Address, bigint>();
 
     // Parallel cache lookups — avoids sequential IDB round-trips.
-    const uncached: Array<{ token: ReadonlyToken; handle: Address }> = [];
+    const uncached: { token: ReadonlyToken; handle: Address }[] = [];
     const cachedValues = await Promise.all(
       tokens.map((token, i) => {
         const handle = resolvedHandles[i]!;
-        if (token.isZeroHandle(handle)) return Promise.resolve(BigInt(0));
+        if (token.isZeroHandle(handle)) return Promise.resolve(0n);
         return loadCachedBalance({
           storage: tokenStorage,
           tokenAddress: token.address,
@@ -274,8 +274,8 @@ export class ReadonlyToken {
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
     const creds = await firstToken.credentials.allow(...uncachedAddresses);
 
-    const errors: Array<{ address: Address; error: Error }> = [];
-    const decryptFns: Array<() => Promise<void>> = [];
+    const errors: { address: Address; error: Error }[] = [];
+    const decryptFns: (() => Promise<void>)[] = [];
 
     for (const { token, handle } of uncached) {
       decryptFns.push(() =>
@@ -292,7 +292,7 @@ export class ReadonlyToken {
             durationDays: creds.durationDays,
           })
           .then(async (result) => {
-            const value = (result[handle] as bigint | undefined) ?? BigInt(0);
+            const value = (result[handle] as bigint | undefined) ?? 0n;
             results.set(token.address, value);
             await saveCachedBalance({
               storage: tokenStorage,
@@ -504,7 +504,7 @@ export class ReadonlyToken {
    * ```
    */
   async decryptBalance(handle: Handle, owner?: Address): Promise<bigint> {
-    if (this.isZeroHandle(handle)) return BigInt(0);
+    if (this.isZeroHandle(handle)) return 0n;
 
     const signerAddress = owner ?? (await this.signer.getAddress());
 
@@ -535,7 +535,7 @@ export class ReadonlyToken {
       });
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
-      const value = (result[handle] as bigint | undefined) ?? BigInt(0);
+      const value = (result[handle] as bigint | undefined) ?? 0n;
       await saveCachedBalance({
         storage: this.#storage,
         tokenAddress: this.address,
@@ -569,7 +569,7 @@ export class ReadonlyToken {
 
     for (const handle of handles) {
       if (this.isZeroHandle(handle)) {
-        results.set(handle, BigInt(0));
+        results.set(handle, 0n);
       } else {
         nonZeroHandles.push(handle);
       }
@@ -596,7 +596,7 @@ export class ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
 
       for (const handle of nonZeroHandles) {
-        results.set(handle, (decrypted[handle] as bigint | undefined) ?? BigInt(0));
+        results.set(handle, (decrypted[handle] as bigint | undefined) ?? 0n);
       }
     } catch (error) {
       this.emit({

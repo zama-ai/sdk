@@ -1,5 +1,6 @@
-import { vi } from "vitest";
-import { encodeAbiParameters, Address, Hex } from "viem";
+
+import type { Address, Hex } from "viem";
+import { encodeAbiParameters } from "viem";
 import { test as base, describe, expect } from "../../test-fixtures";
 import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
 
@@ -33,7 +34,7 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
   return { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner };
 });
 
-vi.mock("ethers", () => {
+vi.mock(import('ethers'), () => {
   return {
     ethers: { Contract: MockContract },
     Contract: MockContract,
@@ -558,8 +559,8 @@ describe("ethers write contract helpers", () => {
 
   eit("writeUnwrapContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({ hash: TX_HASH });
-    const handle = new Uint8Array(32).fill(0xde);
-    const proof = new Uint8Array(32).fill(0xef);
+    const handle = new Uint8Array(32).fill(0xDE);
+    const proof = new Uint8Array(32).fill(0xEF);
     const hash = await writeUnwrapContract(
       mockSigner,
       tokenAddress,

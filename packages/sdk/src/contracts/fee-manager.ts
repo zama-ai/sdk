@@ -1,5 +1,5 @@
 import { FEE_MANAGER_ABI } from "../abi/fee-manager.abi";
-import { type Address } from "viem";
+import type { Address } from "viem";
 
 /**
  * Returns the contract config to compute the wrap fee.

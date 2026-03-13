@@ -91,9 +91,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     if (this.#worker) return this.#worker;
 
     if (!this.#initPromise) {
-      this.#initPromise = this.#doInitWorker().catch((err) => {
+      this.#initPromise = this.#doInitWorker().catch((error) => {
         this.#initPromise = null;
-        throw err;
+        throw error;
       });
     }
     return this.#initPromise;
@@ -108,9 +108,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
       await this.sendRequestTo<InitResponseData>(worker, type, payload, INIT_TIMEOUT_MS);
       this.onWorkerReady?.(worker);
       this.#worker = worker;
-    } catch (err) {
+    } catch (error) {
       this.terminateWorker(worker);
-      throw err;
+      throw error;
     }
 
     return this.#worker;

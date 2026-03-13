@@ -1,4 +1,4 @@
-import { type Hex } from "viem";
+import type { Hex } from "viem";
 
 /** Coerce an unknown caught value to an Error instance. */
 export function toError(error: unknown): Error {
@@ -50,7 +50,7 @@ export function assertCondition(condition: boolean, message: string): asserts co
  * Defaults to `Infinity` (equivalent to `Promise.all`).
  */
 export async function pLimit<T>(
-  fns: Array<() => Promise<T>>,
+  fns: (() => Promise<T>)[],
   maxConcurrency = Infinity,
 ): Promise<T[]> {
   if (!isFinite(maxConcurrency) || maxConcurrency >= fns.length) {

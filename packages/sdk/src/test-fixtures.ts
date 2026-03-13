@@ -1,14 +1,17 @@
 /* eslint-disable no-empty-pattern */
-import { test as base, vi } from "vitest";
+import { test as base } from "vitest";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { Handle } from "./relayer/relayer-sdk.types";
 import type { Address, Hex } from "viem";
-import { CredentialsManager, CredentialsManagerConfig } from "./token/credentials-manager";
+import type { CredentialsManagerConfig } from "./token/credentials-manager";
+import { CredentialsManager } from "./token/credentials-manager";
 import { MemoryStorage } from "./token/memory-storage";
-import { ReadonlyToken } from "./token/readonly-token";
-import { Token, TokenConfig } from "./token/token";
+import type { ReadonlyToken } from "./token/readonly-token";
+import type { TokenConfig } from "./token/token";
+import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, TransactionResult } from "./token/token.types";
-import { ZamaSDK, ZamaSDKConfig } from "./token/zama-sdk";
+import type { ZamaSDKConfig } from "./token/zama-sdk";
+import { ZamaSDK } from "./token/zama-sdk";
 import { ZamaSDKEvents } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 

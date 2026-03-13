@@ -2,7 +2,8 @@ import { act } from "@testing-library/react";
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import type { Address, GenericSigner, RawLog, Token } from "@zama-fhe/sdk";
 import { expect, vi } from "../test-fixtures";
-import { createMockRelayer, createMockSigner } from "../../../sdk/src/test-fixtures";
+import type { createMockRelayer} from "../../../sdk/src/test-fixtures";
+import { createMockSigner } from "../../../sdk/src/test-fixtures";
 import { expectCacheInvalidated } from "../test-helpers";
 
 export const TOKEN = "0x1111111111111111111111111111111111111111" as Address;

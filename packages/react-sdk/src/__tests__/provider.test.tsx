@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+
 import { describe, expect, it } from "../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
@@ -8,7 +8,7 @@ import { decryptionKeys } from "../relayer/decryption-cache";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaSDKConfig[] = [];
-vi.mock("@zama-fhe/sdk", async (importOriginal: () => Promise<typeof import("@zama-fhe/sdk")>) => {
+vi.mock(import('@zama-fhe/sdk'), async (importOriginal: () => Promise<typeof import("@zama-fhe/sdk")>) => {
   const actual = await importOriginal();
   return {
     ...actual,

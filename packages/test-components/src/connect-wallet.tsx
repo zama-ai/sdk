@@ -10,7 +10,7 @@ const BURNER_PK_KEY = "burnerWallet.pk";
  * - Otherwise, use the injected connector (MetaMask / browser wallet)
  */
 function pickConnector(connectors: readonly { id: string; name: string }[]) {
-  const hasBurnerPk = typeof window !== "undefined" && !!localStorage.getItem(BURNER_PK_KEY);
+  const hasBurnerPk = typeof window !== "undefined" && Boolean(localStorage.getItem(BURNER_PK_KEY));
 
   if (hasBurnerPk) {
     return connectors.find((c) => c.id === "burnerWallet") ?? connectors[0];

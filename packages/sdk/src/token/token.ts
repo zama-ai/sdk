@@ -12,7 +12,8 @@ import {
   wrapContract,
   wrapETHContract,
 } from "../contracts";
-import { getAddress, hexToBigInt, Address, Hex } from "viem";
+import type { Address, Hex } from "viem";
+import { getAddress, hexToBigInt } from "viem";
 import { findUnwrapRequested } from "../events/onchain-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import {

@@ -1,6 +1,6 @@
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { type Address } from "@zama-fhe/sdk";
-import { type Handle } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
+import type { Handle } from "@zama-fhe/sdk";
 
 /**
  * Query key helpers for the shared decryption cache.

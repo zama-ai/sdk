@@ -138,7 +138,7 @@ function validateCdnUrl(rawUrl: string): string {
  */
 function setupFetchInterceptor(): void {
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const url = typeof input === "string" ? input : (input instanceof URL ? input.href : input.url);
     const method = init?.method?.toUpperCase() ?? "GET";
 
     // Only intercept requests to our relayer proxy
@@ -191,7 +191,7 @@ function isBrowserExtension(): boolean {
 async function verifyIntegrity(content: string, expectedHash: string): Promise<void> {
   const encoder = new TextEncoder();
   const hashBuffer = await crypto.subtle.digest("SHA-384", encoder.encode(content));
-  const hashHex = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = [...new Uint8Array(hashBuffer)]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
   if (hashHex !== expectedHash) {
@@ -721,8 +721,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       default:
         console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);
     }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     sendError(
       request?.id ?? "unknown",
       request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),

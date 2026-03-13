@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+
 import { decryptionKeys } from "../decryption-cache";
 
-describe("decryptionKeys", () => {
+describe(decryptionKeys, () => {
   it("produces stable query keys", () => {
     const key = decryptionKeys.value("0xhandle1");
     expect(key).toEqual(["zama.decryption", { handle: "0xhandle1" }]);

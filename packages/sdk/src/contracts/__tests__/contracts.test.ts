@@ -1,5 +1,5 @@
 import { describe, it, expect } from "../../test-fixtures";
-import { type Address } from "viem";
+import type { Address } from "viem";
 
 // ERC-20
 import {
@@ -147,8 +147,8 @@ describe("Encryption contract builders", () => {
     tokenAddress,
     userAddress,
   }) => {
-    const handle = new Uint8Array([0xab]);
-    const proof = new Uint8Array([0xcd]);
+    const handle = new Uint8Array([0xAB]);
+    const proof = new Uint8Array([0xCD]);
     const config = confidentialTransferFromContract(
       tokenAddress,
       userAddress,
@@ -181,8 +181,8 @@ describe("Encryption contract builders", () => {
   });
 
   it("unwrapContract converts handles to hex", ({ tokenAddress, userAddress }) => {
-    const handle = new Uint8Array([0xde, 0xad]);
-    const proof = new Uint8Array([0xbe, 0xef]);
+    const handle = new Uint8Array([0xDE, 0xAD]);
+    const proof = new Uint8Array([0xBE, 0xEF]);
     const config = unwrapContract(tokenAddress, userAddress, SPENDER, handle, proof);
     expect(config.functionName).toBe("unwrap");
     expect(config.args).toEqual([userAddress, SPENDER, "0xdead", "0xbeef"]);
