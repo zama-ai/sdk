@@ -1,12 +1,15 @@
 import { ethers, BrowserProvider, type Signer } from "ethers";
-import type {
-  Abi,
-  ContractFunctionArgs,
-  ContractFunctionName,
-  ContractFunctionReturnType,
-  Hex,
+import {
+  getAddress,
+  isHex,
+  type Abi,
+  type Address,
+  type ContractFunctionArgs,
+  type ContractFunctionName,
+  type ContractFunctionReturnType,
+  type EIP1193Provider,
+  type Hex,
 } from "viem";
-import { getAddress, isHex, type Address } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   GenericSigner,
@@ -16,7 +19,7 @@ import type {
   WriteContractConfig,
 } from "../token/token.types";
 import { eip1193Subscribe } from "../token/eip1193-subscribe";
-import type { EIP1193Provider } from "viem";
+
 
 /**
  * Configuration for {@link EthersSigner}.

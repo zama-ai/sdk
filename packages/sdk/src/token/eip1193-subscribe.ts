@@ -1,5 +1,4 @@
-import type { EIP1193EventMap, EIP1193Provider } from "viem";
-import { getAddress as checksumAddress, type Address } from "viem";
+import { getAddress as checksumAddress, type Address, type EIP1193EventMap, type EIP1193Provider } from "viem";
 import type { SignerLifecycleCallbacks } from "./token.types";
 
 /**

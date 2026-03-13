@@ -13,15 +13,13 @@ import {
 } from "../contracts";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { pLimit } from "../utils";
+import { pLimit, toError } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credentials-manager";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
+import { ZamaSDKEvents, type ZamaSDKEventInput, type ZamaSDKEventListener } from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { getAddress, type Address } from "viem";
-import { toError } from "../utils";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -245,7 +243,7 @@ export class ReadonlyToken {
     const cachedValues = await Promise.all(
       tokens.map((token, i) => {
         const handle = resolvedHandles[i]!;
-        if (token.isZeroHandle(handle)) return Promise.resolve(0n);
+        if (token.isZeroHandle(handle)) return 0n;
         return loadCachedBalance({
           storage: tokenStorage,
           tokenAddress: token.address,
@@ -622,7 +620,7 @@ function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   }
 
   const statusCode =
-    error != null &&
+    error !== null && error !== undefined &&
     typeof error === "object" &&
     "statusCode" in error &&
     typeof (error as Record<string, unknown>).statusCode === "number"

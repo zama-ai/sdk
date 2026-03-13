@@ -1,5 +1,5 @@
 import { describe, it, expect } from "../test-fixtures";
-import { keccak256, toHex, toBytes } from "viem";
+import { getAddress, keccak256, toHex, toBytes, type Address, type Hex } from "viem";
 import {
   Topics,
   decodeConfidentialTransfer,
@@ -13,8 +13,6 @@ import {
   findWrapped,
   type RawLog,
 } from "../events";
-
-import { getAddress, type Address, type Hex } from "viem";
 
 // Helpers
 const addr = (hex: string): Address => getAddress(`0x${hex.padStart(40, "0")}`);

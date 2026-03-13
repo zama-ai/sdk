@@ -4,10 +4,8 @@ import { Token } from "./token";
 import { ReadonlyToken } from "./readonly-token";
 import { MemoryStorage } from "./memory-storage";
 import { CredentialsManager } from "./credentials-manager";
-import type { GenericSigner, GenericStorage } from "./token.types";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { ZamaSDKEventListener } from "../events/sdk-events";
-import type { SignerLifecycleCallbacks } from "./token.types";
+import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./token.types";
+import { ZamaSDKEvents, type ZamaSDKEventListener } from "../events/sdk-events";
 import { toError } from "../utils";
 
 /** Configuration for {@link ZamaSDK}. */
@@ -146,7 +144,7 @@ export class ZamaSDK {
 
   async #revokeByTrackedIdentity(): Promise<void> {
     await this.#identityReady;
-    if (this.#lastAddress == null || this.#lastChainId == null) return;
+    if (this.#lastAddress === null || this.#lastAddress === undefined || this.#lastChainId === null || this.#lastChainId === undefined) return;
     const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
     await this.sessionStorage.delete(storeKey);
     this.#onEvent?.({

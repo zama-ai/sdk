@@ -1,12 +1,6 @@
 import type { RawLog } from "../events/onchain-events";
-import type { Address, Hex } from "viem";
+import type { Address, Hex, Abi, ContractFunctionArgs, ContractFunctionName, ContractFunctionReturnType } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type {
-  Abi,
-  ContractFunctionArgs,
-  ContractFunctionName,
-  ContractFunctionReturnType,
-} from "viem";
 
 /** Framework-agnostic transaction receipt (only the fields the SDK needs). */
 export interface TransactionReceipt {
