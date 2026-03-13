@@ -24,7 +24,7 @@ jobs:
         run: git submodule update --init --recursive
 
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@8789b3e # v1.7.0
 
       - name: Install forge-fhevm deps
         run: cd contracts/lib/forge-fhevm && forge soldeer install
