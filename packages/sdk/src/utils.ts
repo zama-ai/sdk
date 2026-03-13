@@ -25,19 +25,20 @@ export function assertObject(
   }
 }
 
-export function assertString<T>(value: T, context: string): asserts value is T {
+export function assertString(value: unknown, context: string): asserts value is string {
   if (typeof value !== "string") {
     throw new TypeError(`${context} must be a string, got ${typeof value}`);
   }
 }
 
-export function assertArray<T>(value: T, context: string): asserts value is T {
+export function assertArray(value: unknown, context: string): asserts value is unknown[] {
   if (!Array.isArray(value)) {
     throw new TypeError(`${context} must be an array, got ${typeof value}`);
   }
 }
 
-export function assertFunction<T>(value: T, context: string): asserts value is T {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+export function assertFunction(value: unknown, context: string): asserts value is Function {
   if (typeof value !== "function") {
     throw new TypeError(`${context} must be a function, got ${typeof value}`);
   }
