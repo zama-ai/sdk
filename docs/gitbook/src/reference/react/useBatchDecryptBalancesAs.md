@@ -19,8 +19,8 @@ import { useBatchDecryptBalancesAs } from "@zama-fhe/react-sdk";
 {% tab title="component.tsx" %}
 
 ```tsx
-import { useBatchDecryptBalancesAs } from "@zama-fhe/react-sdk";
-import { useReadonlyToken } from "@zama-fhe/react-sdk";
+import { useMemo } from "react";
+import { useBatchDecryptBalancesAs, useZamaSDK } from "@zama-fhe/react-sdk";
 
 function PortfolioBalance({
   tokenAddresses,
@@ -29,8 +29,12 @@ function PortfolioBalance({
   tokenAddresses: `0x${string}`[];
   delegatorAddress: `0x${string}`;
 }) {
-  // Build ReadonlyToken instances (typically from useReadonlyToken or sdk.createReadonlyToken)
-  const tokens = tokenAddresses.map((addr) => useReadonlyToken(addr));
+  // Build ReadonlyToken instances using the SDK factory (not hooks — hooks cannot be called in a loop)
+  const sdk = useZamaSDK();
+  const tokens = useMemo(
+    () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
+    [sdk, tokenAddresses],
+  );
 
   const {
     mutateAsync: batchDecryptAs,

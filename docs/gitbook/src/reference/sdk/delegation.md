@@ -35,7 +35,7 @@ await token.delegateDecryption({ delegateAddress: "0xDelegate" });
 // Delegation with an expiration date
 await token.delegateDecryption({
   delegateAddress: "0xDelegate",
-  expirationDate: new Date("2025-12-31T00:00:00Z"),
+  expirationDate: new Date("2027-12-31T00:00:00Z"),
 });
 ```
 
@@ -47,9 +47,9 @@ The SDK accepts a standard JavaScript `Date` object and converts it to a **UTC U
 
 ```ts
 // These all produce the same on-chain expiry:
-new Date("2025-12-31T00:00:00Z"); // explicit UTC
-new Date("2025-12-31T00:00:00+05:30"); // IST → converted to UTC internally
-new Date(2025, 11, 31); // local time → .getTime() returns UTC ms
+new Date("2027-12-31T00:00:00Z"); // explicit UTC
+new Date("2027-12-31T00:00:00+05:30"); // IST → converted to UTC internally
+new Date(2027, 11, 31); // local time → .getTime() returns UTC ms
 ```
 
 If no `expirationDate` is provided, the SDK uses `2^64 - 1` (effectively permanent).
@@ -66,7 +66,7 @@ const tokens = addresses.map((a) => sdk.createToken(a));
 const results = await Token.batchDelegateDecryption({
   tokens,
   delegateAddress: "0xDelegate",
-  expirationDate: new Date("2025-12-31"),
+  expirationDate: new Date("2027-12-31"),
 });
 
 // results is a Map<Address, TransactionResult | ZamaError>
@@ -182,7 +182,7 @@ const balances = await ReadonlyToken.batchDecryptBalancesAs(tokens, {
 
 ## Events
 
-The SDK emits events during delegation operations. Subscribe via the standard event emitter on `Token`:
+The SDK emits events during delegation operations. Subscribe via the `onEvent` callback in the `ZamaSDK` constructor:
 
 | Event                       | When                        |
 | --------------------------- | --------------------------- |
@@ -190,15 +190,18 @@ The SDK emits events during delegation operations. Subscribe via the standard ev
 | `RevokeDelegationSubmitted` | Revocation transaction sent |
 
 ```ts
-import { ZamaSDKEvents } from "@zama-fhe/sdk";
+import { createZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
 
-token.on((event) => {
-  if (event.type === ZamaSDKEvents.DelegationSubmitted) {
-    console.log("Delegation tx:", event.txHash);
-  }
-  if (event.type === ZamaSDKEvents.RevokeDelegationSubmitted) {
-    console.log("Revocation tx:", event.txHash);
-  }
+const sdk = createZamaSDK({
+  // ... other config
+  onEvent: (event) => {
+    if (event.type === ZamaSDKEvents.DelegationSubmitted) {
+      console.log("Delegation tx:", event.txHash);
+    }
+    if (event.type === ZamaSDKEvents.RevokeDelegationSubmitted) {
+      console.log("Revocation tx:", event.txHash);
+    }
+  },
 });
 ```
 

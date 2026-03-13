@@ -81,7 +81,7 @@ interface DelegatedStoredCredentials extends StoredCredentials {
 - Contract set auto-extended when new tokens are added (re-sign with `createDelegatedUserDecryptEIP712`, reuse existing keypair and `startTimestamp`)
 - Stale credentials detected via `keypairTTL`, session expiry detected via `sessionTTL`
 
-**`sessionTTL` sentinel:** A `sessionTTL` of `0` means "never expire" (infinite session). This avoids `Infinity` serialization issues with JSON storage. The `#isSessionExpired` check returns `false` when `ttl === 0`.
+**`sessionTTL` sentinel:** A `sessionTTL` of `0` means "always re-sign" (every operation triggers a wallet signature prompt). Use `"infinite"` for sessions that never expire — this avoids `Infinity` serialization issues with JSON storage. The `isExpired` check returns `true` when `ttl === 0`.
 
 ### 2. `ReadonlyToken.batchDecryptBalancesAs` (static method)
 
