@@ -7,7 +7,8 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
-import workerCode from "./relayer-sdk.worker.ts?iife";
+import { getBrowserExtensionRuntime } from "../utils";
+import workerCode, { filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
 
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
@@ -32,10 +33,12 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
   }
 
   protected createWorker(): Worker {
-    const scriptUrl = URL.createObjectURL(
-      new Blob([workerCode], { type: "application/javascript" }),
-    );
-    return new Worker(scriptUrl);
+    const runtime = getBrowserExtensionRuntime();
+    if (runtime) {
+      return new Worker(runtime.getURL(workerFilename));
+    }
+    const blobUrl = URL.createObjectURL(new Blob([workerCode], { type: "application/javascript" }));
+    return new Worker(blobUrl);
   }
 
   protected wireEvents(worker: Worker): void {
