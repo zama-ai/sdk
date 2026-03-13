@@ -48,7 +48,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
-    "lint": "eslint .",
+    "lint": "oxlint",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
