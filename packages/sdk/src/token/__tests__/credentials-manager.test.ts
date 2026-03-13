@@ -304,7 +304,9 @@ describe("CredentialsManager", () => {
       await credentialManager.allow(TOKEN_A);
     } catch (e) {
       expect(e).toBeInstanceOf(ZamaError);
-      expect((e as ZamaError).cause).toBeUndefined();
+      // Non-Error causes are preserved (not dropped) so downstream debugging
+      // retains the original value.
+      expect((e as ZamaError).cause).toBe("unexpected");
     }
   });
 

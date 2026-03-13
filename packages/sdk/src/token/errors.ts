@@ -207,7 +207,7 @@ export function wrapSigningError(error: unknown, context: string): never {
     throw new SigningRejectedError(context, { cause: error });
   }
   throw new SigningFailedError(context, {
-    cause: error instanceof Error ? error : undefined,
+    cause: error,
   });
 }
 

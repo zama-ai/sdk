@@ -680,7 +680,7 @@ export class Token extends ReadonlyToken {
    * Calls `ACL.delegateForUserDecryption()` on-chain.
    *
    * @param delegateAddress - Address to delegate decryption rights to.
-   * @param options - Optional configuration: `expirationDate` sets when the delegation expires (defaults to `uint64.max`, i.e. permanent delegation).
+   * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
    * @returns The transaction hash and mined receipt.
    * @throws {@link TransactionRevertedError} if the delegation transaction reverts.
    */

@@ -313,6 +313,27 @@ export class ReadonlyToken {
     const firstToken = tokens[0]!;
     ReadonlyToken.assertSameRelayer(tokens);
 
+    // Pre-flight delegation check — avoids wasting a wallet signature on an
+    // expired or non-existent delegation.
+    const delegateAddress = await firstToken.signer.getAddress();
+    const expiry = await firstToken.getDelegationExpiry({
+      delegatorAddress: getAddress(delegatorAddress),
+      delegateAddress,
+    });
+    if (expiry === 0n) {
+      throw new DelegationNotFoundError(
+        `No active delegation from ${delegatorAddress} to ${delegateAddress}`,
+      );
+    }
+    if (expiry !== MAX_UINT64) {
+      const now = await firstToken.signer.getBlockTimestamp();
+      if (expiry <= now) {
+        throw new DelegationExpiredError(
+          `Delegation from ${delegatorAddress} to ${delegateAddress} has expired`,
+        );
+      }
+    }
+
     return ReadonlyToken.#batchDecryptCore({
       tokens,
       handles,
@@ -424,18 +445,32 @@ export class ReadonlyToken {
               );
             }
             results.set(token.address, value);
-            await saveCachedBalance({
-              storage: tokenStorage,
-              tokenAddress: token.address,
-              owner: ownerAddress,
-              handle,
-              value,
-            });
+            try {
+              await saveCachedBalance({
+                storage: tokenStorage,
+                tokenAddress: token.address,
+                owner: ownerAddress,
+                handle,
+                value,
+              });
+            } catch {
+              // Cache write failure should not invalidate a successful decryption
+            }
           })
           .catch((error) => {
             const err = error instanceof Error ? error : new Error(String(error));
             if (onError) {
-              results.set(token.address, onError(err, token.address));
+              try {
+                results.set(token.address, onError(err, token.address));
+              } catch (callbackError) {
+                errors.push({
+                  address: token.address,
+                  error:
+                    callbackError instanceof Error
+                      ? callbackError
+                      : new Error(String(callbackError)),
+                });
+              }
             } else {
               errors.push({ address: token.address, error: err });
             }

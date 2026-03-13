@@ -106,6 +106,48 @@ describe("matchZamaError", () => {
   });
 });
 
+// --- wrapSigningError ---
+
+import { SigningFailedError, wrapSigningError } from "../errors";
+
+describe("wrapSigningError", () => {
+  it("wraps Error as SigningRejectedError for code 4001", () => {
+    const original = Object.assign(new Error("rejected"), { code: 4001 });
+    expect(() => wrapSigningError(original, "test")).toThrow(
+      expect.objectContaining({ code: "SIGNING_REJECTED", cause: original }),
+    );
+  });
+
+  it("wraps Error as SigningFailedError for generic errors", () => {
+    const original = new Error("network");
+    expect(() => wrapSigningError(original, "test")).toThrow(
+      expect.objectContaining({ code: "SIGNING_FAILED", cause: original }),
+    );
+  });
+
+  it("preserves non-Error cause instead of dropping it", () => {
+    const stringError = "string error value";
+    try {
+      wrapSigningError(stringError, "test");
+    } catch (err) {
+      expect(err).toBeInstanceOf(SigningFailedError);
+      // RED: currently `cause` is `undefined` because non-Error is dropped
+      expect((err as SigningFailedError).cause).toBe(stringError);
+    }
+  });
+
+  it("preserves object cause instead of dropping it", () => {
+    const objError = { message: "something went wrong", code: 42 };
+    try {
+      wrapSigningError(objError, "test");
+    } catch (err) {
+      expect(err).toBeInstanceOf(SigningFailedError);
+      // RED: currently `cause` is `undefined` because non-Error is dropped
+      expect((err as SigningFailedError).cause).toBe(objError);
+    }
+  });
+});
+
 // --- Delegation errors ---
 
 import {
