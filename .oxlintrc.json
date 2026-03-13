@@ -16,6 +16,7 @@
   "ignorePatterns": [
     "**/dist/**",
     "**/node_modules/**",
+    "**/next-env.d.ts",
     "coverage/**",
     "hardhat/**",
     "**/.next/**",
@@ -51,6 +52,8 @@
     "unicorn/no-null": "off",
     "unicorn/numeric-separators-style": "off",
     "unicorn/switch-case-braces": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "unicorn/require-post-message-target-origin": "off",
     "import/no-named-export": "off",
     "import/group-exports": "off",
     "import/exports-last": "off",
@@ -125,18 +128,48 @@
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",
         "@typescript-eslint/no-non-null-assertion": "off",
-        "no-console": "off"
+        "no-console": "off",
+        "no-shadow": "off",
+        "no-new": "off",
+        "import/first": "off",
+        "vitest/hoisted-apis-on-top": "off",
+        "promise/always-return": "off",
+        "promise/catch-or-return": "off",
+        "promise/param-names": "off",
+        "promise/prefer-await-to-callbacks": "off"
       }
     },
     {
-      "files": ["scripts/**/*.mjs", "*.cjs"],
+      "files": [
+        "examples/**",
+        "packages/test-components/**",
+        "packages/test-nextjs/**",
+        "packages/test-vite/**"
+      ],
+      "rules": {
+        "@typescript-eslint/no-non-null-assertion": "off",
+        "no-console": "off",
+        "no-shadow": "off",
+        "no-nested-ternary": "off",
+        "unicorn/no-nested-ternary": "off",
+        "unicorn/prefer-global-this": "off",
+        "unicorn/filename-case": "off",
+        "import/no-unassigned-import": "off",
+        "promise/catch-or-return": "off",
+        "promise/always-return": "off"
+      }
+    },
+    {
+      "files": ["scripts/**"],
       "globals": {
         "console": "readonly",
         "module": "readonly",
         "process": "readonly"
       },
       "rules": {
-        "no-console": "off"
+        "no-console": "off",
+        "no-continue": "off",
+        "no-await-in-loop": "off"
       }
     }
   ]
