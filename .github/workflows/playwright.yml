@@ -107,6 +107,8 @@ jobs:
 
       - name: Build Vite test-vite
         run: pnpm build:test-vite
+        env:
+          VITE_ANVIL_PORT: 8546
 
       - name: Run Playwright tests
         run: pnpm e2e:test
