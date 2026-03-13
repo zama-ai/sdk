@@ -48,14 +48,14 @@ export default defineConfig({
     {
       command: CI
         ? "pnpm --filter @zama-fhe/test-nextjs start"
-        : "pnpm --filter @zama-fhe/test-nextjs dev:e2e",
+        : "pnpm --filter @zama-fhe/test-nextjs dev",
       port: NEXTJS_PORT,
       reuseExistingServer: !CI,
     },
     {
       command: CI
         ? "pnpm --filter @zama-fhe/test-vite preview"
-        : "pnpm --filter @zama-fhe/test-vite dev:e2e",
+        : "pnpm --filter @zama-fhe/test-vite dev",
       port: VITE_PORT,
       reuseExistingServer: !CI,
     },

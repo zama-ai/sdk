@@ -123,8 +123,6 @@ jobs:
 
       - name: Build Next.js test-nextjs
         run: pnpm build:test-nextjs
-        env:
-          NEXT_PUBLIC_NETWORK: hardhat
 
       - name: Save Next.js build cache
         if: steps.nextjs-build-cache.outputs.cache-hit != 'true'
@@ -135,14 +133,9 @@ jobs:
 
       - name: Build Vite test-vite
         run: pnpm build:test-vite
-        env:
-          VITE_NETWORK: hardhat
 
       - name: Run Playwright tests
         run: pnpm e2e:test
-        env:
-          NEXT_PUBLIC_NETWORK: hardhat
-          VITE_NETWORK: hardhat
 
       - name: Upload test results
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
