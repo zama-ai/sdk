@@ -291,6 +291,8 @@ export class ReadonlyToken {
    * @param tokens - Array of ReadonlyToken instances to decrypt balances for.
    * @param options - Delegated decryption configuration.
    * @returns A Map from token address to decrypted balance.
+   * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
+   * @throws {@link DelegationExpiredError} if the delegation has expired.
    * @throws {@link DecryptionFailedError} if any decryption fails and no `onError` callback is provided.
    * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
    *
@@ -720,6 +722,8 @@ export class ReadonlyToken {
    * @param delegatorAddress - The address of the account that delegated decryption rights.
    * @param owner - Optional balance owner address. Defaults to the delegator address.
    * @returns The decrypted plaintext balance as a bigint.
+   * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
+   * @throws {@link DelegationExpiredError} if the delegation has expired.
    * @throws {@link DecryptionFailedError} if delegated decryption fails or the relayer returns no value.
    * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
    * @throws {@link SigningFailedError} if the signing operation fails.
