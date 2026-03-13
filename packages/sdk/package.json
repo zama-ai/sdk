@@ -68,7 +68,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "viem": "^2.47.0"
+    "viem": "^2.47.1"
   },
   "devDependencies": {
     "@tanstack/query-core": "^5.90.20",
