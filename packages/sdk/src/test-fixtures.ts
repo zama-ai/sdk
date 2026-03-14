@@ -2,9 +2,9 @@
 import { test as base } from "vitest";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { Handle } from "./relayer/relayer-sdk.types";
+import type { QueryClient } from "@tanstack/query-core";
 import type { Address, Hex } from "viem";
-import type { CredentialsManagerConfig } from "./token/credentials-manager";
-import { CredentialsManager } from "./token/credentials-manager";
+import { type CredentialsManagerConfig, CredentialsManager } from "./token/credentials-manager";
 import { MemoryStorage } from "./token/memory-storage";
 import type { ReadonlyToken } from "./token/readonly-token";
 import type { TokenConfig } from "./token/token";
@@ -291,7 +291,7 @@ export function mockQueryContext<TQueryKey extends readonly unknown[]>(queryKey:
     // Our factories never access client — they extract params from queryKey.
     // A typed stub satisfies the QueryFunctionContext contract without pulling
     // in a real QueryClient + its transitive deps.
-    client: {} as import("@tanstack/query-core").QueryClient,
+    client: {} as QueryClient,
     signal: AbortSignal.timeout(5000),
     meta: undefined,
   };

@@ -8,7 +8,7 @@ import { decryptionKeys } from "../relayer/decryption-cache";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaSDKConfig[] = [];
-vi.mock(import('@zama-fhe/sdk'), async (importOriginal: () => Promise<typeof import("@zama-fhe/sdk")>) => {
+vi.mock(import('@zama-fhe/sdk'), async (importOriginal: () => Promise<typeof import("@zama-fhe/sdk")>) => { // oxlint-disable-line typescript-eslint/consistent-type-imports
   const actual = await importOriginal();
   return {
     ...actual,

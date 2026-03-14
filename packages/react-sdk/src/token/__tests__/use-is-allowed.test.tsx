@@ -6,7 +6,7 @@ import { useIsAllowed } from "../use-is-allowed";
 
 vi.mock(import('@tanstack/react-query'), async () => {
   const actual =
-    await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+    await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query"); // oxlint-disable-line typescript-eslint/consistent-type-imports
   return { ...actual, useQuery: vi.fn(() => ({ data: true })) };
 });
 

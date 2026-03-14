@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "../../test-fixtures";
 import { Topics } from "../../events";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
+import type { Token } from "../token";
 
 import { ReadonlyToken } from "../readonly-token";
-import { ZamaSDKEvents } from "../../events/sdk-events";
-import type { ZamaSDKEvent, ZamaSDKEventListener } from "../../events/sdk-events";
+import { type ZamaSDKEvent, type ZamaSDKEventListener, ZamaSDKEvents } from "../../events/sdk-events";
 import { CredentialsManager } from "../credentials-manager";
 import type { GenericSigner, GenericStorage } from "../token.types";
 import type { Address } from "viem";
@@ -305,7 +305,7 @@ describe("Token event emissions", () => {
       sessionStorage: GenericStorage;
       address: Address;
       onEvent: ZamaSDKEventListener;
-    }) => import("../token").Token,
+    }) => Token,
   ) {
     return createToken({
       relayer,

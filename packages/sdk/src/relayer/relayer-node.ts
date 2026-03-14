@@ -6,6 +6,7 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
+import type { GenericLogger } from "../worker/worker.types";
 import type { RelayerSDK } from "./relayer-sdk";
 import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
 import { ZamaError, EncryptionFailedError } from "../token/errors";
@@ -27,7 +28,7 @@ export interface RelayerNodeConfig {
   getChainId: () => Promise<number>;
   poolSize?: number;
   /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: import("../worker/worker.types").GenericLogger;
+  logger?: GenericLogger;
 }
 
 /**

@@ -383,6 +383,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
     }
 
     const result = sdkInstance.getPublicParams(
+      // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically
       payload.bits as keyof import("@zama-fhe/relayer-sdk/node").PublicParams<Uint8Array>,
     );
 
