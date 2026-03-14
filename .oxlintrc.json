@@ -67,6 +67,8 @@
     "arrow-body-style": "off",
     "func-names": "off",
     "unicorn/no-await-expression-member": "off",
+    "no-template-curly-in-string": "off",
+    "import/no-unassigned-import": "off",
     "eqeqeq": "error",
     "unicorn/prefer-node-protocol": "error",
     "unicorn/no-typeof-undefined": "warn",
