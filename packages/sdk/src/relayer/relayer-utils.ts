@@ -103,9 +103,9 @@ export const HardhatConfig = {
 } as const satisfies FhevmInstanceConfig;
 
 export const DefaultConfigs: Record<number, FhevmInstanceConfig> = {
-  [1]: MainnetConfig,
-  [11155111]: SepoliaConfig,
-  [31337]: HardhatConfig,
+  1: MainnetConfig,
+  11155111: SepoliaConfig,
+  31337: HardhatConfig,
 } as const;
 
 /** EIP-712 domain field → Solidity type. Order follows the EIP-712 spec. */
