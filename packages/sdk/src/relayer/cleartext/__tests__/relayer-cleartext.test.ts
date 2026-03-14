@@ -550,7 +550,7 @@ describe(RelayerCleartext, () => {
   });
 
   it("userDecrypt decodes ebool handle as boolean", async () => {
-    const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
+    const boolHandle = asHandle("0x" + "01".repeat(30) + "0000");
     const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [boolHandle.toLowerCase()]: 1n },
@@ -562,7 +562,7 @@ describe(RelayerCleartext, () => {
   });
 
   it("userDecrypt decodes ebool handle with value 0 as false", async () => {
-    const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
+    const boolHandle = asHandle("0x" + "01".repeat(30) + "0000");
     const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [boolHandle.toLowerCase()]: 0n },
@@ -574,7 +574,7 @@ describe(RelayerCleartext, () => {
   });
 
   it("userDecrypt decodes eaddress handle as hex string", async () => {
-    const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
+    const addressHandle = asHandle("0x" + "01".repeat(30) + "0700");
     const addressValue = 0x1000000000000000000000000000000000000001n;
     const { fhevm } = createInstance({
       persistAllowed: () => true,
@@ -845,8 +845,8 @@ describe(RelayerCleartext, () => {
   });
 
   it("delegatedUserDecrypt decodes ebool and eaddress handles", async () => {
-    const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
-    const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
+    const boolHandle = asHandle("0x" + "01".repeat(30) + "0000");
+    const addressHandle = asHandle("0x" + "01".repeat(30) + "0700");
     const addressValue = 0x1000000000000000000000000000000000000001n;
 
     const { fhevm } = createInstance({
