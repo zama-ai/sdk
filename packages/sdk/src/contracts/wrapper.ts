@@ -1,7 +1,7 @@
 import type { Address, Hex } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
-const wrapperAbi = [
+export const wrapperAbi = [
   {
     inputs: [
       {

@@ -1,6 +1,6 @@
 import { type Address } from "viem";
 
-const feeeManagerAbi = [
+export const feeManagerAbi = [
   {
     inputs: [
       {
@@ -105,7 +105,7 @@ export function getWrapFeeContract(
 ) {
   return {
     address: feeManagerAddress,
-    abi: feeeManagerAbi,
+    abi: feeManagerAbi,
     functionName: "getWrapFee",
     args: [amount, wrapFrom, wrapTo],
   } as const;
@@ -129,7 +129,7 @@ export function getUnwrapFeeContract(
 ) {
   return {
     address: feeManagerAddress,
-    abi: feeeManagerAbi,
+    abi: feeManagerAbi,
     functionName: "getUnwrapFee",
     args: [amount, unwrapFrom, unwrapTo],
   } as const;
@@ -148,7 +148,7 @@ export function getUnwrapFeeContract(
 export function getBatchTransferFeeContract(feeManagerAddress: Address) {
   return {
     address: feeManagerAddress,
-    abi: feeeManagerAbi,
+    abi: feeManagerAbi,
     functionName: "getBatchTransferFee",
     args: [],
   } as const;
@@ -167,7 +167,7 @@ export function getBatchTransferFeeContract(feeManagerAddress: Address) {
 export function getFeeRecipientContract(feeManagerAddress: Address) {
   return {
     address: feeManagerAddress,
-    abi: feeeManagerAbi,
+    abi: feeManagerAbi,
     functionName: "getFeeRecipient",
     args: [],
   } as const;

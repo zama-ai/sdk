@@ -1,6 +1,6 @@
 import { type Address } from "viem";
 
-const deploymentCoordinatorAbi = [
+export const deploymentCoordinatorAbi = [
   {
     inputs: [{ internalType: "address", name: "originalToken", type: "address" }],
     name: "getWrapper",

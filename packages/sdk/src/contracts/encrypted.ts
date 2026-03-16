@@ -1,7 +1,7 @@
 import { Address, toHex } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
-const encryptedAbi = [
+export const encryptedAbi = [
   {
     inputs: [
       {
