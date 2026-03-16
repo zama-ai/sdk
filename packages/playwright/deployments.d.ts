@@ -1,4 +1,4 @@
-declare module "*/contracts/deployments.json" {
+declare module "*/hardhat/deployments.json" {
   const deployments: {
     USDT: string;
     cUSDT: string;
