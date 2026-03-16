@@ -66,7 +66,7 @@ export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig) {
     mutationKey: ["userDecryptFlow"],
     mutationFn: async ({
       handles,
-      durationDays = Math.ceil(sdk.credentials.keypairTTL / 86400),
+      durationDays = Math.max(1, Math.ceil(sdk.credentials.keypairTTL / 86400)),
     }) => {
       // Step 1: Generate keypair
       const keypair = await sdk.relayer.generateKeypair();

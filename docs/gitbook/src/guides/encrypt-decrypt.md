@@ -286,12 +286,14 @@ function DecryptExample() {
     ];
 
     setStatus("Generating keypair...");
+    let result: Record<string, bigint> | undefined;
     try {
-      const result = await decrypt.mutateAsync({
+      result = await decrypt.mutateAsync({
         handles,
       });
     } catch {
       setStatus("Decrypt Balance");
+      return;
     }
 
     // result is Record<Handle, ClearValueType>

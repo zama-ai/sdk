@@ -45,6 +45,7 @@ export {
   Token,
   ReadonlyToken,
   MemoryStorage,
+  memoryStorage,
   IndexedDBStorage,
   indexedDBStorage,
   CredentialsManager,
