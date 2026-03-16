@@ -10,6 +10,7 @@ import {AdminProvider} from "../src/admin/AdminProvider.sol";
 import {DeploymentCoordinator} from "../src/factory/DeploymentCoordinator.sol";
 import {ERC7984TransferBatcher} from "../src/batcher/ERC7984TransferBatcher.sol";
 import {ConfidentialWrapper} from "../src/wrapper/ERC7984ERC20WrapperUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Deploy is Script {
     function run() external {
@@ -60,9 +61,16 @@ contract Deploy is Script {
         usdc.mint(msg.sender, 10_000 * 1e6);
         usdt.mint(msg.sender, 10_000 * 1e6);
 
+        // 10. Wrap 1,000 of each into confidential tokens so E2E tests start funded
+        uint256 wrapAmount = 1_000 * 1e6;
+        IERC20(address(usdc)).approve(address(cUSDC), wrapAmount);
+        cUSDC.wrap(msg.sender, wrapAmount);
+        IERC20(address(usdt)).approve(address(cUSDT), wrapAmount);
+        cUSDT.wrap(msg.sender, wrapAmount);
+
         vm.stopBroadcast();
 
-        // 10. Write deployments.json
+        // 11. Write deployments.json
         string memory json = "deployments";
         vm.serializeAddress(json, "erc20", address(usdc));
         vm.serializeAddress(json, "cToken", address(cUSDC));

@@ -13,6 +13,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { TEST_PRIVATE_KEY, MINTED, NEXTJS_ANVIL_PORT } from "./constants";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
+import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 
 const privateKey = TEST_PRIVATE_KEY;
 
@@ -25,7 +26,7 @@ const contracts = {
   cUSDC: deployments.cToken as Address,
   transferBatcher: deployments.transferBatcher as Address,
   feeManager: deployments.feeManager as Address,
-  acl: deployments.fhevm.acl as Address,
+  acl: hardhatCleartextConfig.aclContractAddress as Address,
 } as const;
 
 /** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */
