@@ -1,0 +1,22 @@
+{
+  "name": "hoodi-example",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.0",
+    "@zama-fhe/react-sdk": "1.1.0-alpha.3",
+    "@zama-fhe/sdk": "1.1.0-alpha.3",
+    "ethers": "^6.13.0",
+    "next": "^16.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "^5.8.0"
+  }
+}
