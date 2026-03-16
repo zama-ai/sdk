@@ -99,6 +99,21 @@ export { allowMutationOptions } from "./allow";
 export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokeMutationOptions } from "./revoke";
 export { revokeSessionMutationOptions } from "./revoke-session";
+export {
+  delegateDecryptionMutationOptions,
+  type DelegateDecryptionParams,
+} from "./delegate-decryption";
+export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
+export {
+  batchDecryptBalancesAsMutationOptions,
+  type BatchDecryptBalancesAsParams,
+} from "./batch-decrypt-balances-as";
+export { revokeDelegationMutationOptions, type RevokeDelegationParams } from "./revoke-delegation";
+export {
+  delegationStatusQueryOptions,
+  type DelegationStatusData,
+  type DelegationStatusQueryConfig,
+} from "./delegation-status";
 export type { ActivityItem, ActivityLogMetadata } from "../activity";
 export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";
@@ -119,7 +134,11 @@ export type {
   UserDecryptParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type { BatchDecryptOptions, ReadonlyTokenConfig } from "../token/readonly-token";
+export type {
+  BatchDecryptOptions,
+  BatchDecryptAsOptions,
+  ReadonlyTokenConfig,
+} from "../token/readonly-token";
 export type { ReadonlyToken } from "../token/readonly-token";
 export type { TokenConfig } from "../token/token";
 export type { Token } from "../token/token";

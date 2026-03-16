@@ -11,11 +11,11 @@ import { useZamaSDK } from "../provider";
  *
  * @example
  * ```tsx
- * const { mutate: revoke } = useRevoke();
- * revoke(["0xTokenA", "0xTokenB"]);
+ * const { mutate: revokeTokens } = useRevokeTokens();
+ * revokeTokens(["0xTokenA", "0xTokenB"]);
  * ```
  */
-export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>) {
+export function useRevokeTokens(options?: UseMutationOptions<void, Error, Address[]>) {
   const sdk = useZamaSDK();
 
   return useMutation<void, Error, Address[]>({

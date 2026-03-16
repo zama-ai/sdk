@@ -7,19 +7,18 @@
   "author": "Zama",
   "scripts": {
     "dev": "next dev --port 3100",
-    "dev:e2e": "NEXT_PUBLIC_NETWORK=hardhat next dev --port 3100",
     "build": "next build",
     "start": "next start --port 3100"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
     "@zama-fhe/react-sdk": "workspace:*",
-    "@zama-fhe/test-components": "workspace:*",
     "@zama-fhe/sdk": "workspace:*",
+    "@zama-fhe/test-components": "workspace:*",
     "next": "^16.1.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "viem": "^2.47.0",
+    "viem": "^2.47.1",
     "wagmi": "^3.5.0"
   },
   "devDependencies": {

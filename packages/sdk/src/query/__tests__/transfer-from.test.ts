@@ -7,13 +7,13 @@ describe("confidentialTransferFromMutationOptions", () => {
 
     expect(options.mutationKey).toEqual(["zama.confidentialTransferFrom", mockToken.address]);
     await options.mutationFn({
-      from: "0x2222222222222222222222222222222222222222",
-      to: "0x3333333333333333333333333333333333333333",
+      from: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      to: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       amount: 4n,
     });
     expect(mockToken.confidentialTransferFrom).toHaveBeenCalledWith(
-      "0x2222222222222222222222222222222222222222",
-      "0x3333333333333333333333333333333333333333",
+      "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       4n,
       undefined,
     );

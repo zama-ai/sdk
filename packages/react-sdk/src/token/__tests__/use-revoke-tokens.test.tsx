@@ -7,18 +7,18 @@ import {
   TOKEN,
   expectDefaultMutationState,
 } from "../../__tests__/mutation-test-helpers";
-import { useRevoke } from "../use-revoke";
+import { useRevokeTokens } from "../use-revoke-tokens";
 
-describe("useRevoke", () => {
+describe("useRevokeTokens", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useRevoke());
+    const { result } = renderWithProviders(() => useRevokeTokens());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
   });
 
   test("cache: invalidates isAllowed query after revoke", async ({ renderWithProviders }) => {
-    const { result, queryClient } = renderWithProviders(() => useRevoke());
+    const { result, queryClient } = renderWithProviders(() => useRevokeTokens());
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
@@ -29,7 +29,7 @@ describe("useRevoke", () => {
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
     const onSuccess = vi.fn();
 
-    const { result, queryClient } = renderWithProviders(() => useRevoke({ onSuccess }));
+    const { result, queryClient } = renderWithProviders(() => useRevokeTokens({ onSuccess }));
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));

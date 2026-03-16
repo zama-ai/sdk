@@ -17,6 +17,7 @@ import type {
 import { TransactionRevertedError } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 import {
+  getBlock,
   getChainId,
   getAccount,
   readContract,
@@ -98,6 +99,11 @@ export class WagmiSigner implements GenericSigner {
       }
       throw error;
     }
+  }
+
+  async getBlockTimestamp(): Promise<bigint> {
+    const block = await getBlock(this.config);
+    return block.timestamp;
   }
 
   subscribe({

@@ -566,6 +566,63 @@ interface FinalizeUnwrapParams {
 }
 ```
 
+### Delegation Hooks
+
+#### `useDelegateDecryption`
+
+Grant decryption delegation to another address via the on-chain ACL. ACL address is resolved automatically from the relayer transport config.
+
+```ts
+function useDelegateDecryption(
+  config: UseZamaConfig,
+  options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>,
+): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams>;
+
+interface DelegateDecryptionParams {
+  delegateAddress: Address;
+  expirationDate?: Date;
+}
+```
+
+```tsx
+const { mutateAsync: delegate, isPending } = useDelegateDecryption({
+  tokenAddress: "0xToken",
+});
+
+// Permanent delegation
+await delegate({ delegateAddress: "0xDelegate" });
+
+// With expiration
+await delegate({
+  delegateAddress: "0xDelegate",
+  expirationDate: new Date("2025-12-31"),
+});
+```
+
+#### `useDecryptBalanceAs`
+
+Decrypt another user's balance as a delegate. Uses the delegated EIP-712 flow — the connected wallet signs as the delegate, and the relayer verifies the on-chain delegation.
+
+```ts
+function useDecryptBalanceAs(
+  tokenAddress: Address,
+  options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>,
+): UseMutationResult<bigint, Error, DecryptBalanceAsParams>;
+
+interface DecryptBalanceAsParams {
+  delegatorAddress: Address;
+  owner?: Address;
+}
+```
+
+```tsx
+const { mutateAsync: decryptAs, data: balance } = useDecryptBalanceAs("0xToken");
+
+// Decrypt the delegator's balance
+const result = await decryptAs({ delegatorAddress: "0xDelegator" });
+// result => bigint
+```
+
 ### Approval Hooks
 
 #### `useConfidentialApprove`

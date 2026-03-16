@@ -122,6 +122,33 @@ describe("Session TTL", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(3);
   });
 
+  it("TTL 'infinite': session never expires", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+    createCredentialManager,
+  }) => {
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+    const manager = createCredentialManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 604800,
+      sessionTTL: "infinite",
+    });
+    await manager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+
+    // Advance 3 days — well within keypairTTL (7 days) but far beyond default sessionTTL (30 days won't matter here)
+    // The key assertion: the session is NOT re-signed because sessionTTL is "infinite".
+    vi.setSystemTime(new Date("2026-01-04T00:00:00Z"));
+
+    await manager.allow(TOKEN_A);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
   it("TTL expiry does not clear FHE keypair in persistent storage", async ({
     relayer,
     signer,

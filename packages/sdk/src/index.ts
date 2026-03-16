@@ -46,6 +46,7 @@ export { FEE_MANAGER_ABI } from "./abi/fee-manager.abi";
 export { TRANSFER_BATCHER_ABI } from "./abi/transfer-batch.abi";
 export { WRAPPER_ABI } from "./abi/wrapper.abi";
 export { BATCH_SWAP_ABI } from "./abi/batch-swap.abi";
+export { ACL_ABI } from "./abi/acl.abi";
 
 // ERC-165 interface IDs
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
@@ -56,13 +57,19 @@ export type { ZamaSDKConfig } from "./token/zama-sdk";
 export { Token } from "./token/token";
 export type { TokenConfig } from "./token/token";
 export { ReadonlyToken } from "./token/readonly-token";
-export type { ReadonlyTokenConfig, BatchDecryptOptions } from "./token/readonly-token";
+export type {
+  ReadonlyTokenConfig,
+  BatchDecryptOptions,
+  BatchDecryptAsOptions,
+} from "./token/readonly-token";
 export { ZERO_HANDLE } from "./token/readonly-token";
 export { MemoryStorage, memoryStorage } from "./token/memory-storage";
 export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
 export { ChromeSessionStorage, chromeSessionStorage } from "./token/chrome-session-storage";
 export { CredentialsManager } from "./token/credentials-manager";
 export type { CredentialsManagerConfig } from "./token/credentials-manager";
+export { DelegatedCredentialsManager } from "./token/delegated-credentials-manager";
+export type { DelegatedCredentialsManagerConfig } from "./token/delegated-credentials-manager";
 export {
   savePendingUnshield,
   loadPendingUnshield,
@@ -73,6 +80,7 @@ export type {
   GenericStorage,
   SignerLifecycleCallbacks,
   StoredCredentials,
+  DelegatedStoredCredentials,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,
@@ -135,6 +143,10 @@ export {
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  DelegationSelfNotAllowedError,
+  DelegationCooldownError,
+  DelegationNotFoundError,
+  DelegationExpiredError,
   matchZamaError,
 } from "./token/errors";
 
@@ -212,6 +224,8 @@ export {
   getUnwrapFeeContract,
   getBatchTransferFeeContract,
   getFeeRecipientContract,
-  FHE_GAS_LIMIT,
+  delegateForUserDecryptionContract,
+  revokeDelegationContract,
+  getDelegationExpiryContract,
 } from "./contracts";
 export type { BatchTransferData } from "./contracts";

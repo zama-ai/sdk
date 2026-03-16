@@ -155,7 +155,7 @@ describe("Shield callbacks (SDK-19)", () => {
     tokenAddress,
   }) => {
     // underlying() returns a non-zero address so it's treated as ERC-20, not ETH
-    vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
+    vi.mocked(signer.readContract).mockResolvedValue("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c");
     const token = createToken({
       relayer,
       signer,
@@ -167,7 +167,7 @@ describe("Shield callbacks (SDK-19)", () => {
 
     // Mock allowance to 0 so approval is needed
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
+      .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying()
       .mockResolvedValueOnce(0n); // allowance()
 
     const onApprovalSubmitted = vi.fn();
@@ -189,7 +189,7 @@ describe("Shield callbacks (SDK-19)", () => {
     sessionStorage,
     tokenAddress,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
+    vi.mocked(signer.readContract).mockResolvedValue("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c");
     const token = createToken({
       relayer,
       signer,
@@ -201,7 +201,7 @@ describe("Shield callbacks (SDK-19)", () => {
 
     // Mock allowance to be greater than amount
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999") // underlying()
+      .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying()
       .mockResolvedValueOnce(1000n); // allowance() > 100n
 
     const onApprovalSubmitted = vi.fn();
@@ -223,7 +223,7 @@ describe("Shield callbacks (SDK-19)", () => {
     sessionStorage,
     tokenAddress,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
+    vi.mocked(signer.readContract).mockResolvedValue("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c");
     const token = createToken({
       relayer,
       signer,
@@ -234,7 +234,7 @@ describe("Shield callbacks (SDK-19)", () => {
     });
 
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999")
+      .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
       .mockResolvedValueOnce(0n);
 
     const result = await token.shield(100n, {
@@ -259,7 +259,7 @@ describe("Shield callbacks (SDK-19)", () => {
     sessionStorage,
     tokenAddress,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue("0x9999999999999999999999999999999999999999");
+    vi.mocked(signer.readContract).mockResolvedValue("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c");
     const token = createToken({
       relayer,
       signer,
@@ -270,10 +270,10 @@ describe("Shield callbacks (SDK-19)", () => {
     });
 
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999")
+      .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
       .mockResolvedValueOnce(1000n);
 
-    const recipient = "0x8888888888888888888888888888888888888888" as Address;
+    const recipient = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
     await token.shield(100n, { to: recipient });
 
     // The writeContract call for wrap should include the recipient
@@ -287,7 +287,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     const onTransferSubmitted = vi.fn();
 
     await token.confidentialTransfer(
-      "0x8888888888888888888888888888888888888888" as Address,
+      "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,
       { onEncryptComplete, onTransferSubmitted },
     );
@@ -300,7 +300,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     const order: string[] = [];
 
     await token.confidentialTransfer(
-      "0x8888888888888888888888888888888888888888" as Address,
+      "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,
       {
         onEncryptComplete: () => order.push("encrypted"),
@@ -313,7 +313,7 @@ describe("Transfer callbacks (SDK-19)", () => {
 
   it("works without callbacks (backward compatible)", async ({ token }) => {
     const result = await token.confidentialTransfer(
-      "0x8888888888888888888888888888888888888888" as Address,
+      "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,
     );
 
@@ -322,7 +322,7 @@ describe("Transfer callbacks (SDK-19)", () => {
 
   it("completes transfer even when callbacks throw", async ({ token }) => {
     const result = await token.confidentialTransfer(
-      "0x8888888888888888888888888888888888888888" as Address,
+      "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,
       {
         onEncryptComplete: () => {

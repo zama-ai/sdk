@@ -59,10 +59,9 @@ export function useConfidentialBalance(
     owner,
     pollingInterval: handleRefetchInterval,
   });
-  const handleFactoryEnabled = baseHandleQueryOptions.enabled ?? true;
   const handleQuery = useQuery<Handle>({
     ...baseHandleQueryOptions,
-    enabled: handleFactoryEnabled && (userEnabled ?? true),
+    enabled: (baseHandleQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
@@ -71,12 +70,10 @@ export function useConfidentialBalance(
     handle,
     owner,
   });
-  const factoryEnabled = baseBalanceQueryOptions.enabled ?? true;
-
   const balanceQuery = useQuery<bigint>({
     ...baseBalanceQueryOptions,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: (baseBalanceQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   return { ...balanceQuery, handleQuery };

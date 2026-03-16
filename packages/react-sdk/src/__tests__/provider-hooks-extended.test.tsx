@@ -16,7 +16,7 @@ describe("useUnderlyingAllowance", () => {
     renderWithProviders,
   }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce("0x5555555555555555555555555555555555555555")
+      .mockResolvedValueOnce("0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e")
       .mockResolvedValueOnce(5000n);
 
     const { result } = renderWithProviders(
@@ -88,14 +88,14 @@ describe("useWrapperDiscoverySuspense", () => {
     renderWithProviders,
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(
-      "0x4444444444444444444444444444444444444444" as Address,
+      "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address,
     );
 
     const { result } = renderWithProviders(
       () =>
         useWrapperDiscoverySuspense({
           tokenAddress,
-          coordinatorAddress: "0x5555555555555555555555555555555555555555" as Address,
+          coordinatorAddress: "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address,
         }),
       { signer },
     );

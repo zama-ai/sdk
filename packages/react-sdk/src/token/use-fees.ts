@@ -52,14 +52,12 @@ export function useShieldFee(
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const userEnabled = options?.enabled;
   const baseOpts = shieldFeeQueryOptions(sdk.signer, config);
-  const factoryEnabled = baseOpts.enabled ?? true;
 
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -85,14 +83,12 @@ export function useUnshieldFee(
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const userEnabled = options?.enabled;
   const baseOpts = unshieldFeeQueryOptions(sdk.signer, config);
-  const factoryEnabled = baseOpts.enabled ?? true;
 
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -113,14 +109,12 @@ export function useBatchTransferFee(
   options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const userEnabled = options?.enabled;
   const baseOpts = batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress);
-  const factoryEnabled = baseOpts.enabled ?? true;
 
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -141,13 +135,11 @@ export function useFeeRecipient(
   options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const userEnabled = options?.enabled;
   const baseOpts = feeRecipientQueryOptions(sdk.signer, feeManagerAddress);
-  const factoryEnabled = baseOpts.enabled ?? true;
 
   return useQuery<Address>({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }

@@ -9,6 +9,9 @@ import { useZamaSDK } from "../provider";
  * Encrypt a plaintext value using FHE.
  * Calls the relayer's `encrypt` method via a mutation.
  *
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link EncryptionFailedError} — FHE encryption failed
+ *
  * @returns A mutation whose `mutate` accepts {@link EncryptParams}.
  *
  * @example

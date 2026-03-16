@@ -14,6 +14,11 @@ import { useToken, type UseZamaConfig } from "./use-token";
  * Call {@link useFinalizeUnwrap} after the request is processed on-chain,
  * or use {@link useUnshield} for a single-call orchestration.
  *
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link EncryptionFailedError} — FHE encryption of the unwrap amount failed
+ * - {@link TransactionRevertedError} — on-chain transaction reverted
+ *
  * @param config - Token address (and optional wrapper) identifying the token.
  * @param options - React Query mutation options.
  *
