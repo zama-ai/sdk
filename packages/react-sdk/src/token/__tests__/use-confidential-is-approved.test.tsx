@@ -86,7 +86,7 @@ describe("useConfidentialIsApproved", () => {
       useConfidentialIsApproved({
         tokenAddress: TOKEN,
         spender: SPENDER,
-        holder: "0x4444444444444444444444444444444444444444",
+        holder: "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D",
       }),
     );
 
@@ -95,7 +95,7 @@ describe("useConfidentialIsApproved", () => {
     expect(signer.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
-        args: ["0x4444444444444444444444444444444444444444", SPENDER],
+        args: ["0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D", SPENDER],
       }),
     );
   });
@@ -112,7 +112,7 @@ describe("useConfidentialIsApprovedSuspense", () => {
       useConfidentialIsApprovedSuspense({
         tokenAddress: TOKEN,
         spender: SPENDER,
-        holder: "0x4444444444444444444444444444444444444444",
+        holder: "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D",
       }),
     );
 
@@ -121,7 +121,7 @@ describe("useConfidentialIsApprovedSuspense", () => {
     expect(signer.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "isOperator",
-        args: ["0x4444444444444444444444444444444444444444", SPENDER],
+        args: ["0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D", SPENDER],
       }),
     );
   });

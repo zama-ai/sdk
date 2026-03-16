@@ -1,14 +1,14 @@
 import { getAddress, type Address } from "viem";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import { Token } from "./token";
-import { ReadonlyToken } from "./readonly-token";
-import { MemoryStorage } from "./memory-storage";
-import { CredentialsManager } from "./credentials-manager";
-import type { GenericSigner, GenericStorage } from "./token.types";
-import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ZamaSDKEventListener } from "../events/sdk-events";
-import type { SignerLifecycleCallbacks } from "./token.types";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { toError } from "../utils";
+import { CredentialsManager } from "./credentials-manager";
+import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
+import { MemoryStorage } from "./memory-storage";
+import { ReadonlyToken } from "./readonly-token";
+import { Token } from "./token";
+import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./token.types";
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -34,9 +34,10 @@ export interface ZamaSDKConfig {
    * Controls how long session signatures (EIP-712 wallet signatures) remain valid, in seconds.
    * Default: `2592000` (30 days).
    * - `0`: never persist — every operation triggers a signing prompt (high-security mode).
+   * - `"infinite"`: session never expires.
    * - Positive number: seconds until the session signature expires and requires re-authentication.
    */
-  sessionTTL?: number;
+  sessionTTL?: number | "infinite";
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
   /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
@@ -53,8 +54,11 @@ export class ZamaSDK {
   readonly storage: GenericStorage;
   readonly sessionStorage: GenericStorage;
   readonly credentials: CredentialsManager;
+  readonly delegatedCredentials: DelegatedCredentialsManager;
   readonly #onEvent: ZamaSDKEventListener;
   #unsubscribeSigner?: () => void;
+  // oxlint false positive: awaited in #revokeByTrackedIdentity() and revokeSession()
+  // eslint-disable-next-line no-unused-private-class-members
   #identityReady: Promise<void>;
   #lastAddress: Address | null = null;
   #lastChainId: number | null = null;
@@ -65,7 +69,7 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.#onEvent = config.onEvent ?? function () {};
-    this.credentials = new CredentialsManager({
+    const credentialsConfig = {
       relayer: this.relayer,
       signer: this.signer,
       storage: this.storage,
@@ -77,7 +81,9 @@ export class ZamaSDK {
       })(),
       sessionTTL: config.sessionTTL ?? 2592000,
       onEvent: this.#onEvent,
-    });
+    };
+    this.credentials = new CredentialsManager(credentialsConfig);
+    this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
     this.#identityReady = this.#initIdentity();
 
     if (this.signer.subscribe) {
@@ -167,6 +173,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
+      delegatedCredentials: this.delegatedCredentials,
       address: getAddress(address),
       onEvent: this.#onEvent,
     });

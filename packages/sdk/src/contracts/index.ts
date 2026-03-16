@@ -1,4 +1,5 @@
 export {
+  encryptedAbi,
   confidentialBalanceOfContract,
   confidentialTransferContract,
   confidentialTransferFromContract,
@@ -12,9 +13,10 @@ export {
   deploymentCoordinatorContract,
   isFinalizeUnwrapOperatorContract,
   setFinalizeUnwrapOperatorContract,
-} from "./encryption";
+} from "./encrypted";
 
 export {
+  wrapperAbi,
   finalizeUnwrapContract,
   underlyingContract,
   wrapContract,
@@ -30,9 +32,14 @@ export {
   approveContract,
 } from "./erc20";
 
-export { getWrapperContract, wrapperExistsContract } from "./deployment-coordinator";
+export {
+  deploymentCoordinatorAbi,
+  getWrapperContract,
+  wrapperExistsContract,
+} from "./deployment-coordinator";
 
 export {
+  erc165Abi,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
   supportsInterfaceContract,
@@ -41,10 +48,24 @@ export {
 } from "./erc165";
 
 export {
+  feeManagerAbi,
   getWrapFeeContract,
   getUnwrapFeeContract,
   getBatchTransferFeeContract,
   getFeeRecipientContract,
 } from "./fee-manager";
 
-export { confidentialBatchTransferContract, type BatchTransferData } from "./transfer-batcher";
+export {
+  transferBatcherAbi,
+  confidentialBatchTransferContract,
+  type BatchTransferData,
+} from "./transfer-batcher";
+
+export {
+  aclAbi,
+  delegateForUserDecryptionContract,
+  revokeDelegationContract,
+  getDelegationExpiryContract,
+} from "./acl";
+
+export { MAX_UINT64 } from "./constants";

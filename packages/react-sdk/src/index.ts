@@ -48,6 +48,7 @@ export {
   IndexedDBStorage,
   indexedDBStorage,
   CredentialsManager,
+  DelegatedCredentialsManager,
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "@zama-fhe/sdk";
@@ -83,6 +84,9 @@ export type {
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
+  DelegatedCredentialsManagerConfig,
+  DelegatedStoredCredentials,
+  BatchDecryptAsOptions,
   CredentialsManagerConfig,
   ZamaSDKEventType,
   ZamaSDKEvent,
@@ -127,19 +131,6 @@ export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 // Re-export constants
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
-
-// Re-export ABIs
-export {
-  ERC20_ABI,
-  ERC20_METADATA_ABI,
-  DEPLOYMENT_COORDINATOR_ABI,
-  ERC165_ABI,
-  ENCRYPTION_ABI,
-  FEE_MANAGER_ABI,
-  TRANSFER_BATCHER_ABI,
-  WRAPPER_ABI,
-  BATCH_SWAP_ABI,
-} from "@zama-fhe/sdk";
 
 // Re-export all contract call builders
 export {
@@ -191,9 +182,9 @@ export {
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
-export { useAllow } from "./token/use-allow";
+export { useAllowTokens } from "./token/use-allow-tokens";
 export { useIsAllowed } from "./token/use-is-allowed";
-export { useRevoke } from "./token/use-revoke";
+export { useRevokeTokens } from "./token/use-revoke-tokens";
 export { useRevokeSession } from "./token/use-revoke-session";
 export {
   useConfidentialTransfer,
@@ -228,6 +219,11 @@ export {
 } from "./token/use-wrapper-discovery";
 export { useMetadata, useMetadataSuspense, type TokenMetadata } from "./token/use-metadata";
 export { useActivityFeed, type UseActivityFeedConfig } from "./token/use-activity-feed";
+export { useDelegateDecryption } from "./token/use-delegate-decryption";
+export { useRevokeDelegation } from "./token/use-revoke-delegation";
+export { useDelegationStatus, type UseDelegationStatusConfig } from "./token/use-delegation-status";
+export { useDecryptBalanceAs } from "./token/use-decrypt-balance-as";
+export { useBatchDecryptBalancesAs } from "./token/use-batch-decrypt-balances-as";
 export { useApproveUnderlying } from "./token/use-approve-underlying";
 export {
   useIsConfidential,
@@ -297,6 +293,17 @@ export {
   isAllowedQueryOptions,
   revokeMutationOptions,
   revokeSessionMutationOptions,
+  delegateDecryptionMutationOptions,
+  type DelegateDecryptionParams,
+  decryptBalanceAsMutationOptions,
+  type DecryptBalanceAsParams,
+  batchDecryptBalancesAsMutationOptions,
+  type BatchDecryptBalancesAsParams,
+  revokeDelegationMutationOptions,
+  type RevokeDelegationParams,
+  delegationStatusQueryOptions,
+  type DelegationStatusData,
+  type DelegationStatusQueryConfig,
 } from "@zama-fhe/sdk/query";
 export type {
   OptimisticBalanceSnapshot,

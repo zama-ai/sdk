@@ -304,7 +304,9 @@ describe("CredentialsManager", () => {
       await credentialManager.allow(TOKEN_A);
     } catch (e) {
       expect(e).toBeInstanceOf(ZamaError);
-      expect((e as ZamaError).cause).toBeUndefined();
+      // Non-Error causes are preserved (not dropped) so downstream debugging
+      // retains the original value.
+      expect((e as ZamaError).cause).toBe("unexpected");
     }
   });
 
@@ -484,7 +486,7 @@ describe("CredentialsManager", () => {
       setupMocks(relayer, signer);
       const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
       await storage.set(storeKey, "corrupted-json{{{");
-      expect(await credentialManager.isExpired()).toBe(false);
+      expect(await credentialManager.isExpired()).toBe(true);
     });
 
     it("works without session signature (checks timestamp only)", async ({
@@ -992,9 +994,9 @@ describe("storeKey caching", () => {
     await manager.allow(TOKEN_A);
     expect(computeSpy).toHaveBeenCalledOnce();
 
-    vi.mocked(signer.getAddress).mockResolvedValue(
-      "0x2222222222222222222222222222222222ABCDEF" as Address,
-    );
+    // Change to the same address but with different casing (normalized form is 0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B)
+    // Test that getAddress normalization means casing change doesn't invalidate cache
+    vi.mocked(signer.getAddress).mockResolvedValue("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
 
     await manager.allow(TOKEN_A);
     // getAddress normalization means casing change doesn't invalidate cache

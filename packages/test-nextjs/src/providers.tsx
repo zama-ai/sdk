@@ -10,19 +10,16 @@ import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
 import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 
-const isHardhat = process.env.NEXT_PUBLIC_NETWORK === "hardhat";
-
 const wagmiConfig = createConfig({
   chains: [hardhat],
-  connectors: isHardhat
-    ? [
-        burner({
-          rpcUrls: {
-            [hardhat.id]: hardhat.rpcUrls.default.http[0],
-          },
-        }),
-      ]
-    : [injected()],
+  connectors: [
+    burner({
+      rpcUrls: {
+        [hardhat.id]: hardhat.rpcUrls.default.http[0],
+      },
+    }),
+    injected(),
+  ],
   transports: {
     [hardhat.id]: http(),
   },
