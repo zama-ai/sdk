@@ -1,6 +1,7 @@
 name: Claude Auto Review
 
-# Automatic code review on PRs targeting main/prerelease.
+# Automatic code review when a reviewer is requested on PRs targeting main/prerelease.
+# For ad-hoc reviews, use @claude in a PR comment (handled by claude.yml).
 #
 # Security model:
 #   - Network sandbox: Squid proxy (L7 domain allowlist) + iptables egress block
@@ -13,7 +14,7 @@ name: Claude Auto Review
 on:
   pull_request:
     branches: [main, prerelease]
-    types: [opened, synchronize, ready_for_review, reopened]
+    types: [review_requested]
 
 permissions: {}
 
