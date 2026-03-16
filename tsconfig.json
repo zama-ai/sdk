@@ -3,6 +3,11 @@
   "compilerOptions": {
     "paths": {
       "@zama-fhe/sdk": ["./packages/sdk/src/index.ts"],
+      "@zama-fhe/sdk/cleartext": ["./packages/sdk/src/relayer/cleartext/index.ts"],
+      "@zama-fhe/sdk/query": ["./packages/sdk/src/query/index.ts"],
+      "@zama-fhe/sdk/viem": ["./packages/sdk/src/viem/index.ts"],
+      "@zama-fhe/sdk/ethers": ["./packages/sdk/src/ethers/index.ts"],
+      "@zama-fhe/sdk/node": ["./packages/sdk/src/node/index.ts"],
       "@zama-fhe/sdk/*": ["./packages/sdk/src/*"],
       "@zama-fhe/react-sdk": ["./packages/react-sdk/src/index.ts"],
       "@zama-fhe/react-sdk/*": ["./packages/react-sdk/src/*"]
