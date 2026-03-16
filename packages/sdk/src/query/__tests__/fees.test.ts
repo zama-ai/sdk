@@ -36,19 +36,19 @@ describe("fee query options", () => {
   });
 
   test("fee queries are enabled by default when feeManagerAddress is defined", ({ signer }) => {
-    const feeManagerAddress = "0x1111111111111111111111111111111111111111";
+    const feeManagerAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
 
     const shieldOptions = shieldFeeQueryOptions(signer, {
       feeManagerAddress,
       amount: 1n,
-      from: "0x2222222222222222222222222222222222222222",
-      to: "0x3333333333333333333333333333333333333333",
+      from: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      to: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
     const unshieldOptions = unshieldFeeQueryOptions(signer, {
       feeManagerAddress,
       amount: 1n,
-      from: "0x2222222222222222222222222222222222222222",
-      to: "0x3333333333333333333333333333333333333333",
+      from: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      to: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
     const batchOptions = batchTransferFeeQueryOptions(signer, feeManagerAddress);
     const recipientOptions = feeRecipientQueryOptions(signer, feeManagerAddress);
@@ -61,7 +61,7 @@ describe("fee query options", () => {
 
   test("shield fee query is disabled when amount is omitted", ({ signer }) => {
     const options = shieldFeeQueryOptions(signer, {
-      feeManagerAddress: "0x1111111111111111111111111111111111111111",
+      feeManagerAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     });
 
     expect(options.enabled).toBe(false);
@@ -69,7 +69,7 @@ describe("fee query options", () => {
 
   test("unshield fee query is disabled when recipient params are omitted", ({ signer }) => {
     const options = unshieldFeeQueryOptions(signer, {
-      feeManagerAddress: "0x1111111111111111111111111111111111111111",
+      feeManagerAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       amount: 12n,
     });
 
@@ -80,10 +80,10 @@ describe("fee query options", () => {
     vi.mocked(signer.readContract).mockResolvedValue(77n);
 
     const options = unshieldFeeQueryOptions(signer, {
-      feeManagerAddress: "0x1111111111111111111111111111111111111111",
+      feeManagerAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       amount: 12n,
-      from: "0x2222222222222222222222222222222222222222",
-      to: "0x3333333333333333333333333333333333333333",
+      from: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      to: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
 
     expect(await options.queryFn(mockQueryContext(options.queryKey))).toBe(77n);
@@ -93,10 +93,10 @@ describe("fee query options", () => {
     vi.mocked(signer.readContract).mockResolvedValue(5n);
 
     const options = shieldFeeQueryOptions(signer, {
-      feeManagerAddress: "0x1111111111111111111111111111111111111111",
+      feeManagerAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       amount: 0n,
-      from: "0x2222222222222222222222222222222222222222",
-      to: "0x3333333333333333333333333333333333333333",
+      from: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      to: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
 
     expect(await options.queryFn(mockQueryContext(options.queryKey))).toBe(5n);
@@ -106,20 +106,20 @@ describe("fee query options", () => {
   test("batch transfer fee and recipient query contracts", async ({ signer }) => {
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(5n)
-      .mockResolvedValueOnce("0x4444444444444444444444444444444444444444");
+      .mockResolvedValueOnce("0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D");
 
     const batchOptions = batchTransferFeeQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
     const recipientOptions = feeRecipientQueryOptions(
       signer,
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
 
     expect(await batchOptions.queryFn(mockQueryContext(batchOptions.queryKey))).toBe(5n);
     expect(await recipientOptions.queryFn(mockQueryContext(recipientOptions.queryKey))).toBe(
-      "0x4444444444444444444444444444444444444444",
+      "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D",
     );
   });
 
@@ -127,10 +127,10 @@ describe("fee query options", () => {
     signer,
   }) => {
     const options = shieldFeeQueryOptions(signer, {
-      feeManagerAddress: "0x1111111111111111111111111111111111111111",
+      feeManagerAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       amount: 1n,
-      from: "0x2222222222222222222222222222222222222222",
-      to: "0x3333333333333333333333333333333333333333",
+      from: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      to: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
 
     await expect(

@@ -1,24 +1,31 @@
 /* eslint-disable no-empty-pattern */
-import { test as base } from "vitest";
+import { test as base, vi } from "vitest";
+import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { Handle } from "./relayer/relayer-sdk.types";
 import type { QueryClient } from "@tanstack/query-core";
 import type { Address, Hex } from "viem";
-import { type CredentialsManagerConfig, CredentialsManager } from "./token/credentials-manager";
+import type { CredentialsManagerConfig } from "./token/credentials-manager";
+import { CredentialsManager } from "./token/credentials-manager";
+import type { DelegatedCredentialsManagerConfig } from "./token/delegated-credentials-manager";
+import { DelegatedCredentialsManager } from "./token/delegated-credentials-manager";
 import { MemoryStorage } from "./token/memory-storage";
-import type { ReadonlyToken } from "./token/readonly-token";
+import type { ReadonlyTokenConfig } from "./token/readonly-token";
+import { ReadonlyToken } from "./token/readonly-token";
 import type { TokenConfig } from "./token/token";
 import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, TransactionResult } from "./token/token.types";
 import type { ZamaSDKConfig } from "./token/zama-sdk";
 import { ZamaSDK } from "./token/zama-sdk";
-import { ZamaSDKEvents } from "./events/sdk-events";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
-const TOKEN: Address = "0x1111111111111111111111111111111111abCDEF";
-const WRAPPER: Address = "0x4444444444444444444444444444444444444Abc";
-const USER: Address = "0x2222222222222222222222222222222222abCDEF";
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Handle;
+const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+const WRAPPER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
+const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
+const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
+const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
@@ -57,12 +64,15 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     createDelegatedUserDecryptEIP712: vi.fn(),
     delegatedUserDecrypt: vi.fn(),
     requestZKProofVerification: vi.fn(),
-    getPublicKey: vi
-      .fn()
-      .mockResolvedValue({ publicKeyId: "pk-1", publicKey: new Uint8Array([1]) }),
-    getPublicParams: vi
-      .fn()
-      .mockResolvedValue({ publicParams: new Uint8Array([2]), publicParamsId: "pp-1" }),
+    getAclAddress: vi.fn().mockResolvedValue(ACL),
+    getPublicKey: vi.fn().mockResolvedValue({
+      publicKeyId: "pk-1",
+      publicKey: new Uint8Array([1]),
+    }),
+    getPublicParams: vi.fn().mockResolvedValue({
+      publicParams: new Uint8Array([2]),
+      publicParamsId: "pp-1",
+    }),
     terminate: vi.fn(),
     ...overrides,
   } as unknown as RelayerSDK;
@@ -79,6 +89,7 @@ export function createMockSigner(
     readContract: vi.fn(),
     waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
     getChainId: vi.fn().mockResolvedValue(31337),
+    getBlockTimestamp: vi.fn().mockResolvedValue(BigInt(Math.floor(Date.now() / 1000))),
     subscribe: vi.fn().mockReturnValue(() => {}),
     ...overrides,
   };
@@ -104,8 +115,11 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     address,
     signer,
     decryptBalance: vi.fn().mockResolvedValue(123n),
+    decryptBalanceAs: vi.fn().mockResolvedValue(123n),
     decryptHandles: vi.fn().mockResolvedValue(new Map()),
     confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
+    isDelegated: vi.fn().mockResolvedValue(false),
+    getDelegationExpiry: vi.fn().mockResolvedValue(0n),
     name: vi.fn().mockResolvedValue("Test"),
     symbol: vi.fn().mockResolvedValue("TST"),
     decimals: vi.fn().mockResolvedValue(18),
@@ -118,15 +132,20 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
 }
 
 interface SdkFixtures {
-  userAddress: Address;
-  tokenAddress: Address;
-  wrapperAddress: Address;
-  handle: Handle;
+  userAddress: typeof USER;
+  tokenAddress: typeof TOKEN;
+  wrapperAddress: typeof WRAPPER;
+  aclAddress: typeof ACL;
+  delegatorAddress: typeof DELEGATOR;
+  delegateAddress: typeof DELEGATE;
+  handle: typeof VALID_HANDLE;
   relayer: RelayerSDK;
   signer: GenericSigner;
   token: Token;
+  readonlyToken: ReadonlyToken;
   mockToken: Token;
   credentialManager: CredentialsManager;
+  delegatedCredentialManager: DelegatedCredentialsManager;
   storage: GenericStorage;
   sessionStorage: GenericStorage;
   createMockRelayer: typeof createMockRelayer;
@@ -143,7 +162,11 @@ interface SdkFixtures {
   ) => Token;
   createMockReadonlyToken: (address?: Address) => ReadonlyToken;
   createCredentialManager: (config: CredentialsManagerConfig) => CredentialsManager;
+  createDelegatedCredentialManager: (
+    config: DelegatedCredentialsManagerConfig,
+  ) => DelegatedCredentialsManager;
   createToken: (config: TokenConfig) => Token;
+  createReadonlyToken: (config: ReadonlyTokenConfig) => ReadonlyToken;
   sdk: ZamaSDK;
   createSDK: (overrides?: Partial<ZamaSDKConfig>) => ZamaSDK;
   events: typeof ZamaSDKEvents;
@@ -153,6 +176,9 @@ export const test = base.extend<SdkFixtures>({
   userAddress: USER,
   tokenAddress: TOKEN,
   wrapperAddress: WRAPPER,
+  aclAddress: ACL,
+  delegatorAddress: DELEGATOR,
+  delegateAddress: DELEGATE,
   handle: VALID_HANDLE,
   // Per-test instances — fresh mocks for each test
   relayer: async ({}, use) => {
@@ -193,6 +219,17 @@ export const test = base.extend<SdkFixtures>({
       }),
     );
   },
+  readonlyToken: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, use) => {
+    await use(
+      new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        address: tokenAddress,
+      }),
+    );
+  },
   mockToken: async ({ createMockToken }, use) => {
     await use(createMockToken());
   },
@@ -223,8 +260,43 @@ export const test = base.extend<SdkFixtures>({
     }
     await use(factory);
   },
+  createDelegatedCredentialManager: async ({}, use) => {
+    function factory(config: DelegatedCredentialsManagerConfig) {
+      return new DelegatedCredentialsManager({
+        relayer: config.relayer,
+        signer: config.signer,
+        storage: config.storage,
+        sessionStorage: config.sessionStorage,
+        keypairTTL: config.keypairTTL ?? 86400,
+        sessionTTL: config.sessionTTL ?? 2592000,
+        onEvent: config.onEvent,
+      });
+    }
+    await use(factory);
+  },
+  delegatedCredentialManager: async (
+    { relayer, signer, storage, sessionStorage, createDelegatedCredentialManager },
+    use,
+  ) => {
+    await use(
+      createDelegatedCredentialManager({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        keypairTTL: 86400,
+        sessionTTL: 2592000,
+      }),
+    );
+  },
   createToken: async ({}, use) => {
     await use((config: TokenConfig) => new Token(config));
+  },
+  createReadonlyToken: async ({}, use) => {
+    function createReadonlyToken(config: ReadonlyTokenConfig) {
+      return new ReadonlyToken(config);
+    }
+    await use(createReadonlyToken);
   },
   createMockToken: async ({ tokenAddress, signer }, use) => {
     const defaultTxResult: TransactionResult = {
@@ -234,7 +306,11 @@ export const test = base.extend<SdkFixtures>({
     function factory(
       addressOrArgs?:
         | Address
-        | { address?: Address; signer?: GenericSigner; txResult?: TransactionResult },
+        | {
+            address?: Address;
+            signer?: GenericSigner;
+            txResult?: TransactionResult;
+          },
     ) {
       const addr =
         typeof addressOrArgs === "string"
@@ -260,6 +336,8 @@ export const test = base.extend<SdkFixtures>({
         unshield: vi.fn().mockResolvedValue(txResult),
         unshieldAll: vi.fn().mockResolvedValue(txResult),
         resumeUnshield: vi.fn().mockResolvedValue(txResult),
+        delegateDecryption: vi.fn().mockResolvedValue(txResult),
+        revokeDelegation: vi.fn().mockResolvedValue(txResult),
       } as unknown as Token;
     }
     await use(factory);
@@ -272,7 +350,13 @@ export const test = base.extend<SdkFixtures>({
   },
   createSDK: async ({ signer, relayer, storage, sessionStorage }, use) => {
     await use((overrides?: Partial<ZamaSDKConfig>) => {
-      return new ZamaSDK({ relayer, signer, storage, sessionStorage, ...overrides });
+      return new ZamaSDK({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        ...overrides,
+      });
     });
   },
   events: ZamaSDKEvents,

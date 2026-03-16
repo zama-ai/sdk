@@ -97,9 +97,6 @@ export class ViemSigner implements GenericSigner {
     const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
     const { walletClient, account } = this.#requireWalletAndAccount();
-    if (!account) {
-      throw new TypeError("WalletClient has no account");
-    }
     return walletClient.writeContract({
       chain: walletClient.chain,
       account,
@@ -119,6 +116,11 @@ export class ViemSigner implements GenericSigner {
 
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     return this.#publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  async getBlockTimestamp(): Promise<bigint> {
+    const block = await this.#publicClient.getBlock();
+    return block.timestamp;
   }
 
   subscribe(callbacks: SignerLifecycleCallbacks): () => void {

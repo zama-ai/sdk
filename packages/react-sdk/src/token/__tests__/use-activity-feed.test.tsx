@@ -5,7 +5,7 @@ import { Topics } from "@zama-fhe/sdk";
 import { useActivityFeed } from "../use-activity-feed";
 import { TOKEN, USER } from "../../__tests__/mutation-test-helpers";
 
-const OTHER = "0x3333333333333333333333333333333333333333";
+const OTHER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C";
 
 const topic = (hex: string): `0x${string}` => `0x${hex.padStart(64, "0")}`;
 const bytes32 = (hex: string): Address => `0x${hex.padStart(64, "0")}`;

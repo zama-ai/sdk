@@ -4,7 +4,7 @@ import {
   balanceOfContract,
   decimalsContract,
   symbolContract,
-  useAllow,
+  useAllowTokens,
   useConfidentialBalances,
   useMetadata,
   type Address,
@@ -107,7 +107,7 @@ export function TokenTable({
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const [revealed, setRevealed] = useState(false);
-  const { mutate: allowTokens } = useAllow();
+  const { mutate: allowTokens } = useAllowTokens();
   const {
     data: balances,
     isFetching,

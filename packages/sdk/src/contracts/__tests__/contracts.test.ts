@@ -58,10 +58,10 @@ import {
 // Transfer batcher
 import { confidentialBatchTransferContract } from "../transfer-batcher";
 
-const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
-const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
-const FEE_MANAGER = "0x6666666666666666666666666666666666666666" as Address;
-const BATCHER = "0x7777777777777777777777777777777777777777" as Address;
+const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
+const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
+const FEE_MANAGER = "0x6f6F6f6f6f6f6f6f6f6F6f6F6F6F6F6f6F6F6f6F" as Address;
+const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 
 describe("ERC-20 contract builders", () => {
   it("nameContract", ({ tokenAddress }) => {
@@ -147,8 +147,8 @@ describe("Encryption contract builders", () => {
     tokenAddress,
     userAddress,
   }) => {
-    const handle = new Uint8Array([0xAB]);
-    const proof = new Uint8Array([0xCD]);
+    const handle = new Uint8Array([0xab]);
+    const proof = new Uint8Array([0xcd]);
     const config = confidentialTransferFromContract(
       tokenAddress,
       userAddress,
@@ -181,8 +181,8 @@ describe("Encryption contract builders", () => {
   });
 
   it("unwrapContract converts handles to hex", ({ tokenAddress, userAddress }) => {
-    const handle = new Uint8Array([0xDE, 0xAD]);
-    const proof = new Uint8Array([0xBE, 0xEF]);
+    const handle = new Uint8Array([0xde, 0xad]);
+    const proof = new Uint8Array([0xbe, 0xef]);
     const config = unwrapContract(tokenAddress, userAddress, SPENDER, handle, proof);
     expect(config.functionName).toBe("unwrap");
     expect(config.args).toEqual([userAddress, SPENDER, "0xdead", "0xbeef"]);

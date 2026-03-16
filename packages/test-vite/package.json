@@ -11,13 +11,13 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
     "@zama-fhe/react-sdk": "workspace:*",
-    "@zama-fhe/test-components": "workspace:*",
     "@zama-fhe/sdk": "workspace:*",
+    "@zama-fhe/test-components": "workspace:*",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router": "^7.13.1",
     "tailwindcss": "^4.2.1",
-    "viem": "^2.47.0",
+    "viem": "^2.47.1",
     "wagmi": "^3.5.0"
   },
   "devDependencies": {

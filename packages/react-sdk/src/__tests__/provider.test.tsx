@@ -56,10 +56,10 @@ describe("ZamaProvider & useZamaSDK", () => {
     const lifecycle = vi.mocked(signer.subscribe!).mock.calls.at(-1)?.[0];
     const signerKey = zamaQueryKeys.signerAddress.all;
     const balanceKey = zamaQueryKeys.confidentialBalance.token(
-      "0x1111111111111111111111111111111111111111",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
     const decryptionKey = decryptionKeys.value(
-      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "0xaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbB",
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
 

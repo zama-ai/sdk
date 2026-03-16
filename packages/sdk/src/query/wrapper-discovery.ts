@@ -1,9 +1,9 @@
+import type { Address } from "viem";
 import { getWrapperContract, wrapperExistsContract } from "../contracts";
 import type { GenericSigner } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
-import type { Address } from "viem";
+import { filterQueryOptions } from "./utils";
 
 export interface WrapperDiscoveryQueryConfig {
   coordinatorAddress: Address;

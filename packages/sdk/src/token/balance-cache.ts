@@ -32,7 +32,8 @@ export async function loadCachedBalance({
   try {
     const raw = await storage.get<string>(storageKey(tokenAddress, owner, handle));
     return raw !== null ? BigInt(raw) : null;
-  } catch {
+  } catch (error) {
+    console.warn("[zama-sdk] Balance cache read failed:", error);
     return null;
   }
 }

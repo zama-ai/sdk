@@ -25,7 +25,7 @@ describe("pending-unshield persistence", () => {
   });
 
   it("isolates by wrapper address", async ({ storage, wrapperAddress }) => {
-    const OTHER = "0x2222222222222222222222222222222222222222" as Address;
+    const OTHER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
     await savePendingUnshield(storage, wrapperAddress, TX_HASH);
     expect(await loadPendingUnshield(storage, OTHER)).toBeNull();
   });

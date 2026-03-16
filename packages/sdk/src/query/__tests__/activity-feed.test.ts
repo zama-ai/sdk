@@ -5,9 +5,9 @@ import { Topics } from "../../events/onchain-events";
 import { activityFeedQueryOptions } from "../activity-feed";
 import type { Address } from "viem";
 
-const USER = "0x2222222222222222222222222222222222222222";
-const TOKEN = "0x1111111111111111111111111111111111111111";
-const OTHER = "0x3333333333333333333333333333333333333333";
+const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
+const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
+const OTHER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C";
 
 const topic = (hex: string): `0x${string}` => `0x${hex.padStart(64, "0")}`;
 const bytes32 = (hex: string): Address => `0x${hex.padStart(64, "0")}`;

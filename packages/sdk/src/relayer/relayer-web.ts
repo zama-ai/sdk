@@ -5,6 +5,10 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+import type { Address, Hex } from "viem";
+import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
+import type { RelayerSDK } from "./relayer-sdk";
 import type {
   DelegatedUserDecryptParams,
   EIP712TypedData,
@@ -16,11 +20,7 @@ import type {
   RelayerWebConfig,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
-import type { RelayerSDK } from "./relayer-sdk";
-import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { ZamaError, EncryptionFailedError } from "../token/errors";
-import type { Address, Hex } from "viem";
+import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -103,7 +103,7 @@ export class RelayerWeb implements RelayerSDK {
 
     return {
       cdnUrl: CDN_URL,
-      fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
+      fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
       csrfToken: security?.getCsrfToken?.() ?? "",
       integrity: security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
       logger: this.#config.logger,
@@ -378,5 +378,14 @@ export class RelayerWeb implements RelayerSDK {
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const worker = await this.#ensureWorker();
     return (await worker.getPublicParams(bits)).result;
+  }
+
+  async getAclAddress(): Promise<Address> {
+    const chainId = await this.#config.getChainId();
+    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+    if (!config.aclContractAddress) {
+      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
+    }
+    return config.aclContractAddress as Address;
   }
 }

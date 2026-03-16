@@ -145,7 +145,10 @@
         "**/*.config.mts",
         "**/*.config.cts",
         "packages/sdk/src/worker/**",
-        "packages/sdk/src/token/credentials-manager.ts"
+        "packages/sdk/src/token/credentials-manager.ts",
+        "packages/sdk/src/token/credential-manager-base.ts",
+        "packages/sdk/src/token/balance-cache.ts",
+        "packages/sdk/src/token/token.ts"
       ],
       "rules": {
         "no-console": "off"

@@ -16,11 +16,11 @@ import { useZamaSDK } from "../provider";
  *
  * @example
  * ```tsx
- * const { mutateAsync: allow, isPending } = useAllow();
- * // Call allow(allTokenAddresses) before any individual reveal
+ * const { mutateAsync: allowTokens, isPending } = useAllowTokens();
+ * // Call allowTokens(allTokenAddresses) before any individual reveal
  * ```
  */
-export function useAllow(options?: UseMutationOptions<void, Error, Address[]>) {
+export function useAllowTokens(options?: UseMutationOptions<void, Error, Address[]>) {
   const sdk = useZamaSDK();
 
   return useMutation<void, Error, Address[]>({
