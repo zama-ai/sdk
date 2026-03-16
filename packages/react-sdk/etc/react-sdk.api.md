@@ -129,6 +129,7 @@ import { loadPendingUnshield } from '@zama-fhe/sdk';
 import { MainnetConfig } from '@zama-fhe/sdk';
 import { matchZamaError } from '@zama-fhe/sdk';
 import { MemoryStorage } from '@zama-fhe/sdk';
+import { memoryStorage } from '@zama-fhe/sdk';
 import { nameContract } from '@zama-fhe/sdk';
 import { NetworkType } from '@zama-fhe/sdk';
 import { NoCiphertextError } from '@zama-fhe/sdk';
@@ -525,6 +526,8 @@ export { MainnetConfig }
 export { matchZamaError }
 
 export { MemoryStorage }
+
+export { memoryStorage }
 
 export { nameContract }
 
