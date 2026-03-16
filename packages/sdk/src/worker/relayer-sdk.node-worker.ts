@@ -83,6 +83,10 @@ function toBigInt(value: bigint | boolean): bigint {
   return typeof value === "boolean" ? (value ? 1n : 0n) : value;
 }
 
+function unreachableFheType(_: never): never {
+  throw new Error("Unsupported FHE type");
+}
+
 async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { id, type, payload } = request;
   const { values, contractAddress, userAddress } = payload;
@@ -122,7 +126,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
           input.addAddress(String(value));
           break;
         default:
-          throw new Error(`Unsupported FHE type: ${fheType}`);
+          unreachableFheType(fheType);
       }
     }
 
@@ -397,7 +401,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
   }
 }
 
-port.on("message", async (request: WorkerRequest) => {
+async function handleMessage(request: WorkerRequest): Promise<void> {
   try {
     switch (request.type) {
       case "NODE_INIT":
@@ -434,14 +438,14 @@ port.on("message", async (request: WorkerRequest) => {
         handleGetPublicParams(request);
         break;
       default:
-        console.error("[NodeWorker] Unknown request type:", (request as WorkerRequest).type);
+        console.error("[NodeWorker] Unknown request type:", request.type);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(
-      request?.id ?? "unknown",
-      request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),
-      message,
-    );
+    sendError(request.id, request.type, message);
   }
+}
+
+port.on("message", (request: WorkerRequest) => {
+  void handleMessage(request);
 });

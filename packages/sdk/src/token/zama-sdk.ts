@@ -72,7 +72,9 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       keypairTTL: (() => {
         const ttl = config.keypairTTL ?? 86400;
-        if (ttl <= 0) throw new Error("keypairTTL must be a positive number (seconds)");
+        if (ttl <= 0) {
+          throw new Error("keypairTTL must be a positive number (seconds)");
+        }
         return ttl;
       })(),
       sessionTTL: config.sessionTTL ?? 2592000,
@@ -144,7 +146,14 @@ export class ZamaSDK {
 
   async #revokeByTrackedIdentity(): Promise<void> {
     await this.#identityReady;
-    if (this.#lastAddress === null || this.#lastAddress === undefined || this.#lastChainId === null || this.#lastChainId === undefined) return;
+    if (
+      this.#lastAddress === null ||
+      this.#lastAddress === undefined ||
+      this.#lastChainId === null ||
+      this.#lastChainId === undefined
+    ) {
+      return;
+    }
     const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
     await this.sessionStorage.delete(storeKey);
     this.#onEvent?.({

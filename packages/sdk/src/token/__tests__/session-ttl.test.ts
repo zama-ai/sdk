@@ -93,7 +93,7 @@ describe("Session TTL", () => {
     // SessionExpired event should have fired
     const expiredEvents = emitted.filter((e) => e.type === events.SessionExpired);
     expect(expiredEvents).toHaveLength(1);
-    expect("reason" in expiredEvents[0]! && expiredEvents[0].reason).toBe("ttl");
+    expect("reason" in expiredEvents[0] && expiredEvents[0].reason).toBe("ttl");
   });
 
   it("TTL 0: every operation triggers signing prompt", async ({

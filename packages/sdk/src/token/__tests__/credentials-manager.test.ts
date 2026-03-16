@@ -344,7 +344,9 @@ describe("CredentialsManager", () => {
     // Make removeItem throw to test best-effort cleanup
     const originalRemoveItem = storage.delete.bind(storage);
     storage.delete = vi.fn().mockImplementation((key: string) => {
-      if (key === storeKey) throw new Error("storage unavailable");
+      if (key === storeKey) {
+        throw new Error("storage unavailable");
+      }
       return originalRemoveItem(key);
     });
 
@@ -805,8 +807,8 @@ describe("contract address extension", () => {
     await credentialManager.allow(TOKEN_A, TOKEN_B);
 
     // Second createEIP712 call should include both tokens
-    const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1]!;
-    const contractAddresses = secondCall[1] as Address[];
+    const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1];
+    const contractAddresses = secondCall[1];
     const normalized = contractAddresses.map((a) => getAddress(a));
     expect(normalized).toContain(getAddress(TOKEN_A));
     expect(normalized).toContain(getAddress(TOKEN_B));

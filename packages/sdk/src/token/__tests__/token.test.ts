@@ -123,7 +123,7 @@ describe("Token", () => {
         .mockResolvedValueOnce({ [handle2]: 2000n });
 
       const result = await Token.batchDecryptBalances([token, token2], {
-        handles: [handle as Address, handle2 as Address],
+        handles: [handle, handle2 as Address],
       });
 
       expect(result.get(tokenAddress)).toBe(1000n);
@@ -151,7 +151,7 @@ describe("Token", () => {
       });
 
       const result = await Token.batchDecryptBalances([token, token2], {
-        handles: [handle as Address, ZERO_HANDLE as Address],
+        handles: [handle, ZERO_HANDLE as Address],
       });
 
       expect(result.get(tokenAddress)).toBe(1000n);
@@ -169,7 +169,7 @@ describe("Token", () => {
       vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
       const result = await Token.batchDecryptBalances([token], {
-        handles: [handle as Address],
+        handles: [handle],
         onError: () => 0n,
       });
 
@@ -186,7 +186,7 @@ describe("Token", () => {
 
       await expect(
         Token.batchDecryptBalances([token], {
-          handles: [handle as Address],
+          handles: [handle],
         }),
       ).rejects.toThrow("Batch decryption failed for 1 token(s)");
     });
@@ -222,7 +222,7 @@ describe("Token", () => {
       handle,
       tokenAddress,
     }) => {
-      const balance = await token.decryptBalance(handle as Address);
+      const balance = await token.decryptBalance(handle);
 
       expect(balance).toBe(1000n);
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
@@ -234,7 +234,7 @@ describe("Token", () => {
     });
 
     it("does not call readContract (skips on-chain read)", async ({ signer, token, handle }) => {
-      await token.decryptBalance(handle as Address);
+      await token.decryptBalance(handle);
 
       expect(signer.readContract).not.toHaveBeenCalled();
     });
@@ -246,7 +246,7 @@ describe("Token", () => {
       handle,
     }) => {
       const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
-      await token.decryptBalance(handle as Address, otherOwner);
+      await token.decryptBalance(handle, otherOwner);
 
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -262,7 +262,7 @@ describe("Token", () => {
       token,
       handle,
     }) => {
-      await token.decryptBalance(handle as Address);
+      await token.decryptBalance(handle);
 
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -279,9 +279,7 @@ describe("Token", () => {
     }) => {
       vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
-      await expect(token.decryptBalance(handle as Address)).rejects.toThrow(
-        "Failed to decrypt balance",
-      );
+      await expect(token.decryptBalance(handle)).rejects.toThrow("Failed to decrypt balance");
     });
 
     it("returns 0n when handle not found in decrypt result", async ({
@@ -292,7 +290,7 @@ describe("Token", () => {
     }) => {
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({});
 
-      const balance = await token.decryptBalance(handle as Address);
+      const balance = await token.decryptBalance(handle);
 
       expect(balance).toBe(0n);
     });

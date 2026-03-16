@@ -119,7 +119,9 @@ export class RelayerWeb implements RelayerSDK {
    * Resets on failure to allow retries.
    */
   async #ensureWorker(): Promise<RelayerWorkerClient> {
-    if (this.#ensureLock) return this.#ensureLock;
+    if (this.#ensureLock) {
+      return this.#ensureLock;
+    }
     this.#ensureLock = this.#ensureWorkerInner();
     try {
       return await this.#ensureLock;

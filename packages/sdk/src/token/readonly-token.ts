@@ -17,7 +17,11 @@ import { pLimit, toError } from "../utils";
 import type { GenericSigner, GenericStorage } from "./token.types";
 import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "./errors";
 import { CredentialsManager } from "./credentials-manager";
-import { ZamaSDKEvents, type ZamaSDKEventInput, type ZamaSDKEventListener } from "../events/sdk-events";
+import {
+  ZamaSDKEvents,
+  type ZamaSDKEventInput,
+  type ZamaSDKEventListener,
+} from "../events/sdk-events";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { getAddress, type Address } from "viem";
 
@@ -163,7 +167,7 @@ export class ReadonlyToken {
     const result = await this.signer.readContract(
       supportsInterfaceContract(this.address, ERC7984_INTERFACE_ID),
     );
-    return result === true;
+    return result;
   }
 
   /**
@@ -182,7 +186,7 @@ export class ReadonlyToken {
     const result = await this.signer.readContract(
       supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
     );
-    return result === true;
+    return result;
   }
 
   /**
@@ -217,7 +221,9 @@ export class ReadonlyToken {
     tokens: ReadonlyToken[],
     options?: BatchDecryptOptions,
   ): Promise<Map<Address, bigint>> {
-    if (tokens.length === 0) return new Map();
+    if (tokens.length === 0) {
+      return new Map();
+    }
 
     const { handles, owner, onError, maxConcurrency } = options ?? {};
 
@@ -243,7 +249,9 @@ export class ReadonlyToken {
     const cachedValues = await Promise.all(
       tokens.map((token, i) => {
         const handle = resolvedHandles[i]!;
-        if (token.isZeroHandle(handle)) return 0n;
+        if (token.isZeroHandle(handle)) {
+          return 0n;
+        }
         return loadCachedBalance({
           storage: tokenStorage,
           tokenAddress: token.address,
@@ -267,7 +275,9 @@ export class ReadonlyToken {
     }
 
     // All balances resolved from cache — no credentials needed.
-    if (uncached.length === 0) return results;
+    if (uncached.length === 0) {
+      return results;
+    }
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
     const creds = await firstToken.credentials.allow(...uncachedAddresses);
@@ -341,7 +351,9 @@ export class ReadonlyToken {
   async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
     const coordinator = getAddress(coordinatorAddress);
     const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
-    if (!exists) return null;
+    if (!exists) {
+      return null;
+    }
     return this.signer.readContract(getWrapperContract(coordinator, this.address));
   }
 
@@ -471,7 +483,9 @@ export class ReadonlyToken {
    * ```
    */
   static async allow(...tokens: ReadonlyToken[]): Promise<void> {
-    if (tokens.length === 0) return;
+    if (tokens.length === 0) {
+      return;
+    }
     const allAddresses = tokens.map((t) => t.address);
     await tokens[0]!.credentials.allow(...allAddresses);
   }
@@ -502,7 +516,9 @@ export class ReadonlyToken {
    * ```
    */
   async decryptBalance(handle: Handle, owner?: Address): Promise<bigint> {
-    if (this.isZeroHandle(handle)) return 0n;
+    if (this.isZeroHandle(handle)) {
+      return 0n;
+    }
 
     const signerAddress = owner ?? (await this.signer.getAddress());
 
@@ -513,7 +529,9 @@ export class ReadonlyToken {
       owner: signerAddress,
       handle,
     });
-    if (cached !== null) return cached;
+    if (cached !== null) {
+      return cached;
+    }
 
     const creds = await this.credentials.allow(this.address);
 
@@ -573,7 +591,9 @@ export class ReadonlyToken {
       }
     }
 
-    if (nonZeroHandles.length === 0) return results;
+    if (nonZeroHandles.length === 0) {
+      return results;
+    }
 
     const creds = await this.credentials.allow(this.address);
 
@@ -620,7 +640,8 @@ function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   }
 
   const statusCode =
-    error !== null && error !== undefined &&
+    error !== null &&
+    error !== undefined &&
     typeof error === "object" &&
     "statusCode" in error &&
     typeof (error as Record<string, unknown>).statusCode === "number"

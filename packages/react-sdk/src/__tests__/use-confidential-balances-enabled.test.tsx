@@ -9,23 +9,23 @@ import { useConfidentialBalances } from "../token/use-confidential-balances";
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const TOKEN_B = "0x2222222222222222222222222222222222222222" as Address;
 const OWNER = "0x3333333333333333333333333333333333333333" as Address;
-const HANDLE_A = `0x${"aa".repeat(32)}` as Address;
-const HANDLE_B = `0x${"bb".repeat(32)}` as Address;
+const HANDLE_A = `0x${"aa".repeat(32)}`;
+const HANDLE_B = `0x${"bb".repeat(32)}`;
 
-vi.mock(import('@tanstack/react-query'), async () => {
+vi.mock(import("@tanstack/react-query"), async () => {
   const actual =
     await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query"); // oxlint-disable-line typescript-eslint/consistent-type-imports
   return { ...actual, useQuery: vi.fn() };
 });
 
-vi.mock(import('../provider'), () => ({
+vi.mock(import("../provider"), () => ({
   useZamaSDK: vi.fn(() => ({
     signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
     createReadonlyToken: vi.fn((address: Address) => ({ address })),
   })),
 }));
 
-vi.mock(import('@zama-fhe/sdk/query'), () => ({
+vi.mock(import("@zama-fhe/sdk/query"), () => ({
   confidentialBalancesQueryOptions: vi.fn(() => ({
     queryKey: ["balances"],
     queryFn: vi.fn(),

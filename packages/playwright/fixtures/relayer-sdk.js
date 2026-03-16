@@ -6,7 +6,7 @@ console.log("[Mock SDK] Loading mock relayerSDK");
 const BASE_URL = "__BASE_URL__";
 
 if (BASE_URL === "__BASE_URL__") {
-  throw Error('"__BASE_URL__" must be replaced by a base url');
+  throw new Error('"__BASE_URL__" must be replaced by a base url');
 }
 
 self.relayerSDK = {

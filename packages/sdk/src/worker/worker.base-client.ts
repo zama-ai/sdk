@@ -88,7 +88,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   // ===========================================================================
 
   async initWorker(): Promise<TWorker> {
-    if (this.#worker) return this.#worker;
+    if (this.#worker) {
+      return this.#worker;
+    }
 
     if (!this.#initPromise) {
       this.#initPromise = this.#doInitWorker().catch((error) => {
@@ -174,7 +176,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending(`Worker error: ${message}`);
-    if (worker) this.terminateWorker(worker);
+    if (worker) {
+      this.terminateWorker(worker);
+    }
   }
 
   protected handleWorkerMessageError(): void {
@@ -182,7 +186,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending("Worker message deserialization failed");
-    if (worker) this.terminateWorker(worker);
+    if (worker) {
+      this.terminateWorker(worker);
+    }
   }
 
   // ===========================================================================

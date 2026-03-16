@@ -23,7 +23,7 @@ export { isConfidentialQueryOptions, isWrapperQueryOptions };
  */
 export function useIsConfidential(
   tokenAddress: Address,
-  options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
   const token = useReadonlyToken(tokenAddress);
 
@@ -68,7 +68,7 @@ export function useIsConfidentialSuspense(tokenAddress: Address) {
  */
 export function useIsWrapper(
   tokenAddress: Address,
-  options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
   const token = useReadonlyToken(tokenAddress);
 

@@ -39,6 +39,10 @@ import type {
 let sdkInstance: FhevmInstance | null = null;
 let sdkGlobal: RelayerSDKGlobal | null = null;
 
+function unreachableFheType(_: never): never {
+  throw new Error("Unsupported FHE type");
+}
+
 // Store relayer URL and CSRF token for fetch interception.
 // These globals are per-worker-instance. Do NOT convert to SharedWorker
 // without rearchitecting CSRF token management to be per-connection.
@@ -138,7 +142,7 @@ function validateCdnUrl(rawUrl: string): string {
  */
 function setupFetchInterceptor(): void {
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const url = typeof input === "string" ? input : (input instanceof URL ? input.href : input.url);
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const method = init?.method?.toUpperCase() ?? "GET";
 
     // Only intercept requests to our relayer proxy
@@ -330,7 +334,7 @@ function addTypedValue(
       input.addAddress(String(value));
       break;
     default:
-      throw new Error(`Unsupported FHE type: ${fheType}`);
+      unreachableFheType(fheType);
   }
 }
 
@@ -416,15 +420,25 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
  * Relayer SDK errors may carry a `status` or `statusCode` property.
  */
 function extractHttpStatus(error: unknown): number | undefined {
-  if (error === null || error === undefined || typeof error !== "object") return undefined;
+  if (error === null || error === undefined || typeof error !== "object") {
+    return undefined;
+  }
   const e = error as Record<string, unknown>;
-  if (typeof e.statusCode === "number") return e.statusCode;
-  if (typeof e.status === "number") return e.status;
+  if (typeof e.statusCode === "number") {
+    return e.statusCode;
+  }
+  if (typeof e.status === "number") {
+    return e.status;
+  }
   // Check nested cause
   if (e.cause !== null && e.cause !== undefined && typeof e.cause === "object") {
     const cause = e.cause as Record<string, unknown>;
-    if (typeof cause.statusCode === "number") return cause.statusCode;
-    if (typeof cause.status === "number") return cause.status;
+    if (typeof cause.statusCode === "number") {
+      return cause.statusCode;
+    }
+    if (typeof cause.status === "number") {
+      return cause.status;
+    }
   }
   return undefined;
 }

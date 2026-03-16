@@ -49,7 +49,7 @@ export interface UseFeeConfig {
  */
 export function useShieldFee(
   config: UseFeeConfig,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
   const baseOpts = shieldFeeQueryOptions(sdk.signer, config);
@@ -80,7 +80,7 @@ export function useShieldFee(
  */
 export function useUnshieldFee(
   config: UseFeeConfig,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
   const baseOpts = unshieldFeeQueryOptions(sdk.signer, config);
@@ -106,7 +106,7 @@ export function useUnshieldFee(
  */
 export function useBatchTransferFee(
   feeManagerAddress: Address,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
   const baseOpts = batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress);
@@ -132,7 +132,7 @@ export function useBatchTransferFee(
  */
 export function useFeeRecipient(
   feeManagerAddress: Address,
-  options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<Address>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
   const baseOpts = feeRecipientQueryOptions(sdk.signer, feeManagerAddress);

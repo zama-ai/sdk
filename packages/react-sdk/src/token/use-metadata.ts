@@ -24,7 +24,7 @@ export { type TokenMetadata };
  */
 export function useMetadata(
   tokenAddress: Address,
-  options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<TokenMetadata>, "queryKey" | "queryFn">,
 ) {
   const token = useReadonlyToken(tokenAddress);
 

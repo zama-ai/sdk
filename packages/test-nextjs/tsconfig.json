@@ -1,24 +1,16 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "target": "es2022",
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
+      "@zama-fhe/sdk": ["../sdk/src/index.ts"],
+      "@zama-fhe/sdk/*": ["../sdk/src/*"],
+      "@zama-fhe/react-sdk": ["../react-sdk/src/index.ts"],
+      "@zama-fhe/react-sdk/*": ["../react-sdk/src/*"],
       "@/*": ["./src/*"]
     }
   },

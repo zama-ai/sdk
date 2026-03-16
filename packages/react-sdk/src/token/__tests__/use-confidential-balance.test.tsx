@@ -6,7 +6,7 @@ import { TOKEN, USER } from "../../__tests__/mutation-test-helpers";
 
 describe("useConfidentialBalance", () => {
   test("default", async ({ renderWithProviders, signer, relayer }) => {
-    const handle = `0x${"aa".repeat(32)}` as Address;
+    const handle = `0x${"aa".repeat(32)}`;
     vi.mocked(signer.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
 
@@ -51,7 +51,7 @@ describe("useConfidentialBalance", () => {
 
   describe("lifecycle", () => {
     test("default", async ({ renderWithProviders, signer, relayer }) => {
-      const handle = `0x${"aa".repeat(32)}` as Address;
+      const handle = `0x${"aa".repeat(32)}`;
       vi.mocked(signer.readContract).mockResolvedValue(handle);
       vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
 
@@ -182,7 +182,7 @@ describe("useConfidentialBalance", () => {
       signer,
       relayer,
     }) => {
-      const handle = `0x${"ac".repeat(32)}` as Address;
+      const handle = `0x${"ac".repeat(32)}`;
       let resolveAddress: (value: Address) => void;
       const addressPromise = new Promise<Address>((resolve) => {
         resolveAddress = resolve;
@@ -208,14 +208,14 @@ describe("useConfidentialBalance", () => {
 
     describe("behavior: full lifecycle", () => {
       test("handle poll -> decrypt cascade", async ({ renderWithProviders, signer, relayer }) => {
-        const handleA = `0x${"ab".repeat(32)}` as Address;
-        const handleB = `0x${"bc".repeat(32)}` as Address;
+        const handleA = `0x${"ab".repeat(32)}`;
+        const handleB = `0x${"bc".repeat(32)}`;
         vi.mocked(signer.readContract)
           .mockResolvedValueOnce(handleA)
           .mockResolvedValueOnce(handleB);
         vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }) => {
           const value = handles[0] === handleA ? 111n : 222n;
-          return { [handles[0] as Address]: value };
+          return { [handles[0]]: value };
         });
 
         const { result } = renderWithProviders(() =>
@@ -250,7 +250,7 @@ describe("useConfidentialBalance", () => {
       signer,
       relayer,
     }) => {
-      const handle = `0x${"ad".repeat(32)}` as Address;
+      const handle = `0x${"ad".repeat(32)}`;
       vi.mocked(signer.readContract).mockResolvedValue(handle);
       vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 999n });
 

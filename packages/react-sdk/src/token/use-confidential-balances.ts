@@ -26,7 +26,7 @@ export type { ConfidentialBalancesData };
 
 /** Query options for the decrypt phase of {@link useConfidentialBalances}. */
 export type UseConfidentialBalancesOptions = Omit<
-  UseQueryOptions<ConfidentialBalancesData, Error>,
+  UseQueryOptions<ConfidentialBalancesData>,
   "queryKey" | "queryFn"
 >;
 

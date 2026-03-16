@@ -23,7 +23,7 @@ export { totalSupplyQueryOptions };
  */
 export function useTotalSupply(
   tokenAddress: Address,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const token = useReadonlyToken(tokenAddress);
 

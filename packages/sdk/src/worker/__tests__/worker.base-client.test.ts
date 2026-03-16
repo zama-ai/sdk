@@ -328,7 +328,7 @@ describe("BaseWorkerClient", () => {
     const result = await client.userDecrypt(params);
     expect(result).toEqual({ clearValues: { [HANDLE]: 42n } });
 
-    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("USER_DECRYPT");
     expect(lastCall.payload).toEqual(params);
   });
@@ -384,7 +384,7 @@ describe("BaseWorkerClient", () => {
     const result = await client.encrypt(params);
     expect(result).toEqual({ handles: [], inputProof: "0x" });
 
-    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("ENCRYPT");
   });
 
@@ -394,7 +394,7 @@ describe("BaseWorkerClient", () => {
 
     await client.publicDecrypt([HANDLE]);
 
-    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("PUBLIC_DECRYPT");
     expect(lastCall.payload).toEqual({ handles: [HANDLE] });
   });
@@ -411,7 +411,7 @@ describe("BaseWorkerClient", () => {
     };
     await client.createEIP712(params);
 
-    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("CREATE_EIP712");
     expect(lastCall.payload).toEqual(params);
   });
@@ -429,7 +429,7 @@ describe("BaseWorkerClient", () => {
     };
     await client.createDelegatedUserDecryptEIP712(params);
 
-    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("CREATE_DELEGATED_EIP712");
     expect(lastCall.payload).toEqual(params);
   });
@@ -452,7 +452,7 @@ describe("BaseWorkerClient", () => {
     };
     await client.delegatedUserDecrypt(params);
 
-    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("DELEGATED_USER_DECRYPT");
     expect(lastCall.payload).toEqual(params);
   });
@@ -463,7 +463,7 @@ describe("BaseWorkerClient", () => {
 
     await client.requestZKProofVerification({ proof: "0x" } as never);
 
-    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("REQUEST_ZK_PROOF_VERIFICATION");
   });
 
@@ -473,7 +473,7 @@ describe("BaseWorkerClient", () => {
 
     await client.getPublicKey();
 
-    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("GET_PUBLIC_KEY");
   });
 
@@ -483,7 +483,7 @@ describe("BaseWorkerClient", () => {
 
     await client.getPublicParams(2048);
 
-    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0] as WorkerRequest;
+    const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("GET_PUBLIC_PARAMS");
     expect(lastCall.payload).toEqual({ bits: 2048 });
   });

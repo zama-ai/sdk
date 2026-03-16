@@ -26,7 +26,9 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES):
 }
 
 function isTransientError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
+  if (!(error instanceof Error)) {
+    return false;
+  }
   const msg = error.message.toLowerCase();
   return (
     msg.includes("timed out") ||

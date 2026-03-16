@@ -19,10 +19,7 @@ export interface UseConfidentialBalanceConfig {
 }
 
 /** Query options for the decrypt phase of {@link useConfidentialBalance}. */
-export type UseConfidentialBalanceOptions = Omit<
-  UseQueryOptions<bigint, Error>,
-  "queryKey" | "queryFn"
->;
+export type UseConfidentialBalanceOptions = Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">;
 
 /**
  * Declarative hook to read the connected wallet's confidential token balance.

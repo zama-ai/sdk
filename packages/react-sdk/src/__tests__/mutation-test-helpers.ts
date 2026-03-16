@@ -2,7 +2,7 @@ import { act } from "@testing-library/react";
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import type { Address, GenericSigner, RawLog, Token } from "@zama-fhe/sdk";
 import { expect, vi } from "../test-fixtures";
-import type { createMockRelayer} from "../../../sdk/src/test-fixtures";
+import type { createMockRelayer } from "../../../sdk/src/test-fixtures";
 import { createMockSigner } from "../../../sdk/src/test-fixtures";
 import { expectCacheInvalidated } from "../test-helpers";
 
@@ -20,9 +20,9 @@ export const WAGMI_BALANCE_KEY = [
 export const OTHER_TOKEN = "0x9999999999999999999999999999999999999999" as Address;
 export const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address;
 
-export const HANDLE = `0x${"11".repeat(32)}` as Address;
-export const BURN_AMOUNT_HANDLE = `0x${"22".repeat(32)}` as Address;
-export const DECRYPTION_PROOF = `0x${"33".repeat(32)}` as Address;
+export const HANDLE = `0x${"11".repeat(32)}`;
+export const BURN_AMOUNT_HANDLE = `0x${"22".repeat(32)}`;
+export const DECRYPTION_PROOF = `0x${"33".repeat(32)}`;
 export const UNDERLYING = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 export const UNWRAP_REQUESTED_TOPIC =
   "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee";
@@ -44,7 +44,7 @@ export const DEFAULT_IDLE_MUTATION_STATE = {
 } as const;
 
 export function toTopicAddress(address: Address): Address {
-  return `0x${address.slice(2).padStart(64, "0")}` as Address;
+  return `0x${address.slice(2).padStart(64, "0")}`;
 }
 
 export function createUnwrapRequestedLog(handle: Address): RawLog {
@@ -99,7 +99,7 @@ export async function mutateAndExpectOnSuccess(
   await act(mutate);
   expect(onSuccess).toHaveBeenCalledOnce();
 
-  const [data, variables, _onMutateResult, context] = onSuccess.mock.calls[0]!;
+  const [data, variables, _onMutateResult, context] = onSuccess.mock.calls[0];
   expect(data).toBeDefined();
   if (options.variables === "undefined") {
     expect(variables).toBeUndefined();

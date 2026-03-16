@@ -34,7 +34,7 @@ export interface UseUnderlyingAllowanceConfig {
  */
 export function useUnderlyingAllowance(
   config: UseUnderlyingAllowanceConfig,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const { tokenAddress, wrapperAddress } = config;
   const token = useReadonlyToken(tokenAddress);

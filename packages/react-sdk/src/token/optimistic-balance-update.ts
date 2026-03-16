@@ -41,7 +41,9 @@ export async function applyOptimisticBalanceDelta({
   await queryClient.cancelQueries({ queryKey: balanceKey });
   const previous = queryClient.getQueriesData<bigint>({ queryKey: balanceKey });
   for (const [key, value] of previous) {
-    if (value === undefined) continue;
+    if (value === undefined) {
+      continue;
+    }
     // Temporary optimistic underflow (`amount > value`) is acceptable because
     // settlement invalidates and rewrites this cache entry.
     queryClient.setQueryData(key, mode === "add" ? value + amount : value - amount);

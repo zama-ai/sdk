@@ -44,8 +44,9 @@ export function ConnectWallet() {
     <button
       onClick={() => {
         const connector = pickConnector(connectors);
-        if (connector)
+        if (connector) {
           connect({ connector: connector as Parameters<typeof connect>[0]["connector"] });
+        }
       }}
       className="px-2.5 py-1 text-xs font-medium bg-zama-yellow text-zama-black rounded hover:bg-zama-yellow-hover transition-colors"
     >

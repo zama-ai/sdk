@@ -102,7 +102,7 @@ describe("confidentialBalancesQueryOptions", () => {
       }),
     );
     // onError callback is passed but we don't assert its identity
-    expect(batchSpy.mock.calls[0]![1]).toHaveProperty("onError");
+    expect(batchSpy.mock.calls[0][1]).toHaveProperty("onError");
 
     expect(result.balances.get(tokenA as Address)).toBe(10n);
     expect(result.balances.get(tokenB as Address)).toBe(20n);

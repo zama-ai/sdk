@@ -1,6 +1,6 @@
-
 import { describe, expect, it } from "../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
+import type * as ZamaSdkModule from "@zama-fhe/sdk";
 import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
@@ -8,7 +8,7 @@ import { decryptionKeys } from "../relayer/decryption-cache";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaSDKConfig[] = [];
-vi.mock(import('@zama-fhe/sdk'), async (importOriginal: () => Promise<typeof import("@zama-fhe/sdk")>) => { // oxlint-disable-line typescript-eslint/consistent-type-imports
+vi.mock(import("@zama-fhe/sdk"), async (importOriginal: () => Promise<typeof ZamaSdkModule>) => {
   const actual = await importOriginal();
   return {
     ...actual,
@@ -102,7 +102,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     );
 
     // onEvent is stabilized via ref — verify it delegates correctly
-    const wrappedOnEvent = tokenSDKConstructorArgs[0]!.onEvent!;
+    const wrappedOnEvent = tokenSDKConstructorArgs[0].onEvent!;
     wrappedOnEvent({ type: "credentials:loading", timestamp: 1, contractAddresses: [] } as never);
     expect(onEvent).toHaveBeenCalledTimes(1);
   });

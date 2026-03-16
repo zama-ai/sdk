@@ -64,7 +64,9 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async #ensurePool(): Promise<NodeWorkerPool> {
-    if (this.#ensureLock) return this.#ensureLock;
+    if (this.#ensureLock) {
+      return this.#ensureLock;
+    }
     this.#ensureLock = this.#ensurePoolInner();
     try {
       return await this.#ensureLock;

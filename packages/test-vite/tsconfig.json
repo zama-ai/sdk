@@ -1,18 +1,5 @@
 {
-  "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "target": "es2022"
-  },
+  "extends": "../../tsconfig.json",
   "include": ["src", "vite.config.ts", "playwright.config.ts"],
   "exclude": ["node_modules"]
 }

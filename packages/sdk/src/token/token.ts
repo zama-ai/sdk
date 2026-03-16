@@ -59,7 +59,9 @@ export class Token extends ReadonlyToken {
   }
 
   async #getUnderlying(): Promise<Address> {
-    if (this.#underlying !== undefined) return this.#underlying;
+    if (this.#underlying !== undefined) {
+      return this.#underlying;
+    }
     if (!this.#underlyingPromise) {
       this.#underlyingPromise = this.signer
         .readContract(underlyingContract(this.wrapper))
@@ -118,7 +120,9 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new EncryptionFailedError("Failed to encrypt transfer amount", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -142,7 +146,9 @@ export class Token extends ReadonlyToken {
         operation: "transfer",
         error: toError(error),
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new TransactionRevertedError("Transfer transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -192,7 +198,9 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new EncryptionFailedError("Failed to encrypt transferFrom amount", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -222,7 +230,9 @@ export class Token extends ReadonlyToken {
         operation: "transferFrom",
         error: toError(error),
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new TransactionRevertedError("TransferFrom transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -258,7 +268,9 @@ export class Token extends ReadonlyToken {
         operation: "approve",
         error: toError(error),
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new ApprovalFailedError("Operator approval failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -342,7 +354,9 @@ export class Token extends ReadonlyToken {
         operation: "shield",
         error: toError(error),
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new TransactionRevertedError("Shield transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -377,7 +391,9 @@ export class Token extends ReadonlyToken {
         operation: "shieldETH",
         error: toError(error),
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new TransactionRevertedError("Shield ETH transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -418,7 +434,9 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new EncryptionFailedError("Failed to encrypt unshield amount", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -441,7 +459,9 @@ export class Token extends ReadonlyToken {
         operation: "unwrap",
         error: toError(error),
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new TransactionRevertedError("Unshield transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -483,7 +503,9 @@ export class Token extends ReadonlyToken {
         operation: "unwrap",
         error: toError(error),
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new TransactionRevertedError("Unshield-all transaction failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -593,7 +615,9 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new DecryptionFailedError("Failed to finalize unshield", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -612,7 +636,9 @@ export class Token extends ReadonlyToken {
         operation: "finalizeUnwrap",
         error: toError(error),
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new TransactionRevertedError("Failed to finalize unshield", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -663,7 +689,9 @@ export class Token extends ReadonlyToken {
         operation: "approveUnderlying",
         error: toError(error),
       });
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new ApprovalFailedError("ERC-20 approval failed", {
         cause: error instanceof Error ? error : undefined,
       });
@@ -682,7 +710,9 @@ export class Token extends ReadonlyToken {
     try {
       receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
     } catch (error) {
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new TransactionRevertedError("Failed to get unshield receipt", {
         cause: error,
       });
@@ -715,7 +745,9 @@ export class Token extends ReadonlyToken {
       allowanceContract(underlying, userAddress, this.wrapper),
     );
 
-    if (allowance >= amount) return;
+    if (allowance >= amount) {
+      return;
+    }
 
     try {
       // Reset to zero first when there's an existing non-zero allowance.
@@ -733,7 +765,9 @@ export class Token extends ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
       safeCallback(() => callbacks?.onApprovalSubmitted?.(txHash));
     } catch (error) {
-      if (error instanceof ZamaError) throw error;
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       throw new ApprovalFailedError("ERC-20 approval failed", {
         cause: error instanceof Error ? error : undefined,
       });

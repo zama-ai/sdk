@@ -54,9 +54,13 @@ export interface CredentialsManagerConfig {
 }
 
 function hasExtensionRuntimeId(value: unknown): value is { runtime: { id: string } } {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
   const runtime = Reflect.get(value, "runtime");
-  if (typeof runtime !== "object" || runtime === null) return false;
+  if (typeof runtime !== "object" || runtime === null) {
+    return false;
+  }
   return typeof Reflect.get(runtime, "id") === "string";
 }
 
@@ -82,9 +86,7 @@ export class CredentialsManager {
       "SHA-256",
       new TextEncoder().encode(`${normalizedAddress}:${chainId}`),
     );
-    const hex = [...new Uint8Array(hash)]
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+    const hex = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
     return hex.slice(0, 32);
   }
 
@@ -228,7 +230,9 @@ export class CredentialsManager {
     const storeKey = await this.#storeKey();
     try {
       const stored = await this.#storage.get(storeKey);
-      if (!stored) return false;
+      if (!stored) {
+        return false;
+      }
 
       const encrypted = stored as unknown;
       this.#assertEncryptedCredentials(encrypted);
@@ -271,7 +275,9 @@ export class CredentialsManager {
   async isAllowed(): Promise<boolean> {
     const storeKey = await this.#storeKey();
     const entry = await this.#getSessionEntry(storeKey);
-    if (entry === null) return false;
+    if (entry === null) {
+      return false;
+    }
     return !this.#isSessionExpired(entry);
   }
 
@@ -318,13 +324,17 @@ export class CredentialsManager {
 
   /** Check if a session entry has expired based on its recorded TTL. */
   #isSessionExpired(entry: SessionEntry): boolean {
-    if (entry.ttl === 0) return true;
+    if (entry.ttl === 0) {
+      return true;
+    }
     return Math.floor(Date.now() / 1000) - entry.createdAt >= entry.ttl;
   }
 
   async #getSessionEntry(storeKey: string): Promise<SessionEntry | null> {
     const raw = await this.#sessionStorage.get(storeKey);
-    if (raw === null) return null;
+    if (raw === null) {
+      return null;
+    }
     this.#assertSessionEntry(raw);
     return raw;
   }
@@ -370,7 +380,9 @@ export class CredentialsManager {
     creds: { startTimestamp: number; durationDays: number; contractAddresses: Address[] },
     requiredContracts: Address[],
   ): boolean {
-    if (!this.#isTimeValid(creds)) return false;
+    if (!this.#isTimeValid(creds)) {
+      return false;
+    }
     return this.#coversContracts(creds.contractAddresses, requiredContracts);
   }
 
@@ -407,7 +419,9 @@ export class CredentialsManager {
 
   /** Merge two contract address lists into a deduplicated sorted array. */
   #mergeContracts(existing: Address[], incoming: Address[]): Address[] {
-    return [...new Set([...existing, ...incoming].map((address) => getAddress(address)))].toSorted();
+    return [
+      ...new Set([...existing, ...incoming].map((address) => getAddress(address))),
+    ].toSorted();
   }
 
   /**
@@ -446,7 +460,9 @@ export class CredentialsManager {
     try {
       return await promise;
     } finally {
-      if (this.#extendPromise === promise) this.#extendPromise = null;
+      if (this.#extendPromise === promise) {
+        this.#extendPromise = null;
+      }
     }
   }
 

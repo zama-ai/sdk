@@ -43,7 +43,7 @@ export interface UseWrapperDiscoverySuspenseConfig {
  */
 export function useWrapperDiscovery(
   config: UseWrapperDiscoveryConfig,
-  options?: Omit<UseQueryOptions<Address | null, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">,
 ) {
   const { tokenAddress, coordinatorAddress } = config;
   const token = useReadonlyToken(tokenAddress);

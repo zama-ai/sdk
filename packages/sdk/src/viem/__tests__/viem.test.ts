@@ -390,8 +390,8 @@ describe("Viem write contract helpers", () => {
   vit(
     "writeConfidentialTransferContract calls writeContract with correct config",
     ({ tokenAddress, userAddress, walletClient }) => {
-      const handle = new Uint8Array([0xAB, 0xCD]);
-      const proof = new Uint8Array([0xEF]);
+      const handle = new Uint8Array([0xab, 0xcd]);
+      const proof = new Uint8Array([0xef]);
       writeConfidentialTransferContract(walletClient, tokenAddress, userAddress, handle, proof);
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -440,8 +440,8 @@ describe("Viem write contract helpers", () => {
   vit(
     "writeUnwrapContract calls writeContract with correct config",
     ({ tokenAddress, userAddress, walletClient }) => {
-      const handle = new Uint8Array([0xDE, 0xAD]);
-      const proof = new Uint8Array([0xBE, 0xEF]);
+      const handle = new Uint8Array([0xde, 0xad]);
+      const proof = new Uint8Array([0xbe, 0xef]);
       writeUnwrapContract(walletClient, tokenAddress, userAddress, SPENDER, handle, proof);
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -519,7 +519,7 @@ describe("Viem write contract helpers", () => {
       writeSetOperatorContract(walletClient, tokenAddress, SPENDER);
       const after = Math.floor(Date.now() / 1000) + 3600;
 
-      const callArgs = (walletClient.writeContract as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+      const callArgs = (walletClient.writeContract as ReturnType<typeof vi.fn>).mock.calls[0][0];
       const timestamp = callArgs.args[1] as number;
       expect(timestamp).toBeGreaterThanOrEqual(before);
       expect(timestamp).toBeLessThanOrEqual(after);

@@ -54,7 +54,9 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
         <h2 className="text-xl font-semibold text-white">useCreateEIP712</h2>
         <button
           onClick={() => {
-            if (!keypairPublicKey) return;
+            if (!keypairPublicKey) {
+              return;
+            }
             createEIP712.mutate({
               publicKey: keypairPublicKey,
               contractAddresses: tokenAddresses,

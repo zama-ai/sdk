@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeEach } from "../../test-fixtures";
 import type { NodeWorkerPoolConfig } from "../worker.node-pool";
 import { NodeWorkerPool } from "../worker.node-pool";
@@ -6,7 +5,7 @@ import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
 
 const HANDLE = ("0x" + "11".repeat(32)) as `0x${string}`;
 
-vi.mock(import('../worker.node-client'), () => {
+vi.mock(import("../worker.node-client"), () => {
   const NodeWorkerClient = vi.fn().mockImplementation(function () {
     return {
       initWorker: vi.fn().mockResolvedValue(undefined),
@@ -261,7 +260,9 @@ describe("NodeWorkerPool", () => {
       terminateFns.push(terminateFn);
       return {
         initWorker: vi.fn().mockImplementation(() => {
-          if (terminateFns.length > 1) return Promise.reject(new Error("init failed"));
+          if (terminateFns.length > 1) {
+            return Promise.reject(new Error("init failed"));
+          }
           return Promise.resolve(undefined);
         }),
         terminate: terminateFn,

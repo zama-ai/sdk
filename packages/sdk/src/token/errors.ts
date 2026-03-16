@@ -171,7 +171,9 @@ export function matchZamaError<R>(
 ): R | undefined {
   if (error instanceof ZamaError) {
     const handler = handlers[error.code];
-    if (handler) return handler(error);
+    if (handler) {
+      return handler(error);
+    }
   }
   return handlers._?.(error);
 }

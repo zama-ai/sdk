@@ -39,7 +39,7 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker, NodeWorkerClientC
   }
 
   protected terminateWorker(worker: Worker): void {
-    worker.terminate();
+    void worker.terminate();
   }
 
   protected generateRequestId(): string {
@@ -56,7 +56,7 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker, NodeWorkerClientC
     };
   }
 
-  protected onWorkerReady(worker: Worker): void {
+  protected override onWorkerReady(worker: Worker): void {
     worker.unref();
   }
 }

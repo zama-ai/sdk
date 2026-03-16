@@ -1,4 +1,3 @@
-
 import type { Address, Hex } from "viem";
 import { encodeAbiParameters } from "viem";
 import { test as base, describe, expect } from "../../test-fixtures";
@@ -15,7 +14,9 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
       {},
       {
         get(_target, prop) {
-          if (prop === "then") return undefined;
+          if (prop === "then") {
+            return undefined;
+          }
           return mockContractMethod;
         },
       },
@@ -35,7 +36,7 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
   return { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner };
 });
 
-vi.mock(import('ethers'), () => {
+vi.mock(import("ethers"), () => {
   return {
     ethers: { Contract: MockContract },
     Contract: MockContract,
@@ -373,7 +374,7 @@ describe("EthersSigner", () => {
       const ethersSigner = new EthersSigner({ signer: signer as never });
 
       const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
-      expect(receipt.logs[0]!.topics).toEqual(["0xa", "0xb"]);
+      expect(receipt.logs[0].topics).toEqual(["0xa", "0xb"]);
     });
 
     eit("throws when signer has no provider", async ({ createEthersMockSigner }) => {
@@ -542,8 +543,8 @@ describe("ethers write contract helpers", () => {
     const batchData = [
       {
         to: userAddress,
-        encryptedAmount: VALID_HANDLE as Address,
-        inputProof: VALID_PROOF as Address,
+        encryptedAmount: VALID_HANDLE,
+        inputProof: VALID_PROOF,
         retryFor: 0n,
       },
     ];
@@ -560,8 +561,8 @@ describe("ethers write contract helpers", () => {
 
   eit("writeUnwrapContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({ hash: TX_HASH });
-    const handle = new Uint8Array(32).fill(0xDE);
-    const proof = new Uint8Array(32).fill(0xEF);
+    const handle = new Uint8Array(32).fill(0xde);
+    const proof = new Uint8Array(32).fill(0xef);
     const hash = await writeUnwrapContract(
       mockSigner,
       tokenAddress,
@@ -575,7 +576,7 @@ describe("ethers write contract helpers", () => {
 
   eit("writeUnwrapFromBalanceContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({ hash: TX_HASH });
-    const balance = VALID_HANDLE as Address;
+    const balance = VALID_HANDLE;
     const hash = await writeUnwrapFromBalanceContract(
       mockSigner,
       tokenAddress,
@@ -588,8 +589,8 @@ describe("ethers write contract helpers", () => {
 
   eit("writeFinalizeUnwrapContract", async ({ wrapperAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({ hash: TX_HASH });
-    const burnt = VALID_HANDLE as Address;
-    const proof = VALID_PROOF as Address;
+    const burnt = VALID_HANDLE;
+    const proof = VALID_PROOF;
     const hash = await writeFinalizeUnwrapContract(mockSigner, wrapperAddress, burnt, 500n, proof);
     expect(hash).toBe(TX_HASH);
   });
