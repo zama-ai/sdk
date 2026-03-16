@@ -48,3 +48,11 @@ export {
 } from "./fee-manager";
 
 export { confidentialBatchTransferContract, type BatchTransferData } from "./transfer-batcher";
+
+export {
+  delegateForUserDecryptionContract,
+  revokeDelegationContract,
+  getDelegationExpiryContract,
+} from "./acl";
+
+export { MAX_UINT64 } from "./constants";

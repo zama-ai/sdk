@@ -6,9 +6,9 @@ describe("confidentialTransferMutationOptions", () => {
     const options = confidentialTransferMutationOptions(mockToken);
 
     expect(options.mutationKey).toEqual(["zama.confidentialTransfer", mockToken.address]);
-    await options.mutationFn({ to: "0x2222222222222222222222222222222222222222", amount: 3n });
+    await options.mutationFn({ to: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B", amount: 3n });
     expect(mockToken.confidentialTransfer).toHaveBeenCalledWith(
-      "0x2222222222222222222222222222222222222222",
+      "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       3n,
       undefined,
     );

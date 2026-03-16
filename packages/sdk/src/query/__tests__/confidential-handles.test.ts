@@ -3,9 +3,9 @@ import { confidentialHandlesQueryOptions } from "../confidential-handles";
 import { zamaQueryKeys } from "../query-keys";
 
 describe("confidentialHandlesQueryOptions", () => {
-  const tokenA = "0x1111111111111111111111111111111111111111";
-  const tokenB = "0x3333333333333333333333333333333333333333";
-  const owner = "0x2222222222222222222222222222222222222222";
+  const tokenA = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
+  const tokenB = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C";
+  const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
 
   test("uses expected query key shape", ({ signer }) => {
     const options = confidentialHandlesQueryOptions(signer, [tokenA, tokenB], { owner });
@@ -58,7 +58,7 @@ describe("confidentialHandlesQueryOptions", () => {
     const options = confidentialHandlesQueryOptions(signer, [tokenA], { owner });
     const key = zamaQueryKeys.confidentialHandles.tokens(
       [tokenA, tokenB],
-      "0x4444444444444444444444444444444444444444",
+      "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D",
     );
 
     await options.queryFn(mockQueryContext(key));
@@ -68,12 +68,12 @@ describe("confidentialHandlesQueryOptions", () => {
     expect(calls[0]?.[0]).toMatchObject({
       address: tokenA,
       functionName: "confidentialBalanceOf",
-      args: ["0x4444444444444444444444444444444444444444"],
+      args: ["0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D"],
     });
     expect(calls[1]?.[0]).toMatchObject({
       address: tokenB,
       functionName: "confidentialBalanceOf",
-      args: ["0x4444444444444444444444444444444444444444"],
+      args: ["0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D"],
     });
   });
 });

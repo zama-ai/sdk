@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { describe, expect, it, vi } from "../../test-fixtures";
 
-const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
+const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
 describe("Token.shield", () => {
   it("fires onApprovalSubmitted and onShieldSubmitted callbacks", async ({
@@ -116,7 +116,7 @@ describe("Token.shield", () => {
     });
     vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
 
-    const recipient = "0x8888888888888888888888888888888888888888" as Address;
+    const recipient = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
     await token.shield(100n, { to: recipient });
 
     expect(signer.writeContract).toHaveBeenCalled();

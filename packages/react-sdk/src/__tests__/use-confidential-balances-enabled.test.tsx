@@ -6,9 +6,9 @@ import { vi } from "vitest";
 import { beforeEach, describe, expect, test } from "../test-fixtures";
 import { useConfidentialBalances } from "../token/use-confidential-balances";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const TOKEN_B = "0x2222222222222222222222222222222222222222" as Address;
-const OWNER = "0x3333333333333333333333333333333333333333" as Address;
+const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+const TOKEN_B = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
+const OWNER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const HANDLE_A = `0x${"aa".repeat(32)}` as Address;
 const HANDLE_B = `0x${"bb".repeat(32)}` as Address;
 

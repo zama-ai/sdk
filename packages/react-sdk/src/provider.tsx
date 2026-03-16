@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  Address,
   GenericSigner,
   GenericStorage,
   RelayerSDK,
