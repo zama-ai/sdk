@@ -12,9 +12,7 @@ const HANDLE_A = `0x${"aa".repeat(32)}` as Address;
 const HANDLE_B = `0x${"bb".repeat(32)}` as Address;
 
 vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>( // oxlint-disable-line typescript-eslint/consistent-type-imports
-    "@tanstack/react-query",
-  );
+  const actual = await vi.importActual("@tanstack/react-query");
   return { ...actual, useQuery: vi.fn() };
 });
 
