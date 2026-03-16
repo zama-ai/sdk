@@ -22,7 +22,6 @@ import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
 import { ApproveUnderlyingSubmittedEvent } from '@zama-fhe/sdk';
 import { balanceOfContract } from '@zama-fhe/sdk';
 import { BaseEvent } from '@zama-fhe/sdk';
-import { BATCH_SWAP_ABI } from '@zama-fhe/sdk';
 import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { batchDecryptBalancesAsMutationOptions } from '@zama-fhe/sdk/query';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
@@ -84,25 +83,19 @@ import { DelegatedUserDecryptParams } from '@zama-fhe/sdk';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { DelegationStatusQueryConfig } from '@zama-fhe/sdk/query';
 import { delegationStatusQueryOptions } from '@zama-fhe/sdk/query';
-import { DEPLOYMENT_COORDINATOR_ABI } from '@zama-fhe/sdk';
 import { deploymentCoordinatorContract } from '@zama-fhe/sdk';
 import { EIP712TypedData } from '@zama-fhe/sdk';
 import { EncryptEndEvent } from '@zama-fhe/sdk';
 import { EncryptErrorEvent } from '@zama-fhe/sdk';
 import { EncryptInput } from '@zama-fhe/sdk';
-import { ENCRYPTION_ABI } from '@zama-fhe/sdk';
 import { EncryptionFailedError } from '@zama-fhe/sdk';
 import { encryptMutationOptions } from '@zama-fhe/sdk/query';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { EncryptStartEvent } from '@zama-fhe/sdk';
-import { ERC165_ABI } from '@zama-fhe/sdk';
-import { ERC20_ABI } from '@zama-fhe/sdk';
-import { ERC20_METADATA_ABI } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
 import { extractEncryptedHandles } from '@zama-fhe/sdk';
-import { FEE_MANAGER_ABI } from '@zama-fhe/sdk';
 import { feeRecipientQueryOptions } from '@zama-fhe/sdk/query';
 import { FheTypeName } from '@zama-fhe/sdk';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
@@ -207,7 +200,6 @@ import { TransactionErrorEvent } from '@zama-fhe/sdk';
 import { TransactionReceipt } from '@zama-fhe/sdk';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { TransactionRevertedError } from '@zama-fhe/sdk';
-import { TRANSFER_BATCHER_ABI } from '@zama-fhe/sdk';
 import { TransferCallbacks } from '@zama-fhe/sdk';
 import { TransferFromSubmittedEvent } from '@zama-fhe/sdk';
 import { TransferSubmittedEvent } from '@zama-fhe/sdk';
@@ -238,7 +230,6 @@ import { UserDecryptParams } from '@zama-fhe/sdk';
 import { wrapContract } from '@zama-fhe/sdk';
 import { wrapETHContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
-import { WRAPPER_ABI } from '@zama-fhe/sdk';
 import { wrapperDiscoveryQueryOptions } from '@zama-fhe/sdk/query';
 import { wrapperExistsContract } from '@zama-fhe/sdk';
 import { WriteContractArgs } from '@zama-fhe/sdk';
@@ -294,8 +285,6 @@ export { ApproveUnderlyingSubmittedEvent }
 export { balanceOfContract }
 
 export { BaseEvent }
-
-export { BATCH_SWAP_ABI }
 
 export { BatchDecryptAsOptions }
 
@@ -452,8 +441,6 @@ export { DelegationStatusQueryConfig }
 
 export { delegationStatusQueryOptions }
 
-export { DEPLOYMENT_COORDINATOR_ABI }
-
 export { deploymentCoordinatorContract }
 
 export { EIP712TypedData }
@@ -463,8 +450,6 @@ export { EncryptEndEvent }
 export { EncryptErrorEvent }
 
 export { EncryptInput }
-
-export { ENCRYPTION_ABI }
 
 export { EncryptionFailedError }
 
@@ -476,19 +461,11 @@ export { EncryptResult }
 
 export { EncryptStartEvent }
 
-export { ERC165_ABI }
-
-export { ERC20_ABI }
-
-export { ERC20_METADATA_ABI }
-
 export { ERC7984_INTERFACE_ID }
 
 export { ERC7984_WRAPPER_INTERFACE_ID }
 
 export { extractEncryptedHandles }
-
-export { FEE_MANAGER_ABI }
 
 export { feeRecipientQueryOptions }
 
@@ -710,8 +687,6 @@ export { TransactionReceipt }
 export { TransactionResult }
 
 export { TransactionRevertedError }
-
-export { TRANSFER_BATCHER_ABI }
 
 export { TransferCallbacks }
 
@@ -1399,8 +1374,6 @@ export { wrapContract }
 export { wrapETHContract }
 
 export { WrappedEvent }
-
-export { WRAPPER_ABI }
 
 export { wrapperDiscoveryQueryOptions }
 
