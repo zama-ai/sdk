@@ -1,5 +1,55 @@
 # Changelog
 
+## [1.1.0](https://github.com/zama-ai/sdk/compare/v1.0.1...v1.1.0) (2026-03-13)
+
+### Features
+
+- add activity feed, batch transfer, and resume unshield e2e tests ([0b05774](https://github.com/zama-ai/sdk/commit/0b05774be738da6b0051238fc6f867944c8d83b2))
+- add cleartext fhEVM feature ([#51](https://github.com/zama-ai/sdk/issues/51)) ([f951673](https://github.com/zama-ai/sdk/commit/f951673a86e975c06dcd41527c5401c365a7d2d5))
+- add wagmi v2 compatibility shim for useConnection/getConnection ([0741649](https://github.com/zama-ai/sdk/commit/0741649d6e984de6362d024cb7e1b5ebfb6db605))
+- cache decrypted balances in storage to eliminate spinner on reload ([f90d649](https://github.com/zama-ai/sdk/commit/f90d6495d28aabcd2bf5e210a9cfe741cc10de1b))
+- expose WASM thread pool option for RelayerWeb [SDK-10] ([#28](https://github.com/zama-ai/sdk/issues/28)) ([11dae99](https://github.com/zama-ai/sdk/commit/11dae99a2801378aca1d36dd2be64b061b039669))
+- implement 10 SDK backlog items — types, hooks, callbacks, status tracking (Vibe Kanban) ([#57](https://github.com/zama-ai/sdk/issues/57)) ([b59e222](https://github.com/zama-ai/sdk/commit/b59e222fa522c7fd0e137b9be418eb59b8a1cc55)), closes [#ensureAllowance](https://github.com/zama-ai/sdk/issues/ensureAllowance)
+- **react-sdk:** audit improvements — consistent imports, optimistic shieldETH, error docs, mergeEnabled (Vibe Kanban) ([#100](https://github.com/zama-ai/sdk/issues/100)) ([d6efb4f](https://github.com/zama-ai/sdk/commit/d6efb4f76092f83078772cea463ad845c07b7f36))
+- read-only signer mode & gitbook import audit ([#65](https://github.com/zama-ai/sdk/issues/65)) ([03366c2](https://github.com/zama-ai/sdk/commit/03366c265ed51e4e9fa86355196ca935a576d586))
+- **sdk:** add configurable session TTL for wallet sessions [SDK-11] ([#56](https://github.com/zama-ai/sdk/issues/56)) ([f6655d0](https://github.com/zama-ai/sdk/commit/f6655d0376d20c87388db4a70653bd36e8b52c19)), closes [#hasLegacySignature](https://github.com/zama-ai/sdk/issues/hasLegacySignature)
+- **sdk:** cleartext flat config refactor ([#78](https://github.com/zama-ai/sdk/issues/78)) ([b052bb9](https://github.com/zama-ai/sdk/commit/b052bb926c007c10dfccfd891a9ff995facc521d))
+- session-scoped signatures & SDK API improvements [SDK-6] ([#25](https://github.com/zama-ai/sdk/issues/25)) ([116ae85](https://github.com/zama-ai/sdk/commit/116ae85a8d4c1a592563e6d5f3a1f65cabb7711f)), closes [CredentialsManager#sessionSignatures](https://github.com/zama-ai/CredentialsManager/issues/sessionSignatures) [#reSign](https://github.com/zama-ai/sdk/issues/reSign) [#storeKey](https://github.com/zama-ai/sdk/issues/storeKey) [#onEvent](https://github.com/zama-ai/sdk/issues/onEvent) [#lastChainId](https://github.com/zama-ai/sdk/issues/lastChainId) [#unsubscribeSigner](https://github.com/zama-ai/sdk/issues/unsubscribeSigner)
+- **test-components:** add 11 shared form/panel components ([28a29c2](https://github.com/zama-ai/sdk/commit/28a29c2a5ad14de175b803d21f4f9c08bac1cb9f))
+- **test-components:** add shared responsive sidebar nav ([ded5823](https://github.com/zama-ai/sdk/commit/ded582358c5a87cc2540d1e19a4de2f94d521e52))
+- **test-components:** add token-table with framework-agnostic LinkComponent prop ([df48d0f](https://github.com/zama-ai/sdk/commit/df48d0fd717cc70d11e5b3a5bab783206fc37fb2))
+- **test-components:** scaffold shared test components package ([3ff61a9](https://github.com/zama-ai/sdk/commit/3ff61a957fd8166825b797530d0c8c45255b7f39))
+- **test-vite:** add React Router, Tailwind CSS, and extract pages ([8c8c2fa](https://github.com/zama-ai/sdk/commit/8c8c2fa4a518ebc48f76cf5a54ce4be67e96e7b5))
+- **test-vite:** migrate to rolldown-vite ([7488eef](https://github.com/zama-ai/sdk/commit/7488eefcb0ba917e50f599d883a49e00fd1cd008))
+
+### Bug Fixes
+
+- add `viem` as dep of sdk, fix examples ([#74](https://github.com/zama-ai/sdk/issues/74)) ([3cf92cd](https://github.com/zama-ai/sdk/commit/3cf92cd8bb69d1188530e49fd9dbf77ab62c13da))
+- address integrator friction — gas limits, worker IIFE, CDN localhost, StrictMode restart, Sepolia /v2 ([a18079c](https://github.com/zama-ai/sdk/commit/a18079c8a766db5ee9e730a8d2513ed76115315a))
+- **ci:** add Vite build step before running e2e tests ([66ee3d8](https://github.com/zama-ai/sdk/commit/66ee3d8b453a23ddee374eed9ea3a0ad605f4864))
+- **deps:** pin minimatch to 10.2.4 to resolve ReDoS vulnerabilities ([#69](https://github.com/zama-ai/sdk/issues/69)) ([3861748](https://github.com/zama-ai/sdk/commit/3861748d8fffd756cf76eab0dbc055f73e6181f5))
+- **playwright:** drain in-flight route handlers before reverting chain state ([de35aab](https://github.com/zama-ai/sdk/commit/de35aabde4573ce91e7853dbc39cf64ee6d02620))
+- **playwright:** use uniform 30s timeout for nextjs project ([d65cd82](https://github.com/zama-ai/sdk/commit/d65cd82b3120882b02f5bbf70a057635fe0f934c))
+- **release:** remove registry-url to fix npm trusted publishing ([aa515ee](https://github.com/zama-ai/sdk/commit/aa515ee4329e83347049513aa1435f89d8a13df8))
+- replace `< 2M` with prose in JSDoc to silence tsdoc-malformed-html-name ([2a777b4](https://github.com/zama-ai/sdk/commit/2a777b41ae140d177fe43a37072915044c1fde94))
+- replace importScripts with fetch+eval in worker to fix MIME-type errors ([54dbee8](https://github.com/zama-ai/sdk/commit/54dbee8cd3d2f8dade1f4c2a66454ce6fc779a03))
+- **sdk:** add /v2 path to mainnet relayer URL ([84978f1](https://github.com/zama-ai/sdk/commit/84978f1e737f60717237284b474d85c45212f7f3))
+- **security:** resolve 3 high-severity Dependabot alerts ([#41](https://github.com/zama-ai/sdk/issues/41)) ([9c81b97](https://github.com/zama-ai/sdk/commit/9c81b979e2a0f312f1543604dcfd4c3299f30f3a)), closes [#3](https://github.com/zama-ai/sdk/issues/3) [#4](https://github.com/zama-ai/sdk/issues/4) [#2](https://github.com/zama-ai/sdk/issues/2)
+- **security:** resolve CodeQL code scanning alerts ([#42](https://github.com/zama-ai/sdk/issues/42)) ([27d54b6](https://github.com/zama-ai/sdk/commit/27d54b6ca1148a2db114bad7748e39ac340cbd62))
+- **test-components:** add non-null assertion for array index access ([7e3efec](https://github.com/zama-ai/sdk/commit/7e3efecb996536cbf2ae8500477a930c07441972))
+- **test-nextjs:** correct theme.css import path in globals.css ([2b52c60](https://github.com/zama-ai/sdk/commit/2b52c602acc191c89c3748902011b28808e59050))
+- **test-nextjs:** correct USDT contract address to match hardhat deployment ([3e40812](https://github.com/zama-ai/sdk/commit/3e40812f82a02ab9576cea8e76fbd822f1f74421))
+- **test-nextjs:** replace CONTRACTS.confidentialToken with CONTRACTS.cUSDT ([8762b14](https://github.com/zama-ai/sdk/commit/8762b141be7d56c42130359fb53c53205e88da24))
+- use real hardhat-deployed addresses, add missing transferBatcher approval ([#50](https://github.com/zama-ai/sdk/issues/50)) ([06c6428](https://github.com/zama-ai/sdk/commit/06c64286ca1e4a8b6d9cf0f3485bd530829b0eef))
+
+### Performance Improvements
+
+- speed up vitest by 40% ([#88](https://github.com/zama-ai/sdk/issues/88)) ([33a9b68](https://github.com/zama-ai/sdk/commit/33a9b68b6c86e2b176f78caca23c721884a1ef8b))
+
+### Reverts
+
+- remove premature localhost CDN validation & document balance cache ([a17f191](https://github.com/zama-ai/sdk/commit/a17f191f16155bb29d8e6bf42ce00554afe18c1b))
+
 ## [1.1.0-alpha.3](https://github.com/zama-ai/sdk/compare/v1.1.0-alpha.2...v1.1.0-alpha.3) (2026-03-12)
 
 ### Features
