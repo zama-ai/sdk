@@ -25,7 +25,12 @@
       "Bash(pnpm test:*)",
       "Bash(pnpm e2e:*)",
       "Bash(pnpm format)",
-      "Bash(pnpm format:*)"
+      "Bash(pnpm format:*)",
+      "Bash(pnpm api-report)",
+      "Bash(pnpm api-report:*)",
+      "Bash(pnpm docs:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr view:*)"
     ],
     "ask": [
       "Bash(rm:*)",

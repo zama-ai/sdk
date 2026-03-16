@@ -32,10 +32,22 @@ You receive:
 
 ### Step 1: Stage and commit
 
-Stage all changes in the worktree:
+Stage changes in the worktree. First verify what will be staged:
+
+```bash
+git status
+```
+
+Confirm that `.factory-state.json` is NOT in the list (it should be gitignored). Then stage:
 
 ```bash
 git add -A
+```
+
+If `.factory-state.json` appears in the staged files, unstage it:
+
+```bash
+git reset HEAD .factory-state.json
 ```
 
 Create a conventional commit:

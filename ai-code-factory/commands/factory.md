@@ -100,11 +100,15 @@ echo ".factory-state.json" >> <worktree-root>/.gitignore
 
 Max retries per phase: **3**
 
+### Missing Output Markers
+
+If any agent's output does not contain the expected `_OUTPUT_START` / `_OUTPUT_END` markers, treat it as a phase failure. Log the raw output, increment the relevant retry counter, and re-dispatch the agent. If retries are exhausted, escalate to Linear with the raw output attached.
+
 ### Phase 1: Ticket Analysis
 
 Dispatch the **ticket-analyzer** agent with the ticket ID or label filter.
 
-Parse the output between `TICKET_ANALYSIS_START` and `TICKET_ANALYSIS_END` markers.
+Parse the output between `TICKET_ANALYSIS_OUTPUT_START` and `TICKET_ANALYSIS_OUTPUT_END` markers.
 
 - If `tier` is `partially_clear` or `vague`: print the Linear comment that was posted and STOP.
 - If `tier` is `clear`: continue.
@@ -178,8 +182,8 @@ Parse the output between `QUALITY_GATE_OUTPUT_START` and `QUALITY_GATE_OUTPUT_EN
 
 **If FAIL:**
 
-- Increment `quality_gate_retries`
-- If `quality_gate_retries` >= 3: escalate to Linear and STOP
+- Increment `retry_counters.quality_gate`
+- If `retry_counters.quality_gate` >= 3: escalate to Linear and STOP
 - Send `failed_check` and `error_output` to implementer as fix context
 - After implementer fix, **re-run quality gate from the beginning**
 
@@ -220,8 +224,8 @@ Parse the output between `CODE_REVIEW_OUTPUT_START` and `CODE_REVIEW_OUTPUT_END`
 
 **If `must-fix` issues:**
 
-- Increment `code_review_retries`
-- If `code_review_retries` >= 3: escalate to Linear and STOP
+- Increment `retry_counters.code_review`
+- If `retry_counters.code_review` >= 3: escalate to Linear and STOP
 - Send must-fix issues to implementer
 - After implementer fix, **re-enter at Phase 6 (Quality Gate)**
 
@@ -242,8 +246,8 @@ Parse the output between `RED_TEAM_OUTPUT_START` and `RED_TEAM_OUTPUT_END`.
 
 **If `vulnerabilities_found`:**
 
-- Increment `red_team_retries`
-- If `red_team_retries` >= 3: escalate to Linear and STOP
+- Increment `retry_counters.red_team`
+- If `retry_counters.red_team` >= 3: escalate to Linear and STOP
 - Send confirmed vulnerabilities to implementer as must-fix issues
 - After implementer fix, **re-enter at Phase 6 (Quality Gate)**
 
@@ -262,14 +266,21 @@ Parse the output between `MUTATION_TESTER_OUTPUT_START` and `MUTATION_TESTER_OUT
 
 **If `mutation_score` < 80:**
 
-- Increment `mutation_test_retries`
-- If `mutation_test_retries` >= 3: escalate to Linear and STOP
+- Increment `retry_counters.mutation_test`
+- If `retry_counters.mutation_test` >= 3: escalate to Linear and STOP
 - Send surviving mutants to **test-writer** (not implementer)
 - After test-writer fix, **re-run mutation testing (Phase 10 only)**
 
 **If score >= 80:** continue.
 
 Print: `🧬 Mutation testing: {mutation_score}% kill rate ({killed}/{total_mutants})`
+
+### Pre-PR Cleanup
+
+Before creating the PR:
+
+1. Verify worktree is clean of mutation artifacts: `git diff` — if unexpected changes, run `git restore .`
+2. Delete `.factory-state.json` from the worktree (it's no longer needed after successful pipeline completion)
 
 ### Phase 11: Create PR
 

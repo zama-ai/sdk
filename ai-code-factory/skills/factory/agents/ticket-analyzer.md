@@ -57,7 +57,7 @@ Use Grep and Glob to find:
 Output this YAML block exactly (the orchestrator parses it):
 
 ```yaml
---- TICKET_ANALYSIS_START ---
+--- TICKET_ANALYSIS_OUTPUT_START ---
 ticket_id: LIN-1234
 title: "The ticket title"
 tier: clear
@@ -73,7 +73,7 @@ acceptance_criteria:
 test_hints:
   - "Hint from ticket or inferred"
 complexity_estimate: small
---- TICKET_ANALYSIS_END ---
+--- TICKET_ANALYSIS_OUTPUT_END ---
 ```
 
 ### Step 5: Post Linear comment (only if not clear)
