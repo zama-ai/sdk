@@ -106,15 +106,15 @@ export class RelayerNode implements RelayerSDK {
       this.#cache = new PublicParamsCache({
         storage: this.#config.storage,
         chainId,
+        relayerUrl: mergeFhevmConfig(chainId, this.#config.transports[chainId]).relayerUrl,
+        revalidateIntervalMs: this.#config.revalidateIntervalMs,
         logger: this.#config.logger,
       });
     }
 
     // Revalidate cached artifacts if due
     if (this.#cache) {
-      const relayerUrl = mergeFhevmConfig(chainId, this.#config.transports[chainId]).relayerUrl;
-      const interval = this.#config.revalidateIntervalMs ?? 86_400_000;
-      const stale = await this.#cache.revalidateIfDue(relayerUrl, interval);
+      const stale = await this.#cache.revalidateIfDue();
       if (stale) {
         this.#tearDown();
       }

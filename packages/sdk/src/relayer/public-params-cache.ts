@@ -21,7 +21,10 @@ interface CachedPublicParams {
 type PublicKeyResult = { publicKeyId: string; publicKey: Uint8Array } | null;
 
 /** Return type of the public params fetcher. */
-type PublicParamsResult = { publicParamsId: string; publicParams: Uint8Array } | null;
+type PublicParamsResult = {
+  publicParamsId: string;
+  publicParams: Uint8Array;
+} | null;
 
 /** Max chunk size for String.fromCharCode to avoid call-stack overflow on large buffers. */
 const CHUNK_SIZE = 8192;
@@ -62,15 +65,27 @@ function paramsStorageKey(chainId: number, bits: number): string {
 export class PublicParamsCache {
   readonly #storage: GenericStorage;
   readonly #chainId: number;
+  readonly #relayerUrl: string;
+  readonly #revalidateIntervalMs: number;
   readonly #logger?: GenericLogger;
   #publicKeyMem: PublicKeyResult | undefined;
   #publicParamsMem = new Map<number, PublicParamsResult>();
   #publicKeyInflight: Promise<PublicKeyResult> | null = null;
   #publicParamsInflight = new Map<number, Promise<PublicParamsResult>>();
+  /** In-memory guard to skip storage reads when revalidation isn't due. */
+  #lastRevalidatedAt: number | null = null;
 
-  constructor(opts: { storage: GenericStorage; chainId: number; logger?: GenericLogger }) {
+  constructor(opts: {
+    storage: GenericStorage;
+    chainId: number;
+    relayerUrl: string;
+    revalidateIntervalMs?: number;
+    logger?: GenericLogger;
+  }) {
     this.#storage = opts.storage;
     this.#chainId = opts.chainId;
+    this.#relayerUrl = opts.relayerUrl;
+    this.#revalidateIntervalMs = opts.revalidateIntervalMs ?? 86_400_000;
     this.#logger = opts.logger;
   }
 
@@ -212,36 +227,59 @@ export class PublicParamsCache {
    * @returns `true` if the cache was invalidated and the caller should
    *   re-fetch artifacts, `false` otherwise.
    */
-  async revalidateIfDue(relayerUrl: string, intervalMs: number): Promise<boolean> {
+  async revalidateIfDue(): Promise<boolean> {
+    // Fast path: in-memory timestamp check avoids storage I/O on every call
+    const now = Date.now();
+    if (
+      this.#lastRevalidatedAt != null &&
+      now - this.#lastRevalidatedAt < this.#revalidateIntervalMs
+    ) {
+      return false;
+    }
+
     const pkKey = pubkeyStorageKey(this.#chainId);
 
+    // Track partial progress so the catch block can reuse already-read data
+    let storedPk: CachedPublicKey | null = null;
+    let paramEntries: Array<{
+      bits: number;
+      key: string;
+      data: CachedPublicParams;
+    }> = [];
+
     try {
-      // 1. Read PK cache entry
-      const storedPk = await this.#storage.get<CachedPublicKey>(pkKey);
+      // 1. Read PK cache entry and collect params entries in parallel
+      const [pk, entries] = await Promise.all([
+        this.#storage.get<CachedPublicKey>(pkKey),
+        this.#collectParamEntries(),
+      ]);
+      storedPk = pk ?? null;
+      paramEntries = entries;
+
       if (!storedPk) return false;
 
-      // 2. Collect params entries (only those known to the in-memory map)
-      const paramEntries = await this.#collectParamEntries();
-
-      // 3. Check if all entries are within intervalMs
-      const now = Date.now();
+      // 2. Check if all entries are within intervalMs
       const allEntries: Array<{ lastValidatedAt?: number }> = [
         storedPk,
         ...paramEntries.map((e) => e.data),
       ];
       const allFresh = allEntries.every(
-        (e) => e.lastValidatedAt != null && now - e.lastValidatedAt < intervalMs,
+        (e) => e.lastValidatedAt != null && now - e.lastValidatedAt < this.#revalidateIntervalMs,
       );
-      if (allFresh) return false;
+      if (allFresh) {
+        this.#lastRevalidatedAt = now;
+        return false;
+      }
 
-      // 4. Fetch manifest
-      const manifestRes = await globalThis.fetch(`${relayerUrl}/keyurl`);
+      // 3. Fetch manifest
+      const manifestRes = await globalThis.fetch(`${this.#relayerUrl}/keyurl`);
       if (!manifestRes.ok) {
         this.#logger?.warn("Manifest fetch failed during revalidation, treating cache as fresh", {
           status: manifestRes.status,
-          relayerUrl,
+          relayerUrl: this.#relayerUrl,
         });
         await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, now);
+        this.#lastRevalidatedAt = now;
         return false;
       }
       const manifest = (await manifestRes.json()) as {
@@ -249,38 +287,40 @@ export class PublicParamsCache {
         crs?: Record<string, { dataId?: string; urls?: string[] }>;
       };
 
-      // 5. Check public key freshness via dataId
+      // 4. Check public key freshness via dataId
       const manifestPkId = manifest.fhePublicKey?.dataId;
       if (manifestPkId && manifestPkId !== storedPk.publicKeyId) {
         await this.#clearAll(pkKey, paramEntries);
+        this.#lastRevalidatedAt = null;
         return true;
       }
 
-      // 6. Check each CRS entry via dataId
+      // 5. Check each CRS entry via dataId
       for (const entry of paramEntries) {
         const manifestCrs = manifest.crs?.[String(entry.bits)];
         const manifestCrsId = manifestCrs?.dataId;
 
         if (manifestCrsId && manifestCrsId !== entry.data.publicParamsId) {
           await this.#clearAll(pkKey, paramEntries);
+          this.#lastRevalidatedAt = null;
           return true;
         }
       }
 
-      // 7. All fresh — update timestamps
+      // 6. All fresh — update timestamps
       await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, now);
+      this.#lastRevalidatedAt = now;
       return false;
     } catch (err) {
       this.#logger?.warn("Revalidation failed, using cached artifacts (fail-open)", {
         chainId: this.#chainId,
-        relayerUrl,
+        relayerUrl: this.#relayerUrl,
         error: err instanceof Error ? err.message : String(err),
       });
-      // Fail-open: try to update timestamps to prevent retry storm
+      // Fail-open: try to update timestamps to prevent retry storm.
+      // Reuse already-read data when available to avoid redundant storage reads.
       try {
-        const storedPk = await this.#storage.get<CachedPublicKey>(pkKey);
         if (storedPk) {
-          const paramEntries = await this.#collectParamEntries();
           await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, Date.now());
         }
       } catch (innerErr) {
@@ -289,6 +329,7 @@ export class PublicParamsCache {
           error: innerErr instanceof Error ? innerErr.message : String(innerErr),
         });
       }
+      this.#lastRevalidatedAt = now;
       return false;
     }
   }
@@ -296,23 +337,27 @@ export class PublicParamsCache {
   async #collectParamEntries(): Promise<
     Array<{ bits: number; key: string; data: CachedPublicParams }>
   > {
-    const entries: Array<{ bits: number; key: string; data: CachedPublicParams }> = [];
-    for (const bits of this.#publicParamsMem.keys()) {
-      const pKey = paramsStorageKey(this.#chainId, bits);
-      const raw = await this.#storage.get<CachedPublicParams>(pKey);
-      if (raw) entries.push({ bits, key: pKey, data: raw });
-    }
-    return entries;
+    const bitsArray = Array.from(this.#publicParamsMem.keys());
+    const results = await Promise.all(
+      bitsArray.map(async (bits) => {
+        const pKey = paramsStorageKey(this.#chainId, bits);
+        const raw = await this.#storage.get<CachedPublicParams>(pKey);
+        return raw ? { bits, key: pKey, data: raw } : null;
+      }),
+    );
+    return results.filter(
+      (e): e is { bits: number; key: string; data: CachedPublicParams } => e !== null,
+    );
   }
 
   async #clearAll(pkKey: string, paramEntries: Array<{ key: string }>): Promise<void> {
     this.#publicKeyMem = undefined;
     this.#publicParamsMem.clear();
     try {
-      await this.#storage.delete(pkKey);
-      for (const entry of paramEntries) {
-        await this.#storage.delete(entry.key);
-      }
+      await Promise.all([
+        this.#storage.delete(pkKey),
+        ...paramEntries.map((entry) => this.#storage.delete(entry.key)),
+      ]);
     } catch (err) {
       this.#logger?.warn("Failed to clear stale artifacts from persistent storage", {
         chainId: this.#chainId,
@@ -327,26 +372,27 @@ export class PublicParamsCache {
     paramEntries: Array<{ key: string; data: CachedPublicParams }>,
     now: number,
   ): Promise<void> {
-    try {
-      storedPk.lastValidatedAt = now;
-      await this.#storage.set(pkKey, storedPk);
-    } catch (err) {
-      this.#logger?.warn("Failed to update public key validation timestamp", {
-        chainId: this.#chainId,
-        error: err instanceof Error ? err.message : String(err),
-      });
+    storedPk.lastValidatedAt = now;
+    for (const entry of paramEntries) {
+      entry.data.lastValidatedAt = now;
     }
 
-    for (const entry of paramEntries) {
-      try {
-        entry.data.lastValidatedAt = now;
-        await this.#storage.set(entry.key, entry.data);
-      } catch (err) {
-        this.#logger?.warn("Failed to update params validation timestamp", {
+    const writes = [
+      this.#storage.set(pkKey, storedPk).catch((err) => {
+        this.#logger?.warn("Failed to update public key validation timestamp", {
           chainId: this.#chainId,
           error: err instanceof Error ? err.message : String(err),
         });
-      }
-    }
+      }),
+      ...paramEntries.map((entry) =>
+        this.#storage.set(entry.key, entry.data).catch((err) => {
+          this.#logger?.warn("Failed to update params validation timestamp", {
+            chainId: this.#chainId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }),
+      ),
+    ];
+    await Promise.all(writes);
   }
 }

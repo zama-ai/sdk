@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { MemoryStorage } from "../../token/memory-storage";
 import { PublicParamsCache } from "../public-params-cache";
 
+const DUMMY_RELAYER_URL = "https://relayer.example.com";
+
 describe("PublicParamsCache", () => {
   let storage: MemoryStorage;
 
@@ -13,7 +15,11 @@ describe("PublicParamsCache", () => {
 
   describe("getPublicKey", () => {
     it("returns cached public key without calling fetcher on cache hit", async () => {
-      const cache = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1, 2, 3]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
 
@@ -33,12 +39,20 @@ describe("PublicParamsCache", () => {
       const fetcher = vi.fn().mockResolvedValue(pk);
 
       // Store via first cache instance
-      const cache1 = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache1 = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       await cache1.getPublicKey(fetcher);
       expect(fetcher).toHaveBeenCalledOnce();
 
       // New cache instance, same storage — should restore without fetching
-      const cache2 = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache2 = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const fetcher2 = vi.fn().mockResolvedValue(null);
       const result = await cache2.getPublicKey(fetcher2);
 
@@ -50,10 +64,14 @@ describe("PublicParamsCache", () => {
       const pk1 = { publicKeyId: "sepolia", publicKey: new Uint8Array([1]) };
       const pk2 = { publicKeyId: "mainnet", publicKey: new Uint8Array([2]) };
 
-      const cache1 = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache1 = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       await cache1.getPublicKey(vi.fn().mockResolvedValue(pk1));
 
-      const cache2 = new PublicParamsCache({ storage, chainId: 1 });
+      const cache2 = new PublicParamsCache({ storage, chainId: 1, relayerUrl: DUMMY_RELAYER_URL });
       const fetcher2 = vi.fn().mockResolvedValue(pk2);
       const result = await cache2.getPublicKey(fetcher2);
 
@@ -63,7 +81,11 @@ describe("PublicParamsCache", () => {
     });
 
     it("returns null and does not cache when fetcher returns null", async () => {
-      const cache = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const fetcher = vi.fn().mockResolvedValue(null);
 
       const result = await cache.getPublicKey(fetcher);
@@ -82,7 +104,11 @@ describe("PublicParamsCache", () => {
         delete: vi.fn().mockResolvedValue(undefined),
       };
 
-      const cache = new PublicParamsCache({ storage: badStorage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage: badStorage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
 
@@ -98,7 +124,11 @@ describe("PublicParamsCache", () => {
         delete: vi.fn().mockResolvedValue(undefined),
       };
 
-      const cache = new PublicParamsCache({ storage: badStorage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage: badStorage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
 
@@ -114,7 +144,12 @@ describe("PublicParamsCache", () => {
       };
       const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-      const cache = new PublicParamsCache({ storage: badStorage, chainId: 11155111, logger });
+      const cache = new PublicParamsCache({
+        storage: badStorage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+        logger,
+      });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       await cache.getPublicKey(vi.fn().mockResolvedValue(pk));
 
@@ -125,7 +160,11 @@ describe("PublicParamsCache", () => {
     });
 
     it("propagates fetcher errors to caller", async () => {
-      const cache = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const fetcher = vi.fn().mockRejectedValue(new Error("network down"));
 
       await expect(cache.getPublicKey(fetcher)).rejects.toThrow("network down");
@@ -136,7 +175,11 @@ describe("PublicParamsCache", () => {
 
   describe("getPublicParams", () => {
     it("returns cached public params without calling fetcher on cache hit", async () => {
-      const cache = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([4, 5, 6]) };
       const fetcher = vi.fn().mockResolvedValue(pp);
 
@@ -153,10 +196,18 @@ describe("PublicParamsCache", () => {
       const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([7, 8]) };
       const fetcher = vi.fn().mockResolvedValue(pp);
 
-      const cache1 = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache1 = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       await cache1.getPublicParams(2048, fetcher);
 
-      const cache2 = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache2 = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const fetcher2 = vi.fn().mockResolvedValue(null);
       const result = await cache2.getPublicParams(2048, fetcher2);
 
@@ -165,7 +216,11 @@ describe("PublicParamsCache", () => {
     });
 
     it("uses different cache keys per bit size", async () => {
-      const cache = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const pp2048 = { publicParamsId: "pp-2048", publicParams: new Uint8Array([1]) };
       const pp4096 = { publicParamsId: "pp-4096", publicParams: new Uint8Array([2]) };
 
@@ -178,7 +233,11 @@ describe("PublicParamsCache", () => {
     });
 
     it("returns null and does not cache when fetcher returns null", async () => {
-      const cache = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const fetcher = vi.fn().mockResolvedValue(null);
 
       const result = await cache.getPublicParams(2048, fetcher);
@@ -194,7 +253,7 @@ describe("PublicParamsCache", () => {
 
   describe("revalidateIfDue", () => {
     const CHAIN_ID = 11155111;
-    const RELAYER_URL = "https://relayer.example.com";
+    const RELAYER_URL = DUMMY_RELAYER_URL;
     const INTERVAL_MS = 60_000;
     const PK_STORAGE_KEY = `fhe:pubkey:${CHAIN_ID}`;
     const PARAMS_STORAGE_KEY = `fhe:params:${CHAIN_ID}:2048`;
@@ -261,7 +320,12 @@ describe("PublicParamsCache", () => {
       await st.set(PK_STORAGE_KEY, pkData);
       await st.set(PARAMS_STORAGE_KEY, paramsData);
 
-      const cache = new PublicParamsCache({ storage: st, chainId: CHAIN_ID });
+      const cache = new PublicParamsCache({
+        storage: st,
+        chainId: CHAIN_ID,
+        relayerUrl: RELAYER_URL,
+        revalidateIntervalMs: INTERVAL_MS,
+      });
       // Prime the in-memory params map so revalidation discovers bits=2048
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
       // Also prime the public key
@@ -275,7 +339,7 @@ describe("PublicParamsCache", () => {
       const fetchSpy = vi.fn();
       globalThis.fetch = fetchSpy;
 
-      const result = await cache.revalidateIfDue(RELAYER_URL, INTERVAL_MS);
+      const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
       expect(fetchSpy).not.toHaveBeenCalled();
     });
@@ -298,7 +362,7 @@ describe("PublicParamsCache", () => {
         return Promise.reject(new Error(`Unexpected fetch: ${url}`));
       });
 
-      const result = await cache.revalidateIfDue(RELAYER_URL, INTERVAL_MS);
+      const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
 
       // Verify lastValidatedAt was updated
@@ -336,7 +400,7 @@ describe("PublicParamsCache", () => {
       });
       globalThis.fetch = fetchSpy;
 
-      const result = await cache.revalidateIfDue(RELAYER_URL, INTERVAL_MS);
+      const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
 
       // Cache should be cleared
@@ -372,7 +436,7 @@ describe("PublicParamsCache", () => {
         return Promise.reject(new Error(`Unexpected fetch: ${url}`));
       });
 
-      const result = await cache.revalidateIfDue(RELAYER_URL, INTERVAL_MS);
+      const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
 
       expect(await storage.get(PK_STORAGE_KEY)).toBeNull();
@@ -389,7 +453,7 @@ describe("PublicParamsCache", () => {
 
       globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network failure"));
 
-      const result = await cache.revalidateIfDue(RELAYER_URL, INTERVAL_MS);
+      const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
 
       // Verify lastValidatedAt was updated (fail-open prevents retry storm)
@@ -411,7 +475,7 @@ describe("PublicParamsCache", () => {
         status: 500,
       });
 
-      const result = await cache.revalidateIfDue(RELAYER_URL, INTERVAL_MS);
+      const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
 
       const pk = await storage.get<{ lastValidatedAt: number }>(PK_STORAGE_KEY);
@@ -426,12 +490,18 @@ describe("PublicParamsCache", () => {
       await storage.set(PK_STORAGE_KEY, makeCachedPk({ lastValidatedAt: expired }));
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
 
-      const cache = new PublicParamsCache({ storage, chainId: CHAIN_ID, logger });
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: CHAIN_ID,
+        relayerUrl: RELAYER_URL,
+        revalidateIntervalMs: INTERVAL_MS,
+        logger,
+      });
       await cache.getPublicKey(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
       globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network failure"));
-      await cache.revalidateIfDue(RELAYER_URL, INTERVAL_MS);
+      await cache.revalidateIfDue();
 
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining("Revalidation failed"),
@@ -477,7 +547,7 @@ describe("PublicParamsCache", () => {
         return Promise.reject(new Error(`Unexpected fetch: ${url}`));
       });
 
-      const result = await cache.revalidateIfDue(RELAYER_URL, INTERVAL_MS);
+      const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
 
       // Main chain cleared
@@ -506,7 +576,12 @@ describe("PublicParamsCache", () => {
       await storage.set(PK_STORAGE_KEY, makeCachedPk({ lastValidatedAt: expired }));
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
 
-      const cache = new PublicParamsCache({ storage: failDeleteStorage, chainId: CHAIN_ID });
+      const cache = new PublicParamsCache({
+        storage: failDeleteStorage,
+        chainId: CHAIN_ID,
+        relayerUrl: RELAYER_URL,
+        revalidateIntervalMs: INTERVAL_MS,
+      });
       await cache.getPublicKey(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
@@ -525,7 +600,7 @@ describe("PublicParamsCache", () => {
         return Promise.reject(new Error(`Unexpected fetch: ${url}`));
       });
 
-      const result = await cache.revalidateIfDue(RELAYER_URL, INTERVAL_MS);
+      const result = await cache.revalidateIfDue();
       // Should still report stale even though storage delete failed
       expect(result).toBe(true);
     });
@@ -535,7 +610,11 @@ describe("PublicParamsCache", () => {
 
   describe("concurrent access", () => {
     it("deduplicates concurrent getPublicKey calls", async () => {
-      const cache = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1]) };
       let resolveDeferred!: (v: typeof pk) => void;
       const fetcher = vi.fn().mockReturnValue(
@@ -557,7 +636,11 @@ describe("PublicParamsCache", () => {
     });
 
     it("deduplicates concurrent getPublicParams calls", async () => {
-      const cache = new PublicParamsCache({ storage, chainId: 11155111 });
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([1]) };
       let resolveDeferred!: (v: typeof pp) => void;
       const fetcher = vi.fn().mockReturnValue(
