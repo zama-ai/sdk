@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.0-alpha.2](https://github.com/zama-ai/sdk/compare/v1.2.0-alpha.1...v1.2.0-alpha.2) (2026-03-16)
+
+### Bug Fixes
+
+- remove ABI re-exports from react-sdk that are no longer in sdk public API ([ad24185](https://github.com/zama-ai/sdk/commit/ad24185280469a363e293ed65249667e5333d8ff))
+
+### Performance Improvements
+
+- reduce bundle size by inlining slim ABI fragments ([613321c](https://github.com/zama-ai/sdk/commit/613321c09eb73d560a2aeb36cf77956870e584d9))
+
 ## [1.2.0-alpha.1](https://github.com/zama-ai/sdk/compare/v1.1.0...v1.2.0-alpha.1) (2026-03-16)
 
 ### Features
