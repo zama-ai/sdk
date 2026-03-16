@@ -2,33 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { JsonRpcProvider, Contract } from "ethers";
 import {
   useConfidentialBalance,
   useShield,
   useConfidentialTransfer,
   useUnshield,
   useMetadata,
+  useZamaSDK,
+  balanceOfContract,
+  underlyingContract,
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 
-const ERC20_ABI = ["function balanceOf(address) view returns (uint256)"];
-const HOODI_RPC = process.env.NEXT_PUBLIC_HOODI_RPC_URL || "https://rpc.hoodi.ethpandaops.io";
 const HOODI_CHAIN_ID = 560048;
 const HOODI_CHAIN_ID_HEX = "0x88BB0";
 
-// Hoodi token pairs: confidential address is the ERC-7984 wrapper, used for all SDK hooks.
-// The underlying ERC-20 is resolved automatically via underlying() — only used here for
-// displaying the public balance.
+// Only the ERC-7984 wrapper (confidential) address is needed — the underlying ERC-20
+// is resolved on-chain via underlying() so the TOKENS map stays minimal.
 const TOKENS = {
   usdt: {
     label: "USDT Mock",
-    erc20: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b" as Address,
     confidential: "0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75" as Address,
   },
   test: {
     label: "Test Token",
-    erc20: "0x7740F913dC24D4F9e1A72531372c3170452B2F87" as Address,
     confidential: "0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1" as Address,
   },
 } as const;
@@ -41,6 +38,7 @@ export default function Home() {
   const [selectedToken, setSelectedToken] = useState<TokenKey>("usdt");
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState("");
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const token = TOKENS[selectedToken];
   const isHoodi = chainId !== null && parseInt(chainId, 16) === HOODI_CHAIN_ID;
@@ -74,6 +72,7 @@ export default function Home() {
       return;
     }
 
+    setConnectError(null);
     try {
       const accounts = (await window.ethereum.request({
         method: "eth_requestAccounts",
@@ -110,20 +109,26 @@ export default function Home() {
       setChainId(HOODI_CHAIN_ID_HEX);
     } catch (err) {
       console.error("Failed to connect wallet:", err);
+      setConnectError(err instanceof Error ? err.message : "Failed to connect wallet");
     }
   }
 
   // SDK hooks — always called (React rules of hooks)
+  const sdk = useZamaSDK();
   const queryClient = useQueryClient();
   const metadata = useMetadata(token.confidential);
 
-  const erc20BalanceKey = ["erc20-balance", token.erc20, address];
+  const erc20BalanceKey = ["erc20-balance", token.confidential, address];
   const { data: erc20Balance } = useQuery({
     queryKey: erc20BalanceKey,
     queryFn: async () => {
-      const provider = new JsonRpcProvider(HOODI_RPC);
-      const contract = new Contract(token.erc20, ERC20_ABI, provider);
-      return contract.balanceOf(address) as Promise<bigint>;
+      // Resolve the underlying ERC-20 address from the wrapper on-chain, then read its balance.
+      const erc20Address = (await sdk.signer.readContract(
+        underlyingContract(token.confidential),
+      )) as Address;
+      return sdk.signer.readContract(
+        balanceOfContract(erc20Address, address as Address),
+      ) as Promise<bigint>;
     },
     enabled: !!address,
   });
@@ -143,6 +148,7 @@ export default function Home() {
 
   const parsedAmount = BigInt(amount || "0");
   const anyPending = shield.isPending || transfer.isPending || unshield.isPending;
+  const anyError = shield.isError || transfer.isError || unshield.isError;
   const actionsDisabled = anyPending || !isHoodi;
   const lastTxHash =
     (shield.isSuccess && shield.data?.txHash) ||
@@ -162,6 +168,7 @@ export default function Home() {
         <button onClick={connect} style={buttonStyle}>
           Connect MetaMask
         </button>
+        {connectError && <p style={{ color: "red" }}>{connectError}</p>}
       </div>
     );
   }
@@ -185,12 +192,16 @@ export default function Home() {
         >
           <strong>Wrong network</strong> — switch to Hoodi (chainId 560048) to use this app.{" "}
           <button
-            onClick={() =>
-              window.ethereum?.request({
-                method: "wallet_switchEthereumChain",
-                params: [{ chainId: HOODI_CHAIN_ID_HEX }],
-              })
-            }
+            onClick={async () => {
+              try {
+                await window.ethereum?.request({
+                  method: "wallet_switchEthereumChain",
+                  params: [{ chainId: HOODI_CHAIN_ID_HEX }],
+                });
+              } catch {
+                // User rejected the network switch — safe to ignore
+              }
+            }}
             style={{ ...buttonStyle, marginLeft: 8 }}
           >
             Switch to Hoodi
@@ -244,6 +255,8 @@ export default function Home() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0"
+            min="0"
+            step="1"
             style={inputStyle}
           />
         </label>
@@ -293,12 +306,12 @@ export default function Home() {
       </div>
 
       {/* Status */}
-      {(shield.isError || transfer.isError || unshield.isError) && (
+      {anyError && (
         <p style={{ color: "red" }}>
           Error: {(shield.error ?? transfer.error ?? unshield.error)?.message}
         </p>
       )}
-      {lastTxHash && (
+      {!anyError && lastTxHash && (
         <p style={{ color: "green" }}>
           Transaction confirmed!{" "}
           <a

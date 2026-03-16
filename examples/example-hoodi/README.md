@@ -33,9 +33,12 @@ Next.js app demonstrating all four ERC-7984 operations on the **Hoodi** testnet 
 
 ## Setup
 
+> **Network:** Hoodi testnet — chainId `560048`, default RPC `https://rpc.hoodi.ethpandaops.io`.
+> MetaMask will be prompted to add the network automatically on first connect.
+
 ```bash
 cp .env.example .env.local
-# Fill in NEXT_PUBLIC_HOODI_RPC_URL if you want to override the default RPC
+# Optional: set NEXT_PUBLIC_HOODI_RPC_URL to override the default RPC (e.g. an Infura or private node URL)
 
 npm install
 ```

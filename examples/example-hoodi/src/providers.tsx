@@ -18,6 +18,19 @@ const queryClient = new QueryClient();
  * so the user still sees confirmation popups for write operations.
  */
 function createHybridEthereum(ethereum: typeof window.ethereum) {
+  if (!ethereum) {
+    // No wallet injected — return a no-op provider so ZamaProvider mounts without
+    // crashing. page.tsx checks window.ethereum before calling connect(), so all
+    // user-visible wallet operations still fail gracefully.
+    return {
+      request() {
+        return Promise.reject(new Error("No wallet injected"));
+      },
+      on() {},
+      removeListener() {},
+    };
+  }
+
   const rpcProvider = new JsonRpcProvider(HOODI_RPC_URL);
   return {
     request({ method, params }: { method: string; params?: unknown[] }) {
