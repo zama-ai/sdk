@@ -8,6 +8,7 @@
     ],
     "paths": {
       "@zama-fhe/sdk": ["../sdk/src/index.ts"],
+      "@zama-fhe/sdk/cleartext": ["../sdk/src/relayer/cleartext/index.ts"],
       "@zama-fhe/sdk/*": ["../sdk/src/*"],
       "@zama-fhe/react-sdk": ["../react-sdk/src/index.ts"],
       "@zama-fhe/react-sdk/*": ["../react-sdk/src/*"],
