@@ -365,6 +365,10 @@ export class RelayerCleartext implements RelayerSDK {
     return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
   }
 
+  async getAclAddress(): Promise<Address> {
+    return this.#config.aclContractAddress;
+  }
+
   terminate(): void {
     // No resources to release in cleartext mode.
   }
