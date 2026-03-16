@@ -1,5 +1,21 @@
-import { DEPLOYMENT_COORDINATOR_ABI } from "../abi/deployment-coordinator.abi";
 import type { Address } from "viem";
+
+export const deploymentCoordinatorAbi = [
+  {
+    inputs: [{ internalType: "address", name: "originalToken", type: "address" }],
+    name: "getWrapper",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "originalToken", type: "address" }],
+    name: "wrapperExists",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 /**
  * Returns the contract config to look up a wrapper for a given ERC-20 token.
@@ -14,7 +30,7 @@ import type { Address } from "viem";
 export function getWrapperContract(coordinator: Address, tokenAddress: Address) {
   return {
     address: coordinator,
-    abi: DEPLOYMENT_COORDINATOR_ABI,
+    abi: deploymentCoordinatorAbi,
     functionName: "getWrapper",
     args: [tokenAddress],
   } as const;
@@ -33,7 +49,7 @@ export function getWrapperContract(coordinator: Address, tokenAddress: Address) 
 export function wrapperExistsContract(coordinator: Address, tokenAddress: Address) {
   return {
     address: coordinator,
-    abi: DEPLOYMENT_COORDINATOR_ABI,
+    abi: deploymentCoordinatorAbi,
     functionName: "wrapperExists",
     args: [tokenAddress],
   } as const;

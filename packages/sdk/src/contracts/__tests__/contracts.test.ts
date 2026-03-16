@@ -34,7 +34,7 @@ import {
   deploymentCoordinatorContract,
   isFinalizeUnwrapOperatorContract,
   setFinalizeUnwrapOperatorContract,
-} from "../encryption";
+} from "../encrypted";
 
 // Wrapper
 import {

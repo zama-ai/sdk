@@ -1,5 +1,91 @@
-import { FEE_MANAGER_ABI } from "../abi/fee-manager.abi";
 import type { Address } from "viem";
+
+export const feeManagerAbi = [
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "wrapFrom",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "wrapTo",
+        type: "address",
+      },
+    ],
+    name: "getWrapFee",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint64",
+        name: "amount",
+        type: "uint64",
+      },
+      {
+        internalType: "address",
+        name: "unwrapFrom",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "unwrapTo",
+        type: "address",
+      },
+    ],
+    name: "getUnwrapFee",
+    outputs: [
+      {
+        internalType: "uint64",
+        name: "",
+        type: "uint64",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getBatchTransferFee",
+    outputs: [
+      {
+        internalType: "uint64",
+        name: "",
+        type: "uint64",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getFeeRecipient",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 /**
  * Returns the contract config to compute the wrap fee.
@@ -19,7 +105,7 @@ export function getWrapFeeContract(
 ) {
   return {
     address: feeManagerAddress,
-    abi: FEE_MANAGER_ABI,
+    abi: feeManagerAbi,
     functionName: "getWrapFee",
     args: [amount, wrapFrom, wrapTo],
   } as const;
@@ -43,7 +129,7 @@ export function getUnwrapFeeContract(
 ) {
   return {
     address: feeManagerAddress,
-    abi: FEE_MANAGER_ABI,
+    abi: feeManagerAbi,
     functionName: "getUnwrapFee",
     args: [amount, unwrapFrom, unwrapTo],
   } as const;
@@ -62,7 +148,7 @@ export function getUnwrapFeeContract(
 export function getBatchTransferFeeContract(feeManagerAddress: Address) {
   return {
     address: feeManagerAddress,
-    abi: FEE_MANAGER_ABI,
+    abi: feeManagerAbi,
     functionName: "getBatchTransferFee",
     args: [],
   } as const;
@@ -81,7 +167,7 @@ export function getBatchTransferFeeContract(feeManagerAddress: Address) {
 export function getFeeRecipientContract(feeManagerAddress: Address) {
   return {
     address: feeManagerAddress,
-    abi: FEE_MANAGER_ABI,
+    abi: feeManagerAbi,
     functionName: "getFeeRecipient",
     args: [],
   } as const;
