@@ -1,13 +1,11 @@
 import type { GenericStorage } from "../token/token.types";
+import type { GenericLogger } from "../worker/worker.types";
 
 /** Cached shape for the FHE network public key. */
 interface CachedPublicKey {
   publicKeyId: string;
   /** Base64-encoded Uint8Array. */
   publicKey: string;
-  artifactUrl?: string;
-  etag?: string;
-  lastModified?: string;
   lastValidatedAt?: number;
 }
 
@@ -16,9 +14,6 @@ interface CachedPublicParams {
   publicParamsId: string;
   /** Base64-encoded Uint8Array. */
   publicParams: string;
-  artifactUrl?: string;
-  etag?: string;
-  lastModified?: string;
   lastValidatedAt?: number;
 }
 
@@ -28,6 +23,7 @@ type PublicKeyResult = { publicKeyId: string; publicKey: Uint8Array } | null;
 /** Return type of the public params fetcher. */
 type PublicParamsResult = { publicParamsId: string; publicParams: Uint8Array } | null;
 
+/** Max chunk size for String.fromCharCode to avoid call-stack overflow on large buffers. */
 const CHUNK_SIZE = 8192;
 
 function toBase64(bytes: Uint8Array): string {
@@ -57,26 +53,28 @@ function paramsStorageKey(chainId: number, bits: number): string {
 
 /**
  * Persistent cache for FHE network public key and public params.
- * Uses a {@link GenericStorage} backend (IndexedDB, memory, etc.)
- * to avoid re-downloading large binary data on every app instantiation.
+ * Uses a {@link GenericStorage} backend (e.g. MemoryStorage, or any
+ * user-provided async key-value adapter) to avoid re-downloading large
+ * binary data on every app instantiation.
  *
  * Cache keys are scoped by chain ID.
  */
 export class PublicParamsCache {
   readonly #storage: GenericStorage;
   readonly #chainId: number;
+  readonly #logger?: GenericLogger;
   #publicKeyMem: PublicKeyResult | undefined;
   #publicParamsMem = new Map<number, PublicParamsResult>();
   #publicKeyInflight: Promise<PublicKeyResult> | null = null;
   #publicParamsInflight = new Map<number, Promise<PublicParamsResult>>();
 
-  constructor(storage: GenericStorage, chainId: number) {
-    this.#storage = storage;
-    this.#chainId = chainId;
+  constructor(opts: { storage: GenericStorage; chainId: number; logger?: GenericLogger }) {
+    this.#storage = opts.storage;
+    this.#chainId = opts.chainId;
+    this.#logger = opts.logger;
   }
 
   async getPublicKey(fetcher: () => Promise<PublicKeyResult>): Promise<PublicKeyResult> {
-    // In-memory hit
     if (this.#publicKeyMem !== undefined) return this.#publicKeyMem;
 
     // Deduplicate concurrent calls
@@ -93,7 +91,6 @@ export class PublicParamsCache {
   async #loadPublicKey(fetcher: () => Promise<PublicKeyResult>): Promise<PublicKeyResult> {
     const key = pubkeyStorageKey(this.#chainId);
 
-    // Try persistent storage
     try {
       const stored = await this.#storage.get<CachedPublicKey>(key);
       if (stored) {
@@ -104,18 +101,21 @@ export class PublicParamsCache {
         this.#publicKeyMem = result;
         return result;
       }
-    } catch {
-      // Storage read failed — fall through to fetcher
+    } catch (err) {
+      this.#logger?.warn(
+        "Failed to read public key from persistent storage, falling back to network fetch",
+        {
+          chainId: this.#chainId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
     }
 
-    // Fetch from relayer
     const result = await fetcher();
     if (result === null) return null;
 
-    // Cache in memory
     this.#publicKeyMem = result;
 
-    // Persist (best-effort)
     try {
       const cached: CachedPublicKey = {
         publicKeyId: result.publicKeyId,
@@ -123,8 +123,11 @@ export class PublicParamsCache {
         lastValidatedAt: Date.now(),
       };
       await this.#storage.set(key, cached);
-    } catch {
-      // Write failed — data still usable in memory
+    } catch (err) {
+      this.#logger?.warn("Failed to persist public key to storage", {
+        chainId: this.#chainId,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
     return result;
@@ -134,7 +137,6 @@ export class PublicParamsCache {
     bits: number,
     fetcher: () => Promise<PublicParamsResult>,
   ): Promise<PublicParamsResult> {
-    // In-memory hit
     const mem = this.#publicParamsMem.get(bits);
     if (mem !== undefined) return mem;
 
@@ -157,7 +159,6 @@ export class PublicParamsCache {
   ): Promise<PublicParamsResult> {
     const key = paramsStorageKey(this.#chainId, bits);
 
-    // Try persistent storage
     try {
       const stored = await this.#storage.get<CachedPublicParams>(key);
       if (stored) {
@@ -168,18 +169,22 @@ export class PublicParamsCache {
         this.#publicParamsMem.set(bits, result);
         return result;
       }
-    } catch {
-      // Storage read failed — fall through to fetcher
+    } catch (err) {
+      this.#logger?.warn(
+        "Failed to read public params from persistent storage, falling back to network fetch",
+        {
+          chainId: this.#chainId,
+          bits,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
     }
 
-    // Fetch from relayer
     const result = await fetcher();
     if (result === null) return null;
 
-    // Cache in memory
     this.#publicParamsMem.set(bits, result);
 
-    // Persist (best-effort)
     try {
       const cached: CachedPublicParams = {
         publicParamsId: result.publicParamsId,
@@ -187,8 +192,12 @@ export class PublicParamsCache {
         lastValidatedAt: Date.now(),
       };
       await this.#storage.set(key, cached);
-    } catch {
-      // Write failed — data still usable in memory
+    } catch (err) {
+      this.#logger?.warn("Failed to persist public params to storage", {
+        chainId: this.#chainId,
+        bits,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
     return result;
@@ -197,12 +206,11 @@ export class PublicParamsCache {
   // ── Artifact-level revalidation ──────────────────────────────
 
   /**
-   * Check whether cached FHE artifacts are still fresh by consulting the
-   * relayer manifest and issuing conditional HEAD requests against the
-   * artifact URLs.
+   * Check whether cached FHE artifacts are still fresh by comparing the
+   * relayer manifest (`/keyurl`) dataIds against cached values.
    *
-   * @returns `true` if the cache was invalidated (caller should tear down
-   *   the worker), `false` otherwise.
+   * @returns `true` if the cache was invalidated and the caller should
+   *   re-fetch artifacts, `false` otherwise.
    */
   async revalidateIfDue(relayerUrl: string, intervalMs: number): Promise<boolean> {
     const pkKey = pubkeyStorageKey(this.#chainId);
@@ -212,19 +220,8 @@ export class PublicParamsCache {
       const storedPk = await this.#storage.get<CachedPublicKey>(pkKey);
       if (!storedPk) return false;
 
-      // 2. Collect params entries
-      const paramEntries: Array<{
-        bits: number;
-        key: string;
-        data: CachedPublicParams;
-      }> = [];
-      for (const bits of this.#publicParamsMem.keys()) {
-        const pKey = paramsStorageKey(this.#chainId, bits);
-        const raw = await this.#storage.get<CachedPublicParams>(pKey);
-        if (raw) {
-          paramEntries.push({ bits, key: pKey, data: raw });
-        }
-      }
+      // 2. Collect params entries (only those known to the in-memory map)
+      const paramEntries = await this.#collectParamEntries();
 
       // 3. Check if all entries are within intervalMs
       const now = Date.now();
@@ -240,6 +237,10 @@ export class PublicParamsCache {
       // 4. Fetch manifest
       const manifestRes = await globalThis.fetch(`${relayerUrl}/keyurl`);
       if (!manifestRes.ok) {
+        this.#logger?.warn("Manifest fetch failed during revalidation, treating cache as fresh", {
+          status: manifestRes.status,
+          relayerUrl,
+        });
         await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, now);
         return false;
       }
@@ -248,124 +249,75 @@ export class PublicParamsCache {
         crs?: Record<string, { dataId?: string; urls?: string[] }>;
       };
 
-      // 5. Check public key freshness
-      const manifestPkUrl = manifest.fhePublicKey?.urls?.[0];
+      // 5. Check public key freshness via dataId
       const manifestPkId = manifest.fhePublicKey?.dataId;
-
-      if (manifestPkUrl && storedPk.artifactUrl && manifestPkUrl !== storedPk.artifactUrl) {
-        await this.#clearAll(pkKey, paramEntries);
-        return true;
-      }
-
       if (manifestPkId && manifestPkId !== storedPk.publicKeyId) {
         await this.#clearAll(pkKey, paramEntries);
         return true;
       }
 
-      if (storedPk.artifactUrl) {
-        const stale = await this.#checkArtifactFreshness(storedPk.artifactUrl, {
-          etag: storedPk.etag,
-          lastModified: storedPk.lastModified,
-        });
-        if (stale) {
-          await this.#clearAll(pkKey, paramEntries);
-          return true;
-        }
-      }
-
-      // 6. Check each CRS entry
+      // 6. Check each CRS entry via dataId
       for (const entry of paramEntries) {
         const manifestCrs = manifest.crs?.[String(entry.bits)];
-        const manifestCrsUrl = manifestCrs?.urls?.[0];
         const manifestCrsId = manifestCrs?.dataId;
-
-        if (manifestCrsUrl && entry.data.artifactUrl && manifestCrsUrl !== entry.data.artifactUrl) {
-          await this.#clearAll(pkKey, paramEntries);
-          return true;
-        }
 
         if (manifestCrsId && manifestCrsId !== entry.data.publicParamsId) {
           await this.#clearAll(pkKey, paramEntries);
           return true;
-        }
-
-        if (entry.data.artifactUrl) {
-          const stale = await this.#checkArtifactFreshness(entry.data.artifactUrl, {
-            etag: entry.data.etag,
-            lastModified: entry.data.lastModified,
-          });
-          if (stale) {
-            await this.#clearAll(pkKey, paramEntries);
-            return true;
-          }
         }
       }
 
       // 7. All fresh — update timestamps
       await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, now);
       return false;
-    } catch {
+    } catch (err) {
+      this.#logger?.warn("Revalidation failed, using cached artifacts (fail-open)", {
+        chainId: this.#chainId,
+        relayerUrl,
+        error: err instanceof Error ? err.message : String(err),
+      });
       // Fail-open: try to update timestamps to prevent retry storm
       try {
         const storedPk = await this.#storage.get<CachedPublicKey>(pkKey);
         if (storedPk) {
-          const paramEntries: Array<{
-            bits: number;
-            key: string;
-            data: CachedPublicParams;
-          }> = [];
-          for (const bits of this.#publicParamsMem.keys()) {
-            const pKey = paramsStorageKey(this.#chainId, bits);
-            const raw = await this.#storage.get<CachedPublicParams>(pKey);
-            if (raw) {
-              paramEntries.push({ bits, key: pKey, data: raw });
-            }
-          }
+          const paramEntries = await this.#collectParamEntries();
           await this.#updateValidationTimestamps(pkKey, storedPk, paramEntries, Date.now());
         }
-      } catch {
-        // Best-effort — ignore
+      } catch (innerErr) {
+        this.#logger?.warn("Failed to update validation timestamps after revalidation error", {
+          chainId: this.#chainId,
+          error: innerErr instanceof Error ? innerErr.message : String(innerErr),
+        });
       }
       return false;
     }
   }
 
-  /**
-   * Issue a conditional HEAD request against an artifact URL.
-   * @returns `true` if the artifact is STALE (needs re-fetch).
-   */
-  async #checkArtifactFreshness(
-    artifactUrl: string,
-    cached: { etag?: string; lastModified?: string },
-  ): Promise<boolean> {
-    const headers: Record<string, string> = {};
-    if (cached.etag) headers["If-None-Match"] = cached.etag;
-    if (cached.lastModified) headers["If-Modified-Since"] = cached.lastModified;
-
-    const res = await globalThis.fetch(artifactUrl, {
-      method: "HEAD",
-      headers,
-    });
-
-    if (res.status === 304) return false; // still fresh
-
-    // Compare validators from the response
-    const newEtag = res.headers.get("etag");
-    const newLastModified = res.headers.get("last-modified");
-
-    if (cached.etag && newEtag && cached.etag !== newEtag) return true;
-    if (cached.lastModified && newLastModified && cached.lastModified !== newLastModified)
-      return true;
-
-    return false;
+  async #collectParamEntries(): Promise<
+    Array<{ bits: number; key: string; data: CachedPublicParams }>
+  > {
+    const entries: Array<{ bits: number; key: string; data: CachedPublicParams }> = [];
+    for (const bits of this.#publicParamsMem.keys()) {
+      const pKey = paramsStorageKey(this.#chainId, bits);
+      const raw = await this.#storage.get<CachedPublicParams>(pKey);
+      if (raw) entries.push({ bits, key: pKey, data: raw });
+    }
+    return entries;
   }
 
   async #clearAll(pkKey: string, paramEntries: Array<{ key: string }>): Promise<void> {
     this.#publicKeyMem = undefined;
     this.#publicParamsMem.clear();
-    await this.#storage.delete(pkKey);
-    for (const entry of paramEntries) {
-      await this.#storage.delete(entry.key);
+    try {
+      await this.#storage.delete(pkKey);
+      for (const entry of paramEntries) {
+        await this.#storage.delete(entry.key);
+      }
+    } catch (err) {
+      this.#logger?.warn("Failed to clear stale artifacts from persistent storage", {
+        chainId: this.#chainId,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -375,12 +327,26 @@ export class PublicParamsCache {
     paramEntries: Array<{ key: string; data: CachedPublicParams }>,
     now: number,
   ): Promise<void> {
-    storedPk.lastValidatedAt = now;
-    await this.#storage.set(pkKey, storedPk);
+    try {
+      storedPk.lastValidatedAt = now;
+      await this.#storage.set(pkKey, storedPk);
+    } catch (err) {
+      this.#logger?.warn("Failed to update public key validation timestamp", {
+        chainId: this.#chainId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     for (const entry of paramEntries) {
-      entry.data.lastValidatedAt = now;
-      await this.#storage.set(entry.key, entry.data);
+      try {
+        entry.data.lastValidatedAt = now;
+        await this.#storage.set(entry.key, entry.data);
+      } catch (err) {
+        this.#logger?.warn("Failed to update params validation timestamp", {
+          chainId: this.#chainId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   }
 }

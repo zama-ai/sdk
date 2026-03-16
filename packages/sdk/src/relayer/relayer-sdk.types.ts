@@ -53,7 +53,7 @@ export interface RelayerWebConfig {
   onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
   /** Optional persistent storage for caching FHE public key and params across sessions. */
   storage?: GenericStorage;
-  /** Revalidation interval in ms for cached FHE public material. Default: 86_400_000 (24h). Set to 0 to revalidate on every startup. Ignored when storage is not set. */
+  /** Revalidation interval in ms for cached FHE public material. Default: 86_400_000 (24h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
   revalidateIntervalMs?: number;
 }
 

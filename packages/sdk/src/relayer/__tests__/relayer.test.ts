@@ -647,7 +647,7 @@ describe("RelayerWeb", () => {
       await relayer.getPublicKey();
       expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
 
-      // Mock fetch for revalidation: manifest returns changed URL
+      // Mock fetch for revalidation: manifest returns changed dataId
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
         if (String(url).includes("/keyurl")) {
           return Promise.resolve({
@@ -655,8 +655,8 @@ describe("RelayerWeb", () => {
             json: () =>
               Promise.resolve({
                 fhePublicKey: {
-                  dataId: "pk-1",
-                  urls: ["https://cdn.example.com/pk-ROTATED.bin"],
+                  dataId: "pk-ROTATED",
+                  urls: ["https://cdn.example.com/pk.bin"],
                 },
               }),
           });
@@ -664,12 +664,11 @@ describe("RelayerWeb", () => {
         return Promise.reject(new Error(`Unexpected fetch: ${url}`));
       });
 
-      // Manually seed artifactUrl in storage so revalidation detects URL change
+      // Force revalidation by setting lastValidatedAt to 0
       const pkKey = `fhe:pubkey:${CHAIN_ID}`;
       const cached = await storage.get<Record<string, unknown>>(pkKey);
       if (cached) {
-        cached.artifactUrl = "https://cdn.example.com/pk-OLD.bin";
-        cached.lastValidatedAt = 0; // force revalidation
+        cached.lastValidatedAt = 0;
         await storage.set(pkKey, cached);
       }
 
@@ -1106,7 +1105,7 @@ describe("RelayerNode", () => {
       await relayer.getPublicKey();
       expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
 
-      // Mock fetch for revalidation: manifest returns changed URL
+      // Mock fetch for revalidation: manifest returns changed dataId
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
         if (String(url).includes("/keyurl")) {
           return Promise.resolve({
@@ -1114,8 +1113,8 @@ describe("RelayerNode", () => {
             json: () =>
               Promise.resolve({
                 fhePublicKey: {
-                  dataId: "pk-1",
-                  urls: ["https://cdn.example.com/pk-ROTATED.bin"],
+                  dataId: "pk-ROTATED",
+                  urls: ["https://cdn.example.com/pk.bin"],
                 },
               }),
           });
@@ -1123,11 +1122,10 @@ describe("RelayerNode", () => {
         return Promise.reject(new Error(`Unexpected fetch: ${url}`));
       });
 
-      // Seed artifactUrl in storage so revalidation detects URL change
+      // Force revalidation by setting lastValidatedAt to 0
       const pkKey = `fhe:pubkey:${CHAIN_ID}`;
       const cached = await storage.get<Record<string, unknown>>(pkKey);
       if (cached) {
-        cached.artifactUrl = "https://cdn.example.com/pk-OLD.bin";
         cached.lastValidatedAt = 0;
         await storage.set(pkKey, cached);
       }

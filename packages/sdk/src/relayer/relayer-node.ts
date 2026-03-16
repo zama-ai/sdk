@@ -33,7 +33,7 @@ export interface RelayerNodeConfig {
   logger?: GenericLogger;
   /** Optional persistent storage for caching FHE public key and params across sessions. */
   storage?: GenericStorage;
-  /** Revalidation interval in ms for cached FHE public material. Default: 86_400_000 (24h). Set to 0 to revalidate on every startup. Ignored when storage is not set. */
+  /** Revalidation interval in ms for cached FHE public material. Default: 86_400_000 (24h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
   revalidateIntervalMs?: number;
 }
 
@@ -80,6 +80,13 @@ export class RelayerNode implements RelayerSDK {
     }
   }
 
+  #tearDown(): void {
+    this.#pool?.terminate();
+    this.#pool = null;
+    this.#initPromise = null;
+    this.#cache = null;
+  }
+
   async #ensurePoolInner(): Promise<NodeWorkerPool> {
     if (this.#terminated) {
       throw new EncryptionFailedError("RelayerNode has been terminated");
@@ -89,29 +96,27 @@ export class RelayerNode implements RelayerSDK {
 
     // Chain changed → tear down old pool, re-init
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#pool?.terminate();
-      this.#pool = null;
-      this.#initPromise = null;
-      this.#cache = null;
+      this.#tearDown();
     }
 
     this.#resolvedChainId = chainId;
 
     // Create cache for current chain (when storage is provided)
     if (!this.#cache && this.#config.storage) {
-      this.#cache = new PublicParamsCache(this.#config.storage, chainId);
+      this.#cache = new PublicParamsCache({
+        storage: this.#config.storage,
+        chainId,
+        logger: this.#config.logger,
+      });
     }
 
     // Revalidate cached artifacts if due
-    if (this.#cache && this.#initPromise) {
+    if (this.#cache) {
       const relayerUrl = mergeFhevmConfig(chainId, this.#config.transports[chainId]).relayerUrl;
       const interval = this.#config.revalidateIntervalMs ?? 86_400_000;
       const stale = await this.#cache.revalidateIfDue(relayerUrl, interval);
       if (stale) {
-        this.#pool?.terminate();
-        this.#pool = null;
-        this.#initPromise = null;
-        this.#cache = null;
+        this.#tearDown();
       }
     }
 
