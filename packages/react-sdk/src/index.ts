@@ -132,19 +132,6 @@ export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 // Re-export constants
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
 
-// Re-export ABIs
-export {
-  ERC20_ABI,
-  ERC20_METADATA_ABI,
-  DEPLOYMENT_COORDINATOR_ABI,
-  ERC165_ABI,
-  ENCRYPTION_ABI,
-  FEE_MANAGER_ABI,
-  TRANSFER_BATCHER_ABI,
-  WRAPPER_ABI,
-  BATCH_SWAP_ABI,
-} from "@zama-fhe/sdk";
-
 // Re-export all contract call builders
 export {
   confidentialBalanceOfContract,
