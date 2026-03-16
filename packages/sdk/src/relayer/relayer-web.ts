@@ -20,6 +20,7 @@ import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.c
 import type { RelayerSDK } from "./relayer-sdk";
 import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
 import { ZamaError, EncryptionFailedError } from "../token/errors";
+import { PublicParamsCache } from "./public-params-cache";
 import type { Address, Hex } from "viem";
 
 /**
@@ -63,6 +64,7 @@ export class RelayerWeb implements RelayerSDK {
   #ensureLock: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
+  #cache: PublicParamsCache | null = null;
   #status: RelayerSDKStatus = "idle";
   #initError: Error | undefined;
   readonly #config: RelayerWebConfig;
@@ -145,9 +147,28 @@ export class RelayerWeb implements RelayerSDK {
       this.#workerClient?.terminate();
       this.#workerClient = null;
       this.#initPromise = null;
+      this.#cache = null;
     }
 
     this.#resolvedChainId = chainId;
+
+    // Create cache for current chain (when storage is provided)
+    if (!this.#cache && this.#config.storage) {
+      this.#cache = new PublicParamsCache(this.#config.storage, chainId);
+    }
+
+    // Revalidate cached artifacts if due
+    if (this.#cache && this.#initPromise) {
+      const relayerUrl = mergeFhevmConfig(chainId, this.#config.transports[chainId]).relayerUrl;
+      const interval = this.#config.revalidateIntervalMs ?? 86_400_000;
+      const stale = await this.#cache.revalidateIfDue(relayerUrl, interval);
+      if (stale) {
+        this.#workerClient?.terminate();
+        this.#workerClient = null;
+        this.#initPromise = null;
+        this.#cache = null;
+      }
+    }
 
     if (!this.#initPromise) {
       this.#setStatus("initializing");
@@ -359,22 +380,33 @@ export class RelayerWeb implements RelayerSDK {
 
   /**
    * Get the TFHE compact public key.
+   * When storage is configured, the result is cached persistently.
    */
   async getPublicKey(): Promise<{
     publicKeyId: string;
     publicKey: Uint8Array;
   } | null> {
     const worker = await this.#ensureWorker();
+    if (this.#cache) {
+      return this.#cache.getPublicKey(async () => (await worker.getPublicKey()).result);
+    }
     return (await worker.getPublicKey()).result;
   }
 
   /**
    * Get public parameters for encryption capacity.
+   * When storage is configured, the result is cached persistently.
    */
   async getPublicParams(
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const worker = await this.#ensureWorker();
+    if (this.#cache) {
+      return this.#cache.getPublicParams(
+        bits,
+        async () => (await worker.getPublicParams(bits)).result,
+      );
+    }
     return (await worker.getPublicParams(bits)).result;
   }
 }

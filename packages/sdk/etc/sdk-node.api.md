@@ -538,6 +538,8 @@ export interface RelayerNodeConfig {
     logger?: GenericLogger;
     // (undocumented)
     poolSize?: number;
+    revalidateIntervalMs?: number;
+    storage?: GenericStorage;
     // (undocumented)
     transports: Record<number, Partial<FhevmInstanceConfig_2>>;
 }

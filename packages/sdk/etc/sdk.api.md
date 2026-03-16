@@ -19437,7 +19437,9 @@ export interface RelayerWebConfig {
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
     onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
+    revalidateIntervalMs?: number;
     security?: RelayerWebSecurityConfig;
+    storage?: GenericStorage;
     threads?: number;
     // (undocumented)
     transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;

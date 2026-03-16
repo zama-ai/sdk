@@ -18,8 +18,11 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "./relayer-sdk.types";
+import type { GenericLogger } from "../worker/worker.types";
+import type { GenericStorage } from "../token/token.types";
 import type { Address, Hex } from "viem";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import { PublicParamsCache } from "./public-params-cache";
 
 export interface RelayerNodeConfig {
   transports: Record<number, Partial<FhevmInstanceConfig>>;
@@ -27,7 +30,11 @@ export interface RelayerNodeConfig {
   getChainId: () => Promise<number>;
   poolSize?: number;
   /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: import("../worker/worker.types").GenericLogger;
+  logger?: GenericLogger;
+  /** Optional persistent storage for caching FHE public key and params across sessions. */
+  storage?: GenericStorage;
+  /** Revalidation interval in ms for cached FHE public material. Default: 86_400_000 (24h). Set to 0 to revalidate on every startup. Ignored when storage is not set. */
+  revalidateIntervalMs?: number;
 }
 
 /**
@@ -46,6 +53,7 @@ export class RelayerNode implements RelayerSDK {
   #ensureLock: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
+  #cache: PublicParamsCache | null = null;
 
   constructor(config: RelayerNodeConfig) {
     this.#config = config;
@@ -84,9 +92,28 @@ export class RelayerNode implements RelayerSDK {
       this.#pool?.terminate();
       this.#pool = null;
       this.#initPromise = null;
+      this.#cache = null;
     }
 
     this.#resolvedChainId = chainId;
+
+    // Create cache for current chain (when storage is provided)
+    if (!this.#cache && this.#config.storage) {
+      this.#cache = new PublicParamsCache(this.#config.storage, chainId);
+    }
+
+    // Revalidate cached artifacts if due
+    if (this.#cache && this.#initPromise) {
+      const relayerUrl = mergeFhevmConfig(chainId, this.#config.transports[chainId]).relayerUrl;
+      const interval = this.#config.revalidateIntervalMs ?? 86_400_000;
+      const stale = await this.#cache.revalidateIfDue(relayerUrl, interval);
+      if (stale) {
+        this.#pool?.terminate();
+        this.#pool = null;
+        this.#initPromise = null;
+        this.#cache = null;
+      }
+    }
 
     if (!this.#initPromise) {
       this.#initPromise = this.#initPool().catch((error) => {
@@ -236,6 +263,9 @@ export class RelayerNode implements RelayerSDK {
     publicKey: Uint8Array;
   } | null> {
     const pool = await this.#ensurePool();
+    if (this.#cache) {
+      return this.#cache.getPublicKey(async () => (await pool.getPublicKey()).result);
+    }
     return (await pool.getPublicKey()).result;
   }
 
@@ -243,6 +273,12 @@ export class RelayerNode implements RelayerSDK {
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const pool = await this.#ensurePool();
+    if (this.#cache) {
+      return this.#cache.getPublicParams(
+        bits,
+        async () => (await pool.getPublicParams(bits)).result,
+      );
+    }
     return (await pool.getPublicParams(bits)).result;
   }
 }
