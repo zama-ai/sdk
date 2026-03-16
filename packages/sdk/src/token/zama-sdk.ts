@@ -55,6 +55,8 @@ export class ZamaSDK {
   readonly credentials: CredentialsManager;
   readonly #onEvent: ZamaSDKEventListener;
   #unsubscribeSigner?: () => void;
+  // oxlint false positive: awaited in #revokeByTrackedIdentity() and revokeSession()
+  // eslint-disable-next-line no-unused-private-class-members
   #identityReady: Promise<void>;
   #lastAddress: Address | null = null;
   #lastChainId: number | null = null;

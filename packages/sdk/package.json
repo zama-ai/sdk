@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "1.1.0-alpha.3",
+  "version": "1.1.0",
   "description": "TypeScript SDK for Zama confidential ERC-20 tokens (fhEVM)",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
@@ -64,7 +64,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
-    "lint": "eslint .",
+    "lint": "oxlint",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
