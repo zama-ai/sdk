@@ -7,7 +7,6 @@ const VITE_PORT = 3200;
 const CI = !!process.env.CI;
 
 export default defineConfig<{}, WorkerFixtures>({
-  globalSetup: "./global-setup.ts",
   testDir: "./tests",
   outputDir: "./test-results/",
   fullyParallel: false,
@@ -25,7 +24,6 @@ export default defineConfig<{}, WorkerFixtures>({
   projects: [
     {
       name: "nextjs",
-      testDir: "./tests",
       workers: 1,
       use: {
         baseURL: `http://localhost:${NEXTJS_PORT}`,
@@ -36,7 +34,6 @@ export default defineConfig<{}, WorkerFixtures>({
     },
     {
       name: "vite",
-      testDir: "./tests",
       workers: 1,
       use: {
         baseURL: `http://localhost:${VITE_PORT}`,
@@ -47,6 +44,22 @@ export default defineConfig<{}, WorkerFixtures>({
     },
   ],
   webServer: [
+    {
+      command: `./start-anvil.sh ${NEXTJS_ANVIL_PORT}`,
+      name: "anvil-nextjs",
+      wait: {
+        stdout: /Anvil ready on port (\d+)/,
+      },
+      timeout: 30_000,
+    },
+    {
+      command: `./start-anvil.sh ${VITE_ANVIL_PORT}`,
+      name: "anvil-vite",
+      wait: {
+        stdout: /Anvil ready on port (\d+)/,
+      },
+      timeout: 30_000,
+    },
     {
       command: CI
         ? `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} pnpm --filter @zama-fhe/test-nextjs start`
