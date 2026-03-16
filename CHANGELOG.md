@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.0-alpha.1](https://github.com/zama-ai/sdk/compare/v1.1.0...v1.2.0-alpha.1) (2026-03-16)
+
+### Features
+
+- add delegated decryption support [SDK-12] ([#72](https://github.com/zama-ai/sdk/issues/72)) ([7bcaeb6](https://github.com/zama-ai/sdk/commit/7bcaeb612b3268a3b94fa71217c09b8763391735)), closes [#batchDelegationOp](https://github.com/zama-ai/sdk/issues/batchDelegationOp) [#storage](https://github.com/zama-ai/sdk/issues/storage) [#batchDecryptCore](https://github.com/zama-ai/sdk/issues/batchDecryptCore)
+
 ## [1.1.0](https://github.com/zama-ai/sdk/compare/v1.0.1...v1.1.0) (2026-03-13)
 
 ### Features

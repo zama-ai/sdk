@@ -5,19 +5,19 @@ import { expect, vi } from "../test-fixtures";
 import { createMockRelayer, createMockSigner } from "../../../sdk/src/test-fixtures";
 import { expectCacheInvalidated } from "../test-helpers";
 
-export const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-export const USER = "0x2222222222222222222222222222222222222222" as Address;
-export const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
-export const WRAPPER = "0x4444444444444444444444444444444444444444" as Address;
-export const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
-export const FEE_MANAGER = "0x6666666666666666666666666666666666666666" as Address;
-export const TOKEN_B = "0x7777777777777777777777777777777777777777" as Address;
+export const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+export const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
+export const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
+export const WRAPPER = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
+export const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
+export const FEE_MANAGER = "0x6f6F6f6f6f6f6f6f6f6F6f6F6F6F6F6f6F6F6f6F" as Address;
+export const TOKEN_B = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 export const WAGMI_BALANCE_KEY = [
   "readContract",
   { functionName: "balanceOf", address: TOKEN, args: [USER] },
 ] as const;
-export const OTHER_TOKEN = "0x9999999999999999999999999999999999999999" as Address;
-export const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address;
+export const OTHER_TOKEN = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
+export const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
 
 export const HANDLE = `0x${"11".repeat(32)}` as Address;
 export const BURN_AMOUNT_HANDLE = `0x${"22".repeat(32)}` as Address;
@@ -25,7 +25,7 @@ export const DECRYPTION_PROOF = `0x${"33".repeat(32)}` as Address;
 export const UNDERLYING = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 export const UNWRAP_REQUESTED_TOPIC =
   "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee";
-export const TRANSFER_FROM = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" as Address;
+export const TRANSFER_FROM = "0xeDEdEDedeDEdeDeDedeDEDeDEdEdededeDeDEdED" as Address;
 export const DEFAULT_IDLE_MUTATION_STATE = {
   context: undefined,
   data: undefined,
@@ -82,6 +82,8 @@ export function createMockToken(
     unshield: vi.fn().mockResolvedValue(mockResult),
     unshieldAll: vi.fn().mockResolvedValue(mockResult),
     resumeUnshield: vi.fn().mockResolvedValue(mockResult),
+    delegateDecryption: vi.fn().mockResolvedValue(mockResult),
+    revokeDelegation: vi.fn().mockResolvedValue(mockResult),
   } as unknown as Token;
 }
 

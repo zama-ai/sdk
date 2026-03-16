@@ -393,7 +393,7 @@ describe("RelayerWeb", () => {
       const relayer = createWebRelayer();
       const mockResult = {
         clearValues: {
-          [HANDLE]: "0x1111111111111111111111111111111111111111",
+          [HANDLE]: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
           [("0x" + "22".repeat(32)) as `0x${string}`]: true,
         },
         abiEncodedClearValues: "0xencoded",
@@ -909,7 +909,7 @@ describe("RelayerNode", () => {
       const relayer = createNodeRelayer();
       const mockResult = {
         clearValues: {
-          [HANDLE]: "0x1111111111111111111111111111111111111111",
+          [HANDLE]: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
           [("0x" + "22".repeat(32)) as `0x${string}`]: true,
         },
         abiEncodedClearValues: "0xencoded",

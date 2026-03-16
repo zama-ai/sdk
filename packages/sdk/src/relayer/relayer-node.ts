@@ -6,9 +6,13 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
+import type { Address, Hex } from "viem";
+import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import type { GenericStorage } from "../token/token.types";
+import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import type { GenericLogger } from "../worker/worker.types";
+import { PublicParamsCache } from "./public-params-cache";
 import type { RelayerSDK } from "./relayer-sdk";
-import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { ZamaError, EncryptionFailedError } from "../token/errors";
 import type {
   DelegatedUserDecryptParams,
   EIP712TypedData,
@@ -18,11 +22,7 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import type { GenericLogger } from "../worker/worker.types";
-import type { GenericStorage } from "../token/token.types";
-import type { Address, Hex } from "viem";
-import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
-import { PublicParamsCache } from "./public-params-cache";
+import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
 
 export interface RelayerNodeConfig {
   transports: Record<number, Partial<FhevmInstanceConfig>>;
@@ -64,7 +64,7 @@ export class RelayerNode implements RelayerSDK {
     const { transports, poolSize } = this.#config;
 
     return {
-      fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
+      fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
       poolSize,
       logger: this.#config.logger,
     };
@@ -103,10 +103,11 @@ export class RelayerNode implements RelayerSDK {
 
     // Create cache for current chain (when storage is provided)
     if (!this.#cache && this.#config.storage) {
+      const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
       this.#cache = new PublicParamsCache({
         storage: this.#config.storage,
         chainId,
-        relayerUrl: mergeFhevmConfig(chainId, this.#config.transports[chainId]).relayerUrl,
+        relayerUrl: config.relayerUrl,
         revalidateIntervalMs: this.#config.revalidateIntervalMs,
         logger: this.#config.logger,
       });
@@ -285,5 +286,14 @@ export class RelayerNode implements RelayerSDK {
       );
     }
     return (await pool.getPublicParams(bits)).result;
+  }
+
+  async getAclAddress(): Promise<Address> {
+    const chainId = await this.#config.getChainId();
+    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+    if (!config.aclContractAddress) {
+      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
+    }
+    return config.aclContractAddress as Address;
   }
 }

@@ -215,6 +215,21 @@ export const zamaQueryKeys = {
     bits: (bits: number) => ["zama.publicParams", { bits }] as const,
   },
 
+  delegationStatus: {
+    all: ["zama.delegationStatus"] as const,
+    token: (tokenAddress: string) =>
+      ["zama.delegationStatus", { tokenAddress: getAddress(tokenAddress) }] as const,
+    scope: (tokenAddress: string, delegator: string, delegate: string) =>
+      [
+        "zama.delegationStatus",
+        {
+          tokenAddress: getAddress(tokenAddress),
+          delegatorAddress: getAddress(delegator),
+          delegateAddress: getAddress(delegate),
+        },
+      ] as const,
+  },
+
   decryption: {
     all: ["zama.decryption"] as const,
     handle: (handle: string, contractAddress?: Address) =>

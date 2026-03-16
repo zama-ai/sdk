@@ -128,17 +128,3 @@ export function buildEIP712DomainType(
     .filter((k) => k in domain)
     .map((k) => ({ name: k, type: DOMAIN_FIELD_TYPES[k]! }));
 }
-
-/**
- * Merge user overrides on top of SDK defaults for a given chain.
- */
-export function mergeFhevmConfig(
-  chainId: number,
-  overrides?: Partial<FhevmInstanceConfig>,
-): FhevmInstanceConfig {
-  const base = DefaultConfigs[chainId];
-  if (!base && (!overrides || Object.keys(overrides).length === 0)) {
-    throw new Error(`No config for chainId: ${chainId}`);
-  }
-  return { ...base, ...overrides } as FhevmInstanceConfig;
-}
