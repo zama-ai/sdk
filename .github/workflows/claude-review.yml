@@ -1,9 +1,14 @@
 name: Claude Auto Review
 
-# Automatic code review when a reviewer is requested on PRs targeting main/prerelease.
-# For ad-hoc reviews, use @claude in a PR comment (handled by claude.yml).
+# Structured code review (read-only).
+# Triggers:
+#   1. Automatic — when a reviewer is requested on PRs targeting main/prerelease
+#   2. Manual    — comment "@claude-review" on any PR
+#
+# For general questions/tasks, use @claude (handled by claude.yml).
 #
 # Security model:
+#   - Read-only: no contents:write, cannot push or commit
 #   - Network sandbox: Squid proxy (L7 domain allowlist) + iptables egress block
 #   - CODEOWNERS + branch protection as HITL protection
 #   - Workflow and sandbox config changes require @zama-ai/infosec approval
@@ -15,16 +20,28 @@ on:
   pull_request:
     branches: [main, prerelease]
     types: [review_requested]
+  issue_comment:
+    types: [created]
 
 permissions: {}
 
 concurrency:
-  group: claude-review-${{ github.ref }}
+  group: claude-review-${{ github.event.issue.number || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   review:
-    if: github.event.pull_request.draft == false
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        contains(github.event.comment.body, '@claude-review') &&
+        (
+          github.event.comment.author_association == 'MEMBER' ||
+          github.event.comment.author_association == 'OWNER'
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -33,7 +50,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      issues: read
+      issues: write
       id-token: write
 
     steps:
@@ -66,7 +83,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
-          prompt: "/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          prompt: "/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number || github.event.issue.number }}"
           path_to_bun_executable: bun
           claude_args: >-
             --system-prompt
