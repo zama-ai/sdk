@@ -1,6 +1,6 @@
 export const HANDLE_VERSION = 0;
 
-export const PREHANDLE_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000n;
+export const PREHANDLE_MASK = 0xffffffffffffffffffffffffffffffffffffffffff0000000000000000000000n;
 
 // Constants used for instanciation of the cleartext FHEVM instance.
 export const MOCK_INPUT_SIGNER_PK =

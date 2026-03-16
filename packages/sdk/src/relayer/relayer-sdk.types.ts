@@ -110,10 +110,13 @@ export interface EIP712TypedData {
     chainId: number;
     verifyingContract: Address;
   };
-  types: Record<string, readonly {
+  types: Record<
+    string,
+    readonly {
       readonly name: string;
       readonly type: string;
-    }[]>;
+    }[]
+  >;
   primaryType?: string;
   message: {
     publicKey: Hex;

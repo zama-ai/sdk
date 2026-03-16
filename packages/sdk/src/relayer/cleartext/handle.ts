@@ -47,7 +47,7 @@ export function computeInputHandle(
     ),
   );
 
-  const chainId64 = chainId & 0xFFFF_FFFF_FFFF_FFFFn;
+  const chainId64 = chainId & 0xffff_ffff_ffff_ffffn;
   const handle =
     (BigInt(handleHash) & PREHANDLE_MASK) |
     (BigInt(index) << 80n) |
