@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 
-const aclAbi = [
+export const aclAbi = [
   {
     inputs: [
       { internalType: "address", name: "delegate", type: "address" },

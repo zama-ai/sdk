@@ -1,7 +1,7 @@
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { Address, Hex } from "viem";
 
-const transferBatcherAbi = [
+export const transferBatcherAbi = [
   {
     inputs: [
       {
