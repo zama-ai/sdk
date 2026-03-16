@@ -19,7 +19,7 @@ on:
   pull_request_review:
     types: [submitted]
   issues:
-    types: [opened, assigned]
+    types: [opened]
 
 permissions: {}
 
@@ -119,9 +119,6 @@ jobs:
             "Bash(git log*)"
             "Bash(git add*)"
             "Bash(git commit*)"
-            "Bash(git checkout*)"
-            "Bash(git switch*)"
-            "Bash(git branch*)"
             "Bash(git push origin HEAD)"
         env:
           HTTP_PROXY: http://127.0.0.1:3128

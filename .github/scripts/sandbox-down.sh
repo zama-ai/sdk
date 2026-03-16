@@ -2,6 +2,7 @@
 # Network sandbox teardown: reset iptables and stop Squid proxy.
 #
 # All commands use `|| true` so this script is safe to run in `if: always()` contexts.
+# `set -e` is intentionally omitted — teardown must run to completion even if individual commands fail.
 #
 # Optional env vars:
 #   RUNNER_DEBUG   — set to "1" to print Squid access logs before stopping
@@ -35,5 +36,10 @@ fi
 # ── Stop Squid proxy ───────────────────────────────────────────────
 
 docker rm -f sandbox-proxy 2>/dev/null || true
+
+# Verify egress is restored — warn (don't fail) if it isn't
+if ! curl -sf --max-time 5 -o /dev/null https://api.github.com 2>/dev/null; then
+  echo "::warning::Egress may not be fully restored after teardown"
+fi
 
 echo "Network sandbox torn down"

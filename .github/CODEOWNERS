@@ -1,5 +1,7 @@
-# Enforces changes in Sandboxed AI CI/CD
+# Requires approval from infosec + product-integrations for sandboxed AI CI/CD.
+# NOTE: This only enforces if branch protection has "Require review from Code Owners" enabled.
 
+.github/CODEOWNERS @zama-ai/infosec @zama-ai/product-integrations
 .github/squid/sandbox-*.conf @zama-ai/infosec @zama-ai/product-integrations
 .github/scripts/sandbox-*.sh @zama-ai/infosec @zama-ai/product-integrations
 .github/workflows/claude*.yml @zama-ai/infosec @zama-ai/product-integrations
