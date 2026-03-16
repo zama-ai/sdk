@@ -37,17 +37,6 @@ export type { GenericLogger } from "./worker/worker.types";
 // Network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
 
-// ABIs
-export { ERC20_ABI, ERC20_METADATA_ABI } from "./abi/erc20.abi";
-export { DEPLOYMENT_COORDINATOR_ABI } from "./abi/deployment-coordinator.abi";
-export { ERC165_ABI } from "./abi/erc165.abi";
-export { ENCRYPTION_ABI } from "./abi/encryption.abi";
-export { FEE_MANAGER_ABI } from "./abi/fee-manager.abi";
-export { TRANSFER_BATCHER_ABI } from "./abi/transfer-batch.abi";
-export { WRAPPER_ABI } from "./abi/wrapper.abi";
-export { BATCH_SWAP_ABI } from "./abi/batch-swap.abi";
-export { ACL_ABI } from "./abi/acl.abi";
-
 // ERC-165 interface IDs
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
 

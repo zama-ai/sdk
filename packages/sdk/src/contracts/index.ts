@@ -12,7 +12,7 @@ export {
   deploymentCoordinatorContract,
   isFinalizeUnwrapOperatorContract,
   setFinalizeUnwrapOperatorContract,
-} from "./encryption";
+} from "./encrypted";
 
 export {
   finalizeUnwrapContract,
