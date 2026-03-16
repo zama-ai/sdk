@@ -26,6 +26,7 @@ const contracts = {
   cUSDC: deployments.cToken as Address,
   transferBatcher: deployments.transferBatcher as Address,
   feeManager: deployments.feeManager as Address,
+  acl: deployments.fhevm.acl as Address,
 } as const;
 
 /** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */

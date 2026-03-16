@@ -1,34 +1,38 @@
+import { Address, getAddress, Hex, hexToBigInt } from "viem";
 import {
   allowanceContract,
   approveContract,
   confidentialTransferContract,
   confidentialTransferFromContract,
+  delegateForUserDecryptionContract,
   finalizeUnwrapContract,
   isOperatorContract,
+  revokeDelegationContract,
   setOperatorContract,
   underlyingContract,
   unwrapContract,
   unwrapFromBalanceContract,
   wrapContract,
   wrapETHContract,
+  MAX_UINT64,
 } from "../contracts";
-import { getAddress, hexToBigInt, Address, Hex } from "viem";
 import { findUnwrapRequested } from "../events/onchain-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import {
-  ZamaError,
-  EncryptionFailedError,
   ApprovalFailedError,
-  TransactionRevertedError,
+  ConfigurationError,
   DecryptionFailedError,
+  EncryptionFailedError,
+  TransactionRevertedError,
+  ZamaError,
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
-import { ZamaSDKEvents } from "../events/sdk-events";
 import type {
-  TransactionResult,
-  UnshieldCallbacks,
   ShieldCallbacks,
+  TransactionResult,
   TransferCallbacks,
+  UnshieldCallbacks,
 } from "./token.types";
 import { toError } from "../utils";
 
@@ -669,6 +673,162 @@ export class Token extends ReadonlyToken {
     }
   }
 
+  // DELEGATION OPERATIONS
+
+  /**
+   * Delegate decryption rights for this token to another address.
+   * Calls `ACL.delegateForUserDecryption()` on-chain.
+   *
+   * @param delegateAddress - Address to delegate decryption rights to.
+   * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link TransactionRevertedError} if the delegation transaction reverts.
+   */
+  async delegateDecryption({
+    delegateAddress,
+    expirationDate,
+  }: {
+    delegateAddress: Address;
+    expirationDate?: Date;
+  }): Promise<TransactionResult> {
+    if (expirationDate && expirationDate.getTime() <= Date.now()) {
+      throw new ConfigurationError("Expiration date must be in the future");
+    }
+
+    const acl = await this.getAclAddress();
+    // uint64 max → no practical expiry
+    const expDate = expirationDate
+      ? BigInt(Math.floor(expirationDate.getTime() / 1000))
+      : MAX_UINT64;
+
+    try {
+      const txHash = await this.signer.writeContract(
+        delegateForUserDecryptionContract(acl, getAddress(delegateAddress), this.address, expDate),
+      );
+      this.emit({ type: ZamaSDKEvents.DelegationSubmitted, txHash });
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "delegateDecryption",
+        error: toError(error),
+      });
+      if (error instanceof ZamaError) throw error;
+      throw new TransactionRevertedError("Delegation transaction failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+  }
+
+  /**
+   * Revoke decryption delegation for this token.
+   * Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
+   *
+   * @param delegateAddress - Address to revoke delegation from.
+   * @returns The transaction hash and mined receipt.
+   * @throws {@link TransactionRevertedError} if the revocation transaction reverts.
+   */
+  async revokeDelegation({
+    delegateAddress,
+  }: {
+    delegateAddress: Address;
+  }): Promise<TransactionResult> {
+    const acl = await this.getAclAddress();
+
+    try {
+      const txHash = await this.signer.writeContract(
+        revokeDelegationContract(acl, getAddress(delegateAddress), this.address),
+      );
+      this.emit({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash });
+      const receipt = await this.signer.waitForTransactionReceipt(txHash);
+      return { txHash, receipt };
+    } catch (error) {
+      this.emit({
+        type: ZamaSDKEvents.TransactionError,
+        operation: "revokeDelegation",
+        error: toError(error),
+      });
+      if (error instanceof ZamaError) throw error;
+      throw new TransactionRevertedError("Revoke delegation transaction failed", {
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+  }
+
+  // BATCH DELEGATION
+
+  /**
+   * Delegate decryption rights across multiple tokens in parallel.
+   * Returns a per-token result map with partial success semantics.
+   *
+   * @param tokens - Array of Token instances to delegate on.
+   * @param delegateAddress - Address to delegate decryption rights to.
+   * @param expirationDate - Optional expiration date.
+   * @returns Map from token address to TransactionResult or ZamaError.
+   */
+  static async batchDelegateDecryption({
+    tokens,
+    delegateAddress,
+    expirationDate,
+  }: {
+    tokens: Token[];
+    delegateAddress: Address;
+    expirationDate?: Date;
+  }): Promise<Map<Address, TransactionResult | ZamaError>> {
+    return Token.#batchDelegationOp(
+      tokens,
+      (t) => t.delegateDecryption({ delegateAddress, expirationDate }),
+      "Delegation failed",
+    );
+  }
+
+  /**
+   * Revoke delegation across multiple tokens in parallel.
+   * Returns a per-token result map with partial success semantics.
+   *
+   * @param tokens - Array of Token instances to revoke delegation on.
+   * @param delegateAddress - Address to revoke delegation from.
+   * @returns Map from token address to TransactionResult or ZamaError.
+   */
+  static async batchRevokeDelegation({
+    tokens,
+    delegateAddress,
+  }: {
+    tokens: Token[];
+    delegateAddress: Address;
+  }): Promise<Map<Address, TransactionResult | ZamaError>> {
+    return Token.#batchDelegationOp(
+      tokens,
+      (t) => t.revokeDelegation({ delegateAddress }),
+      "Revoke delegation failed",
+    );
+  }
+
+  static async #batchDelegationOp(
+    tokens: Token[],
+    op: (token: Token) => Promise<TransactionResult>,
+    errorMessage: string,
+  ): Promise<Map<Address, TransactionResult | ZamaError>> {
+    const results = new Map<Address, TransactionResult | ZamaError>();
+    const settled = await Promise.allSettled(tokens.map(op));
+    for (let i = 0; i < tokens.length; i++) {
+      const outcome = settled[i]!;
+      if (outcome.status === "fulfilled") {
+        results.set(tokens[i]!.address, outcome.value);
+      } else {
+        const err =
+          outcome.reason instanceof ZamaError
+            ? outcome.reason
+            : new TransactionRevertedError(errorMessage, {
+                cause: outcome.reason,
+              });
+        results.set(tokens[i]!.address, err);
+      }
+    }
+    return results;
+  }
+
   // PRIVATE HELPERS
 
   async #waitAndFinalizeUnshield(
@@ -747,7 +907,7 @@ export class Token extends ReadonlyToken {
 function safeCallback(fn: () => void): void {
   try {
     fn();
-  } catch {
-    // Swallow – the caller must not be disrupted by listener errors.
+  } catch (error) {
+    console.warn("[zama-sdk] Callback threw:", error);
   }
 }

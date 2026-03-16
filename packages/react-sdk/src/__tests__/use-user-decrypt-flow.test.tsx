@@ -162,7 +162,7 @@ describe("useUserDecryptFlow", () => {
 
     result.current.mutate({
       handles: [
-        { handle: "0xh", contractAddress: "0x1111111111111111111111111111111111111111" as Address },
+        { handle: "0xh", contractAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address },
       ],
     });
 

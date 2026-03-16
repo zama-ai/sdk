@@ -3,7 +3,7 @@ import type { RawLog } from "../../events";
 import { describe, expect, it, vi } from "../../test-fixtures";
 import type { Address } from "viem";
 
-const RECIPIENT = "0x8888888888888888888888888888888888888888" as Address;
+const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
 const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Address;
 
 describe("Integration: multi-step workflows", () => {
@@ -14,7 +14,7 @@ describe("Integration: multi-step workflows", () => {
       token,
       handle,
     }) => {
-      const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
+      const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
       // Step 1: readContract calls for underlying and allowance
       vi.mocked(signer.readContract)
