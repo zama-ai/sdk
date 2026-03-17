@@ -1,7 +1,7 @@
 [
   {
     "name": "@zama-fhe/sdk (all JS)",
-    "path": "packages/sdk/dist/**/*.js",
+    "path": "packages/sdk/dist/esm/**/*.js",
     "limit": "40 KB"
   },
   {

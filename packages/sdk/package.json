@@ -10,36 +10,62 @@
     "directory": "packages/sdk"
   },
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs"
     },
     "./cleartext": {
-      "types": "./dist/cleartext/index.d.ts",
-      "import": "./dist/cleartext/index.js"
+      "types": "./dist/esm/cleartext/index.d.ts",
+      "import": "./dist/esm/cleartext/index.js",
+      "require": "./dist/cjs/cleartext/index.cjs"
     },
     "./query": {
-      "types": "./dist/query/index.d.ts",
-      "import": "./dist/query/index.js"
+      "types": "./dist/esm/query/index.d.ts",
+      "import": "./dist/esm/query/index.js",
+      "require": "./dist/cjs/query/index.cjs"
     },
     "./viem": {
-      "types": "./dist/viem/index.d.ts",
-      "import": "./dist/viem/index.js"
+      "types": "./dist/esm/viem/index.d.ts",
+      "import": "./dist/esm/viem/index.js",
+      "require": "./dist/cjs/viem/index.cjs"
     },
     "./ethers": {
-      "types": "./dist/ethers/index.d.ts",
-      "import": "./dist/ethers/index.js"
+      "types": "./dist/esm/ethers/index.d.ts",
+      "import": "./dist/esm/ethers/index.js",
+      "require": "./dist/cjs/ethers/index.cjs"
     },
     "./node": {
-      "types": "./dist/node/index.d.ts",
-      "import": "./dist/node/index.js"
+      "types": "./dist/esm/node/index.d.ts",
+      "import": "./dist/esm/node/index.js",
+      "require": "./dist/cjs/node/index.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "cleartext": [
+        "./dist/esm/cleartext/index.d.ts"
+      ],
+      "query": [
+        "./dist/esm/query/index.d.ts"
+      ],
+      "viem": [
+        "./dist/esm/viem/index.d.ts"
+      ],
+      "ethers": [
+        "./dist/esm/ethers/index.d.ts"
+      ],
+      "node": [
+        "./dist/esm/node/index.d.ts"
+      ]
     }
   },
   "files": [
     "dist/**/*.js",
+    "dist/**/*.cjs",
     "dist/**/*.d.ts",
     "README.md",
     "LICENSE"

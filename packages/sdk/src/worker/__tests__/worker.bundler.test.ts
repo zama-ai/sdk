@@ -11,7 +11,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-const DIST = resolve(__dirname, "../../../dist");
+const DIST = resolve(__dirname, "../../../dist/esm");
 
 describe("worker build smoke tests", () => {
   const workerPath = resolve(DIST, "relayer-sdk.worker.js");

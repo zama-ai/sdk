@@ -76,7 +76,9 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       keypairTTL: (() => {
         const ttl = config.keypairTTL ?? 86400;
-        if (ttl <= 0) throw new Error("keypairTTL must be a positive number (seconds)");
+        if (ttl <= 0) {
+          throw new Error("keypairTTL must be a positive number (seconds)");
+        }
         return ttl;
       })(),
       sessionTTL: config.sessionTTL ?? 2592000,
@@ -194,6 +196,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
+      delegatedCredentials: this.delegatedCredentials,
       address: getAddress(address),
       wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,
