@@ -173,7 +173,7 @@ export class PublicParamsCache {
       }
     } catch (err) {
       // Corrupt or unreadable entry — delete and fall through to fetcher
-      await this.#storage.delete(key).catch(() => {});
+      await this.#deleteQuietly(key);
       (this.#logger ?? fallbackLogger).warn(
         "Failed to read public key from persistent storage, falling back to network fetch",
         {
@@ -235,17 +235,18 @@ export class PublicParamsCache {
 
     try {
       const raw = await this.#storage.get<unknown>(key);
-      assertCachedParams(raw);
-
-      const result: PublicParamsResult = {
-        publicParamsId: raw.publicParamsId,
-        publicParams: fromBase64(raw.publicParams),
-      };
-      this.#publicParamsMem.set(bits, result);
-      return result;
+      if (raw) {
+        assertCachedParams(raw);
+        const result: PublicParamsResult = {
+          publicParamsId: raw.publicParamsId,
+          publicParams: fromBase64(raw.publicParams),
+        };
+        this.#publicParamsMem.set(bits, result);
+        return result;
+      }
     } catch (err) {
       // Corrupt or unreadable entry — delete and fall through to fetcher
-      await this.#storage.delete(key).catch(() => {});
+      await this.#deleteQuietly(key);
       (this.#logger ?? fallbackLogger).warn(
         "Failed to read public params from persistent storage, falling back to network fetch",
         {
@@ -271,7 +272,14 @@ export class PublicParamsCache {
 
       // Update params index for cold-start CRS detection
       const idxKey = paramsIndexKey(this.#chainId);
-      const existing = (await this.#storage.get<number[]>(idxKey).catch(() => null)) ?? [];
+      const existing =
+        (await this.#storage.get<number[]>(idxKey).catch((err) => {
+          (this.#logger ?? fallbackLogger).warn("Failed to read params index from storage", {
+            chainId: this.#chainId,
+            error: toError(err).message,
+          });
+          return null;
+        })) ?? [];
       if (!existing.includes(bits)) {
         await this.#storage.set(idxKey, [...existing, bits]);
       }
@@ -314,6 +322,9 @@ export class PublicParamsCache {
       return false;
     }
 
+    // Skip revalidation when relayerUrl is not configured (e.g. Hardhat)
+    if (!this.#relayerUrl) return false;
+
     const pkKey = pubkeyStorageKey(this.#chainId);
 
     // Track partial progress so the catch block can reuse already-read data
@@ -336,9 +347,12 @@ export class PublicParamsCache {
         try {
           assertCachedPk(pkRaw);
           storedPk = { ...pkRaw, lastValidatedAt: pkRaw.lastValidatedAt ?? 0 };
-        } catch {
-          // Corrupt — delete
-          await this.#storage.delete(pkKey).catch(() => {});
+        } catch (err) {
+          (this.#logger ?? fallbackLogger).warn(
+            "Corrupt public key cache entry detected, deleting",
+            { chainId: this.#chainId, error: toError(err).message },
+          );
+          await this.#deleteQuietly(pkKey);
         }
       }
 
@@ -360,19 +374,21 @@ export class PublicParamsCache {
       // 3. Fetch manifest to discover current artifact URLs
       const manifestRes = await globalThis.fetch(`${this.#relayerUrl}/keyurl`);
       if (!manifestRes.ok) {
+        // Treat as transient failure — use short retry instead of full TTL
+        const retryTimestamp = now - this.#ttlMs + SHORT_RETRY_MS;
         (this.#logger ?? fallbackLogger).warn(
-          "Manifest fetch failed during revalidation, treating cache as fresh",
+          "Manifest fetch failed during revalidation, retrying in 5 min",
           { status: manifestRes.status, relayerUrl: this.#relayerUrl },
         );
         await this.#writeEntries(
           pkKey,
-          { ...storedPk, lastValidatedAt: now },
+          { ...storedPk, lastValidatedAt: retryTimestamp },
           paramEntries.map((e) => ({
             ...e,
-            data: { ...e.data, lastValidatedAt: now },
+            data: { ...e.data, lastValidatedAt: retryTimestamp },
           })),
         );
-        this.#lastRevalidatedAt = now;
+        this.#lastRevalidatedAt = retryTimestamp;
         return false;
       }
 
@@ -490,40 +506,28 @@ export class PublicParamsCache {
     if (cached.etag) headers["If-None-Match"] = cached.etag;
     if (cached.lastModified) headers["If-Modified-Since"] = cached.lastModified;
 
-    // HEAD when no validators (first check — just capture them).
-    // Conditional GET when we have validators (server returns 304 if unchanged).
-    const method = hasValidators ? "GET" : "HEAD";
-    const controller = new AbortController();
+    // HEAD avoids downloading the (potentially multi-MB) artifact body.
+    // With conditional headers, the server returns 304 if unchanged or 200 (no body) if stale.
+    const res = await globalThis.fetch(url, { method: "HEAD", headers });
 
-    try {
-      const res = await globalThis.fetch(url, {
-        method,
-        headers,
-        signal: controller.signal,
-      });
+    const etag = res.headers.get("etag") ?? undefined;
+    const lastModified = res.headers.get("last-modified") ?? undefined;
 
-      const etag = res.headers.get("etag") ?? undefined;
-      const lastModified = res.headers.get("last-modified") ?? undefined;
-
-      if (res.status === 304) {
-        return {
-          fresh: true,
-          etag: etag ?? cached.etag,
-          lastModified: lastModified ?? cached.lastModified,
-        };
-      }
-
-      if (!hasValidators) {
-        // First revalidation — capture validators, treat as fresh
-        return { fresh: true, etag, lastModified };
-      }
-
-      // 200 = artifact changed
-      return { fresh: false, etag, lastModified };
-    } finally {
-      // Abort to avoid downloading large response bodies on 200
-      controller.abort();
+    if (res.status === 304) {
+      return {
+        fresh: true,
+        etag: etag ?? cached.etag,
+        lastModified: lastModified ?? cached.lastModified,
+      };
     }
+
+    if (!hasValidators) {
+      // First revalidation — capture validators, treat as fresh
+      return { fresh: true, etag, lastModified };
+    }
+
+    // 200 = artifact changed
+    return { fresh: false, etag, lastModified };
   }
 
   // ── Internal helpers ────────────────────────────────────
@@ -533,17 +537,34 @@ export class PublicParamsCache {
   > {
     // Merge in-memory keys with persisted index for cold-start CRS detection
     const idxKey = paramsIndexKey(this.#chainId);
-    const persistedBits = (await this.#storage.get<number[]>(idxKey).catch(() => null)) ?? [];
+    const persistedBits =
+      (await this.#storage.get<number[]>(idxKey).catch((err) => {
+        (this.#logger ?? fallbackLogger).warn(
+          "Failed to read params index, CRS revalidation may be incomplete",
+          { chainId: this.#chainId, error: toError(err).message },
+        );
+        return null;
+      })) ?? [];
     const allBits = new Set([...this.#publicParamsMem.keys(), ...persistedBits]);
 
     const bitsArray = Array.from(allBits);
     const results = await Promise.all(
       bitsArray.map(async (bits) => {
         const pKey = paramsStorageKey(this.#chainId, bits);
+        // Separate storage read from validation so we only delete on corruption
+        let raw: unknown;
         try {
-          const raw = await this.#storage.get<unknown>(pKey);
+          raw = await this.#storage.get<unknown>(pKey);
+        } catch (err) {
+          (this.#logger ?? fallbackLogger).warn(
+            "Failed to read cached params entry during revalidation",
+            { chainId: this.#chainId, bits, error: toError(err).message },
+          );
+          return null;
+        }
+        if (!raw) return null;
+        try {
           assertCachedParams(raw);
-
           return {
             bits,
             key: pKey,
@@ -552,9 +573,13 @@ export class PublicParamsCache {
               lastValidatedAt: raw.lastValidatedAt ?? 0,
             } as CachedPublicParams,
           };
-        } catch {
-          // Corrupt entry — delete
-          await this.#storage.delete(pKey).catch(() => {});
+        } catch (err) {
+          (this.#logger ?? fallbackLogger).warn("Corrupt params cache entry detected, deleting", {
+            chainId: this.#chainId,
+            bits,
+            error: toError(err).message,
+          });
+          await this.#deleteQuietly(pKey);
           return null;
         }
       }),
@@ -562,6 +587,16 @@ export class PublicParamsCache {
     return results.filter(
       (e): e is { bits: number; key: string; data: CachedPublicParams } => e !== null,
     );
+  }
+
+  async #deleteQuietly(key: string): Promise<void> {
+    await this.#storage.delete(key).catch((err) => {
+      (this.#logger ?? fallbackLogger).warn("Failed to delete cache entry", {
+        chainId: this.#chainId,
+        key,
+        error: toError(err).message,
+      });
+    });
   }
 
   async #clearAll(pkKey: string, paramEntries: Array<{ key: string }>): Promise<void> {

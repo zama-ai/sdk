@@ -585,7 +585,7 @@ describe("PublicParamsCache", () => {
       expect(pk!.lastValidatedAt).toBeLessThan(expectedRetry + 2000);
     });
 
-    it("returns false (fail-open) on non-OK manifest response", async () => {
+    it("returns false (fail-open) on non-OK manifest response with short retry", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
@@ -598,8 +598,12 @@ describe("PublicParamsCache", () => {
       const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
 
+      // Should use short retry (5 min) just like network errors, not full TTL
       const pk = await storage.get<{ lastValidatedAt: number }>(PK_STORAGE_KEY);
-      expect(pk!.lastValidatedAt).toBeGreaterThan(expired);
+      expect(pk).not.toBeNull();
+      const expectedRetry = Date.now() - CACHE_TTL_MS + 5 * 60 * 1000;
+      expect(pk!.lastValidatedAt).toBeGreaterThan(expectedRetry - 2000);
+      expect(pk!.lastValidatedAt).toBeLessThan(expectedRetry + 2000);
     });
 
     it("fheArtifactCacheTTL: 0 always triggers revalidation", async () => {
