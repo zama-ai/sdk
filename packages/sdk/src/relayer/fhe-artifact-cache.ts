@@ -500,6 +500,12 @@ export class FheArtifactCache {
     // With conditional headers, the server returns 304 if unchanged or 200 (no body) if stale.
     const res = await globalThis.fetch(url, { method: "HEAD", headers });
 
+    // Treat server errors as transient — throw so the outer catch applies fail-open with short retry.
+    // Without this, a CDN 5xx would be misinterpreted as "artifact changed" and wipe the cache.
+    if (!res.ok && res.status !== 304) {
+      throw new Error(`Artifact freshness check failed: HEAD ${url} returned ${res.status}`);
+    }
+
     const etag = res.headers.get("etag") ?? undefined;
     const lastModified = res.headers.get("last-modified") ?? undefined;
 
