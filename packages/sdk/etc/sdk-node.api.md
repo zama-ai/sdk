@@ -536,11 +536,11 @@ export class RelayerNode implements RelayerSDK {
 
 // @public (undocumented)
 export interface RelayerNodeConfig {
+    fheArtifactCacheTTL?: number;
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
     // (undocumented)
     poolSize?: number;
-    fheArtifactCacheTTL?: number;
     storage?: GenericStorage;
     // (undocumented)
     transports: Record<number, Partial<FhevmInstanceConfig_2>>;
