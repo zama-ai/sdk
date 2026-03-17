@@ -798,7 +798,7 @@ function useFeeRecipient(
 
 ### Low-Level FHE Hooks
 
-These hooks expose the raw `RelayerSDK` operations as React Query mutations. For detailed usage examples and common pitfalls, see the [Encrypt & Decrypt guide](../../docs/gitbook/src/guides/encrypt-decrypt.md).
+These hooks are for **custom FHE contracts** (non-token contracts that use encrypted types directly). For confidential ERC-20 tokens, use the high-level token hooks above instead. For detailed usage examples, see the [Encrypt & Decrypt guide](../../docs/gitbook/src/guides/encrypt-decrypt.md).
 
 #### Encryption
 

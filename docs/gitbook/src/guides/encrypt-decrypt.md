@@ -1,15 +1,17 @@
 ---
 title: Encrypt & Decrypt
-description: How to encrypt values for smart contract calls and decrypt FHE ciphertext handles using the SDK hooks.
+description: How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.
 ---
 
 # Encrypt & Decrypt
 
-This guide walks through low-level FHE encryption and decryption using `useEncrypt`, `useUserDecryptFlow`, `useUserDecrypt`, and `usePublicDecrypt`. These hooks are for custom flows where you need direct FHE control. If you use the high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`), encryption and decryption are handled automatically. Before starting, make sure your project is set up following the [Configuration](/guides/configuration) guide.
+The high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`) handle encryption and decryption automatically for wrapped confidential ERC-20 tokens. This guide is for a different scenario: **your smart contract uses FHE types directly** (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that stores `euint` values). In that case, you need `useEncrypt` and `useUserDecryptFlow` to interact with your contract's encrypted parameters and return values.
+
+Before starting, make sure your project is set up following the [Configuration](/guides/configuration) guide.
 
 ## Example
 
-Here is a complete flow that encrypts a value, sends it to a contract, reads back the encrypted handle, and decrypts it:
+Here is a complete flow that encrypts a value, sends it to a custom FHE contract, reads back the encrypted handle, and decrypts it:
 
 {% code title="ConfidentialRoundTrip.tsx" %}
 
@@ -146,7 +148,7 @@ import { useEncrypt, useUserDecryptFlow } from "@zama-fhe/react-sdk";
 
 ### 1. Encrypt values with useEncrypt
 
-`useEncrypt` encrypts plaintext values into FHE ciphertext handles that can be passed to confidential smart contract functions.
+`useEncrypt` encrypts plaintext values into FHE ciphertext that can be passed to any smart contract function that accepts encrypted parameters (e.g. `einput` + `bytes` proof).
 
 {% code title="EncryptExample.tsx" %}
 
@@ -215,7 +217,7 @@ if (!address) return <p role="status">Connect wallet first</p>;
 
 ### 2. Use encrypted values in contract calls
 
-After encryption, pass the handles and proof to your contract:
+After encryption, pass the handles and proof to your custom FHE contract:
 
 {% code title="ConfidentialAction.tsx" %}
 
@@ -250,62 +252,38 @@ function ConfidentialAction() {
 
 {% endcode %}
 
-### 3. Decrypt with useUserDecryptFlow (recommended)
+### 3. Decrypt with useUserDecryptFlow
 
-This is the **recommended hook** for most use cases. It handles the complete 4-step orchestration in a single call:
-
-1. Generate an FHE keypair
-2. Create EIP-712 typed data for authorization
-3. Prompt the wallet to sign
-4. Decrypt the ciphertext handles
+`useUserDecryptFlow` is the **recommended way to decrypt**. It manages the entire orchestration internally — keypair generation, EIP-712 creation, wallet signature, and decryption — so you only need to provide the handles you want to decrypt. All session parameters (`keypairTTL`, credential duration, etc.) are inherited from the SDK configuration.
 
 {% code title="DecryptExample.tsx" %}
 
 ```tsx
-import { useUserDecryptFlow } from "@zama-fhe/react-sdk";
-import type { DecryptHandle } from "@zama-fhe/react-sdk";
-import { useState } from "react";
+import { useUserDecryptFlow, useUserDecryptedValue } from "@zama-fhe/react-sdk";
 
 function DecryptExample() {
-  const [status, setStatus] = useState("Decrypt Balance");
-  const decrypt = useUserDecryptFlow({
-    callbacks: {
-      onKeypairGenerated: () => setStatus("Keypair ready"),
-      onEIP712Created: () => setStatus("Awaiting wallet signature..."),
-      onSigned: () => setStatus("Signed, decrypting..."),
-      onDecrypted: () => setStatus("Done!"),
-    },
-  });
+  const decrypt = useUserDecryptFlow();
+  const { data: decryptedValue } = useUserDecryptedValue("0xabc123...");
 
   const handleDecrypt = async () => {
-    const handles: DecryptHandle[] = [
-      {
-        handle: "0xabc123...", // the encrypted handle from the contract
-        contractAddress: "0xYourConfidentialContract",
-      },
-    ];
-
-    setStatus("Generating keypair...");
-    let result: Record<string, bigint> | undefined;
-    try {
-      result = await decrypt.mutateAsync({
-        handles,
-      });
-    } catch {
-      setStatus("Decrypt Balance");
-      return;
-    }
-
-    // result is Record<Handle, ClearValueType>
-    // e.g. { "0xabc123...": 1000n }
+    const result = await decrypt.mutateAsync({
+      handles: [
+        {
+          handle: "0xabc123...", // the encrypted handle from the contract
+          contractAddress: "0xYourConfidentialContract",
+        },
+      ],
+    });
+    // result: { "0xabc123...": 1000n }
   };
 
   return (
     <section>
       <button onClick={handleDecrypt} disabled={decrypt.isPending}>
-        {status}
+        {decrypt.isPending ? "Decrypting..." : "Decrypt"}
       </button>
       {decrypt.error && <p role="alert">Error: {decrypt.error.message}</p>}
+      {decryptedValue !== undefined && <output>Value: {decryptedValue.toString()}</output>}
     </section>
   );
 }
@@ -418,7 +396,9 @@ function DecryptWithProgress() {
 
 ### 4. Decrypt with useUserDecrypt (advanced)
 
-Use this when you need full control over each step — for example, to reuse a keypair across multiple decrypt operations or integrate with a custom signing flow.
+{% hint style="warning" %}
+You almost certainly want `useUserDecryptFlow` instead. This low-level hook requires you to manage the FHE keypair, EIP-712 typed data, and wallet signature yourself. It exists for rare cases where you need to reuse a keypair across multiple decrypt operations or integrate with a custom signing flow.
+{% endhint %}
 
 {% code title="ManualDecrypt.tsx" %}
 

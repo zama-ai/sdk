@@ -8,7 +8,12 @@ description: Low-level mutation hook that decrypts an encrypted handle using the
 Low-level mutation hook that decrypts encrypted handles using the user's FHE credentials. The caller is responsible for providing all parameters (keypair, signature, contract addresses).
 
 {% hint style="warning" %}
-Most apps use [`useConfidentialBalance`](/reference/react/useConfidentialBalance), which decrypts automatically with two-phase polling. Reach for `useUserDecrypt` only when building custom decrypt flows.
+**You probably want a higher-level hook instead:**
+
+- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — decrypts token balances automatically with two-phase polling.
+- [`useUserDecryptFlow`](/guides/encrypt-decrypt#3.-decrypt-with-useuserdecryptflow) — manages the full keypair/EIP-712/signature orchestration for you. All session parameters are inherited from SDK config.
+
+Reach for `useUserDecrypt` only when you need to manage the FHE keypair and signing flow yourself (e.g. reusing a keypair across multiple operations or integrating a custom signing workflow).
 {% endhint %}
 
 ## Import
@@ -38,9 +43,9 @@ function DecryptHandle({ handle }: { handle: string }) {
       signature: "0x...",
       signerAddress: "0xUser",
       startTimestamp: Math.floor(Date.now() / 1000),
-      durationDays: 30,
+      durationDays: 1,
     });
-    console.log("Decrypted:", result[handle]);
+    // result[handle] contains the decrypted bigint value
   }
 
   return (
@@ -65,6 +70,10 @@ Passed to `mutate` / `mutateAsync` at call time.
 ```ts
 import { type UserDecryptParams } from "@zama-fhe/sdk";
 ```
+
+{% hint style="info" %}
+Most of these parameters (keypair, signature, timestamps) are managed automatically by [`useUserDecryptFlow`](/guides/encrypt-decrypt#3.-decrypt-with-useuserdecryptflow). You only need to provide them manually if you have a specific reason to control the decrypt lifecycle yourself.
+{% endhint %}
 
 ### handles
 
@@ -124,6 +133,7 @@ On success, results are written to the decryption cache so that `useUserDecrypte
 
 ## Related
 
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts balances automatically
+- [`useUserDecryptFlow`](/guides/encrypt-decrypt#3.-decrypt-with-useuserdecryptflow) — recommended high-level hook that manages the full decrypt orchestration
+- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances automatically
 - [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value
 - [`useGenerateKeypair`](/reference/react/useGenerateKeypair) — generate the FHE keypair needed for decryption
