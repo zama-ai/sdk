@@ -5,7 +5,7 @@
 
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
-import { assertObject, assertString, prefixHex, unprefixHex } from "../utils";
+import { getBrowserExtensionRuntime, prefixHex, unprefixHex } from "../utils";
 import type {
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,
@@ -163,29 +163,6 @@ function setupFetchInterceptor(): void {
 }
 
 /**
- * Detect browser extension environment (Chrome, Firefox, Safari).
- * Extensions have restricted CSP that blocks blob: URLs, so we must
- * fall back to importScripts with the CDN URL directly.
- * - Chrome/Edge: `chrome.runtime.id`
- * - Firefox/Safari: `browser.runtime.id`
- */
-function isBrowserExtension(): boolean {
-  try {
-    // Chrome/Edge expose chrome.runtime.id, Firefox/Safari expose browser.runtime.id
-    const g = globalThis as unknown as Record<string, unknown>;
-    for (const ns of [g.chrome, g.browser]) {
-      assertObject(ns, "ns");
-      assertObject(ns.runtime, "runtime");
-      assertString(ns.runtime.id, "id");
-      return true;
-    }
-  } catch {
-    return false;
-  }
-  return false;
-}
-
-/**
  * Verify a fetched script's SHA-384 hash matches the expected integrity value.
  */
 async function verifyIntegrity(content: string, expectedHash: string): Promise<void> {
@@ -223,7 +200,7 @@ async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> 
   // Validate CDN URL immediately before any script loading (defense-in-depth).
   const validatedUrl = validateCdnUrl(cdnUrl);
 
-  if (isBrowserExtension()) {
+  if (getBrowserExtensionRuntime()) {
     // Extensions: blob: URLs are forbidden. Use importScripts directly —
     // the CDN origin must be allowed in the extension's CSP manifest.
     if (integrity) {
