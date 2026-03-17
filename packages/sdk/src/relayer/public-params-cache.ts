@@ -1,5 +1,5 @@
 import type { GenericStorage } from "../token/token.types";
-import { assertObject, assertStringProp } from "../utils";
+import { assertObject, assertStringProp, toError } from "../utils";
 import type { GenericLogger } from "../worker/worker.types";
 
 // ── Cached data shapes ──────────────────────────────────────
@@ -162,13 +162,15 @@ export class PublicParamsCache {
 
     try {
       const raw = await this.#storage.get<unknown>(key);
-      assertCachedPk(raw);
-      const result: PublicKeyResult = {
-        publicKeyId: raw.publicKeyId,
-        publicKey: fromBase64(raw.publicKey),
-      };
-      this.#publicKeyMem = result;
-      return result;
+      if (raw) {
+        assertCachedPk(raw);
+        const result: PublicKeyResult = {
+          publicKeyId: raw.publicKeyId,
+          publicKey: fromBase64(raw.publicKey),
+        };
+        this.#publicKeyMem = result;
+        return result;
+      }
     } catch (err) {
       // Corrupt or unreadable entry — delete and fall through to fetcher
       await this.#storage.delete(key).catch(() => {});
@@ -176,7 +178,7 @@ export class PublicParamsCache {
         "Failed to read public key from persistent storage, falling back to network fetch",
         {
           chainId: this.#chainId,
-          error: err instanceof Error ? err.message : String(err),
+          error: toError(err).message,
         },
       );
     }
@@ -196,7 +198,7 @@ export class PublicParamsCache {
     } catch (err) {
       (this.#logger ?? fallbackLogger).warn("Failed to persist public key to storage", {
         chainId: this.#chainId,
-        error: err instanceof Error ? err.message : String(err),
+        error: toError(err).message,
       });
     }
 
@@ -233,15 +235,14 @@ export class PublicParamsCache {
 
     try {
       const raw = await this.#storage.get<unknown>(key);
-      if (raw) {
-        assertCachedParams(raw);
-        const result: PublicParamsResult = {
-          publicParamsId: raw.publicParamsId,
-          publicParams: fromBase64(raw.publicParams),
-        };
-        this.#publicParamsMem.set(bits, result);
-        return result;
-      }
+      assertCachedParams(raw);
+
+      const result: PublicParamsResult = {
+        publicParamsId: raw.publicParamsId,
+        publicParams: fromBase64(raw.publicParams),
+      };
+      this.#publicParamsMem.set(bits, result);
+      return result;
     } catch (err) {
       // Corrupt or unreadable entry — delete and fall through to fetcher
       await this.#storage.delete(key).catch(() => {});
@@ -250,7 +251,7 @@ export class PublicParamsCache {
         {
           chainId: this.#chainId,
           bits,
-          error: err instanceof Error ? err.message : String(err),
+          error: toError(err).message,
         },
       );
     }
@@ -278,7 +279,7 @@ export class PublicParamsCache {
       (this.#logger ?? fallbackLogger).warn("Failed to persist public params to storage", {
         chainId: this.#chainId,
         bits,
-        error: err instanceof Error ? err.message : String(err),
+        error: toError(err).message,
       });
     }
 
@@ -447,7 +448,7 @@ export class PublicParamsCache {
         {
           chainId: this.#chainId,
           relayerUrl: this.#relayerUrl,
-          error: err instanceof Error ? err.message : String(err),
+          error: toError(err).message,
         },
       );
 
@@ -469,7 +470,7 @@ export class PublicParamsCache {
           "Failed to update validation timestamps after revalidation error",
           {
             chainId: this.#chainId,
-            error: innerErr instanceof Error ? innerErr.message : String(innerErr),
+            error: toError(innerErr).message,
           },
         );
       }
@@ -539,24 +540,23 @@ export class PublicParamsCache {
     const results = await Promise.all(
       bitsArray.map(async (bits) => {
         const pKey = paramsStorageKey(this.#chainId, bits);
-        const raw = await this.#storage.get<unknown>(pKey);
-        if (raw) {
-          try {
-            assertCachedParams(raw);
-            return {
-              bits,
-              key: pKey,
-              data: {
-                ...raw,
-                lastValidatedAt: raw.lastValidatedAt ?? 0,
-              } as CachedPublicParams,
-            };
-          } catch {
-            // Corrupt entry — delete
-            await this.#storage.delete(pKey).catch(() => {});
-          }
+        try {
+          const raw = await this.#storage.get<unknown>(pKey);
+          assertCachedParams(raw);
+
+          return {
+            bits,
+            key: pKey,
+            data: {
+              ...raw,
+              lastValidatedAt: raw.lastValidatedAt ?? 0,
+            } as CachedPublicParams,
+          };
+        } catch {
+          // Corrupt entry — delete
+          await this.#storage.delete(pKey).catch(() => {});
+          return null;
         }
-        return null;
       }),
     );
     return results.filter(
@@ -579,7 +579,7 @@ export class PublicParamsCache {
         "Failed to clear stale artifacts from persistent storage",
         {
           chainId: this.#chainId,
-          error: err instanceof Error ? err.message : String(err),
+          error: toError(err).message,
         },
       );
     }
@@ -594,14 +594,14 @@ export class PublicParamsCache {
       this.#storage.set(pkKey, pk).catch((err) => {
         (this.#logger ?? fallbackLogger).warn("Failed to update public key validation timestamp", {
           chainId: this.#chainId,
-          error: err instanceof Error ? err.message : String(err),
+          error: toError(err).message,
         });
       }),
       ...paramEntries.map((entry) =>
         this.#storage.set(entry.key, entry.data).catch((err) => {
           (this.#logger ?? fallbackLogger).warn("Failed to update params validation timestamp", {
             chainId: this.#chainId,
-            error: err instanceof Error ? err.message : String(err),
+            error: toError(err).message,
           });
         }),
       ),
