@@ -1,5 +1,39 @@
 import type { Address } from "viem";
-import { ACL_ABI } from "../abi/acl.abi";
+
+export const aclAbi = [
+  {
+    inputs: [
+      { internalType: "address", name: "delegate", type: "address" },
+      { internalType: "address", name: "contractAddress", type: "address" },
+      { internalType: "uint64", name: "expirationDate", type: "uint64" },
+    ],
+    name: "delegateForUserDecryption",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "delegate", type: "address" },
+      { internalType: "address", name: "contractAddress", type: "address" },
+    ],
+    name: "revokeDelegationForUserDecryption",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "delegator", type: "address" },
+      { internalType: "address", name: "delegate", type: "address" },
+      { internalType: "address", name: "contractAddress", type: "address" },
+    ],
+    name: "getUserDecryptionDelegationExpirationDate",
+    outputs: [{ internalType: "uint64", name: "", type: "uint64" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 /**
  * Returns the contract config to delegate user decryption rights.
@@ -19,7 +53,7 @@ export function delegateForUserDecryptionContract(
 ) {
   return {
     address: aclAddress,
-    abi: ACL_ABI,
+    abi: aclAbi,
     functionName: "delegateForUserDecryption",
     args: [delegateAddress, contractAddress, expirationDate],
   } as const;
@@ -42,7 +76,7 @@ export function revokeDelegationContract(
 ) {
   return {
     address: aclAddress,
-    abi: ACL_ABI,
+    abi: aclAbi,
     functionName: "revokeDelegationForUserDecryption",
     args: [delegateAddress, contractAddress],
   } as const;
@@ -66,7 +100,7 @@ export function getDelegationExpiryContract(
 ) {
   return {
     address: aclAddress,
-    abi: ACL_ABI,
+    abi: aclAbi,
     functionName: "getUserDecryptionDelegationExpirationDate",
     args: [delegatorAddress, delegateAddress, contractAddress],
   } as const;
