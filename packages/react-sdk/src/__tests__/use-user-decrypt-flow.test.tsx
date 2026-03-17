@@ -42,7 +42,7 @@ describe("useUserDecryptFlow", () => {
     expect(queryClient.getQueryData(decryptionKeys.value("0xhandle2"))).toBe(true);
   });
 
-  it("fires step callbacks in correct order", async ({
+  it("fires callbacks in correct order", async ({
     relayer,
     signer,
     tokenAddress,
@@ -52,9 +52,7 @@ describe("useUserDecryptFlow", () => {
 
     const order: string[] = [];
     const callbacks = {
-      onKeypairGenerated: vi.fn(() => order.push("keypair")),
-      onEIP712Created: vi.fn(() => order.push("eip712")),
-      onSigned: vi.fn(() => order.push("signed")),
+      onCredentialsReady: vi.fn(() => order.push("credentials")),
       onDecrypted: vi.fn(() => order.push("decrypted")),
     };
 
@@ -69,8 +67,7 @@ describe("useUserDecryptFlow", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(order).toEqual(["keypair", "eip712", "signed", "decrypted"]);
-    expect(callbacks.onSigned).toHaveBeenCalledWith("0xsig");
+    expect(order).toEqual(["credentials", "decrypted"]);
     expect(callbacks.onDecrypted).toHaveBeenCalledWith({ "0xh": 42n });
   });
 
@@ -132,7 +129,12 @@ describe("useUserDecryptFlow", () => {
     );
   });
 
-  it("uses custom durationDays", async ({ relayer, signer, tokenAddress, renderWithProviders }) => {
+  it("derives durationDays from keypairTTL", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 1n });
 
     const { result } = renderWithProviders(() => useUserDecryptFlow(), {
@@ -142,17 +144,54 @@ describe("useUserDecryptFlow", () => {
 
     result.current.mutate({
       handles: [{ handle: "0xh", contractAddress: tokenAddress }],
-      durationDays: 7,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
+    // durationDays is derived from keypairTTL (default 86400s = 1 day)
     expect(relayer.createEIP712).toHaveBeenCalledWith(
       "0xpub",
       [tokenAddress],
       expect.any(Number),
-      7,
+      1,
     );
+  });
+
+  it("reuses cached credentials on second call (no extra wallet prompt)", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    vi.mocked(relayer.userDecrypt)
+      .mockResolvedValueOnce({ "0xh1": 10n })
+      .mockResolvedValueOnce({ "0xh2": 20n });
+
+    const { result } = renderWithProviders(() => useUserDecryptFlow(), {
+      relayer,
+      signer,
+    });
+
+    // First call — generates fresh credentials
+    result.current.mutate({
+      handles: [{ handle: "0xh1", contractAddress: tokenAddress }],
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(relayer.generateKeypair).toHaveBeenCalledTimes(1);
+    expect(signer.signTypedData).toHaveBeenCalledTimes(1);
+
+    // Second call with same contract — should reuse cached credentials
+    result.current.mutate({
+      handles: [{ handle: "0xh2", contractAddress: tokenAddress }],
+    });
+    await waitFor(() => expect(result.current.data).toEqual({ "0xh2": 20n }));
+
+    // No additional keypair generation or signing
+    expect(relayer.generateKeypair).toHaveBeenCalledTimes(1);
+    expect(signer.signTypedData).toHaveBeenCalledTimes(1);
+    // But userDecrypt was called twice (one per mutation)
+    expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
   });
 
   it("reports error when keypair generation fails", async ({ relayer, renderWithProviders }) => {
@@ -167,6 +206,7 @@ describe("useUserDecryptFlow", () => {
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.error?.message).toBe("keygen failed");
+    // CredentialsManager wraps the error with context
+    expect(result.current.error?.message).toBe("Failed to create decrypt credentials");
   });
 });

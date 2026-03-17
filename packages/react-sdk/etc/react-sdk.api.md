@@ -135,7 +135,6 @@ import { loadPendingUnshield } from '@zama-fhe/sdk';
 import { MainnetConfig } from '@zama-fhe/sdk';
 import { matchZamaError } from '@zama-fhe/sdk';
 import { MemoryStorage } from '@zama-fhe/sdk';
-import { memoryStorage } from '@zama-fhe/sdk';
 import { nameContract } from '@zama-fhe/sdk';
 import { NetworkType } from '@zama-fhe/sdk';
 import { NoCiphertextError } from '@zama-fhe/sdk';
@@ -193,6 +192,7 @@ import { TOKEN_TOPICS } from '@zama-fhe/sdk';
 import { TokenConfig } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { tokenMetadataQueryOptions } from '@zama-fhe/sdk/query';
+import { TokenWrapperPair } from '@zama-fhe/sdk';
 import { Topics } from '@zama-fhe/sdk';
 import { totalSupplyContract } from '@zama-fhe/sdk';
 import { totalSupplyQueryOptions } from '@zama-fhe/sdk/query';
@@ -544,8 +544,6 @@ export { MainnetConfig }
 export { matchZamaError }
 
 export { MemoryStorage }
-
-export { memoryStorage }
 
 export { nameContract }
 
@@ -1140,6 +1138,12 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
 }
 
 // @public
+export function useConfidentialTokenAddress(input: {
+    tokenAddress: Address | undefined;
+    wrappersRegistryAddresses?: Record<number, Address>;
+}): _tanstack_react_query0.UseQueryResult<readonly [boolean, `0x${string}`], Error>;
+
+// @public
 export function useConfidentialTransfer<TContext = unknown>(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, TContext>): UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext>;
 
 // @public
@@ -1210,6 +1214,12 @@ export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQuery
 export function useIsConfidentialSuspense(tokenAddress: Address): _tanstack_react_query0.UseSuspenseQueryResult<boolean, Error>;
 
 // @public
+export function useIsConfidentialTokenValid(input: {
+    confidentialTokenAddress: Address | undefined;
+    wrappersRegistryAddresses?: Record<number, Address>;
+}): _tanstack_react_query0.UseQueryResult<boolean, Error>;
+
+// @public
 export function useIsWrapper(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<boolean, Error>;
 
 // @public
@@ -1250,6 +1260,9 @@ export { UserDecryptParams }
 export function useReadonlyToken(address: Address): _zama_fhe_sdk0.ReadonlyToken;
 
 // @public
+export function useRegistryAddress(wrappersRegistryAddresses?: Record<number, Address>): Address | undefined;
+
+// @public
 export function useRequestZKProofVerification(): _tanstack_react_query0.UseMutationResult<Readonly<{
     handles: Uint8Array[];
     inputProof: Uint8Array;
@@ -1288,6 +1301,35 @@ export function useShieldFee(config: UseFeeConfig, options?: Omit<UseQueryOption
 
 // @public
 export function useToken(config: UseZamaConfig): _zama_fhe_sdk0.Token;
+
+// @public
+export function useTokenAddress(input: {
+    confidentialTokenAddress: Address | undefined;
+    wrappersRegistryAddresses?: Record<number, Address>;
+}): _tanstack_react_query0.UseQueryResult<readonly [boolean, `0x${string}`], Error>;
+
+// @public
+export function useTokenPair(input: {
+    index: bigint | undefined;
+    wrappersRegistryAddresses?: Record<number, Address>;
+}): _tanstack_react_query0.UseQueryResult<TokenWrapperPair, Error>;
+
+// @public
+export function useTokenPairsLength(input?: {
+    wrappersRegistryAddresses?: Record<number, Address>;
+}): _tanstack_react_query0.UseQueryResult<bigint, Error>;
+
+// @public
+export function useTokenPairsRegistry(input?: {
+    wrappersRegistryAddresses?: Record<number, Address>;
+}): _tanstack_react_query0.UseQueryResult<readonly TokenWrapperPair[], Error>;
+
+// @public
+export function useTokenPairsSlice(input: {
+    fromIndex: bigint | undefined;
+    toIndex: bigint | undefined;
+    wrappersRegistryAddresses?: Record<number, Address>;
+}): _tanstack_react_query0.UseQueryResult<readonly TokenWrapperPair[], Error>;
 
 // @public
 export function useTotalSupply(tokenAddress: Address, options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<bigint, Error>;

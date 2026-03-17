@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Address, ClearValueType, Handle, Hex } from "@zama-fhe/sdk";
+import type { Address, ClearValueType, Handle } from "@zama-fhe/sdk";
 import { decryptionKeys } from "./decryption-cache";
 import { useZamaSDK } from "../provider";
 
@@ -15,18 +15,12 @@ export interface DecryptHandle {
 export interface UserDecryptFlowParams {
   /** Encrypted handles to decrypt. */
   handles: DecryptHandle[];
-  /** Number of days the credential remains valid. Defaults to `Math.ceil(keypairTTL / 86400)`. */
-  durationDays?: number;
 }
 
-/** Progress callbacks for each step of the decrypt flow. */
+/** Progress callbacks for the decrypt flow. */
 export interface UserDecryptFlowCallbacks {
-  /** Fired after the keypair is generated. */
-  onKeypairGenerated?: () => void;
-  /** Fired after the EIP-712 typed data is created, before wallet signing. */
-  onEIP712Created?: () => void;
-  /** Fired after the wallet signature is obtained. */
-  onSigned?: (signature: Hex) => void;
+  /** Fired after credentials are ready (either from cache or freshly generated). */
+  onCredentialsReady?: () => void;
   /** Fired after decryption completes. */
   onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
 }
@@ -39,7 +33,10 @@ export interface UseUserDecryptFlowConfig {
 
 /**
  * High-level orchestration hook for user decryption.
- * Handles the full flow: keypair generation → EIP-712 creation → wallet signature → decryption.
+ *
+ * Reuses cached FHE credentials from `sdk.credentials` when available,
+ * falling back to generating a fresh keypair + EIP-712 signature only when
+ * no valid credentials exist. This avoids redundant wallet signature prompts.
  *
  * On success, populates the decryption cache so `useUserDecryptedValue` / `useUserDecryptedValues`
  * can read the results.
@@ -50,7 +47,7 @@ export interface UseUserDecryptFlowConfig {
  * @example
  * ```tsx
  * const decryptFlow = useUserDecryptFlow({
- *   callbacks: { onSigned: () => setStep("decrypting") },
+ *   callbacks: { onDecrypted: (values) => console.log(values) },
  * });
  * decryptFlow.mutate({
  *   handles: [{ handle: "0xHandle", contractAddress: "0xContract" }],
@@ -64,34 +61,17 @@ export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig) {
 
   return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptFlowParams>({
     mutationKey: ["userDecryptFlow"],
-    mutationFn: async ({
-      handles,
-      durationDays = Math.max(1, Math.ceil(sdk.credentials.keypairTTL / 86400)),
-    }) => {
-      // Step 1: Generate keypair
-      const keypair = await sdk.relayer.generateKeypair();
-      callbacks?.onKeypairGenerated?.();
-
-      // Step 2: Create EIP-712 typed data
+    mutationFn: async ({ handles }) => {
+      // Resolve credentials — reuses cached keypair+signature if valid,
+      // otherwise generates fresh ones (which may trigger a wallet prompt).
       const contractAddresses = [...new Set(handles.map((h) => h.contractAddress))];
-      const startTimestamp = Math.floor(Date.now() / 1000);
-      const eip712 = await sdk.relayer.createEIP712(
-        keypair.publicKey,
-        contractAddresses,
-        startTimestamp,
-        durationDays,
-      );
-      callbacks?.onEIP712Created?.();
+      const creds = await sdk.credentials.allow(...contractAddresses);
+      callbacks?.onCredentialsReady?.();
 
-      // Step 3: Sign with wallet
-      const signature = await sdk.signer.signTypedData(eip712);
-      callbacks?.onSigned?.(signature);
-
-      // Step 4: Decrypt — group handles by contract address
+      // Decrypt — group handles by contract address
       const signerAddress = await sdk.signer.getAddress();
       const allResults: Partial<Record<Handle, ClearValueType>> = {};
 
-      // Decrypt per contract address (the relayer requires handles from the same contract)
       const handlesByContract = new Map<Address, Handle[]>();
       for (const h of handles) {
         const list = handlesByContract.get(h.contractAddress) ?? [];
@@ -103,13 +83,13 @@ export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig) {
         const result = await sdk.relayer.userDecrypt({
           handles: contractHandles,
           contractAddress,
-          signedContractAddresses: contractAddresses,
-          privateKey: keypair.privateKey,
-          publicKey: keypair.publicKey,
-          signature,
+          signedContractAddresses: creds.contractAddresses,
+          privateKey: creds.privateKey,
+          publicKey: creds.publicKey,
+          signature: creds.signature,
           signerAddress,
-          startTimestamp,
-          durationDays,
+          startTimestamp: creds.startTimestamp,
+          durationDays: creds.durationDays,
         });
         Object.assign(allResults, result);
       }

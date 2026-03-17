@@ -816,14 +816,12 @@ const { handles, inputProof } = await encrypt.mutateAsync({
 
 #### Decryption (recommended: `useUserDecryptFlow`)
 
-`useUserDecryptFlow` handles the full 4-step orchestration (generate keypair → create EIP-712 → wallet signature → decrypt) in a single call with optional progress callbacks:
+`useUserDecryptFlow` manages the full decrypt orchestration and reuses cached credentials when available, avoiding redundant wallet prompts:
 
 ```tsx
 const decrypt = useUserDecryptFlow({
   callbacks: {
-    onKeypairGenerated: () => setStep("eip712"),
-    onEIP712Created: () => setStep("signing"),
-    onSigned: () => setStep("decrypting"),
+    onCredentialsReady: () => setStep("decrypting"),
     onDecrypted: (values) => setStep("done"),
   },
 });
@@ -833,7 +831,6 @@ const result = await decrypt.mutateAsync({
     { handle: "0xabc...", contractAddress: "0xTokenA" },
     { handle: "0xdef...", contractAddress: "0xTokenB" },
   ],
-  durationDays: 1,
 });
 // result: { "0xabc...": 500n, "0xdef...": 1000n }
 // Results are automatically cached for useUserDecryptedValue

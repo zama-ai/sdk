@@ -350,7 +350,7 @@ function Balances({ handles }: { handles: string[] }) {
 
 #### Showing progress during decryption
 
-The decrypt flow involves a wallet signature prompt, which can feel slow. Use the callbacks to show progress:
+Use the `onCredentialsReady` and `onDecrypted` callbacks to show progress:
 
 {% code title="DecryptWithProgress.tsx" %}
 
@@ -358,22 +358,20 @@ The decrypt flow involves a wallet signature prompt, which can feel slow. Use th
 import { useUserDecryptFlow } from "@zama-fhe/react-sdk";
 import { useState } from "react";
 
-type DecryptStep = "idle" | "keypair" | "eip712" | "signing" | "decrypting" | "done";
+type DecryptStep = "idle" | "authorizing" | "decrypting" | "done";
 
 function DecryptWithProgress() {
   const [step, setStep] = useState<DecryptStep>("idle");
 
   const decrypt = useUserDecryptFlow({
     callbacks: {
-      onKeypairGenerated: () => setStep("eip712"),
-      onEIP712Created: () => setStep("signing"),
-      onSigned: () => setStep("decrypting"),
+      onCredentialsReady: () => setStep("decrypting"),
       onDecrypted: () => setStep("done"),
     },
   });
 
   const handleDecrypt = async () => {
-    setStep("keypair");
+    setStep("authorizing");
     await decrypt.mutateAsync({
       handles: [{ handle: "0x...", contractAddress: "0xToken" }],
     });
@@ -381,9 +379,7 @@ function DecryptWithProgress() {
 
   const stepLabels: Record<DecryptStep, string> = {
     idle: "Decrypt",
-    keypair: "Generating keypair...",
-    eip712: "Preparing authorization...",
-    signing: "Approve in wallet...",
+    authorizing: "Authorizing...",
     decrypting: "Decrypting...",
     done: "Done!",
   };
