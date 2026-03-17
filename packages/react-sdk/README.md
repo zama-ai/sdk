@@ -814,16 +814,14 @@ const { handles, inputProof } = await encrypt.mutateAsync({
 // Pass handles and inputProof to your contract call
 ```
 
-#### Decryption (recommended: `useUserDecryptFlow`)
+#### Decryption (`useUserDecrypt`)
 
-`useUserDecryptFlow` manages the full decrypt orchestration and reuses cached credentials when available, avoiding redundant wallet prompts:
+`useUserDecrypt` manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available, avoiding redundant wallet prompts:
 
 ```tsx
-const decrypt = useUserDecryptFlow({
-  callbacks: {
-    onCredentialsReady: () => setStep("decrypting"),
-    onDecrypted: (values) => setStep("done"),
-  },
+const decrypt = useUserDecrypt({
+  onCredentialsReady: () => setStep("decrypting"),
+  onDecrypted: (values) => setStep("done"),
 });
 
 const result = await decrypt.mutateAsync({
@@ -838,13 +836,12 @@ const result = await decrypt.mutateAsync({
 
 #### All Encryption & Decryption Hooks
 
-| Hook                        | Input                        | Output                   | Description                                                                                     |
-| --------------------------- | ---------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------- |
-| `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                                                        |
-| `useUserDecryptFlow()`      | `UserDecryptFlowParams`      | `Record<string, bigint>` | **Recommended.** Full decrypt orchestration with progress callbacks. Populates cache.           |
-| `useUserDecrypt()`          | `UserDecryptParams`          | `Record<string, bigint>` | Low-level decrypt — you manage keypair, EIP-712, and signature. Populates the decryption cache. |
-| `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption (no authorization needed). Populates the decryption cache.                    |
-| `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                                                         |
+| Hook                        | Input                        | Output                   | Description                                                                  |
+| --------------------------- | ---------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                                     |
+| `useUserDecrypt()`          | `DecryptParams`              | `Record<string, bigint>` | Full decrypt orchestration with progress callbacks. Populates cache.         |
+| `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption (no authorization needed). Populates the decryption cache. |
+| `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                                      |
 
 #### Key Management
 
@@ -864,7 +861,7 @@ const result = await decrypt.mutateAsync({
 
 ### Decryption Cache Hooks
 
-`useUserDecryptFlow`, `useUserDecrypt`, and `usePublicDecrypt` populate a shared React Query cache. These hooks read from that cache without triggering new decryption requests.
+`useUserDecrypt` and `usePublicDecrypt` populate a shared React Query cache. These hooks read from that cache without triggering new decryption requests.
 
 ```ts
 // Single handle
@@ -879,7 +876,7 @@ function useUserDecryptedValues(handles: string[]): {
 
 ```tsx
 // First, trigger decryption (populates the cache)
-const decrypt = useUserDecryptFlow();
+const decrypt = useUserDecrypt();
 await decrypt.mutateAsync({
   handles: [{ handle: "0xHandleHash", contractAddress: "0xToken" }],
 });

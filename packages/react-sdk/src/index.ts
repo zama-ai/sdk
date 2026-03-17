@@ -12,7 +12,13 @@ export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
-export { useUserDecrypt } from "./relayer/use-user-decrypt";
+export {
+  useUserDecrypt,
+  type DecryptHandle,
+  type DecryptParams,
+  type DecryptCallbacks,
+  type UseUserDecryptConfig,
+} from "./relayer/use-user-decrypt";
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
 export { useCreateEIP712 } from "./relayer/use-create-eip712";
@@ -23,15 +29,6 @@ export { useDelegatedUserDecrypt } from "./relayer/use-delegated-user-decrypt";
 export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
 export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
 export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
-
-// Orchestration hooks
-export {
-  useUserDecryptFlow,
-  type DecryptHandle,
-  type UserDecryptFlowParams,
-  type UserDecryptFlowCallbacks,
-  type UseUserDecryptFlowConfig,
-} from "./relayer/use-user-decrypt-flow";
 
 // Read hooks (cached lookups)
 export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";

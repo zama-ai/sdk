@@ -5,7 +5,7 @@ description: How to encrypt values and decrypt FHE ciphertext handles for custom
 
 # Encrypt & Decrypt
 
-The high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`) handle encryption and decryption automatically for wrapped confidential ERC-20 tokens. This guide is for a different scenario: **your smart contract uses FHE types directly** (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that stores `euint` values). In that case, you need `useEncrypt` and `useUserDecryptFlow` to interact with your contract's encrypted parameters and return values.
+The high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`) handle encryption and decryption automatically for wrapped confidential ERC-20 tokens. This guide is for a different scenario: **your smart contract uses FHE types directly** (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that stores `euint` values). In that case, you need `useEncrypt` and `useUserDecrypt` to interact with your contract's encrypted parameters and return values.
 
 Before starting, make sure your project is set up following the [Configuration](/guides/configuration) guide.
 
@@ -16,19 +16,14 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 {% code title="ConfidentialRoundTrip.tsx" %}
 
 ```tsx
-import {
-  useEncrypt,
-  useUserDecryptFlow,
-  useUserDecryptedValue,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
+import { useEncrypt, useUserDecrypt, useUserDecryptedValue, useZamaSDK } from "@zama-fhe/react-sdk";
 import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
 
 function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
-  const decrypt = useUserDecryptFlow();
+  const decrypt = useUserDecrypt();
   const [handle, setHandle] = useState<string>();
   const { data: decryptedValue } = useUserDecryptedValue(handle);
 
@@ -139,7 +134,7 @@ FHE operations use Web Workers and browser APIs. In Next.js or other SSR framewo
 ```tsx
 "use client"; // Required at the top of the file
 
-import { useEncrypt, useUserDecryptFlow } from "@zama-fhe/react-sdk";
+import { useEncrypt, useUserDecrypt } from "@zama-fhe/react-sdk";
 ```
 
 {% endhint %}
@@ -252,17 +247,17 @@ function ConfidentialAction() {
 
 {% endcode %}
 
-### 3. Decrypt with useUserDecryptFlow
+### 3. Decrypt with useUserDecrypt
 
-`useUserDecryptFlow` is the **recommended way to decrypt**. It manages the entire orchestration internally — keypair generation, EIP-712 creation, wallet signature, and decryption — so you only need to provide the handles you want to decrypt. All session parameters (`keypairTTL`, credential duration, etc.) are inherited from the SDK configuration.
+`useUserDecrypt` manages the entire orchestration internally — keypair generation, EIP-712 creation, wallet signature, and decryption — so you only need to provide the handles you want to decrypt. All session parameters (`keypairTTL`, credential duration, etc.) are inherited from the SDK configuration.
 
 {% code title="DecryptExample.tsx" %}
 
 ```tsx
-import { useUserDecryptFlow, useUserDecryptedValue } from "@zama-fhe/react-sdk";
+import { useUserDecrypt, useUserDecryptedValue } from "@zama-fhe/react-sdk";
 
 function DecryptExample() {
-  const decrypt = useUserDecryptFlow();
+  const decrypt = useUserDecrypt();
   const { data: decryptedValue } = useUserDecryptedValue("0xabc123...");
 
   const handleDecrypt = async () => {
@@ -293,7 +288,7 @@ function DecryptExample() {
 
 #### Decrypting handles from multiple contracts
 
-`useUserDecryptFlow` automatically groups handles by contract address and issues one decryption request per contract:
+`useUserDecrypt` automatically groups handles by contract address and issues one decryption request per contract:
 
 ```tsx
 const result = await decrypt.mutateAsync({
@@ -307,10 +302,6 @@ const result = await decrypt.mutateAsync({
 // Single wallet signature, but two decryption requests (one per contract)
 // result: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
 ```
-
-{% hint style="info" %}
-**Handles must belong to the same contract** within a single low-level `useUserDecrypt` call. The relayer requires all handles in one request to share the same contract address. `useUserDecryptFlow` handles this automatically by grouping handles. If using `useUserDecrypt` manually, group your handles by `contractAddress` and make separate calls.
-{% endhint %}
 
 #### Reading decrypted values from cache
 
@@ -343,7 +334,7 @@ function Balances({ handles }: { handles: string[] }) {
 {% hint style="info" %}
 **Decrypted values are `undefined`?** Cache reads only return data after a decryption has populated the cache. Make sure:
 
-1. You have called `useUserDecryptFlow` or `useUserDecrypt` first
+1. You have called `useUserDecrypt` first
 2. The handle you are reading matches exactly (it is case-sensitive, hex-encoded)
 3. The decryption completed successfully (check `decrypt.isSuccess`)
    {% endhint %}
@@ -355,7 +346,7 @@ Use the `onCredentialsReady` and `onDecrypted` callbacks to show progress:
 {% code title="DecryptWithProgress.tsx" %}
 
 ```tsx
-import { useUserDecryptFlow } from "@zama-fhe/react-sdk";
+import { useUserDecrypt } from "@zama-fhe/react-sdk";
 import { useState } from "react";
 
 type DecryptStep = "idle" | "authorizing" | "decrypting" | "done";
@@ -363,11 +354,9 @@ type DecryptStep = "idle" | "authorizing" | "decrypting" | "done";
 function DecryptWithProgress() {
   const [step, setStep] = useState<DecryptStep>("idle");
 
-  const decrypt = useUserDecryptFlow({
-    callbacks: {
-      onCredentialsReady: () => setStep("decrypting"),
-      onDecrypted: () => setStep("done"),
-    },
+  const decrypt = useUserDecrypt({
+    onCredentialsReady: () => setStep("decrypting"),
+    onDecrypted: () => setStep("done"),
   });
 
   const handleDecrypt = async () => {
@@ -390,74 +379,11 @@ function DecryptWithProgress() {
 
 {% endcode %}
 
-### 4. Decrypt with useUserDecrypt (advanced)
-
-{% hint style="warning" %}
-You almost certainly want `useUserDecryptFlow` instead. This low-level hook requires you to manage the FHE keypair, EIP-712 typed data, and wallet signature yourself. It exists for rare cases where you need to reuse a keypair across multiple decrypt operations or integrate with a custom signing flow.
-{% endhint %}
-
-{% code title="ManualDecrypt.tsx" %}
-
-```tsx
-import {
-  useGenerateKeypair,
-  useCreateEIP712,
-  useUserDecrypt,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
-
-function ManualDecrypt() {
-  const sdk = useZamaSDK();
-  const generateKeypair = useGenerateKeypair();
-  const createEIP712 = useCreateEIP712();
-  const userDecrypt = useUserDecrypt();
-
-  const handleDecrypt = async () => {
-    const contractAddress = "0xYourContract";
-    const handles = ["0xhandle1...", "0xhandle2..."];
-
-    // Step 1: Generate keypair
-    const keypair = await generateKeypair.mutateAsync();
-
-    // Step 2: Create EIP-712 typed data
-    const startTimestamp = Math.floor(Date.now() / 1000);
-    const eip712 = await createEIP712.mutateAsync({
-      publicKey: keypair.publicKey,
-      contractAddresses: [contractAddress],
-      startTimestamp,
-      durationDays: 1,
-    });
-
-    // Step 3: Sign with wallet
-    const signature = await sdk.signer.signTypedData(eip712);
-
-    // Step 4: Decrypt
-    const result = await userDecrypt.mutateAsync({
-      handles,
-      contractAddress,
-      signedContractAddresses: [contractAddress],
-      privateKey: keypair.privateKey,
-      publicKey: keypair.publicKey,
-      signature,
-      signerAddress: await sdk.signer.getAddress(),
-      startTimestamp,
-      durationDays: 1,
-    });
-
-    // result: { "0xhandle1...": 500n, "0xhandle2...": 200n }
-  };
-
-  return <button onClick={handleDecrypt}>Decrypt (Manual)</button>;
-}
-```
-
-{% endcode %}
-
 {% hint style="info" %}
-**Decryption fails with "invalid keypair" or "expired credentials"?** The FHE keypair has a TTL (default: 1 day). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. The high-level hooks (`useConfidentialBalance`, `useUserDecryptFlow`) handle re-generation automatically. If using `useUserDecrypt` manually, generate a fresh keypair before each decrypt.
+**Decryption fails with "invalid keypair" or "expired credentials"?** The FHE keypair has a TTL (default: 1 day). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. `useUserDecrypt` and `useConfidentialBalance` handle re-generation automatically.
 {% endhint %}
 
-### 5. Decrypt with usePublicDecrypt (advanced)
+### 4. Decrypt with usePublicDecrypt (advanced)
 
 For values marked as publicly decryptable on-chain, no keypair or signature is needed:
 

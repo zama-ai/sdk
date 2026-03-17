@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
-import { useUserDecryptFlow } from "../relayer/use-user-decrypt-flow";
+import { useUserDecrypt } from "../relayer/use-user-decrypt";
 import { decryptionKeys } from "../relayer/decryption-cache";
 
-describe("useUserDecryptFlow", () => {
+describe("useUserDecrypt", () => {
   it("runs the full flow: keypair -> EIP712 -> sign -> decrypt", async ({
     relayer,
     signer,
@@ -16,7 +16,7 @@ describe("useUserDecryptFlow", () => {
       "0xhandle2": true,
     });
 
-    const { result, queryClient } = renderWithProviders(() => useUserDecryptFlow(), {
+    const { result, queryClient } = renderWithProviders(() => useUserDecrypt(), {
       relayer,
       signer,
     });
@@ -51,15 +51,16 @@ describe("useUserDecryptFlow", () => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 42n });
 
     const order: string[] = [];
-    const callbacks = {
-      onCredentialsReady: vi.fn(() => order.push("credentials")),
-      onDecrypted: vi.fn(() => order.push("decrypted")),
-    };
+    const onCredentialsReady = vi.fn(() => order.push("credentials"));
+    const onDecrypted = vi.fn(() => order.push("decrypted"));
 
-    const { result } = renderWithProviders(() => useUserDecryptFlow({ callbacks }), {
-      relayer,
-      signer,
-    });
+    const { result } = renderWithProviders(
+      () => useUserDecrypt({ onCredentialsReady, onDecrypted }),
+      {
+        relayer,
+        signer,
+      },
+    );
 
     result.current.mutate({
       handles: [{ handle: "0xh", contractAddress: tokenAddress }],
@@ -68,7 +69,7 @@ describe("useUserDecryptFlow", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(order).toEqual(["credentials", "decrypted"]);
-    expect(callbacks.onDecrypted).toHaveBeenCalledWith({ "0xh": 42n });
+    expect(onDecrypted).toHaveBeenCalledWith({ "0xh": 42n });
   });
 
   it("groups handles by contract address", async ({ relayer, signer, renderWithProviders }) => {
@@ -79,7 +80,7 @@ describe("useUserDecryptFlow", () => {
       .mockResolvedValueOnce({ "0xh1": 10n })
       .mockResolvedValueOnce({ "0xh2": 20n });
 
-    const { result } = renderWithProviders(() => useUserDecryptFlow(), {
+    const { result } = renderWithProviders(() => useUserDecrypt(), {
       relayer,
       signer,
     });
@@ -106,7 +107,7 @@ describe("useUserDecryptFlow", () => {
   }) => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh1": 1n, "0xh2": 2n });
 
-    const { result } = renderWithProviders(() => useUserDecryptFlow(), {
+    const { result } = renderWithProviders(() => useUserDecrypt(), {
       relayer,
       signer,
     });
@@ -137,7 +138,7 @@ describe("useUserDecryptFlow", () => {
   }) => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 1n });
 
-    const { result } = renderWithProviders(() => useUserDecryptFlow(), {
+    const { result } = renderWithProviders(() => useUserDecrypt(), {
       relayer,
       signer,
     });
@@ -167,7 +168,7 @@ describe("useUserDecryptFlow", () => {
       .mockResolvedValueOnce({ "0xh1": 10n })
       .mockResolvedValueOnce({ "0xh2": 20n });
 
-    const { result } = renderWithProviders(() => useUserDecryptFlow(), {
+    const { result } = renderWithProviders(() => useUserDecrypt(), {
       relayer,
       signer,
     });
@@ -197,7 +198,7 @@ describe("useUserDecryptFlow", () => {
   it("reports error when keypair generation fails", async ({ relayer, renderWithProviders }) => {
     vi.mocked(relayer.generateKeypair).mockRejectedValue(new Error("keygen failed"));
 
-    const { result } = renderWithProviders(() => useUserDecryptFlow(), { relayer });
+    const { result } = renderWithProviders(() => useUserDecrypt(), { relayer });
 
     result.current.mutate({
       handles: [

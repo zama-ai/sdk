@@ -7,7 +7,7 @@ import { decryptionKeys } from "./decryption-cache";
 
 /**
  * Look up multiple cached decrypted values by their handles.
- * Values are populated automatically when useUserDecrypt or usePublicDecrypt succeed.
+ * Values are populated automatically when `useUserDecrypt` or `usePublicDecrypt` succeed.
  */
 export function useUserDecryptedValues(handles: Handle[]) {
   const results = useQueries({
@@ -19,7 +19,7 @@ export function useUserDecryptedValues(handles: Handle[]) {
     })),
   });
 
-  const data: Partial<Record<Handle, ClearValueType | undefined>> = {};
+  const data: Record<Handle, ClearValueType | undefined> = {};
   for (let i = 0; i < handles.length; i++) {
     data[handles[i]!] = results[i]!.data as ClearValueType | undefined;
   }

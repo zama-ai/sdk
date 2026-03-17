@@ -399,6 +399,12 @@ export { decryptBalanceAsMutationOptions }
 
 export { DecryptBalanceAsParams }
 
+// @public
+export interface DecryptCallbacks {
+    onCredentialsReady?: () => void;
+    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
+}
+
 export { DecryptEndEvent }
 
 export { DecryptErrorEvent }
@@ -420,6 +426,11 @@ export const decryptionKeys: {
         readonly handle: string;
     }];
 };
+
+// @public
+export interface DecryptParams {
+    handles: DecryptHandle[];
+}
 
 export { DecryptStartEvent }
 
@@ -1230,17 +1241,6 @@ export function usePublicKey(): _tanstack_react_query0.UseQueryResult<PublicKeyD
 // @public
 export function usePublicParams(bits: number): _tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
 
-// @public
-export interface UserDecryptFlowCallbacks {
-    onCredentialsReady?: () => void;
-    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
-}
-
-// @public
-export interface UserDecryptFlowParams {
-    handles: DecryptHandle[];
-}
-
 export { UserDecryptParams }
 
 // @public
@@ -1320,24 +1320,19 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, UserDecryptParams, unknown>;
+export function useUserDecrypt(config?: UseUserDecryptConfig): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DecryptParams, unknown>;
+
+// @public
+export type UseUserDecryptConfig = DecryptCallbacks;
 
 // @public
 export function useUserDecryptedValue(handle: Handle | undefined): _tanstack_react_query0.UseQueryResult<ClearValueType, Error>;
 
 // @public
 export function useUserDecryptedValues(handles: Handle[]): {
-    data: Partial<Record<`0x${string}`, ClearValueType | undefined>>;
+    data: Record<`0x${string}`, ClearValueType | undefined>;
     results: _tanstack_react_query0.UseQueryResult<never, Error>[];
 };
-
-// @public
-export function useUserDecryptFlow(config?: UseUserDecryptFlowConfig): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, UserDecryptFlowParams, unknown>;
-
-// @public
-export interface UseUserDecryptFlowConfig {
-    callbacks?: UserDecryptFlowCallbacks;
-}
 
 // @public
 export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?: Omit<UseQueryOptions<Address | null, Error>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<`0x${string}` | null, Error>;

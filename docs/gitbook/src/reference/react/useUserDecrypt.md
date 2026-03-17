@@ -1,19 +1,16 @@
 ---
 title: useUserDecrypt
-description: Low-level mutation hook that decrypts an encrypted handle using the user's FHE credentials.
+description: High-level mutation hook that orchestrates the full user decryption flow — credential management, wallet signature, and decryption — in a single call.
 ---
 
 # useUserDecrypt
 
-Low-level mutation hook that decrypts encrypted handles using the user's FHE credentials. The caller is responsible for providing all parameters (keypair, signature, contract addresses).
+High-level orchestration hook for user decryption. Manages the entire flow internally — keypair generation, EIP-712 creation, wallet signature, and decryption — so you only need to provide the handles you want to decrypt. All session parameters (`keypairTTL`, credential duration, etc.) are inherited from the SDK configuration.
 
-{% hint style="warning" %}
-**You probably want a higher-level hook instead:**
+Reuses cached FHE credentials when available, falling back to generating fresh ones only when no valid credentials exist. This avoids redundant wallet signature prompts across multiple decrypt calls.
 
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — decrypts token balances automatically with two-phase polling.
-- [`useUserDecryptFlow`](/guides/encrypt-decrypt#3.-decrypt-with-useuserdecryptflow) — manages the full keypair/EIP-712/signature orchestration for you. All session parameters are inherited from SDK config.
-
-Reach for `useUserDecrypt` only when you need to manage the FHE keypair and signing flow yourself (e.g. reusing a keypair across multiple operations or integrating a custom signing workflow).
+{% hint style="info" %}
+**This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](/reference/react/useConfidentialBalance) which decrypts automatically with two-phase polling. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
 {% endhint %}
 
 ## Import
@@ -28,30 +25,32 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 {% tab title="component.tsx" %}
 
 ```tsx
-import { useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useUserDecrypt, useUserDecryptedValue } from "@zama-fhe/react-sdk";
 
-function DecryptHandle({ handle }: { handle: string }) {
-  const { mutateAsync: decrypt, isPending, data } = useUserDecrypt();
+function DecryptHandle() {
+  const decrypt = useUserDecrypt();
+  const { data: decryptedValue } = useUserDecryptedValue("0xhandle...");
 
   async function handleDecrypt() {
-    const result = await decrypt({
-      handles: [handle],
-      contractAddress: "0xContract",
-      signedContractAddresses: ["0xContract"],
-      privateKey: "0x...",
-      publicKey: "0x...",
-      signature: "0x...",
-      signerAddress: "0xUser",
-      startTimestamp: Math.floor(Date.now() / 1000),
-      durationDays: 1,
+    const result = await decrypt.mutateAsync({
+      handles: [
+        {
+          handle: "0xhandle...",
+          contractAddress: "0xYourContract",
+        },
+      ],
     });
-    // result[handle] contains the decrypted bigint value
+    // result: { "0xhandle...": 1000n }
   }
 
   return (
-    <button onClick={handleDecrypt} disabled={isPending}>
-      {isPending ? "Decrypting..." : "Decrypt"}
-    </button>
+    <section>
+      <button onClick={handleDecrypt} disabled={decrypt.isPending}>
+        {decrypt.isPending ? "Decrypting..." : "Decrypt"}
+      </button>
+      {decrypt.error && <p role="alert">Error: {decrypt.error.message}</p>}
+      {decryptedValue !== undefined && <output>Value: {decryptedValue.toString()}</output>}
+    </section>
   );
 }
 ```
@@ -61,79 +60,120 @@ function DecryptHandle({ handle }: { handle: string }) {
 
 ## Parameters
 
-`useUserDecrypt` takes no constructor parameters.
+```ts
+import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
+```
+
+`UseUserDecryptConfig` extends `DecryptCallbacks` — callbacks are passed directly as top-level properties.
+
+### onCredentialsReady
+
+`(() => void) | undefined`
+
+Fired after credentials are ready — either reused from cache or freshly generated (which may trigger a wallet signature prompt).
+
+### onDecrypted
+
+`((values: Record<Handle, ClearValueType>) => void) | undefined`
+
+Fired after all handles have been decrypted. Receives the full result map.
+
+{% tabs %}
+{% tab title="with callbacks" %}
+
+```tsx
+import { useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useState } from "react";
+
+type DecryptStep = "idle" | "authorizing" | "decrypting" | "done";
+
+function DecryptWithProgress() {
+  const [step, setStep] = useState<DecryptStep>("idle");
+
+  const decrypt = useUserDecrypt({
+    onCredentialsReady: () => setStep("decrypting"),
+    onDecrypted: () => setStep("done"),
+  });
+
+  const handleDecrypt = async () => {
+    setStep("authorizing");
+    await decrypt.mutateAsync({
+      handles: [{ handle: "0x...", contractAddress: "0xToken" }],
+    });
+  };
+
+  const stepLabels: Record<DecryptStep, string> = {
+    idle: "Decrypt",
+    authorizing: "Authorizing...",
+    decrypting: "Decrypting...",
+    done: "Done!",
+  };
+
+  return <button onClick={handleDecrypt}>{stepLabels[step]}</button>;
+}
+```
+
+{% endtab %}
+{% endtabs %}
 
 ## Mutation Variables
 
 Passed to `mutate` / `mutateAsync` at call time.
 
 ```ts
-import { type UserDecryptParams } from "@zama-fhe/sdk";
+import { type DecryptParams } from "@zama-fhe/react-sdk";
 ```
-
-{% hint style="info" %}
-Most of these parameters (keypair, signature, timestamps) are managed automatically by [`useUserDecryptFlow`](/guides/encrypt-decrypt#3.-decrypt-with-useuserdecryptflow). You only need to provide them manually if you have a specific reason to control the decrypt lifecycle yourself.
-{% endhint %}
 
 ### handles
 
-`Handle[]`
+`DecryptHandle[]`
 
-Encrypted handles to decrypt.
+Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it.
 
-### contractAddress
+```ts
+import { type DecryptHandle } from "@zama-fhe/react-sdk";
+```
 
-`Address`
+| Field             | Type      | Description                                            |
+| ----------------- | --------- | ------------------------------------------------------ |
+| `handle`          | `Handle`  | The encrypted handle (hex string) to decrypt.          |
+| `contractAddress` | `Address` | Address of the contract that owns the encrypted value. |
 
-Address of the contract that owns the encrypted values.
+Handles from different contracts can be mixed in a single call — `useUserDecrypt` automatically groups them by contract address and issues one decryption request per unique contract:
 
-### signedContractAddresses
+```tsx
+const result = await decrypt.mutateAsync({
+  handles: [
+    { handle: "0xhandle1...", contractAddress: "0xContractA" },
+    { handle: "0xhandle2...", contractAddress: "0xContractA" },
+    { handle: "0xhandle3...", contractAddress: "0xContractB" },
+  ],
+});
 
-`Address[]`
-
-Contract addresses covered by the EIP-712 signature.
-
-### privateKey / publicKey
-
-`Hex`
-
-The user's FHE keypair (hex-encoded). Generate with [`useGenerateKeypair`](/reference/react/useGenerateKeypair).
-
-### signature
-
-`Hex`
-
-EIP-712 wallet signature authorizing the decrypt.
-
-### signerAddress
-
-`Address`
-
-The address of the wallet that signed the EIP-712 authorization.
-
-### startTimestamp
-
-`number`
-
-Unix timestamp (in seconds) marking the start of the credential validity window. Typically `Math.floor(Date.now() / 1000)`.
-
-### durationDays
-
-`number`
-
-Validity window of the credential in days (from `startTimestamp`).
+// Single wallet signature, two decryption requests (one per contract)
+// result: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
+```
 
 ## Return Type
 
-`data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value.
+`data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-On success, results are written to the decryption cache so that `useUserDecryptedValue` and `useUserDecryptedValues` can read them without re-decrypting.
+On success, results are written to the decryption cache so that [`useUserDecryptedValue`](/guides/encrypt-decrypt#reading-decrypted-values-from-cache) and [`useUserDecryptedValues`](/guides/encrypt-decrypt#reading-decrypted-values-from-cache) can read them without re-decrypting.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
+## Credential Caching
+
+`useUserDecrypt` uses the SDK's credential manager (`sdk.credentials`) to avoid unnecessary wallet prompts:
+
+- **First call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The credentials are then cached.
+- **Subsequent calls** — reuses the cached credentials if they are still valid (not expired).
+- **Expiry** — credentials expire after `keypairTTL` seconds (default: 86400 = 1 day, configurable via SDK config). Once expired, the next call generates fresh credentials.
+
+This means users only see a wallet signature prompt once per session (or per TTL window), even if they decrypt multiple times.
+
 ## Related
 
-- [`useUserDecryptFlow`](/guides/encrypt-decrypt#3.-decrypt-with-useuserdecryptflow) — recommended high-level hook that manages the full decrypt orchestration
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances automatically
-- [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value
-- [`useGenerateKeypair`](/reference/react/useGenerateKeypair) — generate the FHE keypair needed for decryption
+- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances automatically with two-phase polling
+- [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value for on-chain submission
+- [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with end-to-end examples
