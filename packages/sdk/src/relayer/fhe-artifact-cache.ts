@@ -98,7 +98,7 @@ interface ManifestShape {
   crs?: Record<string, { dataId?: string; urls?: string[] }>;
 }
 
-// ── PublicParamsCache ───────────────────────────────────────
+// ── FheArtifactCache ───────────────────────────────────────
 
 /**
  * Persistent cache for FHE network public key and public params.
@@ -108,7 +108,7 @@ interface ManifestShape {
  *
  * Cache keys are scoped by chain ID.
  */
-export class PublicParamsCache {
+export class FheArtifactCache {
   readonly #storage: GenericStorage;
   readonly #chainId: number;
   readonly #relayerUrl: string;

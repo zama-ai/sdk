@@ -11,7 +11,7 @@ import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/e
 import type { GenericStorage } from "../token/token.types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
-import { PublicParamsCache } from "./public-params-cache";
+import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   DelegatedUserDecryptParams,
@@ -53,7 +53,7 @@ export class RelayerNode implements RelayerSDK {
   #ensureLock: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
-  #cache: PublicParamsCache | null = null;
+  #cache: FheArtifactCache | null = null;
 
   constructor(config: RelayerNodeConfig) {
     this.#config = config;
@@ -104,7 +104,7 @@ export class RelayerNode implements RelayerSDK {
     // Create cache for current chain (when storage is provided)
     if (!this.#cache && this.#config.storage) {
       const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-      this.#cache = new PublicParamsCache({
+      this.#cache = new FheArtifactCache({
         storage: this.#config.storage,
         chainId,
         relayerUrl: config.relayerUrl,

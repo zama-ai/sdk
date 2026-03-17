@@ -8,7 +8,7 @@ import type {
 import type { Address, Hex } from "viem";
 import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
-import { PublicParamsCache } from "./public-params-cache";
+import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   DelegatedUserDecryptParams,
@@ -64,7 +64,7 @@ export class RelayerWeb implements RelayerSDK {
   #ensureLock: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
-  #cache: PublicParamsCache | null = null;
+  #cache: FheArtifactCache | null = null;
   #status: RelayerSDKStatus = "idle";
   #initError: Error | undefined;
   readonly #config: RelayerWebConfig;
@@ -159,7 +159,7 @@ export class RelayerWeb implements RelayerSDK {
     // Create cache for current chain (when storage is provided)
     if (!this.#cache && this.#config.storage) {
       const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-      this.#cache = new PublicParamsCache({
+      this.#cache = new FheArtifactCache({
         storage: this.#config.storage,
         chainId,
         relayerUrl: config.relayerUrl,
