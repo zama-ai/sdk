@@ -1,4 +1,5 @@
 import type { GenericStorage } from "../token/token.types";
+import { assertObject, assertStringProp } from "../utils";
 import type { GenericLogger } from "../worker/worker.types";
 
 // ── Cached data shapes ──────────────────────────────────────
@@ -83,22 +84,16 @@ function paramsIndexKey(chainId: number): string {
   return `fhe:params-index:${chainId}`;
 }
 
-function isValidCachedPk(v: unknown): v is CachedPublicKey {
-  return (
-    v != null &&
-    typeof v === "object" &&
-    typeof (v as Record<string, unknown>).publicKeyId === "string" &&
-    typeof (v as Record<string, unknown>).publicKey === "string"
-  );
+function assertCachedPk(v: unknown): asserts v is CachedPublicKey {
+  assertObject(v, "CachedPublicKey");
+  assertStringProp(v, "publicKeyId", "CachedPublicKey.publicKeyId");
+  assertStringProp(v, "publicKey", "CachedPublicKey.publicKey");
 }
 
-function isValidCachedParams(v: unknown): v is CachedPublicParams {
-  return (
-    v != null &&
-    typeof v === "object" &&
-    typeof (v as Record<string, unknown>).publicParamsId === "string" &&
-    typeof (v as Record<string, unknown>).publicParams === "string"
-  );
+function assertCachedParams(v: unknown): asserts v is CachedPublicParams {
+  assertObject(v, "CachedPublicParams");
+  assertStringProp(v, "publicParamsId", "CachedPublicParams.publicParamsId");
+  assertStringProp(v, "publicParams", "CachedPublicParams.publicParams");
 }
 
 /** Manifest shape returned by the relayer `/keyurl` endpoint. */
@@ -167,19 +162,16 @@ export class PublicParamsCache {
 
     try {
       const raw = await this.#storage.get<unknown>(key);
-      if (raw) {
-        if (isValidCachedPk(raw)) {
-          const result: PublicKeyResult = {
-            publicKeyId: raw.publicKeyId,
-            publicKey: fromBase64(raw.publicKey),
-          };
-          this.#publicKeyMem = result;
-          return result;
-        }
-        // Corrupt entry — delete and fall through to fetcher
-        await this.#storage.delete(key).catch(() => {});
-      }
+      assertCachedPk(raw);
+      const result: PublicKeyResult = {
+        publicKeyId: raw.publicKeyId,
+        publicKey: fromBase64(raw.publicKey),
+      };
+      this.#publicKeyMem = result;
+      return result;
     } catch (err) {
+      // Corrupt or unreadable entry — delete and fall through to fetcher
+      await this.#storage.delete(key).catch(() => {});
       (this.#logger ?? fallbackLogger).warn(
         "Failed to read public key from persistent storage, falling back to network fetch",
         {
@@ -242,18 +234,17 @@ export class PublicParamsCache {
     try {
       const raw = await this.#storage.get<unknown>(key);
       if (raw) {
-        if (isValidCachedParams(raw)) {
-          const result: PublicParamsResult = {
-            publicParamsId: raw.publicParamsId,
-            publicParams: fromBase64(raw.publicParams),
-          };
-          this.#publicParamsMem.set(bits, result);
-          return result;
-        }
-        // Corrupt entry — delete and fall through to fetcher
-        await this.#storage.delete(key).catch(() => {});
+        assertCachedParams(raw);
+        const result: PublicParamsResult = {
+          publicParamsId: raw.publicParamsId,
+          publicParams: fromBase64(raw.publicParams),
+        };
+        this.#publicParamsMem.set(bits, result);
+        return result;
       }
     } catch (err) {
+      // Corrupt or unreadable entry — delete and fall through to fetcher
+      await this.#storage.delete(key).catch(() => {});
       (this.#logger ?? fallbackLogger).warn(
         "Failed to read public params from persistent storage, falling back to network fetch",
         {
@@ -340,11 +331,14 @@ export class PublicParamsCache {
       ]);
 
       // Validate PK shape
-      if (pkRaw && isValidCachedPk(pkRaw)) {
-        storedPk = { ...pkRaw, lastValidatedAt: pkRaw.lastValidatedAt ?? 0 };
-      } else if (pkRaw) {
-        // Corrupt — delete
-        await this.#storage.delete(pkKey).catch(() => {});
+      if (pkRaw) {
+        try {
+          assertCachedPk(pkRaw);
+          storedPk = { ...pkRaw, lastValidatedAt: pkRaw.lastValidatedAt ?? 0 };
+        } catch {
+          // Corrupt — delete
+          await this.#storage.delete(pkKey).catch(() => {});
+        }
       }
 
       paramEntries = entries;
@@ -372,7 +366,10 @@ export class PublicParamsCache {
         await this.#writeEntries(
           pkKey,
           { ...storedPk, lastValidatedAt: now },
-          paramEntries.map((e) => ({ ...e, data: { ...e.data, lastValidatedAt: now } })),
+          paramEntries.map((e) => ({
+            ...e,
+            data: { ...e.data, lastValidatedAt: now },
+          })),
         );
         this.#lastRevalidatedAt = now;
         return false;
@@ -419,7 +416,10 @@ export class PublicParamsCache {
           return true;
         }
 
-        let updatedData: CachedPublicParams = { ...entry.data, lastValidatedAt: now };
+        let updatedData: CachedPublicParams = {
+          ...entry.data,
+          lastValidatedAt: now,
+        };
         if (crsUrl) {
           const freshness = await this.#checkArtifactFreshness(crsUrl, entry.data);
           if (!freshness.fresh) {
@@ -540,16 +540,21 @@ export class PublicParamsCache {
       bitsArray.map(async (bits) => {
         const pKey = paramsStorageKey(this.#chainId, bits);
         const raw = await this.#storage.get<unknown>(pKey);
-        if (raw && isValidCachedParams(raw)) {
-          return {
-            bits,
-            key: pKey,
-            data: { ...raw, lastValidatedAt: raw.lastValidatedAt ?? 0 } as CachedPublicParams,
-          };
-        }
         if (raw) {
-          // Corrupt entry — delete
-          await this.#storage.delete(pKey).catch(() => {});
+          try {
+            assertCachedParams(raw);
+            return {
+              bits,
+              key: pKey,
+              data: {
+                ...raw,
+                lastValidatedAt: raw.lastValidatedAt ?? 0,
+              } as CachedPublicParams,
+            };
+          } catch {
+            // Corrupt entry — delete
+            await this.#storage.delete(pKey).catch(() => {});
+          }
         }
         return null;
       }),
