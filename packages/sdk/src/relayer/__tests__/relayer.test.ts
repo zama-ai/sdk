@@ -641,36 +641,47 @@ describe("RelayerWeb", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createWebRelayer({ storage, revalidateIntervalMs: 0 });
+      const relayer = createWebRelayer({ storage, fheArtifactCacheTTL: 0 });
 
       // First call — init worker, fetch and cache pk
       await relayer.getPublicKey();
       expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
 
-      // Mock fetch for revalidation: manifest returns changed dataId
+      // Seed artifact metadata + force expired timestamp so revalidation
+      // issues a conditional GET instead of just capturing validators.
+      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
+      const cached = await storage.get<Record<string, unknown>>(pkKey);
+      if (cached) {
+        cached.lastValidatedAt = 0;
+        cached.artifactUrl = "https://cdn.example.com/pk.bin";
+        cached.etag = '"pk-etag-1"';
+        await storage.set(pkKey, cached);
+      }
+
+      // Mock fetch for revalidation: manifest + artifact returns 200 (changed)
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        if (String(url).includes("/keyurl")) {
+        const urlStr = String(url);
+        if (urlStr.includes("/keyurl")) {
           return Promise.resolve({
             ok: true,
             json: () =>
               Promise.resolve({
                 fhePublicKey: {
-                  dataId: "pk-ROTATED",
                   urls: ["https://cdn.example.com/pk.bin"],
                 },
               }),
           });
         }
+        if (urlStr.includes("pk.bin")) {
+          return Promise.resolve({
+            status: 200,
+            ok: true,
+            headers: new Headers({ etag: '"pk-etag-ROTATED"' }),
+            body: null,
+          });
+        }
         return Promise.reject(new Error(`Unexpected fetch: ${url}`));
       });
-
-      // Force revalidation by setting lastValidatedAt to 0
-      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
-      const cached = await storage.get<Record<string, unknown>>(pkKey);
-      if (cached) {
-        cached.lastValidatedAt = 0;
-        await storage.set(pkKey, cached);
-      }
 
       // Next call triggers revalidation → stale → worker teardown + re-init
       const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
@@ -687,7 +698,7 @@ describe("RelayerWeb", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createWebRelayer({ storage, revalidateIntervalMs: 86_400_000 });
+      const relayer = createWebRelayer({ storage, fheArtifactCacheTTL: 86_400 });
 
       // First call — init worker, fetch and cache pk
       await relayer.getPublicKey();
@@ -1099,36 +1110,46 @@ describe("RelayerNode", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createNodeRelayer({ storage, revalidateIntervalMs: 0 });
+      const relayer = createNodeRelayer({ storage, fheArtifactCacheTTL: 0 });
 
       // First call — init pool, fetch and cache pk
       await relayer.getPublicKey();
       expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
 
-      // Mock fetch for revalidation: manifest returns changed dataId
+      // Seed artifact metadata + force expired timestamp
+      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
+      const cached = await storage.get<Record<string, unknown>>(pkKey);
+      if (cached) {
+        cached.lastValidatedAt = 0;
+        cached.artifactUrl = "https://cdn.example.com/pk.bin";
+        cached.etag = '"pk-etag-1"';
+        await storage.set(pkKey, cached);
+      }
+
+      // Mock fetch: manifest + artifact returns 200 (changed)
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        if (String(url).includes("/keyurl")) {
+        const urlStr = String(url);
+        if (urlStr.includes("/keyurl")) {
           return Promise.resolve({
             ok: true,
             json: () =>
               Promise.resolve({
                 fhePublicKey: {
-                  dataId: "pk-ROTATED",
                   urls: ["https://cdn.example.com/pk.bin"],
                 },
               }),
           });
         }
+        if (urlStr.includes("pk.bin")) {
+          return Promise.resolve({
+            status: 200,
+            ok: true,
+            headers: new Headers({ etag: '"pk-etag-ROTATED"' }),
+            body: null,
+          });
+        }
         return Promise.reject(new Error(`Unexpected fetch: ${url}`));
       });
-
-      // Force revalidation by setting lastValidatedAt to 0
-      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
-      const cached = await storage.get<Record<string, unknown>>(pkKey);
-      if (cached) {
-        cached.lastValidatedAt = 0;
-        await storage.set(pkKey, cached);
-      }
 
       // Next call triggers revalidation → stale → pool teardown + re-init
       const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
@@ -1144,7 +1165,7 @@ describe("RelayerNode", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createNodeRelayer({ storage, revalidateIntervalMs: 86_400_000 });
+      const relayer = createNodeRelayer({ storage, fheArtifactCacheTTL: 86_400 });
 
       await relayer.getPublicKey();
       expect(NodeWorkerPool).toHaveBeenCalledTimes(1);

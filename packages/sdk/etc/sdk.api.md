@@ -4111,7 +4111,7 @@ export interface RelayerWebConfig {
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
     onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
-    revalidateIntervalMs?: number;
+    fheArtifactCacheTTL?: number;
     security?: RelayerWebSecurityConfig;
     storage?: GenericStorage;
     threads?: number;

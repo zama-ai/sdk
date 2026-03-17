@@ -169,6 +169,26 @@ describe("PublicParamsCache", () => {
 
       await expect(cache.getPublicKey(fetcher)).rejects.toThrow("network down");
     });
+
+    it("deletes corrupt cache entry and falls back to fetcher", async () => {
+      // Seed storage with an entry missing `publicKeyId` (corrupt shape)
+      await storage.set("fhe:pubkey:11155111", { publicKey: "not-an-id" });
+
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
+      const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1]) };
+      const result = await cache.getPublicKey(vi.fn().mockResolvedValue(pk));
+
+      expect(result).toEqual(pk);
+      // Corrupt entry should have been deleted
+      const raw = await storage.get("fhe:pubkey:11155111");
+      // Now contains the freshly-stored valid entry
+      expect(raw).not.toBeNull();
+      expect((raw as Record<string, unknown>).publicKeyId).toBe("id1");
+    });
   });
 
   // ── getPublicParams ───────────────────────────────────────────
@@ -247,6 +267,26 @@ describe("PublicParamsCache", () => {
       await cache.getPublicParams(2048, fetcher2);
       expect(fetcher2).toHaveBeenCalledOnce();
     });
+
+    it("updates params index for cold-start CRS detection", async () => {
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: 11155111,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
+      const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([1]) };
+      await cache.getPublicParams(2048, vi.fn().mockResolvedValue(pp));
+
+      const idx = await storage.get<number[]>("fhe:params-index:11155111");
+      expect(idx).toEqual([2048]);
+
+      // Adding another bit size appends to the index
+      const pp2 = { publicParamsId: "pp2", publicParams: new Uint8Array([2]) };
+      await cache.getPublicParams(4096, vi.fn().mockResolvedValue(pp2));
+
+      const idx2 = await storage.get<number[]>("fhe:params-index:11155111");
+      expect(idx2).toEqual([2048, 4096]);
+    });
   });
 
   // ── revalidateIfDue ─────────────────────────────────────────
@@ -254,9 +294,14 @@ describe("PublicParamsCache", () => {
   describe("revalidateIfDue", () => {
     const CHAIN_ID = 11155111;
     const RELAYER_URL = DUMMY_RELAYER_URL;
-    const INTERVAL_MS = 60_000;
+    const CACHE_TTL = 60; // seconds
+    const CACHE_TTL_MS = CACHE_TTL * 1000;
     const PK_STORAGE_KEY = `fhe:pubkey:${CHAIN_ID}`;
     const PARAMS_STORAGE_KEY = `fhe:params:${CHAIN_ID}:2048`;
+    const PARAMS_INDEX_KEY = `fhe:params-index:${CHAIN_ID}`;
+
+    const PK_ARTIFACT_URL = "https://cdn.example.com/pk.bin";
+    const CRS_ARTIFACT_URL = "https://cdn.example.com/params-2048.bin";
 
     let originalFetch: typeof globalThis.fetch;
 
@@ -264,12 +309,18 @@ describe("PublicParamsCache", () => {
       overrides: Partial<{
         publicKeyId: string;
         publicKey: string;
+        artifactUrl: string;
+        etag: string;
+        lastModified: string;
         lastValidatedAt: number;
       }> = {},
     ) {
       return {
         publicKeyId: "pk-id-1",
         publicKey: btoa(String.fromCharCode(1, 2, 3)),
+        artifactUrl: PK_ARTIFACT_URL,
+        etag: '"pk-etag-1"',
+        lastModified: "Wed, 01 Jan 2025 00:00:00 GMT",
         lastValidatedAt: Date.now(),
         ...overrides,
       };
@@ -279,12 +330,18 @@ describe("PublicParamsCache", () => {
       overrides: Partial<{
         publicParamsId: string;
         publicParams: string;
+        artifactUrl: string;
+        etag: string;
+        lastModified: string;
         lastValidatedAt: number;
       }> = {},
     ) {
       return {
         publicParamsId: "pp-id-1",
         publicParams: btoa(String.fromCharCode(4, 5, 6)),
+        artifactUrl: CRS_ARTIFACT_URL,
+        etag: '"pp-etag-1"',
+        lastModified: "Wed, 01 Jan 2025 00:00:00 GMT",
         lastValidatedAt: Date.now(),
         ...overrides,
       };
@@ -293,15 +350,66 @@ describe("PublicParamsCache", () => {
     const MANIFEST = {
       fhePublicKey: {
         dataId: "pk-id-1",
-        urls: ["https://cdn.example.com/pk.bin"],
+        urls: [PK_ARTIFACT_URL],
       },
       crs: {
         2048: {
           dataId: "pp-id-1",
-          urls: ["https://cdn.example.com/params-2048.bin"],
+          urls: [CRS_ARTIFACT_URL],
         },
       },
     };
+
+    /** Build a mock fetch that handles manifest + artifact conditional requests. */
+    function mockFetch(
+      opts: {
+        manifest?: typeof MANIFEST;
+        manifestOk?: boolean;
+        manifestStatus?: number;
+        pkStatus?: number;
+        pkHeaders?: Record<string, string>;
+        crsStatus?: number;
+        crsHeaders?: Record<string, string>;
+      } = {},
+    ) {
+      const {
+        manifest = MANIFEST,
+        manifestOk = true,
+        manifestStatus = 200,
+        pkStatus = 304,
+        pkHeaders = { etag: '"pk-etag-1"' },
+        crsStatus = 304,
+        crsHeaders = { etag: '"pp-etag-1"' },
+      } = opts;
+
+      globalThis.fetch = vi.fn().mockImplementation((url: string | URL) => {
+        const urlStr = String(url);
+        if (urlStr === `${RELAYER_URL}/keyurl`) {
+          return Promise.resolve({
+            ok: manifestOk,
+            status: manifestStatus,
+            json: () => Promise.resolve(manifest),
+          });
+        }
+        if (urlStr === PK_ARTIFACT_URL) {
+          return Promise.resolve({
+            status: pkStatus,
+            ok: pkStatus >= 200 && pkStatus < 300,
+            headers: new Headers(pkHeaders),
+            body: null,
+          });
+        }
+        if (urlStr === CRS_ARTIFACT_URL) {
+          return Promise.resolve({
+            status: crsStatus,
+            ok: crsStatus >= 200 && crsStatus < 300,
+            headers: new Headers(crsHeaders),
+            body: null,
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      });
+    }
 
     beforeEach(() => {
       originalFetch = globalThis.fetch;
@@ -311,7 +419,7 @@ describe("PublicParamsCache", () => {
       globalThis.fetch = originalFetch;
     });
 
-    /** Helper: seed storage + prime in-memory map by calling getPublicParams */
+    /** Seed storage + prime in-memory map by calling getPublicParams. */
     async function seedAndPrime(
       st: MemoryStorage,
       pkData = makeCachedPk(),
@@ -319,12 +427,13 @@ describe("PublicParamsCache", () => {
     ) {
       await st.set(PK_STORAGE_KEY, pkData);
       await st.set(PARAMS_STORAGE_KEY, paramsData);
+      await st.set(PARAMS_INDEX_KEY, [2048]);
 
       const cache = new PublicParamsCache({
         storage: st,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
-        revalidateIntervalMs: INTERVAL_MS,
+        fheArtifactCacheTTL: CACHE_TTL,
       });
       // Prime the in-memory params map so revalidation discovers bits=2048
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
@@ -333,7 +442,7 @@ describe("PublicParamsCache", () => {
       return cache;
     }
 
-    it("skips revalidation when interval has not elapsed", async () => {
+    it("skips revalidation when TTL has not elapsed", async () => {
       const cache = await seedAndPrime(storage);
 
       const fetchSpy = vi.fn();
@@ -344,23 +453,15 @@ describe("PublicParamsCache", () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
-    it("revalidates and returns false when manifest dataIds match", async () => {
-      const expired = Date.now() - INTERVAL_MS - 1000;
+    it("revalidates and returns false when artifacts return 304 (unchanged)", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
         makeCachedPk({ lastValidatedAt: expired }),
         makeCachedParams({ lastValidatedAt: expired }),
       );
 
-      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        if (url === `${RELAYER_URL}/keyurl`) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(MANIFEST),
-          });
-        }
-        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
-      });
+      mockFetch({ pkStatus: 304, crsStatus: 304 });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
@@ -373,32 +474,19 @@ describe("PublicParamsCache", () => {
       expect(pp!.lastValidatedAt).toBeGreaterThan(expired);
     });
 
-    it("returns true when PK dataId changes in manifest", async () => {
-      const expired = Date.now() - INTERVAL_MS - 1000;
+    it("returns true when PK artifact returns 200 (ETag changed)", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
         makeCachedPk({ lastValidatedAt: expired }),
         makeCachedParams({ lastValidatedAt: expired }),
       );
 
-      const changedManifest = {
-        fhePublicKey: {
-          dataId: "pk-id-ROTATED",
-          urls: ["https://cdn.example.com/pk.bin"],
-        },
-        crs: MANIFEST.crs,
-      };
-
-      const fetchSpy = vi.fn().mockImplementation((url: string) => {
-        if (url === `${RELAYER_URL}/keyurl`) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(changedManifest),
-          });
-        }
-        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      // PK returns 200 = changed
+      mockFetch({
+        pkStatus: 200,
+        pkHeaders: { etag: '"pk-etag-ROTATED"' },
       });
-      globalThis.fetch = fetchSpy;
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
@@ -408,32 +496,19 @@ describe("PublicParamsCache", () => {
       expect(await storage.get(PARAMS_STORAGE_KEY)).toBeNull();
     });
 
-    it("returns true when CRS dataId changes in manifest (PK unchanged)", async () => {
-      const expired = Date.now() - INTERVAL_MS - 1000;
+    it("returns true when CRS artifact returns 200 (ETag changed, PK unchanged)", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
         makeCachedPk({ lastValidatedAt: expired }),
         makeCachedParams({ lastValidatedAt: expired }),
       );
 
-      const changedManifest = {
-        fhePublicKey: MANIFEST.fhePublicKey,
-        crs: {
-          2048: {
-            dataId: "pp-id-ROTATED",
-            urls: ["https://cdn.example.com/params-2048.bin"],
-          },
-        },
-      };
-
-      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        if (url === `${RELAYER_URL}/keyurl`) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(changedManifest),
-          });
-        }
-        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      // PK fresh (304), CRS changed (200)
+      mockFetch({
+        pkStatus: 304,
+        crsStatus: 200,
+        crsHeaders: { etag: '"pp-etag-ROTATED"' },
       });
 
       const result = await cache.revalidateIfDue();
@@ -443,8 +518,53 @@ describe("PublicParamsCache", () => {
       expect(await storage.get(PARAMS_STORAGE_KEY)).toBeNull();
     });
 
-    it("returns false (fail-open) on network error", async () => {
-      const expired = Date.now() - INTERVAL_MS - 1000;
+    it("returns true when artifact URL changes in manifest", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
+      const cache = await seedAndPrime(
+        storage,
+        makeCachedPk({ lastValidatedAt: expired }),
+        makeCachedParams({ lastValidatedAt: expired }),
+      );
+
+      // Manifest returns a different URL for PK
+      mockFetch({
+        manifest: {
+          ...MANIFEST,
+          fhePublicKey: {
+            dataId: "pk-id-1",
+            urls: ["https://new-cdn.example.com/pk-v2.bin"],
+          },
+        },
+      });
+
+      const result = await cache.revalidateIfDue();
+      expect(result).toBe(true);
+    });
+
+    it("updates stored ETag and lastModified after successful 304", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
+      const cache = await seedAndPrime(
+        storage,
+        makeCachedPk({ lastValidatedAt: expired, etag: '"old-etag"' }),
+        makeCachedParams({ lastValidatedAt: expired }),
+      );
+
+      // 304 with a new etag header (servers may update weak→strong)
+      mockFetch({
+        pkStatus: 304,
+        pkHeaders: { etag: '"refreshed-etag"' },
+        crsStatus: 304,
+      });
+
+      const result = await cache.revalidateIfDue();
+      expect(result).toBe(false);
+
+      const pk = await storage.get<{ etag: string }>(PK_STORAGE_KEY);
+      expect(pk!.etag).toBe('"refreshed-etag"');
+    });
+
+    it("returns false (fail-open) on network error with short retry", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
         makeCachedPk({ lastValidatedAt: expired }),
@@ -456,24 +576,24 @@ describe("PublicParamsCache", () => {
       const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
 
-      // Verify lastValidatedAt was updated (fail-open prevents retry storm)
+      // Verify lastValidatedAt uses short retry (5 min) instead of full TTL
       const pk = await storage.get<{ lastValidatedAt: number }>(PK_STORAGE_KEY);
       expect(pk).not.toBeNull();
-      expect(pk!.lastValidatedAt).toBeGreaterThan(expired);
+      // Should be set to retry in ~5 min, not full TTL
+      const expectedRetry = Date.now() - CACHE_TTL_MS + 5 * 60 * 1000;
+      expect(pk!.lastValidatedAt).toBeGreaterThan(expectedRetry - 2000);
+      expect(pk!.lastValidatedAt).toBeLessThan(expectedRetry + 2000);
     });
 
     it("returns false (fail-open) on non-OK manifest response", async () => {
-      const expired = Date.now() - INTERVAL_MS - 1000;
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
         makeCachedPk({ lastValidatedAt: expired }),
         makeCachedParams({ lastValidatedAt: expired }),
       );
 
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-      });
+      mockFetch({ manifestOk: false, manifestStatus: 500 });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
@@ -482,19 +602,42 @@ describe("PublicParamsCache", () => {
       expect(pk!.lastValidatedAt).toBeGreaterThan(expired);
     });
 
-    it("logs warning on network error when logger is provided", async () => {
-      const expired = Date.now() - INTERVAL_MS - 1000;
-      const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
-
-      // Seed storage directly
-      await storage.set(PK_STORAGE_KEY, makeCachedPk({ lastValidatedAt: expired }));
-      await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
+    it("fheArtifactCacheTTL: 0 always triggers revalidation", async () => {
+      await storage.set(PK_STORAGE_KEY, makeCachedPk());
+      await storage.set(PARAMS_INDEX_KEY, [2048]);
+      await storage.set(PARAMS_STORAGE_KEY, makeCachedParams());
 
       const cache = new PublicParamsCache({
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
-        revalidateIntervalMs: INTERVAL_MS,
+        fheArtifactCacheTTL: 0,
+      });
+      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
+
+      // Even with fresh timestamps, TTL=0 should always proceed
+      mockFetch({ pkStatus: 304, crsStatus: 304 });
+
+      const result = await cache.revalidateIfDue();
+      expect(result).toBe(false);
+      // Should have fetched manifest + artifact URLs
+      expect(globalThis.fetch).toHaveBeenCalled();
+    });
+
+    it("logs warning on network error when logger is provided", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
+      const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
+
+      await storage.set(PK_STORAGE_KEY, makeCachedPk({ lastValidatedAt: expired }));
+      await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
+      await storage.set(PARAMS_INDEX_KEY, [2048]);
+
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: CHAIN_ID,
+        relayerUrl: RELAYER_URL,
+        fheArtifactCacheTTL: CACHE_TTL,
         logger,
       });
       await cache.getPublicKey(vi.fn().mockResolvedValue(null));
@@ -521,30 +664,17 @@ describe("PublicParamsCache", () => {
       await storage.set(otherParamsKey, otherParams);
 
       // Seed main chain with expired data
-      const expired = Date.now() - INTERVAL_MS - 1000;
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
         makeCachedPk({ lastValidatedAt: expired }),
         makeCachedParams({ lastValidatedAt: expired }),
       );
 
-      // Make main chain stale via PK dataId change
-      const changedManifest = {
-        fhePublicKey: {
-          dataId: "pk-id-ROTATED",
-          urls: ["https://cdn.example.com/pk.bin"],
-        },
-        crs: MANIFEST.crs,
-      };
-
-      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        if (url === `${RELAYER_URL}/keyurl`) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(changedManifest),
-          });
-        }
-        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      // PK artifact changed (200)
+      mockFetch({
+        pkStatus: 200,
+        pkHeaders: { etag: '"pk-etag-ROTATED"' },
       });
 
       const result = await cache.revalidateIfDue();
@@ -564,7 +694,7 @@ describe("PublicParamsCache", () => {
     });
 
     it("still returns true (stale) when storage delete fails during clearAll", async () => {
-      const expired = Date.now() - INTERVAL_MS - 1000;
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
 
       // Use a storage that fails on delete
       const failDeleteStorage = {
@@ -575,34 +705,127 @@ describe("PublicParamsCache", () => {
 
       await storage.set(PK_STORAGE_KEY, makeCachedPk({ lastValidatedAt: expired }));
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
+      await storage.set(PARAMS_INDEX_KEY, [2048]);
 
       const cache = new PublicParamsCache({
         storage: failDeleteStorage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
-        revalidateIntervalMs: INTERVAL_MS,
+        fheArtifactCacheTTL: CACHE_TTL,
       });
       await cache.getPublicKey(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
-      const changedManifest = {
-        fhePublicKey: { dataId: "pk-id-ROTATED", urls: ["https://cdn.example.com/pk.bin"] },
-        crs: MANIFEST.crs,
-      };
+      // PK artifact changed (200)
+      mockFetch({
+        pkStatus: 200,
+        pkHeaders: { etag: '"pk-etag-ROTATED"' },
+      });
 
-      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-        if (url === `${RELAYER_URL}/keyurl`) {
+      const result = await cache.revalidateIfDue();
+      // Should still report stale even though storage delete failed
+      expect(result).toBe(true);
+    });
+
+    it("discovers CRS from params index on cold start (no in-memory keys)", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
+
+      // Seed storage directly (simulates cold start — no in-memory map)
+      await storage.set(PK_STORAGE_KEY, makeCachedPk({ lastValidatedAt: expired }));
+      await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
+      await storage.set(PARAMS_INDEX_KEY, [2048]);
+
+      // Create cache WITHOUT priming in-memory (cold start)
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: CHAIN_ID,
+        relayerUrl: RELAYER_URL,
+        fheArtifactCacheTTL: CACHE_TTL,
+      });
+      // Prime only PK (not params) — simulates a cold start where
+      // getPublicParams hasn't been called yet
+      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+
+      // CRS artifact changed (200)
+      mockFetch({
+        pkStatus: 304,
+        crsStatus: 200,
+        crsHeaders: { etag: '"pp-etag-ROTATED"' },
+      });
+
+      const result = await cache.revalidateIfDue();
+      expect(result).toBe(true);
+    });
+
+    it("deletes corrupt cache entry during revalidation and returns false", async () => {
+      // Seed PK with corrupt data (missing publicKey field)
+      await storage.set(PK_STORAGE_KEY, { publicKeyId: 42, notAKey: true });
+
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: CHAIN_ID,
+        relayerUrl: RELAYER_URL,
+        fheArtifactCacheTTL: CACHE_TTL,
+      });
+
+      const result = await cache.revalidateIfDue();
+      // No valid cached PK → returns false (nothing to revalidate)
+      expect(result).toBe(false);
+
+      // Corrupt entry should have been deleted
+      expect(await storage.get(PK_STORAGE_KEY)).toBeNull();
+    });
+
+    it("first revalidation captures validators via HEAD and treats cache as fresh", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
+      // Seed WITHOUT artifact metadata (simulates first revalidation after initial fetch)
+      const cache = await seedAndPrime(
+        storage,
+        makeCachedPk({
+          lastValidatedAt: expired,
+          artifactUrl: undefined as unknown as string,
+          etag: undefined as unknown as string,
+          lastModified: undefined as unknown as string,
+        }),
+        makeCachedParams({
+          lastValidatedAt: expired,
+          artifactUrl: undefined as unknown as string,
+          etag: undefined as unknown as string,
+          lastModified: undefined as unknown as string,
+        }),
+      );
+
+      // HEAD requests return validators (no conditional headers sent)
+      globalThis.fetch = vi.fn().mockImplementation((url: string | URL) => {
+        const urlStr = String(url);
+        if (urlStr === `${RELAYER_URL}/keyurl`) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve(changedManifest),
+            status: 200,
+            json: () => Promise.resolve(MANIFEST),
+          });
+        }
+        if (urlStr === PK_ARTIFACT_URL || urlStr === CRS_ARTIFACT_URL) {
+          return Promise.resolve({
+            status: 200,
+            ok: true,
+            headers: new Headers({
+              etag: '"newly-captured-etag"',
+              "last-modified": "Mon, 01 Jan 2025 00:00:00 GMT",
+            }),
+            body: null,
           });
         }
         return Promise.reject(new Error(`Unexpected fetch: ${url}`));
       });
 
       const result = await cache.revalidateIfDue();
-      // Should still report stale even though storage delete failed
-      expect(result).toBe(true);
+      expect(result).toBe(false); // Fresh — first time just captures validators
+
+      // Validators should now be stored
+      const pk = await storage.get<{ etag: string; artifactUrl: string }>(PK_STORAGE_KEY);
+      expect(pk!.etag).toBe('"newly-captured-etag"');
+      expect(pk!.artifactUrl).toBe(PK_ARTIFACT_URL);
     });
   });
 
@@ -658,6 +881,66 @@ describe("PublicParamsCache", () => {
       expect(r1).toEqual(pp);
       expect(r2).toEqual(pp);
       expect(fetcher).toHaveBeenCalledOnce();
+    });
+
+    it("deduplicates concurrent revalidateIfDue calls", async () => {
+      const CHAIN_ID = 11155111;
+      const expired = Date.now() - 120_000;
+
+      await storage.set(`fhe:pubkey:${CHAIN_ID}`, {
+        publicKeyId: "pk-1",
+        publicKey: btoa(String.fromCharCode(1)),
+        artifactUrl: "https://cdn.example.com/pk.bin",
+        etag: '"pk-etag"',
+        lastValidatedAt: expired,
+      });
+      await storage.set(`fhe:params-index:${CHAIN_ID}`, []);
+
+      const cache = new PublicParamsCache({
+        storage,
+        chainId: CHAIN_ID,
+        relayerUrl: DUMMY_RELAYER_URL,
+        fheArtifactCacheTTL: 60,
+      });
+      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+
+      // Use a deferred promise for the manifest fetch so we can control timing
+      let resolveManifest!: (v: unknown) => void;
+      const manifestPromise = new Promise((resolve) => {
+        resolveManifest = resolve;
+      });
+
+      globalThis.fetch = vi.fn().mockImplementation((url: string | URL) => {
+        if (String(url).includes("/keyurl")) {
+          return manifestPromise;
+        }
+        return Promise.resolve({
+          status: 304,
+          ok: true,
+          headers: new Headers({ etag: '"pk-etag"' }),
+          body: null,
+        });
+      });
+
+      const p1 = cache.revalidateIfDue();
+      // Let p1 progress through storage reads to the fetch call
+      await new Promise((r) => setTimeout(r, 0));
+      const p2 = cache.revalidateIfDue();
+
+      resolveManifest({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            fhePublicKey: { urls: ["https://cdn.example.com/pk.bin"] },
+          }),
+      });
+
+      const [r1, r2] = await Promise.all([p1, p2]);
+      expect(r1).toBe(false);
+      expect(r2).toBe(false);
+      // Only one manifest fetch (p2 coalesced with p1)
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2); // manifest + conditional GET for pk
     });
   });
 });

@@ -33,8 +33,8 @@ export interface RelayerNodeConfig {
   logger?: GenericLogger;
   /** Optional persistent storage for caching FHE public key and params across sessions. */
   storage?: GenericStorage;
-  /** Revalidation interval in ms for cached FHE public material. Default: 86_400_000 (24h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
-  revalidateIntervalMs?: number;
+  /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
+  fheArtifactCacheTTL?: number;
 }
 
 /**
@@ -108,7 +108,7 @@ export class RelayerNode implements RelayerSDK {
         storage: this.#config.storage,
         chainId,
         relayerUrl: config.relayerUrl,
-        revalidateIntervalMs: this.#config.revalidateIntervalMs,
+        fheArtifactCacheTTL: this.#config.fheArtifactCacheTTL,
         logger: this.#config.logger,
       });
     }
@@ -117,6 +117,7 @@ export class RelayerNode implements RelayerSDK {
     if (this.#cache) {
       const stale = await this.#cache.revalidateIfDue();
       if (stale) {
+        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
         this.#tearDown();
       }
     }

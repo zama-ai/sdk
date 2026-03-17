@@ -163,7 +163,7 @@ export class RelayerWeb implements RelayerSDK {
         storage: this.#config.storage,
         chainId,
         relayerUrl: config.relayerUrl,
-        revalidateIntervalMs: this.#config.revalidateIntervalMs,
+        fheArtifactCacheTTL: this.#config.fheArtifactCacheTTL,
         logger: this.#config.logger,
       });
     }
@@ -172,6 +172,7 @@ export class RelayerWeb implements RelayerSDK {
     if (this.#cache) {
       const stale = await this.#cache.revalidateIfDue();
       if (stale) {
+        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
         this.#tearDown();
       }
     }
