@@ -51,10 +51,6 @@ const SHORT_RETRY_MS = 5 * 60 * 1000;
 
 // ── Helpers ─────────────────────────────────────────────────
 
-const fallbackLogger: Pick<GenericLogger, "warn"> = {
-  warn: (...args: unknown[]) => console.warn("[PublicParamsCache]", ...args),
-};
-
 function toBase64(bytes: Uint8Array): string {
   const chunks: string[] = [];
   for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
@@ -117,7 +113,7 @@ export class PublicParamsCache {
   readonly #chainId: number;
   readonly #relayerUrl: string;
   readonly #ttlMs: number;
-  readonly #logger?: GenericLogger;
+  readonly #logger: GenericLogger;
   #publicKeyMem: PublicKeyResult | undefined;
   #publicParamsMem = new Map<number, PublicParamsResult>();
   #publicKeyInflight: Promise<PublicKeyResult> | null = null;
@@ -138,7 +134,7 @@ export class PublicParamsCache {
     this.#chainId = opts.chainId;
     this.#relayerUrl = opts.relayerUrl;
     this.#ttlMs = (opts.fheArtifactCacheTTL ?? 86_400) * 1000;
-    this.#logger = opts.logger;
+    this.#logger = opts.logger ?? console;
   }
 
   // ── getPublicKey ────────────────────────────────────────
@@ -174,7 +170,7 @@ export class PublicParamsCache {
     } catch (err) {
       // Corrupt or unreadable entry — delete and fall through to fetcher
       await this.#deleteQuietly(key);
-      (this.#logger ?? fallbackLogger).warn(
+      this.#logger.warn(
         "Failed to read public key from persistent storage, falling back to network fetch",
         {
           chainId: this.#chainId,
@@ -196,7 +192,7 @@ export class PublicParamsCache {
       };
       await this.#storage.set(key, cached);
     } catch (err) {
-      (this.#logger ?? fallbackLogger).warn("Failed to persist public key to storage", {
+      this.#logger.warn("Failed to persist public key to storage", {
         chainId: this.#chainId,
         error: toError(err).message,
       });
@@ -247,7 +243,7 @@ export class PublicParamsCache {
     } catch (err) {
       // Corrupt or unreadable entry — delete and fall through to fetcher
       await this.#deleteQuietly(key);
-      (this.#logger ?? fallbackLogger).warn(
+      this.#logger.warn(
         "Failed to read public params from persistent storage, falling back to network fetch",
         {
           chainId: this.#chainId,
@@ -274,7 +270,7 @@ export class PublicParamsCache {
       const idxKey = paramsIndexKey(this.#chainId);
       const existing =
         (await this.#storage.get<number[]>(idxKey).catch((err) => {
-          (this.#logger ?? fallbackLogger).warn("Failed to read params index from storage", {
+          this.#logger.warn("Failed to read params index from storage", {
             chainId: this.#chainId,
             error: toError(err).message,
           });
@@ -284,7 +280,7 @@ export class PublicParamsCache {
         await this.#storage.set(idxKey, [...existing, bits]);
       }
     } catch (err) {
-      (this.#logger ?? fallbackLogger).warn("Failed to persist public params to storage", {
+      this.#logger.warn("Failed to persist public params to storage", {
         chainId: this.#chainId,
         bits,
         error: toError(err).message,
@@ -348,10 +344,10 @@ export class PublicParamsCache {
           assertCachedPk(pkRaw);
           storedPk = { ...pkRaw, lastValidatedAt: pkRaw.lastValidatedAt ?? 0 };
         } catch (err) {
-          (this.#logger ?? fallbackLogger).warn(
-            "Corrupt public key cache entry detected, deleting",
-            { chainId: this.#chainId, error: toError(err).message },
-          );
+          this.#logger.warn("Corrupt public key cache entry detected, deleting", {
+            chainId: this.#chainId,
+            error: toError(err).message,
+          });
           await this.#deleteQuietly(pkKey);
         }
       }
@@ -376,10 +372,10 @@ export class PublicParamsCache {
       if (!manifestRes.ok) {
         // Treat as transient failure — use short retry instead of full TTL
         const retryTimestamp = now - this.#ttlMs + SHORT_RETRY_MS;
-        (this.#logger ?? fallbackLogger).warn(
-          "Manifest fetch failed during revalidation, retrying in 5 min",
-          { status: manifestRes.status, relayerUrl: this.#relayerUrl },
-        );
+        this.#logger.warn("Manifest fetch failed during revalidation, retrying in 5 min", {
+          status: manifestRes.status,
+          relayerUrl: this.#relayerUrl,
+        });
         await this.#writeEntries(
           pkKey,
           { ...storedPk, lastValidatedAt: retryTimestamp },
@@ -459,14 +455,11 @@ export class PublicParamsCache {
       this.#lastRevalidatedAt = now;
       return false;
     } catch (err) {
-      (this.#logger ?? fallbackLogger).warn(
-        "Revalidation failed, using cached artifacts (fail-open)",
-        {
-          chainId: this.#chainId,
-          relayerUrl: this.#relayerUrl,
-          error: toError(err).message,
-        },
-      );
+      this.#logger.warn("Revalidation failed, using cached artifacts (fail-open)", {
+        chainId: this.#chainId,
+        relayerUrl: this.#relayerUrl,
+        error: toError(err).message,
+      });
 
       // Fail-open: use short retry interval (5 min) instead of full TTL
       const retryTimestamp = now - this.#ttlMs + SHORT_RETRY_MS;
@@ -482,13 +475,10 @@ export class PublicParamsCache {
           );
         }
       } catch (innerErr) {
-        (this.#logger ?? fallbackLogger).warn(
-          "Failed to update validation timestamps after revalidation error",
-          {
-            chainId: this.#chainId,
-            error: toError(innerErr).message,
-          },
-        );
+        this.#logger.warn("Failed to update validation timestamps after revalidation error", {
+          chainId: this.#chainId,
+          error: toError(innerErr).message,
+        });
       }
       this.#lastRevalidatedAt = retryTimestamp;
       return false;
@@ -539,10 +529,10 @@ export class PublicParamsCache {
     const idxKey = paramsIndexKey(this.#chainId);
     const persistedBits =
       (await this.#storage.get<number[]>(idxKey).catch((err) => {
-        (this.#logger ?? fallbackLogger).warn(
-          "Failed to read params index, CRS revalidation may be incomplete",
-          { chainId: this.#chainId, error: toError(err).message },
-        );
+        this.#logger.warn("Failed to read params index, CRS revalidation may be incomplete", {
+          chainId: this.#chainId,
+          error: toError(err).message,
+        });
         return null;
       })) ?? [];
     const allBits = new Set([...this.#publicParamsMem.keys(), ...persistedBits]);
@@ -556,10 +546,11 @@ export class PublicParamsCache {
         try {
           raw = await this.#storage.get<unknown>(pKey);
         } catch (err) {
-          (this.#logger ?? fallbackLogger).warn(
-            "Failed to read cached params entry during revalidation",
-            { chainId: this.#chainId, bits, error: toError(err).message },
-          );
+          this.#logger.warn("Failed to read cached params entry during revalidation", {
+            chainId: this.#chainId,
+            bits,
+            error: toError(err).message,
+          });
           return null;
         }
         if (!raw) return null;
@@ -574,7 +565,7 @@ export class PublicParamsCache {
             } as CachedPublicParams,
           };
         } catch (err) {
-          (this.#logger ?? fallbackLogger).warn("Corrupt params cache entry detected, deleting", {
+          this.#logger.warn("Corrupt params cache entry detected, deleting", {
             chainId: this.#chainId,
             bits,
             error: toError(err).message,
@@ -591,7 +582,7 @@ export class PublicParamsCache {
 
   async #deleteQuietly(key: string): Promise<void> {
     await this.#storage.delete(key).catch((err) => {
-      (this.#logger ?? fallbackLogger).warn("Failed to delete cache entry", {
+      this.#logger.warn("Failed to delete cache entry", {
         chainId: this.#chainId,
         key,
         error: toError(err).message,
@@ -610,13 +601,10 @@ export class PublicParamsCache {
         ...paramEntries.map((entry) => this.#storage.delete(entry.key)),
       ]);
     } catch (err) {
-      (this.#logger ?? fallbackLogger).warn(
-        "Failed to clear stale artifacts from persistent storage",
-        {
-          chainId: this.#chainId,
-          error: toError(err).message,
-        },
-      );
+      this.#logger.warn("Failed to clear stale artifacts from persistent storage", {
+        chainId: this.#chainId,
+        error: toError(err).message,
+      });
     }
   }
 
@@ -627,14 +615,14 @@ export class PublicParamsCache {
   ): Promise<void> {
     const writes = [
       this.#storage.set(pkKey, pk).catch((err) => {
-        (this.#logger ?? fallbackLogger).warn("Failed to update public key validation timestamp", {
+        this.#logger.warn("Failed to update public key validation timestamp", {
           chainId: this.#chainId,
           error: toError(err).message,
         });
       }),
       ...paramEntries.map((entry) =>
         this.#storage.set(entry.key, entry.data).catch((err) => {
-          (this.#logger ?? fallbackLogger).warn("Failed to update params validation timestamp", {
+          this.#logger.warn("Failed to update params validation timestamp", {
             chainId: this.#chainId,
             error: toError(err).message,
           });
