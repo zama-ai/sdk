@@ -3,10 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "delegation": "tsx src/delegation.ts",
+    "portfolio": "tsx src/portfolio.ts",
+    "events": "tsx src/events.ts",
+    "eth-wrapping": "tsx src/eth-wrapping.ts"
   },
   "dependencies": {
-    "@zama-fhe/sdk": "1.0.0-alpha.16",
+    "@zama-fhe/sdk": "^1.2.0-alpha.2",
     "viem": "^2.30.0"
   },
   "devDependencies": {

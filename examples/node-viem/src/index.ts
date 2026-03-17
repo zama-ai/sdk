@@ -1,3 +1,8 @@
+/**
+ * Basic example: shield, transfer, unshield, and check balances.
+ *
+ * Usage: PRIVATE_KEY=0x... TOKEN_ADDRESS=0x... COORDINATOR_ADDRESS=0x... RECIPIENT=0x... npx tsx src/index.ts
+ */
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { mainnet, sepolia } from "viem/chains";
@@ -28,7 +33,10 @@ async function main() {
 
   // 2. Create SDK components
   const signer = new ViemSigner({ walletClient, publicClient });
-  const authConfig = { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY };
+  const authConfig = {
+    __type: "ApiKeyHeader" as const,
+    value: RELAYER_API_KEY,
+  };
   const relayer = new RelayerNode({
     getChainId: () => signer.getChainId(),
     transports: {
@@ -38,41 +46,50 @@ async function main() {
   });
   const storage = new MemoryStorage();
 
-  // 3. Resolve wrapper address on-chain
+  // 3. Resolve wrapper address on-chain via the coordinator
   const wrapperAddress = await readWrapperForTokenContract(
     publicClient,
     COORDINATOR_ADDRESS,
     TOKEN_ADDRESS,
   );
 
+  console.log("Wrapper address:", wrapperAddress);
+
   const sdk = new ZamaSDK({ relayer, signer, storage });
   const token = sdk.createToken(TOKEN_ADDRESS, wrapperAddress);
 
   try {
-    // 3. Check balance
+    // 4. Read token metadata
+    const [name, symbol, decimals] = await Promise.all([
+      token.name(),
+      token.symbol(),
+      token.decimals(),
+    ]);
+    console.log(`Token: ${name} (${symbol}), ${decimals} decimals`);
+
+    // 5. Decrypt current balance
     const balance = await token.balanceOf();
     console.log("Decrypted balance:", balance);
 
-    // 4. Shield (wrap public tokens into confidential)
-    console.log("Shielding 1000 tokens...");
+    // 6. Shield (wrap public tokens into confidential)
+    console.log("\nShielding 1000 tokens...");
     const shieldTx = await token.shield(1000n);
-    console.log("Shield tx:", shieldTx);
+    console.log("Shield tx:", shieldTx.txHash);
 
-    // 5. Confidential transfer
+    // 7. Confidential transfer
     console.log("Transferring 500 tokens to", RECIPIENT);
     const transferTx = await token.confidentialTransfer(RECIPIENT, 500n);
-    console.log("Transfer tx:", transferTx);
+    console.log("Transfer tx:", transferTx.txHash);
 
-    // 6. Unshield (unwrap confidential tokens back to public)
+    // 8. Unshield (unwrap confidential tokens back to public)
     console.log("Unshielding 200 tokens...");
     const unshieldTx = await token.unshield(200n);
-    console.log("Unshield tx:", unshieldTx);
+    console.log("Unshield tx:", unshieldTx.txHash);
 
-    // 7. Final balance
+    // 9. Final balance
     const finalBalance = await token.balanceOf();
-    console.log("Final balance:", finalBalance);
+    console.log("\nFinal balance:", finalBalance);
   } finally {
-    // 8. Cleanup worker pool
     sdk.terminate();
   }
 }
