@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0-alpha.3](https://github.com/zama-ai/sdk/compare/v1.2.0-alpha.2...v1.2.0-alpha.3) (2026-03-17)
+
+### Bug Fixes
+
+- **sdk:** auto-detect browser extensions and fall back to file-based worker URL ([292bd3b](https://github.com/zama-ai/sdk/commit/292bd3bacd18bdadbf04985f053c43e873b6378a))
+- **sdk:** fix extension runtime fallback and revoke blob URL after worker creation ([e7c6d07](https://github.com/zama-ai/sdk/commit/e7c6d074bcbe8c0bed3565db3243fab0b52b3218))
+- **sdk:** inline worker code via blob URL to eliminate Vite optimizeDeps workaround ([60f09b1](https://github.com/zama-ai/sdk/commit/60f09b1a833e98852c0abd5982ff14019dd26c04))
+- **sdk:** make worker blob URL creation lazy to avoid SSR crashes ([9a9311a](https://github.com/zama-ai/sdk/commit/9a9311a6ef03420d311b4092d4fbc3d9c9a8986c))
+- **sdk:** support browser extensions and lazy worker creation ([c0fcd44](https://github.com/zama-ai/sdk/commit/c0fcd44f7d8884dc4f580066f83ef5e6cd18eea4))
+- **sdk:** use proper TypeScript assertion type narrowing in utility guards ([632bb80](https://github.com/zama-ai/sdk/commit/632bb80d27e6390c4effd795b0fcb29e6b4d0277))
+- **test:** use forks pool for react-sdk in CI instead of default ([4eca9aa](https://github.com/zama-ai/sdk/commit/4eca9aa3df6ad8285e8d096421aa75dcf5678149))
+
+### Performance Improvements
+
+- **test:** use vmForks locally, vmThreads in CI for both test projects ([d6f9de9](https://github.com/zama-ai/sdk/commit/d6f9de9e5d03ca4e2dab982afcd2460a0dd01f19))
+
 ## [1.2.0-alpha.2](https://github.com/zama-ai/sdk/compare/v1.2.0-alpha.1...v1.2.0-alpha.2) (2026-03-16)
 
 ### Bug Fixes

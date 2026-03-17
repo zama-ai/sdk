@@ -1,5 +1,6 @@
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
+import { iife } from "./iife-plugin";
 
 const shared = {
   external: [/^viem/, /^ethers/, /^@zama-fhe\/relayer-sdk/, /^@tanstack\/query-core/, /^node:/],
@@ -9,38 +10,22 @@ const shared = {
   treeshake: true,
 };
 
-export default defineConfig([
-  {
-    input: {
-      index: "src/index.ts",
-      "cleartext/index": "src/relayer/cleartext/index.ts",
-      "query/index": "src/query/index.ts",
-      "viem/index": "src/viem/index.ts",
-      "ethers/index": "src/ethers/index.ts",
-      "node/index": "src/node/index.ts",
-      "relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
-    },
-    output: {
-      dir: "dist",
-      format: "esm",
-      sourcemap: true,
-      minify: true,
-    },
-    ...shared,
-    plugins: [dts({ tsconfig: "tsconfig.build.json" })],
+export default defineConfig({
+  input: {
+    index: "src/index.ts",
+    "cleartext/index": "src/relayer/cleartext/index.ts",
+    "query/index": "src/query/index.ts",
+    "viem/index": "src/viem/index.ts",
+    "ethers/index": "src/ethers/index.ts",
+    "node/index": "src/node/index.ts",
+    "relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
   },
-  {
-    input: {
-      "relayer-sdk.worker": "src/worker/relayer-sdk.worker.ts",
-    },
-    output: {
-      dir: "dist",
-      format: "iife",
-      sourcemap: true,
-      entryFileNames: "[name].js",
-      minify: true,
-    },
-    ...shared,
-    external: [],
+  output: {
+    dir: "dist",
+    format: "esm",
+    sourcemap: true,
+    minify: true,
   },
-]);
+  ...shared,
+  plugins: [iife({ tsconfig: "tsconfig.build.json" }), dts({ tsconfig: "tsconfig.build.json" })],
+});
