@@ -208,28 +208,6 @@ body {
   margin-top: 10px;
 }
 
-/* Checkbox label */
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-/* Delegation status indicator (DecryptAsCard) */
-.delegation-status {
-  font-size: 13px;
-}
-.delegation-status-active {
-  color: #166534;
-}
-.delegation-status-none,
-.delegation-status-checking {
-  color: #94a3b8;
-}
-
 /* Divider */
 .divider {
   border: none;
