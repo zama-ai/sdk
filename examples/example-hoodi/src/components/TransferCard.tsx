@@ -12,14 +12,21 @@ interface TransferCardProps {
   decimals: number;
   symbol: string;
   disabled: boolean;
+  onSuccess?: () => void;
 }
 
-export function TransferCard({ tokenAddress, decimals, symbol, disabled }: TransferCardProps) {
+export function TransferCard({
+  tokenAddress,
+  decimals,
+  symbol,
+  disabled,
+  onSuccess,
+}: TransferCardProps) {
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
 
-  const transfer = useConfidentialTransfer({ tokenAddress });
+  const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
 
   const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";

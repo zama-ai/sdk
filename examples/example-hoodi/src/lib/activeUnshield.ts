@@ -2,7 +2,7 @@ import type { Address } from "@zama-fhe/react-sdk";
 
 /**
  * Module-level bridge used to associate an in-flight unwrap transaction hash
- * (received via ZamaSDKEvents.UnwrapSubmitted, which carries no token address)
+ * (received via ZamaSDKEvents.UnshieldPhase1Submitted, which carries no token address)
  * with the correct wrapperAddress so providers.tsx can call savePendingUnshield
  * before the Phase 1 transaction is mined.
  *

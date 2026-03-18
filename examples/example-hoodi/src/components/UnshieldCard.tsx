@@ -43,7 +43,7 @@ export function UnshieldCard({
   function handleUnshield() {
     setStep(1);
     // Register the active token before mutate() so the onEvent handler in ZamaProvider
-    // can associate the txHash (from ZamaSDKEvents.UnwrapSubmitted) with this wrapperAddress.
+    // can associate the txHash (from ZamaSDKEvents.UnshieldPhase1Submitted) with this wrapperAddress.
     // savePendingUnshield is called there — before Phase 1 is mined — so closing the tab
     // during mining still leaves recoverable state for PendingUnshieldCard.
     setActiveUnshieldToken(tokenAddress);

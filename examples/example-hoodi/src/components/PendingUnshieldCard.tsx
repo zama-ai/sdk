@@ -21,7 +21,9 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
   const [pendingTxHash, setPendingTxHash] = useState<Hex | null>(null);
 
   useEffect(() => {
-    loadPendingUnshield(storage, tokenAddress).then(setPendingTxHash);
+    loadPendingUnshield(storage, tokenAddress)
+      .then(setPendingTxHash)
+      .catch((err) => console.error("[PendingUnshieldCard] loadPendingUnshield failed:", err));
   }, [storage, tokenAddress]);
 
   const resume = useResumeUnshield(

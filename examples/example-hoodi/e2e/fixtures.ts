@@ -63,6 +63,13 @@ export async function mockWallet(page: Page, config: WalletConfig) {
             return Promise.resolve(null);
           case "eth_sendTransaction":
             return Promise.resolve("0x" + "1".repeat(64));
+          case "net_version":
+            return Promise.resolve("560048");
+          case "eth_blockNumber":
+            return Promise.resolve("0x1");
+          case "eth_getTransactionReceipt":
+          case "eth_getTransactionByHash":
+            return Promise.resolve(null);
           case "eth_signTypedData_v4":
           case "personal_sign":
           case "eth_sign":
@@ -108,7 +115,7 @@ export async function mockRpc(page: Page) {
       eth_call: "0x",
       eth_getTransactionCount: "0x0",
       eth_estimateGas: "0x5208",
-      net_version: "559536",
+      net_version: "560048",
     };
 
     await route.fulfill({

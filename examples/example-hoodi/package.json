@@ -5,7 +5,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "@types/node": "^20.0.0",
     "@types/react": "^19.2.0",
     "typescript": "^5.8.0"
   }

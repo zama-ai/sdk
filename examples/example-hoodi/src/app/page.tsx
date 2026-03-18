@@ -28,8 +28,8 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // Add your ERC-7984 token pairs here.
 // - erc20: the underlying ERC-20 token (source of funds for shield, mint target)
 // - confidential: the ERC-7984 wrapper contract (used for all SDK hooks)
-// The SDK hooks (useShield, useUnshield, useConfidentialTransfer) all take
-// tokenAddress === wrapperAddress === token.confidential for ERC-7984 tokens.
+// For ERC-7984 tokens, the SDK hooks (useUnshield, useConfidentialTransfer) and the
+// Token API (sdk.createToken().shield()) all use tokenAddress === token.confidential.
 const TOKENS = {
   usdt: {
     label: "USDT Mock",
@@ -53,10 +53,10 @@ const rpcProvider = new JsonRpcProvider(HOODI_RPC_URL);
 type TokenKey = keyof typeof TOKENS;
 
 // Attempt to switch to Hoodi. If the network is unknown to the wallet (error 4902),
-// prompt to add it. Silently ignores user rejections (error 4001) so the caller
-// can decide how to handle them by re-reading the current chainId afterwards.
-async function switchToHoodi() {
-  const ethereum = getEthereumProvider()!;
+// prompt to add it. Errors from wallet_switchEthereumChain (including 4001 user rejection)
+// are swallowed — the caller re-reads the current chainId to determine the outcome.
+// Errors from wallet_addEthereumChain propagate to the caller.
+async function switchToHoodi(ethereum: NonNullable<ReturnType<typeof getEthereumProvider>>) {
   try {
     await ethereum.request({
       method: "wallet_switchEthereumChain",
@@ -77,8 +77,8 @@ async function switchToHoodi() {
         ],
       });
     }
-    // 4001 (user rejection) and other errors are swallowed intentionally.
-    // The caller re-reads the actual chainId to determine the outcome.
+    // wallet_switchEthereumChain errors other than 4902 (including 4001 rejection) are
+    // intentionally ignored — chainId is re-read in the finally block of the caller.
   }
 }
 
@@ -93,7 +93,8 @@ export default function Home() {
   const token = TOKENS[selectedToken];
   const isHoodi = chainId === HOODI_CHAIN_ID_HEX;
 
-  // Declared early so queryClient is captured by the useEffect closure below.
+  // Stable reference from the QueryClientProvider in providers.tsx.
+  // Used in handleAccountsChanged (inside the useEffect below) to invalidate balance caches.
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
 
@@ -104,7 +105,7 @@ export default function Home() {
     if (!ethereum) return;
     setIsSwitching(true);
     try {
-      await switchToHoodi();
+      await switchToHoodi(ethereum);
     } catch {
       /* ignore */
     } finally {
@@ -223,7 +224,6 @@ export default function Home() {
   const balance = useConfidentialBalance({ tokenAddress: token.confidential });
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
-  // Uses sdk.signer so receipt polling goes through the direct Hoodi RPC (fast).
   const mint = useMutation({
     mutationFn: async () => {
       const txHash = await sdk.signer.writeContract({
@@ -325,7 +325,7 @@ export default function Home() {
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
-        isLoadingConfidential={balance.isPending}
+        isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}
@@ -349,6 +349,7 @@ export default function Home() {
       <ShieldCard
         key={`shield-${address}-${selectedToken}`}
         tokenAddress={token.confidential}
+        underlyingAddress={token.erc20}
         decimals={erc20Decimals}
         symbol={erc20Symbol}
         disabled={actionsDisabled}
@@ -361,6 +362,7 @@ export default function Home() {
         decimals={decimals}
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
+        onSuccess={refreshBalances}
       />
 
       <UnshieldCard

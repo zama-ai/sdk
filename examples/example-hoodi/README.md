@@ -13,12 +13,18 @@ Next.js app demonstrating the four core ERC-7984 operations on the **Hoodi** tes
 
 ## Operations demonstrated
 
-| Operation                    | Hook                      |
-| ---------------------------- | ------------------------- |
-| Decrypt confidential balance | `useConfidentialBalance`  |
-| Shield (ERC-20 → cToken)     | `useShield`               |
-| Confidential transfer        | `useConfidentialTransfer` |
-| Unshield (cToken → ERC-20)   | `useUnshield`             |
+| Operation                    | SDK API                      |
+| ---------------------------- | ---------------------------- |
+| Decrypt confidential balance | `useConfidentialBalance`     |
+| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()` |
+| Confidential transfer        | `useConfidentialTransfer`    |
+| Unshield (cToken → ERC-20)   | `useUnshield`                |
+
+> **Shield** uses `token.shield()` directly (via `sdk.createToken()`) rather than the `useShield` hook, with a manual approval step that waits for the on-chain confirmation before proceeding. This ensures compatibility with USDT-style tokens that revert when updating a non-zero allowance without first resetting it to zero.
+
+> **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
+
+> **Separate IndexedDB instances** for `storage` and `sessionStorage` in `ZamaProvider`: both use the same key internally, so sharing a single `IndexedDBStorage` instance causes the session entry to overwrite the encrypted keypair, forcing a re-sign on every balance decryption.
 
 ## How it differs from `react-ethers`
 
@@ -53,6 +59,8 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) and connect your wallet. The app will prompt you to switch to (or add) the Hoodi network automatically.
+
+> **Disconnecting:** wallets manage their own site connections. To fully disconnect, use your wallet's "Connected sites" settings (e.g. MetaMask → ⋮ → Connected sites → disconnect).
 
 ## Tests
 

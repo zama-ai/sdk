@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useShield } from "@zama-fhe/react-sdk";
+import { useMutation } from "@tanstack/react-query";
+import { useZamaSDK, allowanceContract, approveContract } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 import { parseAmount } from "@/lib/parseAmount";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 
 interface ShieldCardProps {
   tokenAddress: Address;
+  /** ERC-20 address of the underlying token (the `erc20` side of the pair). */
+  underlyingAddress: Address;
   decimals: number;
   symbol: string;
   disabled: boolean;
@@ -16,25 +19,61 @@ interface ShieldCardProps {
 
 export function ShieldCard({
   tokenAddress,
+  underlyingAddress,
   decimals,
   symbol,
   disabled,
   onSuccess,
 }: ShieldCardProps) {
   const [amount, setAmount] = useState("");
-  const [step, setStep] = useState<1 | 2>(1);
+  // "approve" = waiting for ERC-20 approval tx(s), "shield" = waiting for wrap tx.
+  const [phase, setPhase] = useState<"approve" | "shield">("approve");
 
-  const shield = useShield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+  const sdk = useZamaSDK();
 
   const parsedAmount = parseAmount(amount, decimals);
-  const pendingLabel = step === 2 ? "Shielding… (2/2)" : "Shielding… (1/2)";
+  const pendingLabel = phase === "shield" ? "Shielding… (2/2 wrap)" : "Shielding… (1/2 approve)";
+
+  // Note: we manage approval manually rather than using the useApproveUnderlying hook
+  // so we can display separate "1/2 approve" and "2/2 wrap" labels during the flow,
+  // and handle the USDT-style zero-reset without the hook's opaque pending state.
+  const shield = useMutation({
+    mutationFn: async (amount: bigint) => {
+      const token = sdk.createToken(tokenAddress);
+      const userAddress = await sdk.signer.getAddress();
+
+      // Read the current ERC-20 allowance granted to the wrapper.
+      const currentAllowance = (await sdk.signer.readContract(
+        allowanceContract(underlyingAddress, userAddress, tokenAddress),
+      )) as bigint;
+
+      if (currentAllowance < amount) {
+        // Some tokens (USDT-style) revert if you approve a non-zero amount while a non-zero
+        // allowance is already set. Reset to 0 first, waiting for the receipt so the reset
+        // is confirmed on-chain before the new approval is estimated and submitted.
+        if (currentAllowance > 0n) {
+          const resetTxHash = await sdk.signer.writeContract(
+            approveContract(underlyingAddress, tokenAddress, 0n),
+          );
+          await sdk.signer.waitForTransactionReceipt(resetTxHash);
+        }
+        const approveTxHash = await sdk.signer.writeContract(
+          approveContract(underlyingAddress, tokenAddress, amount),
+        );
+        await sdk.signer.waitForTransactionReceipt(approveTxHash);
+      }
+
+      setPhase("shield");
+
+      // approvalStrategy: 'skip' — approval is already confirmed above (or was sufficient).
+      return token.shield(amount, { approvalStrategy: "skip" });
+    },
+    onSuccess,
+  });
 
   function handleShield() {
-    setStep(1);
-    shield.mutate({
-      amount: parsedAmount,
-      callbacks: { onApprovalSubmitted: () => setStep(2) },
-    });
+    setPhase("approve");
+    shield.mutate(parsedAmount);
   }
 
   return (
@@ -59,11 +98,7 @@ export function ShieldCard({
         {shield.isPending ? pendingLabel : "Shield"}
       </button>
       {shield.isError && (
-        <div className="alert alert-error card-status">
-          {shield.error?.message?.toLowerCase().includes("allowance")
-            ? "Approval transaction may still be confirming — please wait a moment and retry."
-            : shield.error?.message}
-        </div>
+        <div className="alert alert-error card-status">{shield.error?.message}</div>
       )}
       {shield.isSuccess && shield.data?.txHash && (
         <div className="alert alert-success card-status">
