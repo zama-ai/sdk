@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { formatEther, formatUnits, parseUnits } from "ethers";
+import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import {
   useConfidentialBalance,
   useMetadata,
@@ -44,6 +44,10 @@ const TOKENS = {
 // Standard ERC-20 mint ABI — both test tokens expose mint(address, uint256).
 const MINT_ABI = ["function mint(address to, uint256 amount)"];
 
+// Routes ETH balance reads through the direct Hoodi RPC so polling is fast
+// and independent of the injected wallet's own RPC endpoint.
+const rpcProvider = new JsonRpcProvider(HOODI_RPC_URL);
+
 type TokenKey = keyof typeof TOKENS;
 
 // Attempt to switch to Hoodi. If the network is unknown to the wallet (error 4902),
@@ -78,6 +82,7 @@ async function switchToHoodi() {
 export default function Home() {
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const [selectedToken, setSelectedToken] = useState<TokenKey>("usdt");
   const [connectError, setConnectError] = useState<string | null>(null);
@@ -129,8 +134,9 @@ export default function Home() {
 
     const handleAccountsChanged = (accounts: unknown) => {
       setAddress((accounts as string[])[0] ?? null);
-      // Invalidate all cached queries so balances refresh for the new wallet.
-      queryClient.invalidateQueries();
+      // Invalidate only balance queries — metadata (name/symbol/decimals) is address-independent.
+      queryClient.invalidateQueries({ queryKey: ["eth-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["erc20-balance"] });
     };
     const handleChainChanged = (chainId: unknown) => setChainId(chainId as string);
 
@@ -151,6 +157,7 @@ export default function Home() {
     }
 
     setConnectError(null);
+    setIsConnecting(true);
     try {
       const accounts = (await window.ethereum.request({
         method: "eth_requestAccounts",
@@ -162,6 +169,8 @@ export default function Home() {
     } catch (err) {
       console.error("Failed to connect wallet:", err);
       setConnectError(err instanceof Error ? err.message : "Failed to connect wallet");
+    } finally {
+      setIsConnecting(false);
     }
   }
 
@@ -179,13 +188,8 @@ export default function Home() {
   const ethBalanceKey = ["eth-balance", address];
   const { data: ethBalance } = useQuery({
     queryKey: ethBalanceKey,
-    queryFn: async () => {
-      const hex = (await window.ethereum!.request({
-        method: "eth_getBalance",
-        params: [address, "latest"],
-      })) as string;
-      return formatEther(BigInt(hex));
-    },
+    // Reads through the direct Hoodi RPC (fast, no wallet roundtrip).
+    queryFn: () => rpcProvider.getBalance(address!).then(formatEther),
     enabled: !!address,
   });
 
@@ -241,8 +245,8 @@ export default function Home() {
         <p className="subtitle">
           Connect your wallet to interact with ERC-7984 tokens on Hoodi testnet.
         </p>
-        <button className="btn btn-primary" onClick={connect}>
-          Connect Wallet
+        <button className="btn btn-primary" onClick={connect} disabled={isConnecting}>
+          {isConnecting ? "Connecting…" : "Connect Wallet"}
         </button>
         {connectError && <div className="alert alert-error card-status">{connectError}</div>}
       </div>

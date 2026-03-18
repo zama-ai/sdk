@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isAddress } from "ethers";
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 import { parseAmount } from "@/lib/parseAmount";
@@ -56,7 +57,9 @@ export function TransferCard({ tokenAddress, decimals, symbol, disabled }: Trans
       <button
         className="btn btn-primary btn-full"
         onClick={handleTransfer}
-        disabled={disabled || parsedAmount <= BigInt(0) || !recipient || transfer.isPending}
+        disabled={
+          disabled || parsedAmount <= BigInt(0) || !isAddress(recipient) || transfer.isPending
+        }
       >
         {transfer.isPending ? pendingLabel : "Transfer"}
       </button>
