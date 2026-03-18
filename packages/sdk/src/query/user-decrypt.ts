@@ -3,6 +3,7 @@ import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../token/zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
+import { zamaQueryKeys } from "./query-keys";
 
 /** A handle to decrypt, paired with its originating contract address. */
 export interface DecryptHandle {
@@ -65,6 +66,11 @@ export function userDecryptMutationOptions(
 
       callbacks?.onDecrypted?.(allResults);
       return allResults;
+    },
+    onSuccess: (data, _variables, _onMutateResult, context) => {
+      for (const [handle, value] of Object.entries(data) as [Handle, ClearValueType][]) {
+        context.client.setQueryData(zamaQueryKeys.decryption.handle(handle), value);
+      }
     },
   };
 }

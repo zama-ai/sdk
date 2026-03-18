@@ -1,13 +1,13 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import type { ClearValueType, Handle } from "@zama-fhe/sdk";
 import type {
   DecryptHandle,
   UserDecryptCallbacks,
   UserDecryptMutationParams,
 } from "@zama-fhe/sdk/query";
-import { userDecryptMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { userDecryptMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 export type {
@@ -45,15 +45,8 @@ export type UseUserDecryptConfig = UserDecryptCallbacks;
  */
 export function useUserDecrypt(config?: UseUserDecryptConfig) {
   const sdk = useZamaSDK();
-  const queryClient = useQueryClient();
 
-  return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptMutationParams>({
-    ...userDecryptMutationOptions(sdk, config),
-    onSuccess: (data) => {
-      // Populate the shared decryption cache
-      for (const [handle, value] of Object.entries(data) as [Handle, ClearValueType][]) {
-        queryClient.setQueryData(zamaQueryKeys.decryption.handle(handle), value);
-      }
-    },
-  });
+  return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptMutationParams>(
+    userDecryptMutationOptions(sdk, config),
+  );
 }

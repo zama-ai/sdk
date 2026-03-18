@@ -95,6 +95,15 @@ export { unwrapMutationOptions, type UnwrapParams } from "./unwrap";
 export { unwrapAllMutationOptions } from "./unwrap-all";
 export { finalizeUnwrapMutationOptions, type FinalizeUnwrapParams } from "./finalize-unwrap";
 export { encryptMutationOptions } from "./encrypt";
+export { generateKeypairMutationOptions } from "./generate-keypair";
+export { createEIP712MutationOptions, type CreateEIP712Params } from "./create-eip712";
+export {
+  createDelegatedUserDecryptEIP712MutationOptions,
+  type CreateDelegatedUserDecryptEIP712Params,
+} from "./create-delegated-user-decrypt-eip712";
+export { delegatedUserDecryptMutationOptions } from "./delegated-user-decrypt";
+export { publicDecryptMutationOptions } from "./public-decrypt";
+export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
 export { allowMutationOptions } from "./allow";
 export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokeMutationOptions } from "./revoke";
