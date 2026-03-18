@@ -1,5 +1,7 @@
+# Requires branch protection "Require review from Code Owners" to enforce.
 
-# Enforces changes in Sandboxed AI CI/CD
-
-.github/squid/sandbox-*.conf @zama-ai/infosec @zama-ai/product-integrations
-.github/workflows/claude*.yml @zama-ai/infosec @zama-ai/product-integrations
+.github/CODEOWNERS                    @zama-ai/infosec @zama-ai/product-integrations
+.github/squid/sandbox-*.conf          @zama-ai/infosec @zama-ai/product-integrations
+.github/scripts/sandbox-*.sh          @zama-ai/infosec @zama-ai/product-integrations
+.github/scripts/install-claude.sh     @zama-ai/infosec @zama-ai/product-integrations
+.github/workflows/claude*.yml         @zama-ai/infosec @zama-ai/product-integrations
