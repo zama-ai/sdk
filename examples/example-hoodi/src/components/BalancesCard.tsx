@@ -4,7 +4,6 @@ interface BalancesCardProps {
   formattedErc20: string;
   formattedConfidential: string;
   isLoadingConfidential: boolean;
-  isErrorConfidential: boolean;
   erc20Symbol: string;
   onMint: () => void;
   isMinting: boolean;
@@ -15,19 +14,12 @@ export function BalancesCard({
   formattedErc20,
   formattedConfidential,
   isLoadingConfidential,
-  isErrorConfidential,
   erc20Symbol,
   onMint,
   isMinting,
   mintDisabled,
 }: BalancesCardProps) {
-  const confidentialDisplay = isErrorConfidential ? (
-    "Decryption failed"
-  ) : isLoadingConfidential ? (
-    <i>Decrypting…</i>
-  ) : (
-    formattedConfidential
-  );
+  const confidentialDisplay = isLoadingConfidential ? <i>Decrypting…</i> : formattedConfidential;
 
   return (
     <div className="card">
@@ -47,9 +39,7 @@ export function BalancesCard({
       </div>
       <div className="balance-row">
         <span className="balance-label">Confidential (private)</span>
-        <span
-          className={`balance-value${isLoadingConfidential || isErrorConfidential ? " loading" : ""}`}
-        >
+        <span className={`balance-value${isLoadingConfidential ? " loading" : ""}`}>
           {confidentialDisplay}
         </span>
       </div>

@@ -13,6 +13,7 @@ import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { JsonRpcProvider } from "ethers";
 import { HOODI_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
+import { getEthereumProvider } from "@/lib/ethereum";
 
 const queryClient = new QueryClient();
 
@@ -45,7 +46,7 @@ function createHybridEthereum(
 ) {
   if (!ethereum) {
     // No wallet injected — return a no-op provider so ZamaProvider mounts without
-    // crashing. page.tsx checks window.ethereum before calling connect(), so all
+    // crashing. page.tsx checks getEthereumProvider() before calling connect(), so all
     // user-visible wallet operations still fail gracefully.
     return {
       request() {
@@ -89,25 +90,34 @@ export function Providers({ children }: { children: ReactNode }) {
   const [walletKey, setWalletKey] = useState(0);
 
   useEffect(() => {
-    if (!window.ethereum) return;
+    const ethereum = getEthereumProvider();
+    if (!ethereum) return;
     // Seed the ref for already-connected wallets on page load.
-    (window.ethereum.request({ method: "eth_accounts" }) as Promise<string[]>).then(
+    (ethereum.request({ method: "eth_accounts" }) as Promise<string[]>).then(
       (accounts) => {
         liveAccountsRef.current = accounts;
       },
       () => {},
     );
     const handleAccountsChanged = (accounts: unknown) => {
-      liveAccountsRef.current = accounts as string[];
-      setWalletKey((k) => k + 1);
+      const newAccounts = accounts as string[];
+      // Only remount ZamaProvider when the active account actually changes.
+      // Some wallets (e.g. Phantom) fire accountsChanged with the same account
+      // on page load or after transactions, which would cause unnecessary remounts
+      // and trigger repeated EIP-712 session prompts.
+      const prevAddress = liveAccountsRef.current[0];
+      liveAccountsRef.current = newAccounts;
+      if (newAccounts[0] !== prevAddress) {
+        setWalletKey((k) => k + 1);
+      }
     };
-    window.ethereum.on("accountsChanged", handleAccountsChanged);
-    return () => window.ethereum?.removeListener("accountsChanged", handleAccountsChanged);
+    ethereum.on("accountsChanged", handleAccountsChanged);
+    return () => ethereum.removeListener("accountsChanged", handleAccountsChanged);
   }, []);
 
   const { signer, relayer } = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hybridEthereum = createHybridEthereum(window.ethereum, liveAccountsRef) as any;
+    const hybridEthereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef) as any;
     const signer = new EthersSigner({ ethereum: hybridEthereum });
     const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL });
     return { signer, relayer };

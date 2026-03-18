@@ -59,7 +59,11 @@ export function ShieldCard({
         {shield.isPending ? pendingLabel : "Shield"}
       </button>
       {shield.isError && (
-        <div className="alert alert-error card-status">{shield.error?.message}</div>
+        <div className="alert alert-error card-status">
+          {shield.error?.message?.toLowerCase().includes("allowance")
+            ? "Approval transaction may still be confirming — please wait a moment and retry."
+            : shield.error?.message}
+        </div>
       )}
       {shield.isSuccess && shield.data?.txHash && (
         <div className="alert alert-success card-status">

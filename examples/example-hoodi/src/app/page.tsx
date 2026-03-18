@@ -21,6 +21,7 @@ import {
   HOODI_EXPLORER_URL,
   HOODI_RPC_URL,
 } from "@/lib/config";
+import { getEthereumProvider } from "@/lib/ethereum";
 
 // ─── CONFIGURATION ────────────────────────────────────────────────────────────
 // Add your ERC-7984 token pairs here.
@@ -54,14 +55,15 @@ type TokenKey = keyof typeof TOKENS;
 // prompt to add it. Silently ignores user rejections (error 4001) so the caller
 // can decide how to handle them by re-reading the current chainId afterwards.
 async function switchToHoodi() {
+  const ethereum = getEthereumProvider()!;
   try {
-    await window.ethereum!.request({
+    await ethereum.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: HOODI_CHAIN_ID_HEX }],
     });
   } catch (err: unknown) {
     if ((err as { code: number }).code === 4902) {
-      await window.ethereum!.request({
+      await ethereum.request({
         method: "wallet_addEthereumChain",
         params: [
           {
@@ -97,14 +99,15 @@ export default function Home() {
   // Attempt to switch to Hoodi and update chainId based on the actual result.
   // Safe to call concurrently — duplicate calls are harmless (last write wins).
   async function handleSwitchToHoodi() {
-    if (!window.ethereum) return;
+    const ethereum = getEthereumProvider();
+    if (!ethereum) return;
     setIsSwitching(true);
     try {
       await switchToHoodi();
     } catch {
       /* ignore */
     } finally {
-      const current = (await window.ethereum.request({ method: "eth_chainId" })) as string;
+      const current = (await ethereum.request({ method: "eth_chainId" })) as string;
       setChainId(current);
       setIsSwitching(false);
     }
@@ -114,12 +117,13 @@ export default function Home() {
   // Note: providers.tsx has a second accountsChanged listener that manages the
   // ZamaProvider lifecycle (signer remount). This listener handles UI-level state only.
   useEffect(() => {
-    if (!window.ethereum) return;
+    const ethereum = getEthereumProvider();
+    if (!ethereum) return;
 
     // Read both accounts and chainId in parallel, then auto-switch if needed.
     Promise.all([
-      window.ethereum.request({ method: "eth_accounts" }) as Promise<string[]>,
-      window.ethereum.request({ method: "eth_chainId" }) as Promise<string>,
+      ethereum.request({ method: "eth_accounts" }) as Promise<string[]>,
+      ethereum.request({ method: "eth_chainId" }) as Promise<string>,
     ]).then(([accounts, currentChainId]) => {
       const detectedAddress = accounts[0] ?? null;
       setAddress(detectedAddress);
@@ -140,18 +144,19 @@ export default function Home() {
     };
     const handleChainChanged = (chainId: unknown) => setChainId(chainId as string);
 
-    window.ethereum.on("accountsChanged", handleAccountsChanged);
-    window.ethereum.on("chainChanged", handleChainChanged);
+    ethereum.on("accountsChanged", handleAccountsChanged);
+    ethereum.on("chainChanged", handleChainChanged);
     return () => {
-      window.ethereum?.removeListener("accountsChanged", handleAccountsChanged);
-      window.ethereum?.removeListener("chainChanged", handleChainChanged);
+      ethereum.removeListener("accountsChanged", handleAccountsChanged);
+      ethereum.removeListener("chainChanged", handleChainChanged);
     };
   }, []);
 
   async function connect() {
-    if (!window.ethereum) {
+    const ethereum = getEthereumProvider();
+    if (!ethereum) {
       setConnectError(
-        "No wallet found. Please install an EIP-1193 browser wallet (e.g. Rabby, Phantom, …).",
+        "No Ethereum wallet found. Please install an EIP-1193 browser wallet (e.g. Rabby, MetaMask, or Phantom).",
       );
       return;
     }
@@ -159,7 +164,7 @@ export default function Home() {
     setConnectError(null);
     setIsConnecting(true);
     try {
-      const accounts = (await window.ethereum.request({
+      const accounts = (await ethereum.request({
         method: "eth_requestAccounts",
       })) as string[];
       setAddress(accounts[0] ?? null);
@@ -312,8 +317,6 @@ export default function Home() {
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
         isLoadingConfidential={balance.isPending}
-        // handleQuery = Phase 1 (encrypted handle poll); balance query = Phase 2 (decrypt)
-        isErrorConfidential={balance.isError || balance.handleQuery.isError}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}
