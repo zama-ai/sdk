@@ -16,7 +16,6 @@ const entryPoints = {
   "query/index": "src/query/index.ts",
   "viem/index": "src/viem/index.ts",
   "ethers/index": "src/ethers/index.ts",
-  "node/index": "src/node/index.ts",
 };
 
 export default defineConfig([
@@ -24,6 +23,7 @@ export default defineConfig([
   {
     input: {
       ...entryPoints,
+      "node/index": "src/node/index.ts",
       "relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
     },
     output: {

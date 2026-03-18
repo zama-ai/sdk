@@ -31,6 +31,32 @@ describe("ZamaSDK", () => {
     expect(token.address).toBe(tokenAddress);
   });
 
+  it("createToken shares delegatedCredentials with the SDK", ({
+    relayer,
+    signer,
+    storage,
+    tokenAddress,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const token = sdk.createToken(tokenAddress);
+    expect((token as unknown as { delegatedCredentials: unknown }).delegatedCredentials).toBe(
+      sdk.delegatedCredentials,
+    );
+  });
+
+  it("createReadonlyToken shares delegatedCredentials with the SDK", ({
+    relayer,
+    signer,
+    storage,
+    tokenAddress,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const token = sdk.createReadonlyToken(tokenAddress);
+    expect((token as unknown as { delegatedCredentials: unknown }).delegatedCredentials).toBe(
+      sdk.delegatedCredentials,
+    );
+  });
+
   it("creates distinct instances per address", ({ relayer, signer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
     const t1 = sdk.createReadonlyToken("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address);

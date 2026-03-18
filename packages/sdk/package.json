@@ -16,32 +16,37 @@
     ".": {
       "types": "./dist/esm/index.d.ts",
       "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/esm/index.js"
     },
     "./cleartext": {
       "types": "./dist/esm/cleartext/index.d.ts",
       "import": "./dist/esm/cleartext/index.js",
-      "require": "./dist/cjs/cleartext/index.cjs"
+      "require": "./dist/cjs/cleartext/index.cjs",
+      "default": "./dist/esm/cleartext/index.js"
     },
     "./query": {
       "types": "./dist/esm/query/index.d.ts",
       "import": "./dist/esm/query/index.js",
-      "require": "./dist/cjs/query/index.cjs"
+      "require": "./dist/cjs/query/index.cjs",
+      "default": "./dist/esm/query/index.js"
     },
     "./viem": {
       "types": "./dist/esm/viem/index.d.ts",
       "import": "./dist/esm/viem/index.js",
-      "require": "./dist/cjs/viem/index.cjs"
+      "require": "./dist/cjs/viem/index.cjs",
+      "default": "./dist/esm/viem/index.js"
     },
     "./ethers": {
       "types": "./dist/esm/ethers/index.d.ts",
       "import": "./dist/esm/ethers/index.js",
-      "require": "./dist/cjs/ethers/index.cjs"
+      "require": "./dist/cjs/ethers/index.cjs",
+      "default": "./dist/esm/ethers/index.js"
     },
     "./node": {
       "types": "./dist/esm/node/index.d.ts",
       "import": "./dist/esm/node/index.js",
-      "require": "./dist/cjs/node/index.cjs"
+      "default": "./dist/esm/node/index.js"
     }
   },
   "typesVersions": {
@@ -67,6 +72,7 @@
     "dist/**/*.js",
     "dist/**/*.cjs",
     "dist/**/*.d.ts",
+    "dist/**/*.map",
     "README.md",
     "LICENSE"
   ],
