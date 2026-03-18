@@ -54,6 +54,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) and connect your wallet. The app will prompt you to switch to (or add) the Hoodi network automatically.
 
+## Tests
+
+```bash
+npm run test:e2e          # run all tests (starts dev server automatically)
+npx playwright test --ui  # interactive mode — watch tests run in the browser
+```
+
+18 Playwright e2e tests covering the connect flow, wrong-network screen, and main UI (no real wallet or transactions required — uses a mocked EIP-1193 provider).
+
 ## Environment variables
 
 | Variable                    | Required | Default                            | Description                                                                                                     |

@@ -53,4 +53,25 @@ test.describe("main screen", () => {
     // ETH row is always rendered; shows "—" until the query resolves.
     await expect(page.getByText(/ETH:/)).toBeVisible();
   });
+
+  test("shows metadata loading hint while metadata is pending", async ({ page }) => {
+    // eth_call returns "0x" so useMetadata never resolves → loading hint is visible.
+    await expect(page.getByText(/Loading token metadata/)).toBeVisible();
+  });
+
+  test("switching token updates the selector value", async ({ page }) => {
+    const select = page.getByRole("combobox");
+    await expect(select).toHaveValue("usdt");
+    await select.selectOption("test");
+    await expect(select).toHaveValue("test");
+  });
+
+  test("no pending unshield card shown on fresh load", async ({ page }) => {
+    // IndexedDB is empty in a fresh browser context — no PendingUnshieldCard renders.
+    await expect(page.getByText(/Pending Unshield/)).not.toBeVisible();
+  });
+
+  test("mint button is disabled before metadata loads", async ({ page }) => {
+    await expect(page.getByRole("button", { name: /Mint/ })).toBeDisabled();
+  });
 });

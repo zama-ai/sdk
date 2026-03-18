@@ -9,6 +9,7 @@ import {
   useZamaSDK,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import type { Address } from "@zama-fhe/react-sdk";
 import { BalancesCard } from "@/components/BalancesCard";
 import { ShieldCard } from "@/components/ShieldCard";
@@ -195,7 +196,7 @@ export default function Home() {
     queryKey: ethBalanceKey,
     // Reads through the direct Hoodi RPC (fast, no wallet roundtrip).
     queryFn: () => rpcProvider.getBalance(address!).then(formatEther),
-    enabled: !!address,
+    enabled: !!address && isHoodi,
   });
 
   // Use the ERC-20 address from config directly — no on-chain underlyingContract() lookup needed.
@@ -206,12 +207,17 @@ export default function Home() {
       sdk.signer.readContract(
         balanceOfContract(token.erc20, address as Address),
       ) as Promise<bigint>,
-    enabled: !!address,
+    enabled: !!address && isHoodi,
   });
 
   const refreshBalances = () => {
     queryClient.invalidateQueries({ queryKey: erc20BalanceKey });
     queryClient.invalidateQueries({ queryKey: ethBalanceKey });
+    // Invalidate the encrypted handle so useConfidentialBalance re-polls after
+    // any operation that changes the confidential balance (shield, unshield, transfer).
+    queryClient.invalidateQueries({
+      queryKey: zamaQueryKeys.confidentialHandle.token(token.confidential),
+    });
   };
 
   const balance = useConfidentialBalance({ tokenAddress: token.confidential });
@@ -311,6 +317,9 @@ export default function Home() {
             </option>
           ))}
         </select>
+        {(!cTokenMetadata.data || !erc20Metadata.data) && (
+          <p className="token-meta">Loading token metadata…</p>
+        )}
       </div>
 
       <BalancesCard

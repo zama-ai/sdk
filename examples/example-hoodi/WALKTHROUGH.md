@@ -379,6 +379,30 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 
 ---
 
+## Running tests
+
+This example ships with a Playwright e2e test suite. Tests run against the real Next.js dev server with a mocked EIP-1193 browser wallet — no real wallet, no on-chain transactions required.
+
+```bash
+# Install deps (first time only)
+npm install
+
+# Run all 18 tests — starts the dev server automatically
+npm run test:e2e
+
+# Interactive mode — watch each test run step-by-step in the browser
+npx playwright test --ui
+
+# Single file
+npx playwright test e2e/connect.spec.ts
+```
+
+Covered flows: connect screen (no wallet, install error, auto-detect, click-to-connect), wrong-network screen (display, chain ID, switch button), main UI (cards, token selector, buttons disabled before metadata loads, balance display, loading hint, token switching, pending unshield absence, mint button state).
+
+Tests run automatically on CI for every pull request that touches `examples/example-hoodi/`.
+
+---
+
 ## Going further
 
 - **Additional tokens** — add entries to the `TOKENS` constant in `src/app/page.tsx` with the ERC-20 address and the ERC-7984 wrapper address. Both can be found in the registry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`.
