@@ -11,7 +11,9 @@ function createFakeProvider() {
   const listeners = new Map<string, Set<(...args: never[]) => void>>();
   return {
     on(event: string, fn: (...args: never[]) => void) {
-      if (!listeners.has(event)) listeners.set(event, new Set());
+      if (!listeners.has(event)) {
+        listeners.set(event, new Set());
+      }
       listeners.get(event)!.add(fn);
     },
     removeListener(event: string, fn: (...args: never[]) => void) {

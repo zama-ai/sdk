@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "../utils/query";
-import { type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { isConfidentialQueryOptions, isWrapperQueryOptions } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
@@ -23,7 +23,7 @@ export { isConfidentialQueryOptions, isWrapperQueryOptions };
  */
 export function useIsConfidential(
   tokenAddress: Address,
-  options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
   const token = useReadonlyToken(tokenAddress);
 
@@ -68,7 +68,7 @@ export function useIsConfidentialSuspense(tokenAddress: Address) {
  */
 export function useIsWrapper(
   tokenAddress: Address,
-  options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
   const token = useReadonlyToken(tokenAddress);
 

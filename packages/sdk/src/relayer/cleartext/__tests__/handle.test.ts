@@ -1,5 +1,5 @@
 import { toBytes } from "viem";
-import { describe, expect, it } from "vitest";
+
 import { HANDLE_VERSION } from "../constants";
 import { fheTypeIdFromName } from "../fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "../handle";

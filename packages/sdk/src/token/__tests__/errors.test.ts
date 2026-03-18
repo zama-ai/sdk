@@ -8,6 +8,12 @@ import {
   SigningRejectedError,
   EncryptionFailedError,
   matchZamaError,
+  SigningFailedError,
+  wrapSigningError,
+  DelegationSelfNotAllowedError,
+  DelegationCooldownError,
+  DelegationNotFoundError,
+  DelegationExpiredError,
 } from "../errors";
 
 describe("InvalidKeypairError", () => {
@@ -108,8 +114,6 @@ describe("matchZamaError", () => {
 
 // --- wrapSigningError ---
 
-import { SigningFailedError, wrapSigningError } from "../errors";
-
 describe("wrapSigningError", () => {
   it("wraps Error as SigningRejectedError for code 4001", () => {
     const original = Object.assign(new Error("rejected"), { code: 4001 });
@@ -149,13 +153,6 @@ describe("wrapSigningError", () => {
 });
 
 // --- Delegation errors ---
-
-import {
-  DelegationSelfNotAllowedError,
-  DelegationCooldownError,
-  DelegationNotFoundError,
-  DelegationExpiredError,
-} from "../errors";
 
 describe("DelegationSelfNotAllowedError", () => {
   it("is instanceof ZamaError", () => {

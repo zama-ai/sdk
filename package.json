@@ -20,9 +20,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:integration": "vitest run --reporter=verbose --config vitest.integration.config.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm run --parallel --recursive '/^typecheck/'",
     "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
+    "lint:fix": "oxlint --fix --fix-suggestions",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "release:ci": "pnpm exec semantic-release",
@@ -81,6 +81,7 @@
     "mdbook": "workspace:*",
     "oxfmt": "^0.37.0",
     "oxlint": "^1.52.0",
+    "oxlint-tsgolint": "0.16.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "rolldown": "1.0.0-rc.9",
@@ -95,7 +96,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": "oxlint --fix",
-    "*.{ts,tsx,js,mjs,cjs,json,yaml,yml,md}": "oxfmt"
+    "*.{ts,tsx,js,mjs,cjs,json,yaml,yml}": "oxfmt"
   },
   "pnpm": {
     "overrides": {

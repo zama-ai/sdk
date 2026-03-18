@@ -242,7 +242,7 @@ describe("useConfidentialTransfer", () => {
     signer,
     relayer,
   }) => {
-    const handleB = `0x${"44".repeat(32)}` as Address;
+    const handleB = `0x${"44".repeat(32)}`;
 
     vi.mocked(signer.readContract).mockResolvedValueOnce(HANDLE).mockResolvedValueOnce(handleB);
     vi.mocked(relayer.userDecrypt)
@@ -312,8 +312,8 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0]!,
+    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0],
     );
 
     await act(async () => {
@@ -419,8 +419,8 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0]!,
+    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0],
     );
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3800n);
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 5000n);
@@ -448,7 +448,9 @@ describe("useConfidentialTransfer optimistic updates", () => {
       callCount++;
       // First call is the optimistic subtract, let it through.
       // Second call (rollback) should throw.
-      if (callCount <= 1) return originalSetQueryData(key, value);
+      if (callCount <= 1) {
+        return originalSetQueryData(key, value);
+      }
       throw new Error("rollback boom");
     });
 
@@ -456,7 +458,9 @@ describe("useConfidentialTransfer optimistic updates", () => {
     // propagating through the mutation executor.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const suppress = (reason: any) => {
-      if (reason instanceof Error && reason.message === "rollback boom") return;
+      if (reason instanceof Error && reason.message === "rollback boom") {
+        return;
+      }
       throw reason;
     };
     process.on("unhandledRejection", suppress);

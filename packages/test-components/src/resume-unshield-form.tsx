@@ -85,7 +85,9 @@ export function ResumeUnshieldForm({
       {/* Step 2: Resume unshield from tx hash */}
       <form
         action={() => {
-          if (!unwrapTxHash) return;
+          if (!unwrapTxHash) {
+            return;
+          }
           resumeUnshield.mutate({ unwrapTxHash: unwrapTxHash as `0x${string}` });
         }}
         className="space-y-4"

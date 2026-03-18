@@ -1,7 +1,6 @@
 import { act, waitFor } from "@testing-library/react";
 import { describe, expect, test } from "../../test-fixtures";
-import { TOKEN, expectDefaultMutationState } from "../../__tests__/mutation-test-helpers";
-import { USER } from "../../__tests__/mutation-test-helpers";
+import { TOKEN, USER, expectDefaultMutationState } from "../../__tests__/mutation-test-helpers";
 import { useEncrypt } from "../use-encrypt";
 
 describe("useEncrypt", () => {

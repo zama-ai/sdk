@@ -33,7 +33,9 @@ export function confidentialHandleQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, owner: keyOwner }] = context.queryKey;
-      if (!keyOwner) throw new Error("owner is required");
+      if (!keyOwner) {
+        throw new Error("owner is required");
+      }
       const handle = await signer.readContract(
         confidentialBalanceOfContract(keyTokenAddress, keyOwner),
       );

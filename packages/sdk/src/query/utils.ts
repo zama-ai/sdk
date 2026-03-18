@@ -7,16 +7,22 @@ function isPlainObject(value: any): value is Object {
 
   // If has modified constructor
   const ctor = value.constructor;
-  if (typeof ctor === "undefined") return true;
+  if (ctor === undefined) {
+    return true;
+  }
 
   // If has modified prototype
   const prot = ctor.prototype;
-  if (!hasObjectPrototype(prot)) return false;
+  if (!hasObjectPrototype(prot)) {
+    return false;
+  }
 
   // If constructor does not have an Object-specific method
   // biome-ignore lint/suspicious/noPrototypeBuiltins: using
   // eslint-disable-next-line no-prototype-builtins
-  if (!prot.hasOwnProperty("isPrototypeOf")) return false;
+  if (!prot.hasOwnProperty("isPrototypeOf")) {
+    return false;
+  }
 
   // Most likely a plain Object
   return true;
@@ -116,7 +122,7 @@ export function hashFn(queryKey: readonly unknown[]): string {
   return JSON.stringify(queryKey, (_, value) => {
     if (isPlainObject(value)) {
       return Object.keys(value)
-        .sort()
+        .toSorted()
         .reduce(
           (result, key) => {
             result[key] = value[key];

@@ -8,7 +8,7 @@ import type {
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
 import { getBrowserExtensionRuntime } from "../utils";
-import workerCode, { filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
+import { default as workerCode, filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
 
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
@@ -76,6 +76,8 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
    * Call this before making authenticated requests to ensure the token is fresh.
    */
   async updateCsrf(csrfToken: string): Promise<void> {
-    await this.sendRequest<UpdateCsrfResponseData>("UPDATE_CSRF", { csrfToken });
+    await this.sendRequest<UpdateCsrfResponseData>("UPDATE_CSRF", {
+      csrfToken,
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { type Hex } from "viem";
+import type { Hex } from "viem";
 
 /** Coerce an unknown caught value to an Error instance. */
 export function toError(error: unknown): Error {
@@ -111,14 +111,14 @@ export function getBrowserExtensionRuntime(): BrowserExtensionRuntime | undefine
  * Defaults to `Infinity` (equivalent to `Promise.all`).
  */
 export async function pLimit<T>(
-  fns: Array<() => Promise<T>>,
+  fns: (() => Promise<T>)[],
   maxConcurrency = Infinity,
 ): Promise<T[]> {
-  if (!isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
+  if (!Number.isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
     return Promise.all(fns.map((f) => f()));
   }
 
-  const results: T[] = new Array(fns.length);
+  const results: T[] = Array.from({ length: fns.length });
   let index = 0;
 
   async function worker() {

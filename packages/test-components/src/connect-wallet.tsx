@@ -10,7 +10,7 @@ const BURNER_PK_KEY = "burnerWallet.pk";
  * - Otherwise, use the injected connector (MetaMask / browser wallet)
  */
 function pickConnector(connectors: readonly { id: string; name: string }[]) {
-  const hasBurnerPk = typeof window !== "undefined" && !!localStorage.getItem(BURNER_PK_KEY);
+  const hasBurnerPk = typeof window !== "undefined" && Boolean(localStorage.getItem(BURNER_PK_KEY));
 
   if (hasBurnerPk) {
     return connectors.find((c) => c.id === "burnerWallet") ?? connectors[0];
@@ -44,8 +44,9 @@ export function ConnectWallet() {
     <button
       onClick={() => {
         const connector = pickConnector(connectors);
-        if (connector)
+        if (connector) {
           connect({ connector: connector as Parameters<typeof connect>[0]["connector"] });
+        }
       }}
       className="px-2.5 py-1 text-xs font-medium bg-zama-yellow text-zama-black rounded hover:bg-zama-yellow-hover transition-colors"
     >

@@ -6,8 +6,7 @@ import { useDelegationStatus } from "../use-delegation-status";
 import { TOKEN, RECIPIENT, USER } from "../../__tests__/mutation-test-helpers";
 
 vi.mock("@tanstack/react-query", async () => {
-  const actual =
-    await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+  const actual = await vi.importActual("@tanstack/react-query");
   return { ...actual, useQuery: vi.fn(() => ({ data: undefined })) };
 });
 

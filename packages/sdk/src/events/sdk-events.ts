@@ -1,4 +1,4 @@
-import { type Address, type Hex } from "viem";
+import type { Address, Hex } from "viem";
 
 /**
  * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.
