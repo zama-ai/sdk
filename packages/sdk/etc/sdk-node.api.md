@@ -155,10 +155,10 @@ export interface CreateEIP712ResponseData {
     };
     // (undocumented)
     types: {
-        UserDecryptRequestVerification: Array<{
+        UserDecryptRequestVerification: {
             name: string;
             type: string;
-        }>;
+        }[];
     };
 }
 
@@ -234,12 +234,10 @@ export interface EIP712TypedData {
     // (undocumented)
     primaryType?: string;
     // (undocumented)
-    types: {
-        [key: string]: ReadonlyArray<{
-            readonly name: string;
-            readonly type: string;
-        }>;
-    };
+    types: Record<string, readonly {
+        readonly name: string;
+        readonly type: string;
+    }[]>;
 }
 
 // @public
@@ -513,6 +511,8 @@ export class RelayerNode implements RelayerSDK {
     // (undocumented)
     generateKeypair(): Promise<KeypairType_2<Hex>>;
     // (undocumented)
+    getAclAddress(): Promise<Address>;
+    // (undocumented)
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;
@@ -549,6 +549,7 @@ export interface RelayerSDK {
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
+    getAclAddress(): Promise<Address>;
     getPublicKey(): Promise<{
         publicKeyId: string;
         publicKey: Uint8Array;

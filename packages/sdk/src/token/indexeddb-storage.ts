@@ -22,8 +22,12 @@ export class IndexedDBStorage implements GenericStorage {
   }
 
   #getDB(): Promise<IDBDatabase> {
-    if (this.#db) return Promise.resolve(this.#db);
-    if (this.#dbPromise) return this.#dbPromise;
+    if (this.#db) {
+      return Promise.resolve(this.#db);
+    }
+    if (this.#dbPromise) {
+      return this.#dbPromise;
+    }
 
     this.#dbPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(this.#dbName, this.#dbVersion);
@@ -60,52 +64,41 @@ export class IndexedDBStorage implements GenericStorage {
     return this.#dbPromise;
   }
 
-  async get<T = unknown>(key: string): Promise<T | null> {
+  async #withTransaction<T>(
+    mode: IDBTransactionMode,
+    fn: (store: IDBObjectStore) => IDBRequest,
+  ): Promise<T> {
     const db = await this.#getDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.#storeName, "readonly");
+      const tx = db.transaction(this.#storeName, mode);
       tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
-      const store = tx.objectStore(this.#storeName);
-      const request = store.get(key);
-      request.onsuccess = () => resolve(request.result?.value ?? null);
+      const request = fn(tx.objectStore(this.#storeName));
+      if (mode === "readonly") {
+        request.onsuccess = () => resolve(request.result);
+      } else {
+        tx.oncomplete = () => resolve(request.result);
+      }
       request.onerror = () => reject(request.error);
     });
+  }
+
+  async get<T = unknown>(key: string): Promise<T | null> {
+    const result = await this.#withTransaction<{ value: T } | undefined>("readonly", (store) =>
+      store.get(key),
+    );
+    return result?.value ?? null;
   }
 
   async set<T = unknown>(key: string, value: T): Promise<void> {
-    const db = await this.#getDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.#storeName, "readwrite");
-      tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
-      const store = tx.objectStore(this.#storeName);
-      const request = store.put({ key, value });
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.#withTransaction<void>("readwrite", (store) => store.put({ key, value }));
   }
 
   async delete(key: string): Promise<void> {
-    const db = await this.#getDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.#storeName, "readwrite");
-      tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
-      const store = tx.objectStore(this.#storeName);
-      const request = store.delete(key);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.#withTransaction<void>("readwrite", (store) => store.delete(key));
   }
 
   async clear(): Promise<void> {
-    const db = await this.#getDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.#storeName, "readwrite");
-      tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
-      const store = tx.objectStore(this.#storeName);
-      const request = store.clear();
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.#withTransaction<void>("readwrite", (store) => store.clear());
   }
 }
 

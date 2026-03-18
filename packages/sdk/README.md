@@ -20,6 +20,44 @@ yarn add @zama-fhe/sdk
 | `ethers`                | >= 6    | Optional — for the `@zama-fhe/sdk/ethers` adapter  |
 | `@zama-fhe/relayer-sdk` | >= 0.4  | Optional — only for `@zama-fhe/sdk/node` (Node.js) |
 
+## Module Systems (ESM & CJS)
+
+The SDK ships both ESM and CommonJS builds. Most modern toolchains use ESM automatically — no extra configuration needed. If your project uses CommonJS (`"type": "commonjs"` in `package.json` or `"moduleResolution": "node"` in `tsconfig.json`), the `require` condition is resolved automatically.
+
+### ESM (recommended)
+
+```ts
+import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+```
+
+### CommonJS
+
+```js
+const { ZamaSDK, RelayerWeb } = require("@zama-fhe/sdk");
+const { EthersSigner } = require("@zama-fhe/sdk/ethers");
+```
+
+### Available subpath exports
+
+| Subpath                   | Description                          | CJS |
+| ------------------------- | ------------------------------------ | --- |
+| `@zama-fhe/sdk`           | Core SDK (ZamaSDK, RelayerWeb, etc.) | Yes |
+| `@zama-fhe/sdk/viem`      | Viem adapter (ViemSigner)            | Yes |
+| `@zama-fhe/sdk/ethers`    | Ethers adapter (EthersSigner)        | Yes |
+| `@zama-fhe/sdk/node`      | Node.js backend (RelayerNode)        | No  |
+| `@zama-fhe/sdk/query`     | TanStack Query integration           | Yes |
+| `@zama-fhe/sdk/cleartext` | Cleartext testing adapter            | Yes |
+
+> **Note:** The `@zama-fhe/sdk/node` subpath is ESM-only because it relies on `node:worker_threads` which is inherently ESM-oriented.
+
+### TypeScript configuration
+
+The SDK works with all TypeScript `moduleResolution` modes:
+
+- **`"bundler"` / `"node16"` / `"nodenext"`** — resolved via the `exports` field (recommended)
+- **`"node"`** — resolved via the `typesVersions` fallback
+
 ## Quick Start
 
 ### Browser
@@ -141,23 +179,25 @@ You can also implement the `RelayerSDK` interface for custom backends.
 
 Full read/write interface for a single confidential ERC-20. Extends `ReadonlyToken`. The encrypted ERC-20 contract IS the wrapper, so `wrapper` defaults to the token `address`. Pass an explicit `wrapper` only if they differ.
 
-| Method                                     | Description                                                                                                                                                                                                  |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `shield(amount, options?)`                 | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
-| `shieldETH(amount, value?)`                | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
-| `unshield(amount, callbacks?)`             | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                                   |
-| `unshieldAll(callbacks?)`                  | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                               |
-| `unwrap(amount)`                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
-| `unwrapAll()`                              | Request unwrap for the entire balance (low-level, requires manual finalization).                                                                                                                             |
-| `resumeUnshield(unwrapTxHash, callbacks?)` | Resume an interrupted unshield from an existing unwrap tx hash. Goes straight to wait receipt → finalize.                                                                                                    |
-| `finalizeUnwrap(burnAmountHandle)`         | Complete unwrap with public decryption proof.                                                                                                                                                                |
-| `confidentialTransfer(to, amount)`         | Encrypted transfer. Encrypts amount, then calls the contract.                                                                                                                                                |
-| `confidentialTransferFrom(from, to, amt)`  | Operator encrypted transfer.                                                                                                                                                                                 |
-| `approve(spender, until?)`                 | Set operator approval. `until` defaults to now + 1 hour.                                                                                                                                                     |
-| `isApproved(spender)`                      | Check if a spender is an approved operator.                                                                                                                                                                  |
-| `approveUnderlying(amount?)`               | Approve wrapper to spend underlying ERC-20. Default: max uint256.                                                                                                                                            |
-| `balanceOf(owner?)`                        | Decrypt and return the plaintext balance.                                                                                                                                                                    |
-| `decryptHandles(handles, owner?)`          | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
+| Method                                                     | Description                                                                                                                                                                                                  |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `shield(amount, options?)`                                 | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
+| `shieldETH(amount, value?)`                                | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
+| `unshield(amount, callbacks?)`                             | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                                   |
+| `unshieldAll(callbacks?)`                                  | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                               |
+| `unwrap(amount)`                                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
+| `unwrapAll()`                                              | Request unwrap for the entire balance (low-level, requires manual finalization).                                                                                                                             |
+| `resumeUnshield(unwrapTxHash, callbacks?)`                 | Resume an interrupted unshield from an existing unwrap tx hash. Goes straight to wait receipt → finalize.                                                                                                    |
+| `finalizeUnwrap(burnAmountHandle)`                         | Complete unwrap with public decryption proof.                                                                                                                                                                |
+| `confidentialTransfer(to, amount)`                         | Encrypted transfer. Encrypts amount, then calls the contract.                                                                                                                                                |
+| `confidentialTransferFrom(from, to, amt)`                  | Operator encrypted transfer.                                                                                                                                                                                 |
+| `approve(spender, until?)`                                 | Set operator approval. `until` defaults to now + 1 hour.                                                                                                                                                     |
+| `isApproved(spender)`                                      | Check if a spender is an approved operator.                                                                                                                                                                  |
+| `approveUnderlying(amount?)`                               | Approve wrapper to spend underlying ERC-20. Default: max uint256.                                                                                                                                            |
+| `delegateDecryption({ delegateAddress, expirationDate? })` | Grant decryption rights to another address via the on-chain ACL. Default: permanent. ACL address resolved from relayer config.                                                                               |
+| `revokeDelegation({ delegateAddress })`                    | Revoke decryption delegation for this token. ACL address resolved from relayer config.                                                                                                                       |
+| `balanceOf(owner?)`                                        | Decrypt and return the plaintext balance.                                                                                                                                                                    |
+| `decryptHandles(handles, owner?)`                          | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
 
 All write methods return a `TransactionResult` object:
 
@@ -172,28 +212,31 @@ interface TransactionResult {
 
 Read-only subset. No wrapper address needed.
 
-| Method                                | Description                                                                 |
-| ------------------------------------- | --------------------------------------------------------------------------- |
-| `balanceOf(owner?)`                   | Decrypt and return the plaintext balance.                                   |
-| `confidentialBalanceOf(owner?)`       | Return the raw encrypted balance handle (no decryption).                    |
-| `decryptBalance(handle, owner?)`      | Decrypt a single encrypted handle.                                          |
-| `decryptHandles(handles, owner?)`     | Batch-decrypt handles in a single relayer call.                             |
-| `allow()`                             | Ensure FHE decrypt credentials exist (generates/signs if needed).           |
-| `allow(...tokens)` _(static)_         | Pre-authorize multiple tokens with a single wallet signature.               |
-| `isAllowed()`                         | Whether a session signature is currently cached for this token.             |
-| `revoke()`                            | Clear the session signature for the connected wallet.                       |
-| `credentials.allow(...addresses)`     | Pre-authorize and cache the session signature for specific token addresses. |
-| `credentials.revoke(...addresses?)`   | Clear the session signature for the connected wallet.                       |
-| `credentials.isAllowed()`             | Whether a session signature is currently cached.                            |
-| `credentials.isExpired(address?)`     | Whether stored credentials are past their expiration time.                  |
-| `credentials.clear()`                 | Delete stored credentials for the connected wallet.                         |
-| `isConfidential()`                    | ERC-165 check for ERC-7984 support.                                         |
-| `isWrapper()`                         | ERC-165 check for wrapper interface.                                        |
-| `discoverWrapper(coordinatorAddress)` | Look up a wrapper for this token via the deployment coordinator.            |
-| `underlyingToken()`                   | Read the underlying ERC-20 address from a wrapper.                          |
-| `allowance(wrapper, owner?)`          | Read ERC-20 allowance of the underlying token.                              |
-| `isZeroHandle(handle)`                | Returns `true` if the handle is the zero sentinel.                          |
-| `name()` / `symbol()` / `decimals()`  | Read token metadata.                                                        |
+| Method                                                       | Description                                                                            |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `balanceOf(owner?)`                                          | Decrypt and return the plaintext balance.                                              |
+| `confidentialBalanceOf(owner?)`                              | Return the raw encrypted balance handle (no decryption).                               |
+| `decryptBalance(handle, owner?)`                             | Decrypt a single encrypted handle.                                                     |
+| `decryptHandles(handles, owner?)`                            | Batch-decrypt handles in a single relayer call.                                        |
+| `allow()`                                                    | Ensure FHE decrypt credentials exist (generates/signs if needed).                      |
+| `allow(...tokens)` _(static)_                                | Pre-authorize multiple tokens with a single wallet signature.                          |
+| `isAllowed()`                                                | Whether a session signature is currently cached for this token.                        |
+| `revoke()`                                                   | Clear the session signature for the connected wallet.                                  |
+| `credentials.allow(...addresses)`                            | Pre-authorize and cache the session signature for specific token addresses.            |
+| `credentials.revoke(...addresses?)`                          | Clear the session signature for the connected wallet.                                  |
+| `credentials.isAllowed()`                                    | Whether a session signature is currently cached.                                       |
+| `credentials.isExpired(address?)`                            | Whether stored credentials are past their expiration time.                             |
+| `credentials.clear()`                                        | Delete stored credentials for the connected wallet.                                    |
+| `decryptBalanceAs({ delegatorAddress, owner? })`             | Decrypt a delegator's balance as a delegate. ACL address resolved from relayer config. |
+| `isDelegated({ delegatorAddress, delegateAddress })`         | Check if a delegation is active and unexpired.                                         |
+| `getDelegationExpiry({ delegatorAddress, delegateAddress })` | Raw expiry timestamp (`0n` = none, `2^64-1` = permanent).                              |
+| `isConfidential()`                                           | ERC-165 check for ERC-7984 support.                                                    |
+| `isWrapper()`                                                | ERC-165 check for wrapper interface.                                                   |
+| `discoverWrapper(coordinatorAddress)`                        | Look up a wrapper for this token via the deployment coordinator.                       |
+| `underlyingToken()`                                          | Read the underlying ERC-20 address from a wrapper.                                     |
+| `allowance(wrapper, owner?)`                                 | Read ERC-20 allowance of the underlying token.                                         |
+| `isZeroHandle(handle)`                                       | Returns `true` if the handle is the zero sentinel.                                     |
+| `name()` / `symbol()` / `decimals()`                         | Read token metadata.                                                                   |
 
 Static methods for multi-token operations:
 
@@ -208,6 +251,21 @@ const balances = await ReadonlyToken.batchDecryptBalances(tokens, { owner });
 
 // Decrypt pre-fetched handles for multiple tokens
 const balances = await ReadonlyToken.batchDecryptBalances(tokens, { handles, owner });
+```
+
+Batch delegation (on `Token`):
+
+```ts
+const tokens = addresses.map((a) => sdk.createToken(a));
+
+// Delegate across multiple tokens — returns Map<Address, TransactionResult | ZamaError>
+const results = await Token.batchDelegateDecryption({
+  tokens,
+  delegateAddress: "0xDelegate",
+});
+
+// Revoke across multiple tokens
+const results = await Token.batchRevokeDelegation(tokens, "0xDelegate");
 ```
 
 ### Pending Unshield Persistence

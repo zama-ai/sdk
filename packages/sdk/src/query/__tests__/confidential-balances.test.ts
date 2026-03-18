@@ -7,9 +7,9 @@ import { zamaQueryKeys } from "../query-keys";
 import type { Address } from "viem";
 
 describe("confidentialBalancesQueryOptions", () => {
-  const tokenA = "0x1111111111111111111111111111111111111111";
-  const tokenB = "0x3333333333333333333333333333333333333333";
-  const owner = "0x2222222222222222222222222222222222222222";
+  const tokenA = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
+  const tokenB = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C";
+  const owner = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
 
   test("uses expected key shape and staleTime Infinity", ({ createMockReadonlyToken }) => {
     const t1 = createMockReadonlyToken(tokenA);
@@ -102,7 +102,7 @@ describe("confidentialBalancesQueryOptions", () => {
       }),
     );
     // onError callback is passed but we don't assert its identity
-    expect(batchSpy.mock.calls[0]![1]).toHaveProperty("onError");
+    expect(batchSpy.mock.calls[0][1]).toHaveProperty("onError");
 
     expect(result.balances.get(tokenA as Address)).toBe(10n);
     expect(result.balances.get(tokenB as Address)).toBe(20n);

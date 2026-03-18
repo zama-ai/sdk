@@ -12,7 +12,13 @@ export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
-export { useUserDecrypt } from "./relayer/use-user-decrypt";
+export {
+  useUserDecrypt,
+  type DecryptHandle,
+  type DecryptParams,
+  type DecryptCallbacks,
+  type UseUserDecryptConfig,
+} from "./relayer/use-user-decrypt";
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
 export { useCreateEIP712 } from "./relayer/use-create-eip712";
@@ -24,19 +30,9 @@ export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-ve
 export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
 export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
 
-// Orchestration hooks
-export {
-  useUserDecryptFlow,
-  type DecryptHandle,
-  type UserDecryptFlowParams,
-  type UserDecryptFlowCallbacks,
-  type UseUserDecryptFlowConfig,
-} from "./relayer/use-user-decrypt-flow";
-
 // Read hooks (cached lookups)
 export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";
 export { useUserDecryptedValues } from "./relayer/use-user-decrypted-values";
-export { decryptionKeys } from "./relayer/decryption-cache";
 
 // Re-export core classes
 export {
@@ -45,9 +41,11 @@ export {
   Token,
   ReadonlyToken,
   MemoryStorage,
+  memoryStorage,
   IndexedDBStorage,
   indexedDBStorage,
   CredentialsManager,
+  DelegatedCredentialsManager,
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "@zama-fhe/sdk";
@@ -83,6 +81,9 @@ export type {
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
+  DelegatedCredentialsManagerConfig,
+  DelegatedStoredCredentials,
+  BatchDecryptAsOptions,
   CredentialsManagerConfig,
   ZamaSDKEventType,
   ZamaSDKEvent,
@@ -127,19 +128,6 @@ export { HardhatConfig, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
 
 // Re-export constants
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
-
-// Re-export ABIs
-export {
-  ERC20_ABI,
-  ERC20_METADATA_ABI,
-  DEPLOYMENT_COORDINATOR_ABI,
-  ERC165_ABI,
-  ENCRYPTION_ABI,
-  FEE_MANAGER_ABI,
-  TRANSFER_BATCHER_ABI,
-  WRAPPER_ABI,
-  BATCH_SWAP_ABI,
-} from "@zama-fhe/sdk";
 
 // Re-export all contract call builders
 export {
@@ -191,9 +179,9 @@ export {
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
-export { useAllow } from "./token/use-allow";
+export { useAllowTokens } from "./token/use-allow-tokens";
 export { useIsAllowed } from "./token/use-is-allowed";
-export { useRevoke } from "./token/use-revoke";
+export { useRevokeTokens } from "./token/use-revoke-tokens";
 export { useRevokeSession } from "./token/use-revoke-session";
 export {
   useConfidentialTransfer,
@@ -208,7 +196,7 @@ export {
   type UseConfidentialIsApprovedSuspenseConfig,
 } from "./token/use-confidential-is-approved";
 export { useShield, type UseShieldConfig } from "./token/use-shield";
-export { useShieldETH } from "./token/use-shield-eth";
+export { useShieldETH, type UseShieldETHConfig } from "./token/use-shield-eth";
 export { useUnwrap } from "./token/use-unwrap";
 export { useUnwrapAll } from "./token/use-unwrap-all";
 export { useFinalizeUnwrap } from "./token/use-finalize-unwrap";
@@ -228,6 +216,11 @@ export {
 } from "./token/use-wrapper-discovery";
 export { useMetadata, useMetadataSuspense, type TokenMetadata } from "./token/use-metadata";
 export { useActivityFeed, type UseActivityFeedConfig } from "./token/use-activity-feed";
+export { useDelegateDecryption } from "./token/use-delegate-decryption";
+export { useRevokeDelegation } from "./token/use-revoke-delegation";
+export { useDelegationStatus, type UseDelegationStatusConfig } from "./token/use-delegation-status";
+export { useDecryptBalanceAs } from "./token/use-decrypt-balance-as";
+export { useBatchDecryptBalancesAs } from "./token/use-batch-decrypt-balances-as";
 export { useApproveUnderlying } from "./token/use-approve-underlying";
 export {
   useIsConfidential,
@@ -293,10 +286,30 @@ export {
   finalizeUnwrapMutationOptions,
   type FinalizeUnwrapParams,
   encryptMutationOptions,
+  generateKeypairMutationOptions,
+  createEIP712MutationOptions,
+  createDelegatedUserDecryptEIP712MutationOptions,
+  delegatedUserDecryptMutationOptions,
+  publicDecryptMutationOptions,
+  requestZKProofVerificationMutationOptions,
+  userDecryptMutationOptions,
+  type UserDecryptMutationParams,
+  type UserDecryptCallbacks,
   allowMutationOptions,
   isAllowedQueryOptions,
   revokeMutationOptions,
   revokeSessionMutationOptions,
+  delegateDecryptionMutationOptions,
+  type DelegateDecryptionParams,
+  decryptBalanceAsMutationOptions,
+  type DecryptBalanceAsParams,
+  batchDecryptBalancesAsMutationOptions,
+  type BatchDecryptBalancesAsParams,
+  revokeDelegationMutationOptions,
+  type RevokeDelegationParams,
+  delegationStatusQueryOptions,
+  type DelegationStatusData,
+  type DelegationStatusQueryConfig,
 } from "@zama-fhe/sdk/query";
 export type {
   OptimisticBalanceSnapshot,

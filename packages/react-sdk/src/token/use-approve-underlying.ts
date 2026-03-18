@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import type { UseMutationOptions } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
   approveUnderlyingMutationOptions,
@@ -13,6 +14,10 @@ import { useToken, type UseZamaConfig } from "./use-token";
  * Approve the wrapper contract to spend the underlying ERC-20.
  * Defaults to max uint256. Resets to zero first if there's an existing
  * non-zero allowance (required by tokens like USDT).
+ *
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link TransactionRevertedError} — approval transaction reverted
  *
  * @param config - Token and wrapper addresses.
  * @param options - React Query mutation options.

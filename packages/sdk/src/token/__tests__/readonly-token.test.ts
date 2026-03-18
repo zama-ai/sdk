@@ -1,11 +1,9 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
-import { ReadonlyToken } from "../readonly-token";
-import { ZERO_HANDLE } from "../readonly-token";
-import { ZamaErrorCode } from "../errors";
+import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
+import { ZamaErrorCode, DecryptionFailedError } from "../errors";
 import type { GenericSigner, GenericStorage } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-
-import { DecryptionFailedError } from "../errors";
+import { saveCachedBalance } from "../balance-cache";
 import { getAddress, type Address } from "viem";
 
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
@@ -102,7 +100,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const result = await token.decryptHandles([handle as Address, VALID_HANDLE2 as Address]);
+      const result = await token.decryptHandles([handle, VALID_HANDLE2]);
 
       expect(result.get(handle)).toBe(1000n);
       expect(result.get(VALID_HANDLE2)).toBe(2000n);
@@ -131,7 +129,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const result = await token.decryptHandles([ZERO_HANDLE as Address, handle as Address]);
+      const result = await token.decryptHandles([ZERO_HANDLE as Address, handle]);
 
       expect(result.get(ZERO_HANDLE)).toBe(0n);
       expect(result.get(handle)).toBe(1000n);
@@ -183,7 +181,7 @@ describe("ReadonlyToken", () => {
         handle,
       });
       const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
-      await token.decryptHandles([handle as Address], otherOwner);
+      await token.decryptHandles([handle], otherOwner);
 
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -209,7 +207,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      await token.decryptHandles([handle as Address]);
+      await token.decryptHandles([handle]);
 
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -237,9 +235,9 @@ describe("ReadonlyToken", () => {
       const unknownHandle = ("0x" + "ff".repeat(32)) as Address;
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({});
 
-      const result = await token.decryptHandles([unknownHandle as Address]);
-
-      expect(result.get(unknownHandle)).toBe(0n);
+      await expect(token.decryptHandles([unknownHandle as Address])).rejects.toThrow(
+        "Decryption returned no value for handle",
+      );
     });
 
     it("throws ZamaError on decryption failure", async ({
@@ -260,7 +258,7 @@ describe("ReadonlyToken", () => {
       });
       vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
-      await expect(token.decryptHandles([handle as Address])).rejects.toMatchObject({
+      await expect(token.decryptHandles([handle])).rejects.toMatchObject({
         code: ZamaErrorCode.DecryptionFailed,
         message: "Failed to decrypt handles",
       });
@@ -284,12 +282,12 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const UNDERLYING = "0x9999999999999999999999999999999999999999" as Address;
+      const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(UNDERLYING) // underlying()
         .mockResolvedValueOnce(500n); // allowance()
 
-      const result = await token.allowance("0x4444444444444444444444444444444444444444" as Address);
+      const result = await token.allowance("0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address);
 
       expect(result).toBe(500n);
       expect(signer.readContract).toHaveBeenCalledTimes(2);
@@ -337,7 +335,7 @@ describe("ReadonlyToken", () => {
 
       await expect(
         ReadonlyToken.batchDecryptBalances([token, token2], {
-          handles: [handle as Address, VALID_HANDLE2 as Address],
+          handles: [handle, VALID_HANDLE2],
         }),
       ).rejects.toThrow(DecryptionFailedError);
 
@@ -347,7 +345,7 @@ describe("ReadonlyToken", () => {
 
       await expect(
         ReadonlyToken.batchDecryptBalances([token, token2], {
-          handles: [handle as Address, VALID_HANDLE2 as Address],
+          handles: [handle, VALID_HANDLE2],
         }),
       ).rejects.toThrow(/Batch decryption failed for 1 token\(s\)/);
     });
@@ -381,7 +379,7 @@ describe("ReadonlyToken", () => {
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
-        handles: [handle as Address, VALID_HANDLE2 as Address],
+        handles: [handle, VALID_HANDLE2],
         onError: () => 0n,
       });
 
@@ -417,9 +415,9 @@ describe("ReadonlyToken", () => {
         .mockResolvedValueOnce({ [handle]: 1000n })
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
-      const captured: Array<{ error: Error; address: Address }> = [];
+      const captured: { error: Error; address: Address }[] = [];
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
-        handles: [handle as Address, VALID_HANDLE2 as Address],
+        handles: [handle, VALID_HANDLE2],
         onError: (error, address) => {
           captured.push({ error, address });
           return 42n;
@@ -429,8 +427,8 @@ describe("ReadonlyToken", () => {
       expect(result.get(tokenAddress)).toBe(1000n);
       expect(result.get(getAddress(TOKEN2))).toBe(42n);
       expect(captured).toHaveLength(1);
-      expect(captured[0]!.address).toBe(getAddress(TOKEN2));
-      expect(captured[0]!.error.message).toBe("decrypt failed");
+      expect(captured[0].address).toBe(getAddress(TOKEN2));
+      expect(captured[0].error.message).toBe("decrypt failed");
     });
   });
 
@@ -453,9 +451,121 @@ describe("ReadonlyToken", () => {
       });
       await expect(
         ReadonlyToken.batchDecryptBalances([token], {
-          handles: [handle as Address, VALID_HANDLE2 as Address],
+          handles: [handle, VALID_HANDLE2],
         }),
       ).rejects.toThrow(/tokens\.length.*must equal.*handles\.length/);
+    });
+  });
+
+  describe("batchDecryptBalances (cache-aware allow)", () => {
+    const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+
+    it("skips allow() entirely when all balances are cached", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const token2 = new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        address: TOKEN2,
+      });
+
+      const signerAddress = await signer.getAddress();
+
+      // Pre-populate cache for both tokens
+      await saveCachedBalance({
+        storage,
+        tokenAddress,
+        owner: signerAddress,
+        handle: handle,
+        value: 1000n,
+      });
+      await saveCachedBalance({
+        storage,
+        tokenAddress: TOKEN2,
+        owner: signerAddress,
+        handle: VALID_HANDLE2,
+        value: 2000n,
+      });
+
+      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+        handles: [handle, VALID_HANDLE2],
+      });
+
+      expect(result.get(tokenAddress)).toBe(1000n);
+      expect(result.get(getAddress(TOKEN2))).toBe(2000n);
+      // No credentials needed — no keypair generation or signing
+      expect(relayer.generateKeypair).not.toHaveBeenCalled();
+      expect(signer.signTypedData).not.toHaveBeenCalled();
+    });
+
+    it("calls allow() only with uncached token addresses", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const token2 = new ReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        address: TOKEN2,
+      });
+
+      const signerAddress = await signer.getAddress();
+
+      // Pre-populate cache only for token1
+      await saveCachedBalance({
+        storage,
+        tokenAddress,
+        owner: signerAddress,
+        handle: handle,
+        value: 1000n,
+      });
+
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({
+        [VALID_HANDLE2]: 2000n,
+      } as never);
+
+      const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
+        handles: [handle, VALID_HANDLE2],
+      });
+
+      expect(result.get(tokenAddress)).toBe(1000n);
+      expect(result.get(getAddress(TOKEN2))).toBe(2000n);
+      // Credentials generated only for the uncached token
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
+      // createEIP712 called with only token2's address
+      const eip712Call = vi.mocked(relayer.createEIP712).mock.calls[0];
+      const signedAddresses = eip712Call[1];
+      expect(signedAddresses).toHaveLength(1);
+      expect(signedAddresses[0].toLowerCase()).toBe(TOKEN2.toLowerCase());
     });
   });
 

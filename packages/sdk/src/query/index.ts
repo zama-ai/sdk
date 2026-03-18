@@ -95,10 +95,40 @@ export { unwrapMutationOptions, type UnwrapParams } from "./unwrap";
 export { unwrapAllMutationOptions } from "./unwrap-all";
 export { finalizeUnwrapMutationOptions, type FinalizeUnwrapParams } from "./finalize-unwrap";
 export { encryptMutationOptions } from "./encrypt";
+export { generateKeypairMutationOptions } from "./generate-keypair";
+export { createEIP712MutationOptions, type CreateEIP712Params } from "./create-eip712";
+export {
+  createDelegatedUserDecryptEIP712MutationOptions,
+  type CreateDelegatedUserDecryptEIP712Params,
+} from "./create-delegated-user-decrypt-eip712";
+export { delegatedUserDecryptMutationOptions } from "./delegated-user-decrypt";
+export { publicDecryptMutationOptions } from "./public-decrypt";
+export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
 export { allowMutationOptions } from "./allow";
 export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokeMutationOptions } from "./revoke";
 export { revokeSessionMutationOptions } from "./revoke-session";
+export {
+  delegateDecryptionMutationOptions,
+  type DelegateDecryptionParams,
+} from "./delegate-decryption";
+export {
+  userDecryptMutationOptions,
+  type UserDecryptMutationParams,
+  type UserDecryptCallbacks,
+  type DecryptHandle,
+} from "./user-decrypt";
+export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
+export {
+  batchDecryptBalancesAsMutationOptions,
+  type BatchDecryptBalancesAsParams,
+} from "./batch-decrypt-balances-as";
+export { revokeDelegationMutationOptions, type RevokeDelegationParams } from "./revoke-delegation";
+export {
+  delegationStatusQueryOptions,
+  type DelegationStatusData,
+  type DelegationStatusQueryConfig,
+} from "./delegation-status";
 export type { ActivityItem, ActivityLogMetadata } from "../activity";
 export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";
@@ -119,7 +149,11 @@ export type {
   UserDecryptParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type { BatchDecryptOptions, ReadonlyTokenConfig } from "../token/readonly-token";
+export type {
+  BatchDecryptOptions,
+  BatchDecryptAsOptions,
+  ReadonlyTokenConfig,
+} from "../token/readonly-token";
 export type { ReadonlyToken } from "../token/readonly-token";
 export type { TokenConfig } from "../token/token";
 export type { Token } from "../token/token";

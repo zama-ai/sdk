@@ -1,4 +1,3 @@
-import { vi } from "vitest";
 import { describe, it, expect, beforeEach } from "../../test-fixtures";
 
 // ---------------------------------------------------------------------------
@@ -29,19 +28,19 @@ const { mockWorkerClient, MockRelayerWorkerClient } = vi.hoisted(() => {
   return { mockWorkerClient, MockRelayerWorkerClient };
 });
 
-vi.mock("../../worker/worker.client", () => ({
+vi.mock(import("../../worker/worker.client"), () => ({
   RelayerWorkerClient: MockRelayerWorkerClient,
 }));
 
 import { RelayerWeb } from "../relayer-web";
-import { type Address } from "viem";
+import type { Address } from "viem";
 
 const MOCK_EIP712 = {
   domain: {
     name: "KmsDecryptor",
     version: "1",
     chainId: 1,
-    verifyingContract: "0x1111111111111111111111111111111111111111",
+    verifyingContract: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
   },
   types: {
     UserDecryptRequestVerification: [
@@ -51,7 +50,7 @@ const MOCK_EIP712 = {
   },
   message: {
     publicKey: "0xpub",
-    contractAddresses: ["0x1111111111111111111111111111111111111111"],
+    contractAddresses: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
     startTimestamp: 1000n,
     durationDays: 7n,
     extraData: "0x",
@@ -75,7 +74,7 @@ describe("createEIP712 includes EIP712Domain type", () => {
     const relayer = createRelayer();
     const result = await relayer.createEIP712(
       "0xpub",
-      ["0x1111111111111111111111111111111111111111" as Address],
+      ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address],
       1000,
       7,
     );
@@ -94,7 +93,7 @@ describe("createEIP712 includes EIP712Domain type", () => {
     const relayer = createRelayer();
     const result = await relayer.createEIP712(
       "0xpub",
-      ["0x1111111111111111111111111111111111111111" as Address],
+      ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address],
       1000,
       7,
     );
@@ -110,7 +109,7 @@ describe("createEIP712 includes EIP712Domain type", () => {
     const relayer = createRelayer();
     const result = await relayer.createEIP712(
       "0xpub",
-      ["0x1111111111111111111111111111111111111111" as Address],
+      ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address],
       1000,
       7,
     );

@@ -13,8 +13,8 @@ import {
 } from "../invalidation";
 import { zamaQueryKeys } from "../query-keys";
 
-const TOKEN = "0x1111111111111111111111111111111111111111";
-const OTHER_TOKEN = "0x2222222222222222222222222222222222222222";
+const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
+const OTHER_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
 
 function createQueryClient(): QueryClient {
   return new QueryClient({

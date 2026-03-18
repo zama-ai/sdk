@@ -31,6 +31,9 @@ npm-debug.log*
 # next.js
 .next/
 
+# claude code (opt-in via `pnpm setup:claude`)
+.claude/
+
 # worktrees
 .worktrees/
 

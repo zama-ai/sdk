@@ -26,7 +26,9 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES):
 }
 
 function isTransientError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
+  if (!(error instanceof Error)) {
+    return false;
+  }
   const msg = error.message.toLowerCase();
   return (
     msg.includes("timed out") ||
@@ -103,9 +105,9 @@ export const HardhatConfig = {
 } as const satisfies FhevmInstanceConfig;
 
 export const DefaultConfigs: Record<number, FhevmInstanceConfig> = {
-  [1]: MainnetConfig,
-  [11155111]: SepoliaConfig,
-  [31337]: HardhatConfig,
+  1: MainnetConfig,
+  11155111: SepoliaConfig,
+  31337: HardhatConfig,
 } as const;
 
 /** EIP-712 domain field → Solidity type. Order follows the EIP-712 spec. */
@@ -123,22 +125,8 @@ const DOMAIN_FIELD_TYPES: Record<string, string> = {
  */
 export function buildEIP712DomainType(
   domain: EIP712TypedData["domain"],
-): Array<{ name: string; type: string }> {
+): { name: string; type: string }[] {
   return Object.keys(DOMAIN_FIELD_TYPES)
     .filter((k) => k in domain)
     .map((k) => ({ name: k, type: DOMAIN_FIELD_TYPES[k]! }));
-}
-
-/**
- * Merge user overrides on top of SDK defaults for a given chain.
- */
-export function mergeFhevmConfig(
-  chainId: number,
-  overrides?: Partial<FhevmInstanceConfig>,
-): FhevmInstanceConfig {
-  const base = DefaultConfigs[chainId];
-  if (!base && (!overrides || Object.keys(overrides).length === 0)) {
-    throw new Error(`No config for chainId: ${chainId}`);
-  }
-  return { ...base, ...overrides } as FhevmInstanceConfig;
 }

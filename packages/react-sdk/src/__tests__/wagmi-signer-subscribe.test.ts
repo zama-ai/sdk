@@ -1,16 +1,20 @@
-import { vi } from "vitest";
 import { test as base, describe, expect } from "../test-fixtures";
 import type { Address } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 
-type Connection = { status: string; address?: Address; chainId?: number };
+interface Connection {
+  status: string;
+  address?: Address;
+  chainId?: number;
+}
 type OnChange = (connection: Connection, prevConnection: Connection) => void;
 
 let capturedOnChange: OnChange | undefined;
 const mockUnsubscribe = vi.fn();
 
-vi.mock("wagmi/actions", () => ({
+vi.mock(import("wagmi/actions"), () => ({
   getChainId: vi.fn().mockReturnValue(31337),
+  getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000n }),
   getConnection: vi.fn().mockReturnValue({ address: "0xuser" }),
   readContract: vi.fn(),
   signTypedData: vi.fn(),
@@ -99,5 +103,12 @@ describe("WagmiSigner.subscribe", () => {
 
     expect(onChainChange).toHaveBeenCalledOnce();
     expect(onChainChange).toHaveBeenCalledWith(2);
+  });
+});
+
+describe("WagmiSigner.getBlockTimestamp", () => {
+  wit("returns block timestamp from getBlock", async ({ wagmiSigner }) => {
+    const timestamp = await wagmiSigner.getBlockTimestamp();
+    expect(timestamp).toBe(1700000000n);
   });
 });

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "../utils/query";
-import { type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address, Handle } from "@zama-fhe/sdk";
 import {
   confidentialBalancesQueryOptions,
@@ -26,7 +26,7 @@ export type { ConfidentialBalancesData };
 
 /** Query options for the decrypt phase of {@link useConfidentialBalances}. */
 export type UseConfidentialBalancesOptions = Omit<
-  UseQueryOptions<ConfidentialBalancesData, Error>,
+  UseQueryOptions<ConfidentialBalancesData>,
   "queryKey" | "queryFn"
 >;
 
@@ -77,10 +77,9 @@ export function useConfidentialBalances(
     owner,
     pollingInterval: handleRefetchInterval,
   });
-  const handlesFactoryEnabled = baseHandlesQueryOptions.enabled ?? true;
   const handlesQuery = useQuery<Handle[]>({
     ...baseHandlesQueryOptions,
-    enabled: handlesFactoryEnabled && (userEnabled ?? true),
+    enabled: (baseHandlesQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   // Phase 2: Batch decrypt only when any handle changes

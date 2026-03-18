@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "../utils/query";
-import { type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { signerAddressQueryOptions, underlyingAllowanceQueryOptions } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
@@ -34,10 +34,9 @@ export interface UseUnderlyingAllowanceConfig {
  */
 export function useUnderlyingAllowance(
   config: UseUnderlyingAllowanceConfig,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const { tokenAddress, wrapperAddress } = config;
-  const userEnabled = options?.enabled;
   const token = useReadonlyToken(tokenAddress);
   const addressQuery = useQuery<Address>({
     ...signerAddressQueryOptions(token.signer),
@@ -48,12 +47,11 @@ export function useUnderlyingAllowance(
     owner,
     wrapperAddress,
   });
-  const factoryEnabled = baseOpts.enabled ?? true;
 
   return useQuery<bigint>({
     ...baseOpts,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 

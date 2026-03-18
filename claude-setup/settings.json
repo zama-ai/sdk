@@ -1,0 +1,70 @@
+{
+  "env": {
+    "ENABLE_LSP_TOOL": "1"
+  },
+  "extraKnownMarketplaces": {
+    "zama-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "zama-ai/zama-marketplace"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "zama-developer@zama-marketplace": true,
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git diff:*)",
+      "Bash(pnpm build)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm e2e:*)",
+      "Bash(pnpm format)",
+      "Bash(pnpm format:*)"
+    ],
+    "ask": [
+      "Bash(rm:*)",
+      "Bash(git push:*)",
+      "Bash(npx changeset)",
+      "Bash(npx changeset*)",
+      "Bash(pnpm release)"
+    ],
+    "deny": ["Read(./.env)", "Read(./.env.*)", "Read(.next/**)"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm typecheck"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm lint"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm format"
+          }
+        ]
+      }
+    ]
+  }
+}

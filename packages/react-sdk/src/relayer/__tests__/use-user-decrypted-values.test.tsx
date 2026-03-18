@@ -1,6 +1,5 @@
-import { hashFn } from "@zama-fhe/sdk/query";
+import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, it } from "../../test-fixtures";
-import { decryptionKeys } from "../decryption-cache";
 import { useUserDecryptedValues } from "../use-user-decrypted-values";
 
 describe("useUserDecryptedValues", () => {
@@ -15,8 +14,12 @@ describe("useUserDecryptedValues", () => {
     });
     expect(result.current.results).toHaveLength(2);
 
-    const query1 = queryClient.getQueryCache().find({ queryKey: decryptionKeys.value("0xh1") });
-    const query2 = queryClient.getQueryCache().find({ queryKey: decryptionKeys.value("0xh2") });
+    const query1 = queryClient
+      .getQueryCache()
+      .find({ queryKey: zamaQueryKeys.decryption.handle("0xh1") });
+    const query2 = queryClient
+      .getQueryCache()
+      .find({ queryKey: zamaQueryKeys.decryption.handle("0xh2") });
     expect(query1?.options.queryKeyHashFn).toBe(hashFn);
     expect(query2?.options.queryKeyHashFn).toBe(hashFn);
   });

@@ -26,6 +26,8 @@ export class WagmiSigner implements GenericSigner {
     // (undocumented)
     getAddress(): Promise<Address>;
     // (undocumented)
+    getBlockTimestamp(): Promise<bigint>;
+    // (undocumented)
     getChainId(): Promise<number>;
     // (undocumented)
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;

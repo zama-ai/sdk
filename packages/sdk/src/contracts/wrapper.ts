@@ -1,7 +1,80 @@
-import { WRAPPER_ABI } from "../abi/wrapper.abi";
-import type { Handle } from "../relayer/relayer-sdk.types";
 import type { Address, Hex } from "viem";
-import { FHE_GAS_LIMIT } from "./gas";
+import type { Handle } from "../relayer/relayer-sdk.types";
+
+export const wrapperAbi = [
+  {
+    inputs: [
+      {
+        internalType: "euint64",
+        name: "burntAmount",
+        type: "bytes32",
+      },
+      {
+        internalType: "uint64",
+        name: "burntAmountCleartext",
+        type: "uint64",
+      },
+      {
+        internalType: "bytes",
+        name: "decryptionProof",
+        type: "bytes",
+      },
+    ],
+    name: "finalizeUnwrap",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "underlying",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "to",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+    ],
+    name: "wrap",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "to",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+    ],
+    name: "wrapETH",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+] as const;
 
 /**
  * Returns the contract config for finalizing an unwrap.
@@ -21,10 +94,9 @@ export function finalizeUnwrapContract(
 ) {
   return {
     address: wrapper,
-    abi: WRAPPER_ABI,
+    abi: wrapperAbi,
     functionName: "finalizeUnwrap",
     args: [burntAmount, burntAmountCleartext, decryptionProof],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -39,7 +111,7 @@ export function finalizeUnwrapContract(
 export function underlyingContract(wrapperAddress: Address) {
   return {
     address: wrapperAddress,
-    abi: WRAPPER_ABI,
+    abi: wrapperAbi,
     functionName: "underlying",
     args: [],
   } as const;
@@ -58,10 +130,9 @@ export function underlyingContract(wrapperAddress: Address) {
 export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint) {
   return {
     address: wrapperAddress,
-    abi: WRAPPER_ABI,
+    abi: wrapperAbi,
     functionName: "wrap",
     args: [to, amount],
-    gas: FHE_GAS_LIMIT,
   } as const;
 }
 
@@ -83,10 +154,9 @@ export function wrapETHContract(
 ) {
   return {
     address: wrapperAddress,
-    abi: WRAPPER_ABI,
+    abi: wrapperAbi,
     functionName: "wrapETH",
     args: [to, amount],
     value,
-    gas: FHE_GAS_LIMIT,
   } as const;
 }

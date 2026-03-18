@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "../utils/query";
-import { type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address, Handle } from "@zama-fhe/sdk";
 import {
   confidentialBalanceQueryOptions,
@@ -19,10 +19,7 @@ export interface UseConfidentialBalanceConfig {
 }
 
 /** Query options for the decrypt phase of {@link useConfidentialBalance}. */
-export type UseConfidentialBalanceOptions = Omit<
-  UseQueryOptions<bigint, Error>,
-  "queryKey" | "queryFn"
->;
+export type UseConfidentialBalanceOptions = Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">;
 
 /**
  * Declarative hook to read the connected wallet's confidential token balance.
@@ -59,10 +56,9 @@ export function useConfidentialBalance(
     owner,
     pollingInterval: handleRefetchInterval,
   });
-  const handleFactoryEnabled = baseHandleQueryOptions.enabled ?? true;
   const handleQuery = useQuery<Handle>({
     ...baseHandleQueryOptions,
-    enabled: handleFactoryEnabled && (userEnabled ?? true),
+    enabled: (baseHandleQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
@@ -71,12 +67,10 @@ export function useConfidentialBalance(
     handle,
     owner,
   });
-  const factoryEnabled = baseBalanceQueryOptions.enabled ?? true;
-
   const balanceQuery = useQuery<bigint>({
     ...baseBalanceQueryOptions,
     ...options,
-    enabled: factoryEnabled && (userEnabled ?? true),
+    enabled: (baseBalanceQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   return { ...balanceQuery, handleQuery };

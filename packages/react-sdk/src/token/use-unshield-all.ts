@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import type { UseMutationOptions } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
   invalidateAfterUnshield,
@@ -12,6 +13,11 @@ import { useToken, type UseZamaConfig } from "./use-token";
 /**
  * Unshield the entire balance and finalize in one call.
  * Orchestrates: unwrapAll → wait for receipt → parse event → finalize.
+ *
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link DecryptionFailedError} — public decryption failed during finalize
+ * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
  * @param config - Token and wrapper addresses.
  * @param options - React Query mutation options.

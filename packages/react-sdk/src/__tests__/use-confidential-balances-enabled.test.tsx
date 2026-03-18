@@ -1,20 +1,18 @@
-import { renderHook } from "@testing-library/react";
 import { useQuery } from "@tanstack/react-query";
+import { renderHook } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { signerAddressQueryOptions } from "@zama-fhe/sdk/query";
-import { vi } from "vitest";
-import { beforeEach, describe, expect, test } from "../test-fixtures";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { useConfidentialBalances } from "../token/use-confidential-balances";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const TOKEN_B = "0x2222222222222222222222222222222222222222" as Address;
-const OWNER = "0x3333333333333333333333333333333333333333" as Address;
+const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+const TOKEN_B = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
+const OWNER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const HANDLE_A = `0x${"aa".repeat(32)}` as Address;
 const HANDLE_B = `0x${"bb".repeat(32)}` as Address;
 
 vi.mock("@tanstack/react-query", async () => {
-  const actual =
-    await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+  const actual = await vi.importActual("@tanstack/react-query");
   return { ...actual, useQuery: vi.fn() };
 });
 
@@ -49,12 +47,14 @@ describe("useConfidentialBalances enabled propagation", () => {
     vi.clearAllMocks();
     vi.mocked(useQuery)
       .mockReturnValueOnce({ data: OWNER } as ReturnType<typeof useQuery>)
-      .mockReturnValueOnce({ data: [HANDLE_A, HANDLE_B], fetchStatus: "idle" } as ReturnType<
-        typeof useQuery
-      >)
-      .mockReturnValueOnce({ data: new Map<Address, bigint>(), fetchStatus: "idle" } as ReturnType<
-        typeof useQuery
-      >);
+      .mockReturnValueOnce({
+        data: [HANDLE_A, HANDLE_B],
+        fetchStatus: "idle",
+      } as ReturnType<typeof useQuery>)
+      .mockReturnValueOnce({
+        data: new Map<Address, bigint>(),
+        fetchStatus: "idle",
+      } as ReturnType<typeof useQuery>);
   });
 
   test("disables handles polling query when user passes enabled=false", () => {

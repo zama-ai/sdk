@@ -2,9 +2,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import type { GenericSigner, GenericStorage, RelayerSDK, Token } from "@zama-fhe/sdk";
-import React, { PropsWithChildren } from "react";
+import type { PropsWithChildren } from "react";
+import React from "react";
 import { test as base } from "../../sdk/src/test-fixtures";
-import { ZamaProvider, ZamaProviderProps } from "./provider";
+import type { ZamaProviderProps } from "./provider";
+import { ZamaProvider } from "./provider";
 import { createMockToken } from "./__tests__/mutation-test-helpers";
 
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";

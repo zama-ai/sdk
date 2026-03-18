@@ -1,12 +1,15 @@
 import { ethers, BrowserProvider, type Signer } from "ethers";
-import type {
-  Abi,
-  ContractFunctionArgs,
-  ContractFunctionName,
-  ContractFunctionReturnType,
-  Hex,
+import {
+  getAddress,
+  isHex,
+  type Abi,
+  type Address,
+  type ContractFunctionArgs,
+  type ContractFunctionName,
+  type ContractFunctionReturnType,
+  type EIP1193Provider,
+  type Hex,
 } from "viem";
-import { getAddress, isHex, type Address } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   GenericSigner,
@@ -16,7 +19,6 @@ import type {
   WriteContractConfig,
 } from "../token/token.types";
 import { eip1193Subscribe } from "../token/eip1193-subscribe";
-import type { EIP1193Provider } from "viem";
 
 /**
  * Configuration for {@link EthersSigner}.
@@ -66,12 +68,16 @@ export class EthersSigner implements GenericSigner {
   }
 
   async #requireSigner(): Promise<Signer> {
-    if (!this.#signerPromise) throw new TypeError("No signer configured — read-only mode");
+    if (!this.#signerPromise) {
+      throw new TypeError("No signer configured — read-only mode");
+    }
     return this.#signerPromise;
   }
 
   #requireProvider(): ethers.Provider {
-    if (!this.#readProvider) throw new TypeError("Signer has no provider");
+    if (!this.#readProvider) {
+      throw new TypeError("Signer has no provider");
+    }
     return this.#readProvider;
   }
 
@@ -93,7 +99,9 @@ export class EthersSigner implements GenericSigner {
       Object.entries(sigTypes).map(([key, fields]) => [key, [...fields]]),
     );
     const sig = await signer.signTypedData(domain, mutableSigTypes, message);
-    if (!isHex(sig)) throw new TypeError(`Expected hex string, got: ${sig}`);
+    if (!isHex(sig)) {
+      throw new TypeError(`Expected hex string, got: ${sig}`);
+    }
     return sig;
   }
 
@@ -105,13 +113,19 @@ export class EthersSigner implements GenericSigner {
     const signer = await this.#requireSigner();
     const contract = new ethers.Contract(config.address, config.abi as ethers.InterfaceAbi, signer);
     const overrides: { gasLimit?: bigint; value?: bigint } = {};
-    if (config.value !== undefined) overrides.value = config.value;
-    if (config.gas !== undefined) overrides.gasLimit = config.gas;
+    if (config.value !== undefined) {
+      overrides.value = config.value;
+    }
+    if (config.gas !== undefined) {
+      overrides.gasLimit = config.gas;
+    }
     const tx = await contract[config.functionName]!(
       ...(config.args as readonly unknown[]),
       overrides,
     );
-    if (!isHex(tx.hash)) throw new TypeError(`Expected hex string, got: ${tx.hash}`);
+    if (!isHex(tx.hash)) {
+      throw new TypeError(`Expected hex string, got: ${tx.hash}`);
+    }
     return tx.hash;
   }
 
@@ -133,9 +147,22 @@ export class EthersSigner implements GenericSigner {
     >;
   }
 
+  async getBlockTimestamp(): Promise<bigint> {
+    const block = await this.#requireProvider().getBlock("latest");
+    if (!block) {
+      throw new Error("Failed to fetch latest block");
+    }
+    if (block.timestamp === null) {
+      throw new Error("Latest block has no timestamp");
+    }
+    return BigInt(block.timestamp);
+  }
+
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     const receipt = await this.#requireProvider().waitForTransaction(hash);
-    if (!receipt) throw new Error("Transaction receipt not found");
+    if (!receipt) {
+      throw new Error("Transaction receipt not found");
+    }
     return {
       logs: receipt.logs.map((log) => ({
         topics: log.topics.filter((t): t is Hex => t !== null),

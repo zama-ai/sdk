@@ -5,7 +5,7 @@
 
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
-import { assertObject, assertString, prefixHex, unprefixHex } from "../utils";
+import { getBrowserExtensionRuntime, prefixHex, unprefixHex } from "../utils";
 import type {
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,
@@ -39,11 +39,15 @@ import type {
 let sdkInstance: FhevmInstance | null = null;
 let sdkGlobal: RelayerSDKGlobal | null = null;
 
+function unreachableFheType(_: never): never {
+  throw new Error("Unsupported FHE type");
+}
+
 // Store relayer URL and CSRF token for fetch interception.
 // These globals are per-worker-instance. Do NOT convert to SharedWorker
 // without rearchitecting CSRF token management to be per-connection.
-let relayerUrlBase: string = "";
-let csrfTokenBase: string = "";
+let relayerUrlBase = "";
+let csrfTokenBase = "";
 
 // CSRF header name (must match server expectation)
 const CSRF_HEADER_NAME = "x-csrf-token";
@@ -163,35 +167,12 @@ function setupFetchInterceptor(): void {
 }
 
 /**
- * Detect browser extension environment (Chrome, Firefox, Safari).
- * Extensions have restricted CSP that blocks blob: URLs, so we must
- * fall back to importScripts with the CDN URL directly.
- * - Chrome/Edge: `chrome.runtime.id`
- * - Firefox/Safari: `browser.runtime.id`
- */
-function isBrowserExtension(): boolean {
-  try {
-    // Chrome/Edge expose chrome.runtime.id, Firefox/Safari expose browser.runtime.id
-    const g = globalThis as unknown as Record<string, unknown>;
-    for (const ns of [g.chrome, g.browser]) {
-      assertObject(ns, "ns");
-      assertObject(ns.runtime, "runtime");
-      assertString(ns.runtime.id, "id");
-      return true;
-    }
-  } catch {
-    return false;
-  }
-  return false;
-}
-
-/**
  * Verify a fetched script's SHA-384 hash matches the expected integrity value.
  */
 async function verifyIntegrity(content: string, expectedHash: string): Promise<void> {
   const encoder = new TextEncoder();
   const hashBuffer = await crypto.subtle.digest("SHA-384", encoder.encode(content));
-  const hashHex = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = [...new Uint8Array(hashBuffer)]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
   if (hashHex !== expectedHash) {
@@ -223,7 +204,7 @@ async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> 
   // Validate CDN URL immediately before any script loading (defense-in-depth).
   const validatedUrl = validateCdnUrl(cdnUrl);
 
-  if (isBrowserExtension()) {
+  if (getBrowserExtensionRuntime()) {
     // Extensions: blob: URLs are forbidden. Use importScripts directly —
     // the CDN origin must be allowed in the extension's CSP manifest.
     if (integrity) {
@@ -273,7 +254,7 @@ async function handleInit(request: InitRequest): Promise<void> {
     sdkGlobal = self.relayerSDK;
 
     // Initialize WASM (optionally with a rayon thread pool for parallel FHE ops)
-    await sdkGlobal.initSDK(thread != null ? { thread } : undefined);
+    await sdkGlobal.initSDK(thread !== null && thread !== undefined ? { thread } : undefined);
 
     // Create SDK instance with caller-provided config
     const config: FhevmInstanceConfig = {
@@ -291,6 +272,11 @@ async function handleInit(request: InitRequest): Promise<void> {
   }
 }
 
+/** Coerce a boolean to bigint for numeric FHE types. */
+function toBigInt(value: bigint | boolean): bigint {
+  return typeof value === "boolean" ? (value ? 1n : 0n) : value;
+}
+
 /**
  * Add a single typed value to the encrypted input builder.
  */
@@ -304,28 +290,28 @@ function addTypedValue(
       input.addBool(typeof value === "boolean" ? value : value !== 0n);
       break;
     case "euint8":
-      input.add8(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add8(toBigInt(value));
       break;
     case "euint16":
-      input.add16(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add16(toBigInt(value));
       break;
     case "euint32":
-      input.add32(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add32(toBigInt(value));
       break;
     case "euint64":
-      input.add64(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add64(toBigInt(value));
       break;
     case "euint128":
-      input.add128(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add128(toBigInt(value));
       break;
     case "euint256":
-      input.add256(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+      input.add256(toBigInt(value));
       break;
     case "eaddress":
-      input.addAddress(typeof value === "boolean" ? String(value) : String(value));
+      input.addAddress(String(value));
       break;
     default:
-      throw new Error(`Unsupported FHE type: ${fheType}`);
+      unreachableFheType(fheType);
   }
 }
 
@@ -411,15 +397,25 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
  * Relayer SDK errors may carry a `status` or `statusCode` property.
  */
 function extractHttpStatus(error: unknown): number | undefined {
-  if (error == null || typeof error !== "object") return undefined;
+  if (error === null || error === undefined || typeof error !== "object") {
+    return undefined;
+  }
   const e = error as Record<string, unknown>;
-  if (typeof e.statusCode === "number") return e.statusCode;
-  if (typeof e.status === "number") return e.status;
+  if (typeof e.statusCode === "number") {
+    return e.statusCode;
+  }
+  if (typeof e.status === "number") {
+    return e.status;
+  }
   // Check nested cause
-  if (e.cause != null && typeof e.cause === "object") {
+  if (e.cause !== null && e.cause !== undefined && typeof e.cause === "object") {
     const cause = e.cause as Record<string, unknown>;
-    if (typeof cause.statusCode === "number") return cause.statusCode;
-    if (typeof cause.status === "number") return cause.status;
+    if (typeof cause.statusCode === "number") {
+      return cause.statusCode;
+    }
+    if (typeof cause.status === "number") {
+      return cause.status;
+    }
   }
   return undefined;
 }
@@ -583,8 +579,9 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
     console.error("[Worker] DelegatedUserDecrypt error:", message);
-    sendError(id, type, message);
+    sendError(id, type, message, statusCode);
   }
 }
 
@@ -652,6 +649,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
     }
 
     const result = sdkInstance.getPublicParams(
+      // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically via CDN
       payload.bits as keyof import("@zama-fhe/relayer-sdk/bundle").PublicParams<Uint8Array>,
     );
 
@@ -721,8 +719,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       default:
         console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);
     }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     sendError(
       request?.id ?? "unknown",
       request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),

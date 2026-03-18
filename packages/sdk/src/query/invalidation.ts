@@ -1,4 +1,4 @@
-import { type Address } from "viem";
+import type { Address } from "viem";
 import { zamaQueryKeys } from "./query-keys";
 
 export interface QueryLike {
@@ -19,7 +19,7 @@ function invalidateUnderlyingAllowanceQueries(
   queryClient: QueryClientLike,
   tokenAddress: Address,
 ): void {
-  queryClient.invalidateQueries({
+  void queryClient.invalidateQueries({
     queryKey: zamaQueryKeys.underlyingAllowance.token(tokenAddress),
   });
 }
@@ -28,38 +28,40 @@ export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateBalanceQueries(
   queryClient: QueryClientLike,
   tokenAddress: Address,
 ): void {
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialHandle.token(tokenAddress) });
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialHandles.all });
-  queryClient.invalidateQueries({
+  void queryClient.invalidateQueries({
+    queryKey: zamaQueryKeys.confidentialHandle.token(tokenAddress),
+  });
+  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialHandles.all });
+  void queryClient.invalidateQueries({
     queryKey: zamaQueryKeys.confidentialBalance.token(tokenAddress),
   });
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
+  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
 }
 
 export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterApproveUnderlying(
@@ -70,10 +72,10 @@ export function invalidateAfterApproveUnderlying(
 }
 
 export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddress: Address): void {
-  queryClient.invalidateQueries({
+  void queryClient.invalidateQueries({
     queryKey: zamaQueryKeys.confidentialIsApproved.token(tokenAddress),
   });
-  queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
+  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 function isZamaQuery(query: QueryLike): boolean {
@@ -86,19 +88,21 @@ function isWagmiBalanceQuery(query: QueryLike): boolean {
   return (
     Array.isArray(query.queryKey) &&
     query.queryKey.some((part: unknown) => {
-      if (typeof part !== "object" || part === null || !("functionName" in part)) return false;
+      if (typeof part !== "object" || part === null || !("functionName" in part)) {
+        return false;
+      }
       return part.functionName === "balanceOf";
     })
   );
 }
 
 export function invalidateWagmiBalanceQueries(queryClient: QueryClientLike): void {
-  queryClient.invalidateQueries({ predicate: isWagmiBalanceQuery });
+  void queryClient.invalidateQueries({ predicate: isWagmiBalanceQuery });
 }
 
 export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): void {
   queryClient.removeQueries({ queryKey: zamaQueryKeys.signerAddress.all });
   queryClient.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
-  queryClient.invalidateQueries({ predicate: isZamaQuery });
+  void queryClient.invalidateQueries({ predicate: isZamaQuery });
   invalidateWagmiBalanceQueries(queryClient);
 }

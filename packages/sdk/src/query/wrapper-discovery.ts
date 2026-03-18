@@ -1,9 +1,9 @@
+import type { Address } from "viem";
 import { getWrapperContract, wrapperExistsContract } from "../contracts";
 import type { GenericSigner } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
-import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
-import type { Address } from "viem";
+import { filterQueryOptions } from "./utils";
 
 export interface WrapperDiscoveryQueryConfig {
   coordinatorAddress: Address;
@@ -31,7 +31,9 @@ export function wrapperDiscoveryQueryOptions(
       const exists = await signer.readContract(
         wrapperExistsContract(keyCoordinatorAddress, keyTokenAddress),
       );
-      if (!exists) return null;
+      if (!exists) {
+        return null;
+      }
       return signer.readContract(getWrapperContract(keyCoordinatorAddress, keyTokenAddress));
     },
     staleTime: Infinity,

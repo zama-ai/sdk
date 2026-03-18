@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import type { UseMutationOptions } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
   finalizeUnwrapMutationOptions,
@@ -12,6 +13,11 @@ import { useToken, type UseZamaConfig } from "./use-token";
 /**
  * Complete an unwrap by providing the public decryption proof.
  * Call this after an unwrap request has been processed on-chain.
+ *
+ * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
+ * - {@link SigningRejectedError} — user rejected the wallet prompt
+ * - {@link DecryptionFailedError} — public decryption of the burn amount failed
+ * - {@link TransactionRevertedError} — on-chain finalize transaction reverted
  *
  * @param config - Token address (and optional wrapper) identifying the token.
  * @param options - React Query mutation options.

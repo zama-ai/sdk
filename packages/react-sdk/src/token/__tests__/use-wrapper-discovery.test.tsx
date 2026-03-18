@@ -28,7 +28,7 @@ describe("useWrapperDiscovery", () => {
   });
 
   test("behavior: coordinatorAddress: undefined -> defined", async ({ createWrapper, signer }) => {
-    const wrapperAddress = "0x7777777777777777777777777777777777777777" as Address;
+    const wrapperAddress = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
     vi.mocked(signer.readContract).mockResolvedValue(wrapperAddress);
 
     const ctx = createWrapper({ signer });
@@ -50,7 +50,7 @@ describe("useWrapperDiscovery", () => {
   });
 
   test("default", async ({ renderWithProviders, signer }) => {
-    const wrapperAddress = "0x4444444444444444444444444444444444444444" as Address;
+    const wrapperAddress = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
     vi.mocked(signer.readContract).mockResolvedValue(wrapperAddress);
 
     const { result } = renderWithProviders(() =>

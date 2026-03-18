@@ -2,6 +2,22 @@
 
 import { useAccount, useConnect, useDisconnect, useConnectors } from "wagmi";
 
+const BURNER_PK_KEY = "burnerWallet.pk";
+
+/**
+ * Picks the right connector based on environment:
+ * - If a burner private key is in localStorage, use the burner connector (Playwright / E2E)
+ * - Otherwise, use the injected connector (MetaMask / browser wallet)
+ */
+function pickConnector(connectors: readonly { id: string; name: string }[]) {
+  const hasBurnerPk = typeof window !== "undefined" && Boolean(localStorage.getItem(BURNER_PK_KEY));
+
+  if (hasBurnerPk) {
+    return connectors.find((c) => c.id === "burnerWallet") ?? connectors[0];
+  }
+  return connectors.find((c) => c.id === "injected") ?? connectors[0];
+}
+
 export function ConnectWallet() {
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
@@ -26,7 +42,12 @@ export function ConnectWallet() {
 
   return (
     <button
-      onClick={() => connect({ connector: connectors[0]! })}
+      onClick={() => {
+        const connector = pickConnector(connectors);
+        if (connector) {
+          connect({ connector: connector as Parameters<typeof connect>[0]["connector"] });
+        }
+      }}
       className="px-2.5 py-1 text-xs font-medium bg-zama-yellow text-zama-black rounded hover:bg-zama-yellow-hover transition-colors"
     >
       Connect Wallet
