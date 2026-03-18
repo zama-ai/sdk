@@ -14,7 +14,7 @@ interface DecryptAsCardProps {
   decimals: number;
   symbol: string;
   disabled: boolean;
-  connectedAddress: string;
+  connectedAddress: Address;
 }
 
 function formatExpiry(expiryTimestamp: bigint): string {
@@ -47,7 +47,7 @@ export function DecryptAsCard({
   const delegationStatus = useDelegationStatus({
     tokenAddress,
     delegatorAddress: ownerIsValid ? (ownerAddress as Address) : undefined,
-    delegateAddress: connectedAddress as Address,
+    delegateAddress: connectedAddress,
   });
 
   const decryptAs = useDecryptBalanceAs(tokenAddress);
@@ -75,6 +75,9 @@ export function DecryptAsCard({
         <div className="delegation-status card-gap">
           {delegationStatus.isPending && (
             <span className="delegation-status-checking">Checking delegation status…</span>
+          )}
+          {delegationStatus.isError && (
+            <span className="delegation-status-none">Unable to check delegation status</span>
           )}
           {delegationStatus.data?.isDelegated && (
             <span className="delegation-status-active">

@@ -19,6 +19,9 @@ Next.js app demonstrating all four ERC-7984 operations on the **Hoodi** testnet 
 | Shield (ERC-20 → cToken)     | `useShield`               |
 | Confidential transfer        | `useConfidentialTransfer` |
 | Unshield (cToken → ERC-20)   | `useUnshield`             |
+| Grant decryption access      | `useDelegateDecryption`   |
+| Revoke decryption access     | `useRevokeDelegation`     |
+| Decrypt balance on behalf of | `useDecryptBalanceAs`     |
 
 ## How it differs from `react-ethers`
 

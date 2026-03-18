@@ -394,6 +394,67 @@ unshield.mutate({
 });
 ```
 
+### Delegation hook usage
+
+```tsx
+import {
+  useDelegateDecryption,
+  useRevokeDelegation,
+  useDelegationStatus,
+  useDecryptBalanceAs,
+} from "@zama-fhe/react-sdk";
+import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
+import { formatUnits } from "ethers";
+
+// ── Token owner: grant decryption access ──────────────────────────────────────
+
+const delegate = useDelegateDecryption({ tokenAddress: cTokenAddress });
+
+// Permanent delegation (no expiry) — SDK sends MAX_UINT64 on-chain.
+delegate.mutate({ delegateAddress: "0xDelegate" });
+
+// Time-bounded delegation — expirationDate accepts a JavaScript Date.
+// The SDK throws ConfigurationError if the date is already in the past.
+delegate.mutate({
+  delegateAddress: "0xDelegate",
+  expirationDate: new Date("2026-12-31T23:59:59"),
+});
+
+// ── Token owner: revoke delegation ────────────────────────────────────────────
+
+const revoke = useRevokeDelegation({ tokenAddress: cTokenAddress });
+revoke.mutate({ delegateAddress: "0xDelegate" });
+
+// ── Delegate: check delegation status (live query) ───────────────────────────
+
+// Fires automatically when both addresses are provided.
+// Returns { isDelegated: boolean, expiryTimestamp: bigint }.
+// expiryTimestamp === 2n**64n-1n means permanent.
+const delegationStatus = useDelegationStatus({
+  tokenAddress: cTokenAddress,
+  delegatorAddress: "0xOwner", // the wallet that granted access
+  delegateAddress: "0xDelegate", // the connected wallet
+});
+
+// ── Delegate: decrypt another wallet's balance ────────────────────────────────
+
+const decryptAs = useDecryptBalanceAs(cTokenAddress);
+decryptAs.mutate({ delegatorAddress: "0xOwner" });
+
+if (decryptAs.isSuccess) {
+  console.log(formatUnits(decryptAs.data, cTokenDecimals)); // e.g. "42.5"
+}
+
+// Handle delegation-specific errors:
+if (decryptAs.isError) {
+  if (decryptAs.error instanceof DelegationNotFoundError) {
+    // No delegation exists from 0xOwner to the connected wallet.
+  } else if (decryptAs.error instanceof DelegationExpiredError) {
+    // Delegation existed but has since expired.
+  }
+}
+```
+
 ---
 
 ## Environment variables

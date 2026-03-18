@@ -17,7 +17,16 @@ export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecry
   const [noExpiry, setNoExpiry] = useState(true);
   const [expirationInput, setExpirationInput] = useState("");
 
-  const delegate = useDelegateDecryption({ tokenAddress });
+  const delegate = useDelegateDecryption(
+    { tokenAddress },
+    {
+      onSuccess: () => {
+        setDelegateAddress("");
+        setNoExpiry(true);
+        setExpirationInput("");
+      },
+    },
+  );
 
   const isExpiryValid = noExpiry || (!!expirationInput && new Date(expirationInput) > new Date());
   const canSubmit = isAddress(delegateAddress) && isExpiryValid;
