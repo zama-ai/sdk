@@ -1,5 +1,5 @@
 import { defineConfig, type Plugin } from "vitest/config";
-import path from "path";
+import path from "node:path";
 
 /** Stub `?iife` imports in tests — returns an empty string instead of file contents. */
 function iifeStub(): Plugin {

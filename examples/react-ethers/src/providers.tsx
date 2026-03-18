@@ -16,11 +16,11 @@ export function Providers({ children }: { children: ReactNode }) {
     const relayer = new RelayerWeb({
       getChainId: () => signer.getChainId(),
       transports: {
-        [1]: {
+        1: {
           network: MAINNET_RPC_URL,
           relayerUrl: "http://localhost:3000/api/relayer",
         },
-        [11155111]: {
+        11155111: {
           network: SEPOLIA_RPC_URL,
           relayerUrl: "http://localhost:3000/api/relayer",
         },

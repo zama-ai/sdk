@@ -1,5 +1,9 @@
-import type { EIP1193EventMap, EIP1193Provider } from "viem";
-import { getAddress as checksumAddress, type Address } from "viem";
+import {
+  getAddress as checksumAddress,
+  type Address,
+  type EIP1193EventMap,
+  type EIP1193Provider,
+} from "viem";
 import type { SignerLifecycleCallbacks } from "./token.types";
 
 /**
@@ -17,7 +21,9 @@ export function eip1193Subscribe(
   getAddress: () => Promise<Address>,
   { onDisconnect = () => {}, onAccountChange = () => {}, onChainChange }: SignerLifecycleCallbacks,
 ): () => void {
-  if (!provider) return () => {};
+  if (!provider) {
+    return () => {};
+  }
 
   let currentAddress: Address | undefined;
   getAddress()
@@ -31,7 +37,9 @@ export function eip1193Subscribe(
       currentAddress = undefined;
       return onDisconnect();
     }
-    if (!accounts[0]) return;
+    if (!accounts[0]) {
+      return;
+    }
     let nextAddress: Address;
     try {
       nextAddress = checksumAddress(accounts[0]);

@@ -1,19 +1,18 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, type BrowserContext } from "@playwright/test";
+import type { Address } from "viem";
 import {
   createTestClient,
   formatUnits,
-  parseUnits,
   http,
+  parseUnits,
   publicActions,
   walletActions,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
-import { mockRelayerSdk } from "./fhevm";
-import { TEST_PRIVATE_KEY, MINTED } from "./constants";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
-import { type Address } from "viem";
+import { MINTED, TEST_PRIVATE_KEY } from "./constants";
 
 const privateKey = TEST_PRIVATE_KEY;
 
@@ -118,7 +117,9 @@ export const test = base.extend<TestFixtures>({
   page: async ({ page, baseURL, privateKey, account, viemClient, contracts }, use) => {
     // Mint ERC-20 tokens to the test account before snapshotting, so every test
     // starts from a funded state regardless of what the deploy script did.
-    const nonce = await viemClient.getTransactionCount({ address: account.address });
+    const nonce = await viemClient.getTransactionCount({
+      address: account.address,
+    });
     const usdcHash = await viemClient.writeContract({
       address: contracts.USDC,
       abi: mintAbi,

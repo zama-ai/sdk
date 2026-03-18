@@ -152,7 +152,14 @@ export class ZamaSDK {
 
   async #revokeByTrackedIdentity(): Promise<void> {
     await this.#identityReady;
-    if (this.#lastAddress == null || this.#lastChainId == null) return;
+    if (
+      this.#lastAddress === null ||
+      this.#lastAddress === undefined ||
+      this.#lastChainId === null ||
+      this.#lastChainId === undefined
+    ) {
+      return;
+    }
     const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
     await this.sessionStorage.delete(storeKey);
     this.#onEvent?.({

@@ -31,7 +31,9 @@ export function BatchTransferForm({
   return (
     <form
       action={async (formData) => {
-        if (!userAddress || batchFee === undefined) return;
+        if (!userAddress || batchFee === undefined) {
+          return;
+        }
 
         const recipient1 = formData.get("recipient1") as Address;
         const amount1 = BigInt(formData.get("amount1") as string);

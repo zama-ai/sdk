@@ -97,8 +97,12 @@ function classifyDirection(
   const isFrom = from !== undefined && addressesEqual(userAddress, from);
   const isTo = to !== undefined && addressesEqual(userAddress, to);
 
-  if (isFrom && isTo) return "self";
-  if (isFrom) return "outgoing";
+  if (isFrom && isTo) {
+    return "self";
+  }
+  if (isFrom) {
+    return "outgoing";
+  }
   return "incoming";
 }
 
@@ -215,7 +219,9 @@ export function parseActivityFeed(
   const items: ActivityItem[] = [];
   for (const log of logs) {
     const event = decodeOnChainEvent(log);
-    if (!event) continue;
+    if (!event) {
+      continue;
+    }
 
     const metadata: ActivityLogMetadata = {
       transactionHash: log.transactionHash,
@@ -253,10 +259,14 @@ export function applyDecryptedValues(
   decryptedMap: ReadonlyMap<Handle, bigint>,
 ): ActivityItem[] {
   return items.map((item) => {
-    if (item.amount.type !== "encrypted") return item;
+    if (item.amount.type !== "encrypted") {
+      return item;
+    }
 
     const value = decryptedMap.get(item.amount.handle);
-    if (value === undefined) return item;
+    if (value === undefined) {
+      return item;
+    }
 
     return {
       ...item,
@@ -274,20 +284,30 @@ export function applyDecryptedValues(
  * Items without a block number are placed at the beginning (most recent).
  */
 export function sortByBlockNumber(items: readonly ActivityItem[]): ActivityItem[] {
-  return [...items].sort((a, b) => {
+  return [...items].toSorted((a, b) => {
     const aBlock = a.metadata.blockNumber;
     const bBlock = b.metadata.blockNumber;
 
-    if (aBlock === undefined && bBlock === undefined) return 0;
-    if (aBlock === undefined) return -1;
-    if (bBlock === undefined) return 1;
+    if (aBlock === undefined && bBlock === undefined) {
+      return 0;
+    }
+    if (aBlock === undefined) {
+      return -1;
+    }
+    if (bBlock === undefined) {
+      return 1;
+    }
 
     // Convert to bigint for comparison
     const aBig = typeof aBlock === "bigint" ? aBlock : BigInt(aBlock);
     const bBig = typeof bBlock === "bigint" ? bBlock : BigInt(bBlock);
 
-    if (bBig > aBig) return 1;
-    if (bBig < aBig) return -1;
+    if (bBig > aBig) {
+      return 1;
+    }
+    if (bBig < aBig) {
+      return -1;
+    }
 
     // Same block: sort by logIndex descending
     const aIdx = a.metadata.logIndex ?? 0;

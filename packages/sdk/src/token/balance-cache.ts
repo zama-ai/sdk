@@ -82,7 +82,9 @@ async function trackKey(storage: GenericStorage, key: string): Promise<void> {
 export async function clearAllCachedBalances(storage: GenericStorage): Promise<void> {
   try {
     const raw = await storage.get<string>(BALANCES_KEY);
-    if (!raw) return;
+    if (!raw) {
+      return;
+    }
     const keys: string[] = JSON.parse(raw);
     await Promise.all(keys.map((key) => storage.delete(key)));
     await storage.delete(BALANCES_KEY);

@@ -11,9 +11,10 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-const DIST = resolve(__dirname, "../../../dist/esm");
+const DIST = resolve(__dirname, "../../../dist");
+const hasBuild = existsSync(resolve(DIST, "relayer-sdk.worker.js"));
 
-describe("worker build smoke tests", () => {
+describe.skipIf(!hasBuild)("worker build smoke tests", () => {
   const workerPath = resolve(DIST, "relayer-sdk.worker.js");
   const indexPath = resolve(DIST, "index.js");
 
