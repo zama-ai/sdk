@@ -1,62 +1,138 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatEther, formatUnits, parseUnits } from "ethers";
 import {
   useConfidentialBalance,
-  useShield,
-  useConfidentialTransfer,
-  useUnshield,
   useMetadata,
   useZamaSDK,
   balanceOfContract,
-  underlyingContract,
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
+import { BalancesCard } from "@/components/BalancesCard";
+import { ShieldCard } from "@/components/ShieldCard";
+import { TransferCard } from "@/components/TransferCard";
+import { UnshieldCard } from "@/components/UnshieldCard";
+import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
+import {
+  HOODI_CHAIN_ID,
+  HOODI_CHAIN_ID_HEX,
+  HOODI_EXPLORER_URL,
+  HOODI_RPC_URL,
+} from "@/lib/config";
 
-const HOODI_CHAIN_ID = 560048;
-const HOODI_CHAIN_ID_HEX = "0x88BB0";
-
-// Only the ERC-7984 wrapper (confidential) address is needed — the underlying ERC-20
-// is resolved on-chain via underlying() so the TOKENS map stays minimal.
+// ─── CONFIGURATION ────────────────────────────────────────────────────────────
+// Add your ERC-7984 token pairs here.
+// - erc20: the underlying ERC-20 token (source of funds for shield, mint target)
+// - confidential: the ERC-7984 wrapper contract (used for all SDK hooks)
+// The SDK hooks (useShield, useUnshield, useConfidentialTransfer) all take
+// tokenAddress === wrapperAddress === token.confidential for ERC-7984 tokens.
 const TOKENS = {
   usdt: {
     label: "USDT Mock",
+    erc20: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b" as Address,
     confidential: "0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75" as Address,
   },
   test: {
     label: "Test Token",
+    erc20: "0x7740F913dC24D4F9e1A72531372c3170452B2F87" as Address,
     confidential: "0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1" as Address,
   },
 } as const;
 
+// Standard ERC-20 mint ABI — both test tokens expose mint(address, uint256).
+const MINT_ABI = ["function mint(address to, uint256 amount)"];
+
 type TokenKey = keyof typeof TOKENS;
+
+// Attempt to switch to Hoodi. If the network is unknown to the wallet (error 4902),
+// prompt to add it. Silently ignores user rejections (error 4001) so the caller
+// can decide how to handle them by re-reading the current chainId afterwards.
+async function switchToHoodi() {
+  try {
+    await window.ethereum!.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: HOODI_CHAIN_ID_HEX }],
+    });
+  } catch (err: unknown) {
+    if ((err as { code: number }).code === 4902) {
+      await window.ethereum!.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: HOODI_CHAIN_ID_HEX,
+            chainName: "Hoodi",
+            nativeCurrency: { name: "Hoodi Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: [HOODI_RPC_URL],
+            blockExplorerUrls: [HOODI_EXPLORER_URL],
+          },
+        ],
+      });
+    }
+    // 4001 (user rejection) and other errors are swallowed intentionally.
+    // The caller re-reads the actual chainId to determine the outcome.
+  }
+}
 
 export default function Home() {
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
+  const [isSwitching, setIsSwitching] = useState(false);
   const [selectedToken, setSelectedToken] = useState<TokenKey>("usdt");
-  const [amount, setAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
   const [connectError, setConnectError] = useState<string | null>(null);
 
   const token = TOKENS[selectedToken];
-  const isHoodi = chainId !== null && parseInt(chainId, 16) === HOODI_CHAIN_ID;
+  const isHoodi = chainId === HOODI_CHAIN_ID_HEX;
 
-  // Detect existing connection and listen for account/chain changes
+  // Declared early so queryClient is captured by the useEffect closure below.
+  const queryClient = useQueryClient();
+  const sdk = useZamaSDK();
+
+  // Attempt to switch to Hoodi and update chainId based on the actual result.
+  // Safe to call concurrently — duplicate calls are harmless (last write wins).
+  async function handleSwitchToHoodi() {
+    if (!window.ethereum) return;
+    setIsSwitching(true);
+    try {
+      await switchToHoodi();
+    } catch {
+      /* ignore */
+    } finally {
+      const current = (await window.ethereum.request({ method: "eth_chainId" })) as string;
+      setChainId(current);
+      setIsSwitching(false);
+    }
+  }
+
+  // Detect existing connection on page load and listen for account/chain changes.
+  // Note: providers.tsx has a second accountsChanged listener that manages the
+  // ZamaProvider lifecycle (signer remount). This listener handles UI-level state only.
   useEffect(() => {
     if (!window.ethereum) return;
 
-    (window.ethereum.request({ method: "eth_accounts" }) as Promise<string[]>).then((accounts) =>
-      setAddress(accounts[0] ?? null),
-    );
-    (window.ethereum.request({ method: "eth_chainId" }) as Promise<string>).then(setChainId);
+    // Read both accounts and chainId in parallel, then auto-switch if needed.
+    Promise.all([
+      window.ethereum.request({ method: "eth_accounts" }) as Promise<string[]>,
+      window.ethereum.request({ method: "eth_chainId" }) as Promise<string>,
+    ]).then(([accounts, currentChainId]) => {
+      const detectedAddress = accounts[0] ?? null;
+      setAddress(detectedAddress);
+      setChainId(currentChainId);
 
-    const handleAccountsChanged = (...args: unknown[]) => {
-      const accounts = args[0] as string[];
-      setAddress(accounts[0] ?? null);
+      // Already connected but on the wrong network — trigger switch automatically
+      // so the user is prompted to add/switch Hoodi without having to click anything.
+      if (detectedAddress && currentChainId !== HOODI_CHAIN_ID_HEX) {
+        handleSwitchToHoodi();
+      }
+    });
+
+    const handleAccountsChanged = (accounts: unknown) => {
+      setAddress((accounts as string[])[0] ?? null);
+      // Invalidate all cached queries so balances refresh for the new wallet.
+      queryClient.invalidateQueries();
     };
-    const handleChainChanged = (...args: unknown[]) => setChainId(args[0] as string);
+    const handleChainChanged = (chainId: unknown) => setChainId(chainId as string);
 
     window.ethereum.on("accountsChanged", handleAccountsChanged);
     window.ethereum.on("chainChanged", handleChainChanged);
@@ -68,7 +144,9 @@ export default function Home() {
 
   async function connect() {
     if (!window.ethereum) {
-      alert("MetaMask not found. Please install MetaMask to use this app.");
+      setConnectError(
+        "No wallet found. Please install an EIP-1193 browser wallet (e.g. Rabby, Phantom, …).",
+      );
       return;
     }
 
@@ -77,270 +155,199 @@ export default function Home() {
       const accounts = (await window.ethereum.request({
         method: "eth_requestAccounts",
       })) as string[];
-
-      // Switch to Hoodi — add the network if MetaMask doesn't know it yet
-      try {
-        await window.ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: HOODI_CHAIN_ID_HEX }],
-        });
-      } catch (switchError: unknown) {
-        if ((switchError as { code: number }).code === 4902) {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: HOODI_CHAIN_ID_HEX,
-                chainName: "Hoodi",
-                nativeCurrency: { name: "Hoodi Ether", symbol: "ETH", decimals: 18 },
-                rpcUrls: [
-                  process.env.NEXT_PUBLIC_HOODI_RPC_URL || "https://rpc.hoodi.ethpandaops.io",
-                ],
-                blockExplorerUrls: ["https://hoodi.etherscan.io"],
-              },
-            ],
-          });
-        } else {
-          throw switchError;
-        }
-      }
-
       setAddress(accounts[0] ?? null);
-      setChainId(HOODI_CHAIN_ID_HEX);
+
+      // Switch to Hoodi — updates chainId based on actual result, never throws.
+      await handleSwitchToHoodi();
     } catch (err) {
       console.error("Failed to connect wallet:", err);
       setConnectError(err instanceof Error ? err.message : "Failed to connect wallet");
     }
   }
 
-  // SDK hooks — always called (React rules of hooks)
-  const sdk = useZamaSDK();
-  const queryClient = useQueryClient();
+  // useMetadata fetches name/symbol/decimals for each contract.
+  // erc20Metadata is used for the shield amount and ERC-20 balance display;
+  // metadata (ERC-7984) is used for transfer/unshield amounts and confidential balance display.
   const metadata = useMetadata(token.confidential);
+  const erc20Metadata = useMetadata(token.erc20);
 
-  const erc20BalanceKey = ["erc20-balance", token.confidential, address];
-  const { data: erc20Balance } = useQuery({
-    queryKey: erc20BalanceKey,
+  const decimals = metadata.data?.decimals ?? 0;
+  const erc20Decimals = erc20Metadata.data?.decimals ?? 0;
+  const confidentialSymbol = metadata.data?.symbol ?? "";
+  const erc20Symbol = erc20Metadata.data?.symbol ?? "";
+
+  const ethBalanceKey = ["eth-balance", address];
+  const { data: ethBalance } = useQuery({
+    queryKey: ethBalanceKey,
     queryFn: async () => {
-      // Resolve the underlying ERC-20 address from the wrapper on-chain, then read its balance.
-      const erc20Address = (await sdk.signer.readContract(
-        underlyingContract(token.confidential),
-      )) as Address;
-      return sdk.signer.readContract(
-        balanceOfContract(erc20Address, address as Address),
-      ) as Promise<bigint>;
+      const hex = (await window.ethereum!.request({
+        method: "eth_getBalance",
+        params: [address, "latest"],
+      })) as string;
+      return formatEther(BigInt(hex));
     },
     enabled: !!address,
   });
-  const refreshErc20 = () => queryClient.invalidateQueries({ queryKey: erc20BalanceKey });
+
+  // Use the ERC-20 address from config directly — no on-chain underlyingContract() lookup needed.
+  const erc20BalanceKey = ["erc20-balance", token.erc20, address];
+  const { data: erc20Balance } = useQuery({
+    queryKey: erc20BalanceKey,
+    queryFn: async () =>
+      sdk.signer.readContract(
+        balanceOfContract(token.erc20, address as Address),
+      ) as Promise<bigint>,
+    enabled: !!address,
+  });
+
+  const refreshBalances = () => {
+    queryClient.invalidateQueries({ queryKey: erc20BalanceKey });
+    queryClient.invalidateQueries({ queryKey: ethBalanceKey });
+  };
 
   const balance = useConfidentialBalance({ tokenAddress: token.confidential });
 
-  const shield = useShield(
-    { tokenAddress: token.confidential, wrapperAddress: token.confidential },
-    { onSuccess: refreshErc20 },
-  );
-  const transfer = useConfidentialTransfer({ tokenAddress: token.confidential });
-  const unshield = useUnshield(
-    { tokenAddress: token.confidential, wrapperAddress: token.confidential },
-    { onSuccess: refreshErc20 },
-  );
+  // Mint 10 whole tokens on the underlying ERC-20 contract.
+  // Uses sdk.signer so receipt polling goes through the direct Hoodi RPC (fast).
+  const mint = useMutation({
+    mutationFn: async () => {
+      const txHash = await sdk.signer.writeContract({
+        address: token.erc20,
+        abi: MINT_ABI,
+        functionName: "mint",
+        args: [address as Address, parseUnits("10", erc20Decimals)],
+      });
+      await sdk.signer.waitForTransactionReceipt(txHash);
+    },
+    onSuccess: refreshBalances,
+  });
 
-  const parsedAmount = BigInt(amount || "0");
-  const anyPending = shield.isPending || transfer.isPending || unshield.isPending;
-  const anyError = shield.isError || transfer.isError || unshield.isError;
-  const actionsDisabled = anyPending || !isHoodi;
-  const lastTxHash =
-    (shield.isSuccess && shield.data?.txHash) ||
-    (transfer.isSuccess && transfer.data?.txHash) ||
-    (unshield.isSuccess && unshield.data?.txHash) ||
-    null;
+  const formattedErc20 =
+    erc20Balance !== undefined ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}` : "—";
+  const formattedConfidential =
+    balance.data !== undefined
+      ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
+      : "—";
 
-  // Not connected — show connect screen
+  // Actions are disabled until both metadata are loaded (decimals needed to parse amounts)
+  // and until the wallet is on the Hoodi network.
+  const actionsDisabled = !isHoodi || !metadata.data || !erc20Metadata.data;
+
+  // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!address) {
     return (
-      <div style={{ padding: 40, fontFamily: "system-ui" }}>
-        <h1>Hoodi Confidential Token Demo</h1>
-        <p style={{ color: "#555" }}>
-          Connect your MetaMask wallet to get started. The app will automatically switch to the
-          Hoodi network.
+      <div className="app-container connect-screen">
+        <h1>Hoodi Confidential Token Quickstart</h1>
+        <p className="subtitle">
+          Connect your wallet to interact with ERC-7984 tokens on Hoodi testnet.
         </p>
-        <button onClick={connect} style={buttonStyle}>
-          Connect MetaMask
+        <button className="btn btn-primary" onClick={connect}>
+          Connect Wallet
         </button>
-        {connectError && <p style={{ color: "red" }}>{connectError}</p>}
+        {connectError && <div className="alert alert-error card-status">{connectError}</div>}
       </div>
     );
   }
 
-  // Connected — show main UI
-  return (
-    <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 640 }}>
-      <h1>Hoodi Confidential Token Demo</h1>
-      <p style={{ color: "#666", fontSize: 13 }}>Connected: {address}</p>
+  // ── Screen 2: Wrong network ────────────────────────────────────────────────
+  if (!isHoodi) {
+    return (
+      <div className="app-container connect-screen">
+        <h1>Hoodi Network Required</h1>
+        <p className="subtitle">
+          This app only works on the Hoodi testnet (chain ID {HOODI_CHAIN_ID}). Switch your wallet
+          to continue — Hoodi will be added to your wallet automatically if it is not already
+          configured.
+        </p>
+        <button className="btn btn-primary" onClick={handleSwitchToHoodi} disabled={isSwitching}>
+          {isSwitching ? "Switching…" : "Switch to Hoodi"}
+        </button>
+      </div>
+    );
+  }
 
-      {/* Wrong network banner */}
-      {!isHoodi && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            background: "#fff3cd",
-            border: "1px solid #ffc107",
-            borderRadius: 6,
-          }}
-        >
-          <strong>Wrong network</strong> — switch to Hoodi (chainId 560048) to use this app.{" "}
-          <button
-            onClick={async () => {
-              try {
-                await window.ethereum?.request({
-                  method: "wallet_switchEthereumChain",
-                  params: [{ chainId: HOODI_CHAIN_ID_HEX }],
-                });
-              } catch {
-                // User rejected the network switch — safe to ignore
-              }
-            }}
-            style={{ ...buttonStyle, marginLeft: 8 }}
-          >
-            Switch to Hoodi
-          </button>
+  // ── Screen 3: Connected on Hoodi — main UI ─────────────────────────────────
+  return (
+    <div className="app-container">
+      {/* Header */}
+      <div className="app-header">
+        <h1>Hoodi Confidential Token Quickstart</h1>
+        <div className="connected-address">Connected: {address}</div>
+        <div className="connected-address">
+          ETH: {ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}
         </div>
-      )}
+      </div>
 
       {/* Token selector */}
-      <div style={{ marginBottom: 24 }}>
-        <label>
-          Token:{" "}
-          <select
-            value={selectedToken}
-            onChange={(e) => setSelectedToken(e.target.value as TokenKey)}
-            style={selectStyle}
-          >
-            {(Object.keys(TOKENS) as TokenKey[]).map((key) => (
-              <option key={key} value={key}>
-                {TOKENS[key].label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {metadata.data && (
-          <span style={{ marginLeft: 12, color: "#666", fontSize: 13 }}>
-            {metadata.data.name} ({metadata.data.symbol}) — {metadata.data.decimals} decimals
-          </span>
-        )}
-      </div>
-
-      {/* Balances */}
-      <div style={{ marginBottom: 24, padding: 16, background: "#f5f5f5", borderRadius: 8 }}>
-        <div style={{ marginBottom: 8 }}>
-          <strong>ERC-20 balance:</strong>{" "}
-          {erc20Balance !== undefined ? erc20Balance.toString() : "—"}
-        </div>
-        <div>
-          <strong>Confidential balance:</strong>{" "}
-          {balance.isLoading ? "Decrypting..." : (balance.data?.toString() ?? "—")}
-        </div>
-      </div>
-
-      <hr style={{ margin: "24px 0" }} />
-
-      {/* Amount input */}
-      <div style={{ marginBottom: 16 }}>
-        <label>
-          Amount:{" "}
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0"
-            min="0"
-            step="1"
-            style={inputStyle}
-          />
-        </label>
-      </div>
-
-      {/* Shield */}
-      <div style={{ marginBottom: 16 }}>
-        <button
-          onClick={() => shield.mutate({ amount: parsedAmount })}
-          disabled={actionsDisabled || !amount}
-          style={buttonStyle}
+      <div className="card">
+        <div className="card-title">Token</div>
+        <select
+          className="select"
+          value={selectedToken}
+          onChange={(e) => {
+            setSelectedToken(e.target.value as TokenKey);
+            mint.reset();
+          }}
         >
-          {shield.isPending ? "Shielding..." : "Shield"}
-        </button>
+          {(Object.keys(TOKENS) as TokenKey[]).map((key) => (
+            <option key={key} value={key}>
+              {TOKENS[key].label}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Confidential transfer */}
-      <div style={{ marginBottom: 16 }}>
-        <label>
-          Recipient:{" "}
-          <input
-            type="text"
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            placeholder="0x..."
-            style={{ ...inputStyle, width: 360 }}
-          />
-        </label>
-        <button
-          onClick={() => transfer.mutate({ to: recipient as Address, amount: parsedAmount })}
-          disabled={actionsDisabled || !amount || !recipient}
-          style={{ ...buttonStyle, marginLeft: 8 }}
-        >
-          {transfer.isPending ? "Transferring..." : "Transfer"}
-        </button>
-      </div>
+      <BalancesCard
+        formattedErc20={formattedErc20}
+        formattedConfidential={formattedConfidential}
+        isLoadingConfidential={balance.isPending}
+        // handleQuery = Phase 1 (encrypted handle poll); balance query = Phase 2 (decrypt)
+        isErrorConfidential={balance.isError || balance.handleQuery.isError}
+        erc20Symbol={erc20Symbol}
+        onMint={() => mint.mutate()}
+        isMinting={mint.isPending}
+        mintDisabled={actionsDisabled}
+      />
 
-      {/* Unshield */}
-      <div style={{ marginBottom: 16 }}>
-        <button
-          onClick={() => unshield.mutate({ amount: parsedAmount })}
-          disabled={actionsDisabled || !amount}
-          style={buttonStyle}
-        >
-          {unshield.isPending ? "Unshielding..." : "Unshield"}
-        </button>
-      </div>
+      {/* Pending unshield resume — checked for every token, not just the selected one.
+          key includes address so the component remounts (re-checks IndexedDB) on wallet change. */}
+      {(Object.entries(TOKENS) as [TokenKey, (typeof TOKENS)[TokenKey]][]).map(([key, t]) => (
+        <PendingUnshieldCard
+          key={`${key}-${address}`}
+          tokenAddress={t.confidential}
+          label={t.label}
+          onSuccess={refreshBalances}
+        />
+      ))}
 
-      {/* Status */}
-      {anyError && (
-        <p style={{ color: "red" }}>
-          Error: {(shield.error ?? transfer.error ?? unshield.error)?.message}
-        </p>
-      )}
-      {!anyError && lastTxHash && (
-        <p style={{ color: "green" }}>
-          Transaction confirmed!{" "}
-          <a
-            href={`https://hoodi.etherscan.io/tx/${lastTxHash}`}
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: "green" }}
-          >
-            {lastTxHash.slice(0, 10)}…
-          </a>
-        </p>
-      )}
+      <hr className="divider" />
+
+      {/* key includes address and selectedToken so cards remount (inputs + state reset) on wallet or token change */}
+      <ShieldCard
+        key={`shield-${address}-${selectedToken}`}
+        tokenAddress={token.confidential}
+        decimals={erc20Decimals}
+        symbol={erc20Symbol}
+        disabled={actionsDisabled}
+        onSuccess={refreshBalances}
+      />
+
+      <TransferCard
+        key={`transfer-${address}-${selectedToken}`}
+        tokenAddress={token.confidential}
+        decimals={decimals}
+        symbol={confidentialSymbol}
+        disabled={actionsDisabled}
+      />
+
+      <UnshieldCard
+        key={`unshield-${address}-${selectedToken}`}
+        tokenAddress={token.confidential}
+        decimals={decimals}
+        symbol={confidentialSymbol}
+        disabled={actionsDisabled}
+        onSuccess={refreshBalances}
+      />
     </div>
   );
 }
-
-const buttonStyle: React.CSSProperties = {
-  padding: "8px 16px",
-  fontSize: 14,
-  cursor: "pointer",
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: "6px 10px",
-  fontSize: 14,
-  width: 120,
-};
-
-const selectStyle: React.CSSProperties = {
-  padding: "6px 10px",
-  fontSize: 14,
-};

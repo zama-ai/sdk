@@ -18,36 +18,35 @@ This example uses the **cleartext stack** (`RelayerCleartext`), which is Zama's 
 
 ---
 
-## What this demo proves
+## What this example demonstrates
 
-> A standard MetaMask wallet can interact with ERC-7984 confidential tokens on Hoodi using the Zama SDK's ethers integration and the cleartext backend — with no external relayer service and no API key.
+> Any EIP-1193 browser wallet (Rabby, Phantom…) can interact with ERC-7984 confidential tokens on Hoodi using the Zama SDK's ethers integration and the cleartext backend — with no external relayer service and no API key.
 
 Specifically:
 
-1. A user connects MetaMask (or any injected EIP-1193 wallet).
-2. They can select between two token pairs (USDT Mock / Test Token).
+1. A user connects any injected EIP-1193 wallet.
+2. They can select between two tokens (USDT Mock / Test Token).
 3. All four ERC-7984 protocol operations work end-to-end.
 
 ---
 
 ## Supported operations
 
-| Operation                    | SDK hook                  | Status      |
-| ---------------------------- | ------------------------- | ----------- |
-| Decrypt confidential balance | `useConfidentialBalance`  | ✅ Verified |
-| Shield (ERC-20 → cToken)     | `useShield`               | ✅ Verified |
-| Confidential transfer        | `useConfidentialTransfer` | ✅ Verified |
-| Unshield (cToken → ERC-20)   | `useUnshield`             | ✅ Verified |
+| Operation                    | SDK hook                  | Transactions          |
+| ---------------------------- | ------------------------- | --------------------- |
+| Decrypt confidential balance | `useConfidentialBalance`  | 0 (read)              |
+| Shield (ERC-20 → cToken)     | `useShield`               | 2 (approve + wrap)    |
+| Confidential transfer        | `useConfidentialTransfer` | 1                     |
+| Unshield (cToken → ERC-20)   | `useUnshield`             | 2 (unwrap + finalize) |
 
 ---
 
 ## Wallet compatibility
 
-| Wallet type                        | Supported | Notes                                                                                              |
-| ---------------------------------- | --------- | -------------------------------------------------------------------------------------------------- |
-| MetaMask (EOA)                     | Yes       | Fully tested — this demo                                                                           |
-| Any injected EIP-1193 wallet (EOA) | Yes       | Must support `wallet_switchEthereumChain` / `wallet_addEthereumChain`                              |
-| Smart account (ERC-4337)           | No        | The Zama relayer uses ECDSA (`ecrecover`) — smart account signing key differs from account address |
+| Wallet type                                             | Supported | Notes                                                                                              |
+| ------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------- |
+| EIP-1193 browser wallet EOA (Rabby, MetaMask, Phantom…) | Yes       | Must support `wallet_switchEthereumChain` / `wallet_addEthereumChain`.                             |
+| Smart account (ERC-4337)                                | No        | The Zama relayer uses ECDSA (`ecrecover`) — smart account signing key differs from account address |
 
 ---
 
@@ -80,7 +79,7 @@ RelayerWeb → external HTTP service      RelayerCleartext → on-chain executor
 ## Architecture at a glance
 
 ```
-User (MetaMask)
+User (browser wallet)
   │
   ▼
 page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidentialBalance
@@ -91,22 +90,24 @@ page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidential
   ▼
 @zama-fhe/sdk (ZamaSDK)
   ├─ EthersSigner   → hybrid EIP-1193 provider
-  │    ├─ eth_call  → JsonRpcProvider(HOODI_RPC) — direct Hoodi RPC, bypasses MetaMask routing
-  │    └─ all other → MetaMask → Hoodi
+  │    ├─ reads     → JsonRpcProvider(HOODI_RPC_URL) — direct, fast receipt polling
+  │    └─ writes    → injected wallet (signing, account management)
   └─ RelayerCleartext → hoodiCleartextConfig
        └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, Hoodi)
        └─ produces mock KMS signatures locally (no external call)
 ```
 
-The hybrid EIP-1193 provider is necessary because MetaMask's `BrowserProvider` routes `eth_call` through its own network detection, which can target the wrong chain if MetaMask was on a different network when the provider was initialised. Routing reads directly to a `JsonRpcProvider` pointed at the known-good Hoodi RPC eliminates this issue.
+**Hybrid EIP-1193 provider:** read-only RPC calls (e.g. `eth_call`, `eth_getTransactionReceipt`) are routed to a direct `JsonRpcProvider` pointed at the Hoodi RPC. Wallet-specific calls (account management, signing) go through the injected wallet. This ensures receipt polling is fast and reliable — the wallet's own RPC endpoint can lag by up to a minute on Hoodi testnet.
+
+**Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts with a fresh `EthersSigner` so the new account's address is used immediately. An EIP-712 session credential is cached in IndexedDB (`sessionStorage={indexedDBStorage}`) so it survives remounts without prompting the user again.
 
 ---
 
 ## Prerequisites
 
-### 1. MetaMask
+### 1. Browser wallet
 
-Install [MetaMask](https://metamask.io) and create or import a wallet. The app automatically adds the Hoodi network when you connect.
+Install any EIP-1193 browser wallet (e.g. [Rabby](https://rabby.io), [Phantom](https://phantom.com)) and create or import an account. The app automatically adds the Hoodi network when you connect.
 
 If you prefer to add Hoodi manually:
 
@@ -148,30 +149,38 @@ All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
 
 ## Minting test tokens
 
+### Via the app
+
+Click the **Mint** button next to the ERC-20 balance. This mints 10 whole tokens directly to your connected wallet using the token's `mint(address, uint256)` function.
+
 ### Via Etherscan
 
 1. Go to the ERC-20 contract on [hoodi.etherscan.io](https://hoodi.etherscan.io) (e.g., `0x51a63b...` for USDT Mock).
 2. Click the **Contract** tab → **Write Contract**.
-3. Click **Connect to Web3** and connect MetaMask.
-4. Find the `mint` function, enter your wallet address and the desired amount (in wei — e.g., `1000` for 1000 tokens with 0 decimals, or `1000000000` for tokens with 6 decimals).
-5. Click **Write** and confirm in MetaMask.
+3. Click **Connect to Web3** and connect your wallet.
+4. Find the `mint` function, enter your wallet address and the desired amount in raw units (e.g., `10000000` for 10 USDT Mock, which has 6 decimals).
+5. Click **Write** and confirm in your wallet.
 
 ### Via code
 
 ```ts
-import { Contract, BrowserProvider } from "ethers";
+import { Contract, BrowserProvider, parseUnits } from "ethers";
 
 const MINT_ABI = ["function mint(address to, uint256 amount)"];
 const provider = new BrowserProvider(window.ethereum);
 const signer = await provider.getSigner();
 
-// Mint USDT Mock
+// Amounts are raw integers: use parseUnits to convert from human-readable values.
+// USDT Mock has 6 decimals — 10 USDT = parseUnits("10", 6) = 10_000_000n
 const usdtMock = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
-await usdtMock.mint(await signer.getAddress(), 1000n);
+await usdtMock.mint(await signer.getAddress(), parseUnits("10", 6));
 
-// Mint Test Token
+// Test Token — verify its decimals on Etherscan or via useMetadata before minting.
 const testToken = new Contract("0x7740F913dC24D4F9e1A72531372c3170452B2F87", MINT_ABI, signer);
-await testToken.mint(await signer.getAddress(), 1000n);
+await testToken.mint(
+  await signer.getAddress(),
+  parseUnits("10", 6 /* replace with actual decimals */),
+);
 ```
 
 ---
@@ -180,45 +189,50 @@ await testToken.mint(await signer.getAddress(), 1000n);
 
 ### Step 1 — Connect wallet
 
-Open the app at [http://localhost:3000](http://localhost:3000) and click **Connect MetaMask**.
+Open the app at [http://localhost:3000](http://localhost:3000) and click **Connect Wallet**.
 
-The app calls `eth_requestAccounts` to connect, then `wallet_switchEthereumChain` (or `wallet_addEthereumChain` if Hoodi is not yet in MetaMask) to switch to Hoodi (chainId 560048 / 0x88BB0). No further setup is needed.
+The app calls `eth_requestAccounts` to connect, then `wallet_switchEthereumChain` (or `wallet_addEthereumChain` if Hoodi is not yet known to the wallet) to switch to Hoodi (chainId 560048 / `0x88bb0`). No further setup is needed.
 
-Once connected, your wallet address appears at the top of the page.
+Once connected, your wallet address and ETH balance appear at the top of the page.
 
-If you switch MetaMask to a different network after connecting, a yellow warning banner appears with a **Switch to Hoodi** button. All operation buttons are disabled until you switch back.
+If you switch to a different network after connecting, the app shows a full-page **Hoodi Network Required** screen with a **Switch to Hoodi** button. All operation buttons are disabled until you switch back.
 
 ### Step 2 — Select a token
 
-Use the **Token** dropdown to select between **USDT Mock** and **Test Token**. The token name, symbol, and decimal precision are loaded from the chain via `useMetadata`.
+Use the **Token** dropdown to select between **USDT Mock** and **Test Token**. The token name, symbol, and decimal precision are loaded from the chain via `useMetadata` (called once for the ERC-7984 wrapper and once for the underlying ERC-20).
 
 ### Step 3 — Mint tokens (if needed)
 
-If your ERC-20 balance shows `0`, mint test tokens using one of the methods above before shielding.
+If your ERC-20 balance shows `0`, click **Mint** next to the ERC-20 balance, or use one of the manual methods above. The button mints 10 whole tokens to your wallet and refreshes the balance automatically.
 
 ### Step 4 — Check your balances
 
 Two balances are displayed:
 
-- **ERC-20 balance** — your public on-chain balance of the underlying token (e.g., USDTMock). Read via a standard `balanceOf` call against the Hoodi RPC.
-- **Confidential balance** — your encrypted cToken balance, decrypted locally via `useConfidentialBalance`. In cleartext mode the `RelayerCleartext` reads the plaintext directly from the `CleartextFHEVMExecutor` contract — no wallet signature is required.
+- **ERC-20 balance** — your public on-chain balance of the underlying token (e.g., USDTMock). Read via a standard `balanceOf` call.
+- **Confidential balance** — your confidential cToken balance, read via `useConfidentialBalance`. The SDK reads the encrypted handle on-chain (Phase 1), then decrypts it via `RelayerCleartext` (Phase 2).
+
+On **first use** (or after clearing browser data), your wallet will request a one-time **EIP-712 session signature** to authorise the SDK to decrypt your balance. This credential is cached in IndexedDB and reused for all subsequent decryptions — you will not be prompted again unless you clear your browser storage or revoke the session.
 
 ### Step 5 — Shield (ERC-20 → cToken)
 
-Enter an amount and click **Shield**. This converts public ERC-20 tokens into confidential cTokens.
+Enter a human-readable amount (e.g., `1.5`) and click **Shield**. This converts public ERC-20 tokens into confidential cTokens.
 
 Under the hood, the SDK sequences two transactions automatically:
 
-1. ERC-20 `approve` — authorises the wrapper contract to spend your tokens
-2. `wrap` — locks the ERC-20 in the wrapper and mints the equivalent cToken amount
+1. ERC-20 `approve` — authorises the wrapper contract to spend your tokens. The button shows **Shielding… (1/2)** immediately from the moment you click, while the approval is being processed.
+2. `wrap` — locks the ERC-20 in the wrapper and mints the equivalent cToken amount. The button switches to **Shielding… (2/2)** once the approval is submitted — the SDK mines it automatically, then sends the wrap transaction.
 
-Both transactions require MetaMask confirmation. Gas fees on Hoodi are effectively zero. The ERC-20 balance refreshes automatically on success.
+Both transactions require wallet confirmation. Gas fees on Hoodi are effectively zero. The ERC-20 balance refreshes automatically on success.
 
 ### Step 6 — Confidential transfer
 
 Enter a **recipient address** and an **amount**, then click **Transfer**. This sends cTokens to another address with the amount hidden on-chain.
 
-The SDK encrypts the amount locally before submitting the transaction. One MetaMask confirmation is required.
+The operation has two phases:
+
+1. **FHE encryption** — the amount is encrypted locally by the SDK. The button shows **Encrypting…** during this phase (no wallet interaction).
+2. **Transaction submission** — the encrypted transfer is sent on-chain. The button shows **Submitting…** and one wallet confirmation is required.
 
 ### Step 7 — Unshield (cToken → ERC-20)
 
@@ -226,14 +240,16 @@ Enter an amount and click **Unshield**. This converts cTokens back into public E
 
 Unshield is a two-phase operation:
 
-1. **Unwrap** — a transaction that burns the cTokens and emits an `UnwrapRequested` event containing the encrypted amount handle. One MetaMask confirmation.
-2. **Finalize** — the `RelayerCleartext` decrypts the amount locally (no external call, no wallet prompt), then submits a `finalizeUnwrap` transaction that releases the ERC-20 tokens. One MetaMask confirmation.
+1. **Unwrap** — a transaction that burns the cTokens and emits an `UnwrapRequested` event containing the encrypted amount handle. The button shows **Unshielding… (1/2)**. One wallet confirmation.
+2. **Finalize** — the `RelayerCleartext` decrypts the amount locally (no external call, no wallet prompt), then submits a `finalizeUnwrap` transaction that releases the ERC-20 tokens. The button shows **Unshielding… (2/2)**. One wallet confirmation.
 
 Both phases complete within seconds on Hoodi. The ERC-20 balance refreshes automatically on success.
 
+**Tab close resilience:** if you close the tab after Phase 1 completes but before Phase 2 starts, the pending unshield is saved in IndexedDB. A **Pending Unshield** card will appear when you reopen the app, allowing you to resume finalization.
+
 ### Step 8 — Verify updated balances
 
-After each operation, balances refresh automatically. The ERC-20 balance is re-fetched after shield and unshield. The confidential balance updates as the SDK cache is invalidated.
+After each operation, balances refresh automatically. The ERC-20 balance is re-fetched after shield and unshield. The confidential balance re-decrypts once the underlying handle changes on-chain.
 
 ---
 
@@ -246,22 +262,24 @@ After each operation, balances refresh automatically. The ERC-20 balance is re-f
 import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { ZamaProvider, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { HOODI_RPC_URL } from "@/lib/config"; // process.env.NEXT_PUBLIC_HOODI_RPC_URL || fallback
 
-// Route eth_call to a direct JsonRpcProvider; signing stays in MetaMask.
+// Route read-only RPC calls to a direct JsonRpcProvider for fast receipt polling.
+// Wallet calls (signing, account management) are forwarded to the injected wallet.
+// See providers.tsx for the full implementation (includes wallet-switch handling).
 const hybridEthereum = createHybridEthereum(window.ethereum);
 const signer = new EthersSigner({ ethereum: hybridEthereum });
 
-const relayer = new RelayerCleartext(hoodiCleartextConfig);
-// hoodiCleartextConfig = {
-//   chainId: 560048,
-//   network: "https://rpc.hoodi.ethpandaops.io",
-//   aclContractAddress: "0x6D3FAf6f86e1fF9F3B0831Dda920AbA1cBd5bd68",
-//   executorAddress: "0xC316692627de536368d82e9121F1D44a550894E6",
-//   ...
-// }
+// hoodiCleartextConfig contains the chainId, executor address, and ACL address for Hoodi.
+// Override `network` to use a custom RPC endpoint.
+const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL });
 
-// No proxy route needed — RelayerCleartext reads on-chain directly
-<ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
+<ZamaProvider
+  relayer={relayer}
+  signer={signer}
+  storage={indexedDBStorage}
+  sessionStorage={indexedDBStorage} // persist EIP-712 session credentials across page reloads
+>
   ...
 </ZamaProvider>;
 ```
@@ -269,21 +287,57 @@ const relayer = new RelayerCleartext(hoodiCleartextConfig);
 ### Hook usage
 
 ```tsx
-// tokenAddress = wrapperAddress = the ERC-7984 (cToken) address
-// The underlying ERC-20 is resolved automatically by the SDK via underlying()
+import { parseUnits } from "ethers";
+import {
+  useShield,
+  useConfidentialTransfer,
+  useUnshield,
+  useConfidentialBalance,
+  useMetadata,
+} from "@zama-fhe/react-sdk";
+
+// For ERC-7984 tokens: tokenAddress === wrapperAddress (same contract).
+// The ERC-20 underlying address is separate — used for balance display and shield amounts.
+const cTokenAddress = "0x..."; // ERC-7984 wrapper contract address
+const erc20Address = "0x..."; // Underlying ERC-20 contract address
+
+// Fetch decimal precision for each contract — they may differ.
+// Use erc20Decimals for shield (amounts are in ERC-20 units).
+// Use cTokenDecimals for transfer and unshield (amounts are in confidential token units).
+const { data: cTokenMeta } = useMetadata(cTokenAddress);
+const { data: erc20Meta } = useMetadata(erc20Address);
+const cTokenDecimals = cTokenMeta?.decimals ?? 0;
+const erc20Decimals = erc20Meta?.decimals ?? 0;
+
 const shield = useShield({ tokenAddress: cTokenAddress, wrapperAddress: cTokenAddress });
 const transfer = useConfidentialTransfer({ tokenAddress: cTokenAddress });
 const unshield = useUnshield({ tokenAddress: cTokenAddress, wrapperAddress: cTokenAddress });
 const balance = useConfidentialBalance({ tokenAddress: cTokenAddress });
 
-// Shield: 2 transactions (approve + wrap)
-shield.mutate({ amount: 1000n });
+// Shield: 2 transactions (approve + wrap).
+// Amount is in ERC-20 units — use erc20Decimals to parse human-readable input.
+// onApprovalSubmitted fires between the two transactions — use it to update the progress UI.
+shield.mutate({
+  amount: parseUnits("10", erc20Decimals),
+  callbacks: { onApprovalSubmitted: () => setStep(2) },
+});
 
-// Transfer: 1 transaction (amount encrypted by SDK)
-transfer.mutate({ to: "0xRecipient", amount: 500n });
+// Transfer: FHE encryption (local) + 1 transaction.
+// Amount is in confidential token units — use cTokenDecimals.
+// onEncryptComplete fires when encryption is done, before the tx is submitted.
+transfer.mutate({
+  to: "0xRecipient",
+  amount: parseUnits("5", cTokenDecimals),
+  callbacks: { onEncryptComplete: () => setStep(2) },
+});
 
-// Unshield: 2 transactions (unwrap + finalizeUnwrap), automatic finalization
-unshield.mutate({ amount: 200n });
+// Unshield: 2 transactions (unwrap + finalizeUnwrap).
+// Amount is in confidential token units — use cTokenDecimals.
+// onFinalizing fires between the two transactions — use it to update the progress UI.
+unshield.mutate({
+  amount: parseUnits("2", cTokenDecimals),
+  callbacks: { onFinalizing: () => setStep(2) },
+});
 ```
 
 ---
@@ -294,33 +348,35 @@ unshield.mutate({ amount: 200n });
 | --------------------------- | -------- | ---------------------------------- | ------------------------------------------------------------------------------ |
 | `NEXT_PUBLIC_HOODI_RPC_URL` | No       | `https://rpc.hoodi.ethpandaops.io` | Override the Hoodi RPC endpoint. Infura: `https://hoodi.infura.io/v3/YOUR_KEY` |
 
-Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if you want to use a private RPC endpoint.
+Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if you want to use a private RPC endpoint. Leaving the value empty is safe — the app falls back to the public endpoint automatically.
 
 ---
 
 ## Troubleshooting
 
-| Symptom                                                   | Likely cause                                                     | Fix                                                                                                      |
-| --------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| "MetaMask not found" on connect                           | MetaMask extension not installed                                 | Install MetaMask from [metamask.io](https://metamask.io)                                                 |
-| Stuck on "Connect MetaMask" after clicking                | MetaMask popup was dismissed or blocked                          | Open MetaMask manually and approve the connection request                                                |
-| Network switch fails with error                           | MetaMask cannot reach the Hoodi RPC                              | Check `NEXT_PUBLIC_HOODI_RPC_URL`; try the default `https://rpc.hoodi.ethpandaops.io`                    |
-| Yellow "Wrong network" banner appears                     | MetaMask switched away from Hoodi                                | Click **Switch to Hoodi** in the banner                                                                  |
-| ERC-20 balance shows `—`                                  | Not yet connected or query pending                               | Wait for the connection to complete                                                                      |
-| ERC-20 balance shows `0`                                  | Tokens not yet minted                                            | Mint tokens via Etherscan or the code snippet above                                                      |
-| Shield fails — approve confirmed but wrap never submitted | Ran out of Hoodi ETH between the two transactions                | Top up your wallet and try again                                                                         |
-| "Transaction confirmed!" but balance unchanged            | MetaMask was on the wrong network at the time of the transaction | Verify the yellow banner is absent (Hoodi active) before retrying                                        |
-| Unshield shows "Unshielding..." for longer than usual     | Finalize phase waiting for the unwrap receipt                    | Normal — wait for both MetaMask confirmations                                                            |
-| "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                     | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                      |
-| Amounts look wrong (e.g. off by 10^6)                     | Mixing raw units and display units                               | Amounts in the SDK are raw integers — use the `decimals` field from `useMetadata` to convert for display |
+| Symptom                                                   | Likely cause                                                           | Fix                                                                                                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| "No wallet found" on connect                              | No EIP-1193 wallet extension installed                                 | Install an EIP-1193 browser wallet (e.g. [Rabby](https://rabby.io), [Phantom](https://phantom.com))                                   |
+| Stuck on "Connect Wallet" after clicking                  | Wallet popup was dismissed or blocked                                  | Open your wallet manually and approve the connection request                                                                          |
+| Network switch fails with error                           | Wallet cannot reach the Hoodi RPC                                      | Check `NEXT_PUBLIC_HOODI_RPC_URL`; try the default `https://rpc.hoodi.ethpandaops.io`                                                 |
+| Wrong network screen appears                              | Wallet switched away from Hoodi                                        | Click **Switch to Hoodi** to switch back to Hoodi                                                                                     |
+| ERC-20 balance shows `—`                                  | Not yet connected or query pending                                     | Wait for the connection to complete                                                                                                   |
+| ERC-20 balance shows `0`                                  | Tokens not yet minted                                                  | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens)                                    |
+| "Decrypting…" stays indefinitely                          | Wallet EIP-712 signature request was missed (small notification badge) | Open your wallet and approve the pending signature request; balance will update immediately                                           |
+| Shield stuck on "Shielding… (1/2)"                        | Ran out of Hoodi ETH after the approval transaction                    | Top up your wallet with Hoodi ETH and try again                                                                                       |
+| Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount   | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); call `useMetadata` on both contracts          |
+| "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                           | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                   |
+| Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the unwrap receipt                          | Normal — wait for both wallet confirmations; the app polls via the direct Hoodi RPC for speed                                         |
+| Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield              | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                              |
+| Amounts displayed as very large or very small numbers     | Raw units displayed without decimal conversion                         | Always use `formatUnits(balance, decimals)` for display and `parseUnits(input, decimals)` for input; fetch decimals via `useMetadata` |
 
 ---
 
 ## Going further
 
-- **Additional token pairs** — add entries to the `TOKENS` constant in `page.tsx` using addresses from the registry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`.
+- **Additional tokens** — add entries to the `TOKENS` constant in `src/app/page.tsx` with the ERC-20 address and the ERC-7984 wrapper address. Both can be found in the registry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`.
 - **Production use** — replace `RelayerCleartext` with `RelayerWeb` (browser) or `RelayerNode` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
-- **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances with a single EIP-712 signature.
+- **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances in a single relayer call.
 
 ---
 
@@ -328,8 +384,8 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 
 | Package                 | Version       | Role                                                                                          |
 | ----------------------- | ------------- | --------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | prerelease    | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                              |
-| `@zama-fhe/react-sdk`   | prerelease    | React hooks — `useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance` |
+| `@zama-fhe/sdk`         | 1.1.0-alpha.3 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                              |
+| `@zama-fhe/react-sdk`   | 1.1.0-alpha.3 | React hooks — `useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance` |
 | `ethers`                | ^6.13.0       | Ethereum client (via `EthersSigner`)                                                          |
 | `@tanstack/react-query` | ^5.90.0       | Async state management                                                                        |
 | `next`                  | ^16.0.0       | React framework (App Router)                                                                  |

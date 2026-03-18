@@ -8,7 +8,7 @@ Next.js app demonstrating all four ERC-7984 operations on the **Hoodi** testnet 
 - **ethers v6** — via `EthersSigner` from `@zama-fhe/sdk/ethers`
 - **RelayerCleartext** — cleartext FHE backend (no external relayer service required)
 - **@tanstack/react-query** — async state management
-- **MetaMask** (or any injected EIP-1193 wallet)
+- Any injected **EIP-1193 wallet** (Rabby, Phantom, …)
 - **Chain:** Hoodi testnet (chainId 560048)
 
 ## Operations demonstrated
@@ -34,11 +34,14 @@ Next.js app demonstrating all four ERC-7984 operations on the **Hoodi** testnet 
 ## Setup
 
 > **Network:** Hoodi testnet — chainId `560048`, default RPC `https://rpc.hoodi.ethpandaops.io`.
-> MetaMask will be prompted to add the network automatically on first connect.
+> Your wallet will be prompted to add the network automatically on first connect.
+
+> **Gas:** Operations require Hoodi ETH. Get some at [hoodi-faucet.pk910.de](https://hoodi-faucet.pk910.de) (proof-of-work, no account required).
 
 ```bash
 cp .env.example .env.local
-# Optional: set NEXT_PUBLIC_HOODI_RPC_URL to override the default RPC (e.g. an Infura or private node URL)
+# Optional: set NEXT_PUBLIC_HOODI_RPC_URL to a private endpoint (Infura, Alchemy, etc.)
+# Leave empty to use the default public Hoodi RPC.
 
 npm install
 ```
@@ -49,13 +52,13 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and connect MetaMask. The app will prompt you to switch to (or add) the Hoodi network automatically.
+Open [http://localhost:3000](http://localhost:3000) and connect your wallet. The app will prompt you to switch to (or add) the Hoodi network automatically.
 
 ## Environment variables
 
-| Variable                    | Required | Description                                                                                                         |
-| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_HOODI_RPC_URL` | No       | Override the default Hoodi RPC (`https://rpc.hoodi.ethpandaops.io`). Example: `https://hoodi.infura.io/v3/YOUR_KEY` |
+| Variable                    | Required | Default                            | Description                                                                                                     |
+| --------------------------- | -------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_HOODI_RPC_URL` | No       | `https://rpc.hoodi.ethpandaops.io` | Override the default Hoodi RPC. Example: `https://hoodi.infura.io/v3/YOUR_KEY`. Leaving empty uses the default. |
 
 ## Hoodi contract addresses
 
@@ -70,20 +73,24 @@ All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
 
 ## Getting test tokens
 
-Both `USDTMock` and `Test Token` have a permissionless `mint(address to, uint256 amount)` function.
+Both tokens have a permissionless `mint(address to, uint256 amount)` function.
 
-**Via Etherscan:** Navigate to the contract on [hoodi.etherscan.io](https://hoodi.etherscan.io) → Write Contract → Connect Wallet → call `mint(yourAddress, amount)`.
+**Via the app:** click the **Mint** button next to the ERC-20 balance — mints 10 tokens directly to your wallet.
 
-**Via code:**
+**Via Etherscan:** navigate to the contract on [hoodi.etherscan.io](https://hoodi.etherscan.io) → Write Contract → Connect Wallet → call `mint(yourAddress, amount)`.
+
+**Via code** (amounts are raw integers — use `parseUnits` to convert from human-readable values):
 
 ```ts
-import { Contract, BrowserProvider } from "ethers";
+import { Contract, BrowserProvider, parseUnits } from "ethers";
 
 const MINT_ABI = ["function mint(address to, uint256 amount)"];
 const provider = new BrowserProvider(window.ethereum);
 const signer = await provider.getSigner();
+
+// USDT Mock — 6 decimals: 10 USDT = parseUnits("10", 6)
 const token = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
-await token.mint(await signer.getAddress(), 1000n);
+await token.mint(await signer.getAddress(), parseUnits("10", 6));
 ```
 
 For a detailed partner-facing guide including prerequisites, step-by-step flow, and troubleshooting, see [WALKTHROUGH.md](./WALKTHROUGH.md).
