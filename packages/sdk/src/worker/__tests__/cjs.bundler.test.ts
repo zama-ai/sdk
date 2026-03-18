@@ -18,11 +18,11 @@ const DIST_CJS = resolve(PKG_ROOT, "dist/cjs");
 const DIST_ESM = resolve(PKG_ROOT, "dist/esm");
 
 const pkg = JSON.parse(readFileSync(resolve(PKG_ROOT, "package.json"), "utf-8"));
-const exports = pkg.exports as Record<string, Record<string, string>>;
+const exports = pkg.exports as Record<string, Record<string, unknown>>;
 
 const cjsExports = Object.entries(exports).flatMap(([subpath, conditions]) => {
-  const file = conditions.require;
-  return file ? [{ subpath, file }] : [];
+  const req = conditions.require as { types: string; default: string } | undefined;
+  return req ? [{ subpath, file: req.default, types: req.types }] : [];
 });
 
 describe("CJS build smoke tests", () => {
@@ -30,10 +30,14 @@ describe("CJS build smoke tests", () => {
     expect(exports["./node"]).not.toHaveProperty("require");
   });
 
-  for (const { subpath, file } of cjsExports) {
+  for (const { subpath, file, types } of cjsExports) {
     it(`${subpath} CJS entry point exists and is valid CommonJS`, () => {
       const content = readFileSync(resolve(PKG_ROOT, file), "utf-8");
       expect(content).toMatch(/exports/);
+    });
+
+    it(`${subpath} require condition has nested types`, () => {
+      expect(existsSync(resolve(PKG_ROOT, types))).toBe(true);
     });
   }
 
