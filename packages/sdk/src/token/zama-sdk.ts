@@ -203,6 +203,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
+      delegatedCredentials: this.delegatedCredentials,
       address: getAddress(address),
       wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,

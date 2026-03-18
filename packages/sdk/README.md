@@ -20,6 +20,44 @@ yarn add @zama-fhe/sdk
 | `ethers`                | >= 6    | Optional — for the `@zama-fhe/sdk/ethers` adapter  |
 | `@zama-fhe/relayer-sdk` | >= 0.4  | Optional — only for `@zama-fhe/sdk/node` (Node.js) |
 
+## Module Systems (ESM & CJS)
+
+The SDK ships both ESM and CommonJS builds. Most modern toolchains use ESM automatically — no extra configuration needed. If your project uses CommonJS (`"type": "commonjs"` in `package.json` or `"moduleResolution": "node"` in `tsconfig.json`), the `require` condition is resolved automatically.
+
+### ESM (recommended)
+
+```ts
+import { ZamaSDK, RelayerWeb, IndexedDBStorage } from "@zama-fhe/sdk";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
+```
+
+### CommonJS
+
+```js
+const { ZamaSDK, RelayerWeb } = require("@zama-fhe/sdk");
+const { EthersSigner } = require("@zama-fhe/sdk/ethers");
+```
+
+### Available subpath exports
+
+| Subpath                   | Description                          | CJS |
+| ------------------------- | ------------------------------------ | --- |
+| `@zama-fhe/sdk`           | Core SDK (ZamaSDK, RelayerWeb, etc.) | Yes |
+| `@zama-fhe/sdk/viem`      | Viem adapter (ViemSigner)            | Yes |
+| `@zama-fhe/sdk/ethers`    | Ethers adapter (EthersSigner)        | Yes |
+| `@zama-fhe/sdk/node`      | Node.js backend (RelayerNode)        | No  |
+| `@zama-fhe/sdk/query`     | TanStack Query integration           | Yes |
+| `@zama-fhe/sdk/cleartext` | Cleartext testing adapter            | Yes |
+
+> **Note:** The `@zama-fhe/sdk/node` subpath is ESM-only because it relies on `node:worker_threads` which is inherently ESM-oriented.
+
+### TypeScript configuration
+
+The SDK works with all TypeScript `moduleResolution` modes:
+
+- **`"bundler"` / `"node16"` / `"nodenext"`** — resolved via the `exports` field (recommended)
+- **`"node"`** — resolved via the `typesVersions` fallback
+
 ## Quick Start
 
 ### Browser
