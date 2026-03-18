@@ -32,7 +32,7 @@ import {
   SigningFailedError,
   SigningRejectedError,
 } from "./errors";
-import { GenericSigner, GenericStorage } from "./token.types";
+import type { GenericSigner, GenericStorage } from "./token.types";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -135,7 +135,11 @@ export class ReadonlyToken {
 
   /** Emit a structured event (no-op when no listener is registered). */
   protected emit(partial: ZamaSDKEventInput): void {
-    this.#onEvent?.({ ...partial, tokenAddress: this.address, timestamp: Date.now() });
+    this.#onEvent?.({
+      ...partial,
+      tokenAddress: this.address,
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -191,7 +195,7 @@ export class ReadonlyToken {
     const result = await this.signer.readContract(
       supportsInterfaceContract(this.address, ERC7984_INTERFACE_ID),
     );
-    return result === true;
+    return result;
   }
 
   /**
@@ -210,7 +214,7 @@ export class ReadonlyToken {
     const result = await this.signer.readContract(
       supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
     );
-    return result === true;
+    return result;
   }
 
   /**
@@ -248,7 +252,9 @@ export class ReadonlyToken {
     tokens: ReadonlyToken[],
     options?: BatchDecryptOptions,
   ): Promise<Map<Address, bigint>> {
-    if (tokens.length === 0) return new Map();
+    if (tokens.length === 0) {
+      return new Map();
+    }
 
     const { handles, owner, onError, maxConcurrency } = options ?? {};
     const firstToken = tokens[0]!;
@@ -308,7 +314,9 @@ export class ReadonlyToken {
     tokens: ReadonlyToken[],
     options: BatchDecryptAsOptions,
   ): Promise<Map<Address, bigint>> {
-    if (tokens.length === 0) return new Map();
+    if (tokens.length === 0) {
+      return new Map();
+    }
 
     const { delegatorAddress, handles, owner, onError, maxConcurrency } = options;
     const ownerAddress = owner ?? delegatorAddress;
@@ -381,11 +389,13 @@ export class ReadonlyToken {
     const results = new Map<Address, bigint>();
 
     // Parallel cache lookups — avoids sequential IDB round-trips.
-    const uncached: Array<{ token: ReadonlyToken; handle: Address }> = [];
+    const uncached: { token: ReadonlyToken; handle: Address }[] = [];
     const cachedValues = await Promise.all(
       tokens.map((token, i) => {
         const handle = resolvedHandles[i]!;
-        if (token.isZeroHandle(handle)) return Promise.resolve(BigInt(0));
+        if (token.isZeroHandle(handle)) {
+          return 0n;
+        }
         return loadCachedBalance({
           storage: tokenStorage,
           tokenAddress: token.address,
@@ -409,18 +419,22 @@ export class ReadonlyToken {
     }
 
     // All balances resolved from cache — no credentials needed.
-    if (uncached.length === 0) return results;
+    if (uncached.length === 0) {
+      return results;
+    }
 
     // Pre-flight check runs after cache lookups — skips RPC overhead when
     // all balances are cached. Best-effort: checks the first token's contract
     // only (delegations are typically granted per-delegator, not per-token).
-    if (config.preFlightCheck) await config.preFlightCheck();
+    if (config.preFlightCheck) {
+      await config.preFlightCheck();
+    }
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
     const creds = await obtainCreds(uncachedAddresses);
 
-    const errors: Array<{ address: Address; error: Error }> = [];
-    const decryptFns: Array<() => Promise<void>> = [];
+    const errors: { address: Address; error: Error }[] = [];
+    const decryptFns: (() => Promise<void>)[] = [];
 
     for (const { token, handle } of uncached) {
       decryptFns.push(() =>
@@ -493,7 +507,9 @@ export class ReadonlyToken {
   async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
     const coordinator = getAddress(coordinatorAddress);
     const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
-    if (!exists) return null;
+    if (!exists) {
+      return null;
+    }
     return this.signer.readContract(getWrapperContract(coordinator, this.address));
   }
 
@@ -623,7 +639,9 @@ export class ReadonlyToken {
    * ```
    */
   static async allow(...tokens: ReadonlyToken[]): Promise<void> {
-    if (tokens.length === 0) return;
+    if (tokens.length === 0) {
+      return;
+    }
     const allAddresses = tokens.map((t) => t.address);
     await tokens[0]!.credentials.allow(...allAddresses);
   }
@@ -644,9 +662,13 @@ export class ReadonlyToken {
     delegateAddress: Address;
   }): Promise<boolean> {
     const expiry = await this.getDelegationExpiry(params);
-    if (expiry === 0n) return false;
+    if (expiry === 0n) {
+      return false;
+    }
     // Permanent delegation (uint64 max) — skip the RPC round-trip for block timestamp.
-    if (expiry === MAX_UINT64) return true;
+    if (expiry === MAX_UINT64) {
+      return true;
+    }
     const now = await this.signer.getBlockTimestamp();
     return expiry > now;
   }
@@ -748,7 +770,9 @@ export class ReadonlyToken {
     const normalizedOwner = owner ? getAddress(owner) : normalizedDelegator;
 
     const handle = await this.readConfidentialBalanceOf(normalizedOwner);
-    if (this.isZeroHandle(handle)) return 0n;
+    if (this.isZeroHandle(handle)) {
+      return 0n;
+    }
 
     // Check persistent cache keyed by (token, owner, handle).
     // When the on-chain balance changes the encrypted handle changes too,
@@ -759,7 +783,9 @@ export class ReadonlyToken {
       owner: normalizedOwner,
       handle,
     });
-    if (cached !== null) return cached;
+    if (cached !== null) {
+      return cached;
+    }
 
     // Pre-flight delegation check — avoids wasting a wallet signature on an
     // expired or non-existent delegation.
@@ -784,7 +810,10 @@ export class ReadonlyToken {
         durationDays: creds.durationDays,
       });
 
-      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
+      this.emit({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+      });
 
       const value = result[handle] as bigint | undefined;
       if (value === undefined) {
@@ -832,7 +861,9 @@ export class ReadonlyToken {
    * ```
    */
   async decryptBalance(handle: Handle, owner?: Address): Promise<bigint> {
-    if (this.isZeroHandle(handle)) return BigInt(0);
+    if (this.isZeroHandle(handle)) {
+      return 0n;
+    }
 
     const signerAddress = owner ?? (await this.signer.getAddress());
 
@@ -843,7 +874,9 @@ export class ReadonlyToken {
       owner: signerAddress,
       handle,
     });
-    if (cached !== null) return cached;
+    if (cached !== null) {
+      return cached;
+    }
 
     const creds = await this.credentials.allow(this.address);
 
@@ -861,7 +894,10 @@ export class ReadonlyToken {
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });
-      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
+      this.emit({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+      });
 
       const value = result[handle] as bigint | undefined;
       if (value === undefined) {
@@ -904,13 +940,15 @@ export class ReadonlyToken {
 
     for (const handle of handles) {
       if (this.isZeroHandle(handle)) {
-        results.set(handle, BigInt(0));
+        results.set(handle, 0n);
       } else {
         nonZeroHandles.push(handle);
       }
     }
 
-    if (nonZeroHandles.length === 0) return results;
+    if (nonZeroHandles.length === 0) {
+      return results;
+    }
 
     const creds = await this.credentials.allow(this.address);
 
@@ -928,7 +966,10 @@ export class ReadonlyToken {
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });
-      this.emit({ type: ZamaSDKEvents.DecryptEnd, durationMs: Date.now() - t0 });
+      this.emit({
+        type: ZamaSDKEvents.DecryptEnd,
+        durationMs: Date.now() - t0,
+      });
 
       for (const handle of nonZeroHandles) {
         const value = decrypted[handle] as bigint | undefined;
@@ -980,7 +1021,8 @@ function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   }
 
   const statusCode =
-    error != null &&
+    error !== null &&
+    error !== undefined &&
     typeof error === "object" &&
     "statusCode" in error &&
     typeof (error as Record<string, unknown>).statusCode === "number"

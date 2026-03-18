@@ -1,9 +1,8 @@
 "use client";
 
-import type { EIP712TypedData } from "@zama-fhe/sdk";
+import type { EIP712TypedData, Address } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useZamaSDK } from "../provider";
-import { type Address } from "@zama-fhe/sdk";
 
 /** Parameters for {@link useCreateEIP712}. */
 export interface CreateEIP712Params {

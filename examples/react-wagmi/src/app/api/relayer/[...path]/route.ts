@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 const RELAYER_URL = process.env.RELAYER_URL!;
 const RELAYER_API_KEY = process.env.RELAYER_API_KEY!;

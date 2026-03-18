@@ -46,7 +46,7 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
  */
 export function useConfidentialIsApproved(
   config: UseConfidentialIsApprovedConfig,
-  options?: Omit<UseQueryOptions<boolean, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
   const { spender, holder, ...tokenConfig } = config;
   const userEnabled = options?.enabled;

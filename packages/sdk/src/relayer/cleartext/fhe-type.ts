@@ -130,12 +130,16 @@ export function isFheTypeId(value: unknown): value is FheTypeId {
 }
 
 export function isFheTypeName(value: unknown): value is FheTypeName {
-  if (typeof value !== "string") return false;
+  if (typeof value !== "string") {
+    return false;
+  }
   return value in FheTypeNameToId;
 }
 
 export function isEncryptionBits(value: unknown): value is EncryptionBits {
-  if (typeof value !== "number") return false;
+  if (typeof value !== "number") {
+    return false;
+  }
   return value in EncryptionBitwidthToFheTypeId;
 }
 
@@ -143,28 +147,28 @@ export function isEncryptionBits(value: unknown): value is EncryptionBits {
 // Converters
 ////////////////////////////////////////////////////////////////////////////////
 
-export function fheTypeIdFromEncryptionBits(bitwidth: number | EncryptionBits): FheTypeId {
+export function fheTypeIdFromEncryptionBits(bitwidth: number): FheTypeId {
   if (!isEncryptionBits(bitwidth)) {
     throw new Error(`Invalid encryption bits ${bitwidth}`);
   }
   return EncryptionBitwidthToFheTypeId[bitwidth];
 }
 
-export function fheTypeIdFromName(name: string | FheTypeName): FheTypeId {
+export function fheTypeIdFromName(name: string): FheTypeId {
   if (!isFheTypeName(name)) {
     throw new Error(`Invalid FheType name '${name}'`);
   }
   return FheTypeNameToId[name];
 }
 
-export function fheTypeNameFromId(id: number | FheTypeId): FheTypeName {
+export function fheTypeNameFromId(id: number): FheTypeName {
   if (!isFheTypeId(id)) {
     throw new Error(`Invalid FheType id '${id}'`);
   }
   return FheTypeIdToName[id];
 }
 
-export function encryptionBitsFromFheTypeId(typeId: FheTypeId): EncryptionBits {
+export function encryptionBitsFromFheTypeId(typeId: number): EncryptionBits {
   if (!isFheTypeId(typeId)) {
     throw new Error(`Invalid FheType id '${typeId}'`);
   }
@@ -177,7 +181,7 @@ export function encryptionBitsFromFheTypeId(typeId: FheTypeId): EncryptionBits {
   return bw;
 }
 
-export function encryptionBitsFromFheTypeName(name: FheTypeName): EncryptionBits {
+export function encryptionBitsFromFheTypeName(name: string): EncryptionBits {
   if (!isFheTypeName(name)) {
     throw new Error(`Invalid FheType name '${name}'`);
   }

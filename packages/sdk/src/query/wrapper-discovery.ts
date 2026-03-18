@@ -31,7 +31,9 @@ export function wrapperDiscoveryQueryOptions(
       const exists = await signer.readContract(
         wrapperExistsContract(keyCoordinatorAddress, keyTokenAddress),
       );
-      if (!exists) return null;
+      if (!exists) {
+        return null;
+      }
       return signer.readContract(getWrapperContract(keyCoordinatorAddress, keyTokenAddress));
     },
     staleTime: Infinity,

@@ -1,4 +1,4 @@
-import { type Address, type Hex } from "viem";
+import type { Address, Hex } from "viem";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import { CredentialCrypto } from "./credential-crypto";
@@ -255,7 +255,9 @@ export abstract class BaseCredentialsManager<
   protected async checkExpired(key: string, contractAddress?: Address): Promise<boolean> {
     try {
       const stored = await this.storage.get<TEncrypted>(key);
-      if (!stored) return false;
+      if (!stored) {
+        return false;
+      }
       this.assertEncrypted(stored);
       const requiredContracts = contractAddress ? [contractAddress] : [];
       return !isCredentialValid(stored, requiredContracts);
@@ -277,7 +279,9 @@ export abstract class BaseCredentialsManager<
 
   protected async checkAllowed(key: string): Promise<boolean> {
     const entry = await this.sessionSignatures.get(key);
-    if (entry === null) return false;
+    if (entry === null) {
+      return false;
+    }
     return !this.sessionSignatures.isExpired(entry);
   }
 
@@ -352,7 +356,9 @@ export abstract class BaseCredentialsManager<
     try {
       return await promise;
     } finally {
-      if (this.#extendPromise === promise) this.#extendPromise = null;
+      if (this.#extendPromise === promise) {
+        this.#extendPromise = null;
+      }
     }
   }
 

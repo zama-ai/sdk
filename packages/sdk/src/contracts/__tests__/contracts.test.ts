@@ -1,5 +1,5 @@
 import { describe, it, expect } from "../../test-fixtures";
-import { type Address } from "viem";
+import type { Address } from "viem";
 
 // ERC-20
 import {

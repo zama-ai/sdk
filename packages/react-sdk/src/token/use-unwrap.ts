@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import type { UseMutationOptions } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
   invalidateAfterUnwrap,
