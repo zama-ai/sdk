@@ -13,16 +13,17 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-const DIST_CJS = resolve(__dirname, "../../../dist/cjs");
-const DIST_ESM = resolve(__dirname, "../../../dist/esm");
+const PKG_ROOT = resolve(__dirname, "../../..");
+const DIST_CJS = resolve(PKG_ROOT, "dist/cjs");
+const DIST_ESM = resolve(PKG_ROOT, "dist/esm");
 
-const pkgPath = resolve(__dirname, "../../../package.json");
-const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+const pkg = JSON.parse(readFileSync(resolve(PKG_ROOT, "package.json"), "utf-8"));
 const exports = pkg.exports as Record<string, Record<string, string>>;
 
-const cjsExports = Object.entries(exports)
-  .filter(([, conditions]) => conditions.require)
-  .map(([subpath, conditions]) => ({ subpath, file: conditions.require }));
+const cjsExports = Object.entries(exports).flatMap(([subpath, conditions]) => {
+  const file = conditions.require;
+  return file ? [{ subpath, file }] : [];
+});
 
 describe("CJS build smoke tests", () => {
   it("./node export does not have a require condition", () => {
@@ -30,14 +31,8 @@ describe("CJS build smoke tests", () => {
   });
 
   for (const { subpath, file } of cjsExports) {
-    it(`${subpath} CJS entry point exists at ${file}`, () => {
-      const fullPath = resolve(__dirname, "../../..", file);
-      expect(existsSync(fullPath)).toBe(true);
-    });
-
-    it(`${subpath} CJS entry point is valid CommonJS`, () => {
-      const fullPath = resolve(__dirname, "../../..", file);
-      const content = readFileSync(fullPath, "utf-8");
+    it(`${subpath} CJS entry point exists and is valid CommonJS`, () => {
+      const content = readFileSync(resolve(PKG_ROOT, file), "utf-8");
       expect(content).toMatch(/exports/);
     });
   }
