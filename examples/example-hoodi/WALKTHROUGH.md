@@ -386,8 +386,8 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 
 | Package                 | Version       | Role                                                                                                         |
 | ----------------------- | ------------- | ------------------------------------------------------------------------------------------------------------ |
-| `@zama-fhe/sdk`         | 1.2.0-alpha.4 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                             |
-| `@zama-fhe/react-sdk`   | 1.2.0-alpha.4 | React hooks — `useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useMetadata` |
+| `@zama-fhe/sdk`         | 1.2.0-alpha.5 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                             |
+| `@zama-fhe/react-sdk`   | 1.2.0-alpha.5 | React hooks — `useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useMetadata` |
 | `ethers`                | ^6.13.0       | Ethereum client (via `EthersSigner`)                                                                         |
 | `@tanstack/react-query` | ^5.90.0       | Async state management                                                                                       |
 | `next`                  | ^16.0.0       | React framework (App Router)                                                                                 |
