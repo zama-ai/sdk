@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src"],
+  "include": ["src", "../../iife.d.ts"],
   "exclude": ["node_modules"]
 }

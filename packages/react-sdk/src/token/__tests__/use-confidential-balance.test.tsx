@@ -35,12 +35,12 @@ describe("useConfidentialBalance", () => {
     expect(signer.readContract).not.toHaveBeenCalled();
   });
 
-  test("behavior: disables both phases for other falsy enabled values", async ({
+  test("behavior: disables both phases when enabled is false", async ({
     renderWithProviders,
     signer,
   }) => {
     const { result } = renderWithProviders(() =>
-      useConfidentialBalance({ tokenAddress: TOKEN }, { enabled: 0 as unknown as boolean }),
+      useConfidentialBalance({ tokenAddress: TOKEN }, { enabled: false }),
     );
 
     await waitFor(() => expect(signer.getAddress).toHaveBeenCalled(), { timeout: 5_000 });

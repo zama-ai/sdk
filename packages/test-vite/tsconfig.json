@@ -1,5 +1,11 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src", "vite.config.ts", "playwright.config.ts", "deployments.d.ts"],
+  "include": [
+    "src",
+    "vite.config.ts",
+    "playwright.config.ts",
+    "deployments.d.ts",
+    "../../iife.d.ts"
+  ],
   "exclude": ["node_modules"]
 }

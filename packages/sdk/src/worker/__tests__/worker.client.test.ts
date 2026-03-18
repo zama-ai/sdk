@@ -208,6 +208,19 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
+  it("createWorker() revokes the blob URL after constructing the Worker", async () => {
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    setupAutoResolvingWebWorker();
+    const client = new RelayerWorkerClient(defaultWebConfig());
+    await client.initWorker();
+
+    expect(revokeSpy).toHaveBeenCalledOnce();
+
+    client.terminate();
+    revokeSpy.mockRestore();
+  });
+
   it("wireEvents() sets onmessage, onerror, onmessageerror on the worker", () => {
     const client = new RelayerWorkerClient(defaultWebConfig());
     const initPromise = client.initWorker();
