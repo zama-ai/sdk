@@ -19,6 +19,7 @@
   - [Local Development](guides/local-development.md)
   - [Next.js SSR](guides/nextjs-ssr.md)
   - [Operator Approvals](guides/operator-approvals.md)
+  - [Encrypt & Decrypt](guides/encrypt-decrypt.md)
 - [SDK Reference](reference/sdk/README.md)
   - [ZamaSDK](reference/sdk/ZamaSDK.md)
   - [Token](reference/sdk/Token.md)

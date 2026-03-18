@@ -270,7 +270,7 @@ export class RelayerWeb implements RelayerSDK {
 
   /**
    * Encrypt values for use in smart contract calls.
-   * Each value must specify its FHE type (ebool, euint4–256, eaddress).
+   * Each value must specify its FHE type (ebool, euint8–256, eaddress).
    */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const { values, contractAddress, userAddress } = params;

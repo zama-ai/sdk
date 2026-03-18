@@ -1,6 +1,6 @@
 import { waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "../../test-fixtures";
-import { decryptionKeys } from "../decryption-cache";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { usePublicDecrypt } from "../use-public-decrypt";
 
 describe("usePublicDecrypt", () => {
@@ -21,6 +21,6 @@ describe("usePublicDecrypt", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(relayer.publicDecrypt).toHaveBeenCalledWith(["0xhandle1"]);
 
-    expect(queryClient.getQueryData(decryptionKeys.value("0xhandle1"))).toBe(500n);
+    expect(queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle1"))).toBe(500n);
   });
 });

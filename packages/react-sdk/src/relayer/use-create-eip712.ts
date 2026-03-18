@@ -1,20 +1,12 @@
 "use client";
 
-import type { EIP712TypedData, Address } from "@zama-fhe/sdk";
+import type { EIP712TypedData } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
+import { createEIP712MutationOptions } from "@zama-fhe/sdk/query";
+import type { CreateEIP712Params } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-/** Parameters for {@link useCreateEIP712}. */
-export interface CreateEIP712Params {
-  /** The FHE public key (hex-encoded). */
-  publicKey: `0x${string}`;
-  /** Contract addresses the credential authorizes decryption for. */
-  contractAddresses: Address[];
-  /** Unix timestamp (seconds) when the credential becomes valid. */
-  startTimestamp: number;
-  /** Number of days the credential remains valid. Default: 1. */
-  durationDays?: number;
-}
+export type { CreateEIP712Params };
 
 /**
  * Create EIP-712 typed data for signing an FHE decrypt credential.
@@ -34,8 +26,5 @@ export interface CreateEIP712Params {
  */
 export function useCreateEIP712() {
   const sdk = useZamaSDK();
-  return useMutation<EIP712TypedData, Error, CreateEIP712Params>({
-    mutationFn: ({ publicKey, contractAddresses, startTimestamp, durationDays }) =>
-      sdk.relayer.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays),
-  });
+  return useMutation<EIP712TypedData, Error, CreateEIP712Params>(createEIP712MutationOptions(sdk));
 }
