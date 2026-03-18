@@ -377,6 +377,8 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 - **Additional tokens** — add entries to the `TOKENS` constant in `src/app/page.tsx` with the ERC-20 address and the ERC-7984 wrapper address. Both can be found in the registry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`.
 - **Production use** — replace `RelayerCleartext` with `RelayerWeb` (browser) or `RelayerNode` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
 - **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances in a single relayer call.
+- **Optimistic balance updates** — pass `optimistic: true` to `useShield` to immediately add the shielded amount to the cached confidential balance while the transaction confirms, then roll back automatically on error. Improves perceived responsiveness in production UIs.
+- **Delegated decryption** — use `useDelegateDecryption` to grant another address permission to decrypt your confidential balance, then `useDecryptBalanceAs` to read a user's balance on their behalf (e.g. in a backend or a read-only dashboard). Available from SDK v1.2.0.
 
 ---
 
@@ -384,8 +386,8 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 
 | Package                 | Version       | Role                                                                                          |
 | ----------------------- | ------------- | --------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | 1.1.0-alpha.3 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                              |
-| `@zama-fhe/react-sdk`   | 1.1.0-alpha.3 | React hooks — `useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance` |
+| `@zama-fhe/sdk`         | 1.2.0-alpha.3 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                              |
+| `@zama-fhe/react-sdk`   | 1.2.0-alpha.3 | React hooks — `useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance` |
 | `ethers`                | ^6.13.0       | Ethereum client (via `EthersSigner`)                                                          |
 | `@tanstack/react-query` | ^5.90.0       | Async state management                                                                        |
 | `next`                  | ^16.0.0       | React framework (App Router)                                                                  |
