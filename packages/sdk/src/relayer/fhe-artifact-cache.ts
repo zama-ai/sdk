@@ -127,13 +127,13 @@ export class FheArtifactCache {
     chainId: number;
     relayerUrl: string;
     /** Cache TTL in seconds. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. */
-    fheArtifactCacheTTL?: number;
+    ttl?: number;
     logger?: GenericLogger;
   }) {
     this.#storage = opts.storage;
     this.#chainId = opts.chainId;
     this.#relayerUrl = opts.relayerUrl;
-    this.#ttlMs = (opts.fheArtifactCacheTTL ?? 86_400) * 1000;
+    this.#ttlMs = (opts.ttl ?? 86_400) * 1000;
     this.#logger = opts.logger ?? console;
   }
 

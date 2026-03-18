@@ -51,7 +51,14 @@ export interface RelayerWebConfig {
   threads?: number;
   /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
   onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
-  /** Optional persistent storage for caching FHE public key and params across sessions. */
+  /**
+   * Persistent storage for caching FHE public key and params across sessions.
+   *
+   * Defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")`.
+   * Pass a custom `IndexedDBStorage` instance to configure the database name,
+   * version, or store name. FHE public params can be several MB — avoid
+   * `localStorage`-backed storage which caps at ~5 MB.
+   */
   storage?: GenericStorage;
   /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
   fheArtifactCacheTTL?: number;

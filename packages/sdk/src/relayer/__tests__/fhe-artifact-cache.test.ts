@@ -433,7 +433,7 @@ describe("FheArtifactCache", () => {
         storage: st,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
-        fheArtifactCacheTTL: CACHE_TTL,
+        ttl: CACHE_TTL,
       });
       // Prime the in-memory params map so revalidation discovers bits=2048
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
@@ -606,7 +606,7 @@ describe("FheArtifactCache", () => {
       expect(pk!.lastValidatedAt).toBeLessThan(expectedRetry + 2000);
     });
 
-    it("fheArtifactCacheTTL: 0 always triggers revalidation", async () => {
+    it("ttl: 0 always triggers revalidation", async () => {
       await storage.set(PK_STORAGE_KEY, makeCachedPk());
       await storage.set(PARAMS_INDEX_KEY, [2048]);
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams());
@@ -615,7 +615,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
-        fheArtifactCacheTTL: 0,
+        ttl: 0,
       });
       await cache.getPublicKey(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
@@ -641,7 +641,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
-        fheArtifactCacheTTL: CACHE_TTL,
+        ttl: CACHE_TTL,
         logger,
       });
       await cache.getPublicKey(vi.fn().mockResolvedValue(null));
@@ -715,7 +715,7 @@ describe("FheArtifactCache", () => {
         storage: failDeleteStorage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
-        fheArtifactCacheTTL: CACHE_TTL,
+        ttl: CACHE_TTL,
       });
       await cache.getPublicKey(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
@@ -744,7 +744,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
-        fheArtifactCacheTTL: CACHE_TTL,
+        ttl: CACHE_TTL,
       });
       // Prime only PK (not params) — simulates a cold start where
       // getPublicParams hasn't been called yet
@@ -769,7 +769,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
-        fheArtifactCacheTTL: CACHE_TTL,
+        ttl: CACHE_TTL,
       });
 
       const result = await cache.revalidateIfDue();
@@ -904,7 +904,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: DUMMY_RELAYER_URL,
-        fheArtifactCacheTTL: 60,
+        ttl: 60,
       });
       await cache.getPublicKey(vi.fn().mockResolvedValue(null));
 

@@ -84,6 +84,8 @@ function createWebRelayer(
   return new RelayerWeb({
     getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
     transports: TRANSPORTS,
+    // Override default IndexedDBStorage with per-test MemoryStorage for isolation
+    storage: new MemoryStorage(),
     ...overrides,
   });
 }
@@ -591,15 +593,16 @@ describe("RelayerWeb", () => {
       expect(mockWorkerClient.getPublicKey).not.toHaveBeenCalled();
     });
 
-    it("does not cache when storage is not provided (backward compatible)", async () => {
+    it("caches by default even when no storage is explicitly provided", async () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createWebRelayer(); // no storage
+      const relayer = createWebRelayer();
       await relayer.getPublicKey();
       await relayer.getPublicKey();
 
-      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledTimes(2);
+      // Caching is always on — worker called only once
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
     });
 
     it("clears cache on chain switch", async () => {

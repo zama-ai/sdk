@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import http from "node:http";
 import { test as base, describe, expect } from "vitest";
 import { MemoryStorage } from "../../token/memory-storage";
@@ -11,9 +12,14 @@ interface TestServer {
   rotateCrs: () => void;
 }
 
+/** Size of fake binary artifacts served by the test server (bytes). */
+const FAKE_BIN_SIZE = 1024;
+
 function createTestServer(): { server: http.Server; start: () => Promise<TestServer> } {
   let pkEtag = '"pk-etag-v1"';
   let crsEtag = '"crs-etag-v1"';
+  let pkBody = randomBytes(FAKE_BIN_SIZE);
+  let crsBody = randomBytes(FAKE_BIN_SIZE);
   const pkPath = "/artifacts/pk.bin";
   const crsPath = "/artifacts/crs-2048.bin";
 
@@ -36,6 +42,7 @@ function createTestServer(): { server: http.Server; start: () => Promise<TestSer
 
     if (url === pkPath || url === crsPath) {
       const etag = url === pkPath ? pkEtag : crsEtag;
+      const body = url === pkPath ? pkBody : crsBody;
       const ifNoneMatch = req.headers["if-none-match"];
       if (ifNoneMatch === etag) {
         res.writeHead(304, { ETag: etag });
@@ -45,9 +52,10 @@ function createTestServer(): { server: http.Server; start: () => Promise<TestSer
       res.writeHead(200, {
         ETag: etag,
         "Last-Modified": "Wed, 01 Jan 2025 00:00:00 GMT",
-        "Content-Length": "0",
+        "Content-Type": "application/octet-stream",
+        "Content-Length": String(body.length),
       });
-      res.end();
+      res.end(body);
       return;
     }
 
@@ -66,9 +74,11 @@ function createTestServer(): { server: http.Server; start: () => Promise<TestSer
             baseUrl: `http://127.0.0.1:${port}`,
             rotatePk() {
               pkEtag = `"pk-etag-v${Date.now()}"`;
+              pkBody = randomBytes(FAKE_BIN_SIZE);
             },
             rotateCrs() {
               crsEtag = `"crs-etag-v${Date.now()}"`;
+              crsBody = randomBytes(FAKE_BIN_SIZE);
             },
           });
         });
@@ -110,7 +120,7 @@ const test = base.extend<CacheFixtures>({
           storage,
           chainId: CHAIN_ID,
           relayerUrl: opts?.relayerUrl ?? testServer.baseUrl,
-          fheArtifactCacheTTL: opts?.ttl ?? 1,
+          ttl: opts?.ttl ?? 1,
         }),
     );
   },

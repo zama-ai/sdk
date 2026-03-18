@@ -14,11 +14,12 @@ export class IndexedDBStorage implements GenericStorage {
   #dbPromise: Promise<IDBDatabase> | null = null;
   #dbName: string;
   #dbVersion: number;
-  #storeName = "credentials";
+  #storeName: string;
 
-  constructor(dbName = "CredentialStore", dbVersion = 1) {
+  constructor(dbName = "CredentialStore", dbVersion = 1, storeName = "credentials") {
     this.#dbName = dbName;
     this.#dbVersion = dbVersion;
+    this.#storeName = storeName;
   }
 
   #getDB(): Promise<IDBDatabase> {

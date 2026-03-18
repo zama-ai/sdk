@@ -2927,7 +2927,7 @@ export { Hex }
 
 // @public
 export class IndexedDBStorage implements GenericStorage {
-    constructor(dbName?: string, dbVersion?: number);
+    constructor(dbName?: string, dbVersion?: number, storeName?: string);
     // (undocumented)
     clear(): Promise<void>;
     // (undocumented)

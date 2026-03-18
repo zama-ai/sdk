@@ -7,6 +7,7 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import type { GenericStorage } from "../token/token.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
@@ -22,6 +23,7 @@ import type {
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
+import { IndexedDBStorage } from "../token/indexeddb-storage";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -65,6 +67,7 @@ export class RelayerWeb implements RelayerSDK {
   #terminated = false;
   #resolvedChainId: number | null = null;
   #cache: FheArtifactCache | null = null;
+  #artifactStorage: GenericStorage | null = null;
   #status: RelayerSDKStatus = "idle";
   #initError: Error | undefined;
   readonly #config: RelayerWebConfig;
@@ -156,14 +159,19 @@ export class RelayerWeb implements RelayerSDK {
 
     this.#resolvedChainId = chainId;
 
-    // Create cache for current chain (when storage is provided)
-    if (!this.#cache && this.#config.storage) {
+    // Create cache for current chain.
+    // Storage is chain-independent — reuse across chain switches.
+    if (!this.#artifactStorage) {
+      this.#artifactStorage =
+        this.#config.storage ?? new IndexedDBStorage("FheArtifactCache", 1, "artifacts");
+    }
+    if (!this.#cache) {
       const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
       this.#cache = new FheArtifactCache({
-        storage: this.#config.storage,
+        storage: this.#artifactStorage,
         chainId,
         relayerUrl: config.relayerUrl,
-        fheArtifactCacheTTL: this.#config.fheArtifactCacheTTL,
+        ttl: this.#config.fheArtifactCacheTTL,
         logger: this.#config.logger,
       });
     }
