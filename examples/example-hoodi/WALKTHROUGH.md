@@ -27,6 +27,7 @@ Specifically:
 1. A user connects any injected EIP-1193 wallet.
 2. They can select between two tokens (USDT Mock / Test Token).
 3. All four ERC-7984 protocol operations work end-to-end.
+4. On-chain ACL delegation: grant, revoke, and decrypt on behalf of another wallet.
 
 ---
 
@@ -38,6 +39,9 @@ Specifically:
 | Shield (ERC-20 → cToken)     | `useShield`               | 2 (approve + wrap)    |
 | Confidential transfer        | `useConfidentialTransfer` | 1                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`             | 2 (unwrap + finalize) |
+| Grant decryption access      | `useDelegateDecryption`   | 1                     |
+| Revoke decryption access     | `useRevokeDelegation`     | 1                     |
+| Decrypt balance on behalf of | `useDecryptBalanceAs`     | 0 (read)              |
 
 ---
 
@@ -253,6 +257,56 @@ After each operation, balances refresh automatically. The ERC-20 balance is re-f
 
 ---
 
+### Step 9 — Grant decryption access (token owner)
+
+The **Grant Decryption Access** card lets you authorize another wallet address to decrypt your confidential balance for the selected token. This writes an entry to the on-chain ACL via `useDelegateDecryption`.
+
+Enter the delegate's wallet address and choose an expiry:
+
+- **No expiration** (checked by default) — the delegation is permanent (`MAX_UINT64` on-chain). Suitable for testing.
+- **Uncheck** to enable the datetime picker and set an exact expiry. The SDK will throw a `ConfigurationError` if you submit a date in the past.
+
+Click **Grant Access** and confirm the wallet transaction. One transaction is required.
+
+Once confirmed, the SDK automatically invalidates the cached delegation status for that address and token — any open **Decrypt Balance On Behalf Of** card will immediately re-query the on-chain ACL and update its status indicator.
+
+### Step 10 — Revoke decryption access (token owner)
+
+The **Revoke Decryption Access** card removes a previously granted delegation. Enter the delegate's wallet address and click **Revoke Access**. One transaction is required.
+
+### Step 11 — Decrypt balance on behalf of (delegate)
+
+The **Decrypt Balance On Behalf Of** card is used by the wallet that _received_ a delegation. Enter the **owner's** wallet address (the one that granted you access).
+
+As soon as a valid address is entered, `useDelegationStatus` queries the on-chain ACL and displays the current delegation status in real time:
+
+- **✓ Delegated · Permanent** — active, no expiry.
+- **✓ Delegated · Expires …** — active, with an expiry date.
+- **No active delegation for this token** — no delegation found on-chain.
+
+Click **Decrypt Balance** to read the owner's confidential balance via `useDecryptBalanceAs`. On success, the formatted balance is displayed. On failure, the error is typed:
+
+| Error                     | Message shown                                                    |
+| ------------------------- | ---------------------------------------------------------------- |
+| `DelegationNotFoundError` | "No delegation found — ask the owner to grant you access first." |
+| `DelegationExpiredError`  | "Delegation has expired — ask the owner to renew it."            |
+| Other                     | Raw error message                                                |
+
+#### Note on the decrypted balance cache and multi-account wallets
+
+`decryptBalanceAs` uses a **persistent cache** stored in IndexedDB, keyed by `(token address, owner address, encrypted handle)`. When the cache has a valid entry, the value is returned **immediately, before the on-chain delegation check runs**.
+
+This means: if you previously decrypted an address's balance while connected _as that address_ (e.g. you own both accounts in the same MetaMask instance), the cached value will be served without verifying delegation. The `useDelegationStatus` indicator will correctly show "No active delegation", but `useDecryptBalanceAs` may still return a balance from cache — creating an apparent contradiction.
+
+**This is expected SDK behaviour**, not a bug in the app. The cache is intentionally handle-based: when the on-chain balance changes, the encrypted handle changes too, causing a cache miss — at which point the delegation check runs as normal.
+
+To test delegation enforcement with a clean slate:
+
+- Use a **separate browser profile** (or an incognito window) for the delegate wallet, so it shares no IndexedDB with the owner wallet.
+- Alternatively, clear the site's IndexedDB from DevTools → Application → Storage → IndexedDB.
+
+---
+
 ## SDK integration details
 
 ### Providers setup
@@ -378,17 +432,17 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 - **Production use** — replace `RelayerCleartext` with `RelayerWeb` (browser) or `RelayerNode` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
 - **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances in a single relayer call.
 - **Optimistic balance updates** — pass `optimistic: true` to `useShield` to immediately add the shielded amount to the cached confidential balance while the transaction confirms, then roll back automatically on error. Improves perceived responsiveness in production UIs.
-- **Delegated decryption** — use `useDelegateDecryption` to grant another address permission to decrypt your confidential balance, then `useDecryptBalanceAs` to read a user's balance on their behalf (e.g. in a backend or a read-only dashboard). Available from SDK v1.2.0.
+- **Batch balance decryption across wallets** — for dashboards that display multiple users' balances, use `useBatchDecryptBalancesAs` to decrypt all delegated balances in a single relayer call (requires a delegation from each user).
 
 ---
 
 ## Tech stack
 
-| Package                 | Version       | Role                                                                                          |
-| ----------------------- | ------------- | --------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | 1.2.0-alpha.3 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                              |
-| `@zama-fhe/react-sdk`   | 1.2.0-alpha.3 | React hooks — `useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance` |
-| `ethers`                | ^6.13.0       | Ethereum client (via `EthersSigner`)                                                          |
-| `@tanstack/react-query` | ^5.90.0       | Async state management                                                                        |
-| `next`                  | ^16.0.0       | React framework (App Router)                                                                  |
-| **Chain**               | Hoodi testnet | chainId 560048                                                                                |
+| Package                 | Version       | Role                                                                                                                                                                                        |
+| ----------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@zama-fhe/sdk`         | 1.2.0-alpha.4 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders, delegation errors                                                                                                         |
+| `@zama-fhe/react-sdk`   | 1.2.0-alpha.4 | React hooks — `useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDecryptBalanceAs`, `useDelegationStatus` |
+| `ethers`                | ^6.13.0       | Ethereum client (via `EthersSigner`)                                                                                                                                                        |
+| `@tanstack/react-query` | ^5.90.0       | Async state management                                                                                                                                                                      |
+| `next`                  | ^16.0.0       | React framework (App Router)                                                                                                                                                                |
+| **Chain**               | Hoodi testnet | chainId 560048                                                                                                                                                                              |
