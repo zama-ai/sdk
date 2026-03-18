@@ -358,10 +358,10 @@ const erc20Address = "0x..."; // Underlying ERC-20 contract address
 // Fetch decimal precision for each contract — they may differ.
 // Use erc20Decimals for shield (amounts are in ERC-20 units).
 // Use cTokenDecimals for transfer and unshield (amounts are in confidential token units).
-const { data: cTokenMeta } = useMetadata(cTokenAddress);
-const { data: erc20Meta } = useMetadata(erc20Address);
-const cTokenDecimals = cTokenMeta?.decimals ?? 0;
-const erc20Decimals = erc20Meta?.decimals ?? 0;
+const { data: cTokenMetadata } = useMetadata(cTokenAddress);
+const { data: erc20Metadata } = useMetadata(erc20Address);
+const cTokenDecimals = cTokenMetadata?.decimals ?? 0;
+const erc20Decimals = erc20Metadata?.decimals ?? 0;
 
 const shield = useShield({ tokenAddress: cTokenAddress, wrapperAddress: cTokenAddress });
 const transfer = useConfidentialTransfer({ tokenAddress: cTokenAddress });

@@ -1,6 +1,6 @@
 # Hoodi + Cleartext Example
 
-Next.js app demonstrating all four ERC-7984 operations on the **Hoodi** testnet using the **cleartext stack** and **ethers**.
+Next.js app demonstrating all ERC-7984 operations on the **Hoodi** testnet using the **cleartext stack** and **ethers**.
 
 ## Stack
 

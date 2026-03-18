@@ -7,8 +7,8 @@ import { parseUnits } from "ethers";
  */
 export function parseAmount(value: string, decimals: number): bigint {
   try {
-    return value ? parseUnits(value, decimals) : BigInt(0);
+    return value ? parseUnits(value, decimals) : 0n;
   } catch {
-    return BigInt(0);
+    return 0n;
   }
 }

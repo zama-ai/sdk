@@ -57,9 +57,7 @@ export function TransferCard({ tokenAddress, decimals, symbol, disabled }: Trans
       <button
         className="btn btn-primary btn-full"
         onClick={handleTransfer}
-        disabled={
-          disabled || parsedAmount <= BigInt(0) || !isAddress(recipient) || transfer.isPending
-        }
+        disabled={disabled || parsedAmount === 0n || !isAddress(recipient) || transfer.isPending}
       >
         {transfer.isPending ? pendingLabel : "Transfer"}
       </button>

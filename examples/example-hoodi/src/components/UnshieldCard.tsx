@@ -73,7 +73,7 @@ export function UnshieldCard({
       <button
         className="btn btn-primary btn-full"
         onClick={handleUnshield}
-        disabled={disabled || parsedAmount <= BigInt(0) || unshield.isPending}
+        disabled={disabled || parsedAmount === 0n || unshield.isPending}
       >
         {unshield.isPending ? pendingLabel : "Unshield"}
       </button>

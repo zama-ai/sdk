@@ -54,7 +54,7 @@ export function ShieldCard({
       <button
         className="btn btn-primary btn-full"
         onClick={handleShield}
-        disabled={disabled || parsedAmount <= BigInt(0) || shield.isPending}
+        disabled={disabled || parsedAmount === 0n || shield.isPending}
       >
         {shield.isPending ? pendingLabel : "Shield"}
       </button>

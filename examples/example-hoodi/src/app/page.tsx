@@ -179,13 +179,13 @@ export default function Home() {
 
   // useMetadata fetches name/symbol/decimals for each contract.
   // erc20Metadata is used for the shield amount and ERC-20 balance display;
-  // metadata (ERC-7984) is used for transfer/unshield amounts and confidential balance display.
-  const metadata = useMetadata(token.confidential);
+  // cTokenMetadata (ERC-7984) is used for transfer/unshield amounts and confidential balance display.
+  const cTokenMetadata = useMetadata(token.confidential);
   const erc20Metadata = useMetadata(token.erc20);
 
-  const decimals = metadata.data?.decimals ?? 0;
+  const decimals = cTokenMetadata.data?.decimals ?? 0;
   const erc20Decimals = erc20Metadata.data?.decimals ?? 0;
-  const confidentialSymbol = metadata.data?.symbol ?? "";
+  const confidentialSymbol = cTokenMetadata.data?.symbol ?? "";
   const erc20Symbol = erc20Metadata.data?.symbol ?? "";
 
   const ethBalanceKey = ["eth-balance", address];
@@ -229,6 +229,13 @@ export default function Home() {
     onSuccess: refreshBalances,
   });
 
+  // Clear stale mint state when the wallet account changes so the BalancesCard
+  // does not show a pending/success/error badge belonging to the previous account.
+  // mint.reset is stable across renders (TanStack Query guarantee).
+  useEffect(() => {
+    mint.reset();
+  }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const formattedErc20 =
     erc20Balance !== undefined ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}` : "—";
   const formattedConfidential =
@@ -238,7 +245,7 @@ export default function Home() {
 
   // Actions are disabled until both metadata are loaded (decimals needed to parse amounts)
   // and until the wallet is on the Hoodi network.
-  const actionsDisabled = !isHoodi || !metadata.data || !erc20Metadata.data;
+  const actionsDisabled = !isHoodi || !cTokenMetadata.data || !erc20Metadata.data;
 
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!address) {
@@ -383,8 +390,8 @@ export default function Home() {
         tokenAddress={token.confidential}
         decimals={decimals}
         symbol={confidentialSymbol}
-        disabled={!isHoodi || !metadata.data}
-        connectedAddress={address}
+        disabled={!isHoodi || !cTokenMetadata.data}
+        connectedAddress={address as Address}
       />
     </div>
   );
