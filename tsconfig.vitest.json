@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "vitest.setup.ts",
+    "packages/sdk/src/**/*.test.ts",
+    "packages/sdk/src/**/*.test.tsx",
+    "packages/sdk/src/**/__tests__/**/*.ts",
+    "packages/sdk/src/**/__tests__/**/*.tsx",
+    "packages/sdk/src/test-fixtures.ts",
+    "packages/react-sdk/src/**/*.test.ts",
+    "packages/react-sdk/src/**/*.test.tsx",
+    "packages/react-sdk/src/**/__tests__/**/*.ts",
+    "packages/react-sdk/src/**/__tests__/**/*.tsx",
+    "packages/react-sdk/src/test-fixtures.tsx",
+    "packages/react-sdk/src/test-helpers.ts",
+    "packages/react-sdk/vitest.setup.ts"
+  ]
+}

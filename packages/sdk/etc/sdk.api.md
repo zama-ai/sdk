@@ -2331,12 +2331,10 @@ export interface EIP712TypedData {
     // (undocumented)
     primaryType?: string;
     // (undocumented)
-    types: {
-        [key: string]: ReadonlyArray<{
-            readonly name: string;
-            readonly type: string;
-        }>;
-    };
+    types: Record<string, readonly {
+        readonly name: string;
+        readonly type: string;
+    }[]>;
 }
 
 // @public (undocumented)

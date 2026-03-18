@@ -155,10 +155,10 @@ export interface CreateEIP712ResponseData {
     };
     // (undocumented)
     types: {
-        UserDecryptRequestVerification: Array<{
+        UserDecryptRequestVerification: {
             name: string;
             type: string;
-        }>;
+        }[];
     };
 }
 
@@ -234,12 +234,10 @@ export interface EIP712TypedData {
     // (undocumented)
     primaryType?: string;
     // (undocumented)
-    types: {
-        [key: string]: ReadonlyArray<{
-            readonly name: string;
-            readonly type: string;
-        }>;
-    };
+    types: Record<string, readonly {
+        readonly name: string;
+        readonly type: string;
+    }[]>;
 }
 
 // @public

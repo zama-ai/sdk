@@ -1,7 +1,15 @@
-import { decodeFunctionResult, encodeFunctionData, isHex, type Abi, Hex, Address } from "viem";
+import {
+  decodeFunctionResult,
+  encodeFunctionData,
+  isHex,
+  type Abi,
+  type Address,
+  type Hex,
+} from "viem";
 
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { BatchTransferData } from "../contracts";
+
 import {
   confidentialBalanceOfContract,
   confidentialBatchTransferContract,
@@ -64,7 +72,9 @@ async function ethersRead<T>(
   config: TransactionRequestConfig,
 ): Promise<T> {
   const data = await provider.call(toTransactionRequest(config));
-  if (!isHex(data)) throw new TypeError(`Expected hex string, got: ${data}`);
+  if (!isHex(data)) {
+    throw new TypeError(`Expected hex string, got: ${data}`);
+  }
   return decodeFunctionResult({
     abi: config.abi as Abi,
     functionName: config.functionName as never,
@@ -77,7 +87,9 @@ async function ethersWrite(
   config: TransactionRequestConfig,
 ): Promise<Hex> {
   const tx = await signer.sendTransaction(toTransactionRequest(config));
-  if (!isHex(tx.hash)) throw new TypeError(`Expected hex string, got: ${tx.hash}`);
+  if (!isHex(tx.hash)) {
+    throw new TypeError(`Expected hex string, got: ${tx.hash}`);
+  }
   return tx.hash;
 }
 

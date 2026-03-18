@@ -140,10 +140,14 @@ export class FheArtifactCache {
   // ── getPublicKey ────────────────────────────────────────
 
   async getPublicKey(fetcher: () => Promise<PublicKeyResult>): Promise<PublicKeyResult> {
-    if (this.#publicKeyMem !== undefined) return this.#publicKeyMem;
+    if (this.#publicKeyMem !== undefined) {
+      return this.#publicKeyMem;
+    }
 
     // Deduplicate concurrent calls
-    if (this.#publicKeyInflight) return this.#publicKeyInflight;
+    if (this.#publicKeyInflight) {
+      return this.#publicKeyInflight;
+    }
 
     this.#publicKeyInflight = this.#loadPublicKey(fetcher);
     try {
@@ -180,7 +184,9 @@ export class FheArtifactCache {
     }
 
     const result = await fetcher();
-    if (result === null) return null;
+    if (result === null) {
+      return null;
+    }
 
     this.#publicKeyMem = result;
 
@@ -208,11 +214,15 @@ export class FheArtifactCache {
     fetcher: () => Promise<PublicParamsResult>,
   ): Promise<PublicParamsResult> {
     const mem = this.#publicParamsMem.get(bits);
-    if (mem !== undefined) return mem;
+    if (mem !== undefined) {
+      return mem;
+    }
 
     // Deduplicate concurrent calls
     const inflight = this.#publicParamsInflight.get(bits);
-    if (inflight) return inflight;
+    if (inflight) {
+      return inflight;
+    }
 
     const promise = this.#loadPublicParams(bits, fetcher);
     this.#publicParamsInflight.set(bits, promise);
@@ -254,7 +264,9 @@ export class FheArtifactCache {
     }
 
     const result = await fetcher();
-    if (result === null) return null;
+    if (result === null) {
+      return null;
+    }
 
     this.#publicParamsMem.set(bits, result);
 
@@ -302,7 +314,9 @@ export class FheArtifactCache {
    */
   async revalidateIfDue(): Promise<boolean> {
     // Concurrency guard — coalesce overlapping calls
-    if (this.#revalidationInflight) return this.#revalidationInflight;
+    if (this.#revalidationInflight) {
+      return this.#revalidationInflight;
+    }
     this.#revalidationInflight = this.#revalidateIfDueInner();
     try {
       return await this.#revalidationInflight;
@@ -314,12 +328,14 @@ export class FheArtifactCache {
   async #revalidateIfDueInner(): Promise<boolean> {
     // Fast path: in-memory timestamp check avoids storage I/O on every call
     const now = Date.now();
-    if (this.#lastRevalidatedAt != null && now - this.#lastRevalidatedAt < this.#ttlMs) {
+    if (this.#lastRevalidatedAt !== null && now - this.#lastRevalidatedAt < this.#ttlMs) {
       return false;
     }
 
     // Skip revalidation when relayerUrl is not configured (e.g. Hardhat)
-    if (!this.#relayerUrl) return false;
+    if (!this.#relayerUrl) {
+      return false;
+    }
 
     const pkKey = pubkeyStorageKey(this.#chainId);
 
@@ -354,7 +370,9 @@ export class FheArtifactCache {
 
       paramEntries = entries;
 
-      if (!storedPk) return false;
+      if (!storedPk) {
+        return false;
+      }
 
       // 2. Check if all entries are within TTL
       const allEntries: Array<{ lastValidatedAt: number }> = [
@@ -493,8 +511,12 @@ export class FheArtifactCache {
   ): Promise<{ fresh: boolean; etag?: string; lastModified?: string }> {
     const hasValidators = Boolean(cached.etag || cached.lastModified);
     const headers: Record<string, string> = {};
-    if (cached.etag) headers["If-None-Match"] = cached.etag;
-    if (cached.lastModified) headers["If-Modified-Since"] = cached.lastModified;
+    if (cached.etag) {
+      headers["If-None-Match"] = cached.etag;
+    }
+    if (cached.lastModified) {
+      headers["If-Modified-Since"] = cached.lastModified;
+    }
 
     // HEAD avoids downloading the (potentially multi-MB) artifact body.
     // With conditional headers, the server returns 304 if unchanged or 200 (no body) if stale.
@@ -559,7 +581,9 @@ export class FheArtifactCache {
           });
           return null;
         }
-        if (!raw) return null;
+        if (!raw) {
+          return null;
+        }
         try {
           assertCachedParams(raw);
           return {

@@ -43,7 +43,9 @@ export class SessionSignatures {
   /** Retrieve and validate a session entry, or `null` if none exists. */
   async get(key: string): Promise<SessionEntry | null> {
     const raw = await this.#storage.get<SessionEntry>(key);
-    if (raw === null) return null;
+    if (raw === null) {
+      return null;
+    }
     this.#assertSessionEntry(raw);
     return raw;
   }
@@ -70,8 +72,12 @@ export class SessionSignatures {
    * - Positive number = seconds until expiration.
    */
   isExpired(entry: SessionEntry): boolean {
-    if (entry.ttl === "infinite") return false;
-    if (entry.ttl === 0) return true;
+    if (entry.ttl === "infinite") {
+      return false;
+    }
+    if (entry.ttl === 0) {
+      return true;
+    }
     return Math.floor(Date.now() / 1000) - entry.createdAt >= entry.ttl;
   }
 }

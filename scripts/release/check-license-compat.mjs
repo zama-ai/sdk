@@ -111,7 +111,7 @@ const toLines = (title, entries) => {
     `### ${title}`,
     "",
     ...entries
-      .sort((a, b) => a.pkg.localeCompare(b.pkg))
+      .toSorted((a, b) => a.pkg.localeCompare(b.pkg))
       .map((entry) => `- \`${entry.pkg}\` -> \`${entry.license}\``),
     "",
   ];

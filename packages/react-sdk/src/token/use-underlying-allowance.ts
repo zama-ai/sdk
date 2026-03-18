@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "../utils/query";
-import { type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { signerAddressQueryOptions, underlyingAllowanceQueryOptions } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
@@ -34,7 +34,7 @@ export interface UseUnderlyingAllowanceConfig {
  */
 export function useUnderlyingAllowance(
   config: UseUnderlyingAllowanceConfig,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const { tokenAddress, wrapperAddress } = config;
   const token = useReadonlyToken(tokenAddress);

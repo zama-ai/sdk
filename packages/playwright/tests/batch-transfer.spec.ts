@@ -19,10 +19,10 @@ test("should shield USDT then batch transfer to two recipients", async ({
 
   // Approve the TransferBatcher as an operator on the cToken
   await viemClient.writeContract({
-    address: contracts.cUSDT as `0x${string}`,
+    address: contracts.cUSDT,
     abi: WRAPPER_ABI,
     functionName: "setOperator",
-    args: [contracts.transferBatcher as `0x${string}`, Math.floor(Date.now() / 1000) + 86400],
+    args: [contracts.transferBatcher, Math.floor(Date.now() / 1000) + 86400],
   });
 
   // Navigate to batch transfer page

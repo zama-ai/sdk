@@ -1,5 +1,65 @@
 # Changelog
 
+## [2.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v1.2.0-alpha.5...v2.0.0-alpha.1) (2026-03-18)
+
+### ⚠ BREAKING CHANGES
+
+- useUserDecryptFlow removed, useUserDecrypt now has the
+  flow hook's signature. Old low-level useUserDecrypt accepting
+  UserDecryptParams is removed.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- docs(react-sdk): fix stale JSDoc example in useEncrypt
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk,react-sdk): extract userDecryptMutationOptions and remove decryptionKeys wrapper
+
+Move the user-decrypt orchestration logic (credential resolution, handle
+grouping, relayer calls) into `userDecryptMutationOptions` in the SDK query
+module so it can be shared. The react-sdk `useUserDecrypt` hook now delegates
+to these options instead of reimplementing the logic inline.
+
+Also remove the `decryptionKeys` indirection — all code now uses
+`zamaQueryKeys.decryption.handle()` directly from `@zama-fhe/sdk/query`.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk,react-sdk): extract all relayer mutation options into SDK query module
+
+Move all remaining inline relayer mutation logic from react-sdk hooks into
+shared mutation option factories in `@zama-fhe/sdk/query`. Hooks now delegate
+to these options instead of calling `sdk.relayer.*` directly.
+
+New SDK mutation options:
+
+- generateKeypairMutationOptions
+- createEIP712MutationOptions
+- createDelegatedUserDecryptEIP712MutationOptions
+- delegatedUserDecryptMutationOptions
+- publicDecryptMutationOptions
+- requestZKProofVerificationMutationOptions
+
+Also adds `onSuccess` to `MutationFactoryOptions` using TanStack Query v5's
+`MutationFunctionContext` — decrypt mutations now populate the query cache via
+`context.client.setQueryData()` directly in the options, removing the need for
+hooks to manage cache population.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- chore: regenerate API reports after mutation options refactor
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+### Documentation
+
+- improve documentation for useEncrypt and useUserDecrypt ([#81](https://github.com/zama-ai/sdk/issues/81)) ([5ce5f2e](https://github.com/zama-ai/sdk/commit/5ce5f2ede175f14813b9c1c663ab7696d754d787)), closes [#114](https://github.com/zama-ai/sdk/issues/114)
+
+## [1.2.0-alpha.5](https://github.com/zama-ai/sdk/compare/v1.2.0-alpha.4...v1.2.0-alpha.5) (2026-03-18)
+
+## [1.2.0-alpha.4](https://github.com/zama-ai/sdk/compare/v1.2.0-alpha.3...v1.2.0-alpha.4) (2026-03-18)
+
 ## [1.2.0-alpha.3](https://github.com/zama-ai/sdk/compare/v1.2.0-alpha.2...v1.2.0-alpha.3) (2026-03-17)
 
 ### Bug Fixes

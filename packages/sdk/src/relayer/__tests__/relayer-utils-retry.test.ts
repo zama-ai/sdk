@@ -55,7 +55,7 @@ describe("withRetry", () => {
 
     const promise = withRetry(fn);
     // Attach rejection handler immediately to avoid unhandled rejection
-    const caught = promise.catch((e: unknown) => e);
+    const caught = promise.catch((error: unknown) => error);
     await vi.advanceTimersByTimeAsync(500);
     await vi.advanceTimersByTimeAsync(1000);
     const error = await caught;

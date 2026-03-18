@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "../utils/query";
-import { type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { tokenMetadataQueryOptions, type TokenMetadata } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
@@ -24,7 +24,7 @@ export { type TokenMetadata };
  */
 export function useMetadata(
   tokenAddress: Address,
-  options?: Omit<UseQueryOptions<TokenMetadata, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<TokenMetadata>, "queryKey" | "queryFn">,
 ) {
   const token = useReadonlyToken(tokenAddress);
 

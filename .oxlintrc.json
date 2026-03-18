@@ -1,141 +1,176 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn"],
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "import",
+    "promise",
+    "vitest",
+    "react",
+    "react-perf",
+    "jsx-a11y",
+    "nextjs",
+    "node"
+  ],
   "categories": {
-    "correctness": "off"
+    "correctness": "error",
+    "suspicious": "error",
+    "style": "off",
+    "perf": "off",
+    "pedantic": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "options": {
+    "denyWarnings": true
   },
   "env": {
     "builtin": true
   },
+  "settings": {
+    "react": {
+      "version": "19.2.4"
+    },
+    "next": {
+      "rootDir": [
+        "packages/test-nextjs",
+        "examples/react-ethers",
+        "examples/react-viem",
+        "examples/react-wagmi"
+      ]
+    }
+  },
   "ignorePatterns": [
     "**/dist/**",
     "**/node_modules/**",
+    "**/next-env.d.ts",
+    "**/.next/**",
     "coverage/**",
+    "examples/**",
     "hardhat/**",
-    "**/.next/dev/**",
-    "packages/test-nextjs/.next/**",
-    "packages/test-nextjs/playwright/**",
-    "packages/test-vite/playwright/**",
     "packages/playwright/**",
+    "packages/test-nextjs/**",
+    "packages/test-nextjs/playwright/**",
+    "packages/test-vite/**",
+    "packages/test-vite/playwright/**",
     "docs/api/**",
     "docs/gitbook/**",
     "tools/**"
   ],
   "rules": {
-    "constructor-super": "error",
-    "for-direction": "error",
-    "no-async-promise-executor": "error",
-    "no-case-declarations": "error",
-    "no-class-assign": "error",
-    "no-compare-neg-zero": "error",
-    "no-cond-assign": "error",
-    "no-const-assign": "error",
-    "no-constant-binary-expression": "error",
-    "no-constant-condition": "error",
-    "no-control-regex": "error",
-    "no-debugger": "error",
-    "no-delete-var": "error",
-    "no-dupe-class-members": "error",
-    "no-dupe-else-if": "error",
-    "no-dupe-keys": "error",
-    "no-duplicate-case": "error",
-    "no-empty": "error",
-    "no-empty-character-class": "error",
-    "no-empty-pattern": "error",
-    "no-empty-static-block": "error",
-    "no-ex-assign": "error",
-    "no-extra-boolean-cast": "error",
-    "no-fallthrough": "error",
-    "no-func-assign": "error",
-    "no-global-assign": "error",
-    "no-import-assign": "error",
-    "no-invalid-regexp": "error",
-    "no-irregular-whitespace": "error",
-    "no-loss-of-precision": "error",
-    "no-misleading-character-class": "error",
-    "no-new-native-nonconstructor": "error",
-    "no-nonoctal-decimal-escape": "error",
-    "no-obj-calls": "error",
-    "no-prototype-builtins": "error",
-    "no-redeclare": "error",
-    "no-regex-spaces": "error",
-    "no-self-assign": "error",
-    "no-setter-return": "error",
-    "no-shadow-restricted-names": "error",
-    "no-sparse-arrays": "error",
-    "no-this-before-super": "error",
-    "no-unassigned-vars": "error",
-    "no-unsafe-finally": "error",
-    "no-unsafe-negation": "error",
-    "no-unsafe-optional-chaining": "error",
-    "no-unused-labels": "error",
-    "no-unused-private-class-members": "error",
     "no-unused-vars": [
-      "warn",
+      "error",
       {
         "argsIgnorePattern": "^_",
         "destructuredArrayIgnorePattern": "^_",
         "varsIgnorePattern": "^_"
       }
     ],
-    "no-useless-backreference": "error",
-    "no-useless-catch": "error",
-    "no-useless-escape": "error",
-    "no-with": "error",
-    "preserve-caught-error": "error",
-    "require-yield": "error",
-    "use-isnan": "error",
-    "valid-typeof": "error",
-    "@typescript-eslint/ban-ts-comment": "error",
-    "no-array-constructor": "error",
-    "@typescript-eslint/no-duplicate-enum-values": "error",
-    "@typescript-eslint/no-empty-object-type": "error",
+    "eqeqeq": "error",
+    "curly": "error",
+    "no-console": "error",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "import/no-cycle": "error",
+    "import/no-duplicates": "error",
+    "import/no-self-import": "error",
+    "promise/no-return-wrap": "error",
+    "promise/always-return": "off",
     "@typescript-eslint/no-explicit-any": "error",
-    "@typescript-eslint/no-extra-non-null-assertion": "error",
-    "@typescript-eslint/no-misused-new": "error",
-    "@typescript-eslint/no-namespace": "error",
-    "@typescript-eslint/no-non-null-asserted-optional-chain": "error",
-    "@typescript-eslint/no-require-imports": "error",
-    "@typescript-eslint/no-this-alias": "error",
-    "@typescript-eslint/no-unnecessary-type-constraint": "error",
-    "@typescript-eslint/no-unsafe-declaration-merging": "error",
-    "@typescript-eslint/no-unsafe-function-type": "error",
-    "no-unused-expressions": "error",
-    "@typescript-eslint/no-wrapper-object-types": "error",
-    "@typescript-eslint/prefer-as-const": "error",
-    "@typescript-eslint/prefer-namespace-keyword": "error",
-    "@typescript-eslint/triple-slash-reference": "error"
+    "@typescript-eslint/no-non-null-assertion": "error",
+    "@typescript-eslint/consistent-type-imports": "error",
+    "@typescript-eslint/no-import-type-side-effects": "error",
+    "@typescript-eslint/no-misused-promises": "error",
+    "@typescript-eslint/no-unsafe-type-assertion": "off",
+    "@typescript-eslint/no-unnecessary-type-assertion": "off",
+    "@typescript-eslint/unbound-method": "off",
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/prefer-type-error": "error",
+    "unicorn/throw-new-error": "error",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "unicorn/require-post-message-target-origin": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-uses-react": "off",
+    "import/no-unassigned-import": "off",
+    "import/no-nodejs-modules": "off",
+    "unicorn/no-null": "off",
+    "no-magic-numbers": "off"
   },
   "overrides": [
     {
-      "files": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/test/**",
+        "**/tests/**",
+        "**/__tests__/**",
+        "**/test-fixtures.ts",
+        "**/test-fixtures.tsx",
+        "**/vitest.setup.ts",
+        "vitest.setup.ts"
+      ],
       "rules": {
-        "constructor-super": "off",
-        "no-class-assign": "off",
-        "no-const-assign": "off",
-        "no-dupe-class-members": "off",
-        "no-dupe-keys": "off",
-        "no-func-assign": "off",
-        "no-import-assign": "off",
-        "no-new-native-nonconstructor": "off",
-        "no-obj-calls": "off",
-        "no-redeclare": "off",
-        "no-setter-return": "off",
-        "no-this-before-super": "off",
-        "no-unsafe-negation": "off",
-        "no-var": "error",
-        "no-with": "off",
-        "prefer-const": "error",
-        "prefer-rest-params": "error",
-        "prefer-spread": "error"
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-non-null-assertion": "off",
+        "@typescript-eslint/no-floating-promises": "off",
+        "@typescript-eslint/unbound-method": "off",
+        "no-shadow": "off",
+        "import/no-cycle": "off",
+        "no-console": "off",
+        "no-new": "off",
+        "vitest/hoisted-apis-on-top": "off"
       }
     },
     {
-      "files": ["scripts/**/*.mjs", "*.cjs"],
-      "globals": {
-        "console": "readonly",
-        "module": "readonly",
-        "process": "readonly"
+      "files": [
+        "examples/**",
+        "packages/playwright/**",
+        "packages/test-components/**",
+        "packages/test-nextjs/**",
+        "packages/test-vite/**"
+      ],
+      "rules": {
+        "@typescript-eslint/no-floating-promises": "off",
+        "@typescript-eslint/no-non-null-assertion": "off",
+        "no-console": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/**",
+        "**/*.config.ts",
+        "**/*.config.mts",
+        "**/*.config.cts",
+        "packages/sdk/src/worker/**",
+        "packages/sdk/src/token/credentials-manager.ts",
+        "packages/sdk/src/token/credential-manager-base.ts",
+        "packages/sdk/src/token/balance-cache.ts",
+        "packages/sdk/src/token/token.ts"
+      ],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": [
+        "packages/react-sdk/src/relayer/use-user-decrypted-values.ts",
+        "packages/react-sdk/src/wagmi/wagmi-signer.ts",
+        "packages/sdk/src/ethers/ethers-signer.ts",
+        "packages/sdk/src/events/onchain-events.ts",
+        "packages/sdk/src/query/confidential-balances.ts",
+        "packages/sdk/src/relayer/cleartext/relayer-cleartext.ts",
+        "packages/sdk/src/relayer/relayer-utils.ts",
+        "packages/sdk/src/token/readonly-token.ts",
+        "packages/sdk/src/token/token.ts",
+        "packages/sdk/src/utils.ts",
+        "packages/sdk/src/viem/viem-signer.ts",
+        "packages/sdk/src/worker/worker.node-pool.ts"
+      ],
+      "rules": {
+        "@typescript-eslint/no-non-null-assertion": "off"
       }
     }
   ]

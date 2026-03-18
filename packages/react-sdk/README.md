@@ -290,7 +290,7 @@ const { mutateAsync: tokenAllow, isPending } = useTokenAllow();
 await tokenAllow(allTokenAddresses);
 
 // Individual balance decrypts now reuse cached credentials
-const { data: balance } = useConfidentialBalance("0xTokenA");
+const { data: balance } = useConfidentialBalance({ tokenAddress: "0xTokenA" });
 ```
 
 #### `useIsTokenAllowed`
@@ -798,16 +798,50 @@ function useFeeRecipient(
 
 ### Low-Level FHE Hooks
 
-These hooks expose the raw `RelayerSDK` operations as React Query mutations.
+These hooks are for **custom FHE contracts** (non-token contracts that use encrypted types directly). For confidential ERC-20 tokens, use the high-level token hooks above instead. For detailed usage examples, see the [Encrypt & Decrypt guide](../../docs/gitbook/src/guides/encrypt-decrypt.md).
 
-#### Encryption & Decryption
+#### Encryption
 
-| Hook                        | Input                        | Output                   | Description                                                          |
-| --------------------------- | ---------------------------- | ------------------------ | -------------------------------------------------------------------- |
-| `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                             |
-| `useUserDecrypt()`          | `UserDecryptParams`          | `Record<string, bigint>` | Decrypt with user's FHE private key. Populates the decryption cache. |
-| `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption. Populates the decryption cache.                   |
-| `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                              |
+```tsx
+const encrypt = useEncrypt();
+
+const { handles, inputProof } = await encrypt.mutateAsync({
+  values: [{ value: 1000n, type: "euint64" }],
+  contractAddress: "0xYourContract",
+  userAddress,
+});
+
+// Pass handles and inputProof to your contract call
+```
+
+#### Decryption (`useUserDecrypt`)
+
+`useUserDecrypt` manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available, avoiding redundant wallet prompts:
+
+```tsx
+const decrypt = useUserDecrypt({
+  onCredentialsReady: () => setStep("decrypting"),
+  onDecrypted: (values) => setStep("done"),
+});
+
+const result = await decrypt.mutateAsync({
+  handles: [
+    { handle: "0xabc...", contractAddress: "0xTokenA" },
+    { handle: "0xdef...", contractAddress: "0xTokenB" },
+  ],
+});
+// result: { "0xabc...": 500n, "0xdef...": 1000n }
+// Results are automatically cached for useUserDecryptedValue
+```
+
+#### All Encryption & Decryption Hooks
+
+| Hook                        | Input                        | Output                   | Description                                                                  |
+| --------------------------- | ---------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                                     |
+| `useUserDecrypt()`          | `DecryptParams`              | `Record<string, bigint>` | Full decrypt orchestration with progress callbacks. Populates cache.         |
+| `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption (no authorization needed). Populates the decryption cache. |
+| `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                                      |
 
 #### Key Management
 
@@ -841,11 +875,13 @@ function useUserDecryptedValues(handles: string[]): {
 ```
 
 ```tsx
-// First, trigger decryption
-const { mutateAsync: decrypt } = useUserDecrypt();
-await decrypt(decryptParams);
+// First, trigger decryption (populates the cache)
+const decrypt = useUserDecrypt();
+await decrypt.mutateAsync({
+  handles: [{ handle: "0xHandleHash", contractAddress: "0xToken" }],
+});
 
-// Then read cached results anywhere in the tree
+// Then read cached results anywhere in the tree — no new decryption
 const { data: value } = useUserDecryptedValue("0xHandleHash");
 ```
 
@@ -1044,7 +1080,7 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
-**Types:** `Address`, `ZamaSDKConfig`, `ZamaConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `FHEKeypair`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `ContractCallConfig`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
+**Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
 **Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidKeypairError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 

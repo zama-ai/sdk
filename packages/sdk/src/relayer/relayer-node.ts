@@ -71,7 +71,9 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async #ensurePool(): Promise<NodeWorkerPool> {
-    if (this.#ensureLock) return this.#ensureLock;
+    if (this.#ensureLock) {
+      return this.#ensureLock;
+    }
     this.#ensureLock = this.#ensurePoolInner();
     try {
       return await this.#ensureLock;
@@ -108,7 +110,7 @@ export class RelayerNode implements RelayerSDK {
         storage: this.#config.storage,
         chainId,
         relayerUrl: config.relayerUrl,
-        fheArtifactCacheTTL: this.#config.fheArtifactCacheTTL,
+        ttl: this.#config.fheArtifactCacheTTL,
         logger: this.#config.logger,
       });
     }
@@ -170,7 +172,7 @@ export class RelayerNode implements RelayerSDK {
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<EIP712TypedData> {
     const pool = await this.#ensurePool();
     const result = await pool.createEIP712({
@@ -236,7 +238,7 @@ export class RelayerNode implements RelayerSDK {
     contractAddresses: Address[],
     delegatorAddress: Address,
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const pool = await this.#ensurePool();
     return pool.createDelegatedUserDecryptEIP712({

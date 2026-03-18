@@ -48,7 +48,12 @@ const { mockWorkerClient, MockRelayerWorkerClient, mockPool, MockNodeWorkerPool 
       return mockPool;
     });
 
-    return { mockWorkerClient, MockRelayerWorkerClient, mockPool, MockNodeWorkerPool };
+    return {
+      mockWorkerClient,
+      MockRelayerWorkerClient,
+      mockPool,
+      MockNodeWorkerPool,
+    };
   },
 );
 
@@ -561,7 +566,10 @@ describe("RelayerWeb", () => {
 
     it("caches getPublicParams when storage is provided", async () => {
       const storage = new MemoryStorage();
-      const pp = { publicParamsId: "pp-1", publicParams: new Uint8Array([4, 5]) };
+      const pp = {
+        publicParamsId: "pp-1",
+        publicParams: new Uint8Array([4, 5]),
+      };
       mockWorkerClient.getPublicParams.mockResolvedValue({ result: pp });
 
       const relayer = createWebRelayer({ storage });
@@ -701,7 +709,10 @@ describe("RelayerWeb", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createWebRelayer({ storage, fheArtifactCacheTTL: 86_400 });
+      const relayer = createWebRelayer({
+        storage,
+        fheArtifactCacheTTL: 86_400,
+      });
 
       // First call — init worker, fetch and cache pk
       await relayer.getPublicKey();
@@ -1050,7 +1061,10 @@ describe("RelayerNode", () => {
 
     it("caches getPublicParams when storage is provided", async () => {
       const storage = new MemoryStorage();
-      const pp = { publicParamsId: "pp-1", publicParams: new Uint8Array([4, 5]) };
+      const pp = {
+        publicParamsId: "pp-1",
+        publicParams: new Uint8Array([4, 5]),
+      };
       mockPool.getPublicParams.mockResolvedValue({ result: pp });
 
       const relayer = createNodeRelayer({ storage });
@@ -1168,7 +1182,10 @@ describe("RelayerNode", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createNodeRelayer({ storage, fheArtifactCacheTTL: 86_400 });
+      const relayer = createNodeRelayer({
+        storage,
+        fheArtifactCacheTTL: 86_400,
+      });
 
       await relayer.getPublicKey();
       expect(NodeWorkerPool).toHaveBeenCalledTimes(1);

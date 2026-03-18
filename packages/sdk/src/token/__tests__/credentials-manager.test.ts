@@ -1,13 +1,11 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
-import { ZamaError, ZamaErrorCode } from "../errors";
-import { KeypairExpiredError } from "../errors";
+import { ZamaError, ZamaErrorCode, KeypairExpiredError } from "../errors";
 
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { GenericSigner } from "../token.types";
 import { ZamaSDKEvents } from "../../events";
-import { getAddress } from "viem";
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
 
 const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const TOKEN_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
@@ -239,8 +237,8 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -260,8 +258,8 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -281,8 +279,8 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -348,7 +346,9 @@ describe("CredentialsManager", () => {
     // Make removeItem throw to test best-effort cleanup
     const originalRemoveItem = storage.delete.bind(storage);
     storage.delete = vi.fn().mockImplementation((key: string) => {
-      if (key === storeKey) throw new Error("storage unavailable");
+      if (key === storeKey) {
+        throw new Error("storage unavailable");
+      }
       return originalRemoveItem(key);
     });
 
@@ -809,8 +809,8 @@ describe("contract address extension", () => {
     await credentialManager.allow(TOKEN_A, TOKEN_B);
 
     // Second createEIP712 call should include both tokens
-    const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1]!;
-    const contractAddresses = secondCall[1] as Address[];
+    const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1];
+    const contractAddresses = secondCall[1];
     const normalized = contractAddresses.map((a) => getAddress(a));
     expect(normalized).toContain(getAddress(TOKEN_A));
     expect(normalized).toContain(getAddress(TOKEN_B));
