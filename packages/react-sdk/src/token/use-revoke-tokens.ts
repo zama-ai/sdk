@@ -23,7 +23,7 @@ export function useRevokeTokens(options?: UseMutationOptions<void, Error, Addres
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
+      void context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
     },
   });
 }

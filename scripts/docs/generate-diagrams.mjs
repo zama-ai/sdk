@@ -39,13 +39,13 @@ for (const file of d2Files) {
   const outName = basename(out);
 
   try {
-    const source = readFileSync(src, "utf-8");
+    const source = readFileSync(src, "utf8");
     const compiled = await d2.compile(source);
     const svg = await d2.render(compiled.diagram);
     writeFileSync(out, svg);
     console.log(`D2: ${file} -> ${outName}`);
-  } catch (err) {
-    console.error(`ERROR: Failed to render ${file}: ${err.message}`);
+  } catch (error) {
+    console.error(`ERROR: Failed to render ${file}: ${error.message}`);
     errors = 1;
   }
 }

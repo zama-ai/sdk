@@ -14,13 +14,17 @@ export function iife({ tsconfig }: { tsconfig: string }): Plugin {
   return {
     name: "iife-plugin",
     resolveId(source, importer) {
-      if (!source.endsWith(IIFE_SUFFIX)) return null;
+      if (!source.endsWith(IIFE_SUFFIX)) {
+        return null;
+      }
       const filePath = source.slice(0, -IIFE_SUFFIX.length);
       const resolved = importer ? resolve(dirname(importer), filePath) : resolve(filePath);
       return `\0${resolved}${IIFE_SUFFIX}`;
     },
     async load(id) {
-      if (!id.startsWith("\0") || !id.endsWith(IIFE_SUFFIX)) return null;
+      if (!id.startsWith("\0") || !id.endsWith(IIFE_SUFFIX)) {
+        return null;
+      }
       const filePath = id.slice(1, -IIFE_SUFFIX.length);
       const result = await build({
         input: filePath,

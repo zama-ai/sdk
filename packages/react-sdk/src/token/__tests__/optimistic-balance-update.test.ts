@@ -13,7 +13,7 @@ import {
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const USER = "0x2222222222222222222222222222222222222222" as Address;
-const HANDLE = `0x${"11".repeat(32)}` as Address;
+const HANDLE = `0x${"11".repeat(32)}`;
 
 // ---------------------------------------------------------------------------
 // unwrapOptimisticCallerContext

@@ -112,7 +112,9 @@ test("should transition through masked → decrypting → revealed states", asyn
     return dbs.then((databases: IDBDatabaseInfo[]) =>
       Promise.all(
         databases.map((db: IDBDatabaseInfo) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
+          if (db.name) {
+            indexedDB.deleteDatabase(db.name);
+          }
         }),
       ),
     );

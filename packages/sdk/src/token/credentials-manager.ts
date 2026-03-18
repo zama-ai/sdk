@@ -24,9 +24,13 @@ export interface CredentialsManagerConfig extends CredentialsConfig {
 }
 
 function hasExtensionRuntimeId(value: unknown): value is { runtime: { id: string } } {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
   const runtime = Reflect.get(value, "runtime");
-  if (typeof runtime !== "object" || runtime === null) return false;
+  if (typeof runtime !== "object" || runtime === null) {
+    return false;
+  }
   return typeof Reflect.get(runtime, "id") === "string";
 }
 

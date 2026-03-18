@@ -78,6 +78,15 @@ async function handleNodeInit(request: NodeInitRequest): Promise<void> {
   }
 }
 
+/** Coerce a boolean to bigint for numeric FHE types. */
+function toBigInt(value: bigint | boolean): bigint {
+  return typeof value === "boolean" ? (value ? 1n : 0n) : value;
+}
+
+function unreachableFheType(_: never): never {
+  throw new Error("Unsupported FHE type");
+}
+
 async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { id, type, payload } = request;
   const { values, contractAddress, userAddress } = payload;
@@ -96,28 +105,28 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
           input.addBool(typeof value === "boolean" ? value : value !== 0n);
           break;
         case "euint8":
-          input.add8(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add8(toBigInt(value));
           break;
         case "euint16":
-          input.add16(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add16(toBigInt(value));
           break;
         case "euint32":
-          input.add32(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add32(toBigInt(value));
           break;
         case "euint64":
-          input.add64(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add64(toBigInt(value));
           break;
         case "euint128":
-          input.add128(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add128(toBigInt(value));
           break;
         case "euint256":
-          input.add256(typeof value === "boolean" ? (value ? 1n : 0n) : value);
+          input.add256(toBigInt(value));
           break;
         case "eaddress":
-          input.addAddress(typeof value === "boolean" ? String(value) : String(value));
+          input.addAddress(String(value));
           break;
         default:
-          throw new Error(`Unsupported FHE type: ${fheType}`);
+          unreachableFheType(fheType);
       }
     }
 
@@ -378,6 +387,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
     }
 
     const result = sdkInstance.getPublicParams(
+      // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically
       payload.bits as keyof import("@zama-fhe/relayer-sdk/node").PublicParams<Uint8Array>,
     );
 
@@ -391,7 +401,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
   }
 }
 
-port.on("message", async (request: WorkerRequest) => {
+async function handleMessage(request: WorkerRequest): Promise<void> {
   try {
     switch (request.type) {
       case "NODE_INIT":
@@ -428,14 +438,14 @@ port.on("message", async (request: WorkerRequest) => {
         handleGetPublicParams(request);
         break;
       default:
-        console.error("[NodeWorker] Unknown request type:", (request as WorkerRequest).type);
+        console.error("[NodeWorker] Unknown request type:", request.type);
     }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    sendError(
-      request?.id ?? "unknown",
-      request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),
-      message,
-    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendError(request.id, request.type, message);
   }
+}
+
+port.on("message", (request: WorkerRequest) => {
+  void handleMessage(request);
 });

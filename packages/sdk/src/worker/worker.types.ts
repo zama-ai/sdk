@@ -255,10 +255,10 @@ export interface CreateEIP712ResponseData {
     verifyingContract: Address;
   };
   types: {
-    UserDecryptRequestVerification: Array<{
+    UserDecryptRequestVerification: {
       name: string;
       type: string;
-    }>;
+    }[];
   };
   message: {
     publicKey: Hex;

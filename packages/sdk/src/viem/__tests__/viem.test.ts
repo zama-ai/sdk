@@ -531,7 +531,7 @@ describe("Viem write contract helpers", () => {
       writeSetOperatorContract(walletClient, tokenAddress, SPENDER);
       const after = Math.floor(Date.now() / 1000) + 3600;
 
-      const callArgs = (walletClient.writeContract as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+      const callArgs = (walletClient.writeContract as ReturnType<typeof vi.fn>).mock.calls[0][0];
       const timestamp = callArgs.args[1] as number;
       expect(timestamp).toBeGreaterThanOrEqual(before);
       expect(timestamp).toBeLessThanOrEqual(after);

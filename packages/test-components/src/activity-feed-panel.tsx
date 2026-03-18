@@ -37,7 +37,9 @@ export function ActivityFeedPanel({ tokenAddress }: { tokenAddress: Address }) {
   >(undefined);
 
   useEffect(() => {
-    if (!publicClient || !tokenAddress) return;
+    if (!publicClient || !tokenAddress) {
+      return;
+    }
     publicClient
       .request({
         method: "eth_getLogs",

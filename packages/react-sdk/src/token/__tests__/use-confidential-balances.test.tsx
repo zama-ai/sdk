@@ -6,8 +6,8 @@ import { TOKEN, TOKEN_B, USER } from "../../__tests__/mutation-test-helpers";
 
 describe("useConfidentialBalances", () => {
   test("default", async ({ renderWithProviders, signer, relayer }) => {
-    const handleA = `0x${"bb".repeat(32)}` as Address;
-    const handleB = `0x${"cc".repeat(32)}` as Address;
+    const handleA = `0x${"bb".repeat(32)}`;
+    const handleB = `0x${"cc".repeat(32)}`;
     vi.mocked(signer.readContract).mockResolvedValueOnce(handleA).mockResolvedValueOnce(handleB);
     vi.mocked(relayer.userDecrypt).mockResolvedValue({
       [handleA]: 10n,
@@ -36,7 +36,7 @@ describe("useConfidentialBalances", () => {
     relayer,
   }) => {
     const mixedCaseToken = "0x52908400098527886E0F7030069857D2E4169EE7" as Address;
-    const handle = `0x${"dd".repeat(32)}` as Address;
+    const handle = `0x${"dd".repeat(32)}`;
 
     vi.mocked(signer.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 33n });
@@ -67,8 +67,8 @@ describe("useConfidentialBalances", () => {
 
   describe("lifecycle", () => {
     test("default", async ({ renderWithProviders, signer, relayer }) => {
-      const handleA = `0x${"ca".repeat(32)}` as Address;
-      const handleB = `0x${"cb".repeat(32)}` as Address;
+      const handleA = `0x${"ca".repeat(32)}`;
+      const handleB = `0x${"cb".repeat(32)}`;
       vi.mocked(signer.readContract).mockResolvedValueOnce(handleA).mockResolvedValueOnce(handleB);
       vi.mocked(relayer.userDecrypt).mockResolvedValue({
         [handleA]: 10n,
@@ -220,7 +220,7 @@ describe("useConfidentialBalances", () => {
       signer,
       relayer,
     }) => {
-      const handle = `0x${"cc".repeat(32)}` as Address;
+      const handle = `0x${"cc".repeat(32)}`;
       let resolveAddress: (value: Address) => void;
       const addressPromise = new Promise<Address>((resolve) => {
         resolveAddress = resolve;

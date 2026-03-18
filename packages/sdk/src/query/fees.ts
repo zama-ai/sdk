@@ -49,10 +49,18 @@ export function shieldFeeQueryOptions(
     queryFn: async (context) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
-      if (!params.feeManagerAddress) throw new Error("feeManagerAddress is required");
-      if (amount === undefined) throw new Error("amount is required");
-      if (!params.from) throw new Error("from is required");
-      if (!params.to) throw new Error("to is required");
+      if (!params.feeManagerAddress) {
+        throw new Error("feeManagerAddress is required");
+      }
+      if (amount === undefined) {
+        throw new Error("amount is required");
+      }
+      if (!params.from) {
+        throw new Error("from is required");
+      }
+      if (!params.to) {
+        throw new Error("to is required");
+      }
       return signer.readContract(
         getWrapFeeContract(params.feeManagerAddress, amount, params.from, params.to),
       );
@@ -80,10 +88,18 @@ export function unshieldFeeQueryOptions(
     queryFn: async (context) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
-      if (!params.feeManagerAddress) throw new Error("feeManagerAddress is required");
-      if (amount === undefined) throw new Error("amount is required");
-      if (!params.from) throw new Error("from is required");
-      if (!params.to) throw new Error("to is required");
+      if (!params.feeManagerAddress) {
+        throw new Error("feeManagerAddress is required");
+      }
+      if (amount === undefined) {
+        throw new Error("amount is required");
+      }
+      if (!params.from) {
+        throw new Error("from is required");
+      }
+      if (!params.to) {
+        throw new Error("to is required");
+      }
       return signer.readContract(
         getUnwrapFeeContract(params.feeManagerAddress, amount, params.from, params.to),
       );
@@ -112,7 +128,9 @@ export function batchTransferFeeQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
-      if (!keyFeeManagerAddress) throw new Error("feeManagerAddress is required");
+      if (!keyFeeManagerAddress) {
+        throw new Error("feeManagerAddress is required");
+      }
       return signer.readContract(getBatchTransferFeeContract(keyFeeManagerAddress));
     },
     staleTime: 30_000,
@@ -138,7 +156,9 @@ export function feeRecipientQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
-      if (!keyFeeManagerAddress) throw new Error("feeManagerAddress is required");
+      if (!keyFeeManagerAddress) {
+        throw new Error("feeManagerAddress is required");
+      }
       return signer.readContract(getFeeRecipientContract(keyFeeManagerAddress));
     },
     staleTime: 30_000,

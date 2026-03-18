@@ -28,7 +28,7 @@ export function useAllowTokens(options?: UseMutationOptions<void, Error, Address
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
+      void context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
     },
   });
 }

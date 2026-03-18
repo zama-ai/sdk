@@ -85,7 +85,9 @@ class BurnerWalletConnector {
 
   private resolveRpcUrl(chain: Chain): string {
     const url = this.rpcUrls[chain.id] || chain.rpcUrls.default.http[0];
-    if (!url) throw new Error(`No RPC URL found for chain ${chain.id}`);
+    if (!url) {
+      throw new Error(`No RPC URL found for chain ${chain.id}`);
+    }
     return url;
   }
 
@@ -116,9 +118,12 @@ class BurnerWalletConnector {
     if (params.gasPrice) {
       txParams.gasPrice = hexToBigInt(params.gasPrice);
     } else {
-      if (params.maxFeePerGas) txParams.maxFeePerGas = hexToBigInt(params.maxFeePerGas);
-      if (params.maxPriorityFeePerGas)
+      if (params.maxFeePerGas) {
+        txParams.maxFeePerGas = hexToBigInt(params.maxFeePerGas);
+      }
+      if (params.maxPriorityFeePerGas) {
         txParams.maxPriorityFeePerGas = hexToBigInt(params.maxPriorityFeePerGas);
+      }
     }
 
     return client.sendTransaction(txParams as Parameters<typeof client.sendTransaction>[0]);
@@ -183,7 +188,9 @@ class BurnerWalletConnector {
           const httpClient = getHttpRpcClient(url);
           const body = { method, params };
           const { error, result } = await httpClient.request({ body });
-          if (error) throw new RpcRequestError({ body, error, url });
+          if (error) {
+            throw new RpcRequestError({ body, error, url });
+          }
           return result;
         }
       }
@@ -197,7 +204,9 @@ class BurnerWalletConnector {
   }
 
   async getAccounts(): Promise<readonly Address[]> {
-    if (!this.connected) throw new Error("Connector not connected.");
+    if (!this.connected) {
+      throw new Error("Connector not connected.");
+    }
     const account = this.getAccount();
     return [getAddress(account.address)];
   }
@@ -216,7 +225,9 @@ class BurnerWalletConnector {
   }
 
   async isAuthorized(): Promise<boolean> {
-    if (!this.connected) return false;
+    if (!this.connected) {
+      return false;
+    }
     const accounts = await this.getAccounts();
     return accounts.length > 0;
   }
@@ -233,7 +244,9 @@ class BurnerWalletConnector {
 
   async switchChain({ chainId }: { chainId: number }): Promise<Chain> {
     const chain = this.config.chains.find((c) => c.id === chainId);
-    if (!chain) throw new SwitchChainError(new ChainNotConfiguredError());
+    if (!chain) {
+      throw new SwitchChainError(new ChainNotConfiguredError());
+    }
     const provider = await this.getProvider();
     await provider.request({
       method: "wallet_switchEthereumChain",

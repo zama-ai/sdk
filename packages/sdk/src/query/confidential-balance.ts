@@ -33,8 +33,12 @@ export function confidentialBalanceQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
-      if (!keyOwner) throw new Error("owner is required");
-      if (!keyHandle) throw new Error("handle is required");
+      if (!keyOwner) {
+        throw new Error("owner is required");
+      }
+      if (!keyHandle) {
+        throw new Error("handle is required");
+      }
       return token.decryptBalance(keyHandle, keyOwner);
     },
     enabled: Boolean(ownerKey && handleKey) && queryEnabled,

@@ -1,11 +1,8 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
-import { ReadonlyToken } from "../readonly-token";
-import { ZERO_HANDLE } from "../readonly-token";
-import { ZamaErrorCode } from "../errors";
+import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
+import { ZamaErrorCode, DecryptionFailedError } from "../errors";
 import type { GenericSigner, GenericStorage } from "../token.types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-
-import { DecryptionFailedError } from "../errors";
 import { saveCachedBalance } from "../balance-cache";
 import { getAddress, type Address } from "viem";
 
@@ -103,7 +100,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const result = await token.decryptHandles([handle as Address, VALID_HANDLE2 as Address]);
+      const result = await token.decryptHandles([handle, VALID_HANDLE2]);
 
       expect(result.get(handle)).toBe(1000n);
       expect(result.get(VALID_HANDLE2)).toBe(2000n);
@@ -132,7 +129,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      const result = await token.decryptHandles([ZERO_HANDLE as Address, handle as Address]);
+      const result = await token.decryptHandles([ZERO_HANDLE as Address, handle]);
 
       expect(result.get(ZERO_HANDLE)).toBe(0n);
       expect(result.get(handle)).toBe(1000n);
@@ -184,7 +181,7 @@ describe("ReadonlyToken", () => {
         handle,
       });
       const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
-      await token.decryptHandles([handle as Address], otherOwner);
+      await token.decryptHandles([handle], otherOwner);
 
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -210,7 +207,7 @@ describe("ReadonlyToken", () => {
         tokenAddress,
         handle,
       });
-      await token.decryptHandles([handle as Address]);
+      await token.decryptHandles([handle]);
 
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -261,7 +258,7 @@ describe("ReadonlyToken", () => {
       });
       vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
-      await expect(token.decryptHandles([handle as Address])).rejects.toMatchObject({
+      await expect(token.decryptHandles([handle])).rejects.toMatchObject({
         code: ZamaErrorCode.DecryptionFailed,
         message: "Failed to decrypt handles",
       });
@@ -338,7 +335,7 @@ describe("ReadonlyToken", () => {
 
       await expect(
         ReadonlyToken.batchDecryptBalances([token, token2], {
-          handles: [handle as Address, VALID_HANDLE2 as Address],
+          handles: [handle, VALID_HANDLE2],
         }),
       ).rejects.toThrow(DecryptionFailedError);
 
@@ -348,7 +345,7 @@ describe("ReadonlyToken", () => {
 
       await expect(
         ReadonlyToken.batchDecryptBalances([token, token2], {
-          handles: [handle as Address, VALID_HANDLE2 as Address],
+          handles: [handle, VALID_HANDLE2],
         }),
       ).rejects.toThrow(/Batch decryption failed for 1 token\(s\)/);
     });
@@ -382,7 +379,7 @@ describe("ReadonlyToken", () => {
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
-        handles: [handle as Address, VALID_HANDLE2 as Address],
+        handles: [handle, VALID_HANDLE2],
         onError: () => 0n,
       });
 
@@ -418,9 +415,9 @@ describe("ReadonlyToken", () => {
         .mockResolvedValueOnce({ [handle]: 1000n })
         .mockRejectedValueOnce(new Error("decrypt failed"));
 
-      const captured: Array<{ error: Error; address: Address }> = [];
+      const captured: { error: Error; address: Address }[] = [];
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
-        handles: [handle as Address, VALID_HANDLE2 as Address],
+        handles: [handle, VALID_HANDLE2],
         onError: (error, address) => {
           captured.push({ error, address });
           return 42n;
@@ -430,8 +427,8 @@ describe("ReadonlyToken", () => {
       expect(result.get(tokenAddress)).toBe(1000n);
       expect(result.get(getAddress(TOKEN2))).toBe(42n);
       expect(captured).toHaveLength(1);
-      expect(captured[0]!.address).toBe(getAddress(TOKEN2));
-      expect(captured[0]!.error.message).toBe("decrypt failed");
+      expect(captured[0].address).toBe(getAddress(TOKEN2));
+      expect(captured[0].error.message).toBe("decrypt failed");
     });
   });
 
@@ -454,7 +451,7 @@ describe("ReadonlyToken", () => {
       });
       await expect(
         ReadonlyToken.batchDecryptBalances([token], {
-          handles: [handle as Address, VALID_HANDLE2 as Address],
+          handles: [handle, VALID_HANDLE2],
         }),
       ).rejects.toThrow(/tokens\.length.*must equal.*handles\.length/);
     });
@@ -494,7 +491,7 @@ describe("ReadonlyToken", () => {
         storage,
         tokenAddress,
         owner: signerAddress,
-        handle: handle as Address,
+        handle: handle,
         value: 1000n,
       });
       await saveCachedBalance({
@@ -506,7 +503,7 @@ describe("ReadonlyToken", () => {
       });
 
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
-        handles: [handle as Address, VALID_HANDLE2],
+        handles: [handle, VALID_HANDLE2],
       });
 
       expect(result.get(tokenAddress)).toBe(1000n);
@@ -547,7 +544,7 @@ describe("ReadonlyToken", () => {
         storage,
         tokenAddress,
         owner: signerAddress,
-        handle: handle as Address,
+        handle: handle,
         value: 1000n,
       });
 
@@ -556,7 +553,7 @@ describe("ReadonlyToken", () => {
       } as never);
 
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
-        handles: [handle as Address, VALID_HANDLE2],
+        handles: [handle, VALID_HANDLE2],
       });
 
       expect(result.get(tokenAddress)).toBe(1000n);
@@ -565,10 +562,10 @@ describe("ReadonlyToken", () => {
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
       expect(signer.signTypedData).toHaveBeenCalledOnce();
       // createEIP712 called with only token2's address
-      const eip712Call = vi.mocked(relayer.createEIP712).mock.calls[0]!;
-      const signedAddresses = eip712Call[1] as Address[];
+      const eip712Call = vi.mocked(relayer.createEIP712).mock.calls[0];
+      const signedAddresses = eip712Call[1];
       expect(signedAddresses).toHaveLength(1);
-      expect(signedAddresses[0]!.toLowerCase()).toBe(TOKEN2.toLowerCase());
+      expect(signedAddresses[0].toLowerCase()).toBe(TOKEN2.toLowerCase());
     });
   });
 
