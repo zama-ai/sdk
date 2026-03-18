@@ -31,7 +31,7 @@ export function RevokeDelegationCard({ tokenAddress, disabled }: RevokeDelegatio
         placeholder="Delegate address (0x…)"
       />
       <button
-        className="btn btn-secondary btn-full"
+        className="btn btn-primary btn-full"
         onClick={handleRevoke}
         disabled={disabled || !isAddress(delegateAddress) || revoke.isPending}
       >
