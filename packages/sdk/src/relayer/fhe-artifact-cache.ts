@@ -94,8 +94,8 @@ function assertCachedParams(v: unknown): asserts v is CachedPublicParams {
 
 /** Manifest shape returned by the relayer `/keyurl` endpoint. */
 interface ManifestShape {
-  fhePublicKey?: { dataId?: string; urls?: string[] };
-  crs?: Record<string, { dataId?: string; urls?: string[] }>;
+  fhePublicKey: { dataId: string; urls: string[] };
+  crs: Record<string, { dataId: string; urls: string[] }>;
 }
 
 // ── FheArtifactCache ───────────────────────────────────────
@@ -391,7 +391,7 @@ export class FheArtifactCache {
       const manifest = (await manifestRes.json()) as ManifestShape;
 
       // ── 4. Check PK artifact ──────────────────────────
-      const pkArtifactUrl = manifest.fhePublicKey?.urls?.[0];
+      const pkArtifactUrl = manifest.fhePublicKey.urls[0];
 
       // URL change → stale
       if (storedPk.artifactUrl && pkArtifactUrl && pkArtifactUrl !== storedPk.artifactUrl) {
@@ -419,8 +419,8 @@ export class FheArtifactCache {
       // ── 5. Check each CRS artifact ────────────────────
       const updatedParamEntries: typeof paramEntries = [];
       for (const entry of paramEntries) {
-        const manifestCrs = manifest.crs?.[String(entry.bits)];
-        const crsUrl = manifestCrs?.urls?.[0];
+        const manifestCrs = manifest.crs[String(entry.bits)];
+        const crsUrl = manifestCrs?.urls[0];
 
         // URL change → stale
         if (entry.data.artifactUrl && crsUrl && crsUrl !== entry.data.artifactUrl) {
