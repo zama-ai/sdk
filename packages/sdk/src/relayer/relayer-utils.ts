@@ -1,5 +1,7 @@
+import type { Address } from "viem";
 import type { EIP712TypedData } from "./relayer-sdk.types";
 import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
+import { ConfigurationError } from "../token/errors";
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
@@ -129,4 +131,60 @@ export function buildEIP712DomainType(
   return Object.keys(DOMAIN_FIELD_TYPES)
     .filter((k) => k in domain)
     .map((k) => ({ name: k, type: DOMAIN_FIELD_TYPES[k]! }));
+}
+
+/**
+ * Shape the raw worker/pool EIP712 result into the canonical {@link EIP712TypedData}.
+ * Used by both `RelayerWeb` and `RelayerNode` to avoid duplicating the mapping.
+ */
+export function mapEIP712Result(result: {
+  domain: EIP712TypedData["domain"];
+  types: {
+    UserDecryptRequestVerification: readonly { readonly name: string; readonly type: string }[];
+  };
+  message: {
+    publicKey: EIP712TypedData["message"]["publicKey"];
+    contractAddresses: EIP712TypedData["message"]["contractAddresses"];
+    startTimestamp: EIP712TypedData["message"]["startTimestamp"];
+    durationDays: EIP712TypedData["message"]["durationDays"];
+    extraData: EIP712TypedData["message"]["extraData"];
+  };
+}): EIP712TypedData {
+  const domain = {
+    name: result.domain.name,
+    version: result.domain.version,
+    chainId: result.domain.chainId,
+    verifyingContract: result.domain.verifyingContract,
+  };
+
+  return {
+    domain,
+    types: {
+      EIP712Domain: buildEIP712DomainType(domain),
+      UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
+    },
+    message: {
+      publicKey: result.message.publicKey,
+      contractAddresses: result.message.contractAddresses,
+      startTimestamp: result.message.startTimestamp,
+      durationDays: result.message.durationDays,
+      extraData: result.message.extraData,
+    },
+  };
+}
+
+/**
+ * Resolve the ACL contract address from the config for the current chain.
+ * Used by both `RelayerWeb` and `RelayerNode`.
+ */
+export async function resolveAclAddress(
+  getChainId: () => Promise<number>,
+  transports: Record<number, Partial<FhevmInstanceConfig>>,
+): Promise<Address> {
+  const chainId = await getChainId();
+  const config = Object.assign({}, DefaultConfigs[chainId], transports[chainId]);
+  if (!config.aclContractAddress) {
+    throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
+  }
+  return config.aclContractAddress as Address;
 }

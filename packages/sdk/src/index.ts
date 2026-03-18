@@ -103,6 +103,7 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
   TransactionErrorEvent,
+  TransactionOperation,
   EncryptStartEvent,
   EncryptEndEvent,
   EncryptErrorEvent,

@@ -6,7 +6,7 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import { EncryptionFailedError, ZamaError } from "../token/errors";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
@@ -20,7 +20,7 @@ import type {
   RelayerWebConfig,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
+import { DefaultConfigs, mapEIP712Result, resolveAclAddress, withRetry } from "./relayer-utils";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -65,6 +65,7 @@ export class RelayerWeb implements RelayerSDK {
   #resolvedChainId: number | null = null;
   #status: RelayerSDKStatus = "idle";
   #initError: Error | undefined;
+  #lastCsrfToken = "";
   readonly #config: RelayerWebConfig;
 
   constructor(config: RelayerWebConfig) {
@@ -210,7 +211,8 @@ export class RelayerWeb implements RelayerSDK {
   async #refreshCsrfToken(): Promise<void> {
     if (this.#workerClient) {
       const token = this.#config.security?.getCsrfToken?.() ?? "";
-      if (token) {
+      if (token && token !== this.#lastCsrfToken) {
+        this.#lastCsrfToken = token;
         await this.#workerClient.updateCsrf(token);
       }
     }
@@ -244,28 +246,7 @@ export class RelayerWeb implements RelayerSDK {
       startTimestamp,
       durationDays,
     });
-
-    const domain = {
-      name: result.domain.name,
-      version: result.domain.version,
-      chainId: result.domain.chainId,
-      verifyingContract: result.domain.verifyingContract,
-    };
-
-    return {
-      domain,
-      types: {
-        EIP712Domain: buildEIP712DomainType(domain),
-        UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
-      },
-      message: {
-        publicKey: result.message.publicKey,
-        contractAddresses: result.message.contractAddresses,
-        startTimestamp: result.message.startTimestamp,
-        durationDays: result.message.durationDays,
-        extraData: result.message.extraData,
-      },
-    };
+    return mapEIP712Result(result);
   }
 
   /**
@@ -381,11 +362,6 @@ export class RelayerWeb implements RelayerSDK {
   }
 
   async getAclAddress(): Promise<Address> {
-    const chainId = await this.#config.getChainId();
-    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-    if (!config.aclContractAddress) {
-      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
-    }
-    return config.aclContractAddress as Address;
+    return resolveAclAddress(this.#config.getChainId, this.#config.transports);
   }
 }

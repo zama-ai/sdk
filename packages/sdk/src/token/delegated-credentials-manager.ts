@@ -184,8 +184,10 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
   // ── Private helpers ───────────────────────────────────────────
 
   async #storeKey(delegatorAddress: Address): Promise<string> {
-    const delegateAddress = await this.signer.getAddress();
-    const chainId = await this.signer.getChainId();
+    const [delegateAddress, chainId] = await Promise.all([
+      this.signer.getAddress(),
+      this.signer.getChainId(),
+    ]);
     const identity = `${getAddress(delegateAddress)}:${getAddress(delegatorAddress)}:${chainId}`;
     if (this.#cachedStoreKey && this.#cachedStoreKeyIdentity === identity) {
       return this.#cachedStoreKey;

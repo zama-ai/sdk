@@ -7,7 +7,7 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
 import type { Address, Hex } from "viem";
-import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import { EncryptionFailedError, ZamaError } from "../token/errors";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
@@ -19,7 +19,7 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
+import { DefaultConfigs, mapEIP712Result, resolveAclAddress, withRetry } from "./relayer-utils";
 import type { GenericLogger } from "../worker/worker.types";
 
 export interface RelayerNodeConfig {
@@ -148,28 +148,7 @@ export class RelayerNode implements RelayerSDK {
       startTimestamp,
       durationDays,
     });
-
-    const domain = {
-      name: result.domain.name,
-      version: result.domain.version,
-      chainId: result.domain.chainId,
-      verifyingContract: result.domain.verifyingContract,
-    };
-
-    return {
-      domain,
-      types: {
-        EIP712Domain: buildEIP712DomainType(domain),
-        UserDecryptRequestVerification: result.types.UserDecryptRequestVerification,
-      },
-      message: {
-        publicKey: result.message.publicKey,
-        contractAddresses: result.message.contractAddresses,
-        startTimestamp: result.message.startTimestamp,
-        durationDays: result.message.durationDays,
-        extraData: result.message.extraData,
-      },
-    };
+    return mapEIP712Result(result);
   }
 
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
@@ -250,11 +229,6 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async getAclAddress(): Promise<Address> {
-    const chainId = await this.#config.getChainId();
-    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-    if (!config.aclContractAddress) {
-      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
-    }
-    return config.aclContractAddress as Address;
+    return resolveAclAddress(this.#config.getChainId, this.#config.transports);
   }
 }

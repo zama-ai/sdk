@@ -195,6 +195,23 @@ export class DelegationExpiredError extends ZamaError {
 }
 
 /**
+ * Re-throw if the error is already a ZamaError, otherwise wrap it in the given error class.
+ * Centralizes the `instanceof ZamaError` guard used throughout `Token` methods.
+ */
+export function rethrowOrWrap(
+  error: unknown,
+  ErrorClass: new (message: string, options?: ErrorOptions) => ZamaError,
+  message: string,
+): never {
+  if (error instanceof ZamaError) {
+    throw error;
+  }
+  throw new ErrorClass(message, {
+    cause: error instanceof Error ? error : undefined,
+  });
+}
+
+/**
  * Wrap a signing error as {@link SigningRejectedError} or {@link SigningFailedError}.
  * Detects user rejection via EIP-1193 code 4001 or message heuristics.
  */

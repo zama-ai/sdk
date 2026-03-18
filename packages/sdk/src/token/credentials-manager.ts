@@ -192,8 +192,10 @@ export class CredentialsManager extends BaseCredentialsManager<
   // ── Store key ─────────────────────────────────────────────────
 
   async #storeKey(): Promise<string> {
-    const address = await this.signer.getAddress();
-    const chainId = await this.signer.getChainId();
+    const [address, chainId] = await Promise.all([
+      this.signer.getAddress(),
+      this.signer.getChainId(),
+    ]);
     const identity = `${getAddress(address)}:${chainId}`;
     if (this.#cachedStoreKey && this.#cachedStoreKeyIdentity === identity) {
       return this.#cachedStoreKey;

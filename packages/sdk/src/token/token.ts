@@ -26,6 +26,7 @@ import {
   EncryptionFailedError,
   TransactionRevertedError,
   ZamaError,
+  rethrowOrWrap,
 } from "./errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import type {
@@ -126,12 +127,7 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Failed to encrypt transfer amount", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, EncryptionFailedError, "Failed to encrypt transfer amount");
     }
 
     if (handles.length === 0) {
@@ -152,12 +148,7 @@ export class Token extends ReadonlyToken {
         operation: "transfer",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Transfer transaction failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "Transfer transaction failed");
     }
   }
 
@@ -207,12 +198,7 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Failed to encrypt transferFrom amount", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, EncryptionFailedError, "Failed to encrypt transferFrom amount");
     }
 
     if (handles.length === 0) {
@@ -239,12 +225,7 @@ export class Token extends ReadonlyToken {
         operation: "transferFrom",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("TransferFrom transaction failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "TransferFrom transaction failed");
     }
   }
 
@@ -277,12 +258,7 @@ export class Token extends ReadonlyToken {
         operation: "approve",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new ApprovalFailedError("Operator approval failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, ApprovalFailedError, "Operator approval failed");
     }
   }
 
@@ -363,12 +339,7 @@ export class Token extends ReadonlyToken {
         operation: "shield",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Shield transaction failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "Shield transaction failed");
     }
   }
 
@@ -400,12 +371,7 @@ export class Token extends ReadonlyToken {
         operation: "shieldETH",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Shield ETH transaction failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "Shield ETH transaction failed");
     }
   }
 
@@ -446,12 +412,7 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Failed to encrypt unshield amount", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, EncryptionFailedError, "Failed to encrypt unshield amount");
     }
 
     if (handles.length === 0) {
@@ -471,12 +432,7 @@ export class Token extends ReadonlyToken {
         operation: "unwrap",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Unshield transaction failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "Unshield transaction failed");
     }
   }
 
@@ -515,12 +471,7 @@ export class Token extends ReadonlyToken {
         operation: "unwrap",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Unshield-all transaction failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "Unshield-all transaction failed");
     }
   }
 
@@ -630,12 +581,7 @@ export class Token extends ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new DecryptionFailedError("Failed to finalize unshield", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, DecryptionFailedError, "Failed to finalize unshield");
     }
 
     try {
@@ -651,12 +597,7 @@ export class Token extends ReadonlyToken {
         operation: "finalizeUnwrap",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Failed to finalize unshield", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "Failed to finalize unshield");
     }
   }
 
@@ -704,12 +645,7 @@ export class Token extends ReadonlyToken {
         operation: "approveUnderlying",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new ApprovalFailedError("ERC-20 approval failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, ApprovalFailedError, "ERC-20 approval failed");
     }
   }
 
@@ -754,12 +690,7 @@ export class Token extends ReadonlyToken {
         operation: "delegateDecryption",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Delegation transaction failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "Delegation transaction failed");
     }
   }
 
@@ -791,12 +722,7 @@ export class Token extends ReadonlyToken {
         operation: "revokeDelegation",
         error: toError(error),
       });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Revoke delegation transaction failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "Revoke delegation transaction failed");
     }
   }
 
@@ -889,12 +815,7 @@ export class Token extends ReadonlyToken {
     try {
       receipt = await this.signer.waitForTransactionReceipt(unshieldHash);
     } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Failed to get unshield receipt", {
-        cause: error,
-      });
+      rethrowOrWrap(error, TransactionRevertedError, "Failed to get unshield receipt");
     }
     const event = findUnwrapRequested(receipt.logs);
     if (!event) {
@@ -944,12 +865,7 @@ export class Token extends ReadonlyToken {
       this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash });
       safeCallback(() => callbacks?.onApprovalSubmitted?.(txHash));
     } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new ApprovalFailedError("ERC-20 approval failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      rethrowOrWrap(error, ApprovalFailedError, "ERC-20 approval failed");
     }
   }
 }

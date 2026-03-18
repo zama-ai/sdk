@@ -131,10 +131,26 @@ export interface DecryptErrorEvent extends BaseEvent {
   durationMs: number;
 }
 
+/** Known write operation names for {@link TransactionErrorEvent}. */
+export type TransactionOperation =
+  | "transfer"
+  | "transferFrom"
+  | "approve"
+  | "shield"
+  | "shieldETH"
+  | "unwrap"
+  | "finalizeUnwrap"
+  | "approveUnderlying"
+  | "delegateDecryption"
+  | "revokeDelegation"
+  | "signerDisconnect"
+  | "signerAccountChange"
+  | "signerChainChange";
+
 export interface TransactionErrorEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.TransactionError;
   /** Which write operation failed. */
-  operation: string;
+  operation: TransactionOperation;
   /** The error that caused the transaction to fail. */
   error: Error;
 }

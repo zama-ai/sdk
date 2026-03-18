@@ -24,13 +24,6 @@ function invalidateUnderlyingAllowanceQueries(
   });
 }
 
-export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: Address): void {
-  invalidateBalanceQueries(queryClient, tokenAddress);
-  invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
-  invalidateWagmiBalanceQueries(queryClient);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
-}
-
 export function invalidateBalanceQueries(
   queryClient: QueryClientLike,
   tokenAddress: Address,
@@ -45,19 +38,17 @@ export function invalidateBalanceQueries(
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalances.all });
 }
 
-export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress: Address): void {
+/** Invalidate balances, underlying allowances, wagmi balances, and activity feed for a token. */
+function invalidateAfterBalanceChange(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
   void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
-export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void {
-  invalidateBalanceQueries(queryClient, tokenAddress);
-  invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
-  invalidateWagmiBalanceQueries(queryClient);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
-}
+export const invalidateAfterUnwrap = invalidateAfterBalanceChange;
+export const invalidateAfterShield = invalidateAfterBalanceChange;
+export const invalidateAfterUnshield = invalidateAfterBalanceChange;
 
 export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);

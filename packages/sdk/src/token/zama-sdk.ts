@@ -1,5 +1,5 @@
 import { getAddress, type Address } from "viem";
-import type { ZamaSDKEventListener } from "../events/sdk-events";
+import type { TransactionOperation, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import { toError } from "../utils";
@@ -90,7 +90,7 @@ export class ZamaSDK {
 
     if (this.signer.subscribe) {
       const lifecycleCallbacks = config.signerLifecycleCallbacks;
-      const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
+      const runLifecycleEffect = (operation: TransactionOperation, effect: () => Promise<void>) => {
         void effect().catch((error) => {
           this.#onEvent?.({
             type: ZamaSDKEvents.TransactionError,
@@ -152,12 +152,7 @@ export class ZamaSDK {
 
   async #revokeByTrackedIdentity(): Promise<void> {
     await this.#identityReady;
-    if (
-      this.#lastAddress === null ||
-      this.#lastAddress === undefined ||
-      this.#lastChainId === null ||
-      this.#lastChainId === undefined
-    ) {
+    if (this.#lastAddress === null || this.#lastChainId === null) {
       return;
     }
     const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
