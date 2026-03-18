@@ -127,3 +127,12 @@ if docker run --rm --entrypoint /bin/bash "$SQUID_IMAGE" -lc \
 fi
 
 echo "Network sandbox active. All egress restricted to proxy."
+
+# ── Export proxy env vars for subsequent workflow steps ────────────────
+if [ -n "${GITHUB_ENV:-}" ]; then
+  {
+    echo "HTTP_PROXY=http://127.0.0.1:3128"
+    echo "HTTPS_PROXY=http://127.0.0.1:3128"
+    echo "NO_PROXY=127.0.0.1,localhost"
+  } >> "$GITHUB_ENV"
+fi

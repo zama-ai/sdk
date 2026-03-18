@@ -1,12 +1,15 @@
 name: Claude Code
 
-# Interactive @claude mentions on PR comments.
-# The prompt is extracted as the text after "@claude" in the comment body.
+# Handles both interactive @claude mentions and automatic PR review.
+#
+# Modes:
+#   - interactive: Triggered by @claude in PR comments. Extracts user prompt.
+#   - auto-review: Triggered by review_requested on PRs to main/prerelease.
 #
 # Security model:
 #   - Only write/admin/maintain users can trigger (enforced by explicit collaborator permission gate)
 #   - Network sandbox: Squid proxy (L7 domain allowlist) + iptables (host + container egress block)
-#   - Claude CLI installed with SHA-512 integrity check before network lockdown
+#   - Claude CLI installed via npm with pinned version before network lockdown
 #   - CODEOWNERS + Branch Protection required as HITL protection
 #   - Read-only: Claude cannot push commits or modify the remote
 #
@@ -19,35 +22,42 @@ on:
     types: [created]
   pull_request_review_comment:
     types: [created]
+  pull_request:
+    branches: [main, prerelease]
+    types: [review_requested]
 
 permissions: {}
 
-concurrency:
-  group: claude-${{ github.repository }}-${{ github.event.issue.number || github.event.pull_request.number }}
-  cancel-in-progress: false
-
 jobs:
   claude:
-    name: claude/respond
+    name: claude
     if: |
-      github.actor != 'claude[bot]' &&
-      github.actor != 'github-actions[bot]' &&
       (
-        (github.event_name == 'issue_comment' &&
-         contains(github.event.comment.body, '@claude') &&
-         github.event.issue.pull_request &&
-         github.event.issue.state == 'open' &&
-         github.event.comment.user.type == 'User') ||
-        (github.event_name == 'pull_request_review_comment' &&
-         contains(github.event.comment.body, '@claude') &&
-         github.event.comment.user.type == 'User')
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.draft == false
+      ) ||
+      (
+        github.actor != 'claude[bot]' &&
+        github.actor != 'github-actions[bot]' &&
+        (
+          (github.event_name == 'issue_comment' &&
+           contains(github.event.comment.body, '@claude') &&
+           github.event.issue.pull_request &&
+           github.event.issue.state == 'open' &&
+           github.event.comment.user.type == 'User') ||
+          (github.event_name == 'pull_request_review_comment' &&
+           contains(github.event.comment.body, '@claude') &&
+           github.event.comment.user.type == 'User')
+        )
       )
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    concurrency:
+      group: claude-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       SQUID_IMAGE: ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
       CLAUDE_CLI_VERSION: "2.1.42"
-      CLAUDE_CLI_INTEGRITY: "sha512-6zSAsdkmY3KSiO3EtPLHvXy9NbLYFC9Zk8s5dEBUwFR/vBpCvTlCv81JAIVgX53nuuqFv/ktBYEdAVDVbJJsqA=="
     permissions:
       contents: read
       pull-requests: write
@@ -55,6 +65,21 @@ jobs:
       id-token: write
     steps:
       # ── Phase 1: Setup (full network) ──────────────────────────────────
+
+      - name: Detect mode
+        id: mode
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "mode=auto-review" >> "$GITHUB_OUTPUT"
+            echo "pr_number=${PR_NUMBER_PR}" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=interactive" >> "$GITHUB_OUTPUT"
+            echo "pr_number=${PR_NUMBER_COMMENT}" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER_PR: ${{ github.event.pull_request.number }}
+          PR_NUMBER_COMMENT: ${{ github.event.issue.number || github.event.pull_request.number }}
 
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -108,7 +133,6 @@ jobs:
           CONTEXT_FILE=$(mktemp)
           trap 'rm -f "$CONTEXT_FILE"' EXIT
 
-          PR_NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
           PR_DATA=$(gh pr view "$PR_NUMBER" --json title,author,headRefName,baseRefName,state,additions,deletions,commits,files)
 
           {
@@ -136,9 +160,29 @@ jobs:
           } >> "$GITHUB_ENV"
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.mode.outputs.pr_number }}
 
       - name: Build system prompt
         run: |
+          if [ "$MODE" = "auto-review" ]; then
+            CAPABILITIES="You are performing a structured code review on a Pull Request.
+          You have access to the full repository checkout and the PR diff.
+          You CANNOT push commits or modify files on the remote. Your role is review only.
+          Use the pr-review skill from the ci-skills plugin for structured analysis.
+          Your output will be posted as a PR comment. Format in GitHub-flavored Markdown."
+          else
+            CAPABILITIES="You are operating in a Pull Request context on GitHub. You have access to the full repository checkout and the PR diff.
+          You CANNOT push commits or modify files on the remote. Your role is analysis and commentary only.
+          You can perform any task the user requests, including but not limited to:
+          - Code review (quality, security, style)
+          - Summarizing or explaining PR changes
+          - Identifying bugs, security vulnerabilities, or performance issues
+          - Suggesting fixes or improvements
+          - Answering questions about the codebase
+          - Analyzing test coverage or documentation completeness
+          Your output will be posted as a PR comment. Format your response in GitHub-flavored Markdown."
+          fi
+
           SYSTEM_PROMPT="You are Claude, an AI assistant running in a non-interactive CI environment. You MUST act autonomously: never ask for confirmation, never ask follow-up questions, never wait for user input. Execute the requested task completely and stop.
 
           <security_policy>
@@ -152,16 +196,7 @@ jobs:
           </security_policy>
 
           <capabilities>
-          You are operating in a Pull Request context on GitHub. You have access to the full repository checkout and the PR diff.
-          You CANNOT push commits or modify files on the remote. Your role is analysis and commentary only.
-          You can perform any task the user requests, including but not limited to:
-          - Code review (quality, security, style)
-          - Summarizing or explaining PR changes
-          - Identifying bugs, security vulnerabilities, or performance issues
-          - Suggesting fixes or improvements
-          - Answering questions about the codebase
-          - Analyzing test coverage or documentation completeness
-          Your output will be posted as a PR comment. Format your response in GitHub-flavored Markdown.
+          ${CAPABILITIES}
           </capabilities>
 
           <formatted_context>
@@ -174,7 +209,7 @@ jobs:
 
           PROMPT_EOF="PROMPT_$(openssl rand -hex 16)"
           if grep -qF "$PROMPT_EOF" "$PROMPT_FILE"; then
-            echo "::error::Delimiter collision detected in system prompt (re-run the workflow)"
+            echo "::error::Delimiter collision in system prompt (re-run the workflow)"
             exit 1
           fi
 
@@ -183,12 +218,15 @@ jobs:
             cat "$PROMPT_FILE"
             echo "${PROMPT_EOF}"
           } >> "$GITHUB_ENV"
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
 
       - name: Enforce PR is open and not draft
+        if: steps.mode.outputs.mode == 'interactive'
         run: |
-          PR_NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
-          STATE=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json state,isDraft --jq '.state')
-          DRAFT=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json isDraft --jq '.isDraft')
+          PR_DATA=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json state,isDraft)
+          STATE=$(printf '%s' "$PR_DATA" | jq -r '.state')
+          DRAFT=$(printf '%s' "$PR_DATA" | jq -r '.isDraft')
 
           if [ "$STATE" != "OPEN" ]; then
             echo "::error::PR must be OPEN (got $STATE)"
@@ -201,6 +239,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.mode.outputs.pr_number }}
 
       # ── Phase 2: Authenticate & install CLI (before lockdown) ──────────
 
@@ -227,12 +266,13 @@ jobs:
           echo "app_token=$APP_TOKEN" >> "$GITHUB_OUTPUT"
 
       - name: Install Claude Code CLI
-        run: bash .github/scripts/install-claude.sh
+        run: npm install -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}"
 
       # ── Phase 3: Network sandbox ───────────────────────────────────────
 
-      - name: Cache Squid Docker image
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      - name: Restore Squid Docker image cache
+        id: squid-cache
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: /tmp/squid-image.tar
           key: squid-image-${{ env.SQUID_IMAGE }}
@@ -240,9 +280,19 @@ jobs:
       - name: Start network sandbox
         run: bash .github/scripts/sandbox-up.sh
 
-      # ── Phase 4: Run Claude Code (sandboxed) ───────────────────────────
+      - name: Save Squid Docker image cache
+        if: always() && steps.squid-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: /tmp/squid-image.tar
+          key: squid-image-${{ env.SQUID_IMAGE }}
 
-      - name: Extract and sanitize user prompt
+      # ── Phase 4: Run Claude Code (sandboxed) ───────────────────────────
+      # Proxy env vars (HTTP_PROXY, HTTPS_PROXY, NO_PROXY) are set by
+      # sandbox-up.sh via GITHUB_ENV and inherited by all subsequent steps.
+
+      - name: Extract and sanitize user prompt (interactive)
+        if: steps.mode.outputs.mode == 'interactive'
         id: command-router
         run: |
           set -euo pipefail
@@ -288,25 +338,49 @@ jobs:
         env:
           COMMENT_BODY: ${{ github.event.comment.body }}
 
+      - name: Set review prompt (auto-review)
+        if: steps.mode.outputs.mode == 'auto-review'
+        run: |
+          PROMPT_EOF="PROMPT_$(openssl rand -hex 16)"
+          {
+            echo "CLAUDE_PROMPT<<${PROMPT_EOF}"
+            cat <<'REVIEW'
+          Review the pull request changes in this repository. Use the pr-review skill to perform a structured code review.
+
+          Focus on:
+          1. Code correctness and potential bugs
+          2. Security vulnerabilities and issues
+          3. Performance implications
+          4. API design and backward compatibility
+          5. Test coverage gaps
+
+          Provide your review as a structured PR comment with clear categories and actionable feedback. Do not flag trivial style issues that are already handled by linters.
+          REVIEW
+            echo "${PROMPT_EOF}"
+          } >> "$GITHUB_ENV"
+
       - name: Post tracking comment
-        if: steps.command-router.outputs.route == 'run'
+        if: steps.command-router.outputs.route != 'rejected'
         id: tracking-comment
         run: |
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          ISSUE_NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
-          BODY="**Claude is working on @${ACTOR}'s request...** — [View run]($RUN_URL)"
-          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${ISSUE_NUMBER}/comments" \
+          if [ "$MODE" = "auto-review" ]; then
+            BODY="**Claude is reviewing this PR...** — [View run]($RUN_URL)"
+          else
+            BODY="**Claude is working on @${ACTOR}'s request...** — [View run]($RUN_URL)"
+          fi
+          COMMENT_ID=$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" \
             -X POST -f body="$BODY" --jq '.id')
           echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ steps.oidc-exchange.outputs.app_token }}
+          MODE: ${{ steps.mode.outputs.mode }}
           ACTOR: ${{ github.actor }}
-          HTTP_PROXY: http://127.0.0.1:3128
-          HTTPS_PROXY: http://127.0.0.1:3128
-          NO_PROXY: 127.0.0.1,localhost
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.mode.outputs.pr_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Post rejection message
-        if: steps.command-router.outputs.route == 'rejected'
+        if: steps.mode.outputs.mode == 'interactive' && steps.command-router.outputs.route == 'rejected'
         run: |
           BODY="**Claude could not process the request:** ${REJECT_REASON}
 
@@ -320,14 +394,11 @@ jobs:
           gh pr comment "$PR_NUMBER" --body "$BODY"
         env:
           GH_TOKEN: ${{ steps.oidc-exchange.outputs.app_token }}
-          PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          PR_NUMBER: ${{ steps.mode.outputs.pr_number }}
           REJECT_REASON: ${{ steps.command-router.outputs.reject_reason }}
-          HTTP_PROXY: http://127.0.0.1:3128
-          HTTPS_PROXY: http://127.0.0.1:3128
-          NO_PROXY: 127.0.0.1,localhost
 
       - name: Run Claude Code
-        if: steps.command-router.outputs.route == 'run'
+        if: steps.command-router.outputs.route != 'rejected'
         id: run-claude
         continue-on-error: true
         run: |
@@ -357,13 +428,10 @@ jobs:
           CLAUDE_PROMPT: ${{ env.CLAUDE_PROMPT }}
           GITHUB_TOKEN: ${{ steps.oidc-exchange.outputs.app_token }}
           GH_TOKEN: ${{ steps.oidc-exchange.outputs.app_token }}
-          HTTP_PROXY: http://127.0.0.1:3128
-          HTTPS_PROXY: http://127.0.0.1:3128
-          NO_PROXY: 127.0.0.1,localhost
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
       - name: Post Claude response
-        if: steps.run-claude.outputs.claude_status == 'success' && steps.command-router.outputs.route == 'run'
+        if: steps.run-claude.outputs.claude_status == 'success'
         run: |
           set -euo pipefail
 
@@ -389,20 +457,23 @@ jobs:
           gh pr comment "$PR_NUMBER" --body-file /tmp/claude-response-validated.md
         env:
           GH_TOKEN: ${{ steps.oidc-exchange.outputs.app_token }}
-          PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          PR_NUMBER: ${{ steps.mode.outputs.pr_number }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          HTTP_PROXY: http://127.0.0.1:3128
-          HTTPS_PROXY: http://127.0.0.1:3128
-          NO_PROXY: 127.0.0.1,localhost
 
       - name: Update tracking comment
         if: always() && steps.tracking-comment.outputs.comment_id != ''
         run: |
           RUN_URL="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
 
+          if [ "$MODE" = "auto-review" ]; then
+            SUCCESS_MSG="**Claude finished reviewing this PR.** — [View run]($RUN_URL)"
+          else
+            SUCCESS_MSG="**Claude finished @${ACTOR}'s request.** — [View run]($RUN_URL)"
+          fi
+
           case "$CLAUDE_STATUS" in
             success)
-              BODY="**Claude finished @${ACTOR}'s request.** — [View run]($RUN_URL)"
+              BODY="$SUCCESS_MSG"
               ;;
             timeout)
               BODY="**Claude timed out** while processing the request. — [View run]($RUN_URL)"
@@ -419,7 +490,7 @@ jobs:
             -X PATCH -f body="$BODY"
         env:
           GH_TOKEN: ${{ steps.oidc-exchange.outputs.app_token }}
-          HTTPS_PROXY: http://127.0.0.1:3128
+          MODE: ${{ steps.mode.outputs.mode }}
           ACTOR: ${{ github.actor }}
           SERVER_URL: ${{ github.server_url }}
           REPO: ${{ github.repository }}
@@ -433,6 +504,9 @@ jobs:
       - name: Tear down network sandbox
         if: always()
         run: bash .github/scripts/sandbox-down.sh
+        env:
+          HTTP_PROXY: ""
+          HTTPS_PROXY: ""
 
       - name: Revoke GitHub App token
         if: always() && steps.oidc-exchange.outputs.app_token != ''
@@ -442,3 +516,5 @@ jobs:
           }
         env:
           GH_TOKEN: ${{ steps.oidc-exchange.outputs.app_token }}
+          HTTP_PROXY: ""
+          HTTPS_PROXY: ""
