@@ -103,6 +103,12 @@ export {
   delegateDecryptionMutationOptions,
   type DelegateDecryptionParams,
 } from "./delegate-decryption";
+export {
+  userDecryptMutationOptions,
+  type UserDecryptMutationParams,
+  type UserDecryptCallbacks,
+  type DecryptHandle,
+} from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
 export {
   batchDecryptBalancesAsMutationOptions,

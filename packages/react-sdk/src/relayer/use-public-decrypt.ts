@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ClearValueType, Handle, PublicDecryptResult } from "@zama-fhe/sdk";
-import { decryptionKeys } from "./decryption-cache";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
@@ -29,7 +29,7 @@ export function usePublicDecrypt() {
         Handle,
         ClearValueType,
       ][]) {
-        queryClient.setQueryData(decryptionKeys.value(handle), value);
+        queryClient.setQueryData(zamaQueryKeys.decryption.handle(handle), value);
       }
     },
   });

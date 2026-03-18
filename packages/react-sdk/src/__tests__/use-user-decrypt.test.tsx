@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useUserDecrypt } from "../relayer/use-user-decrypt";
-import { decryptionKeys } from "../relayer/decryption-cache";
+import { describe, expect, it, vi } from "../test-fixtures";
 
 describe("useUserDecrypt", () => {
   it("runs the full flow: keypair -> EIP712 -> sign -> decrypt", async ({
@@ -35,11 +35,14 @@ describe("useUserDecrypt", () => {
     expect(signer.signTypedData).toHaveBeenCalledOnce();
     expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
-    expect(result.current.data).toEqual({ "0xhandle1": 100n, "0xhandle2": true });
+    expect(result.current.data).toEqual({
+      "0xhandle1": 100n,
+      "0xhandle2": true,
+    });
 
     // Verify decryption cache was populated
-    expect(queryClient.getQueryData(decryptionKeys.value("0xhandle1"))).toBe(100n);
-    expect(queryClient.getQueryData(decryptionKeys.value("0xhandle2"))).toBe(true);
+    expect(queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle1"))).toBe(100n);
+    expect(queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle2"))).toBe(true);
   });
 
   it("fires callbacks in correct order", async ({
@@ -105,7 +108,10 @@ describe("useUserDecrypt", () => {
     tokenAddress,
     renderWithProviders,
   }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh1": 1n, "0xh2": 2n });
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({
+      "0xh1": 1n,
+      "0xh2": 2n,
+    });
 
     const { result } = renderWithProviders(() => useUserDecrypt(), {
       relayer,
@@ -202,7 +208,10 @@ describe("useUserDecrypt", () => {
 
     result.current.mutate({
       handles: [
-        { handle: "0xh", contractAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address },
+        {
+          handle: "0xh",
+          contractAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address,
+        },
       ],
     });
 

@@ -33,7 +33,6 @@ export { usePublicParams, type PublicParamsData } from "./relayer/use-public-par
 // Read hooks (cached lookups)
 export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";
 export { useUserDecryptedValues } from "./relayer/use-user-decrypted-values";
-export { decryptionKeys } from "./relayer/decryption-cache";
 
 // Re-export core classes
 export {

@@ -4,7 +4,6 @@ import type * as ZamaSdkModule from "@zama-fhe/sdk";
 import type { ZamaSDKEventListener, ZamaSDKConfig } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { decryptionKeys } from "../relayer/decryption-cache";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaSDKConfig[] = [];
@@ -58,7 +57,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     const balanceKey = zamaQueryKeys.confidentialBalance.token(
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
-    const decryptionKey = decryptionKeys.value(
+    const decryptionKey = zamaQueryKeys.decryption.handle(
       "0xaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbB",
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
