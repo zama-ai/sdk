@@ -233,7 +233,7 @@ jobs:
           claude plugin marketplace add /tmp/zama-marketplace
           claude plugin install ci-skills@zama-marketplace
 
-          REVIEW_PROMPT="Review the pull request changes in this repository. Use the pr-review skill to perform a structured code review.
+          CLAUDE_PROMPT="Review the pull request changes in this repository. Use the pr-review skill to perform a structured code review.
 
           Focus on:
           1. Code correctness and potential bugs
@@ -245,7 +245,7 @@ jobs:
           Provide your review as a structured PR comment with clear categories and actionable feedback. Do not flag trivial style issues that are already handled by linters."
 
           set +e
-          timeout 600 claude -p "$REVIEW_PROMPT" \
+          timeout 600 claude -p "$CLAUDE_PROMPT" \
             --model opus \
             --dangerously-skip-permissions \
             --verbose \
