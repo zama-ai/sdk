@@ -51,6 +51,10 @@ import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { confidentialTransferMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { ContractAbi } from '@zama-fhe/sdk';
+import { createDelegatedUserDecryptEIP712MutationOptions } from '@zama-fhe/sdk/query';
+import { CreateDelegatedUserDecryptEIP712Params } from '@zama-fhe/sdk/query';
+import { createEIP712MutationOptions } from '@zama-fhe/sdk/query';
+import { CreateEIP712Params } from '@zama-fhe/sdk/query';
 import { CredentialsAllowedEvent } from '@zama-fhe/sdk';
 import { CredentialsCachedEvent } from '@zama-fhe/sdk';
 import { CredentialsCreatedEvent } from '@zama-fhe/sdk';
@@ -72,6 +76,7 @@ import { decryptBalanceAsMutationOptions } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
 import { DecryptEndEvent } from '@zama-fhe/sdk';
 import { DecryptErrorEvent } from '@zama-fhe/sdk';
+import { DecryptHandle } from '@zama-fhe/sdk/query';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
 import { DecryptStartEvent } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManager } from '@zama-fhe/sdk';
@@ -79,6 +84,7 @@ import { DelegatedCredentialsManagerConfig } from '@zama-fhe/sdk';
 import { delegateDecryptionMutationOptions } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegatedStoredCredentials } from '@zama-fhe/sdk';
+import { delegatedUserDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { DelegatedUserDecryptParams } from '@zama-fhe/sdk';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { DelegationStatusQueryConfig } from '@zama-fhe/sdk/query';
@@ -106,6 +112,7 @@ import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { FinalizeUnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { findUnwrapRequested } from '@zama-fhe/sdk';
 import { findWrapped } from '@zama-fhe/sdk';
+import { generateKeypairMutationOptions } from '@zama-fhe/sdk/query';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { GenericStorage } from '@zama-fhe/sdk';
 import { getBatchTransferFeeContract } from '@zama-fhe/sdk';
@@ -142,6 +149,7 @@ import { NoCiphertextError } from '@zama-fhe/sdk';
 import { OnChainEvent } from '@zama-fhe/sdk';
 import { parseActivityFeed } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
+import { publicDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { PublicDecryptResult } from '@zama-fhe/sdk';
 import { publicKeyQueryOptions } from '@zama-fhe/sdk/query';
 import { publicParamsQueryOptions } from '@zama-fhe/sdk/query';
@@ -161,6 +169,7 @@ import { RelayerSDKStatus } from '@zama-fhe/sdk';
 import { RelayerWeb } from '@zama-fhe/sdk';
 import { RelayerWebConfig } from '@zama-fhe/sdk';
 import { RelayerWebSecurityConfig } from '@zama-fhe/sdk';
+import { requestZKProofVerificationMutationOptions } from '@zama-fhe/sdk/query';
 import { resumeUnshieldMutationOptions } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { revokeDelegationMutationOptions } from '@zama-fhe/sdk/query';
@@ -226,6 +235,9 @@ import { UnwrapSubmittedEvent } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
+import { UserDecryptCallbacks } from '@zama-fhe/sdk/query';
+import { userDecryptMutationOptions } from '@zama-fhe/sdk/query';
+import { UserDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
 import { wrapContract } from '@zama-fhe/sdk';
 import { wrapETHContract } from '@zama-fhe/sdk';
@@ -344,22 +356,13 @@ export { ConfidentialTransferParams }
 
 export { ContractAbi }
 
-// @public
-export interface CreateDelegatedUserDecryptEIP712Params {
-    contractAddresses: Address[];
-    delegatorAddress: Address;
-    durationDays?: number;
-    publicKey: `0x${string}`;
-    startTimestamp: number;
-}
+export { createDelegatedUserDecryptEIP712MutationOptions }
 
-// @public
-export interface CreateEIP712Params {
-    contractAddresses: Address[];
-    durationDays?: number;
-    publicKey: `0x${string}`;
-    startTimestamp: number;
-}
+export { CreateDelegatedUserDecryptEIP712Params }
+
+export { createEIP712MutationOptions }
+
+export { CreateEIP712Params }
 
 export { CredentialsAllowedEvent }
 
@@ -399,38 +402,13 @@ export { decryptBalanceAsMutationOptions }
 
 export { DecryptBalanceAsParams }
 
-// @public
-export interface DecryptCallbacks {
-    onCredentialsReady?: () => void;
-    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
-}
-
 export { DecryptEndEvent }
 
 export { DecryptErrorEvent }
 
-// @public
-export interface DecryptHandle {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    handle: Handle;
-}
+export { DecryptHandle }
 
 export { DecryptionFailedError }
-
-// @public
-export const decryptionKeys: {
-    value: (handle: Handle, contractAddress?: Address) => readonly ["zama.decryption", {
-        readonly contractAddress?: `0x${string}` | undefined;
-        readonly handle: string;
-    }];
-};
-
-// @public
-export interface DecryptParams {
-    handles: DecryptHandle[];
-}
 
 export { DecryptStartEvent }
 
@@ -443,6 +421,8 @@ export { delegateDecryptionMutationOptions }
 export { DelegateDecryptionParams }
 
 export { DelegatedStoredCredentials }
+
+export { delegatedUserDecryptMutationOptions }
 
 export { DelegatedUserDecryptParams }
 
@@ -497,6 +477,8 @@ export { FinalizeUnwrapSubmittedEvent }
 export { findUnwrapRequested }
 
 export { findWrapped }
+
+export { generateKeypairMutationOptions }
 
 export { GenericSigner }
 
@@ -579,6 +561,8 @@ export interface OptimisticMutateContext {
 
 export { parseActivityFeed }
 
+export { publicDecryptMutationOptions }
+
 export { PublicDecryptResult }
 
 // @public
@@ -624,6 +608,8 @@ export { RelayerWeb }
 export { RelayerWebConfig }
 
 export { RelayerWebSecurityConfig }
+
+export { requestZKProofVerificationMutationOptions }
 
 export { resumeUnshieldMutationOptions }
 
@@ -1241,6 +1227,14 @@ export function usePublicKey(): _tanstack_react_query0.UseQueryResult<PublicKeyD
 // @public
 export function usePublicParams(bits: number): _tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
 
+export { UserDecryptCallbacks as DecryptCallbacks }
+export { UserDecryptCallbacks }
+
+export { userDecryptMutationOptions }
+
+export { UserDecryptMutationParams as DecryptParams }
+export { UserDecryptMutationParams }
+
 export { UserDecryptParams }
 
 // @public
@@ -1320,10 +1314,10 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config?: UseUserDecryptConfig): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DecryptParams, unknown>;
+export function useUserDecrypt(config?: UseUserDecryptConfig): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, UserDecryptMutationParams, unknown>;
 
 // @public
-export type UseUserDecryptConfig = DecryptCallbacks;
+export type UseUserDecryptConfig = UserDecryptCallbacks;
 
 // @public
 export function useUserDecryptedValue(handle: Handle | undefined): _tanstack_react_query0.UseQueryResult<ClearValueType, Error>;

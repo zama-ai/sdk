@@ -14,6 +14,7 @@ import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { MutationFunctionContext } from '@tanstack/query-core';
 import { QueryKey } from '@tanstack/query-core';
 import { QueryObserverOptions } from '@tanstack/query-core';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
@@ -263,6 +264,38 @@ export interface ConfidentialTransferParams {
 }
 
 // @public (undocumented)
+export function createDelegatedUserDecryptEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createDelegatedUserDecryptEIP712"], CreateDelegatedUserDecryptEIP712Params, KmsDelegatedUserDecryptEIP712Type>;
+
+// @public
+export interface CreateDelegatedUserDecryptEIP712Params {
+    // (undocumented)
+    contractAddresses: Address[];
+    // (undocumented)
+    delegatorAddress: Address;
+    // (undocumented)
+    durationDays?: number;
+    // (undocumented)
+    publicKey: Hex;
+    // (undocumented)
+    startTimestamp: number;
+}
+
+// @public (undocumented)
+export function createEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createEIP712"], CreateEIP712Params, EIP712TypedData>;
+
+// @public
+export interface CreateEIP712Params {
+    // (undocumented)
+    contractAddresses: Address[];
+    // (undocumented)
+    durationDays?: number;
+    // (undocumented)
+    publicKey: Hex;
+    // (undocumented)
+    startTimestamp: number;
+}
+
+// @public (undocumented)
 export interface CredentialsAllowedEvent extends BaseEvent {
     contractAddresses?: Address[];
     // (undocumented)
@@ -374,6 +407,14 @@ export interface DecryptErrorEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptError;
 }
 
+// @public
+export interface DecryptHandle {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    handle: Handle;
+}
+
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
     // (undocumented)
@@ -390,6 +431,9 @@ export interface DelegateDecryptionParams {
     // (undocumented)
     expirationDate?: Date;
 }
+
+// @public (undocumented)
+export function delegatedUserDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedUserDecrypt"], DelegatedUserDecryptParams, Readonly<Record<Handle, ClearValueType>>>;
 
 // @public
 export interface DelegatedUserDecryptParams {
@@ -552,6 +596,9 @@ export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
 }
 
+// @public (undocumented)
+export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.generateKeypair"], void, KeypairType<Hex>>;
+
 // @public
 export interface GenericSigner {
     getAddress: () => Promise<Address>;
@@ -636,15 +683,20 @@ export function isConfidentialQueryOptions(signer: GenericSigner, tokenAddress: 
 export function isWrapperQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
 // @public (undocumented)
-export interface MutationFactoryOptions<TMutationKey extends readonly unknown[], TVariables, TData> {
+export interface MutationFactoryOptions<TMutationKey extends readonly unknown[], TVariables, TData, TOnMutateResult = unknown> {
     // (undocumented)
     mutationFn: (variables: TVariables) => Promise<TData>;
     // (undocumented)
     mutationKey: TMutationKey;
+    // (undocumented)
+    onSuccess?: (data: TData, variables: TVariables, onMutateResult: TOnMutateResult, context: MutationFunctionContext) => void;
 }
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
+
+// @public (undocumented)
+export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], Handle[], PublicDecryptResult>;
 
 // @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
@@ -809,6 +861,9 @@ export interface RelayerSDK {
     terminate(): void;
     userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
+
+// @public (undocumented)
+export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.requestZKProofVerification"], ZKProofLike, InputProofBytesType>;
 
 // @public (undocumented)
 export function resumeUnshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
@@ -1167,6 +1222,21 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.UnwrapSubmitted;
+}
+
+// @public
+export interface UserDecryptCallbacks {
+    onCredentialsReady?: () => void;
+    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
+}
+
+// @public (undocumented)
+export function userDecryptMutationOptions(sdk: ZamaSDK, callbacks?: UserDecryptCallbacks): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, Record<Handle, ClearValueType>>;
+
+// @public
+export interface UserDecryptMutationParams {
+    // (undocumented)
+    handles: DecryptHandle[];
 }
 
 // @public
