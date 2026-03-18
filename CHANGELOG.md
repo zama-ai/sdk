@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.0.0-alpha.1...v2.0.0-alpha.2) (2026-03-18)
+
+### Bug Fixes
+
+- **sdk:** detect session expiry with 30s staleTime on isAllowed query ([#124](https://github.com/zama-ai/sdk/issues/124)) ([532fb92](https://github.com/zama-ai/sdk/commit/532fb9298a5e2ff333b7bf72cd4256b3a9db05ba))
+
 ## [2.0.0-alpha.1](https://github.com/zama-ai/sdk/compare/v1.2.0-alpha.5...v2.0.0-alpha.1) (2026-03-18)
 
 ### ⚠ BREAKING CHANGES
