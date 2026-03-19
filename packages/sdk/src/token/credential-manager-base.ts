@@ -223,7 +223,7 @@ export abstract class BaseCredentialsManager<
       if (error instanceof SigningRejectedError || error instanceof SigningFailedError) {
         throw error;
       }
-      console.warn("[zama-sdk] Credential resolution failed, recreating:", error);
+      console.error("[zama-sdk] Credential resolution failed, recreating:", error);
       await this.#deleteCredentials(key);
     }
 
@@ -399,8 +399,8 @@ export abstract class BaseCredentialsManager<
       const encrypted = await this.encryptCredentials(credentials);
       await this.storage.set(key, encrypted);
     } catch (error) {
-      console.warn("[zama-sdk] Failed to encrypt credentials for persistence:", error);
-      return;
+      console.error("[zama-sdk] Failed to persist credentials:", error);
+      this.emit({ type: ZamaSDKEvents.CredentialsPersistFailed });
     }
   }
 

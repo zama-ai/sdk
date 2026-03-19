@@ -456,7 +456,7 @@ export class ReadonlyToken {
                 value,
               });
             } catch {
-              // Cache write failure should not invalidate a successful decryption
+              // Cache write is best-effort; ignore failures
             }
           })
           .catch((error) => {
@@ -831,7 +831,7 @@ export class ReadonlyToken {
           value,
         });
       } catch {
-        // Cache write failure should not invalidate a successful decryption
+        // Cache write is best-effort; ignore failures
       }
 
       return value;
@@ -912,7 +912,7 @@ export class ReadonlyToken {
           value,
         });
       } catch {
-        // Cache write failure should not invalidate a successful decryption
+        // Cache write is best-effort; ignore failures
       }
       return value;
     } catch (error) {

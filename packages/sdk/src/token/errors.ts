@@ -203,10 +203,11 @@ export function wrapSigningError(error: unknown, context: string): never {
     (error instanceof Error && "code" in error && error.code === 4001) ||
     (error instanceof Error &&
       (error.message.includes("rejected") || error.message.includes("denied")));
+  const originalMessage = error instanceof Error ? error.message : String(error);
   if (isRejected) {
-    throw new SigningRejectedError(context, { cause: error });
+    throw new SigningRejectedError(`${context}: ${originalMessage}`, { cause: error });
   }
-  throw new SigningFailedError(context, {
+  throw new SigningFailedError(`${context}: ${originalMessage}`, {
     cause: error,
   });
 }
