@@ -1,6 +1,6 @@
 # Hoodi + Cleartext Example
 
-Next.js app demonstrating the four core ERC-7984 operations on the **Hoodi** testnet using the **cleartext stack** and **ethers**.
+Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet using the **cleartext stack** and **ethers** — including on-chain ACL delegation.
 
 ## Stack
 
@@ -13,12 +13,15 @@ Next.js app demonstrating the four core ERC-7984 operations on the **Hoodi** tes
 
 ## Operations demonstrated
 
-| Operation                    | SDK API                      |
-| ---------------------------- | ---------------------------- |
-| Decrypt confidential balance | `useConfidentialBalance`     |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()` |
-| Confidential transfer        | `useConfidentialTransfer`    |
-| Unshield (cToken → ERC-20)   | `useUnshield`                |
+| Operation                    | SDK API                                       |
+| ---------------------------- | --------------------------------------------- |
+| Decrypt confidential balance | `useConfidentialBalance`                      |
+| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                  |
+| Confidential transfer        | `useConfidentialTransfer`                     |
+| Unshield (cToken → ERC-20)   | `useUnshield`                                 |
+| Grant decryption access      | `useDelegateDecryption`                       |
+| Revoke decryption access     | `useRevokeDelegation`                         |
+| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` |
 
 > **Shield** uses `token.shield()` directly (via `sdk.createToken()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
 
@@ -69,7 +72,7 @@ npm run test:e2e          # run all tests (starts dev server automatically)
 npx playwright test --ui  # interactive mode — watch tests run in the browser
 ```
 
-18 Playwright e2e tests covering the connect flow, wrong-network screen, and main UI (no real wallet or transactions required — uses a mocked EIP-1193 provider).
+19 Playwright e2e tests covering the connect flow, wrong-network screen, and main UI (no real wallet or transactions required — uses a mocked EIP-1193 provider).
 
 ## Environment variables
 

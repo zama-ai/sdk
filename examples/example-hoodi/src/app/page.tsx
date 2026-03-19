@@ -16,6 +16,9 @@ import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
 import { UnshieldCard } from "@/components/UnshieldCard";
 import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
+import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
+import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
+import { DecryptAsCard } from "@/components/DecryptAsCard";
 import {
   HOODI_CHAIN_ID,
   HOODI_CHAIN_ID_HEX,
@@ -378,6 +381,37 @@ export default function Home() {
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
         onSuccess={refreshBalances}
+      />
+
+      {/* ── Delegation — token owner perspective ──────────────────────────────
+          These cards are used by the wallet that OWNS the token.
+          Grant or revoke another wallet's right to decrypt your balance. */}
+      <hr className="divider" />
+
+      <DelegateDecryptionCard
+        key={`grant-delegation-${address}-${selectedToken}`}
+        tokenAddress={token.confidential}
+        disabled={!isHoodi}
+      />
+
+      <RevokeDelegationCard
+        key={`revoke-delegation-${address}-${selectedToken}`}
+        tokenAddress={token.confidential}
+        disabled={!isHoodi}
+      />
+
+      {/* ── Delegation — delegate perspective ────────────────────────────────
+          This card is used by the wallet that RECEIVED a delegation.
+          Decrypt another wallet's confidential balance on their behalf. */}
+      <hr className="divider" />
+
+      <DecryptAsCard
+        key={`decrypt-as-${address}-${selectedToken}`}
+        tokenAddress={token.confidential}
+        decimals={decimals}
+        symbol={confidentialSymbol}
+        disabled={!isHoodi || !cTokenMetadata.data}
+        connectedAddress={address as Address}
       />
     </div>
   );
