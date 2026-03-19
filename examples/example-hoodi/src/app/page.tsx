@@ -106,8 +106,8 @@ export default function Home() {
     setIsSwitching(true);
     try {
       await switchToHoodi(ethereum);
-    } catch {
-      /* ignore */
+    } catch (err) {
+      console.error("Failed to switch to Hoodi:", err);
     } finally {
       const current = (await ethereum.request({ method: "eth_chainId" })) as string;
       setChainId(current);
@@ -126,17 +126,19 @@ export default function Home() {
     Promise.all([
       ethereum.request({ method: "eth_accounts" }) as Promise<string[]>,
       ethereum.request({ method: "eth_chainId" }) as Promise<string>,
-    ]).then(([accounts, currentChainId]) => {
-      const detectedAddress = accounts[0] ?? null;
-      setAddress(detectedAddress);
-      setChainId(currentChainId);
+    ])
+      .then(([accounts, currentChainId]) => {
+        const detectedAddress = accounts[0] ?? null;
+        setAddress(detectedAddress);
+        setChainId(currentChainId);
 
-      // Already connected but on the wrong network — trigger switch automatically
-      // so the user is prompted to add/switch Hoodi without having to click anything.
-      if (detectedAddress && currentChainId !== HOODI_CHAIN_ID_HEX) {
-        handleSwitchToHoodi();
-      }
-    });
+        // Already connected but on the wrong network — trigger switch automatically
+        // so the user is prompted to add/switch Hoodi without having to click anything.
+        if (detectedAddress && currentChainId !== HOODI_CHAIN_ID_HEX) {
+          handleSwitchToHoodi();
+        }
+      })
+      .catch((err) => console.error("Failed to detect wallet state:", err));
 
     const handleAccountsChanged = (accounts: unknown) => {
       setAddress((accounts as string[])[0] ?? null);

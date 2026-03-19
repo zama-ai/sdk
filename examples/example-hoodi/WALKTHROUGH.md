@@ -481,7 +481,7 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 - **Additional tokens** — add entries to the `TOKENS` constant in `src/app/page.tsx` with the ERC-20 address and the ERC-7984 wrapper address. Both can be found in the registry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`.
 - **Production use** — replace `RelayerCleartext` with `RelayerWeb` (browser) or `RelayerNode` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
 - **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances in a single relayer call.
-- **Optimistic balance updates** — for hooks like `useUnshield` and `useConfidentialTransfer`, pass `optimistic: true` to immediately update the cached confidential balance while the transaction confirms, then roll back automatically on error. Improves perceived responsiveness in production UIs.
+- **Optimistic balance updates** — for `useConfidentialTransfer`, pass `optimistic: true` to immediately update the cached confidential balance while the transaction confirms, then roll back automatically on error. Improves perceived responsiveness in production UIs.
 - **On-chain ACL delegation** — grant another wallet the right to decrypt your confidential balance via `useDelegateDecryption`, revoke it with `useRevokeDelegation`, and let delegates decrypt on your behalf with `useDecryptBalanceAs`.
 
 ---

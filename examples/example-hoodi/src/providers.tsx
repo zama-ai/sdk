@@ -206,7 +206,8 @@ export function Providers({ children }: { children: ReactNode }) {
         liveAccountsRef.current = accounts;
         refSeededRef.current = true;
       },
-      () => {
+      (err) => {
+        console.error("[Providers] Failed to seed accounts:", err);
         refSeededRef.current = true;
       },
     );
