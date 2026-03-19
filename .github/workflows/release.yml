@@ -40,8 +40,6 @@ jobs:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() }}
     uses: ./.github/workflows/playwright.yml
-    secrets:
-      SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
   api-report:
     needs: [validate-branch]

@@ -35,8 +35,6 @@ jobs:
   playwright:
     needs: [validate-branch]
     uses: ./.github/workflows/playwright.yml
-    secrets:
-      SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
   release:
     needs: [vitest, playwright]
