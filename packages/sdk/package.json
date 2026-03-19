@@ -124,6 +124,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
+    "update-relayer-sdk-umd-hash": "node scripts/update-relayer-sdk-umd-hash.ts",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit"
   },
