@@ -1,6 +1,6 @@
 # Integrating Zama Confidential Tokens (ERC-7984) on Hoodi
 
-**Audience:** Partners integrating Zama confidential tokens on the Hoodi testnet (ethers-based stack).
+**Audience:** Partners integrating Zama confidential tokens on the Hoodi testnet (ethers-based stack), including on-chain ACL delegation.
 
 **What this document covers:** context and motivation, how the cleartext stack works, prerequisites, step-by-step operation walkthrough, minting instructions, environment variable reference, and troubleshooting.
 
@@ -26,7 +26,7 @@ Specifically:
 
 1. A user connects any injected EIP-1193 wallet.
 2. They can select between two tokens (USDT Mock / Test Token).
-3. All four ERC-7984 protocol operations work end-to-end.
+3. All ERC-7984 protocol operations work end-to-end: shield, transfer, unshield, balance decryption, and on-chain ACL delegation (grant, revoke, decrypt-as).
 
 ---
 
@@ -100,6 +100,8 @@ page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield 
        └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, Hoodi)
        └─ produces mock KMS signatures locally (no external call)
 ```
+
+**`getActiveUnshieldToken` bridge** (`src/lib/activeUnshield.ts`): module-level variable that stores the token address of an in-flight unshield. `ZamaSDKEvents.UnshieldPhase1Submitted` does not carry the token address, so `UnshieldCard` sets this variable just before calling `mutate()`. The `onEvent` handler in `providers.tsx` reads it to call `savePendingUnshield` with the correct wrapper address. A module-level variable is safe here — only one unshield can be in flight per browser tab.
 
 **Hybrid EIP-1193 provider:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` for fast, wallet-independent reads. The following calls are routed to the injected wallet's node instead, because `rpc.hoodi.ethpandaops.io` is a load balancer whose backends can be at different chain heights:
 
@@ -483,6 +485,8 @@ const { data: status } = useDelegationStatus({
 
 // Decrypt owner's balance as a delegate — 0 transactions (read + local cache).
 // Throws DelegationNotFoundError / DelegationExpiredError if the ACL check fails.
+// Note: useDecryptBalanceAs takes a positional tokenAddress argument (unlike
+// useDelegateDecryption / useRevokeDelegation which use a config object { tokenAddress }).
 const decryptAs = useDecryptBalanceAs(cTokenAddress);
 decryptAs.mutate({ delegatorAddress: "0xOwner" });
 // decryptAs.data → bigint (raw balance)
@@ -543,7 +547,7 @@ This example ships with a Playwright e2e test suite. Tests run against the real 
 # Install deps (first time only)
 npm install
 
-# Run all 19 tests — starts the dev server automatically
+# Run all 22 tests — starts the dev server automatically
 npm run test:e2e
 
 # Interactive mode — watch each test run step-by-step in the browser
@@ -553,7 +557,7 @@ npx playwright test --ui
 npx playwright test e2e/connect.spec.ts
 ```
 
-Covered flows: connect screen (no wallet, install error, auto-detect, click-to-connect), wrong-network screen (display, chain ID, switch button), main UI (cards, token selector, buttons disabled before metadata loads, balance display, loading hint, token switching, pending unshield absence, mint button state, delegation buttons disabled when no address entered).
+Covered flows: connect screen (no wallet, install error, auto-detect, click-to-connect), wrong-network screen (display, chain ID, switch button), main UI (cards, token selector, buttons disabled before metadata loads, balance display, loading hint, token switching, pending unshield absence, mint button state), delegation section (section labels, buttons disabled before address entry, Grant Access and Revoke Access enabled after valid address entry).
 
 Tests run automatically on CI for every pull request that touches `examples/example-hoodi/`.
 

@@ -237,9 +237,21 @@ body {
   color: #94a3b8;
 }
 
-/* Divider */
-.divider {
-  border: none;
+/* Section label — centered text with a line on each side */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin: 16px 0 12px;
+}
+.section-label::before,
+.section-label::after {
+  content: "";
+  flex: 1;
   border-top: 1px solid #e2e8f0;
-  margin: 4px 0 12px;
 }

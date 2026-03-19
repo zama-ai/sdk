@@ -334,6 +334,8 @@ export default function Home() {
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
+        // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
+        // balance.isLoading: decrypting it via RelayerCleartext (Phase 2).
         isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
@@ -352,7 +354,7 @@ export default function Home() {
         />
       ))}
 
-      <hr className="divider" />
+      <div className="section-label">Operations</div>
 
       {/* key includes address and selectedToken so cards remount (inputs + state reset) on wallet or token change */}
       <ShieldCard
@@ -386,7 +388,7 @@ export default function Home() {
       {/* ── Delegation — token owner perspective ──────────────────────────────
           These cards are used by the wallet that OWNS the token.
           Grant or revoke another wallet's right to decrypt your balance. */}
-      <hr className="divider" />
+      <div className="section-label">Delegation — as owner</div>
 
       <DelegateDecryptionCard
         key={`grant-delegation-${address}-${selectedToken}`}
@@ -403,7 +405,7 @@ export default function Home() {
       {/* ── Delegation — delegate perspective ────────────────────────────────
           This card is used by the wallet that RECEIVED a delegation.
           Decrypt another wallet's confidential balance on their behalf. */}
-      <hr className="divider" />
+      <div className="section-label">Delegation — as delegate</div>
 
       <DecryptAsCard
         key={`decrypt-as-${address}-${selectedToken}`}

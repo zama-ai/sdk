@@ -66,6 +66,14 @@ export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecry
           No expiration
         </label>
       </div>
+      {!noExpiry && !expirationInput && (
+        <p className="token-meta card-gap">Select an expiration date.</p>
+      )}
+      {!noExpiry && expirationInput && new Date(expirationInput) <= new Date() && (
+        <p className="token-meta card-gap" style={{ color: "#991b1b" }}>
+          Date must be in the future.
+        </p>
+      )}
       <button
         className="btn btn-primary btn-full"
         onClick={handleGrant}

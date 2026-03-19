@@ -42,12 +42,6 @@ test.describe("main screen", () => {
     await expect(page.getByRole("button", { name: "Decrypt Balance", exact: true })).toBeDisabled();
   });
 
-  test("delegation buttons are disabled when no address is entered", async ({ page }) => {
-    // Grant Access and Revoke Access require a valid delegate address — disabled when input is empty.
-    await expect(page.getByRole("button", { name: "Grant Access", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Revoke Access", exact: true })).toBeDisabled();
-  });
-
   test("shows dash for ERC-20 and confidential balances when data unavailable", async ({
     page,
   }) => {

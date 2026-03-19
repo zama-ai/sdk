@@ -29,6 +29,8 @@ Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi*
 
 > **Separate IndexedDB instances** for `storage` and `sessionStorage` in `ZamaProvider`: both use the same key internally, so sharing a single `IndexedDBStorage` instance causes the session entry to overwrite the encrypted keypair, forcing a re-sign on every balance decryption.
 
+> **Delegation revocation cache:** `useDecryptBalanceAs` caches decrypted values in IndexedDB keyed by `(token, owner, handle)`. When delegation is revoked, the cached plaintext is still served until the owner's balance changes (via shield, transfer, or unshield), which produces a new on-chain handle and invalidates the cache entry. No TTL is applied — the handle itself is the cache key.
+
 ## How it differs from `react-ethers`
 
 |           | `react-ethers`                   | `example-hoodi`                      |
@@ -72,7 +74,7 @@ npm run test:e2e          # run all tests (starts dev server automatically)
 npx playwright test --ui  # interactive mode — watch tests run in the browser
 ```
 
-19 Playwright e2e tests covering the connect flow, wrong-network screen, and main UI (no real wallet or transactions required — uses a mocked EIP-1193 provider).
+22 Playwright e2e tests covering the connect flow, wrong-network screen, main UI, and delegation section (no real wallet or transactions required — uses a mocked EIP-1193 provider).
 
 ## Environment variables
 
