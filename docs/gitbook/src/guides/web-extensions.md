@@ -25,9 +25,19 @@ import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 
 ### 3. Configure the SDK with both storage backends
 
-Pass `indexedDBStorage` for the encrypted FHE keypair (persistent, survives browser close) and `chromeSessionStorage` for the session signature (ephemeral, survives service worker restarts):
+Pass `indexedDBStorage` for the encrypted FHE keypair (persistent, survives browser close) and `chromeSessionStorage` for the session signature (ephemeral, survives service worker restarts).
+
+The relayer also needs `resolveAssetUrl` so the Web Worker and SDK assets are loaded from the extension bundle:
 
 ```ts
+const relayer = new RelayerWeb({
+  getChainId: () => signer.getChainId(),
+  transports: {
+    /* ... */
+  },
+  resolveAssetUrl: (name) => chrome.runtime.getURL(name),
+});
+
 const sdk = new ZamaSDK({
   relayer,
   signer,

@@ -7,7 +7,6 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
-import { getBrowserExtensionRuntime } from "../utils";
 import { filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
 import { RELAYER_SDK_UMD_FILENAME } from "./worker.constants";
 
@@ -19,6 +18,18 @@ export interface WorkerClientConfig {
   logger?: GenericLogger;
   /** Number of WASM threads for parallel FHE operations (passed to `initSDK({ thread })`). */
   thread?: number;
+  /** Resolve asset filenames to URLs. Defaults to `new URL(name, import.meta.url)`. */
+  resolveAssetUrl?: (filename: string) => URL | string;
+}
+
+/** Default asset resolver — works with Vite, webpack 5, Next.js. */
+function defaultResolveAssetUrl(filename: string): URL {
+  return new URL(filename, import.meta.url);
+}
+
+/** Normalize a URL | string to a string href. */
+function toHref(url: URL | string): string {
+  return url instanceof URL ? url.href : String(url);
 }
 
 /**
@@ -29,20 +40,16 @@ export interface WorkerClientConfig {
  * co-located files, keeping the main bundle small.
  */
 export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientConfig> {
+  readonly #resolveAssetUrl: (filename: string) => URL | string;
+
   constructor(config: WorkerClientConfig) {
     super(config, config.logger);
+    this.#resolveAssetUrl = config.resolveAssetUrl ?? defaultResolveAssetUrl;
   }
 
   protected createWorker(): Worker {
-    const runtime = getBrowserExtensionRuntime();
-    if (runtime) {
-      return new Worker(runtime.getURL(workerFilename));
-    }
-    // Load the worker from the co-located file emitted at build time.
-    // Modern bundlers (webpack 5, Vite, Rolldown) resolve `new URL(..., import.meta.url)`
-    // and copy the asset to the output directory automatically.
-    const workerUrl = new URL(workerFilename, import.meta.url);
-    return new Worker(workerUrl);
+    const url = this.#resolveAssetUrl(workerFilename);
+    return new Worker(url);
   }
 
   protected wireEvents(worker: Worker): void {
@@ -68,17 +75,15 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     type: WorkerRequestType;
     payload: WorkerRequest["payload"];
   } {
-    // Resolve the relayer-sdk UMD URL: use extension runtime API when
-    // available, otherwise resolve relative to this module.
-    const runtime = getBrowserExtensionRuntime();
-    const sdkUrl = runtime
-      ? runtime.getURL(RELAYER_SDK_UMD_FILENAME)
-      : new URL(RELAYER_SDK_UMD_FILENAME, import.meta.url).href;
+    const sdkUrl = toHref(this.#resolveAssetUrl(RELAYER_SDK_UMD_FILENAME));
 
     // Only spread serializable fields — `logger` contains functions
     // which cannot be cloned by `postMessage`.
     const { fhevmConfig, csrfToken, thread } = this.config;
-    return { type: "INIT", payload: { sdkUrl, fhevmConfig, csrfToken, thread } };
+    return {
+      type: "INIT",
+      payload: { sdkUrl, fhevmConfig, csrfToken, thread },
+    };
   }
 
   /**

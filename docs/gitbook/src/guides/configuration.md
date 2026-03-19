@@ -235,6 +235,7 @@ const sdk = new ZamaSDK({
         network: "https://sepolia.infura.io/v3/YOUR_KEY",
       },
     },
+    resolveAssetUrl: (name) => chrome.runtime.getURL(name),
   }),
   signer,
   storage: indexedDBStorage, // encrypted keypair — persistent

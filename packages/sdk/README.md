@@ -410,13 +410,14 @@ const sdk = new ZamaSDK({
 
 ### `RelayerWebConfig` (browser)
 
-| Field        | Type                                  | Description                                                                                     |
-| ------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `getChainId` | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.      |
-| `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses).    |
-| `security`   | `RelayerWebSecurityConfig`            | Optional. Security options (see below).                                                         |
-| `logger`     | `GenericLogger`                       | Optional. Logger for worker lifecycle and request timing.                                       |
-| `threads`    | `number`                              | Optional. WASM thread count for parallel FHE ops (4–8 recommended). Requires COOP/COEP headers. |
+| Field             | Type                                  | Description                                                                                            |
+| ----------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `getChainId`      | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.             |
+| `transports`      | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses).           |
+| `security`        | `RelayerWebSecurityConfig`            | Optional. Security options (see below).                                                                |
+| `logger`          | `GenericLogger`                       | Optional. Logger for worker lifecycle and request timing.                                              |
+| `threads`         | `number`                              | Optional. WASM thread count for parallel FHE ops (4–8 recommended). Requires COOP/COEP headers.        |
+| `resolveAssetUrl` | `(filename: string) => URL \| string` | Optional. Resolve worker asset filenames to URLs. See [Bundler compatibility](#bundler-compatibility). |
 
 #### `RelayerWebSecurityConfig`
 
@@ -463,6 +464,34 @@ const transports = {
     auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
   },
 };
+```
+
+## Bundler Compatibility
+
+`RelayerWeb` loads a Web Worker and the relayer-sdk UMD bundle from files co-located with the SDK's build output. It uses the `new URL(filename, import.meta.url)` pattern which modern bundlers handle automatically:
+
+| Bundler                                 | Works out of the box?   |
+| --------------------------------------- | ----------------------- |
+| **Vite**                                | Yes                     |
+| **webpack 5** / **Next.js**             | Yes                     |
+| **Rollup** / **Rolldown** / **esbuild** | Needs `resolveAssetUrl` |
+
+For bundlers that don't process `new URL(..., import.meta.url)` in dependencies, pass the resolver from your own module so the bundler sees the pattern in your code:
+
+```ts
+const relayer = new RelayerWeb({
+  resolveAssetUrl: (name) => new URL(name, import.meta.url),
+  // ...
+});
+```
+
+For browser extensions, resolve via the extension runtime API:
+
+```ts
+const relayer = new RelayerWeb({
+  resolveAssetUrl: (name) => chrome.runtime.getURL(name),
+  // ...
+});
 ```
 
 ## GenericSigner Interface

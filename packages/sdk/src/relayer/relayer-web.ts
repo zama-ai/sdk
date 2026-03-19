@@ -97,6 +97,7 @@ export class RelayerWeb implements RelayerSDK {
       // Public API uses `threads` (plural, "how many threads"); upstream
       // `initSDK` expects `thread` (singular) — rename at the boundary.
       thread: threads,
+      resolveAssetUrl: this.#config.resolveAssetUrl,
     };
   }
 

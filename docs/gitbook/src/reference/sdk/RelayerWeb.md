@@ -139,6 +139,36 @@ Cross-Origin-Embedder-Policy: require-corp
 Without these headers, the browser blocks `SharedArrayBuffer` and the relayer falls back to single-threaded mode.
 {% endhint %}
 
+### resolveAssetUrl
+
+`((filename: string) => URL | string) | undefined`
+
+Resolves asset filenames (`"relayer-sdk.worker.js"` and `"relayer-sdk-js.umd.cjs"`) to URLs the browser can fetch.
+
+Defaults to `(name) => new URL(name, import.meta.url)`, which works automatically with Vite, webpack 5, and Next.js. For bundlers that don't handle this pattern in dependencies (Rollup, esbuild), pass the resolver from your own module:
+
+```ts
+const relayer = new RelayerWeb({
+  getChainId: () => signer.getChainId(),
+  transports: {
+    /* ... */
+  },
+  resolveAssetUrl: (name) => new URL(name, import.meta.url),
+});
+```
+
+For browser extensions:
+
+```ts
+const relayer = new RelayerWeb({
+  getChainId: () => signer.getChainId(),
+  transports: {
+    /* ... */
+  },
+  resolveAssetUrl: (name) => chrome.runtime.getURL(name),
+});
+```
+
 ### security
 
 `{ getCsrfToken?: () => string } | undefined`

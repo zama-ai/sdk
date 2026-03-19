@@ -4,11 +4,9 @@ import { basename, dirname, resolve } from "node:path";
 const IIFE_SUFFIX = "?iife";
 
 /**
- * Bundles `<path>?iife` imports as IIFE and exposes the code as a default string export.
- * The source file is resolved relative to the importer — no pre-build step needed.
- *
- * Also emits the bundled worker as a standalone `.js` asset in the output directory
- * so browser extensions can load it via `chrome.runtime.getURL()`.
+ * Bundles `<path>?iife` imports as IIFE and emits the result as a standalone
+ * asset file. Exports only the `filename` so the consumer can reference it
+ * at runtime via `new URL(filename, import.meta.url)`.
  */
 export function iife({ tsconfig }: { tsconfig: string }): Plugin {
   return {
@@ -41,7 +39,7 @@ export function iife({ tsconfig }: { tsconfig: string }): Plugin {
       const filename = basename(filePath).replace(/\.ts$/, ".js");
       this.emitFile({ type: "asset", fileName: filename, source: code });
 
-      return `export default ${JSON.stringify(code)};\nexport const filename = ${JSON.stringify(filename)};`;
+      return `export const filename = ${JSON.stringify(filename)};`;
     },
   };
 }

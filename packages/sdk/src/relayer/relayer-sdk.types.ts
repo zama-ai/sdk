@@ -28,7 +28,7 @@ export interface RelayerWebConfig {
   transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
   /** Resolve the current chain ID. Called lazily before each operation; the worker is re-initialized when the value changes. */
   getChainId: () => Promise<number>;
-  /** Security options (CSRF, CDN integrity). */
+  /** Security options (CSRF). */
   security?: RelayerWebSecurityConfig;
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
@@ -46,6 +46,27 @@ export interface RelayerWebConfig {
    * When omitted, the relayer SDK uses its default (single-threaded).
    */
   threads?: number;
+  /**
+   * Resolve asset filenames to URLs for the Web Worker and relayer-sdk UMD bundle.
+   *
+   * Called with `"relayer-sdk.worker.js"` and `"relayer-sdk-js.umd.cjs"`.
+   * Must return a URL (string or URL object) that the browser can fetch.
+   *
+   * Defaults to `(filename) => new URL(filename, import.meta.url)` which
+   * works automatically with Vite, webpack 5, and Next.js.
+   *
+   * For bundlers that don't handle `new URL(..., import.meta.url)` in
+   * dependencies (Rollup, esbuild), pass the resolver from your own module
+   * so the bundler sees the pattern in your code:
+   *
+   * ```ts
+   * const relayer = new RelayerWeb({
+   *   resolveAssetUrl: (name) => new URL(name, import.meta.url),
+   *   // ...
+   * });
+   * ```
+   */
+  resolveAssetUrl?: (filename: string) => URL | string;
   /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
   onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
 }
