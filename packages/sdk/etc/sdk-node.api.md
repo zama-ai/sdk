@@ -373,10 +373,9 @@ export const HardhatConfig: {
 export interface InitRequest extends BaseRequest {
     // (undocumented)
     payload: {
-        cdnUrl: string;
+        sdkUrl: string;
         fhevmConfig: FhevmInstanceConfig;
-        csrfToken: string; /** Expected SHA-384 hex digest for integrity verification. */
-        integrity?: string; /** Number of WASM threads for parallel FHE operations. */
+        csrfToken: string; /** Number of WASM threads for parallel FHE operations. */
         thread?: number;
     };
     // (undocumented)

@@ -4118,7 +4118,6 @@ export interface RelayerWebConfig {
 // @public
 export interface RelayerWebSecurityConfig {
     getCsrfToken?: () => string;
-    integrityCheck?: boolean;
 }
 
 // @public
