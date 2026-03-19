@@ -100,6 +100,10 @@ export class CredentialsManager extends BaseCredentialsManager<
     );
   }
 
+  /** Revoke a session by its storage key. Clears caches and emits a revoked event. */
+  async revokeByKey(storeKey: string): Promise<void> {
+    await this.revokeSession(storeKey);
+  }
   /** Whether a session signature is currently cached. */
   async isAllowed(): Promise<boolean> {
     return this.checkAllowed(await this.#storeKey());

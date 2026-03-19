@@ -3,6 +3,7 @@ import { ZamaSDK } from "../zama-sdk";
 import { ReadonlyToken } from "../readonly-token";
 import { Token } from "../token";
 import { CredentialsManager } from "../credentials-manager";
+import { CredentialCrypto } from "../credential-crypto";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import type { SignerLifecycleCallbacks } from "../token.types";
 import type { Address } from "viem";
@@ -502,5 +503,64 @@ describe("ZamaSDK", () => {
 
       sdk.terminate();
     });
+  });
+
+  it("revokeSession clears credential caches", async ({
+    relayer,
+    signer,
+    storage,
+    sessionStorage,
+  }) => {
+    const clearCacheSpy = vi.spyOn(CredentialCrypto.prototype, "clearCache");
+    const sdk = new ZamaSDK({ relayer, signer, storage, sessionStorage });
+
+    await sdk.revokeSession();
+
+    expect(clearCacheSpy).toHaveBeenCalled();
+    clearCacheSpy.mockRestore();
+    sdk.terminate();
+  });
+
+  it("lifecycle auto-revoke clears credential caches on account change", async ({
+    createMockRelayer,
+    createMockSigner,
+    storage,
+    sessionStorage,
+    userAddress,
+  }) => {
+    const clearCacheSpy = vi.spyOn(CredentialCrypto.prototype, "clearCache");
+    let subscribeCbs: Required<SignerLifecycleCallbacks>;
+
+    const mockSigner = createMockSigner();
+    const signer = {
+      ...mockSigner,
+      subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+        subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
+        return () => {};
+      }),
+    };
+
+    // Seed a session so revoke has something to delete
+    const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
+    await sessionStorage.set(keyA, "0xsigA");
+
+    const sdk = new ZamaSDK({
+      relayer: createMockRelayer(),
+      signer,
+      storage,
+      sessionStorage,
+    });
+
+    // Reset spy after constructor (constructor may trigger init)
+    clearCacheSpy.mockClear();
+
+    subscribeCbs!.onAccountChange(NEXT_USER_ADDRESS);
+
+    await vi.waitFor(() => {
+      expect(clearCacheSpy).toHaveBeenCalled();
+    });
+
+    clearCacheSpy.mockRestore();
+    sdk.terminate();
   });
 });
