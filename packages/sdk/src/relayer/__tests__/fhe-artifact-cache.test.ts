@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { MemoryStorage } from "../../token/memory-storage";
-import { ArtifactCache } from "../artifact-cache";
+import { FheArtifactCache } from "../fhe-artifact-cache";
 
 const DUMMY_RELAYER_URL = "https://relayer.example.com";
 
-describe("ArtifactCache", () => {
+describe("FheArtifactCache", () => {
   let storage: MemoryStorage;
 
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe("ArtifactCache", () => {
 
   describe("getPublicKey", () => {
     it("returns cached public key without calling fetcher on cache hit", async () => {
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -39,7 +39,7 @@ describe("ArtifactCache", () => {
       const fetcher = vi.fn().mockResolvedValue(pk);
 
       // Store via first cache instance
-      const cache1 = new ArtifactCache({
+      const cache1 = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -48,7 +48,7 @@ describe("ArtifactCache", () => {
       expect(fetcher).toHaveBeenCalledOnce();
 
       // New cache instance, same storage — should restore without fetching
-      const cache2 = new ArtifactCache({
+      const cache2 = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -64,14 +64,14 @@ describe("ArtifactCache", () => {
       const pk1 = { publicKeyId: "sepolia", publicKey: new Uint8Array([1]) };
       const pk2 = { publicKeyId: "mainnet", publicKey: new Uint8Array([2]) };
 
-      const cache1 = new ArtifactCache({
+      const cache1 = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
       });
       await cache1.getPublicKey(vi.fn().mockResolvedValue(pk1));
 
-      const cache2 = new ArtifactCache({ storage, chainId: 1, relayerUrl: DUMMY_RELAYER_URL });
+      const cache2 = new FheArtifactCache({ storage, chainId: 1, relayerUrl: DUMMY_RELAYER_URL });
       const fetcher2 = vi.fn().mockResolvedValue(pk2);
       const result = await cache2.getPublicKey(fetcher2);
 
@@ -81,7 +81,7 @@ describe("ArtifactCache", () => {
     });
 
     it("returns null and does not cache when fetcher returns null", async () => {
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -104,7 +104,7 @@ describe("ArtifactCache", () => {
         delete: vi.fn().mockResolvedValue(undefined),
       };
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage: badStorage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -124,7 +124,7 @@ describe("ArtifactCache", () => {
         delete: vi.fn().mockResolvedValue(undefined),
       };
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage: badStorage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -144,7 +144,7 @@ describe("ArtifactCache", () => {
       };
       const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage: badStorage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -160,7 +160,7 @@ describe("ArtifactCache", () => {
     });
 
     it("propagates fetcher errors to caller", async () => {
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -174,7 +174,7 @@ describe("ArtifactCache", () => {
       // Seed storage with an entry missing `publicKeyId` (corrupt shape)
       await storage.set("fhe:pubkey:11155111", { publicKey: "not-an-id" });
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -195,7 +195,7 @@ describe("ArtifactCache", () => {
 
   describe("getPublicParams", () => {
     it("returns cached public params without calling fetcher on cache hit", async () => {
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -216,14 +216,14 @@ describe("ArtifactCache", () => {
       const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([7, 8]) };
       const fetcher = vi.fn().mockResolvedValue(pp);
 
-      const cache1 = new ArtifactCache({
+      const cache1 = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
       });
       await cache1.getPublicParams(2048, fetcher);
 
-      const cache2 = new ArtifactCache({
+      const cache2 = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -236,7 +236,7 @@ describe("ArtifactCache", () => {
     });
 
     it("uses different cache keys per bit size", async () => {
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -253,7 +253,7 @@ describe("ArtifactCache", () => {
     });
 
     it("returns null and does not cache when fetcher returns null", async () => {
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -269,7 +269,7 @@ describe("ArtifactCache", () => {
     });
 
     it("updates params index for cold-start CRS detection", async () => {
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -429,7 +429,7 @@ describe("ArtifactCache", () => {
       await st.set(PARAMS_STORAGE_KEY, paramsData);
       await st.set(PARAMS_INDEX_KEY, [2048]);
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage: st,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
@@ -611,7 +611,7 @@ describe("ArtifactCache", () => {
       await storage.set(PARAMS_INDEX_KEY, [2048]);
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams());
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
@@ -637,7 +637,7 @@ describe("ArtifactCache", () => {
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
       await storage.set(PARAMS_INDEX_KEY, [2048]);
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
@@ -711,7 +711,7 @@ describe("ArtifactCache", () => {
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
       await storage.set(PARAMS_INDEX_KEY, [2048]);
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage: failDeleteStorage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
@@ -740,7 +740,7 @@ describe("ArtifactCache", () => {
       await storage.set(PARAMS_INDEX_KEY, [2048]);
 
       // Create cache WITHOUT priming in-memory (cold start)
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
@@ -765,7 +765,7 @@ describe("ArtifactCache", () => {
       // Seed PK with corrupt data (missing publicKey field)
       await storage.set(PK_STORAGE_KEY, { publicKeyId: 42, notAKey: true });
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
@@ -837,7 +837,7 @@ describe("ArtifactCache", () => {
 
   describe("concurrent access", () => {
     it("deduplicates concurrent getPublicKey calls", async () => {
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -863,7 +863,7 @@ describe("ArtifactCache", () => {
     });
 
     it("deduplicates concurrent getPublicParams calls", async () => {
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
@@ -900,7 +900,7 @@ describe("ArtifactCache", () => {
       });
       await storage.set(`fhe:params-index:${CHAIN_ID}`, []);
 
-      const cache = new ArtifactCache({
+      const cache = new FheArtifactCache({
         storage,
         chainId: CHAIN_ID,
         relayerUrl: DUMMY_RELAYER_URL,

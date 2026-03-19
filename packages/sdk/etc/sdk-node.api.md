@@ -534,8 +534,8 @@ export class RelayerNode implements RelayerSDK {
 
 // @public (undocumented)
 export interface RelayerNodeConfig {
-    artifactCacheTTL?: number;
-    artifactStorage?: GenericStorage;
+    fheArtifactCacheTTL?: number;
+    fheArtifactStorage?: GenericStorage;
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
     // (undocumented)

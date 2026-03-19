@@ -4106,8 +4106,8 @@ export class RelayerWeb implements RelayerSDK {
 
 // @public
 export interface RelayerWebConfig {
-    artifactCacheTTL?: number;
-    artifactStorage?: GenericStorage;
+    fheArtifactCacheTTL?: number;
+    fheArtifactStorage?: GenericStorage;
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
     onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;

@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import http from "node:http";
 import { test as base, describe, expect } from "vitest";
 import { MemoryStorage } from "../../token/memory-storage";
-import { ArtifactCache } from "../artifact-cache";
+import { FheArtifactCache } from "../fhe-artifact-cache";
 
 // ── Test HTTP server ────────────────────────────────────────
 
@@ -93,9 +93,9 @@ const CHAIN_ID = 11155111;
 interface CacheFixtures {
   testServer: TestServer;
   storage: MemoryStorage;
-  cache: ArtifactCache;
+  cache: FheArtifactCache;
   /** Create a fresh cache instance sharing the same storage (simulates app restart). */
-  createCache: (opts?: { ttl?: number; relayerUrl?: string }) => ArtifactCache;
+  createCache: (opts?: { ttl?: number; relayerUrl?: string }) => FheArtifactCache;
   pkFetcher: () => Promise<{ publicKeyId: string; publicKey: Uint8Array }>;
   paramsFetcher: () => Promise<{ publicParamsId: string; publicParams: Uint8Array }>;
 }
@@ -116,7 +116,7 @@ const test = base.extend<CacheFixtures>({
   createCache: async ({ testServer, storage }, use) => {
     await use(
       (opts) =>
-        new ArtifactCache({
+        new FheArtifactCache({
           storage,
           chainId: CHAIN_ID,
           relayerUrl: opts?.relayerUrl ?? testServer.baseUrl,
@@ -146,7 +146,7 @@ const test = base.extend<CacheFixtures>({
 
 // ── Tests ───────────────────────────────────────────────────
 
-describe("ArtifactCache integration (real HTTP)", () => {
+describe("FheArtifactCache integration (real HTTP)", () => {
   test("full lifecycle: fetch → persist → restore → revalidate (304) → rotate → detect stale", async ({
     cache,
     storage,

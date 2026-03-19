@@ -11,7 +11,7 @@ import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/e
 import type { GenericStorage } from "../token/token.types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
-import { ArtifactCache } from "./artifact-cache";
+import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   DelegatedUserDecryptParams,
@@ -32,9 +32,9 @@ export interface RelayerNodeConfig {
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
   /** Optional persistent storage for caching FHE public key and params across sessions. */
-  artifactStorage?: GenericStorage;
+  fheArtifactStorage?: GenericStorage;
   /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
-  artifactCacheTTL?: number;
+  fheArtifactCacheTTL?: number;
 }
 
 /**
@@ -53,7 +53,7 @@ export class RelayerNode implements RelayerSDK {
   #ensureLock: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
-  #artifactCache: ArtifactCache | null = null;
+  #artifactCache: FheArtifactCache | null = null;
 
   constructor(config: RelayerNodeConfig) {
     this.#config = config;
@@ -104,13 +104,13 @@ export class RelayerNode implements RelayerSDK {
     this.#resolvedChainId = chainId;
 
     // Create cache for current chain (when storage is provided)
-    if (!this.#artifactCache && this.#config.artifactStorage) {
+    if (!this.#artifactCache && this.#config.fheArtifactStorage) {
       const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-      this.#artifactCache = new ArtifactCache({
-        storage: this.#config.artifactStorage,
+      this.#artifactCache = new FheArtifactCache({
+        storage: this.#config.fheArtifactStorage,
         chainId,
         relayerUrl: config.relayerUrl,
-        ttl: this.#config.artifactCacheTTL,
+        ttl: this.#config.fheArtifactCacheTTL,
         logger: this.#config.logger,
       });
     }

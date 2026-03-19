@@ -61,9 +61,9 @@ export interface RelayerWebConfig {
    *
    * **Not to be confused with `ZamaProvider.storage`** which stores credentials.
    */
-  artifactStorage?: GenericStorage;
+  fheArtifactStorage?: GenericStorage;
   /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
-  artifactCacheTTL?: number;
+  fheArtifactCacheTTL?: number;
 }
 
 /** Result from encryption operation */

@@ -116,7 +116,7 @@ interface ManifestShape {
  *
  * Cache keys are scoped by chain ID.
  */
-export class ArtifactCache {
+export class FheArtifactCache {
   readonly #storage: GenericStorage;
   readonly #chainId: number;
   readonly #relayerUrl: string;
