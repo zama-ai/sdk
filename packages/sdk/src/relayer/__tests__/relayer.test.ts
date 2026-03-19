@@ -619,7 +619,10 @@ describe("RelayerWeb", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createWebRelayer({ fheArtifactStorage: storage, getChainId });
+      const relayer = createWebRelayer({
+        fheArtifactStorage: storage,
+        getChainId,
+      });
       await relayer.getPublicKey();
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
 
@@ -652,7 +655,10 @@ describe("RelayerWeb", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createWebRelayer({ fheArtifactStorage: storage, fheArtifactCacheTTL: 0 });
+      const relayer = createWebRelayer({
+        fheArtifactStorage: storage,
+        fheArtifactCacheTTL: 0,
+      });
 
       // First call — init worker, fetch and cache pk
       await relayer.getPublicKey();
@@ -1078,7 +1084,7 @@ describe("RelayerNode", () => {
       expect(mockPool.getPublicParams).toHaveBeenCalledOnce();
     });
 
-    it("does not cache when storage is not provided (backward compatible)", async () => {
+    it("caches getPublicKey when storage is not provided (MemoryStorage fallback)", async () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
@@ -1086,7 +1092,7 @@ describe("RelayerNode", () => {
       await relayer.getPublicKey();
       await relayer.getPublicKey();
 
-      expect(mockPool.getPublicKey).toHaveBeenCalledTimes(2);
+      expect(mockPool.getPublicKey).toHaveBeenCalledTimes(1);
     });
 
     it("clears cache on chain switch", async () => {
@@ -1095,7 +1101,10 @@ describe("RelayerNode", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createNodeRelayer({ fheArtifactStorage: storage, getChainId });
+      const relayer = createNodeRelayer({
+        fheArtifactStorage: storage,
+        getChainId,
+      });
       await relayer.getPublicKey();
       expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
 
@@ -1128,7 +1137,10 @@ describe("RelayerNode", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createNodeRelayer({ fheArtifactStorage: storage, fheArtifactCacheTTL: 0 });
+      const relayer = createNodeRelayer({
+        fheArtifactStorage: storage,
+        fheArtifactCacheTTL: 0,
+      });
 
       // First call — init pool, fetch and cache pk
       await relayer.getPublicKey();

@@ -8,6 +8,7 @@ import type {
 } from "@zama-fhe/relayer-sdk/node";
 import type { Address, Hex } from "viem";
 import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import { MemoryStorage } from "../token/memory-storage";
 import type { GenericStorage } from "../token/token.types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
@@ -31,9 +32,13 @@ export interface RelayerNodeConfig {
   poolSize?: number;
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
-  /** Optional persistent storage for caching FHE public key and params across sessions. */
+  /**
+   * Persistent storage for caching FHE public key and params across sessions.
+   * Defaults to `new MemoryStorage()` (in-process, lost on restart).
+   * Pass a custom `GenericStorage` with redis for cross-restart persistence.
+   */
   fheArtifactStorage?: GenericStorage;
-  /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
+  /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. */
   fheArtifactCacheTTL?: number;
 }
 
@@ -56,7 +61,7 @@ export class RelayerNode implements RelayerSDK {
   #artifactCache: FheArtifactCache | null = null;
 
   constructor(config: RelayerNodeConfig) {
-    this.#config = config;
+    this.#config = { fheArtifactStorage: new MemoryStorage(), ...config };
   }
 
   async #getPoolConfig(): Promise<NodeWorkerPoolConfig> {

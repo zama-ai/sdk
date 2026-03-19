@@ -10,8 +10,8 @@ Persistent cache for the FHE network public key and public parameters (CRS). Sto
 `RelayerWeb` and `RelayerNode` create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the relayer constructor.
 
 {% hint style="info" %}
-**RelayerWeb** defaults to IndexedDB — artifact caching is enabled with zero config.
-**RelayerNode** does **not** cache artifacts unless you explicitly pass `fheArtifactStorage`. Without it, multi-MB FHE artifacts are re-downloaded on every startup.
+**RelayerWeb** defaults to IndexedDB — artifact caching persists across page reloads.
+**RelayerNode** defaults to `MemoryStorage` — artifacts are cached in-process but lost on restart. Pass a custom `GenericStorage` for cross-restart persistence.
 {% endhint %}
 
 ## Import
@@ -64,12 +64,12 @@ const relayer = new RelayerWeb({
 ```
 
 {% endtab %}
-{% tab title="RelayerNode (opt-in)" %}
+{% tab title="RelayerNode (default)" %}
 
 ```ts
-import { MemoryStorage } from "@zama-fhe/sdk";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 
+// RelayerNode defaults to MemoryStorage — artifacts are cached in-process
 const relayer = new RelayerNode({
   getChainId: () => signer.getChainId(),
   poolSize: 4,
@@ -79,14 +79,11 @@ const relayer = new RelayerNode({
       auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
     },
   },
-  // RelayerNode does NOT cache artifacts by default — opt in explicitly
-  fheArtifactStorage: new MemoryStorage(),
-  fheArtifactCacheTTL: 86_400, // 24h (default)
 });
 ```
 
-{% hint style="warning" %}
-`MemoryStorage` caches artifacts for the lifetime of the process but does **not** survive restarts. For cross-restart persistence, use any `GenericStorage`-compatible backend (e.g. Redis, filesystem adapter).
+{% hint style="info" %}
+The default `MemoryStorage` caches artifacts for the lifetime of the process but does **not** survive restarts. For cross-restart persistence, pass any `GenericStorage`-compatible backend (e.g. Redis, filesystem adapter). Pass `fheArtifactStorage: null` to disable caching entirely.
 {% endhint %}
 
 {% endtab %}
@@ -200,7 +197,7 @@ When using `RelayerWeb` or `RelayerNode`, configure artifact caching with these 
 Persistent storage backend for caching FHE artifacts.
 
 - **`RelayerWeb`**: defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")` — caching is enabled automatically.
-- **`RelayerNode`**: defaults to `undefined` — no caching. Pass a `GenericStorage` instance to opt in.
+- **`RelayerNode`**: defaults to `new MemoryStorage()` — in-process caching.
 
 FHE public parameters can be several MB — avoid `localStorage`-backed storage which caps at ~5 MB.
 
