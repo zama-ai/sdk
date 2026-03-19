@@ -71,7 +71,11 @@ describe("FheArtifactCache", () => {
       });
       await cache1.getPublicKey(vi.fn().mockResolvedValue(pk1));
 
-      const cache2 = new FheArtifactCache({ storage, chainId: 1, relayerUrl: DUMMY_RELAYER_URL });
+      const cache2 = new FheArtifactCache({
+        storage,
+        chainId: 1,
+        relayerUrl: DUMMY_RELAYER_URL,
+      });
       const fetcher2 = vi.fn().mockResolvedValue(pk2);
       const result = await cache2.getPublicKey(fetcher2);
 
@@ -142,7 +146,12 @@ describe("FheArtifactCache", () => {
         set: vi.fn().mockResolvedValue(undefined),
         delete: vi.fn().mockResolvedValue(undefined),
       };
-      const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
+      const logger = {
+        info: vi.fn(),
+        debug: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      };
 
       const cache = new FheArtifactCache({
         storage: badStorage,
@@ -200,7 +209,10 @@ describe("FheArtifactCache", () => {
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
       });
-      const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([4, 5, 6]) };
+      const pp = {
+        publicParamsId: "pp1",
+        publicParams: new Uint8Array([4, 5, 6]),
+      };
       const fetcher = vi.fn().mockResolvedValue(pp);
 
       const result1 = await cache.getPublicParams(2048, fetcher);
@@ -213,7 +225,10 @@ describe("FheArtifactCache", () => {
     });
 
     it("persists public params to storage and restores from a fresh cache instance", async () => {
-      const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([7, 8]) };
+      const pp = {
+        publicParamsId: "pp1",
+        publicParams: new Uint8Array([7, 8]),
+      };
       const fetcher = vi.fn().mockResolvedValue(pp);
 
       const cache1 = new FheArtifactCache({
@@ -241,8 +256,14 @@ describe("FheArtifactCache", () => {
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
       });
-      const pp2048 = { publicParamsId: "pp-2048", publicParams: new Uint8Array([1]) };
-      const pp4096 = { publicParamsId: "pp-4096", publicParams: new Uint8Array([2]) };
+      const pp2048 = {
+        publicParamsId: "pp-2048",
+        publicParams: new Uint8Array([1]),
+      };
+      const pp4096 = {
+        publicParamsId: "pp-4096",
+        publicParams: new Uint8Array([2]),
+      };
 
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(pp2048));
       const fetcher4096 = vi.fn().mockResolvedValue(pp4096);
@@ -631,7 +652,12 @@ describe("FheArtifactCache", () => {
 
     it("logs warning on network error when logger is provided", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
-      const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
+      const logger = {
+        info: vi.fn(),
+        debug: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      };
 
       await storage.set(PK_STORAGE_KEY, makeCachedPk({ lastValidatedAt: expired }));
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
@@ -830,6 +856,58 @@ describe("FheArtifactCache", () => {
       const pk = await storage.get<{ etag: string; artifactUrl: string }>(PK_STORAGE_KEY);
       expect(pk!.etag).toBe('"newly-captured-etag"');
       expect(pk!.artifactUrl).toBe(PK_ARTIFACT_URL);
+    });
+
+    it("falls back to GET when HEAD returns 405 (Method Not Allowed)", async () => {
+      const expired = Date.now() - CACHE_TTL_MS - 1000;
+      const cache = await seedAndPrime(
+        storage,
+        makeCachedPk({ lastValidatedAt: expired }),
+        makeCachedParams({ lastValidatedAt: expired }),
+      );
+
+      // HEAD returns 405, GET returns 304
+      globalThis.fetch = vi.fn().mockImplementation((url: string | URL, opts?: RequestInit) => {
+        const urlStr = String(url);
+        if (urlStr === `${RELAYER_URL}/keyurl`) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(MANIFEST),
+          });
+        }
+        if (urlStr === PK_ARTIFACT_URL || urlStr === CRS_ARTIFACT_URL) {
+          if (opts?.method === "HEAD") {
+            return Promise.resolve({
+              status: 405,
+              ok: false,
+              headers: new Headers(),
+            });
+          }
+          // GET fallback returns 304
+          return Promise.resolve({
+            status: 304,
+            ok: false,
+            headers: new Headers({ etag: '"pk-etag-1"' }),
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      });
+
+      const result = await cache.revalidateIfDue();
+      expect(result).toBe(false); // Fresh via GET fallback
+
+      // Verify both HEAD and GET were called for each artifact
+      const fetchCalls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls as Array<
+        [string | URL, RequestInit | undefined]
+      >;
+      const headCalls = fetchCalls.filter(([, opts]) => opts?.method === "HEAD");
+      const getCalls = fetchCalls.filter(
+        ([url, opts]) =>
+          !opts?.method && (String(url) === PK_ARTIFACT_URL || String(url) === CRS_ARTIFACT_URL),
+      );
+      expect(headCalls.length).toBeGreaterThan(0);
+      expect(getCalls.length).toBeGreaterThan(0);
     });
   });
 

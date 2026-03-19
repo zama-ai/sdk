@@ -573,7 +573,12 @@ export class FheArtifactCache {
 
     // HEAD avoids downloading the (potentially multi-MB) artifact body.
     // With conditional headers, the server returns 304 if unchanged or 200 (no body) if stale.
-    const res = await globalThis.fetch(url, { method: "HEAD", headers });
+    let res = await globalThis.fetch(url, { method: "HEAD", headers });
+
+    // Fallback to GET if HEAD is not supported (e.g. some CDN/WAF configs)
+    if (res.status === 405) {
+      res = await globalThis.fetch(url, { headers });
+    }
 
     // Treat server errors as transient — throw so the outer catch applies fail-open with short retry.
     // Without this, a CDN 5xx would be misinterpreted as "artifact changed" and wipe the cache.
