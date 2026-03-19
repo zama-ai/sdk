@@ -2,6 +2,7 @@ name: E2E — example-hoodi
 
 on:
   pull_request:
+    branches: [main, prerelease]
     paths:
       - "examples/example-hoodi/**"
 
