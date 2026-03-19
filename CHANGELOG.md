@@ -4,7 +4,7 @@
 
 ### Features
 
-* **examples:** add example-hoodi — ERC-7984 demo on Hoodi testnet ([#111](https://github.com/zama-ai/sdk/issues/111)) ([438f90a](https://github.com/zama-ai/sdk/commit/438f90aff0d16056ba03d78dd20731a3ac5cb8d8))
+- **examples:** add example-hoodi — ERC-7984 demo on Hoodi testnet ([#111](https://github.com/zama-ai/sdk/issues/111)) ([438f90a](https://github.com/zama-ai/sdk/commit/438f90aff0d16056ba03d78dd20731a3ac5cb8d8))
 
 ## [2.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.0.0-alpha.1...v2.0.0-alpha.2) (2026-03-18)
 
