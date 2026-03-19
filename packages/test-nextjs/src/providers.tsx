@@ -5,29 +5,32 @@ import { MemoryStorage, ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
 import type { ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
-import { hardhat } from "wagmi/chains";
+import { anvil } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
 import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 
+const anvilPort = process.env.NEXT_PUBLIC_ANVIL_PORT || "8545";
+const rpcUrl = `http://127.0.0.1:${anvilPort}`;
+
 const wagmiConfig = createConfig({
-  chains: [hardhat],
+  chains: [anvil],
   connectors: [
     burner({
       rpcUrls: {
-        [hardhat.id]: hardhat.rpcUrls.default.http[0],
+        [anvil.id]: rpcUrl,
       },
     }),
     injected(),
   ],
   transports: {
-    [hardhat.id]: http(),
+    [anvil.id]: http(rpcUrl),
   },
 });
 
 const signer = new WagmiSigner({ config: wagmiConfig });
 const storage = new MemoryStorage();
-const relayer = new RelayerCleartext(hardhatCleartextConfig);
+const relayer = new RelayerCleartext({ ...hardhatCleartextConfig, network: rpcUrl });
 
 const queryClient = new QueryClient();
 
