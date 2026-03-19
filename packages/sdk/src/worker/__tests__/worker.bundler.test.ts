@@ -2,7 +2,7 @@
  * Build-level smoke tests for the worker bundling pipeline.
  *
  * These verify that `pnpm build` produces valid output:
- * - The standalone worker IIFE file exists
+ * - The standalone worker file exists
  * - The relayer-sdk UMD bundle is emitted as a sibling asset
  * - The main bundle references filenames without inlining content
  *
