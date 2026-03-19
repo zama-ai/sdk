@@ -1,6 +1,7 @@
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
 import { iife } from "./iife-plugin";
+import { relayerSdkUmd } from "./relayer-sdk-umd-plugin";
 
 const shared = {
   external: [/^viem/, /^ethers/, /^@zama-fhe\/relayer-sdk/, /^@tanstack\/query-core/, /^node:/],
@@ -33,7 +34,11 @@ export default defineConfig([
       minify: true,
     },
     ...shared,
-    plugins: [iife({ tsconfig: "tsconfig.build.json" }), dts({ tsconfig: "tsconfig.build.json" })],
+    plugins: [
+      iife({ tsconfig: "tsconfig.build.json" }),
+      dts({ tsconfig: "tsconfig.build.json" }),
+      relayerSdkUmd(),
+    ],
   },
   // CJS build (for moduleResolution: "node" / CommonJS consumers)
   {

@@ -21,8 +21,6 @@ export type NetworkType = "hardhat" | "sepolia" | "mainnet";
 export interface RelayerWebSecurityConfig {
   /** Resolve the current CSRF token. Called before each authenticated network request. */
   getCsrfToken?: () => string;
-  /** Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set to `false` only in test environments with mocked SDK scripts. */
-  integrityCheck?: boolean;
 }
 
 /** Configuration for RelayerWeb (browser backend) initialization. */

@@ -8,15 +8,13 @@ import type {
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
 import { getBrowserExtensionRuntime } from "../utils";
-import { default as workerCode, filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
+import { filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
+import { RELAYER_SDK_UMD_FILENAME } from "./worker.constants";
 
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
-  cdnUrl: string;
   fhevmConfig: FhevmInstanceConfig;
   csrfToken: string;
-  /** Expected SHA-384 hex digest of the CDN bundle for integrity verification. */
-  integrity?: string;
   /** Optional logger for tracing worker request lifecycle. */
   logger?: GenericLogger;
   /** Number of WASM threads for parallel FHE operations (passed to `initSDK({ thread })`). */
@@ -26,6 +24,9 @@ export interface WorkerClientConfig {
 /**
  * Client for communicating with the RelayerSDK Web Worker.
  * Provides a promise-based API for FHE operations.
+ *
+ * The worker file (UMD + IIFE, ~800 KB) is loaded on demand from a URL
+ * co-located with this module, keeping the main bundle small.
  */
 export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientConfig> {
   constructor(config: WorkerClientConfig) {
@@ -37,12 +38,11 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     if (runtime) {
       return new Worker(runtime.getURL(workerFilename));
     }
-    const blobUrl = URL.createObjectURL(new Blob([workerCode], { type: "application/javascript" }));
-    try {
-      return new Worker(blobUrl);
-    } finally {
-      URL.revokeObjectURL(blobUrl);
-    }
+    // Load the worker from the co-located file emitted at build time.
+    // Modern bundlers (webpack 5, Vite, Rolldown) resolve `new URL(..., import.meta.url)`
+    // and copy the asset to the output directory automatically.
+    const workerUrl = new URL(workerFilename, import.meta.url);
+    return new Worker(workerUrl);
   }
 
   protected wireEvents(worker: Worker): void {
@@ -68,7 +68,11 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     type: WorkerRequestType;
     payload: WorkerRequest["payload"];
   } {
-    return { type: "INIT", payload: this.config };
+    // Resolve the relayer-sdk UMD URL relative to this module so the
+    // worker can `importScripts` it. The file is co-located with the
+    // worker file in the build output.
+    const sdkUrl = new URL(RELAYER_SDK_UMD_FILENAME, import.meta.url).href;
+    return { type: "INIT", payload: { ...this.config, sdkUrl } };
   }
 
   /**

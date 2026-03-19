@@ -111,7 +111,6 @@ const { NodeWorkerClient } = await import("../worker.node-client");
 
 function defaultWebConfig() {
   return {
-    cdnUrl: "https://cdn.example.com/relayer.js",
     fhevmConfig: { chainId: 1 } as never,
     csrfToken: "csrf-token-123",
   };
@@ -208,19 +207,6 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("createWorker() revokes the blob URL after constructing the Worker", async () => {
-    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
-
-    setupAutoResolvingWebWorker();
-    const client = new RelayerWorkerClient(defaultWebConfig());
-    await client.initWorker();
-
-    expect(revokeSpy).toHaveBeenCalledOnce();
-
-    client.terminate();
-    revokeSpy.mockRestore();
-  });
-
   it("wireEvents() sets onmessage, onerror, onmessageerror on the worker", () => {
     const client = new RelayerWorkerClient(defaultWebConfig());
     const initPromise = client.initWorker();
@@ -278,7 +264,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("getInitPayload() returns INIT type with full config as payload", async () => {
+  it("getInitPayload() returns INIT type with config and sdkUrl in payload", async () => {
     setupAutoResolvingWebWorker();
     const config = defaultWebConfig();
     const client = new RelayerWorkerClient(config);
@@ -286,12 +272,13 @@ describe("RelayerWorkerClient", () => {
 
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual(config);
+    expect(req.payload).toMatchObject(config);
+    expect(req.payload).toHaveProperty("sdkUrl");
 
     client.terminate();
   });
 
-  it("initWorker() initializes the worker with CDN config", async () => {
+  it("initWorker() sends INIT with config", async () => {
     setupAutoResolvingWebWorker();
     const config = defaultWebConfig();
     const client = new RelayerWorkerClient(config);
@@ -301,7 +288,7 @@ describe("RelayerWorkerClient", () => {
 
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual(config);
+    expect(req.payload).toMatchObject(config);
 
     client.terminate();
   });

@@ -51,11 +51,10 @@ export interface BaseRequest {
 export interface InitRequest extends BaseRequest {
   type: "INIT";
   payload: {
-    cdnUrl: string;
+    /** Absolute URL to the relayer-sdk UMD bundle (co-located with the worker file). */
+    sdkUrl: string;
     fhevmConfig: FhevmInstanceConfig;
     csrfToken: string;
-    /** Expected SHA-384 hex digest for integrity verification. */
-    integrity?: string;
     /** Number of WASM threads for parallel FHE operations. */
     thread?: number;
   };

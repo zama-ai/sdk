@@ -5,7 +5,7 @@
 
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
-import { getBrowserExtensionRuntime, prefixHex, unprefixHex } from "../utils";
+import { prefixHex, unprefixHex } from "../utils";
 import type {
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,
@@ -55,7 +55,9 @@ const CSRF_HEADER_NAME = "x-csrf-token";
 // Mutating HTTP methods that require CSRF token (js-set-map-lookups)
 const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 
-// Web Worker global scope with SDK
+// Web Worker global scope with SDK.
+// The relayer-sdk UMD bundle is loaded via `importScripts` during init,
+// which sets `self.relayerSDK`.
 interface WorkerGlobalScopeWithSDK extends Worker {
   relayerSDK?: RelayerSDKGlobal;
   importScripts: (...urls: string[]) => void;
@@ -103,37 +105,8 @@ function sendError(
   self.postMessage(response);
 }
 
-// Store original fetch for use in SDK loading
+// Store original fetch before we patch it with the CSRF interceptor.
 const originalFetch = fetch;
-
-// ── CDN URL validation ───────────────────────────────────────
-
-/** Allowed CDN hostnames for loading the relayer SDK script. */
-const ALLOWED_CDN_HOSTS = new Set<string>(["cdn.zama.org"]);
-
-/**
- * Validate the CDN URL supplied by the caller.
- * Ensures only HTTPS URLs from approved hosts are used when loading
- * SDK code into the worker.
- */
-function validateCdnUrl(rawUrl: string): string {
-  let url: URL;
-  try {
-    url = new URL(rawUrl);
-  } catch {
-    throw new Error("Invalid CDN URL");
-  }
-
-  if (url.protocol !== "https:") {
-    throw new Error("CDN URL must use https");
-  }
-
-  if (!ALLOWED_CDN_HOSTS.has(url.hostname)) {
-    throw new Error(`CDN URL host is not allowed: ${url.hostname}`);
-  }
-
-  return url.toString();
-}
 
 /**
  * Set up fetch interceptor to add credentials and CSRF token for relayer requests.
@@ -167,88 +140,27 @@ function setupFetchInterceptor(): void {
 }
 
 /**
- * Verify a fetched script's SHA-384 hash matches the expected integrity value.
- */
-async function verifyIntegrity(content: string, expectedHash: string): Promise<void> {
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest("SHA-384", encoder.encode(content));
-  const hashHex = [...new Uint8Array(hashBuffer)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  if (hashHex !== expectedHash) {
-    throw new Error(`CDN integrity check failed: expected SHA-384 ${expectedHash}, got ${hashHex}`);
-  }
-}
-
-/**
- * Load SDK script from CDN.
- * Uses two strategies depending on the environment:
- * - **Web apps (default):** fetch + blob URL + importScripts. Avoids MIME-type
- *   rejections (some CDNs serve .cjs as `application/node`) and CSP
- *   `unsafe-eval` violations.
- * - **Browser extensions (Chrome/Firefox/Safari):** importScripts directly.
- *   Blob URLs are blocked by extension CSP, but the CDN must be allowed
- *   in the extension's manifest CSP.
- *
- * Integrity is always verified when a hash is provided, regardless of strategy.
- */
-async function fetchScript(cdnUrl: string): Promise<string> {
-  const response = await originalFetch(cdnUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
-  }
-  return response.text();
-}
-
-async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
-  // Validate CDN URL immediately before any script loading (defense-in-depth).
-  const validatedUrl = validateCdnUrl(cdnUrl);
-
-  if (getBrowserExtensionRuntime()) {
-    // Extensions: blob: URLs are forbidden. Use importScripts directly —
-    // the CDN origin must be allowed in the extension's CSP manifest.
-    if (integrity) {
-      await verifyIntegrity(await fetchScript(validatedUrl), integrity);
-    }
-    return self.importScripts(validatedUrl);
-  }
-
-  // Web apps: fetch + blob URL avoids MIME-type and eval CSP issues.
-  const scriptContent = await fetchScript(validatedUrl);
-
-  if (integrity) {
-    await verifyIntegrity(scriptContent, integrity);
-  }
-
-  const blob = new Blob([scriptContent], { type: "application/javascript" });
-  const blobUrl = URL.createObjectURL(blob);
-  try {
-    self.importScripts(blobUrl);
-  } finally {
-    URL.revokeObjectURL(blobUrl);
-  }
-}
-
-/**
- * Handle INIT request - load SDK and initialize WASM.
+ * Handle INIT request — load the relayer-sdk UMD bundle, initialize WASM,
+ * and create the SDK instance.
  */
 async function handleInit(request: InitRequest): Promise<void> {
   const { id, type, payload } = request;
-  const { cdnUrl, fhevmConfig, csrfToken, integrity, thread } = payload;
+  const { sdkUrl, fhevmConfig, csrfToken, thread } = payload;
 
   try {
     // Extract relayerUrl from config for fetch interception
     relayerUrlBase = fhevmConfig.relayerUrl ?? "";
     csrfTokenBase = csrfToken;
 
-    // Set up fetch interceptor before loading SDK
+    // Set up fetch interceptor before loading SDK (WASM init may fetch)
     setupFetchInterceptor();
 
-    // Load SDK via fetch + eval (avoids MIME-type issues with importScripts)
-    await loadSdkScript(cdnUrl, integrity);
+    // Load the relayer-sdk UMD bundle from the co-located asset.
+    // This sets `self.relayerSDK` on the worker global scope.
+    self.importScripts(sdkUrl);
 
     if (!self.relayerSDK) {
-      throw new Error("Failed to load relayerSDK from CDN");
+      throw new Error("relayerSDK not available after importScripts");
     }
 
     sdkGlobal = self.relayerSDK;
@@ -649,7 +561,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
     }
 
     const result = sdkInstance.getPublicParams(
-      // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically via CDN
+      // oxlint-disable-next-line typescript-eslint/consistent-type-imports
       payload.bits as keyof import("@zama-fhe/relayer-sdk/bundle").PublicParams<Uint8Array>,
     );
 
