@@ -1,8 +1,10 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, type BrowserContext } from "@playwright/test";
+import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import type { Address } from "viem";
 import {
   createTestClient,
+  erc20Abi,
   formatUnits,
   http,
   parseUnits,
@@ -10,9 +12,9 @@ import {
   walletActions,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { hardhat } from "viem/chains";
+import { foundry } from "viem/chains";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
-import { MINTED, TEST_PRIVATE_KEY } from "./constants";
+import { MINTED, NEXTJS_ANVIL_PORT, TEST_PRIVATE_KEY } from "./constants";
 import { mockRelayerSdk } from "./fhevm";
 
 const privateKey = TEST_PRIVATE_KEY;
@@ -26,7 +28,7 @@ const contracts = {
   cUSDC: deployments.cToken as Address,
   transferBatcher: deployments.transferBatcher as Address,
   feeManager: deployments.feeManager as Address,
-  acl: deployments.fhevm.acl as Address,
+  acl: hardhatCleartextConfig.aclContractAddress as Address,
 } as const;
 
 /** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */
@@ -47,40 +49,27 @@ const mintAbi = [
   },
 ] as const;
 
-const viemClient = createTestClient({
-  account,
-  chain: hardhat,
-  mode: "hardhat",
-  transport: http(),
-})
-  .extend(walletActions)
-  .extend(publicActions);
-
-const erc20BalanceOfAbi = [
-  {
-    type: "function",
-    name: "balanceOf",
-    stateMutability: "view",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-] as const;
-
-async function readErc20Balance(
-  tokenAddress: `0x${string}`,
-  owner: `0x${string}` = account.address,
-): Promise<bigint> {
-  return viemClient.readContract({
-    address: tokenAddress,
-    abi: erc20BalanceOfAbi,
-    functionName: "balanceOf",
-    args: [owner],
-  });
+function createViemClient(port: number) {
+  return createTestClient({
+    account,
+    chain: foundry,
+    mode: "anvil",
+    transport: http(`http://127.0.0.1:${port}`),
+  })
+    .extend(walletActions)
+    .extend(publicActions);
 }
+
+type ViemClient = ReturnType<typeof createViemClient>;
 
 export interface ConfidentialBalances {
   cUSDT: bigint;
   cUSDC: bigint;
+}
+
+export interface WorkerFixtures {
+  anvilPort: number;
+  viemClient: ViemClient;
 }
 
 export interface TestFixtures {
@@ -88,22 +77,37 @@ export interface TestFixtures {
   baseURL: `http://${string}` | `https://${string}`;
   privateKey: typeof privateKey;
   account: typeof account;
-  viemClient: typeof viemClient;
   contracts: typeof contracts;
   formatUnits: typeof formatUnits;
   computeFee: typeof computeFee;
-  readErc20Balance: typeof readErc20Balance;
+  readErc20Balance: (tokenAddress: `0x${string}`, owner?: `0x${string}`) => Promise<bigint>;
   confidentialBalances: ConfidentialBalances;
 }
 
-export const test = base.extend<TestFixtures>({
+export const test = base.extend<TestFixtures, WorkerFixtures>({
+  anvilPort: [NEXTJS_ANVIL_PORT, { option: true, scope: "worker" }],
+  viemClient: [
+    async ({ anvilPort }, use) => {
+      await use(createViemClient(anvilPort));
+    },
+    { scope: "worker" },
+  ],
   privateKey,
   account,
-  viemClient,
   contracts,
   formatUnits: async ({}, use) => use(formatUnits),
   computeFee: async ({}, use) => use(computeFee),
-  readErc20Balance: async ({}, use) => use(readErc20Balance),
+  readErc20Balance: async ({ viemClient, account }, use) => {
+    function readErc20Balance(tokenAddress: `0x${string}`, owner: `0x${string}` = account.address) {
+      return viemClient.readContract({
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [owner],
+      });
+    }
+    await use(readErc20Balance);
+  },
   confidentialBalances: async ({ page }, use) => {
     await page.goto("/wallet");
     await page.getByTestId("reveal-button").click();
@@ -115,7 +119,7 @@ export const test = base.extend<TestFixtures>({
     const cUSDC = parseUnits((await cERC20Row.getByTestId("balance").textContent())!.trim(), 6);
     await use({ cUSDT, cUSDC });
   },
-  page: async ({ page, baseURL, privateKey, account, viemClient, contracts }, use) => {
+  page: async ({ page, baseURL, privateKey, account, viemClient, contracts, anvilPort }, use) => {
     // Mint ERC-20 tokens to the test account before snapshotting, so every test
     // starts from a funded state regardless of what the deploy script did.
     const nonce = await viemClient.getTransactionCount({
@@ -142,7 +146,11 @@ export const test = base.extend<TestFixtures>({
 
     const id = await viemClient.snapshot();
 
-    await mockRelayerSdk({ page, baseURL, rpcURL: "http://127.0.0.1:8545" });
+    await mockRelayerSdk({
+      page,
+      baseURL,
+      rpcURL: `http://127.0.0.1:${anvilPort}`,
+    });
 
     // Inject wallet private key for the burner-connector
     await page.addInitScript((pk) => {
