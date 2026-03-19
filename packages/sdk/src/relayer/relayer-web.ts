@@ -7,11 +7,11 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
-import type { GenericStorage } from "../token/token.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
+  ArtifactCacheStorage,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -67,7 +67,7 @@ export class RelayerWeb implements RelayerSDK {
   #terminated = false;
   #resolvedChainId: number | null = null;
   #cache: FheArtifactCache | null = null;
-  #artifactStorage: GenericStorage | null = null;
+  #artifactStorage: ArtifactCacheStorage | null = null;
   #status: RelayerSDKStatus = "idle";
   #initError: Error | undefined;
   readonly #config: RelayerWebConfig;
@@ -165,7 +165,8 @@ export class RelayerWeb implements RelayerSDK {
     // Storage is chain-independent — reuse across chain switches.
     if (!this.#artifactStorage) {
       this.#artifactStorage =
-        this.#config.storage ?? new IndexedDBStorage("FheArtifactCache", 1, "artifacts");
+        this.#config.artifactCacheStorage ??
+        new IndexedDBStorage("FheArtifactCache", 1, "artifacts");
     }
     if (!this.#cache) {
       const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
@@ -173,7 +174,7 @@ export class RelayerWeb implements RelayerSDK {
         storage: this.#artifactStorage,
         chainId,
         relayerUrl: config.relayerUrl,
-        ttl: this.#config.fheArtifactCacheTTL,
+        ttl: this.#config.artifactCacheTTL,
         logger: this.#config.logger,
       });
     }

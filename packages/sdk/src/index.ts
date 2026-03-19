@@ -10,6 +10,7 @@
 export { RelayerWeb } from "./relayer/relayer-web";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
+  ArtifactCacheStorage,
   RelayerWebConfig,
   RelayerWebSecurityConfig,
   RelayerSDKStatus,

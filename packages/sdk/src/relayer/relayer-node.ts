@@ -32,9 +32,9 @@ export interface RelayerNodeConfig {
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
   /** Optional persistent storage for caching FHE public key and params across sessions. */
-  storage?: GenericStorage;
+  artifactCacheStorage?: GenericStorage;
   /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
-  fheArtifactCacheTTL?: number;
+  artifactCacheTTL?: number;
 }
 
 /**
@@ -104,13 +104,13 @@ export class RelayerNode implements RelayerSDK {
     this.#resolvedChainId = chainId;
 
     // Create cache for current chain (when storage is provided)
-    if (!this.#cache && this.#config.storage) {
+    if (!this.#cache && this.#config.artifactCacheStorage) {
       const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
       this.#cache = new FheArtifactCache({
-        storage: this.#config.storage,
+        storage: this.#config.artifactCacheStorage,
         chainId,
         relayerUrl: config.relayerUrl,
-        ttl: this.#config.fheArtifactCacheTTL,
+        ttl: this.#config.artifactCacheTTL,
         logger: this.#config.logger,
       });
     }

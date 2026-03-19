@@ -3,6 +3,16 @@ import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../token/token.types";
 
+/**
+ * Storage backend suitable for large binary data (multi-MB).
+ *
+ * FHE public params can be several megabytes. Implementations backed by
+ * `localStorage` (~5 MB quota) will silently fail — use IndexedDB or an
+ * equivalent high-capacity store in the browser, or any `GenericStorage`
+ * implementation in Node.js (no practical size limit).
+ */
+export type ArtifactCacheStorage = GenericStorage;
+
 // ============================================================================
 // Application Types
 // ============================================================================
@@ -58,10 +68,12 @@ export interface RelayerWebConfig {
    * Pass a custom `IndexedDBStorage` instance to configure the database name,
    * version, or store name. FHE public params can be several MB — avoid
    * `localStorage`-backed storage which caps at ~5 MB.
+   *
+   * **Not to be confused with `ZamaProvider.storage`** which stores credentials.
    */
-  storage?: GenericStorage;
+  artifactCacheStorage?: ArtifactCacheStorage;
   /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
-  fheArtifactCacheTTL?: number;
+  artifactCacheTTL?: number;
 }
 
 /** Result from encryption operation */
