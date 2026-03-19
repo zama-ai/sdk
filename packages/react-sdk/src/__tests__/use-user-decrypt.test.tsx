@@ -219,4 +219,98 @@ describe("useUserDecrypt", () => {
     // CredentialsManager wraps the error with context
     expect(result.current.error?.message).toBe("Failed to create decrypt credentials");
   });
+
+  it("returns cached values reactively via values map", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({
+      "0xh1": 100n,
+      "0xh2": 200n,
+    });
+
+    const handles = [
+      { handle: "0xh1" as const, contractAddress: tokenAddress },
+      { handle: "0xh2" as const, contractAddress: tokenAddress },
+    ];
+
+    const { result } = renderWithProviders(() => useUserDecrypt({ handles }), {
+      relayer,
+      signer,
+    });
+
+    // Before decrypt, values are undefined
+    expect(result.current.values["0xh1"]).toBeUndefined();
+    expect(result.current.values["0xh2"]).toBeUndefined();
+
+    // Decrypt
+    result.current.mutate();
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // After decrypt, values are populated from cache
+    await waitFor(() => {
+      expect(result.current.values["0xh1"]).toBe(100n);
+      expect(result.current.values["0xh2"]).toBe(200n);
+    });
+  });
+
+  it("mutate() without args skips already-cached handles", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh2": 200n });
+
+    const handles = [
+      { handle: "0xh1" as const, contractAddress: tokenAddress },
+      { handle: "0xh2" as const, contractAddress: tokenAddress },
+    ];
+
+    const { result, queryClient } = renderWithProviders(() => useUserDecrypt({ handles }), {
+      relayer,
+      signer,
+    });
+
+    // Pre-populate cache for h1
+    queryClient.setQueryData(zamaQueryKeys.decryption.handle("0xh1"), 100n);
+
+    // mutate() without args should only decrypt h2
+    result.current.mutate();
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // Should only have sent h2 to the relayer
+    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        handles: ["0xh2"],
+      }),
+    );
+  });
+
+  it("mutate() is a no-op when all handles are cached", async ({
+    relayer,
+    signer,
+    tokenAddress,
+    renderWithProviders,
+  }) => {
+    const handles = [{ handle: "0xh1" as const, contractAddress: tokenAddress }];
+
+    const { result, queryClient } = renderWithProviders(() => useUserDecrypt({ handles }), {
+      relayer,
+      signer,
+    });
+
+    // Pre-populate cache
+    queryClient.setQueryData(zamaQueryKeys.decryption.handle("0xh1"), 100n);
+
+    // mutate() should be a no-op
+    result.current.mutate();
+
+    // No relayer call
+    expect(relayer.userDecrypt).not.toHaveBeenCalled();
+  });
 });

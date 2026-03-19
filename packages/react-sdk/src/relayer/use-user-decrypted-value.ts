@@ -8,6 +8,9 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
  * Look up a single cached decrypted value by its handle.
  * Values are populated automatically when `useUserDecrypt` or `usePublicDecrypt` succeed.
  * You can also populate manually via queryClient.setQueryData(zamaQueryKeys.decryption.handle(handle), value).
+ *
+ * @deprecated Use `useUserDecrypt({ handles })` instead — it returns cached values
+ * automatically via the `values` map and decrypts uncached handles on demand.
  */
 export function useUserDecryptedValue(handle: Handle | undefined) {
   return useQuery<ClearValueType>({

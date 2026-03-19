@@ -7,6 +7,9 @@ import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
 /**
  * Look up multiple cached decrypted values by their handles.
  * Values are populated automatically when `useUserDecrypt` or `usePublicDecrypt` succeed.
+ *
+ * @deprecated Use `useUserDecrypt({ handles })` instead — it returns cached values
+ * automatically via the `values` map and decrypts uncached handles on demand.
  */
 export function useUserDecryptedValues(handles: Handle[]) {
   const results = useQueries({
