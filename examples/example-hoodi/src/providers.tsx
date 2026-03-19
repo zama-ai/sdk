@@ -16,6 +16,34 @@ import { HOODI_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 import { getEthereumProvider } from "@/lib/ethereum";
 
+// ── What this file does ────────────────────────────────────────────────────────
+//
+// This file wires together the three SDK primitives every integration needs:
+//
+//   const signer  = new EthersSigner({ ethereum });
+//   const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL });
+//   <ZamaProvider relayer={relayer} signer={signer}
+//     storage={indexedDBStorage} sessionStorage={sessionDBStorage}>
+//
+// That is the minimal setup. This file adds three extra layers to handle issues
+// specific to MetaMask + Hoodi — you may not need all of them in your integration:
+//
+// 1. Hybrid EIP-1193 provider (createHybridEthereum) — routes eth_call /
+//    eth_estimateGas to a direct JsonRpcProvider for speed, and routes signing,
+//    nonce (eth_getTransactionCount), and receipt polling to the injected wallet
+//    to avoid stale data from the Hoodi load balancer. See WALLET_METHODS below.
+//
+// 2. Separate IndexedDB instances for storage and sessionStorage — both use the
+//    same internal key; sharing one DB instance causes the session entry to
+//    overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
+//
+// 3. walletKey + refSeededRef — remounts ZamaProvider on wallet switch with a
+//    fresh EthersSigner bound to the new account, while ignoring spurious
+//    accountsChanged events some wallets emit before eth_accounts resolves.
+//
+// See WALKTHROUGH.md §"Architecture at a glance" for the full rationale.
+// ──────────────────────────────────────────────────────────────────────────────
+
 // Separate IndexedDB database for session signatures (EIP-712 wallet signatures that
 // authorize decryption). Must be distinct from indexedDBStorage ("CredentialStore") because
 // both use the same storage key — storing them in the same DB would cause the session entry

@@ -32,12 +32,12 @@ Specifically:
 
 ## Supported operations
 
-| Operation                    | SDK API                      | Transactions          |
-| ---------------------------- | ---------------------------- | --------------------- |
-| Decrypt confidential balance | `useConfidentialBalance`     | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()` | 2 (approve + wrap)    |
-| Confidential transfer        | `useConfidentialTransfer`    | 1                     |
-| Unshield (cToken → ERC-20)   | `useUnshield`                | 2 (unwrap + finalize) |
+| Operation                    | SDK API                      | Source file                       | Transactions          |
+| ---------------------------- | ---------------------------- | --------------------------------- | --------------------- |
+| Decrypt confidential balance | `useConfidentialBalance`     | `src/app/page.tsx`                | 0 (read)              |
+| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()` | `src/components/ShieldCard.tsx`   | 2 (approve + wrap)    |
+| Confidential transfer        | `useConfidentialTransfer`    | `src/components/TransferCard.tsx` | 1                     |
+| Unshield (cToken → ERC-20)   | `useUnshield`                | `src/components/UnshieldCard.tsx` | 2 (unwrap + finalize) |
 
 ---
 
