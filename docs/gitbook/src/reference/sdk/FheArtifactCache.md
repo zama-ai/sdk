@@ -1,23 +1,23 @@
 ---
-title: ArtifactCache
+title: FheArtifactCache
 description: Persistent cache for FHE public key and public params, avoiding re-downloads across sessions.
 ---
 
-# ArtifactCache
+# FheArtifactCache
 
 Persistent cache for the FHE network public key and public params (CRS). Stores large binary artifacts in a `GenericStorage` backend (e.g. IndexedDB) so they are not re-downloaded on every page load. Cache keys are scoped by chain ID.
 
-`RelayerWeb` and `RelayerNode` create an `ArtifactCache` internally — you configure it through the `artifactStorage` and `artifactCacheTTL` options on the relayer constructor.
+`RelayerWeb` and `RelayerNode` create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the relayer constructor.
 
 ## Import
 
 ```ts
-import { ArtifactCache } from "@zama-fhe/sdk";
+import { FheArtifactCache } from "@zama-fhe/sdk";
 ```
 
 ## Usage
 
-In most cases you don't instantiate `ArtifactCache` directly. Instead, configure artifact caching through `RelayerWeb`:
+In most cases you don't instantiate `FheArtifactCache` directly. Instead, configure artifact caching through `RelayerWeb`:
 
 {% tabs %}
 {% tab title="Default (IndexedDB)" %}
@@ -54,9 +54,9 @@ const relayer = new RelayerWeb({
     },
   },
   // Custom IndexedDB database name
-  artifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
+  fheArtifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
   // Revalidate every 12 hours instead of the default 24h
-  artifactCacheTTL: 43_200,
+  fheArtifactCacheTTL: 43_200,
 });
 ```
 
@@ -64,9 +64,9 @@ const relayer = new RelayerWeb({
 {% tab title="Direct instantiation" %}
 
 ```ts
-import { ArtifactCache } from "@zama-fhe/sdk";
+import { FheArtifactCache } from "@zama-fhe/sdk";
 
-const cache = new ArtifactCache({
+const cache = new FheArtifactCache({
   storage: myStorage,
   chainId: 11155111,
   relayerUrl: "https://your-app.com/api/relayer/11155111",
@@ -97,7 +97,7 @@ if (invalidated) {
 ## Constructor
 
 ```ts
-new ArtifactCache(opts);
+new FheArtifactCache(opts);
 ```
 
 | Field        | Type                         | Description                                                                                     |
@@ -164,7 +164,7 @@ Concurrent calls are coalesced. On transient failures (network errors, 5xx), the
 
 When using `RelayerWeb` or `RelayerNode`, configure artifact caching with these constructor options:
 
-### artifactStorage
+### fheArtifactStorage
 
 `GenericStorage | undefined`
 
@@ -174,11 +174,11 @@ Persistent storage backend for caching FHE artifacts. Defaults to `new IndexedDB
 **Not to be confused with `ZamaProvider.storage`** which stores credentials and decrypted balances.
 {% endhint %}
 
-### artifactCacheTTL
+### fheArtifactCacheTTL
 
 `number | undefined`
 
-Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation. Ignored when `artifactStorage` is not set.
+Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation. Ignored when `fheArtifactStorage` is not set.
 
 ## How It Works
 
@@ -199,7 +199,7 @@ Cache entries are scoped by chain ID:
 
 ## Related
 
-- [RelayerWeb](/reference/sdk/RelayerWeb) — browser relayer that creates an `ArtifactCache` internally
+- [RelayerWeb](/reference/sdk/RelayerWeb) — browser relayer that creates an `FheArtifactCache` internally
 - [RelayerNode](/reference/sdk/RelayerNode) — Node.js relayer variant
 - [GenericStorage](/reference/sdk/GenericStorage) — storage interface used by the cache
 - [Configuration guide](/guides/configuration) — network presets and relayer setup

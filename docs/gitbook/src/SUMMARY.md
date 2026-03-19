@@ -34,7 +34,7 @@
   - [GenericStorage](reference/sdk/GenericStorage.md)
   - [Errors](reference/sdk/errors.md)
   - [Contract Builders](reference/sdk/contract-builders.md)
-  - [ArtifactCache](reference/sdk/ArtifactCache.md)
+  - [FheArtifactCache](reference/sdk/FheArtifactCache.md)
   - [Event Decoders](reference/sdk/event-decoders.md)
   - [Delegated Decryption](reference/sdk/delegation.md)
   - [Network Presets](reference/sdk/network-presets.md)
