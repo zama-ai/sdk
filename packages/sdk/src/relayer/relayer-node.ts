@@ -11,7 +11,7 @@ import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/e
 import type { GenericStorage } from "../token/token.types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
-import { FheArtifactCache } from "./fhe-artifact-cache";
+import { ArtifactCache } from "./artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   DelegatedUserDecryptParams,
@@ -32,7 +32,7 @@ export interface RelayerNodeConfig {
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
   /** Optional persistent storage for caching FHE public key and params across sessions. */
-  artifactCacheStorage?: GenericStorage;
+  artifactStorage?: GenericStorage;
   /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
   artifactCacheTTL?: number;
 }
@@ -53,7 +53,7 @@ export class RelayerNode implements RelayerSDK {
   #ensureLock: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
-  #cache: FheArtifactCache | null = null;
+  #artifactCache: ArtifactCache | null = null;
 
   constructor(config: RelayerNodeConfig) {
     this.#config = config;
@@ -86,7 +86,7 @@ export class RelayerNode implements RelayerSDK {
     this.#pool?.terminate();
     this.#pool = null;
     this.#initPromise = null;
-    this.#cache = null;
+    this.#artifactCache = null;
   }
 
   async #ensurePoolInner(): Promise<NodeWorkerPool> {
@@ -104,10 +104,10 @@ export class RelayerNode implements RelayerSDK {
     this.#resolvedChainId = chainId;
 
     // Create cache for current chain (when storage is provided)
-    if (!this.#cache && this.#config.artifactCacheStorage) {
+    if (!this.#artifactCache && this.#config.artifactStorage) {
       const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-      this.#cache = new FheArtifactCache({
-        storage: this.#config.artifactCacheStorage,
+      this.#artifactCache = new ArtifactCache({
+        storage: this.#config.artifactStorage,
         chainId,
         relayerUrl: config.relayerUrl,
         ttl: this.#config.artifactCacheTTL,
@@ -115,9 +115,17 @@ export class RelayerNode implements RelayerSDK {
       });
     }
 
-    // Revalidate cached artifacts if due
-    if (this.#cache) {
-      const stale = await this.#cache.revalidateIfDue();
+    // Revalidate cached artifacts if due — never let revalidation block init
+    if (this.#artifactCache) {
+      let stale = false;
+      try {
+        stale = await this.#artifactCache.revalidateIfDue();
+      } catch (err) {
+        this.#config.logger?.warn(
+          "Artifact revalidation failed, proceeding with potentially stale cache",
+          { error: err instanceof Error ? err.message : String(err) },
+        );
+      }
       if (stale) {
         this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
         this.#tearDown();
@@ -272,8 +280,8 @@ export class RelayerNode implements RelayerSDK {
     publicKey: Uint8Array;
   } | null> {
     const pool = await this.#ensurePool();
-    if (this.#cache) {
-      return this.#cache.getPublicKey(async () => (await pool.getPublicKey()).result);
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicKey(async () => (await pool.getPublicKey()).result);
     }
     return (await pool.getPublicKey()).result;
   }
@@ -282,8 +290,8 @@ export class RelayerNode implements RelayerSDK {
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const pool = await this.#ensurePool();
-    if (this.#cache) {
-      return this.#cache.getPublicParams(
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicParams(
         bits,
         async () => (await pool.getPublicParams(bits)).result,
       );

@@ -90,7 +90,7 @@ function createWebRelayer(
     getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
     transports: TRANSPORTS,
     // Override default IndexedDBStorage with per-test MemoryStorage for isolation
-    artifactCacheStorage: new MemoryStorage(),
+    artifactStorage: new MemoryStorage(),
     ...overrides,
   });
 }
@@ -553,7 +553,7 @@ describe("RelayerWeb", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1, 2, 3]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createWebRelayer({ artifactCacheStorage: storage });
+      const relayer = createWebRelayer({ artifactStorage: storage });
       const result = await relayer.getPublicKey();
       expect(result).toEqual(pk);
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
@@ -572,7 +572,7 @@ describe("RelayerWeb", () => {
       };
       mockWorkerClient.getPublicParams.mockResolvedValue({ result: pp });
 
-      const relayer = createWebRelayer({ artifactCacheStorage: storage });
+      const relayer = createWebRelayer({ artifactStorage: storage });
       const result = await relayer.getPublicParams(2048);
       expect(result).toEqual(pp);
       expect(mockWorkerClient.getPublicParams).toHaveBeenCalledOnce();
@@ -588,14 +588,14 @@ describe("RelayerWeb", () => {
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
       // First instance — fetches and persists
-      const relayer1 = createWebRelayer({ artifactCacheStorage: storage });
+      const relayer1 = createWebRelayer({ artifactStorage: storage });
       await relayer1.getPublicKey();
       relayer1.terminate();
 
       // Second instance — restores from storage without worker call
       resetMocks();
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: null });
-      const relayer2 = createWebRelayer({ artifactCacheStorage: storage });
+      const relayer2 = createWebRelayer({ artifactStorage: storage });
       const result = await relayer2.getPublicKey();
       expect(result).toEqual(pk);
       expect(mockWorkerClient.getPublicKey).not.toHaveBeenCalled();
@@ -619,7 +619,7 @@ describe("RelayerWeb", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createWebRelayer({ artifactCacheStorage: storage, getChainId });
+      const relayer = createWebRelayer({ artifactStorage: storage, getChainId });
       await relayer.getPublicKey();
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
 
@@ -652,7 +652,7 @@ describe("RelayerWeb", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createWebRelayer({ artifactCacheStorage: storage, artifactCacheTTL: 0 });
+      const relayer = createWebRelayer({ artifactStorage: storage, artifactCacheTTL: 0 });
 
       // First call — init worker, fetch and cache pk
       await relayer.getPublicKey();
@@ -680,6 +680,7 @@ describe("RelayerWeb", () => {
                 fhePublicKey: {
                   urls: ["https://cdn.example.com/pk.bin"],
                 },
+                crs: {},
               }),
           });
         }
@@ -710,7 +711,7 @@ describe("RelayerWeb", () => {
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
       const relayer = createWebRelayer({
-        artifactCacheStorage: storage,
+        artifactStorage: storage,
         artifactCacheTTL: 86_400,
       });
 
@@ -1048,7 +1049,7 @@ describe("RelayerNode", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1, 2, 3]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createNodeRelayer({ artifactCacheStorage: storage });
+      const relayer = createNodeRelayer({ artifactStorage: storage });
       const result = await relayer.getPublicKey();
       expect(result).toEqual(pk);
       expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
@@ -1067,7 +1068,7 @@ describe("RelayerNode", () => {
       };
       mockPool.getPublicParams.mockResolvedValue({ result: pp });
 
-      const relayer = createNodeRelayer({ artifactCacheStorage: storage });
+      const relayer = createNodeRelayer({ artifactStorage: storage });
       const result = await relayer.getPublicParams(2048);
       expect(result).toEqual(pp);
       expect(mockPool.getPublicParams).toHaveBeenCalledOnce();
@@ -1094,7 +1095,7 @@ describe("RelayerNode", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createNodeRelayer({ artifactCacheStorage: storage, getChainId });
+      const relayer = createNodeRelayer({ artifactStorage: storage, getChainId });
       await relayer.getPublicKey();
       expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
 
@@ -1127,7 +1128,7 @@ describe("RelayerNode", () => {
       const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
-      const relayer = createNodeRelayer({ artifactCacheStorage: storage, artifactCacheTTL: 0 });
+      const relayer = createNodeRelayer({ artifactStorage: storage, artifactCacheTTL: 0 });
 
       // First call — init pool, fetch and cache pk
       await relayer.getPublicKey();
@@ -1154,6 +1155,7 @@ describe("RelayerNode", () => {
                 fhePublicKey: {
                   urls: ["https://cdn.example.com/pk.bin"],
                 },
+                crs: {},
               }),
           });
         }
@@ -1183,7 +1185,7 @@ describe("RelayerNode", () => {
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
       const relayer = createNodeRelayer({
-        artifactCacheStorage: storage,
+        artifactStorage: storage,
         artifactCacheTTL: 86_400,
       });
 

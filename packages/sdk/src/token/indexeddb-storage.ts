@@ -44,6 +44,10 @@ export class IndexedDBStorage implements GenericStorage {
         this.#db = request.result;
         this.#dbPromise = null;
         this.#db.onversionchange = () => {
+          // oxlint-disable-next-line no-console
+          console.warn(
+            `IndexedDB "${this.#dbName}" closing due to version change from another tab`,
+          );
           this.#db?.close();
           this.#db = null;
           this.#dbPromise = null;

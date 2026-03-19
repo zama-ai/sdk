@@ -60,7 +60,15 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 function fromBase64(b64: string): Uint8Array {
-  const binary = atob(b64);
+  let binary: string;
+  try {
+    binary = atob(b64);
+  } catch {
+    throw new Error(`Invalid base64 data (length: ${b64.length})`);
+  }
+  if (binary.length === 0) {
+    throw new Error("Decoded artifact is empty");
+  }
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
@@ -98,7 +106,7 @@ interface ManifestShape {
   crs: Record<string, { dataId: string; urls: string[] }>;
 }
 
-// ── FheArtifactCache ───────────────────────────────────────
+// ── ArtifactCache ──────────────────────────────────────────
 
 /**
  * Persistent cache for FHE network public key and public params.
@@ -108,7 +116,7 @@ interface ManifestShape {
  *
  * Cache keys are scoped by chain ID.
  */
-export class FheArtifactCache {
+export class ArtifactCache {
   readonly #storage: GenericStorage;
   readonly #chainId: number;
   readonly #relayerUrl: string;
@@ -406,10 +414,43 @@ export class FheArtifactCache {
         return false;
       }
 
-      const manifest = (await manifestRes.json()) as ManifestShape;
+      const manifest = (await manifestRes.json()) as unknown;
+
+      // Validate manifest shape — a malformed response indicates a permanent
+      // config error (wrong relayer URL, API version mismatch), not a transient
+      // network issue. Log at error level so it's actionable.
+      if (
+        !manifest ||
+        typeof manifest !== "object" ||
+        !("fhePublicKey" in manifest) ||
+        !(manifest as ManifestShape).fhePublicKey?.urls?.length ||
+        !("crs" in manifest) ||
+        typeof (manifest as ManifestShape).crs !== "object"
+      ) {
+        this.#logger.error(
+          "Relayer manifest has unexpected shape — check relayer URL and API version",
+          {
+            relayerUrl: this.#relayerUrl,
+            manifestKeys: manifest && typeof manifest === "object" ? Object.keys(manifest) : [],
+          },
+        );
+        // Fail-open with short retry — but the error-level log distinguishes this from transient failures
+        const retryTimestamp = now - this.#ttlMs + SHORT_RETRY_MS;
+        await this.#writeEntries(
+          pkKey,
+          { ...storedPk, lastValidatedAt: retryTimestamp },
+          paramEntries.map((e) => ({
+            ...e,
+            data: { ...e.data, lastValidatedAt: retryTimestamp },
+          })),
+        );
+        this.#lastRevalidatedAt = retryTimestamp;
+        return false;
+      }
+      const validManifest = manifest as ManifestShape;
 
       // ── 4. Check PK artifact ──────────────────────────
-      const pkArtifactUrl = manifest.fhePublicKey.urls[0];
+      const pkArtifactUrl = validManifest.fhePublicKey.urls[0];
 
       // URL change → stale
       if (storedPk.artifactUrl && pkArtifactUrl && pkArtifactUrl !== storedPk.artifactUrl) {
@@ -437,7 +478,7 @@ export class FheArtifactCache {
       // ── 5. Check each CRS artifact ────────────────────
       const updatedParamEntries: typeof paramEntries = [];
       for (const entry of paramEntries) {
-        const manifestCrs = manifest.crs[String(entry.bits)];
+        const manifestCrs = validManifest.crs[String(entry.bits)];
         const crsUrl = manifestCrs?.urls[0];
 
         // URL change → stale
@@ -473,11 +514,23 @@ export class FheArtifactCache {
       this.#lastRevalidatedAt = now;
       return false;
     } catch (err) {
-      this.#logger.warn("Revalidation failed, using cached artifacts (fail-open)", {
-        chainId: this.#chainId,
-        relayerUrl: this.#relayerUrl,
-        error: toError(err).message,
-      });
+      const error = toError(err);
+      const isProgrammingError =
+        err instanceof TypeError ||
+        err instanceof ReferenceError ||
+        err instanceof RangeError ||
+        err instanceof SyntaxError;
+      const level = isProgrammingError ? "error" : "warn";
+      this.#logger[level](
+        isProgrammingError
+          ? "Unexpected error during revalidation (possible bug)"
+          : "Revalidation failed, using cached artifacts (fail-open)",
+        {
+          chainId: this.#chainId,
+          relayerUrl: this.#relayerUrl,
+          error: error.message,
+        },
+      );
 
       // Fail-open: use short retry interval (5 min) instead of full TTL
       const retryTimestamp = now - this.#ttlMs + SHORT_RETRY_MS;
@@ -621,9 +674,9 @@ export class FheArtifactCache {
   }
 
   async #clearAll(pkKey: string, paramEntries: Array<{ key: string }>): Promise<void> {
-    this.#publicKeyMem = undefined;
-    this.#publicParamsMem.clear();
     const idxKey = paramsIndexKey(this.#chainId);
+    // Delete from persistent storage first — if this fails, in-memory cache
+    // still serves stale data, but the next revalidation cycle will retry.
     try {
       await Promise.all([
         this.#storage.delete(pkKey),
@@ -636,6 +689,9 @@ export class FheArtifactCache {
         error: toError(err).message,
       });
     }
+    // Clear in-memory after storage to avoid re-loading stale entries on failure
+    this.#publicKeyMem = undefined;
+    this.#publicParamsMem.clear();
   }
 
   async #writeEntries(

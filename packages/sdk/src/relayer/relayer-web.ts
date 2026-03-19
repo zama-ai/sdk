@@ -7,11 +7,11 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import type { GenericStorage } from "../token/token.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
-import { FheArtifactCache } from "./fhe-artifact-cache";
+import { ArtifactCache } from "./artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
-  ArtifactCacheStorage,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -66,8 +66,8 @@ export class RelayerWeb implements RelayerSDK {
   #ensureLock: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
-  #cache: FheArtifactCache | null = null;
-  #artifactStorage: ArtifactCacheStorage | null = null;
+  #artifactCache: ArtifactCache | null = null;
+  #artifactStorage: GenericStorage | null = null;
   #status: RelayerSDKStatus = "idle";
   #initError: Error | undefined;
   readonly #config: RelayerWebConfig;
@@ -139,7 +139,7 @@ export class RelayerWeb implements RelayerSDK {
     this.#workerClient?.terminate();
     this.#workerClient = null;
     this.#initPromise = null;
-    this.#cache = null;
+    this.#artifactCache = null;
   }
 
   async #ensureWorkerInner(): Promise<RelayerWorkerClient> {
@@ -165,12 +165,11 @@ export class RelayerWeb implements RelayerSDK {
     // Storage is chain-independent — reuse across chain switches.
     if (!this.#artifactStorage) {
       this.#artifactStorage =
-        this.#config.artifactCacheStorage ??
-        new IndexedDBStorage("FheArtifactCache", 1, "artifacts");
+        this.#config.artifactStorage ?? new IndexedDBStorage("FheArtifactCache", 1, "artifacts");
     }
-    if (!this.#cache) {
+    if (!this.#artifactCache) {
       const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
-      this.#cache = new FheArtifactCache({
+      this.#artifactCache = new ArtifactCache({
         storage: this.#artifactStorage,
         chainId,
         relayerUrl: config.relayerUrl,
@@ -179,9 +178,17 @@ export class RelayerWeb implements RelayerSDK {
       });
     }
 
-    // Revalidate cached artifacts if due
-    if (this.#cache) {
-      const stale = await this.#cache.revalidateIfDue();
+    // Revalidate cached artifacts if due — never let revalidation block init
+    if (this.#artifactCache) {
+      let stale = false;
+      try {
+        stale = await this.#artifactCache.revalidateIfDue();
+      } catch (err) {
+        this.#config.logger?.warn(
+          "Artifact revalidation failed, proceeding with potentially stale cache",
+          { error: err instanceof Error ? err.message : String(err) },
+        );
+      }
       if (stale) {
         this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
         this.#tearDown();
@@ -409,8 +416,8 @@ export class RelayerWeb implements RelayerSDK {
     publicKey: Uint8Array;
   } | null> {
     const worker = await this.#ensureWorker();
-    if (this.#cache) {
-      return this.#cache.getPublicKey(async () => (await worker.getPublicKey()).result);
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicKey(async () => (await worker.getPublicKey()).result);
     }
     return (await worker.getPublicKey()).result;
   }
@@ -423,8 +430,8 @@ export class RelayerWeb implements RelayerSDK {
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const worker = await this.#ensureWorker();
-    if (this.#cache) {
-      return this.#cache.getPublicParams(
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicParams(
         bits,
         async () => (await worker.getPublicParams(bits)).result,
       );
