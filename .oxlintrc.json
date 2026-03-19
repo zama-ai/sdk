@@ -24,6 +24,9 @@
   "options": {
     "denyWarnings": true
   },
+  "globals": {
+    "vi": "readonly"
+  },
   "env": {
     "builtin": true
   },

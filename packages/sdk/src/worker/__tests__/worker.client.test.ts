@@ -1,4 +1,4 @@
-import { describe, vi, it, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
+import { describe, it, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
 
 // ---------------------------------------------------------------------------
@@ -27,13 +27,14 @@ const { MockNodeWorkerClass, nodeUuidFn } = vi.hoisted(() => {
   const nodeUuidFn = vi.fn();
   return { MockNodeWorkerClass, nodeUuidFn };
 });
-
-vi.mock("node:worker_threads", () => ({
+//@ts-expect-error: no overload matches this call
+vi.mock(import("node:worker_threads"), () => ({
   default: { Worker: MockNodeWorkerClass },
   Worker: MockNodeWorkerClass,
 }));
 
-vi.mock("node:crypto", () => ({
+//@ts-expect-error: no overload matches this call
+vi.mock(import("node:crypto"), () => ({
   default: { randomUUID: (...args: unknown[]) => nodeUuidFn(...args) },
   randomUUID: (...args: unknown[]) => nodeUuidFn(...args),
 }));
