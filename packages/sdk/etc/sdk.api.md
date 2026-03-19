@@ -2925,7 +2925,7 @@ export { Hex }
 
 // @public
 export class IndexedDBStorage implements GenericStorage {
-    constructor(dbName?: string, dbVersion?: number);
+    constructor(dbName?: string, dbVersion?: number, storeName?: string);
     // (undocumented)
     clear(): Promise<void>;
     // (undocumented)
@@ -4106,6 +4106,8 @@ export class RelayerWeb implements RelayerSDK {
 
 // @public
 export interface RelayerWebConfig {
+    fheArtifactCacheTTL?: number;
+    fheArtifactStorage?: GenericStorage;
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
     onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
