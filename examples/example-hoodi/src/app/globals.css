@@ -174,6 +174,9 @@ body {
   color: #94a3b8;
   margin-top: 8px;
 }
+.token-meta-error {
+  color: #991b1b;
+}
 
 /* Select */
 .select {

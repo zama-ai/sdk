@@ -362,9 +362,10 @@ import {
 const cTokenAddress = "0x..."; // ERC-7984 wrapper contract address
 const erc20Address = "0x..."; // Underlying ERC-20 contract address (from your config)
 
-// Fetch decimal precision for each contract — they may differ.
+// useMetadata reads name/symbol/decimals from any contract exposing the ERC-20
+// metadata interface — works on both plain ERC-20s and ERC-7984 wrappers.
 // Use erc20Decimals for shield (amounts are in ERC-20 units).
-// Use cTokenDecimals for transfer and unshield (amounts are in confidential token units).
+// Use cTokenDecimals for transfer and unshield (amounts are in cToken units).
 const { data: cTokenMetadata } = useMetadata(cTokenAddress);
 const { data: erc20Metadata } = useMetadata(erc20Address);
 const cTokenDecimals = cTokenMetadata?.decimals ?? 0;
@@ -569,7 +570,6 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 - **Production use** — replace `RelayerCleartext` with `RelayerWeb` (browser) or `RelayerNode` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
 - **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances in a single relayer call.
 - **Optimistic balance updates** — for `useConfidentialTransfer`, pass `optimistic: true` to immediately update the cached confidential balance while the transaction confirms, then roll back automatically on error. Improves perceived responsiveness in production UIs.
-- **On-chain ACL delegation** — grant another wallet the right to decrypt your confidential balance via `useDelegateDecryption`, revoke it with `useRevokeDelegation`, and let delegates decrypt on your behalf with `useDecryptBalanceAs`. Note: revocation takes effect for the delegate only after the owner's balance changes (shield, transfer, or unshield). Until then, the SDK serves the previously decrypted value from its local IndexedDB cache — keyed by the on-chain encrypted handle — without re-checking the ACL. This is intentional: the handle changes whenever the balance changes, which automatically invalidates the cache entry.
 
 ---
 
@@ -577,8 +577,8 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 | Package                 | Version       | Role                                                                                                                                                                                          |
 | ----------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | 1.2.0-alpha.5 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                              |
-| `@zama-fhe/react-sdk`   | 1.2.0-alpha.5 | React hooks — `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useMetadata`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
+| `@zama-fhe/sdk`         | 2.0.0-alpha.2 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                              |
+| `@zama-fhe/react-sdk`   | 2.0.0-alpha.2 | React hooks — `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useMetadata`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
 | `ethers`                | ^6.13.0       | Ethereum client (via `EthersSigner`)                                                                                                                                                          |
 | `@tanstack/react-query` | ^5.90.0       | Async state management                                                                                                                                                                        |
 | `next`                  | ^16.0.0       | React framework (App Router)                                                                                                                                                                  |

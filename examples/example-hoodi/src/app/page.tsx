@@ -174,10 +174,12 @@ export default function Home() {
       const accounts = (await ethereum.request({
         method: "eth_requestAccounts",
       })) as string[];
-      setAddress(accounts[0] ?? null);
 
-      // Switch to Hoodi — updates chainId based on actual result, never throws.
+      // Switch before setting address: both chainId and address are then known
+      // when the first non-connect-screen render fires, avoiding a brief flash
+      // of the wrong-network screen between the two state updates.
       await handleSwitchToHoodi();
+      setAddress(accounts[0] ?? null);
     } catch (err) {
       console.error("Failed to connect wallet:", err);
       setConnectError(err instanceof Error ? err.message : "Failed to connect wallet");
@@ -186,9 +188,10 @@ export default function Home() {
     }
   }
 
-  // useMetadata fetches name/symbol/decimals for each contract.
-  // erc20Metadata is used for the shield amount and ERC-20 balance display;
-  // cTokenMetadata (ERC-7984) is used for transfer/unshield amounts and confidential balance display.
+  // useMetadata reads name/symbol/decimals from any contract that exposes the standard
+  // ERC-20 metadata interface — it works equally on plain ERC-20s and ERC-7984 wrappers.
+  // erc20Metadata drives shield amounts and ERC-20 balance display.
+  // cTokenMetadata drives transfer/unshield amounts and confidential balance display.
   const cTokenMetadata = useMetadata(token.confidential);
   const erc20Metadata = useMetadata(token.erc20);
 
