@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
+import { describe, vi, it, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
 
 // ---------------------------------------------------------------------------
@@ -28,12 +28,12 @@ const { MockNodeWorkerClass, nodeUuidFn } = vi.hoisted(() => {
   return { MockNodeWorkerClass, nodeUuidFn };
 });
 
-vi.mock(import("node:worker_threads"), () => ({
+vi.mock("node:worker_threads", () => ({
   default: { Worker: MockNodeWorkerClass },
   Worker: MockNodeWorkerClass,
 }));
 
-vi.mock(import("node:crypto"), () => ({
+vi.mock("node:crypto", () => ({
   default: { randomUUID: (...args: unknown[]) => nodeUuidFn(...args) },
   randomUUID: (...args: unknown[]) => nodeUuidFn(...args),
 }));
@@ -128,7 +128,12 @@ function autoResolveWebWorker(worker: MockWorker): void {
     Promise.resolve().then(() => {
       worker.onmessage?.(
         new MessageEvent("message", {
-          data: { id: req.id, type: req.type, success: true, data: { initialized: true } },
+          data: {
+            id: req.id,
+            type: req.type,
+            success: true,
+            data: { initialized: true },
+          },
         }),
       );
     });
@@ -140,7 +145,12 @@ function autoResolveNodeWorker(worker: MockNodeWorker): void {
   worker.postMessage.mockImplementation((req: WorkerRequest) => {
     Promise.resolve().then(() => {
       const handler = worker.listeners["message"]?.[0];
-      handler?.({ id: req.id, type: req.type, success: true, data: { initialized: true } });
+      handler?.({
+        id: req.id,
+        type: req.type,
+        success: true,
+        data: { initialized: true },
+      });
     });
   });
 }
@@ -274,6 +284,7 @@ describe("RelayerWorkerClient", () => {
     expect(req.type).toBe("INIT");
     expect(req.payload).toMatchObject(config);
     expect(req.payload).toHaveProperty("sdkUrl");
+    expect((req.payload as { sdkUrl: string }).sdkUrl).toContain("relayer-sdk-js.umd.cjs");
 
     client.terminate();
   });
@@ -365,7 +376,12 @@ describe("RelayerWorkerClient", () => {
       Promise.resolve().then(() => {
         worker.onmessage?.(
           new MessageEvent("message", {
-            data: { id: req.id, type: req.type, success: true, data: { updated: true } },
+            data: {
+              id: req.id,
+              type: req.type,
+              success: true,
+              data: { updated: true },
+            },
           }),
         );
       });

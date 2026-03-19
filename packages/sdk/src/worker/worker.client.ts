@@ -25,8 +25,8 @@ export interface WorkerClientConfig {
  * Client for communicating with the RelayerSDK Web Worker.
  * Provides a promise-based API for FHE operations.
  *
- * The worker file (UMD + IIFE, ~800 KB) is loaded on demand from a URL
- * co-located with this module, keeping the main bundle small.
+ * The worker IIFE and relayer-sdk UMD bundle are loaded on demand from
+ * co-located files, keeping the main bundle small.
  */
 export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientConfig> {
   constructor(config: WorkerClientConfig) {
@@ -68,11 +68,17 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     type: WorkerRequestType;
     payload: WorkerRequest["payload"];
   } {
-    // Resolve the relayer-sdk UMD URL relative to this module so the
-    // worker can `importScripts` it. The file is co-located with the
-    // worker file in the build output.
-    const sdkUrl = new URL(RELAYER_SDK_UMD_FILENAME, import.meta.url).href;
-    return { type: "INIT", payload: { ...this.config, sdkUrl } };
+    // Resolve the relayer-sdk UMD URL: use extension runtime API when
+    // available, otherwise resolve relative to this module.
+    const runtime = getBrowserExtensionRuntime();
+    const sdkUrl = runtime
+      ? runtime.getURL(RELAYER_SDK_UMD_FILENAME)
+      : new URL(RELAYER_SDK_UMD_FILENAME, import.meta.url).href;
+
+    // Only spread serializable fields — `logger` contains functions
+    // which cannot be cloned by `postMessage`.
+    const { fhevmConfig, csrfToken, thread } = this.config;
+    return { type: "INIT", payload: { sdkUrl, fhevmConfig, csrfToken, thread } };
   }
 
   /**

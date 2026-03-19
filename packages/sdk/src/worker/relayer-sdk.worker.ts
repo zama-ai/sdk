@@ -157,10 +157,16 @@ async function handleInit(request: InitRequest): Promise<void> {
 
     // Load the relayer-sdk UMD bundle from the co-located asset.
     // This sets `self.relayerSDK` on the worker global scope.
-    self.importScripts(sdkUrl);
+    try {
+      self.importScripts(sdkUrl);
+    } catch (importError) {
+      throw new Error(`Failed to load relayer-sdk UMD bundle via importScripts("${sdkUrl}")`, {
+        cause: importError,
+      });
+    }
 
     if (!self.relayerSDK) {
-      throw new Error("relayerSDK not available after importScripts");
+      throw new Error(`relayerSDK not defined after loading "${sdkUrl}"`);
     }
 
     sdkGlobal = self.relayerSDK;
@@ -628,8 +634,15 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       case "GET_PUBLIC_PARAMS":
         handleGetPublicParams(request);
         break;
-      default:
-        console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);
+      default: {
+        const unknownType = (request as WorkerRequest).type;
+        console.error("[Worker] Unknown request type:", unknownType);
+        sendError(
+          request?.id ?? "unknown",
+          unknownType ?? ("UNKNOWN" as WorkerRequest["type"]),
+          `Unknown worker request type: ${unknownType}`,
+        );
+      }
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
