@@ -20,7 +20,7 @@ Next.js app demonstrating the four core ERC-7984 operations on the **Hoodi** tes
 | Confidential transfer        | `useConfidentialTransfer`    |
 | Unshield (cToken → ERC-20)   | `useUnshield`                |
 
-> **Shield** uses `token.shield()` directly (via `sdk.createToken()`) rather than the `useShield` hook, with a manual approval step that waits for the on-chain confirmation before proceeding. This ensures compatibility with USDT-style tokens that revert when updating a non-zero allowance without first resetting it to zero.
+> **Shield** uses `token.shield()` directly (via `sdk.createToken()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
 
 > **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
 

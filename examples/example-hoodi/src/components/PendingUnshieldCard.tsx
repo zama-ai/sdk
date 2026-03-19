@@ -27,6 +27,7 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
   }, [storage, tokenAddress]);
 
   const resume = useResumeUnshield(
+    // For ERC-7984 tokens, the wrapper contract and the cToken share the same address.
     { tokenAddress, wrapperAddress: tokenAddress },
     {
       onSuccess: () => {

@@ -28,12 +28,16 @@ export function UnshieldCard({
   const { storage } = useZamaSDK();
 
   const unshield = useUnshield(
+    // For ERC-7984 tokens, the wrapper contract and the cToken share the same address.
     { tokenAddress, wrapperAddress: tokenAddress },
     {
       onSuccess: () => {
         clearPendingUnshield(storage, tokenAddress);
         onSuccess?.();
       },
+      // Clear the active token ref on failure so a stale address is never used by the
+      // onEvent handler in ZamaProvider if a subsequent UnshieldPhase1Submitted fires.
+      onError: () => setActiveUnshieldToken(null),
     },
   );
 

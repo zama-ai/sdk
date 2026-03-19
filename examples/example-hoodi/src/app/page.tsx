@@ -244,10 +244,14 @@ export default function Home() {
     mint.reset();
   }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Guard on metadata too: if balance resolves before metadata, decimals defaults to 0
+  // and symbol to "" — the raw integer would be displayed without unit or decimal conversion.
   const formattedErc20 =
-    erc20Balance !== undefined ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}` : "—";
+    erc20Balance !== undefined && erc20Metadata.data
+      ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}`
+      : "—";
   const formattedConfidential =
-    balance.data !== undefined
+    balance.data !== undefined && cTokenMetadata.data
       ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
       : "—";
 

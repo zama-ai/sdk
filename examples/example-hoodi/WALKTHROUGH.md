@@ -35,7 +35,7 @@ Specifically:
 | Operation                    | SDK API                      | Source file                       | Transactions          |
 | ---------------------------- | ---------------------------- | --------------------------------- | --------------------- |
 | Decrypt confidential balance | `useConfidentialBalance`     | `src/app/page.tsx`                | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()` | `src/components/ShieldCard.tsx`   | 2 (approve + wrap)    |
+| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()` | `src/components/ShieldCard.tsx`   | 1–3 (wrap, ± approve) |
 | Confidential transfer        | `useConfidentialTransfer`    | `src/components/TransferCard.tsx` | 1                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`                | `src/components/UnshieldCard.tsx` | 2 (unwrap + finalize) |
 
@@ -224,13 +224,18 @@ On **first use** (or after clearing browser data), your wallet will request a on
 
 Enter a human-readable amount (e.g., `1.5`) and click **Shield**. This converts public ERC-20 tokens into confidential cTokens.
 
-Under the hood, the app sequences up to three transactions:
+The app manages ERC-20 allowances automatically. The spend cap is set to your **full ERC-20 balance** (not the exact shield amount), so once approved, subsequent shields within the remaining cap need only the wrap transaction — no re-approval. The number of wallet confirmations depends on the current allowance:
 
-1. ERC-20 `approve(0)` _(only if a non-zero allowance already exists)_ — resets the allowance to zero first. Required for USDT-style tokens that revert when updating a non-zero allowance directly. The app waits for the on-chain confirmation before proceeding.
-2. ERC-20 `approve(amount)` — authorises the wrapper contract to spend your tokens. The button shows **Shielding… (1/2 approve)** during both approval steps.
-3. `wrap` — locks the ERC-20 in the wrapper and mints the equivalent cToken amount. The button shows **Shielding… (2/2 wrap)** once the approval is confirmed on-chain.
+| Situation                                          | Transactions                                       | Confirmations |
+| -------------------------------------------------- | -------------------------------------------------- | ------------- |
+| Allowance already covers the amount                | `wrap` only                                        | 1             |
+| No existing allowance (or zero)                    | `approve(fullBalance)` → `wrap`                    | 2             |
+| Non-zero allowance insufficient — standard token   | `approve(fullBalance)` → `wrap` (direct overwrite) | 2             |
+| Non-zero allowance insufficient — USDT-style token | `approve(0)` → `approve(fullBalance)` → `wrap`     | 3 _(rare)_    |
 
-Each step requires a wallet confirmation. Gas fees on Hoodi are effectively zero. The ERC-20 balance refreshes automatically on success.
+When re-approving (non-zero insufficient allowance), the app optimistically tries `approve(fullBalance)` directly. `writeContract` goes through the signer, so `eth_estimateGas` is called with `from = userAddress` — correctly simulating the allowance check. For standard ERC-20 tokens, gas estimation succeeds and the wallet is prompted once. For USDT-style tokens (which revert when `approve(nonZero)` is called with a non-zero existing allowance), gas estimation fails **before the wallet is prompted** — the app silently falls back to the reset path. User rejections are re-thrown immediately and never misidentified as USDT-style.
+
+The button shows **Shielding… (1/2 approve)** during approval and **Shielding… (2/2 wrap)** once the approval is confirmed. Gas fees on Hoodi are effectively zero. The ERC-20 balance refreshes automatically on success.
 
 ### Step 6 — Confidential transfer
 
@@ -256,7 +261,7 @@ Both phases complete within seconds on Hoodi. The ERC-20 balance refreshes autom
 
 ### Step 8 — Verify updated balances
 
-After each operation, balances refresh automatically. The ERC-20 balance is re-fetched after shield and unshield. The confidential balance re-decrypts once the underlying handle changes on-chain.
+After each operation, balances refresh automatically. All three operations (shield, transfer, unshield) invalidate the same set of queries: the ERC-20 balance, the ETH balance, and the confidential handle. The ERC-20 balance changes after shield and unshield (when tokens cross the public/confidential boundary). The confidential balance re-decrypts after all three — shield, transfer, and unshield each modify the encrypted handle on-chain.
 
 ---
 
@@ -303,7 +308,7 @@ const sessionDBStorage = new IndexedDBStorage("SessionStore");
 ### Hook usage
 
 ```tsx
-import { parseUnits } from "ethers";
+import { parseUnits, isError } from "ethers";
 import {
   useZamaSDK,
   useConfidentialTransfer,
@@ -312,6 +317,7 @@ import {
   useMetadata,
   allowanceContract,
   approveContract,
+  balanceOfContract,
 } from "@zama-fhe/react-sdk";
 
 // For ERC-7984 tokens: tokenAddress === wrapperAddress (same contract).
@@ -332,27 +338,62 @@ const unshield = useUnshield({ tokenAddress: cTokenAddress, wrapperAddress: cTok
 const balance = useConfidentialBalance({ tokenAddress: cTokenAddress });
 
 // Shield: manual approval + wrap.
-// Manages approval explicitly to handle USDT-style tokens (revert on non-zero → non-zero).
-// Amount is in ERC-20 units — use erc20Decimals to parse human-readable input.
+// Spend cap strategy: approve for the user's full ERC-20 balance (not the exact shield amount).
+// This avoids re-approval on every shield — subsequent shields within the remaining cap
+// need only the wrap transaction. Re-approval is only triggered when the cap is exceeded.
+//
+// USDT-style detection (non-zero insufficient allowance): writeContract uses the signer,
+// so eth_estimateGas runs with from=userAddress. For USDT-style tokens, gas estimation
+// reverts before the wallet is prompted. We catch this and fall back to reset(0) + approve.
+// User rejections (ACTION_REJECTED) are re-thrown immediately.
+//
+// The shield logic runs inside an async function (e.g., a TanStack Query mutationFn):
 const sdk = useZamaSDK();
 const shieldAmount = parseUnits("10", erc20Decimals);
 const token = sdk.createToken(cTokenAddress);
 const userAddress = await sdk.signer.getAddress();
-const allowance = await sdk.signer.readContract(
+
+const currentAllowance = (await sdk.signer.readContract(
   allowanceContract(erc20Address, userAddress, cTokenAddress),
-);
-if (allowance < shieldAmount) {
-  if (allowance > 0n) {
-    const resetHash = await sdk.signer.writeContract(
-      approveContract(erc20Address, cTokenAddress, 0n),
+)) as bigint;
+
+if (currentAllowance < shieldAmount) {
+  const erc20Balance = (await sdk.signer.readContract(
+    balanceOfContract(erc20Address, userAddress),
+  )) as bigint;
+
+  if (currentAllowance > 0n) {
+    // Try direct overwrite — works for standard ERC-20s (2 txs total: approve + wrap).
+    // USDT-style: gas estimation fails pre-wallet → fall back to reset + approve (3 txs).
+    let needsReset = false;
+    try {
+      const approveHash = await sdk.signer.writeContract(
+        approveContract(erc20Address, cTokenAddress, erc20Balance),
+      );
+      await sdk.signer.waitForTransactionReceipt(approveHash);
+    } catch (err) {
+      if (isError(err, "ACTION_REJECTED")) throw err; // user rejected — stop here
+      needsReset = true; // gas estimation reverted → USDT-style token
+    }
+    if (needsReset) {
+      const resetHash = await sdk.signer.writeContract(
+        approveContract(erc20Address, cTokenAddress, 0n),
+      );
+      await sdk.signer.waitForTransactionReceipt(resetHash);
+      const approveHash = await sdk.signer.writeContract(
+        approveContract(erc20Address, cTokenAddress, erc20Balance),
+      );
+      await sdk.signer.waitForTransactionReceipt(approveHash);
+    }
+  } else {
+    // Zero allowance: direct approve — no reset needed for any token.
+    const approveHash = await sdk.signer.writeContract(
+      approveContract(erc20Address, cTokenAddress, erc20Balance),
     );
-    await sdk.signer.waitForTransactionReceipt(resetHash);
+    await sdk.signer.waitForTransactionReceipt(approveHash);
   }
-  const approveHash = await sdk.signer.writeContract(
-    approveContract(erc20Address, cTokenAddress, shieldAmount),
-  );
-  await sdk.signer.waitForTransactionReceipt(approveHash);
 }
+// approvalStrategy: 'skip' — allowance is confirmed above (or was already sufficient).
 await token.shield(shieldAmount, { approvalStrategy: "skip" });
 
 // Transfer: FHE encryption (local) + 1 transaction.
