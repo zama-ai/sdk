@@ -21,9 +21,27 @@ export interface WorkerClientConfig {
   resolveAssetUrl?: (filename: string) => URL | string;
 }
 
-/** Default asset resolver — works with Vite, webpack 5, Next.js. */
+/**
+ * Default asset resolver — works with Vite, webpack 5, Next.js, Turbopack.
+ *
+ * Bundlers require the first argument of `new URL(..., import.meta.url)` to be
+ * a **string literal** so they can statically resolve the asset at build time.
+ * A dynamic variable (e.g. `new URL(filename, ...)`) triggers "Can't resolve
+ * <dynamic>" errors. We therefore map each known filename to its own static
+ * `new URL()` expression.
+ */
 function defaultResolveAssetUrl(filename: string): URL {
-  return new URL(filename, import.meta.url);
+  switch (filename) {
+    case RELAYER_SDK_UMD_FILENAME:
+      return new URL("./relayer-sdk-js.umd.cjs", import.meta.url);
+    case RELAYER_SDK_WORKER_FILENAME:
+      return new URL("./relayer-sdk.worker.js", import.meta.url);
+    default:
+      throw new Error(
+        `defaultResolveAssetUrl: unknown asset "${filename}". ` +
+          `Provide a custom resolveAssetUrl in your config.`,
+      );
+  }
 }
 
 /** Normalize a URL | string to a string href. */
