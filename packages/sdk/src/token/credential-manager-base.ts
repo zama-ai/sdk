@@ -1,4 +1,4 @@
-import { type Address, type Hex } from "viem";
+import type { Address, Hex } from "viem";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import { CredentialCrypto } from "./credential-crypto";
@@ -83,8 +83,8 @@ export abstract class BaseCredentialsManager<
   protected readonly storage: GenericStorage;
   protected readonly sessionSignatures: SessionSignatures;
   protected readonly crypto: CredentialCrypto;
-  protected readonly keypairTTL: number;
-  protected readonly sessionTTL: number | "infinite";
+  readonly keypairTTL: number;
+  readonly sessionTTL: number | "infinite";
 
   #onEvent: ZamaSDKEventListener;
   #createPromise: Promise<TCreds> | null = null;
@@ -142,7 +142,10 @@ export abstract class BaseCredentialsManager<
     createKey,
     createFn,
   }: ResolveCredentialsOptions<TCreds>): Promise<TCreds> {
-    this.emit({ type: ZamaSDKEvents.CredentialsLoading, contractAddresses: contracts });
+    this.emit({
+      type: ZamaSDKEvents.CredentialsLoading,
+      contractAddresses: contracts,
+    });
 
     try {
       const encrypted = await this.storage.get<TEncrypted>(key);
@@ -157,8 +160,14 @@ export abstract class BaseCredentialsManager<
           } else {
             const creds = await this.decryptCredentials(encrypted, sessionEntry.signature);
             if (isCredentialValid(creds, contracts)) {
-              this.emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses: contracts });
-              this.emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: contracts });
+              this.emit({
+                type: ZamaSDKEvents.CredentialsCached,
+                contractAddresses: contracts,
+              });
+              this.emit({
+                type: ZamaSDKEvents.CredentialsAllowed,
+                contractAddresses: contracts,
+              });
               return creds;
             }
             if (isTimeValid(creds)) {
@@ -168,7 +177,10 @@ export abstract class BaseCredentialsManager<
                 requiredContracts: contracts,
               });
             }
-            this.emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses: contracts });
+            this.emit({
+              type: ZamaSDKEvents.CredentialsExpired,
+              contractAddresses: contracts,
+            });
           }
         }
 
@@ -176,10 +188,20 @@ export abstract class BaseCredentialsManager<
         if (isTimeValid(encrypted)) {
           if (coversContracts(encrypted.contractAddresses, contracts)) {
             const signature = await this.signForContracts(encrypted, encrypted.contractAddresses);
-            await this.sessionSignatures.set({ key, signature, ttl: this.sessionTTL });
+            await this.sessionSignatures.set({
+              key,
+              signature,
+              ttl: this.sessionTTL,
+            });
             const creds = await this.decryptCredentials(encrypted, signature);
-            this.emit({ type: ZamaSDKEvents.CredentialsCached, contractAddresses: contracts });
-            this.emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: contracts });
+            this.emit({
+              type: ZamaSDKEvents.CredentialsCached,
+              contractAddresses: contracts,
+            });
+            this.emit({
+              type: ZamaSDKEvents.CredentialsAllowed,
+              contractAddresses: contracts,
+            });
             return creds;
           }
           // Time-valid but missing contracts — sign with old set to decrypt, then extend
@@ -192,7 +214,10 @@ export abstract class BaseCredentialsManager<
           });
         }
 
-        this.emit({ type: ZamaSDKEvents.CredentialsExpired, contractAddresses: contracts });
+        this.emit({
+          type: ZamaSDKEvents.CredentialsExpired,
+          contractAddresses: contracts,
+        });
       }
     } catch (error) {
       if (error instanceof SigningRejectedError || error instanceof SigningFailedError) {
@@ -207,7 +232,10 @@ export abstract class BaseCredentialsManager<
       this.#createPromiseKey = createKey;
       this.#createPromise = createFn()
         .then((creds) => {
-          this.emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: contracts });
+          this.emit({
+            type: ZamaSDKEvents.CredentialsAllowed,
+            contractAddresses: contracts,
+          });
           return creds;
         })
         .finally(() => {
@@ -227,7 +255,9 @@ export abstract class BaseCredentialsManager<
   protected async checkExpired(key: string, contractAddress?: Address): Promise<boolean> {
     try {
       const stored = await this.storage.get<TEncrypted>(key);
-      if (!stored) return false;
+      if (!stored) {
+        return false;
+      }
       this.assertEncrypted(stored);
       const requiredContracts = contractAddress ? [contractAddress] : [];
       return !isCredentialValid(stored, requiredContracts);
@@ -249,7 +279,9 @@ export abstract class BaseCredentialsManager<
 
   protected async checkAllowed(key: string): Promise<boolean> {
     const entry = await this.sessionSignatures.get(key);
-    if (entry === null) return false;
+    if (entry === null) {
+      return false;
+    }
     return !this.sessionSignatures.isExpired(entry);
   }
 
@@ -306,18 +338,27 @@ export abstract class BaseCredentialsManager<
     if (this.#extendPromise) {
       const previous = await this.#extendPromise;
       if (coversContracts(previous.contractAddresses, requiredContracts)) {
-        this.emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: requiredContracts });
+        this.emit({
+          type: ZamaSDKEvents.CredentialsAllowed,
+          contractAddresses: requiredContracts,
+        });
         return previous;
       }
       credentials = previous;
     }
 
-    const promise = this.#extendCredentials({ key, credentials, requiredContracts });
+    const promise = this.#extendCredentials({
+      key,
+      credentials,
+      requiredContracts,
+    });
     this.#extendPromise = promise;
     try {
       return await promise;
     } finally {
-      if (this.#extendPromise === promise) this.#extendPromise = null;
+      if (this.#extendPromise === promise) {
+        this.#extendPromise = null;
+      }
     }
   }
 
@@ -333,7 +374,11 @@ export abstract class BaseCredentialsManager<
     const merged = normalizeAddresses([...credentials.contractAddresses, ...requiredContracts]);
     const signature = await this.signForContracts(credentials, merged);
 
-    const extended: TCreds = { ...credentials, contractAddresses: merged, signature };
+    const extended: TCreds = {
+      ...credentials,
+      contractAddresses: merged,
+      signature,
+    };
     // Persist ciphertext before session signature to prevent a window where a
     // concurrent reader sees the new signature but finds old ciphertext.
     await this.persistCredentials(key, extended);
@@ -342,7 +387,10 @@ export abstract class BaseCredentialsManager<
       signature,
       ttl: this.sessionTTL,
     });
-    this.emit({ type: ZamaSDKEvents.CredentialsAllowed, contractAddresses: requiredContracts });
+    this.emit({
+      type: ZamaSDKEvents.CredentialsAllowed,
+      contractAddresses: requiredContracts,
+    });
     return extended;
   }
 

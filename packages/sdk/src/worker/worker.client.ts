@@ -7,6 +7,8 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
+import { getBrowserExtensionRuntime } from "../utils";
+import { default as workerCode, filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
 
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
@@ -31,7 +33,16 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
   }
 
   protected createWorker(): Worker {
-    return new Worker(new URL("./relayer-sdk.worker.js", import.meta.url));
+    const runtime = getBrowserExtensionRuntime();
+    if (runtime) {
+      return new Worker(runtime.getURL(workerFilename));
+    }
+    const blobUrl = URL.createObjectURL(new Blob([workerCode], { type: "application/javascript" }));
+    try {
+      return new Worker(blobUrl);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
   }
 
   protected wireEvents(worker: Worker): void {
@@ -65,6 +76,8 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
    * Call this before making authenticated requests to ensure the token is fresh.
    */
   async updateCsrf(csrfToken: string): Promise<void> {
-    await this.sendRequest<UpdateCsrfResponseData>("UPDATE_CSRF", { csrfToken });
+    await this.sendRequest<UpdateCsrfResponseData>("UPDATE_CSRF", {
+      csrfToken,
+    });
   }
 }

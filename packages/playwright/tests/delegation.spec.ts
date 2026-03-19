@@ -1,7 +1,7 @@
 import { test, expect } from "../fixtures";
 import { privateKeyToAccount } from "viem/accounts";
 import { createWalletClient, http } from "viem";
-import { hardhat } from "viem/chains";
+import { foundry } from "viem/chains";
 
 const ACCOUNT_1_PK = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
 const ACCOUNT_1 = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
@@ -86,12 +86,12 @@ const wrapAbi = [
   },
 ] as const;
 
-function createAccount1Client() {
+function createAccount1Client(port: number) {
   const account1 = privateKeyToAccount(ACCOUNT_1_PK);
   const client = createWalletClient({
     account: account1,
-    chain: hardhat,
-    transport: http(),
+    chain: foundry,
+    transport: http(`http://127.0.0.1:${port}`),
   });
   return { account1, client };
 }
@@ -149,11 +149,12 @@ test("should decrypt zero balance as delegate", async ({
   viemClient,
   contracts,
   confidentialBalances,
+  anvilPort,
 }) => {
   expect(confidentialBalances.cUSDT).toBeGreaterThan(0n);
 
   // Account #1 (no shielded balance) delegates to Account #0.
-  const { client: account1Client, account1 } = createAccount1Client();
+  const { client: account1Client, account1 } = createAccount1Client(anvilPort);
   const hash = await account1Client.writeContract({
     address: contracts.acl,
     abi: aclDelegateAbi,
@@ -174,8 +175,9 @@ test("should decrypt non-zero balance via full delegation round-trip", async ({
   viemClient,
   contracts,
   computeFee,
+  anvilPort,
 }) => {
-  const { client: account1Client, account1 } = createAccount1Client();
+  const { client: account1Client, account1 } = createAccount1Client(anvilPort);
   const shieldAmount = 500_000_000n; // 500 USDT (6 decimals)
 
   // 1. Mint USDT to Account #1
@@ -227,10 +229,11 @@ test("should revoke delegation and reset on-chain expiry to zero", async ({
   viemClient,
   contracts,
   confidentialBalances,
+  anvilPort,
 }) => {
   expect(confidentialBalances.cUSDT).toBeGreaterThan(0n);
 
-  const { client: account1Client, account1 } = createAccount1Client();
+  const { client: account1Client, account1 } = createAccount1Client(anvilPort);
 
   // 1. Account #1 delegates decryption to Account #0
   const delegateHash = await account1Client.writeContract({
@@ -274,10 +277,11 @@ test("should delegate with custom expiration and store correct on-chain expiry",
   viemClient,
   contracts,
   confidentialBalances,
+  anvilPort,
 }) => {
   expect(confidentialBalances.cUSDT).toBeGreaterThan(0n);
 
-  const { client: account1Client, account1 } = createAccount1Client();
+  const { client: account1Client, account1 } = createAccount1Client(anvilPort);
 
   // ACL requires expirationDate >= block.timestamp + 1 hour; use +2h for safety.
   const latestBlock = await viemClient.getBlock();
@@ -306,10 +310,11 @@ test("should overwrite delegation with a different expiry", async ({
   viemClient,
   contracts,
   confidentialBalances,
+  anvilPort,
 }) => {
   expect(confidentialBalances.cUSDT).toBeGreaterThan(0n);
 
-  const { client: account1Client, account1 } = createAccount1Client();
+  const { client: account1Client, account1 } = createAccount1Client(anvilPort);
 
   // 1. Delegate with max expiry
   const hash1 = await account1Client.writeContract({
@@ -347,10 +352,11 @@ test("should reject delegation with expiry less than one hour", async ({
   viemClient,
   contracts,
   confidentialBalances,
+  anvilPort,
 }) => {
   expect(confidentialBalances.cUSDT).toBeGreaterThan(0n);
 
-  const { client: account1Client } = createAccount1Client();
+  const { client: account1Client } = createAccount1Client(anvilPort);
 
   // ACL enforces expirationDate >= block.timestamp + 1 hour
   const latestBlock = await viemClient.getBlock();
@@ -370,10 +376,11 @@ test("should reject revocation when no delegation exists", async ({
   account,
   contracts,
   confidentialBalances,
+  anvilPort,
 }) => {
   expect(confidentialBalances.cUSDT).toBeGreaterThan(0n);
 
-  const { client: account1Client } = createAccount1Client();
+  const { client: account1Client } = createAccount1Client(anvilPort);
 
   // Account #1 never delegated, so revocation should revert with NotDelegatedYet
   await expect(
@@ -392,8 +399,9 @@ test("should fail to decrypt as delegate after revocation", async ({
   viemClient,
   contracts,
   computeFee,
+  anvilPort,
 }) => {
-  const { client: account1Client, account1 } = createAccount1Client();
+  const { client: account1Client, account1 } = createAccount1Client(anvilPort);
   const shieldAmount = 500_000_000n;
 
   // 1. Fund Account #1 with shielded tokens
@@ -430,8 +438,13 @@ test("should fail to decrypt as delegate after revocation", async ({
   await expect(page.getByTestId("decrypt-delegate-error")).toBeVisible();
 });
 
-test("should fail to decrypt without delegation", async ({ page, viemClient, contracts }) => {
-  const { client: account1Client, account1 } = createAccount1Client();
+test("should fail to decrypt without delegation", async ({
+  page,
+  viemClient,
+  contracts,
+  anvilPort,
+}) => {
+  const { client: account1Client, account1 } = createAccount1Client(anvilPort);
   const shieldAmount = 500_000_000n;
 
   // Fund Account #1 so it has a non-zero balance handle
@@ -449,8 +462,9 @@ test("should fail to decrypt after delegation expires via time advance", async (
   account,
   viemClient,
   contracts,
+  anvilPort,
 }) => {
-  const { client: account1Client, account1 } = createAccount1Client();
+  const { client: account1Client, account1 } = createAccount1Client(anvilPort);
   const shieldAmount = 500_000_000n;
 
   // 1. Fund Account #1

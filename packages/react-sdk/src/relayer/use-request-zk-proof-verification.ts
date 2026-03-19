@@ -2,6 +2,7 @@
 
 import type { InputProofBytesType, ZKProofLike } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
+import { requestZKProofVerificationMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
@@ -19,7 +20,7 @@ import { useZamaSDK } from "../provider";
  */
 export function useRequestZKProofVerification() {
   const sdk = useZamaSDK();
-  return useMutation<InputProofBytesType, Error, ZKProofLike>({
-    mutationFn: (zkProof) => sdk.relayer.requestZKProofVerification(zkProof),
-  });
+  return useMutation<InputProofBytesType, Error, ZKProofLike>(
+    requestZKProofVerificationMutationOptions(sdk),
+  );
 }

@@ -2,6 +2,7 @@
 
 import type { DelegatedUserDecryptParams, ClearValueType, Handle } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
+import { delegatedUserDecryptMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
@@ -19,7 +20,7 @@ import { useZamaSDK } from "../provider";
  */
 export function useDelegatedUserDecrypt() {
   const sdk = useZamaSDK();
-  return useMutation<Record<Handle, ClearValueType>, Error, DelegatedUserDecryptParams>({
-    mutationFn: (params) => sdk.relayer.delegatedUserDecrypt(params),
-  });
+  return useMutation<Record<Handle, ClearValueType>, Error, DelegatedUserDecryptParams>(
+    delegatedUserDecryptMutationOptions(sdk),
+  );
 }

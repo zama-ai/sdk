@@ -95,7 +95,7 @@ export class RelayerWeb implements RelayerSDK {
       throw new Error(`Invalid thread count: ${threads}. Must be a positive integer.`);
     }
 
-    if (threads !== undefined && typeof globalThis.SharedArrayBuffer === "undefined") {
+    if (threads !== undefined && globalThis.SharedArrayBuffer === undefined) {
       this.#config.logger?.warn(
         "threads option requires SharedArrayBuffer (COOP/COEP headers). Falling back to single-threaded.",
       );
@@ -119,7 +119,9 @@ export class RelayerWeb implements RelayerSDK {
    * Resets on failure to allow retries.
    */
   async #ensureWorker(): Promise<RelayerWorkerClient> {
-    if (this.#ensureLock) return this.#ensureLock;
+    if (this.#ensureLock) {
+      return this.#ensureLock;
+    }
     this.#ensureLock = this.#ensureWorkerInner();
     try {
       return await this.#ensureLock;
@@ -233,7 +235,7 @@ export class RelayerWeb implements RelayerSDK {
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<EIP712TypedData> {
     const worker = await this.#ensureWorker();
     const result = await worker.createEIP712({
@@ -268,7 +270,7 @@ export class RelayerWeb implements RelayerSDK {
 
   /**
    * Encrypt values for use in smart contract calls.
-   * Each value must specify its FHE type (ebool, euint4–256, eaddress).
+   * Each value must specify its FHE type (ebool, euint8–256, eaddress).
    */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const { values, contractAddress, userAddress } = params;
@@ -319,7 +321,7 @@ export class RelayerWeb implements RelayerSDK {
     contractAddresses: Address[],
     delegatorAddress: Address,
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const worker = await this.#ensureWorker();
     return worker.createDelegatedUserDecryptEIP712({

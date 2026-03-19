@@ -1,4 +1,5 @@
-import { PrivateKeyAccount, privateKeyToAccount } from "viem/accounts";
+import type { PrivateKeyAccount } from "viem/accounts";
+import { privateKeyToAccount } from "viem/accounts";
 import {
   concat,
   createPublicClient,
@@ -92,8 +93,12 @@ const EADDRESS_ID: FheTypeId = 7;
 
 function decodeClearValueType(handle: Handle, rawValue: bigint): ClearValueType {
   const typeByte = Number((BigInt(handle) >> 8n) & 0xffn);
-  if (typeByte === EBOOL_ID) return rawValue !== 0n;
-  if (typeByte === EADDRESS_ID) return toHex(rawValue, { size: 20 });
+  if (typeByte === EBOOL_ID) {
+    return rawValue !== 0n;
+  }
+  if (typeByte === EADDRESS_ID) {
+    return toHex(rawValue, { size: 20 });
+  }
   return rawValue;
 }
 
@@ -102,7 +107,7 @@ function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
   value: bigint;
 } {
   if (!isFheTypeName(entry.type)) {
-    throw new EncryptionFailedError(`Unsupported FHE type: ${entry.type}`);
+    throw new EncryptionFailedError("Unsupported FHE type");
   }
 
   const fheType = fheTypeIdFromName(entry.type);
@@ -174,7 +179,7 @@ export class RelayerCleartext implements RelayerSDK {
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<EIP712TypedData> {
     return {
       domain: USER_DECRYPT_EIP712.domain(
@@ -316,7 +321,7 @@ export class RelayerCleartext implements RelayerSDK {
     contractAddresses: Address[],
     delegatorAddress: Address,
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const message: KmsDelegatedUserDecryptEIP712Type["message"] = {
       publicKey: publicKey as KmsDelegatedUserDecryptEIP712Type["message"]["publicKey"],

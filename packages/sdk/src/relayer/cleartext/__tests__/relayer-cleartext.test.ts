@@ -11,7 +11,7 @@ import {
 } from "viem";
 import type { EIP1193Provider } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { describe, expect, it } from "vitest";
+
 import { RelayerCleartext } from "../relayer-cleartext";
 import type { Handle } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
@@ -28,7 +28,7 @@ const ACL_ABI = parseAbi([
 
 const EXECUTOR_ABI = parseAbi(["function plaintexts(bytes32 handle) view returns (uint256)"]);
 
-type MockClientOptions = {
+interface MockClientOptions {
   persistAllowed?: (handle: string, account: string) => boolean;
   isAllowedForDecryption?: (handle: string) => boolean;
   isHandleDelegatedForUserDecryption?: (
@@ -38,8 +38,11 @@ type MockClientOptions = {
     handle: string,
   ) => boolean;
   plaintexts?: Record<string, bigint>;
-};
-type MockCall = { method: string; params: unknown[] };
+}
+interface MockCall {
+  method: string;
+  params: unknown[];
+}
 type UserDecryptParams = Parameters<RelayerCleartext["userDecrypt"]>[0];
 const asHandle = (value: string): Handle => value as Handle;
 
@@ -48,7 +51,7 @@ function createMockProvider(options: MockClientOptions = {}) {
 
   const provider: EIP1193Provider = {
     async request({ method, params }: { method: string; params?: unknown[] }) {
-      const paramList = (params ?? []) as unknown[];
+      const paramList = params ?? [];
       calls.push({ method, params: paramList });
 
       if (method === "eth_call") {
@@ -161,13 +164,15 @@ function createUserDecryptParams(
 function filterEthCallsTo(calls: MockCall[], to: string): MockCall[] {
   const target = getAddress(to);
   return calls.filter((call) => {
-    if (call.method !== "eth_call") return false;
+    if (call.method !== "eth_call") {
+      return false;
+    }
     const tx = call.params[0] as { to?: string };
     return tx.to !== undefined && getAddress(tx.to) === target;
   });
 }
 
-describe("RelayerCleartext", () => {
+describe(RelayerCleartext, () => {
   it("constructor uses kms/input private keys from config", () => {
     const customInputKey =
       "0x0000000000000000000000000000000000000000000000000000000000000001" as const;
@@ -260,7 +265,7 @@ describe("RelayerCleartext", () => {
       chainId: hardhatCleartextConfig.chainId,
       verifyingContract: hardhatCleartextConfig.verifyingContractAddressDecryption,
     });
-    expect(typedData.types.UserDecryptRequestVerification!.map((field) => field.name)).toEqual([
+    expect(typedData.types.UserDecryptRequestVerification.map((field) => field.name)).toEqual([
       "publicKey",
       "contractAddresses",
       "startTimestamp",
@@ -343,8 +348,8 @@ describe("RelayerCleartext", () => {
     expect(proof.length).toBe(195); // 2 + 2*32 + 65 + 2*32
 
     // Handles in proof match returned handles
-    expect(toHex(proof.slice(2, 34))).toBe(toHex(encrypted.handles[0]!));
-    expect(toHex(proof.slice(34, 66))).toBe(toHex(encrypted.handles[1]!));
+    expect(toHex(proof.slice(2, 34))).toBe(toHex(encrypted.handles[0]));
+    expect(toHex(proof.slice(34, 66))).toBe(toHex(encrypted.handles[1]));
 
     // Cleartext values at end
     const clear0 = hexToBigInt(toHex(proof.slice(131, 163)));
@@ -452,7 +457,7 @@ describe("RelayerCleartext", () => {
   it("userDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
     const handleA = asHandle("0x" + "aa".repeat(32));
     const handleB = asHandle("0x" + "bb".repeat(32));
-    const normalizedB = toHex(hexToBigInt(handleB as `0x${string}`), { size: 32 });
+    const normalizedB = toHex(hexToBigInt(handleB), { size: 32 });
 
     const { fhevm, calls } = createInstance({
       persistAllowed: (handle) => handle.toLowerCase() !== normalizedB.toLowerCase(),
@@ -546,11 +551,11 @@ describe("RelayerCleartext", () => {
     const keys = Object.keys(result);
     expect(keys).toHaveLength(1);
     expect(keys[0]).toBe(handleUpper);
-    expect(result[keys[0]! as Handle]).toBe(55n);
+    expect(result[keys[0] as Handle]).toBe(55n);
   });
 
   it("userDecrypt decodes ebool handle as boolean", async () => {
-    const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
+    const boolHandle = asHandle("0x" + "01".repeat(30) + "0000");
     const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [boolHandle.toLowerCase()]: 1n },
@@ -558,11 +563,11 @@ describe("RelayerCleartext", () => {
 
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [boolHandle] }));
 
-    expect(result[boolHandle]).toBe(true);
+    expect(result[boolHandle]).toBeTruthy();
   });
 
   it("userDecrypt decodes ebool handle with value 0 as false", async () => {
-    const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
+    const boolHandle = asHandle("0x" + "01".repeat(30) + "0000");
     const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [boolHandle.toLowerCase()]: 0n },
@@ -570,12 +575,12 @@ describe("RelayerCleartext", () => {
 
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [boolHandle] }));
 
-    expect(result[boolHandle]).toBe(false);
+    expect(result[boolHandle]).toBeFalsy();
   });
 
   it("userDecrypt decodes eaddress handle as hex string", async () => {
-    const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
-    const addressValue = BigInt("0x1000000000000000000000000000000000000001");
+    const addressHandle = asHandle("0x" + "01".repeat(30) + "0700");
+    const addressValue = 0x1000000000000000000000000000000000000001n;
     const { fhevm } = createInstance({
       persistAllowed: () => true,
       plaintexts: { [addressHandle.toLowerCase()]: addressValue },
@@ -584,7 +589,7 @@ describe("RelayerCleartext", () => {
     const result = await fhevm.userDecrypt(createUserDecryptParams({ handles: [addressHandle] }));
 
     const decoded = result[addressHandle];
-    expect(typeof decoded).toBe("string");
+    expectTypeOf(decoded).toBeString();
     expect(decoded).toMatch(/^0x[0-9a-f]{40}$/);
   });
 
@@ -600,7 +605,7 @@ describe("RelayerCleartext", () => {
   it("publicDecrypt with partial ACL failure throws with denied handle and makes zero plaintext calls", async () => {
     const handleA = asHandle("0x" + "dd".repeat(32));
     const handleB = asHandle("0x" + "ee".repeat(32));
-    const normalizedB = toHex(hexToBigInt(handleB as `0x${string}`), { size: 32 });
+    const normalizedB = toHex(hexToBigInt(handleB), { size: 32 });
 
     const { fhevm, calls } = createInstance({
       isAllowedForDecryption: (handle) => handle.toLowerCase() !== normalizedB.toLowerCase(),
@@ -629,7 +634,7 @@ describe("RelayerCleartext", () => {
     });
 
     const result = await fhevm.publicDecrypt([handleA, handleB]);
-    const proofBytes = toBytes(result.decryptionProof as `0x${string}`);
+    const proofBytes = toBytes(result.decryptionProof);
 
     expect(proofBytes[0]).toBe(1);
     expect(proofBytes.length).toBe(66);
@@ -696,9 +701,9 @@ describe("RelayerCleartext", () => {
         handles: [handle],
         contractAddress: CONTRACT_ADDRESS,
         signedContractAddresses: [CONTRACT_ADDRESS],
-        privateKey: `0x${"01".repeat(32)}` as `0x${string}`,
-        publicKey: `0x${"02".repeat(32)}` as `0x${string}`,
-        signature: `0x${"03".repeat(65)}` as `0x${string}`,
+        privateKey: `0x${"01".repeat(32)}`,
+        publicKey: `0x${"02".repeat(32)}`,
+        signature: `0x${"03".repeat(65)}`,
         delegatorAddress,
         delegateAddress,
         startTimestamp: 1,
@@ -771,7 +776,7 @@ describe("RelayerCleartext", () => {
   it("delegatedUserDecrypt partial delegation failure throws with second handle and makes exactly 2 delegation calls", async () => {
     const handleA = asHandle("0x" + "a1".repeat(32));
     const handleB = asHandle("0x" + "b2".repeat(32));
-    const normalizedB = toHex(hexToBigInt(handleB as `0x${string}`), { size: 32 });
+    const normalizedB = toHex(hexToBigInt(handleB), { size: 32 });
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
 
@@ -845,9 +850,9 @@ describe("RelayerCleartext", () => {
   });
 
   it("delegatedUserDecrypt decodes ebool and eaddress handles", async () => {
-    const boolHandle = asHandle("0x" + "01".repeat(30) + "00" + "00");
-    const addressHandle = asHandle("0x" + "01".repeat(30) + "07" + "00");
-    const addressValue = BigInt("0x1000000000000000000000000000000000000001");
+    const boolHandle = asHandle("0x" + "01".repeat(30) + "0000");
+    const addressHandle = asHandle("0x" + "01".repeat(30) + "0700");
+    const addressValue = 0x1000000000000000000000000000000000000001n;
 
     const { fhevm } = createInstance({
       persistAllowed: () => true,
@@ -870,9 +875,9 @@ describe("RelayerCleartext", () => {
       durationDays: 1,
     });
 
-    expect(result[boolHandle]).toBe(true);
+    expect(result[boolHandle]).toBeTruthy();
     const addressResult = result[addressHandle];
-    expect(typeof addressResult).toBe("string");
+    expectTypeOf(addressResult).toBeString();
     expect(addressResult).toMatch(/^0x[0-9a-f]{40}$/);
   });
 

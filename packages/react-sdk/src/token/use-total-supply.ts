@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "../utils/query";
-import { type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { totalSupplyQueryOptions } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
@@ -23,7 +23,7 @@ export { totalSupplyQueryOptions };
  */
 export function useTotalSupply(
   tokenAddress: Address,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const token = useReadonlyToken(tokenAddress);
 

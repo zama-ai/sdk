@@ -22,8 +22,12 @@ export class IndexedDBStorage implements GenericStorage {
   }
 
   #getDB(): Promise<IDBDatabase> {
-    if (this.#db) return Promise.resolve(this.#db);
-    if (this.#dbPromise) return this.#dbPromise;
+    if (this.#db) {
+      return Promise.resolve(this.#db);
+    }
+    if (this.#dbPromise) {
+      return this.#dbPromise;
+    }
 
     this.#dbPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(this.#dbName, this.#dbVersion);

@@ -175,8 +175,12 @@ function wordToBytes32(data: Hex, index: number): Handle {
  * All 3 params indexed → topics[1..3], no data.
  */
 export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEvent | null {
-  if (log.topics[0] !== Topics.ConfidentialTransfer) return null;
-  if (log.topics.length < 4) return null;
+  if (log.topics[0] !== Topics.ConfidentialTransfer) {
+    return null;
+  }
+  if (log.topics.length < 4) {
+    return null;
+  }
 
   return {
     eventName: "ConfidentialTransfer",
@@ -192,8 +196,12 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
  * Data: mintAmount (uint64, abi-encoded as uint256), amountIn, feeAmount
  */
 export function decodeWrapped(log: RawLog): WrappedEvent | null {
-  if (log.topics[0] !== Topics.Wrapped) return null;
-  if (log.topics.length < 3) return null;
+  if (log.topics[0] !== Topics.Wrapped) {
+    return null;
+  }
+  if (log.topics.length < 3) {
+    return null;
+  }
 
   return {
     eventName: "Wrapped",
@@ -211,8 +219,12 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
  * Data: amount (bytes32)
  */
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
-  if (log.topics[0] !== Topics.UnwrapRequested) return null;
-  if (log.topics.length < 2) return null;
+  if (log.topics[0] !== Topics.UnwrapRequested) {
+    return null;
+  }
+  if (log.topics.length < 2) {
+    return null;
+  }
 
   return {
     eventName: "UnwrapRequested",
@@ -228,8 +240,12 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
  * Data: finalizeSuccess, feeTransferSuccess, burnAmount, unwrapAmount, feeAmount
  */
 export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
-  if (log.topics[0] !== Topics.UnwrappedFinalized) return null;
-  if (log.topics.length < 3) return null;
+  if (log.topics[0] !== Topics.UnwrappedFinalized) {
+    return null;
+  }
+  if (log.topics.length < 3) {
+    return null;
+  }
 
   return {
     eventName: "UnwrappedFinalized",
@@ -250,8 +266,12 @@ export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent |
  * Data: returnVal, refund, requestedAmount, burnAmount
  */
 export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null {
-  if (log.topics[0] !== Topics.UnwrappedStarted) return null;
-  if (log.topics.length < 4) return null;
+  if (log.topics[0] !== Topics.UnwrappedStarted) {
+    return null;
+  }
+  if (log.topics.length < 4) {
+    return null;
+  }
 
   return {
     eventName: "UnwrappedStarted",
@@ -302,7 +322,9 @@ export function decodeOnChainEvents(logs: readonly RawLog[]): OnChainEvent[] {
   const events: OnChainEvent[] = [];
   for (const log of logs) {
     const event = decodeOnChainEvent(log);
-    if (event) events.push(event);
+    if (event) {
+      events.push(event);
+    }
   }
   return events;
 }
@@ -319,7 +341,9 @@ export function decodeOnChainEvents(logs: readonly RawLog[]): OnChainEvent[] {
 export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEvent | null {
   for (const log of logs) {
     const event = decodeUnwrapRequested(log);
-    if (event) return event;
+    if (event) {
+      return event;
+    }
   }
   return null;
 }
@@ -336,7 +360,9 @@ export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEve
 export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null {
   for (const log of logs) {
     const event = decodeWrapped(log);
-    if (event) return event;
+    if (event) {
+      return event;
+    }
   }
   return null;
 }

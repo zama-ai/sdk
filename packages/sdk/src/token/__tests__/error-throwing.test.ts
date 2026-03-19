@@ -30,8 +30,8 @@ describe("NoCiphertextError detection (P3)", () => {
     await expect(token.balanceOf()).rejects.toBeInstanceOf(RelayerRequestFailedError);
     try {
       await token.balanceOf();
-    } catch (e) {
-      expect((e as RelayerRequestFailedError).statusCode).toBe(500);
+    } catch (error) {
+      expect((error as RelayerRequestFailedError).statusCode).toBe(500);
     }
   });
 
@@ -67,8 +67,8 @@ describe("NoCiphertextError detection (P3)", () => {
 
     try {
       await token.balanceOf();
-    } catch (e) {
-      expect(e).toBe(original);
+    } catch (error) {
+      expect(error).toBe(original);
     }
   });
 
@@ -84,8 +84,8 @@ describe("NoCiphertextError detection (P3)", () => {
 
     try {
       await token.balanceOf();
-    } catch (e) {
-      expect(e).toBe(original);
+    } catch (error) {
+      expect(error).toBe(original);
     }
   });
 
@@ -110,7 +110,7 @@ describe("NoCiphertextError detection (P3)", () => {
     vi.mocked(signer.readContract).mockResolvedValue(handle);
     vi.mocked(relayer.userDecrypt).mockRejectedValue({ statusCode: 502 });
 
-    const err = await token.balanceOf().catch((e) => e);
+    const err = await token.balanceOf().catch((error) => error);
     expect(err).toBeInstanceOf(RelayerRequestFailedError);
     expect(err.statusCode).toBe(502);
   });

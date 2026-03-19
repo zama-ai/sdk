@@ -1,34 +1,52 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ClearValueType, Handle, UserDecryptParams } from "@zama-fhe/sdk";
-import { decryptionKeys } from "./decryption-cache";
+import { useMutation } from "@tanstack/react-query";
+import type { ClearValueType, Handle } from "@zama-fhe/sdk";
+import type {
+  DecryptHandle,
+  UserDecryptCallbacks,
+  UserDecryptMutationParams,
+} from "@zama-fhe/sdk/query";
+import { userDecryptMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-/**
- * Thin wrapper around sdk.userDecrypt().
- * Caller is responsible for providing all params (keypair, signature, etc.).
- * For the full orchestration (signature management, EIP712 signing),
- * see the app-level useUserDecryptFlow hook.
- *
- * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
- * - {@link DecryptionFailedError} — relayer decryption request failed
- * - {@link InvalidKeypairError} — the provided keypair is invalid
- * - {@link KeypairExpiredError} — the re-encryption keypair has expired
- *
- * On success, populates the decryption cache so useUserDecryptedValue/useUserDecryptedValues
- * can read the results.
- */
-export function useUserDecrypt() {
-  const sdk = useZamaSDK();
-  const queryClient = useQueryClient();
+export type {
+  UserDecryptCallbacks as DecryptCallbacks,
+  DecryptHandle,
+  UserDecryptMutationParams as DecryptParams,
+};
 
-  return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptParams>({
-    mutationFn: (params) => sdk.relayer.userDecrypt(params),
-    onSuccess: (data) => {
-      for (const [handle, value] of Object.entries(data) as [Handle, ClearValueType][]) {
-        queryClient.setQueryData(decryptionKeys.value(handle), value);
-      }
-    },
-  });
+/** Configuration for {@link useUserDecrypt}. */
+export type UseUserDecryptConfig = UserDecryptCallbacks;
+
+/**
+ * High-level orchestration hook for user decryption.
+ *
+ * Reuses cached FHE credentials from `sdk.credentials` when available,
+ * falling back to generating a fresh keypair + EIP-712 signature only when
+ * no valid credentials exist. This avoids redundant wallet signature prompts.
+ *
+ * On success, populates the decryption cache so `useUserDecryptedValue` / `useUserDecryptedValues`
+ * can read the results.
+ *
+ * @param config - Optional callbacks for step-by-step UX feedback.
+ * @returns A mutation whose `mutate` accepts {@link UserDecryptMutationParams}.
+ *
+ * @example
+ * ```tsx
+ * const decrypt = useUserDecrypt({
+ *   onCredentialsReady: () => setStep("decrypting"),
+ *   onDecrypted: (values) => console.log(values),
+ * });
+ * decrypt.mutate({
+ *   handles: [{ handle: "0xHandle", contractAddress: "0xContract" }],
+ * });
+ * ```
+ */
+export function useUserDecrypt(config?: UseUserDecryptConfig) {
+  const sdk = useZamaSDK();
+
+  return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptMutationParams>(
+    userDecryptMutationOptions(sdk, config),
+  );
 }

@@ -89,7 +89,9 @@ export function UnwrapManualForm({
       {/* Step 2: Finalize */}
       <form
         action={() => {
-          if (!burnAmountHandle) return;
+          if (!burnAmountHandle) {
+            return;
+          }
           finalizeUnwrap.mutate({ burnAmountHandle });
         }}
         className="space-y-4"

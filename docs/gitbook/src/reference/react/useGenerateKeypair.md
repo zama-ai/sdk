@@ -8,7 +8,7 @@ description: Low-level mutation hook that generates a fresh FHE keypair via the 
 Low-level mutation hook that generates a fresh FHE keypair via the relayer. Returns a public/private key pair for use in decrypt authorization.
 
 {% hint style="warning" %}
-[`useAllow`](/reference/react/useAllow) and [`useConfidentialBalance`](/reference/react/useConfidentialBalance) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE credentials manually.
+[`useUserDecrypt`](/reference/react/useUserDecrypt), [`useAllow`](/reference/react/useAllow), and [`useConfidentialBalance`](/reference/react/useConfidentialBalance) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE credentials manually.
 {% endhint %}
 
 ## Import

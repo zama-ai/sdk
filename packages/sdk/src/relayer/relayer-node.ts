@@ -20,6 +20,7 @@ import type {
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
+import type { GenericLogger } from "../worker/worker.types";
 
 export interface RelayerNodeConfig {
   transports: Record<number, Partial<FhevmInstanceConfig>>;
@@ -27,7 +28,7 @@ export interface RelayerNodeConfig {
   getChainId: () => Promise<number>;
   poolSize?: number;
   /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: import("../worker/worker.types").GenericLogger;
+  logger?: GenericLogger;
 }
 
 /**
@@ -63,7 +64,9 @@ export class RelayerNode implements RelayerSDK {
   }
 
   async #ensurePool(): Promise<NodeWorkerPool> {
-    if (this.#ensureLock) return this.#ensureLock;
+    if (this.#ensureLock) {
+      return this.#ensureLock;
+    }
     this.#ensureLock = this.#ensurePoolInner();
     try {
       return await this.#ensureLock;
@@ -136,7 +139,7 @@ export class RelayerNode implements RelayerSDK {
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<EIP712TypedData> {
     const pool = await this.#ensurePool();
     const result = await pool.createEIP712({
@@ -202,7 +205,7 @@ export class RelayerNode implements RelayerSDK {
     contractAddresses: Address[],
     delegatorAddress: Address,
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const pool = await this.#ensurePool();
     return pool.createDelegatedUserDecryptEIP712({

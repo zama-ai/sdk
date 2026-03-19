@@ -8,7 +8,9 @@ description: Low-level mutation hook that encrypts a plaintext value using the r
 Low-level mutation hook that encrypts plaintext values using the relayer's FHE engine. Returns encrypted handles and an input proof for on-chain submission.
 
 {% hint style="warning" %}
-Most apps use [`useShield`](/reference/react/useShield) or [`useConfidentialTransfer`](/reference/react/useConfidentialTransfer), which encrypt automatically. Reach for `useEncrypt` only when building custom FHE pipelines.
+For **confidential ERC-20 tokens**, use [`useShield`](/reference/react/useShield) or [`useConfidentialTransfer`](/reference/react/useConfidentialTransfer) — they handle encryption automatically.
+
+Use `useEncrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that accepts encrypted parameters).
 {% endhint %}
 
 ## Import
@@ -34,7 +36,7 @@ function EncryptValue() {
       contractAddress: "0xContract",
       userAddress: "0xUser",
     });
-    console.log("Encrypted handle:", handles[0]);
+    // handles[0] is the encrypted Uint8Array, inputProof is the ZK proof
   }
 
   return (
@@ -91,8 +93,22 @@ import { type EncryptResult } from "@zama-fhe/sdk";
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
+## Supported FHE Types
+
+| Type       | JS value type       | Range                 |
+| ---------- | ------------------- | --------------------- |
+| `ebool`    | `boolean \| bigint` | `true`/`false` or 0/1 |
+| `euint8`   | `bigint`            | 0–255                 |
+| `euint16`  | `bigint`            | 0–65535               |
+| `euint32`  | `bigint`            | 0–2³²−1               |
+| `euint64`  | `bigint`            | 0–2⁶⁴−1               |
+| `euint128` | `bigint`            | 0–2¹²⁸−1              |
+| `euint256` | `bigint`            | 0–2²⁵⁶−1              |
+| `eaddress` | `` `0x${string}` `` | Ethereum address      |
+
 ## Related
 
 - [`useShield`](/reference/react/useShield) — high-level hook that encrypts and shields in one step
 - [`useConfidentialTransfer`](/reference/react/useConfidentialTransfer) — high-level hook that encrypts and transfers
-- [`useUserDecrypt`](/reference/react/useUserDecrypt) — reverse operation, decrypt a handle back to plaintext
+- [`useUserDecrypt`](/reference/react/useUserDecrypt) — reverse operation, decrypt handles back to plaintext
+- [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with examples

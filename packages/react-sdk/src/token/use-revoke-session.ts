@@ -14,15 +14,15 @@ import { useZamaSDK } from "../provider";
  * revokeSession();
  * ```
  */
-export function useRevokeSession(options?: UseMutationOptions<void, Error, void>) {
+export function useRevokeSession(options?: UseMutationOptions<void>) {
   const sdk = useZamaSDK();
 
-  return useMutation<void, Error, void>({
+  return useMutation<void>({
     ...revokeSessionMutationOptions(sdk),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
+      void context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
     },
   });
 }
