@@ -13,7 +13,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import deployments from "../../../hardhat/deployments.json" with { type: "json" };
+import deployments from "../../../contracts/deployments.json" with { type: "json" };
 import { MINTED, NEXTJS_ANVIL_PORT, TEST_PRIVATE_KEY } from "./constants";
 import { mockRelayerSdk } from "./fhevm";
 
