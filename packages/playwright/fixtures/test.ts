@@ -13,6 +13,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import deployments from "../../../hardhat/deployments.json" with { type: "json" };
 import { MINTED, TEST_PRIVATE_KEY } from "./constants";
+import { mockRelayerSdk } from "./fhevm";
 
 const privateKey = TEST_PRIVATE_KEY;
 
@@ -140,6 +141,8 @@ export const test = base.extend<TestFixtures>({
     ]);
 
     const id = await viemClient.snapshot();
+
+    await mockRelayerSdk({ page, baseURL, rpcURL: "http://127.0.0.1:8545" });
 
     // Inject wallet private key for the burner-connector
     await page.addInitScript((pk) => {

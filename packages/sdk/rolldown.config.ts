@@ -35,6 +35,19 @@ export default defineConfig([
     ...shared,
     plugins: [dts({ tsconfig: "tsconfig.build.json" }), relayerSdkUmd()],
   },
+  // Browser worker build (IIFE — classic workers can't use ES imports)
+  {
+    input: {
+      "relayer-sdk.worker": "src/worker/relayer-sdk.worker.ts",
+    },
+    output: {
+      dir: "dist/esm",
+      format: "iife",
+      sourcemap: true,
+      minify: true,
+    },
+    ...shared,
+  },
   // CJS build (for moduleResolution: "node" / CommonJS consumers)
   {
     input: entryPoints,

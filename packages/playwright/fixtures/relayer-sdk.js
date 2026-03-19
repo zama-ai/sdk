@@ -1,6 +1,5 @@
-// Mock SDK for E2E testing - proxies to MockFhevmInstance via endpoints
+// Mock SDK for E2E testing - proxies to RelayerCleartext via endpoints
 // This script runs in the Web Worker context
-console.log("[Mock SDK] Loading mock relayerSDK");
 
 // BASE_URL is replaced at runtime by the fixture
 const BASE_URL = "__BASE_URL__";
@@ -11,13 +10,10 @@ if (BASE_URL === "__BASE_URL__") {
 
 self.relayerSDK = {
   initSDK: async function () {
-    console.log("[Mock SDK] initSDK called");
     return true;
   },
 
   createInstance: async function (config) {
-    console.log("[Mock SDK] createInstance called");
-
     return {
       generateKeypair: function () {
         // Sync call - use XMLHttpRequest
@@ -53,8 +49,39 @@ self.relayerSDK = {
       createEncryptedInput: function (contractAddress, userAddress) {
         const values = [];
         return {
+          addBool: function (value) {
+            values.push({
+              value: typeof value === "boolean" ? (value ? "1" : "0") : value.toString(),
+              type: "ebool",
+            });
+            return this;
+          },
+          add8: function (value) {
+            values.push({ value: value.toString(), type: "euint8" });
+            return this;
+          },
+          add16: function (value) {
+            values.push({ value: value.toString(), type: "euint16" });
+            return this;
+          },
+          add32: function (value) {
+            values.push({ value: value.toString(), type: "euint32" });
+            return this;
+          },
           add64: function (value) {
             values.push({ value: value.toString(), type: "euint64" });
+            return this;
+          },
+          add128: function (value) {
+            values.push({ value: value.toString(), type: "euint128" });
+            return this;
+          },
+          add256: function (value) {
+            values.push({ value: value.toString(), type: "euint256" });
+            return this;
+          },
+          addAddress: function (value) {
+            values.push({ value: value, type: "eaddress" });
             return this;
           },
           encrypt: async function () {
@@ -82,7 +109,6 @@ self.relayerSDK = {
         startTimestamp,
         durationDays,
       ) {
-        console.log("[Mock SDK] userDecrypt called with", handleContractPairs.length, "handles");
         const handles = handleContractPairs.map((p) => p.handle);
         const contractAddress = handleContractPairs[0]?.contractAddress || "";
 
@@ -103,7 +129,6 @@ self.relayerSDK = {
         });
 
         const result = await response.json();
-        console.log("[Mock SDK] userDecrypt result:", result);
 
         // Convert string values back to BigInt
         const clearValues = {};
@@ -154,11 +179,6 @@ self.relayerSDK = {
         startTimestamp,
         durationDays,
       ) {
-        console.log(
-          "[Mock SDK] delegatedUserDecrypt called with",
-          handleContractPairs.length,
-          "handles",
-        );
         const handles = handleContractPairs.map((p) => p.handle);
         const contractAddress = handleContractPairs[0]?.contractAddress || "";
 
@@ -180,13 +200,16 @@ self.relayerSDK = {
         });
 
         const result = await response.json();
-        console.log("[Mock SDK] delegatedUserDecrypt result:", result);
 
         const clearValues = {};
         for (const [key, value] of Object.entries(result)) {
           clearValues[key] = BigInt(value);
         }
         return clearValues;
+      },
+
+      requestZKProofVerification: async function (_zkProof) {
+        throw new Error("Not implemented in mock SDK");
       },
 
       getPublicKey: function () {
@@ -226,5 +249,3 @@ self.relayerSDK = {
   SepoliaConfig: { chainId: 11155111 },
   MainnetConfig: { chainId: 1 },
 };
-
-console.log("[Mock SDK] self.relayerSDK set up successfully");

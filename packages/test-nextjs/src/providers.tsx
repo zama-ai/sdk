@@ -1,14 +1,14 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryStorage, ZamaProvider } from "@zama-fhe/react-sdk";
+import { indexedDBStorage, RelayerWeb, ZamaProvider } from "@zama-fhe/react-sdk";
 import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { HardhatConfig } from "@zama-fhe/sdk";
+import { burner } from "@zama-fhe/test-components";
 import type { ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { hardhat } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
-import { burner } from "@zama-fhe/test-components";
-import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 
 const wagmiConfig = createConfig({
   chains: [hardhat],
@@ -26,8 +26,13 @@ const wagmiConfig = createConfig({
 });
 
 const signer = new WagmiSigner({ config: wagmiConfig });
-const storage = new MemoryStorage();
-const relayer = new RelayerCleartext(hardhatCleartextConfig);
+
+const relayer = new RelayerWeb({
+  getChainId: () => signer.getChainId(),
+  transports: {
+    [hardhat.id]: HardhatConfig,
+  },
+});
 
 const queryClient = new QueryClient();
 
@@ -35,7 +40,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <ZamaProvider relayer={relayer} storage={storage} signer={signer}>
+        <ZamaProvider relayer={relayer} storage={indexedDBStorage} signer={signer}>
           {children}
         </ZamaProvider>
       </WagmiProvider>

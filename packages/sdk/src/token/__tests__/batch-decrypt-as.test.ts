@@ -42,11 +42,11 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
 
-    // readContract order: confidentialBalanceOf(A), confidentialBalanceOf(B), getDelegationExpiry
+    // readContract order: getDelegationExpiry, confidentialBalanceOf(A), confidentialBalanceOf(B)
     vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf(tokenA)
-      .mockResolvedValueOnce(HANDLE_B) // confidentialBalanceOf(tokenB)
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(HANDLE_B); // confidentialBalanceOf(tokenB)
 
     vi.mocked(relayer.delegatedUserDecrypt)
       .mockResolvedValueOnce({ [HANDLE_A]: 100n })
@@ -93,8 +93,10 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const sessionStorage = new MemoryStorage();
     const ZERO = ("0x" + "00".repeat(32)) as Handle;
 
-    // Only confidentialBalanceOf — zero handle means all cached, no preFlightCheck
-    vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO);
+    // readContract order: getDelegationExpiry, confidentialBalanceOf
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(ZERO); // confidentialBalanceOf → zero handle
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
 
@@ -104,12 +106,11 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
 
     expect(balances.get(TOKEN_A)).toBe(0n);
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
-    // Pre-flight is skipped when all balances resolve from cache (zero handles),
-    // so getDelegationExpiry never calls readContract.
-    expect(signer.readContract).toHaveBeenCalledTimes(1);
+    // getDelegationExpiry + confidentialBalanceOf
+    expect(signer.readContract).toHaveBeenCalledTimes(2);
   });
 
-  test("skips pre-flight delegation check when balance is pre-cached", async ({ relayer }) => {
+  test("runs delegation check even when balance is pre-cached", async ({ relayer }) => {
     const signer = createMockSigner(DELEGATE);
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
@@ -119,7 +120,10 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const cacheKey = `zama:balance:${TOKEN_A}:${DELEGATOR}:${handleLower}`;
     await storage.set(cacheKey, "42");
 
-    vi.mocked(signer.readContract).mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
+    // readContract order: getDelegationExpiry, confidentialBalanceOf
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
 
@@ -127,8 +131,8 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       delegatorAddress: DELEGATOR,
     });
 
-    // Only confidentialBalanceOf — pre-flight skipped because cache resolved everything.
-    expect(signer.readContract).toHaveBeenCalledTimes(1);
+    // getDelegationExpiry + confidentialBalanceOf — delegation always checked.
+    expect(signer.readContract).toHaveBeenCalledTimes(2);
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     expect(balances.get(TOKEN_A)).toBe(42n);
   });
@@ -138,10 +142,10 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
 
-    // readContract order: confidentialBalanceOf, getDelegationExpiry
+    // readContract order: getDelegationExpiry, confidentialBalanceOf
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
@@ -164,10 +168,8 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
 
-    // readContract order: confidentialBalanceOf (non-zero handle), getDelegationExpiry → 0n
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf → non-zero, goes to uncached
-      .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
+    // getDelegationExpiry runs first (before cache/balance reads)
+    vi.mocked(signer.readContract).mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
 
@@ -187,10 +189,8 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
 
-    // readContract order: confidentialBalanceOf (non-zero handle), getDelegationExpiry → past
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf → non-zero, goes to uncached
-      .mockResolvedValueOnce(1000n); // getDelegationExpiry → past timestamp
+    // getDelegationExpiry runs first (before cache/balance reads)
+    vi.mocked(signer.readContract).mockResolvedValueOnce(1000n); // getDelegationExpiry → past timestamp
     vi.mocked(signer.getBlockTimestamp).mockResolvedValue(2000n);
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
@@ -211,10 +211,10 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
 
-    // readContract order: confidentialBalanceOf, getDelegationExpiry
+    // readContract order: getDelegationExpiry, confidentialBalanceOf
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [HANDLE_A]: 42n });
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
@@ -235,10 +235,10 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
 
-    // readContract order: confidentialBalanceOf, getDelegationExpiry
+    // readContract order: getDelegationExpiry, confidentialBalanceOf
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
     vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(new Error("decrypt failed"));
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });
@@ -264,10 +264,10 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
 
-    // readContract order: confidentialBalanceOf, getDelegationExpiry
+    // readContract order: getDelegationExpiry, confidentialBalanceOf
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
     vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [HANDLE_A]: 99n });
 
     const token = new ReadonlyToken({ relayer, signer, storage, sessionStorage, address: TOKEN_A });

@@ -194,7 +194,6 @@ async function handleInit(request: InitRequest): Promise<void> {
     sendSuccess<InitResponseData>(id, type, { initialized: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] Init error:", message);
     sendError(id, type, message);
   }
 }
@@ -276,7 +275,6 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
     sendSuccess(id, type, response, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] Encrypt error:", message);
     sendError(id, type, message);
   }
 }
@@ -314,7 +312,6 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    console.error("[Worker] UserDecrypt error:", message);
     sendError(id, type, message, statusCode);
   }
 }
@@ -365,7 +362,6 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] PublicDecrypt error:", message);
     sendError(id, type, message);
   }
 }
@@ -391,7 +387,6 @@ function handleGenerateKeypair(request: GenerateKeypairRequest): void {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] GenerateKeypair error:", message);
     sendError(id, type, message);
   }
 }
@@ -441,7 +436,6 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] CreateEIP712 error:", message);
     sendError(id, type, message);
   }
 }
@@ -468,7 +462,6 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
     sendSuccess<CreateDelegatedEIP712ResponseData>(id, type, result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] CreateDelegatedEIP712 error:", message);
     sendError(id, type, message);
   }
 }
@@ -507,7 +500,6 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    console.error("[Worker] DelegatedUserDecrypt error:", message);
     sendError(id, type, message, statusCode);
   }
 }
@@ -536,7 +528,6 @@ async function handleRequestZKProofVerification(
     sendSuccess(id, type, result, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] RequestZKProofVerification error:", message);
     sendError(id, type, message);
   }
 }
@@ -559,7 +550,6 @@ function handleGetPublicKey(request: GetPublicKeyRequest): void {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] GetPublicKey error:", message);
     sendError(id, type, message);
   }
 }
@@ -585,7 +575,6 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] GetPublicParams error:", message);
     sendError(id, type, message);
   }
 }
@@ -645,7 +634,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         break;
       default: {
         const unknownType = (request as WorkerRequest).type;
-        console.error("[Worker] Unknown request type:", unknownType);
         sendError(
           request?.id ?? "unknown",
           unknownType ?? ("UNKNOWN" as WorkerRequest["type"]),

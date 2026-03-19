@@ -243,7 +243,9 @@ describe("decryptBalanceAs", () => {
     readonlyToken,
     delegatorAddress,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (permanent → active)
+      .mockResolvedValueOnce(ZERO_HANDLE); // confidentialBalanceOf
 
     const balance = await readonlyToken.decryptBalanceAs({ delegatorAddress });
 
@@ -260,8 +262,8 @@ describe("decryptBalanceAs", () => {
     delegatorAddress,
   }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(handle) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (permanent → active)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (permanent → active)
+      .mockResolvedValueOnce(handle); // confidentialBalanceOf
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },
@@ -307,8 +309,8 @@ describe("decryptBalanceAs", () => {
     delegatorAddress,
   }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(handle) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (permanent → active)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (permanent → active)
+      .mockResolvedValueOnce(handle); // confidentialBalanceOf
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockRejectedValue(new Error("fail"));
 
     await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
@@ -326,9 +328,10 @@ describe("decryptBalanceAs", () => {
     userAddress,
   }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
       .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (first call)
-      .mockResolvedValueOnce(handle); // confidentialBalanceOf (second call — cache hit skips delegation check)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf (first call)
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (second call — delegation always checked)
+      .mockResolvedValueOnce(handle); // confidentialBalanceOf (second call — cache hit)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },
@@ -358,13 +361,10 @@ describe("decryptBalanceAs", () => {
     signer,
     relayer,
     readonlyToken,
-    handle,
     delegatorAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(handle) // confidentialBalanceOf
-      .mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
+    vi.mocked(signer.readContract).mockResolvedValueOnce(0n); // getDelegationExpiry → no delegation
 
     await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
       expect.objectContaining({
@@ -379,13 +379,10 @@ describe("decryptBalanceAs", () => {
     signer,
     relayer,
     readonlyToken,
-    handle,
     delegatorAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(handle) // confidentialBalanceOf
-      .mockResolvedValueOnce(1000n); // getDelegationExpiry → expired (past timestamp)
+    vi.mocked(signer.readContract).mockResolvedValueOnce(1000n); // getDelegationExpiry → expired (past timestamp)
 
     await expect(readonlyToken.decryptBalanceAs({ delegatorAddress })).rejects.toThrow(
       expect.objectContaining({
@@ -405,8 +402,8 @@ describe("decryptBalanceAs", () => {
     delegatorAddress,
   }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(handle) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(handle); // confidentialBalanceOf
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },
@@ -440,8 +437,8 @@ describe("decryptBalanceAs", () => {
     delegatorAddress,
   }) => {
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(handle) // confidentialBalanceOf
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(handle); // confidentialBalanceOf
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
       domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },

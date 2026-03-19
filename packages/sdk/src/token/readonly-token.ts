@@ -376,6 +376,13 @@ export class ReadonlyToken {
     } = config;
 
     const firstToken = tokens[0]!;
+
+    // Pre-flight check runs before cache lookups so that a revoked or
+    // expired delegation is never silently served from cache.
+    if (config.preFlightCheck) {
+      await config.preFlightCheck();
+    }
+
     const resolvedHandles =
       handles ?? (await Promise.all(tokens.map((t) => t.readConfidentialBalanceOf(ownerAddress))));
 
@@ -421,13 +428,6 @@ export class ReadonlyToken {
     // All balances resolved from cache — no credentials needed.
     if (uncached.length === 0) {
       return results;
-    }
-
-    // Pre-flight check runs after cache lookups — skips RPC overhead when
-    // all balances are cached. Best-effort: checks the first token's contract
-    // only (delegations are typically granted per-delegator, not per-token).
-    if (config.preFlightCheck) {
-      await config.preFlightCheck();
     }
 
     const uncachedAddresses = uncached.map((entry) => entry.token.address);
@@ -769,6 +769,10 @@ export class ReadonlyToken {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedOwner = owner ? getAddress(owner) : normalizedDelegator;
 
+    // Pre-flight delegation check — must run before the cache so that a
+    // revoked or expired delegation is never silently served from cache.
+    await this.#assertDelegationActive(normalizedDelegator);
+
     const handle = await this.readConfidentialBalanceOf(normalizedOwner);
     if (this.isZeroHandle(handle)) {
       return 0n;
@@ -786,10 +790,6 @@ export class ReadonlyToken {
     if (cached !== null) {
       return cached;
     }
-
-    // Pre-flight delegation check — avoids wasting a wallet signature on an
-    // expired or non-existent delegation.
-    await this.#assertDelegationActive(normalizedDelegator);
 
     const t0 = Date.now();
     try {

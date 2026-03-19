@@ -7,7 +7,7 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
-import { RELAYER_SDK_UMD_FILENAME } from "./worker.constants";
+import { RELAYER_SDK_UMD_FILENAME, RELAYER_SDK_WORKER_FILENAME } from "./worker.constants";
 
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
@@ -47,7 +47,7 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
   }
 
   protected createWorker(): Worker {
-    const url = this.#resolveAssetUrl("relayer-sdk.worker.ts");
+    const url = this.#resolveAssetUrl(RELAYER_SDK_WORKER_FILENAME);
     return new Worker(url);
   }
 
