@@ -33,9 +33,6 @@ export function useTokenPairsSlice({
       wrappersRegistryAddress,
       fromIndex,
       toIndex,
-      query: {
-        enabled: !!wrappersRegistryAddress && fromIndex !== undefined && toIndex !== undefined,
-      },
     }),
   );
 }

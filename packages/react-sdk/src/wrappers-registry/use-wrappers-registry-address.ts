@@ -1,6 +1,7 @@
 "use client";
 
 import { DefaultWrappersRegistryAddresses, type Address } from "@zama-fhe/sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useQuery } from "../utils/query";
 
@@ -8,6 +9,9 @@ import { useQuery } from "../utils/query";
  * Resolves the wrappers registry address for the current chain.
  * Returns `undefined` when the chain ID hasn't been fetched yet
  * or when no registry is configured for the connected chain.
+ *
+ * The chain ID is cached for 30 seconds (`staleTime`), so chain
+ * switches may take up to 30s to reflect.
  */
 export function useWrappersRegistryAddress(
   wrappersRegistryAddresses: Record<number, Address> = DefaultWrappersRegistryAddresses,
@@ -15,7 +19,7 @@ export function useWrappersRegistryAddress(
   const sdk = useZamaSDK();
 
   const { data: chainId } = useQuery<number>({
-    queryKey: ["zama.wrappersRegistry.chainId"],
+    queryKey: zamaQueryKeys.wrappersRegistry.chainId(),
     queryFn: () => sdk.signer.getChainId(),
     staleTime: 30_000,
   });

@@ -20,7 +20,6 @@ export function useTokenPairsLength({
   return useQuery<bigint>(
     tokenPairsLengthQueryOptions(sdk.signer, {
       wrappersRegistryAddress,
-      query: { enabled: !!wrappersRegistryAddress },
     }),
   );
 }

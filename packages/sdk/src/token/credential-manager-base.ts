@@ -399,8 +399,9 @@ export abstract class BaseCredentialsManager<
       const encrypted = await this.encryptCredentials(credentials);
       await this.storage.set(key, encrypted);
     } catch (error) {
-      console.error("[zama-sdk] Failed to persist credentials:", error);
-      this.emit({ type: ZamaSDKEvents.CredentialsPersistFailed });
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error("[zama-sdk] Failed to persist credentials:", err);
+      this.emit({ type: ZamaSDKEvents.CredentialsPersistFailed, error: err });
     }
   }
 

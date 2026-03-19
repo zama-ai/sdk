@@ -1518,6 +1518,9 @@ export const zamaQueryKeys: {
     };
     readonly wrappersRegistry: {
         readonly all: readonly ["zama.wrappersRegistry"];
+        readonly chainId: () => readonly ["zama.wrappersRegistry", {
+            readonly type: "chainId";
+        }];
         readonly tokenPairs: (wrappersRegistryAddress: Address) => readonly ["zama.wrappersRegistry", {
             readonly type: "tokenPairs";
             readonly wrappersRegistryAddress: `0x${string}`;
@@ -1645,7 +1648,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-B5e7AR18.d.ts:1578:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity--9JiC_-D.d.ts:1580:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

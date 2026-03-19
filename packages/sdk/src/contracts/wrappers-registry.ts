@@ -119,9 +119,9 @@ export const wrappersRegistryAbi = [
 ] as const;
 
 export interface TokenWrapperPair {
-  tokenAddress: Address;
-  confidentialTokenAddress: Address;
-  isValid: boolean;
+  readonly tokenAddress: Address;
+  readonly confidentialTokenAddress: Address;
+  readonly isValid: boolean;
 }
 
 /**

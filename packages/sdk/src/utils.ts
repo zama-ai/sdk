@@ -114,10 +114,10 @@ export async function pLimit<T>(
   fns: (() => Promise<T>)[],
   maxConcurrency = Infinity,
 ): Promise<T[]> {
-  if (isFinite(maxConcurrency) && maxConcurrency <= 0) {
+  if (Number.isFinite(maxConcurrency) && maxConcurrency <= 0) {
     throw new Error("maxConcurrency must be a positive number");
   }
-  if (!isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
+  if (!Number.isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
     return Promise.all(fns.map((f) => f()));
   }
 

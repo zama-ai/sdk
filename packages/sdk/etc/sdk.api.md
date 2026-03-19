@@ -6025,11 +6025,11 @@ export interface TokenConfig extends ReadonlyTokenConfig {
 // @public (undocumented)
 export interface TokenWrapperPair {
     // (undocumented)
-    confidentialTokenAddress: Address;
+    readonly confidentialTokenAddress: Address;
     // (undocumented)
-    isValid: boolean;
+    readonly isValid: boolean;
     // (undocumented)
-    tokenAddress: Address;
+    readonly tokenAddress: Address;
 }
 
 // @public

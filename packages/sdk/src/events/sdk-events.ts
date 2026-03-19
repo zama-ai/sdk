@@ -90,6 +90,8 @@ export interface CredentialsRevokedEvent extends BaseEvent {
 
 export interface CredentialsPersistFailedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.CredentialsPersistFailed;
+  /** The error that caused the persist failure. */
+  error: Error;
 }
 
 export interface CredentialsAllowedEvent extends BaseEvent {

@@ -246,6 +246,7 @@ export const zamaQueryKeys = {
 
   wrappersRegistry: {
     all: ["zama.wrappersRegistry"] as const,
+    chainId: () => ["zama.wrappersRegistry", { type: "chainId" }] as const,
     tokenPairs: (wrappersRegistryAddress: Address) =>
       [
         "zama.wrappersRegistry",

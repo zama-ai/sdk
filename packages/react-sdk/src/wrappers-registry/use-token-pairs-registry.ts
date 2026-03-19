@@ -25,7 +25,6 @@ export function useTokenPairsRegistry({
   return useQuery<readonly TokenWrapperPair[]>(
     tokenPairsQueryOptions(sdk.signer, {
       wrappersRegistryAddress,
-      query: { enabled: !!wrappersRegistryAddress },
     }),
   );
 }

@@ -1,4 +1,4 @@
-import { type Address, getAddress, isAddress } from "viem";
+import { type Address, getAddress } from "viem";
 import {
   getConfidentialTokenAddressContract,
   getTokenAddressContract,
@@ -16,16 +16,13 @@ import type { GenericSigner } from "./token.types";
 /** Default wrappers registry addresses extracted from built-in network configs. */
 export const DefaultWrappersRegistryAddresses: Record<number, Address> = Object.fromEntries(
   Object.entries(DefaultConfigs)
-    .filter(
-      ([, cfg]) =>
-        cfg.wrappersRegistryAddress !== undefined && isAddress(cfg.wrappersRegistryAddress),
-    )
-    .map(([chainId, cfg]) => [Number(chainId), cfg.wrappersRegistryAddress as Address]),
+    .filter(([, cfg]) => cfg.wrappersRegistryAddress !== undefined)
+    .map(([chainId, cfg]) => [Number(chainId), cfg.wrappersRegistryAddress]),
 ) as Record<number, Address>;
 
 /** Configuration for {@link WrappersRegistry}. */
 export interface WrappersRegistryConfig {
-  /** Wallet signer for read calls. */
+  /** The connected wallet signer. Must satisfy the full `GenericSigner` interface. */
   signer: GenericSigner;
   /**
    * Per-chain registry address overrides, merged on top of
@@ -88,7 +85,7 @@ export class WrappersRegistry {
 
     if (!address) {
       throw new ConfigurationError(
-        `No wrappers registry address configured for chain ${chainId}. ` +
+        `No wrappers registry address configured for chain ${chainId}.\n` +
           `Pass a wrappersRegistryAddresses entry for this chain.`,
       );
     }
@@ -133,7 +130,7 @@ export class WrappersRegistry {
    * Fetch a range of token wrapper pairs (paginated).
    *
    * @param fromIndex - Start index (inclusive).
-   * @param toIndex - End index (exclusive).
+   * @param toIndex - End index.
    * @returns The slice of `TokenWrapperPair` entries.
    *
    * @example

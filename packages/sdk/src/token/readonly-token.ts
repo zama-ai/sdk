@@ -455,8 +455,9 @@ export class ReadonlyToken {
                 handle,
                 value,
               });
-            } catch {
-              // Cache write is best-effort; ignore failures
+            } catch (cacheError) {
+              // oxlint-disable-next-line no-console
+              console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
             }
           })
           .catch((error) => {
@@ -830,8 +831,9 @@ export class ReadonlyToken {
           handle,
           value,
         });
-      } catch {
-        // Cache write is best-effort; ignore failures
+      } catch (cacheError) {
+        // oxlint-disable-next-line no-console
+        console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
       }
 
       return value;
@@ -911,8 +913,9 @@ export class ReadonlyToken {
           handle,
           value,
         });
-      } catch {
-        // Cache write is best-effort; ignore failures
+      } catch (cacheError) {
+        // oxlint-disable-next-line no-console
+        console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
       }
       return value;
     } catch (error) {

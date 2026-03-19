@@ -23,9 +23,6 @@ export function useTokenAddress({
     tokenAddressQueryOptions(sdk.signer, {
       wrappersRegistryAddress,
       confidentialTokenAddress,
-      query: {
-        enabled: !!wrappersRegistryAddress && !!confidentialTokenAddress,
-      },
     }),
   );
 }

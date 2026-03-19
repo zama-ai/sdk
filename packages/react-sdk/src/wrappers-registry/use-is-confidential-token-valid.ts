@@ -26,9 +26,6 @@ export function useIsConfidentialTokenValid({
     isConfidentialTokenValidQueryOptions(sdk.signer, {
       wrappersRegistryAddress,
       confidentialTokenAddress,
-      query: {
-        enabled: !!wrappersRegistryAddress && !!confidentialTokenAddress,
-      },
     }),
   );
 }

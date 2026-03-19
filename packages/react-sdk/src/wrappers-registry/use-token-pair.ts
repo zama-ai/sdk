@@ -29,9 +29,6 @@ export function useTokenPair({
     tokenPairQueryOptions(sdk.signer, {
       wrappersRegistryAddress,
       index,
-      query: {
-        enabled: !!wrappersRegistryAddress && index !== undefined,
-      },
     }),
   );
 }

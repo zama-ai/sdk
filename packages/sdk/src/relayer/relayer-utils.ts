@@ -1,3 +1,4 @@
+import type { Address } from "viem";
 import type { EIP712TypedData } from "./relayer-sdk.types";
 import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 
@@ -51,7 +52,7 @@ function sleep(ms: number): Promise<void> {
 /**
  * Extends the base relayer config with the on-chain wrappers registry address.
  *
- * Used by {@link DefaultConfigs} and the {@link WrappersRegistry} class to
+ * Used by `DefaultConfigs` and the `WrappersRegistry` class to
  * resolve the correct registry contract per chain.
  */
 export interface ExtendedFhevmInstanceConfig extends FhevmInstanceConfig {
@@ -59,7 +60,7 @@ export interface ExtendedFhevmInstanceConfig extends FhevmInstanceConfig {
    * Address of the `ConfidentialTokenWrappersRegistry` contract.
    * `undefined` for chains where no registry is deployed (e.g. Hardhat).
    */
-  wrappersRegistryAddress: string | undefined;
+  wrappersRegistryAddress: Address | undefined;
 }
 
 /**
@@ -113,7 +114,7 @@ export const SepoliaConfig = {
  * the contracts deployed on your Hardhat network.
  *
  * `wrappersRegistryAddress` is `undefined` — pass it explicitly via
- * `wrappersRegistryAddresses` when creating a {@link WrappersRegistry}.
+ * `wrappersRegistryAddresses` when creating a `WrappersRegistry`.
  */
 export const HardhatConfig = {
   chainId: 31337,
@@ -132,8 +133,8 @@ export const HardhatConfig = {
  * Built-in network configurations keyed by chain ID.
  *
  * Includes Mainnet (1), Sepolia (11155111), and Hardhat (31337).
- * Used by {@link RelayerWeb} to resolve transport configs and by
- * {@link WrappersRegistry} to resolve registry addresses.
+ * Used by `RelayerWeb` to resolve transport configs and by
+ * `WrappersRegistry` to resolve registry addresses.
  */
 export const DefaultConfigs: Record<number, ExtendedFhevmInstanceConfig> = {
   [1]: MainnetConfig,
