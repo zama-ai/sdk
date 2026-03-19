@@ -168,7 +168,7 @@ The `RelayerSDK` interface defines the FHE operations contract. Two implementati
 
 | Backend       | Import               | Environment | How it works                               |
 | ------------- | -------------------- | ----------- | ------------------------------------------ |
-| `RelayerWeb`  | `@zama-fhe/sdk`      | Browser     | Runs WASM in a Web Worker via CDN          |
+| `RelayerWeb`  | `@zama-fhe/sdk`      | Browser     | Runs WASM in a Web Worker (bundled asset)  |
 | `RelayerNode` | `@zama-fhe/sdk/node` | Node.js     | Uses `@zama-fhe/relayer-sdk/node` directly |
 
 The `/node` sub-path also exports `NodeWorkerClient` and `NodeWorkerClientConfig` for running FHE operations in a Node.js worker thread.
@@ -420,12 +420,9 @@ const sdk = new ZamaSDK({
 
 #### `RelayerWebSecurityConfig`
 
-| Field            | Type           | Description                                                                                      |
-| ---------------- | -------------- | ------------------------------------------------------------------------------------------------ |
-| `getCsrfToken`   | `() => string` | Optional. Resolve the CSRF token before each authenticated network request.                      |
-| `integrityCheck` | `boolean`      | Optional. Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set `false` for tests. |
-
-> **Security note:** `RelayerWeb` loads FHE WASM from a CDN at runtime. The `integrityCheck` option (enabled by default) verifies the SHA-384 hash of the bundle before execution, protecting against CDN compromise or MITM attacks. Only disable it in local development or testing.
+| Field          | Type           | Description                                                                 |
+| -------------- | -------------- | --------------------------------------------------------------------------- |
+| `getCsrfToken` | `() => string` | Optional. Resolve the CSRF token before each authenticated network request. |
 
 ### `RelayerNodeConfig` (Node.js)
 

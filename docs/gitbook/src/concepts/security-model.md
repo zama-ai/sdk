@@ -87,26 +87,11 @@ Wallet addresses are hashed before use as storage keys. The storage backend (Ind
 
 </details>
 
-## WASM bundle integrity
+## WASM bundle loading
 
-`RelayerWeb` loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
+The `@zama-fhe/relayer-sdk` UMD bundle (containing TFHE WASM) is bundled at build time from `node_modules` and emitted as a co-located asset alongside the Web Worker. At runtime, the worker loads it via `importScripts` — no external CDN fetch is involved.
 
-![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
-
-This protects against CDN compromise or man-in-the-middle injection of modified WASM.
-
-Integrity checking is enabled by default. Disable it only in test environments:
-
-```ts
-const relayer = new RelayerWeb({
-  // ...
-  security: { integrityCheck: false },
-});
-```
-
-{% hint style="warning" %}
-Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate FHE private keys or manipulate encrypted values.
-{% endhint %}
+Because the bundle is resolved from `node_modules` during your build, its integrity is guaranteed by your package manager's lockfile and build pipeline. The version is pinned by the `@zama-fhe/relayer-sdk` dependency in your `package.json`.
 
 ## Browser security headers
 
@@ -127,18 +112,17 @@ Single-threaded mode works without COOP/COEP headers. Only enable cross-origin i
 
 ### Content Security Policy (CSP)
 
-The Web Worker loads and executes WASM from a CDN. Your CSP must allow:
+The Web Worker loads and executes WASM from co-located build assets. Your CSP must allow:
 
-| Directive     | Value                  | Reason                                        |
-| ------------- | ---------------------- | --------------------------------------------- |
-| `worker-src`  | `blob:`                | Workers are created from blob URLs            |
-| `script-src`  | `'wasm-unsafe-eval'`   | Required for WASM execution inside the worker |
-| `connect-src` | `https://cdn.zama.org` | CDN fetch for the WASM bundle                 |
+| Directive    | Value                | Reason                                        |
+| ------------ | -------------------- | --------------------------------------------- |
+| `worker-src` | `'self'`             | Workers are loaded from same-origin files     |
+| `script-src` | `'wasm-unsafe-eval'` | Required for WASM execution inside the worker |
 
 Example CSP header:
 
 ```
-Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://cdn.zama.org https://your-relayer-proxy.com;
+Content-Security-Policy: worker-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://your-relayer-proxy.com;
 ```
 
 <details>
@@ -190,7 +174,6 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 | Credential encryption | AES-256-GCM         | 256-bit            | Web Crypto API                |
 | Key derivation        | PBKDF2-SHA-256      | 600,000 iterations | Web Crypto API                |
 | Storage key hashing   | SHA-256 (truncated) | 128-bit output     | Web Crypto API                |
-| CDN integrity         | SHA-384             | --                 | Web Crypto API                |
 | FHE encryption        | TFHE                | Network key        | WASM (`@zama-fhe/sdk (WASM)`) |
 | ZK proofs             | WASM prover         | --                 | WASM (`@zama-fhe/sdk (WASM)`) |
 | Wallet signing        | ECDSA secp256k1     | 256-bit            | User wallet                   |

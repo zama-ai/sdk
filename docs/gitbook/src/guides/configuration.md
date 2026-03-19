@@ -270,5 +270,5 @@ Setting `sessionTTL: 0` disables session caching entirely — every operation tr
 
 - [Authentication](/guides/authentication) — set up a backend proxy or use a direct API key
 - [Shield Tokens](/guides/shield-tokens) — convert public ERC-20 tokens into confidential form
-- [RelayerWeb reference](/reference/sdk/RelayerWeb) — multi-threading, security options, CDN configuration
+- [RelayerWeb reference](/reference/sdk/RelayerWeb) — multi-threading and security options
 - [GenericStorage reference](/reference/sdk/GenericStorage) — custom storage implementations

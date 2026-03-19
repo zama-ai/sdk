@@ -141,9 +141,9 @@ Without these headers, the browser blocks `SharedArrayBuffer` and the relayer fa
 
 ### security
 
-`{ integrityCheck?: boolean; getCsrfToken?: () => string } | undefined`
+`{ getCsrfToken?: () => string } | undefined`
 
-Security options for the WASM bundle and relayer requests.
+Security options for relayer requests.
 
 ```ts
 const relayer = new RelayerWeb({
@@ -152,16 +152,14 @@ const relayer = new RelayerWeb({
     /* ... */
   },
   security: {
-    integrityCheck: true, // SHA-384 verification of WASM bundle (default: true)
     getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
   },
 });
 ```
 
-| Field            | Type           | Description                                         |
-| ---------------- | -------------- | --------------------------------------------------- |
-| `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
-| `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
+| Field          | Type           | Description                                         |
+| -------------- | -------------- | --------------------------------------------------- |
+| `getCsrfToken` | `() => string` | Returns a CSRF token to attach to relayer requests. |
 
 ## Related
 
