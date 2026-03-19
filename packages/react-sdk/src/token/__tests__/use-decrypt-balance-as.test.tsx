@@ -9,6 +9,7 @@ import {
 } from "../../__tests__/mutation-test-helpers";
 
 const ZERO_HANDLE = "0x0000000000000000000000000000000000000000000000000000000000000000" as Address;
+const MAX_UINT64 = 2n ** 64n - 1n;
 
 describe("useDecryptBalanceAs", () => {
   test("default", ({ renderWithProviders }) => {
@@ -22,8 +23,11 @@ describe("useDecryptBalanceAs", () => {
     renderWithProviders,
     signer,
   }) => {
-    // Return zero handle so decryptBalanceAs short-circuits to 0n
-    vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    // First readContract call is getDelegationExpiry (via assertDelegationActive),
+    // second is readConfidentialBalanceOf — return zero handle so decryptBalanceAs short-circuits to 0n.
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(MAX_UINT64)
+      .mockResolvedValueOnce(ZERO_HANDLE);
 
     const { result } = renderWithProviders(() => useDecryptBalanceAs(TOKEN));
 
@@ -39,7 +43,9 @@ describe("useDecryptBalanceAs", () => {
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(ZERO_HANDLE);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(MAX_UINT64)
+      .mockResolvedValueOnce(ZERO_HANDLE);
 
     const onSuccess = vi.fn();
 
