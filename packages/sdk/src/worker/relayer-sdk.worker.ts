@@ -60,6 +60,7 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 // which sets `self.relayerSDK`.
 interface WorkerGlobalScopeWithSDK extends Worker {
   relayerSDK?: RelayerSDKGlobal;
+  location: Location;
   importScripts: (...urls: string[]) => void;
 }
 
@@ -157,8 +158,15 @@ async function handleInit(request: InitRequest): Promise<void> {
 
     // Load the relayer-sdk UMD bundle from the co-located asset.
     // This sets `self.relayerSDK` on the worker global scope.
+    //
+    // Security note: `sdkUrl` is always constructed internally by
+    // worker.client.ts via `new URL(RELAYER_SDK_UMD_FILENAME, import.meta.url)`.
+    // It is never user-supplied. The postMessage channel is only accessible
+    // from the same origin that created this dedicated worker, so an attacker
+    // would already need same-origin code execution to tamper with it.
+    // CodeQL flags this as "client-side URL redirect" — this is a false positive.
     try {
-      self.importScripts(sdkUrl);
+      self.importScripts(sdkUrl); // CodeQL: sdkUrl is not user-controlled, see note above
     } catch (importError) {
       throw new Error(`Failed to load relayer-sdk UMD bundle via importScripts("${sdkUrl}")`, {
         cause: importError,
