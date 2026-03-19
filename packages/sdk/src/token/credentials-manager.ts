@@ -100,6 +100,11 @@ export class CredentialsManager extends BaseCredentialsManager<
     );
   }
 
+  /** Revoke the session signature for a pre-computed store key. */
+  async revokeByKey(key: string): Promise<void> {
+    await this.revokeSession(key);
+  }
+
   /** Whether a session signature is currently cached. */
   async isAllowed(): Promise<boolean> {
     return this.checkAllowed(await this.#storeKey());
