@@ -96,7 +96,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": "oxlint --fix",
-    "*.{ts,tsx,js,mjs,cjs,json,yaml,yml,md}": "oxfmt"
+    "*.{ts,tsx,js,mjs,cjs,json,yaml,yml,md}": "oxfmt --no-error-on-unmatched-pattern"
   },
   "pnpm": {
     "overrides": {

@@ -4109,6 +4109,7 @@ export interface RelayerWebConfig {
     getChainId: () => Promise<number>;
     logger?: GenericLogger;
     onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
+    resolveAssetUrl?: (filename: string) => URL | string;
     security?: RelayerWebSecurityConfig;
     threads?: number;
     // (undocumented)
