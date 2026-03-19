@@ -10,8 +10,10 @@ import type {
 import { hashFn, userDecryptMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-type DecryptResult = Record<Handle, ClearValueType>;
-type MutateCallbackOptions = Parameters<
+/** A map of handles to their decrypted clear-text values. */
+export type DecryptResult = Record<Handle, ClearValueType>;
+/** Callback options forwarded to the underlying `useMutation.mutate()`. */
+export type MutateCallbackOptions = Parameters<
   ReturnType<typeof useMutation<DecryptResult, Error, UserDecryptMutationParams>>["mutate"]
 >[1];
 

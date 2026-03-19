@@ -411,6 +411,9 @@ export { DecryptHandle }
 
 export { DecryptionFailedError }
 
+// @public
+export type DecryptResult = Record<Handle, ClearValueType>;
+
 export { DecryptStartEvent }
 
 export { DelegatedCredentialsManager }
@@ -540,6 +543,9 @@ export { matchZamaError }
 export { MemoryStorage }
 
 export { memoryStorage }
+
+// @public
+export type MutateCallbackOptions = Parameters<ReturnType<typeof useMutation<DecryptResult, Error, UserDecryptMutationParams>>["mutate"]>[1];
 
 export { nameContract }
 
@@ -1472,11 +1478,6 @@ export { ZamaSDKEventType }
 export { ZERO_HANDLE }
 
 export { ZKProofLike }
-
-// Warnings were encountered during analysis:
-//
-// dist/index.d.ts:158:100 - (ae-forgotten-export) The symbol "MutateCallbackOptions" needs to be exported by the entry point index.d.ts
-// dist/index.d.ts:159:3 - (ae-forgotten-export) The symbol "DecryptResult" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
