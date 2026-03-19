@@ -47,9 +47,7 @@ describe("useQueries wrapper", () => {
   });
 
   it("works with empty queries array", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() =>
-      useQueries({ queries: [] }),
-    );
+    const { result } = renderWithProviders(() => useQueries({ queries: [] }));
 
     expect(result.current).toHaveLength(0);
   });
