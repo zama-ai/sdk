@@ -68,4 +68,16 @@ export {
   getDelegationExpiryContract,
 } from "./acl";
 
+export {
+  wrappersRegistryAbi,
+  getTokenPairsContract,
+  getTokenPairsLengthContract,
+  getTokenPairsSliceContract,
+  getTokenPairContract,
+  getConfidentialTokenAddressContract,
+  getTokenAddressContract,
+  isConfidentialTokenValidContract,
+  type TokenWrapperPair,
+} from "./wrappers-registry";
+
 export { MAX_UINT64 } from "./constants";

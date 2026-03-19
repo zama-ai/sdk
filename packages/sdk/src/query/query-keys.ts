@@ -243,4 +243,73 @@ export const zamaQueryKeys = {
         },
       ] as const,
   },
+
+  wrappersRegistry: {
+    all: ["zama.wrappersRegistry"] as const,
+    tokenPairs: (wrappersRegistryAddress: Address) =>
+      [
+        "zama.wrappersRegistry",
+        {
+          type: "tokenPairs",
+          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+        },
+      ] as const,
+    confidentialTokenAddress: (wrappersRegistryAddress: Address, tokenAddress: Address) =>
+      [
+        "zama.wrappersRegistry",
+        {
+          type: "confidentialTokenAddress",
+          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          tokenAddress: getAddress(tokenAddress),
+        },
+      ] as const,
+    tokenAddress: (wrappersRegistryAddress: Address, confidentialTokenAddress: Address) =>
+      [
+        "zama.wrappersRegistry",
+        {
+          type: "tokenAddress",
+          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          confidentialTokenAddress: getAddress(confidentialTokenAddress),
+        },
+      ] as const,
+    tokenPairsLength: (wrappersRegistryAddress: Address) =>
+      [
+        "zama.wrappersRegistry",
+        {
+          type: "tokenPairsLength",
+          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+        },
+      ] as const,
+    tokenPairsSlice: (wrappersRegistryAddress: Address, fromIndex: string, toIndex: string) =>
+      [
+        "zama.wrappersRegistry",
+        {
+          type: "tokenPairsSlice",
+          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          fromIndex,
+          toIndex,
+        },
+      ] as const,
+    tokenPair: (wrappersRegistryAddress: Address, index: string) =>
+      [
+        "zama.wrappersRegistry",
+        {
+          type: "tokenPair",
+          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          index,
+        },
+      ] as const,
+    isConfidentialTokenValid: (
+      wrappersRegistryAddress: Address,
+      confidentialTokenAddress: Address,
+    ) =>
+      [
+        "zama.wrappersRegistry",
+        {
+          type: "isConfidentialTokenValid",
+          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          confidentialTokenAddress: getAddress(confidentialTokenAddress),
+        },
+      ] as const,
+  },
 } as const;

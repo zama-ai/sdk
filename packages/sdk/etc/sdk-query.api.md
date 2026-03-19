@@ -228,6 +228,15 @@ export interface ConfidentialIsApprovedQueryConfig {
 // @public (undocumented)
 export function confidentialIsApprovedQueryOptions(signer: GenericSigner, tokenAddress: Address, config: ConfidentialIsApprovedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>>;
 
+// @public (undocumented)
+export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQueryConfig {
+    // (undocumented)
+    tokenAddress?: Address;
+}
+
+// @public (undocumented)
+export function confidentialTokenAddressQueryOptions(signer: GenericSigner, config: ConfidentialTokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.confidentialTokenAddress>>;
+
 // @public
 export interface ConfidentialTransferEvent {
     readonly encryptedAmountHandle: Handle;
@@ -680,6 +689,15 @@ export interface IsConfidentialQueryConfig {
 export function isConfidentialQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isConfidential.token>>;
 
 // @public (undocumented)
+export interface IsConfidentialTokenValidQueryConfig extends WrappersRegistryQueryConfig {
+    // (undocumented)
+    confidentialTokenAddress?: Address;
+}
+
+// @public (undocumented)
+export function isConfidentialTokenValidQueryOptions(signer: GenericSigner, config: IsConfidentialTokenValidQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.wrappersRegistry.isConfidentialTokenValid>>;
+
+// @public (undocumented)
 export function isWrapperQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
 // @public (undocumented)
@@ -1019,6 +1037,15 @@ export class Token extends ReadonlyToken {
     static readonly ZERO_ADDRESS: Address;
 }
 
+// @public (undocumented)
+export interface TokenAddressQueryConfig extends WrappersRegistryQueryConfig {
+    // (undocumented)
+    confidentialTokenAddress?: Address;
+}
+
+// @public (undocumented)
+export function tokenAddressQueryOptions(signer: GenericSigner, config: TokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenAddress>>;
+
 // @public
 export interface TokenConfig extends ReadonlyTokenConfig {
     wrapper?: Address;
@@ -1042,6 +1069,34 @@ export interface TokenMetadataQueryConfig {
 
 // @public (undocumented)
 export function tokenMetadataQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: TokenMetadataQueryConfig): QueryFactoryOptions<TokenMetadata, Error, TokenMetadata, ReturnType<typeof zamaQueryKeys.tokenMetadata.token>>;
+
+// @public (undocumented)
+export interface TokenPairQueryConfig extends WrappersRegistryQueryConfig {
+    // (undocumented)
+    index?: bigint;
+}
+
+// Warning: (ae-forgotten-export) The symbol "TokenWrapperPair" needs to be exported by the entry point index.d.ts
+//
+// @public (undocumented)
+export function tokenPairQueryOptions(signer: GenericSigner, config: TokenPairQueryConfig): QueryFactoryOptions<TokenWrapperPair, Error, TokenWrapperPair, ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPair>>;
+
+// @public (undocumented)
+export function tokenPairsLengthQueryOptions(signer: GenericSigner, config: WrappersRegistryQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsLength>>;
+
+// @public (undocumented)
+export function tokenPairsQueryOptions(signer: GenericSigner, config: WrappersRegistryQueryConfig): QueryFactoryOptions<readonly TokenWrapperPair[], Error, readonly TokenWrapperPair[], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairs>>;
+
+// @public (undocumented)
+export interface TokenPairsSliceQueryConfig extends WrappersRegistryQueryConfig {
+    // (undocumented)
+    fromIndex?: bigint;
+    // (undocumented)
+    toIndex?: bigint;
+}
+
+// @public (undocumented)
+export function tokenPairsSliceQueryOptions(signer: GenericSigner, config: TokenPairsSliceQueryConfig): QueryFactoryOptions<readonly TokenWrapperPair[], Error, readonly TokenWrapperPair[], ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsSlice>>;
 
 // @public (undocumented)
 export interface TotalSupplyQueryConfig {
@@ -1283,6 +1338,14 @@ export interface WrapperDiscoveryQueryConfig {
 // @public (undocumented)
 export function wrapperDiscoveryQueryOptions(signer: GenericSigner, tokenAddress: Address, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<Address | null, Error, Address | null, ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>>;
 
+// @public (undocumented)
+export interface WrappersRegistryQueryConfig {
+    // (undocumented)
+    query?: Record<string, unknown>;
+    // (undocumented)
+    wrappersRegistryAddress: Address | undefined;
+}
+
 // @public
 export const zamaQueryKeys: {
     readonly signerAddress: {
@@ -1453,6 +1516,43 @@ export const zamaQueryKeys: {
             readonly handle: string;
         }];
     };
+    readonly wrappersRegistry: {
+        readonly all: readonly ["zama.wrappersRegistry"];
+        readonly tokenPairs: (wrappersRegistryAddress: Address) => readonly ["zama.wrappersRegistry", {
+            readonly type: "tokenPairs";
+            readonly wrappersRegistryAddress: `0x${string}`;
+        }];
+        readonly confidentialTokenAddress: (wrappersRegistryAddress: Address, tokenAddress: Address) => readonly ["zama.wrappersRegistry", {
+            readonly type: "confidentialTokenAddress";
+            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly tokenAddress: `0x${string}`;
+        }];
+        readonly tokenAddress: (wrappersRegistryAddress: Address, confidentialTokenAddress: Address) => readonly ["zama.wrappersRegistry", {
+            readonly type: "tokenAddress";
+            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly confidentialTokenAddress: `0x${string}`;
+        }];
+        readonly tokenPairsLength: (wrappersRegistryAddress: Address) => readonly ["zama.wrappersRegistry", {
+            readonly type: "tokenPairsLength";
+            readonly wrappersRegistryAddress: `0x${string}`;
+        }];
+        readonly tokenPairsSlice: (wrappersRegistryAddress: Address, fromIndex: string, toIndex: string) => readonly ["zama.wrappersRegistry", {
+            readonly type: "tokenPairsSlice";
+            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly fromIndex: string;
+            readonly toIndex: string;
+        }];
+        readonly tokenPair: (wrappersRegistryAddress: Address, index: string) => readonly ["zama.wrappersRegistry", {
+            readonly type: "tokenPair";
+            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly index: string;
+        }];
+        readonly isConfidentialTokenValid: (wrappersRegistryAddress: Address, confidentialTokenAddress: Address) => readonly ["zama.wrappersRegistry", {
+            readonly type: "isConfidentialTokenValid";
+            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly confidentialTokenAddress: `0x${string}`;
+        }];
+    };
 };
 
 // @public
@@ -1461,6 +1561,8 @@ export class ZamaSDK {
     allow(...contractAddresses: Address[]): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
+    // Warning: (ae-forgotten-export) The symbol "WrappersRegistry" needs to be exported by the entry point index.d.ts
+    createWrappersRegistry(wrappersRegistryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
     readonly credentials: CredentialsManager;
     // (undocumented)
@@ -1541,7 +1643,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-B1fFV04Z.d.ts:1407:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/activity-DXVM2nX1.d.ts:1574:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

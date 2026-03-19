@@ -49,13 +49,29 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Extends the base relayer config with the on-chain wrappers registry address.
+ *
+ * Used by {@link DefaultConfigs} and the {@link WrappersRegistry} class to
+ * resolve the correct registry contract per chain.
+ */
+export interface ExtendedFhevmInstanceConfig extends FhevmInstanceConfig {
+  /**
+   * Address of the `ConfidentialTokenWrappersRegistry` contract.
+   * `undefined` for chains where no registry is deployed (e.g. Hardhat).
+   */
+  wrappersRegistryAddress: string | undefined;
+}
+
+/**
  * Mainnet network configuration (chainId 1).
  *
  * Contract addresses mirror `MainnetConfigV2` from `@zama-fhe/relayer-sdk`.
  * They are duplicated here because the `/bundle` export path only exposes
  * types at build time (runtime values require `/web` or `/node` which pull
- * in WASM). `satisfies FhevmInstanceConfig` ensures structural drift is
- * caught at compile time.
+ * in WASM). `satisfies ExtendedFhevmInstanceConfig` ensures structural drift
+ * is caught at compile time.
+ *
+ * Includes `wrappersRegistryAddress` for the on-chain token wrappers registry.
  */
 export const MainnetConfig = {
   chainId: 1,
@@ -67,11 +83,14 @@ export const MainnetConfig = {
   inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2",
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
-} as const satisfies FhevmInstanceConfig;
+  wrappersRegistryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
+} as const satisfies ExtendedFhevmInstanceConfig;
 
 /**
  * Sepolia testnet network configuration (chainId 11155111).
+ *
  * See {@link MainnetConfig} for why addresses are hardcoded.
+ * Includes `wrappersRegistryAddress` for the on-chain token wrappers registry.
  */
 export const SepoliaConfig = {
   chainId: 11155111,
@@ -83,7 +102,8 @@ export const SepoliaConfig = {
   inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0",
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-} as const satisfies FhevmInstanceConfig;
+  wrappersRegistryAddress: "0xDEbdfa2568dEd84044e9807500ee523acDe9308b",
+} as const satisfies ExtendedFhevmInstanceConfig;
 
 /**
  * Hardhat local network configuration (chainId 31337).
@@ -91,6 +111,9 @@ export const SepoliaConfig = {
  * The addresses in this configuration must match those of your deployment.
  * Ensure that the executor address and other contract addresses correspond to
  * the contracts deployed on your Hardhat network.
+ *
+ * `wrappersRegistryAddress` is `undefined` — pass it explicitly via
+ * `wrappersRegistryAddresses` when creating a {@link WrappersRegistry}.
  */
 export const HardhatConfig = {
   chainId: 31337,
@@ -102,12 +125,20 @@ export const HardhatConfig = {
   kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-} as const satisfies FhevmInstanceConfig;
+  wrappersRegistryAddress: undefined,
+} as const satisfies ExtendedFhevmInstanceConfig;
 
-export const DefaultConfigs: Record<number, FhevmInstanceConfig> = {
-  1: MainnetConfig,
-  11155111: SepoliaConfig,
-  31337: HardhatConfig,
+/**
+ * Built-in network configurations keyed by chain ID.
+ *
+ * Includes Mainnet (1), Sepolia (11155111), and Hardhat (31337).
+ * Used by {@link RelayerWeb} to resolve transport configs and by
+ * {@link WrappersRegistry} to resolve registry addresses.
+ */
+export const DefaultConfigs: Record<number, ExtendedFhevmInstanceConfig> = {
+  [1]: MainnetConfig,
+  [11155111]: SepoliaConfig,
+  [31337]: HardhatConfig,
 } as const;
 
 /** EIP-712 domain field → Solidity type. Order follows the EIP-712 spec. */

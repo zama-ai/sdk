@@ -1,0 +1,41 @@
+"use client";
+
+import {
+  DefaultWrappersRegistryAddresses,
+  type Address,
+  type TokenWrapperPair,
+} from "@zama-fhe/sdk";
+import { tokenPairsSliceQueryOptions } from "@zama-fhe/sdk/query";
+import { useZamaSDK } from "../provider";
+import { useQuery } from "../utils/query";
+import { useWrappersRegistryAddress } from "./use-wrappers-registry-address";
+
+/**
+ * Fetches a range of token wrapper pairs from the registry (paginated).
+ *
+ * @param fromIndex - Start index (inclusive). Pass `undefined` to disable.
+ * @param toIndex - End index (exclusive). Pass `undefined` to disable.
+ */
+export function useTokenPairsSlice({
+  fromIndex,
+  toIndex,
+  wrappersRegistryAddresses = DefaultWrappersRegistryAddresses,
+}: {
+  fromIndex: bigint | undefined;
+  toIndex: bigint | undefined;
+  wrappersRegistryAddresses?: Record<number, Address>;
+}) {
+  const sdk = useZamaSDK();
+  const wrappersRegistryAddress = useWrappersRegistryAddress(wrappersRegistryAddresses);
+
+  return useQuery<readonly TokenWrapperPair[]>(
+    tokenPairsSliceQueryOptions(sdk.signer, {
+      wrappersRegistryAddress,
+      fromIndex,
+      toIndex,
+      query: {
+        enabled: !!wrappersRegistryAddress && fromIndex !== undefined && toIndex !== undefined,
+      },
+    }),
+  );
+}

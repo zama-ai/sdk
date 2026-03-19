@@ -15,6 +15,13 @@ import {
   wrapContract,
   wrapETHContract,
   wrapperExistsContract,
+  getTokenPairsContract,
+  getTokenPairsLengthContract,
+  getTokenPairsSliceContract,
+  getTokenPairContract,
+  getConfidentialTokenAddressContract,
+  getTokenAddressContract,
+  isConfidentialTokenValidContract,
 } from "../contracts";
 
 // ── Helpers ────────────────────────────────────────────────
@@ -182,4 +189,51 @@ export function writeWrapETHContract(
     account: requireAccount(client),
     ...wrapETHContract(wrapperAddress, to, amount, value),
   });
+}
+
+// ── Registry read helpers ──────────────────────────────────
+
+export function readTokenPairsContract(client: PublicClient, registry: Address) {
+  return client.readContract(getTokenPairsContract(registry));
+}
+
+export function readTokenPairsLengthContract(client: PublicClient, registry: Address) {
+  return client.readContract(getTokenPairsLengthContract(registry));
+}
+
+export function readTokenPairsSliceContract(
+  client: PublicClient,
+  registry: Address,
+  fromIndex: bigint,
+  toIndex: bigint,
+) {
+  return client.readContract(getTokenPairsSliceContract(registry, fromIndex, toIndex));
+}
+
+export function readTokenPairContract(client: PublicClient, registry: Address, index: bigint) {
+  return client.readContract(getTokenPairContract(registry, index));
+}
+
+export function readConfidentialTokenAddressContract(
+  client: PublicClient,
+  registry: Address,
+  tokenAddress: Address,
+) {
+  return client.readContract(getConfidentialTokenAddressContract(registry, tokenAddress));
+}
+
+export function readTokenAddressContract(
+  client: PublicClient,
+  registry: Address,
+  confidentialTokenAddress: Address,
+) {
+  return client.readContract(getTokenAddressContract(registry, confidentialTokenAddress));
+}
+
+export function readIsConfidentialTokenValidContract(
+  client: PublicClient,
+  registry: Address,
+  confidentialTokenAddress: Address,
+) {
+  return client.readContract(isConfidentialTokenValidContract(registry, confidentialTokenAddress));
 }

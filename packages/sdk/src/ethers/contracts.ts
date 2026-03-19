@@ -24,6 +24,13 @@ import {
   wrapContract,
   wrapETHContract,
   wrapperExistsContract,
+  getTokenPairsContract,
+  getTokenPairsLengthContract,
+  getTokenPairsSliceContract,
+  getTokenPairContract,
+  getConfidentialTokenAddressContract,
+  getTokenAddressContract,
+  isConfidentialTokenValidContract,
 } from "../contracts";
 
 interface TransactionRequestConfig {
@@ -223,4 +230,55 @@ export function writeWrapETHContract(
   value: bigint,
 ) {
   return ethersWrite(signer, wrapETHContract(wrapperAddress, to, amount, value));
+}
+
+// ── Registry read helpers ──────────────────────────────────
+
+export function readTokenPairsContract(provider: EthersCallProvider, registry: Address) {
+  return ethersRead(provider, getTokenPairsContract(registry));
+}
+
+export function readTokenPairsLengthContract(provider: EthersCallProvider, registry: Address) {
+  return ethersRead(provider, getTokenPairsLengthContract(registry));
+}
+
+export function readTokenPairsSliceContract(
+  provider: EthersCallProvider,
+  registry: Address,
+  fromIndex: bigint,
+  toIndex: bigint,
+) {
+  return ethersRead(provider, getTokenPairsSliceContract(registry, fromIndex, toIndex));
+}
+
+export function readTokenPairContract(
+  provider: EthersCallProvider,
+  registry: Address,
+  index: bigint,
+) {
+  return ethersRead(provider, getTokenPairContract(registry, index));
+}
+
+export function readConfidentialTokenAddressContract(
+  provider: EthersCallProvider,
+  registry: Address,
+  tokenAddress: Address,
+) {
+  return ethersRead(provider, getConfidentialTokenAddressContract(registry, tokenAddress));
+}
+
+export function readTokenAddressContract(
+  provider: EthersCallProvider,
+  registry: Address,
+  confidentialTokenAddress: Address,
+) {
+  return ethersRead(provider, getTokenAddressContract(registry, confidentialTokenAddress));
+}
+
+export function readIsConfidentialTokenValidContract(
+  provider: EthersCallProvider,
+  registry: Address,
+  confidentialTokenAddress: Address,
+) {
+  return ethersRead(provider, isConfidentialTokenValidContract(registry, confidentialTokenAddress));
 }

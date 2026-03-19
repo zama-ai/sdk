@@ -24,6 +24,7 @@
   - [ZamaSDK](reference/sdk/ZamaSDK.md)
   - [Token](reference/sdk/Token.md)
   - [ReadonlyToken](reference/sdk/ReadonlyToken.md)
+  - [WrappersRegistry](reference/sdk/WrappersRegistry.md)
   - [RelayerWeb](reference/sdk/RelayerWeb.md)
   - [RelayerNode](reference/sdk/RelayerNode.md)
   - [RelayerCleartext](reference/sdk/RelayerCleartext.md)

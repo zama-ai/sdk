@@ -7,6 +7,7 @@ import { CredentialsManager } from "./credentials-manager";
 import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
 import { MemoryStorage } from "./memory-storage";
 import { ReadonlyToken } from "./readonly-token";
+import { WrappersRegistry } from "./wrappers-registry";
 import { Token } from "./token";
 import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./token.types";
 
@@ -207,6 +208,31 @@ export class ZamaSDK {
       address: getAddress(address),
       wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,
+    });
+  }
+
+  /**
+   * Create a {@link WrappersRegistry} instance bound to this SDK's signer.
+   * On Mainnet and Sepolia the registry address is resolved automatically.
+   *
+   * @param wrappersRegistryAddresses - Optional per-chain overrides (e.g. Hardhat).
+   * @returns A {@link WrappersRegistry} instance.
+   *
+   * @example
+   * ```ts
+   * // Mainnet / Sepolia — resolved automatically
+   * const registry = sdk.createWrappersRegistry();
+   *
+   * // Hardhat or custom chain — override per chain
+   * const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
+   *
+   * const pairs = await registry.getTokenPairs();
+   * ```
+   */
+  createWrappersRegistry(wrappersRegistryAddresses?: Record<number, Address>): WrappersRegistry {
+    return new WrappersRegistry({
+      signer: this.signer,
+      wrappersRegistryAddresses,
     });
   }
 

@@ -46,6 +46,8 @@ export type { ZamaSDKConfig } from "./token/zama-sdk";
 export { Token } from "./token/token";
 export type { TokenConfig } from "./token/token";
 export { ReadonlyToken } from "./token/readonly-token";
+export { WrappersRegistry, DefaultWrappersRegistryAddresses } from "./token/wrappers-registry";
+export type { WrappersRegistryConfig } from "./token/wrappers-registry";
 export type {
   ReadonlyTokenConfig,
   BatchDecryptOptions,
@@ -216,5 +218,12 @@ export {
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
+  getTokenPairsContract,
+  getTokenPairsLengthContract,
+  getTokenPairsSliceContract,
+  getTokenPairContract,
+  getConfidentialTokenAddressContract,
+  getTokenAddressContract,
+  isConfidentialTokenValidContract,
 } from "./contracts";
-export type { BatchTransferData } from "./contracts";
+export type { BatchTransferData, TokenWrapperPair } from "./contracts";

@@ -197,6 +197,22 @@ Creates a read-only token instance for balance decryption and metadata queries.
 const readonlyToken = sdk.createReadonlyToken("0xEncryptedERC20");
 ```
 
+### createWrappersRegistry
+
+`(wrappersRegistryAddresses?: Record<number, Address>) => WrappersRegistry`
+
+Creates a wrappers registry instance for querying on-chain token wrapper pairs. On Mainnet and Sepolia the registry address is resolved automatically.
+
+```ts
+// Mainnet / Sepolia — resolved automatically
+const registry = sdk.createWrappersRegistry();
+
+// Hardhat or custom chain — override per chain
+const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
+
+const pairs = await registry.getTokenPairs();
+```
+
 ### allow
 
 `(...addresses: Address[]) => Promise<void>`
@@ -261,4 +277,5 @@ sdk.terminate();
 
 - [Token](/reference/sdk/Token) — read/write token operations
 - [ReadonlyToken](/reference/sdk/ReadonlyToken) — read-only token operations
+- [WrappersRegistry](/reference/sdk/WrappersRegistry) — on-chain token wrappers registry
 - [Configuration guide](/guides/configuration) — relayer, signer, and storage setup
