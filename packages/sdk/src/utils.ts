@@ -12,7 +12,6 @@ export function prefixHex(value: string): Hex {
 
 /** Convert a public `Hex` value back an unprefixed format. */
 export function unprefixHex(value: Hex): string {
-  assertCondition(value.startsWith("0x"), `Expected 0x-prefixed hex, got: ${value}`);
   return value.slice(2);
 }
 

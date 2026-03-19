@@ -89,4 +89,34 @@ describe("useDelegateDecryption", () => {
       expect(onSuccess).toHaveBeenCalledOnce();
     });
   });
+
+  test("behavior: onSuccess fires before cache invalidation", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+
+    const order: string[] = [];
+    const onSuccess = vi.fn(() => order.push("onSuccess"));
+
+    const { result, queryClient } = renderWithProviders(() =>
+      useDelegateDecryption({ tokenAddress: TOKEN }, { onSuccess }),
+    );
+
+    const originalInvalidateQueries = queryClient.invalidateQueries.bind(queryClient);
+    vi.spyOn(queryClient, "invalidateQueries").mockImplementation((...args) => {
+      order.push("invalidateQueries");
+      return originalInvalidateQueries(...args);
+    });
+
+    act(() => {
+      result.current.mutate({ delegateAddress: RECIPIENT });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(order).toEqual(["onSuccess", "invalidateQueries"]);
+  });
 });
