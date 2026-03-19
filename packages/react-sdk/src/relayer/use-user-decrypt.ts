@@ -24,15 +24,16 @@ export interface UseUserDecryptConfig extends UserDecryptCallbacks {
 /**
  * React hook for FHE user decryption. Follows react-query `useMutation` semantics.
  *
- * Handles the full decryption flow: keypair generation, EIP-712 signing,
- * and relayer decryption — triggered by calling `mutate()`.
+ * Handles the full decryption flow: credential acquisition (keypair + EIP-712
+ * signing, cached across calls) and relayer decryption — triggered by calling
+ * `mutate()`.
  *
  * ### Return value
  *
  * | Field | Type | Description |
  * |-------|------|-------------|
- * | `mutate(params?)` | `function` | Trigger decryption. Without args, decrypts uncached handles from `config.handles`. |
- * | `mutateAsync(params?)` | `function` | Same as `mutate` but returns `Promise<Record<Handle, ClearValueType>>`. |
+ * | `mutate(params?)` | `function` | Trigger decryption. Without args, decrypts uncached handles from `config.handles`. No-op if all are cached. |
+ * | `mutateAsync(params?)` | `function` | Same as `mutate` but returns `Promise<Record<Handle, ClearValueType>>`. Resolves to `{}` if all cached. |
  * | `data` | `Record<Handle, ClearValueType> \| undefined` | Result of the last successful `mutate` call. |
  * | `values` | `Record<Handle, ClearValueType \| undefined>` | Reactive cache of all tracked handles (populated across calls). |
  * | `isPending` | `boolean` | `true` while decryption is in progress. |
@@ -41,7 +42,10 @@ export interface UseUserDecryptConfig extends UserDecryptCallbacks {
  * | `error` | `Error \| null` | The error, if any. |
  * | `reset` | `function` | Reset mutation state back to idle. |
  *
- * @param config - Handles to track and optional lifecycle callbacks.
+ * All other fields from react-query's `useMutation` are also available
+ * (e.g., `status`, `variables`, `isIdle`, `failureCount`).
+ *
+ * @param config - Handles to track and optional lifecycle callbacks (`onCredentialsReady`, `onDecrypted`).
  *
  * @example
  * ```tsx
@@ -84,15 +88,19 @@ export function useUserDecrypt(config?: UseUserDecryptConfig) {
     queries: handles.map((h) => ({
       queryKey: zamaQueryKeys.decryption.handle(h.handle),
       queryKeyHashFn: hashFn,
-      queryFn: () => undefined as never,
+      queryFn: () => {
+        throw new Error(
+          `[useUserDecrypt] Cache-only query for handle ${h.handle} was unexpectedly executed`,
+        );
+      },
       enabled: false,
     })),
   });
 
-  // Build reactive values map
   const values: Record<Handle, ClearValueType | undefined> = {};
   for (let i = 0; i < handles.length; i++) {
-    values[handles[i]?.handle ?? "0x"] = cacheResults[i]?.data as ClearValueType | undefined;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    values[handles[i]!.handle] = cacheResults[i]?.data as ClearValueType | undefined;
   }
 
   const { handles: _handles, ...callbacks } = config ?? {};
@@ -104,7 +112,10 @@ export function useUserDecrypt(config?: UseUserDecryptConfig) {
   /**
    * Trigger decryption. Without arguments, decrypts all tracked handles
    * that are not yet in the cache. Pass explicit params to override.
-   * Follows react-query `mutate` signature.
+   *
+   * When all handles are already cached this is a no-op: the mutation is
+   * not triggered and its state (`isSuccess`, `data`) is not updated.
+   * Use the `values` map to read cached results reactively.
    */
   function mutate(
     params: UserDecryptMutationParams = {
@@ -119,7 +130,9 @@ export function useUserDecrypt(config?: UseUserDecryptConfig) {
   }
 
   /**
-   * Same as `mutate` but returns a promise. Follows react-query `mutateAsync` signature.
+   * Same as `mutate` but returns a promise.
+   * Resolves immediately with `{}` when all handles are already cached
+   * (the mutation is not triggered in this case).
    */
   function mutateAsync(
     params: UserDecryptMutationParams = {
@@ -150,7 +163,7 @@ function getUncachedHandles(
   queryClient: ReturnType<typeof useQueryClient>,
 ): DecryptHandle[] {
   return handles.filter((h) => {
-    const cached = queryClient.getQueryData(zamaQueryKeys.decryption.handle(h.handle));
-    return cached === undefined;
+    const state = queryClient.getQueryState(zamaQueryKeys.decryption.handle(h.handle));
+    return state?.dataUpdatedAt === undefined || state.dataUpdatedAt === 0;
   });
 }

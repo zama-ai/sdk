@@ -232,6 +232,7 @@ import { UnwrappedFinalizedEvent } from '@zama-fhe/sdk';
 import { UnwrappedStartedEvent } from '@zama-fhe/sdk';
 import { UnwrapRequestedEvent } from '@zama-fhe/sdk';
 import { UnwrapSubmittedEvent } from '@zama-fhe/sdk';
+import { useMutation } from '@tanstack/react-query';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
@@ -1227,12 +1228,10 @@ export function usePublicKey(): _tanstack_react_query0.UseQueryResult<PublicKeyD
 // @public
 export function usePublicParams(bits: number): _tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
 
-export { UserDecryptCallbacks as DecryptCallbacks }
 export { UserDecryptCallbacks }
 
 export { userDecryptMutationOptions }
 
-export { UserDecryptMutationParams as DecryptParams }
 export { UserDecryptMutationParams }
 
 export { UserDecryptParams }
@@ -1314,19 +1313,84 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config?: UseUserDecryptConfig): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, UserDecryptMutationParams, unknown>;
-
-// @public
-export type UseUserDecryptConfig = UserDecryptCallbacks;
-
-// @public
-export function useUserDecryptedValue(handle: Handle | undefined): _tanstack_react_query0.UseQueryResult<ClearValueType, Error>;
-
-// @public
-export function useUserDecryptedValues(handles: Handle[]): {
-    data: Record<`0x${string}`, ClearValueType | undefined>;
-    results: _tanstack_react_query0.UseQueryResult<never, Error>[];
+export function useUserDecrypt(config?: UseUserDecryptConfig): {
+    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void; /** Trigger decryption (returns promise). Without args, decrypts uncached handles from config. */
+    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
+    values: Record<`0x${string}`, ClearValueType | undefined>;
+    data: undefined;
+    variables: undefined;
+    error: null;
+    isError: false;
+    isIdle: true;
+    isPending: false;
+    isSuccess: false;
+    status: "idle";
+    reset: () => void;
+    context: unknown;
+    failureCount: number;
+    failureReason: Error | null;
+    isPaused: boolean;
+    submittedAt: number;
+} | {
+    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void; /** Trigger decryption (returns promise). Without args, decrypts uncached handles from config. */
+    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
+    values: Record<`0x${string}`, ClearValueType | undefined>;
+    data: undefined;
+    variables: UserDecryptMutationParams;
+    error: null;
+    isError: false;
+    isIdle: false;
+    isPending: true;
+    isSuccess: false;
+    status: "pending";
+    reset: () => void;
+    context: unknown;
+    failureCount: number;
+    failureReason: Error | null;
+    isPaused: boolean;
+    submittedAt: number;
+} | {
+    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void; /** Trigger decryption (returns promise). Without args, decrypts uncached handles from config. */
+    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
+    values: Record<`0x${string}`, ClearValueType | undefined>;
+    data: undefined;
+    error: Error;
+    variables: UserDecryptMutationParams;
+    isError: true;
+    isIdle: false;
+    isPending: false;
+    isSuccess: false;
+    status: "error";
+    reset: () => void;
+    context: unknown;
+    failureCount: number;
+    failureReason: Error | null;
+    isPaused: boolean;
+    submittedAt: number;
+} | {
+    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void; /** Trigger decryption (returns promise). Without args, decrypts uncached handles from config. */
+    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
+    values: Record<`0x${string}`, ClearValueType | undefined>;
+    data: DecryptResult;
+    error: null;
+    variables: UserDecryptMutationParams;
+    isError: false;
+    isIdle: false;
+    isPending: false;
+    isSuccess: true;
+    status: "success";
+    reset: () => void;
+    context: unknown;
+    failureCount: number;
+    failureReason: Error | null;
+    isPaused: boolean;
+    submittedAt: number;
 };
+
+// @public
+export interface UseUserDecryptConfig extends UserDecryptCallbacks {
+    handles?: DecryptHandle[];
+}
 
 // @public
 export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<`0x${string}` | null, Error>;
@@ -1408,6 +1472,11 @@ export { ZamaSDKEventType }
 export { ZERO_HANDLE }
 
 export { ZKProofLike }
+
+// Warnings were encountered during analysis:
+//
+// dist/index.d.ts:158:100 - (ae-forgotten-export) The symbol "MutateCallbackOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:159:3 - (ae-forgotten-export) The symbol "DecryptResult" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
