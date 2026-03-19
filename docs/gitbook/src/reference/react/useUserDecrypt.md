@@ -25,23 +25,25 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 {% tab title="component.tsx" %}
 
 ```tsx
-import { useUserDecrypt, useUserDecryptedValue } from "@zama-fhe/react-sdk";
+import { useUserDecrypt } from "@zama-fhe/react-sdk";
 
 function DecryptHandle() {
-  const decrypt = useUserDecrypt();
-  const { data: decryptedValue } = useUserDecryptedValue("0xhandle...");
+  const decrypt = useUserDecrypt({
+    handles: [
+      {
+        handle: "0xhandle...",
+        contractAddress: "0xYourContract",
+      },
+    ],
+  });
 
   async function handleDecrypt() {
-    const result = await decrypt.mutateAsync({
-      handles: [
-        {
-          handle: "0xhandle...",
-          contractAddress: "0xYourContract",
-        },
-      ],
-    });
+    // Decrypts only uncached handles; no-op if already cached
+    const result = await decrypt.mutateAsync();
     // result: { "0xhandle...": 1000n }
   }
+
+  const decryptedValue = decrypt.values["0xhandle..."];
 
   return (
     <section>
@@ -64,7 +66,13 @@ function DecryptHandle() {
 import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
 ```
 
-`UseUserDecryptConfig` extends `DecryptCallbacks` — callbacks are passed directly as top-level properties.
+`UseUserDecryptConfig` extends `UserDecryptCallbacks` — callbacks and tracked handles are passed directly as top-level properties.
+
+### handles
+
+`DecryptHandle[] | undefined`
+
+Encrypted handles to track. The hook reactively reads their decrypted values from the cache via the `values` map. When you call `mutate()` without arguments, only handles not yet in the cache are sent for decryption.
 
 ### onCredentialsReady
 
@@ -158,7 +166,9 @@ const result = await decrypt.mutateAsync({
 
 `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-On success, results are written to the decryption cache so that [`useUserDecryptedValue`](/guides/encrypt-decrypt#reading-decrypted-values-from-cache) and [`useUserDecryptedValues`](/guides/encrypt-decrypt#reading-decrypted-values-from-cache) can read them without re-decrypting.
+`values` is a reactive map of all tracked handles to their cached decrypted values (`undefined` if not yet decrypted). It updates automatically when decryption succeeds.
+
+On success, results are written to the decryption cache so that the `values` map and any other `useUserDecrypt` instance tracking the same handles will update reactively.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

@@ -16,16 +16,19 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 {% code title="ConfidentialRoundTrip.tsx" %}
 
 ```tsx
-import { useEncrypt, useUserDecrypt, useUserDecryptedValue, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
 import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
 
 function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
-  const decrypt = useUserDecrypt();
-  const [handle, setHandle] = useState<string>();
-  const { data: decryptedValue } = useUserDecryptedValue(handle);
+  const [storedHandle, setStoredHandle] = useState<string>();
+
+  // Track the handle — `values` reactively reads from the decryption cache
+  const decrypt = useUserDecrypt({
+    handles: storedHandle ? [{ handle: storedHandle, contractAddress: "0xYourContract" }] : [],
+  });
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -49,20 +52,22 @@ function ConfidentialRoundTrip() {
     });
 
     // 3. Read the handle back from the contract
-    const storedHandle = (await sdk.signer.readContract({
+    const handle = (await sdk.signer.readContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "getHandle",
       args: [userAddress],
     })) as string;
 
+    setStoredHandle(handle);
+
     // 4. Decrypt
     await decrypt.mutateAsync({
-      handles: [{ handle: storedHandle, contractAddress }],
+      handles: [{ handle, contractAddress }],
     });
-
-    setHandle(storedHandle);
   };
+
+  const decryptedValue = storedHandle ? decrypt.values[storedHandle] : undefined;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -254,23 +259,24 @@ function ConfidentialAction() {
 {% code title="DecryptExample.tsx" %}
 
 ```tsx
-import { useUserDecrypt, useUserDecryptedValue } from "@zama-fhe/react-sdk";
+import { useUserDecrypt } from "@zama-fhe/react-sdk";
 
 function DecryptExample() {
-  const decrypt = useUserDecrypt();
-  const { data: decryptedValue } = useUserDecryptedValue("0xabc123...");
+  const decrypt = useUserDecrypt({
+    handles: [
+      {
+        handle: "0xabc123...",
+        contractAddress: "0xYourConfidentialContract",
+      },
+    ],
+  });
 
   const handleDecrypt = async () => {
-    const result = await decrypt.mutateAsync({
-      handles: [
-        {
-          handle: "0xabc123...", // the encrypted handle from the contract
-          contractAddress: "0xYourConfidentialContract",
-        },
-      ],
-    });
-    // result: { "0xabc123...": 1000n }
+    // Decrypts only uncached handles; no-op if already cached
+    await decrypt.mutateAsync();
   };
+
+  const decryptedValue = decrypt.values["0xabc123..."];
 
   return (
     <section>
@@ -305,36 +311,38 @@ const result = await decrypt.mutateAsync({
 
 #### Reading decrypted values from cache
 
-After decryption, values are stored in React Query's cache. Use `useUserDecryptedValue` or `useUserDecryptedValues` to read them anywhere in your component tree without triggering a new decryption:
+After decryption, values are stored in React Query's cache. Pass `handles` to `useUserDecrypt` and read from the reactive `values` map — no separate hooks needed:
 
 ```tsx
-import { useUserDecryptedValue, useUserDecryptedValues } from "@zama-fhe/react-sdk";
+import { useUserDecrypt } from "@zama-fhe/react-sdk";
+import type { DecryptHandle } from "@zama-fhe/react-sdk";
 
-// Single value
-function Balance({ handle }: { handle: string }) {
-  const { data: value } = useUserDecryptedValue(handle);
-  return <output>{value?.toString() ?? "—"}</output>;
-}
+function DecryptedBalances({ handles }: { handles: DecryptHandle[] }) {
+  const { values, mutate, isPending } = useUserDecrypt({ handles });
 
-// Multiple values
-function Balances({ handles }: { handles: string[] }) {
-  const { data } = useUserDecryptedValues(handles);
   return (
-    <ul>
-      {handles.map((h) => (
-        <li key={h}>
-          <output>{data[h]?.toString() ?? "pending"}</output>
-        </li>
-      ))}
-    </ul>
+    <section>
+      <button onClick={() => mutate()} disabled={isPending}>
+        {isPending ? "Decrypting..." : "Decrypt uncached"}
+      </button>
+      <ul>
+        {handles.map((h) => (
+          <li key={h.handle}>
+            <output>{values[h.handle]?.toString() ?? "pending"}</output>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 ```
 
+Calling `mutate()` without arguments decrypts only handles not already in the cache. If all handles are cached, it is a no-op.
+
 {% hint style="info" %}
 **Decrypted values are `undefined`?** Cache reads only return data after a decryption has populated the cache. Make sure:
 
-1. You have called `useUserDecrypt` first
+1. You have called `mutate()` or `mutateAsync()` at least once
 2. The handle you are reading matches exactly (it is case-sensitive, hex-encoded)
 3. The decryption completed successfully (check `decrypt.isSuccess`)
    {% endhint %}

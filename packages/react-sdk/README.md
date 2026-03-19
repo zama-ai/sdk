@@ -831,7 +831,7 @@ const result = await decrypt.mutateAsync({
   ],
 });
 // result: { "0xabc...": 500n, "0xdef...": 1000n }
-// Results are automatically cached for useUserDecryptedValue
+// Results are automatically cached — read via the `values` map
 ```
 
 #### All Encryption & Decryption Hooks
@@ -859,30 +859,19 @@ const result = await decrypt.mutateAsync({
 | `usePublicKey()`    | `void`          | `{ publicKeyId, publicKey } \| null`       | Get the TFHE compact public key.      |
 | `usePublicParams()` | `number` (bits) | `{ publicParams, publicParamsId } \| null` | Get public parameters for encryption. |
 
-### Decryption Cache Hooks
+### Decryption Cache
 
-`useUserDecrypt` and `usePublicDecrypt` populate a shared React Query cache. These hooks read from that cache without triggering new decryption requests.
-
-```ts
-// Single handle
-function useUserDecryptedValue(handle: string | undefined): UseQueryResult<bigint>;
-
-// Multiple handles
-function useUserDecryptedValues(handles: string[]): {
-  data: Record<string, bigint | undefined>;
-  results: UseQueryResult<bigint>[];
-};
-```
+`useUserDecrypt` populates a shared React Query cache. Pass `handles` to track them and read cached values reactively via the `values` map:
 
 ```tsx
-// First, trigger decryption (populates the cache)
-const decrypt = useUserDecrypt();
-await decrypt.mutateAsync({
+const { values, mutate, isPending } = useUserDecrypt({
   handles: [{ handle: "0xHandleHash", contractAddress: "0xToken" }],
 });
 
-// Then read cached results anywhere in the tree — no new decryption
-const { data: value } = useUserDecryptedValue("0xHandleHash");
+// Trigger decryption — only uncached handles are sent to the relayer
+mutate();
+
+// values["0xHandleHash"] updates reactively once decrypted
 ```
 
 ## Query Keys
