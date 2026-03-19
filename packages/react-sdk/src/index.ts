@@ -25,10 +25,6 @@ export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-ve
 export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
 export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
 
-// Read hooks (cached lookups)
-export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";
-export { useUserDecryptedValues } from "./relayer/use-user-decrypted-values";
-
 // Re-export core classes
 export {
   RelayerWeb,
