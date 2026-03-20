@@ -10,7 +10,7 @@ import type { Address } from "viem";
 import { createPublicClient, createTestClient, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { TEST_PRIVATE_KEY, MINTED, NODE_ANVIL_PORT, MOCK_RELAYER_PORT } from "./constants";
+import { TEST_PRIVATE_KEY, MINTED, NODE_ANVIL_PORT } from "./constants";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
 import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { RelayerNode } from "@zama-fhe/sdk/node";
@@ -112,7 +112,6 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
       transports: {
         [HardhatConfig.chainId]: {
           ...HardhatConfig,
-          relayerUrl: `http://127.0.0.1:${MOCK_RELAYER_PORT}`,
           network: `http://127.0.0.1:${anvilPort}`,
         },
       },

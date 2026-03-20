@@ -12,7 +12,7 @@ test.describe("RelayerNode — local operations", () => {
   });
 });
 
-test.describe("RelayerNode — WASM operations (testnet keys)", () => {
+test.describe("RelayerNode — FHE operations (mock worker)", () => {
   test("generates a keypair", async ({ relayer }) => {
     const keypair = await relayer.generateKeypair();
     expect(keypair.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
@@ -35,21 +35,20 @@ test.describe("RelayerNode — WASM operations (testnet keys)", () => {
     expect(eip712.message.contractAddresses).toContain(contracts.cUSDT);
   });
 
-  test("gets public key from testnet relayer", async ({ relayer }) => {
+  test("gets public key", async ({ relayer }) => {
     const result = await relayer.getPublicKey();
     expect(result).not.toBeNull();
-    expect(typeof result!.publicKeyId).toBe("string");
-    expect(result!.publicKeyId.length).toBeGreaterThan(0);
-    expect(result!.publicKey).toBeInstanceOf(Uint8Array);
-    expect(result!.publicKey.length).toBeGreaterThan(0);
+    expect(result!.publicKeyId).toBe("mock-public-key-id");
   });
 
-  test("gets public params from testnet relayer", async ({ relayer }) => {
+  test("gets public params", async ({ relayer }) => {
     const result = await relayer.getPublicParams(2048);
     expect(result).not.toBeNull();
-    expect(typeof result!.publicParamsId).toBe("string");
-    expect(result!.publicParamsId.length).toBeGreaterThan(0);
-    expect(result!.publicParams).toBeInstanceOf(Uint8Array);
-    expect(result!.publicParams.length).toBeGreaterThan(0);
+    expect(result!.publicParamsId).toBe("mock-public-params-id");
   });
+
+  // NOTE: encrypt, userDecrypt, and publicDecrypt require the full MockCoprocessor
+  // stack (fhevm_relayer_v1_input_proof RPC method, FhevmDB, coprocessor signers).
+  // This is provided by the @fhevm/hardhat-plugin but not yet ported to anvil.
+  // These operations are covered by the browser e2e tests.
 });
