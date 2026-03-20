@@ -1,5 +1,5 @@
 /**
- * Journey: A high-throughput backend fires concurrent FHE requests through
+ * Scenario: A high-throughput backend fires concurrent FHE requests through
  * a multi-worker pool to verify parallelism and clean shutdown.
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";

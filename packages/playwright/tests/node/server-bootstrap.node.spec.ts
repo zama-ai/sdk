@@ -1,5 +1,5 @@
 /**
- * Journey: A Node.js backend bootstraps the SDK, connects to the chain,
+ * Scenario: A Node.js backend bootstraps the SDK, connects to the chain,
  * and verifies it can talk to the FHE infrastructure before serving requests.
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";

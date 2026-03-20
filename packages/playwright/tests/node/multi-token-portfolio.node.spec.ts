@@ -1,5 +1,5 @@
 /**
- * Journey: A DeFi dashboard manages a portfolio of confidential tokens —
+ * Scenario: A DeFi dashboard manages a portfolio of confidential tokens —
  * shield multiple tokens, query metadata, discover wrappers, approve, and
  * verify on-chain state.
  */

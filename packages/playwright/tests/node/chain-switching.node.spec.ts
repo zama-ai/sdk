@@ -1,5 +1,5 @@
 /**
- * Journey: A multi-chain backend switches between chains and the SDK
+ * Scenario: A multi-chain backend switches between chains and the SDK
  * re-initializes the worker pool and resolves the correct config.
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";

@@ -1,5 +1,5 @@
 /**
- * Journey: Account #0 shields tokens, delegates decryption to another account,
+ * Scenario: Account #0 shields tokens, delegates decryption to another account,
  * verifies the delegation, then revokes it — the full delegation lifecycle.
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";

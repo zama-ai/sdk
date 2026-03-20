@@ -1,5 +1,5 @@
 /**
- * Journey: A user connects a wallet, authorizes tokens, performs operations,
+ * Scenario: A user connects a wallet, authorizes tokens, performs operations,
  * disconnects, then reconnects — the full session lifecycle.
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";

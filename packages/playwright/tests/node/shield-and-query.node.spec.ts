@@ -1,5 +1,5 @@
 /**
- * Journey: A user shields ERC-20 tokens into confidential wrappers,
+ * Scenario: A user shields ERC-20 tokens into confidential wrappers,
  * then queries the resulting on-chain state.
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";

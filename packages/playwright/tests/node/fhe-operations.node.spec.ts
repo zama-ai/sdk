@@ -1,5 +1,5 @@
 /**
- * Journey: Tests encrypt, userDecrypt, and publicDecrypt operations via
+ * Scenario: Tests encrypt, userDecrypt, and publicDecrypt operations via
  * RelayerNode backed by the RelayerCleartext mock worker.
  *
  * These were previously blocked by the coprocessor dependency — now unblocked
