@@ -16,7 +16,3 @@ test.describe("Token.approveUnderlying — ERC-20 approval for shield", () => {
     expect(result.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
   });
 });
-
-// NOTE: Token.approve (confidential operator approval) and isApproved require
-// valid encrypted input proofs that pass on-chain ACL verification.
-// These are covered by the browser e2e tests in tests/approve.spec.ts.
