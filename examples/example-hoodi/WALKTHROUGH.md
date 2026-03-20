@@ -1,6 +1,6 @@
 # Integrating Zama Confidential Tokens (ERC-7984) on Hoodi
 
-**Audience:** Partners integrating Zama confidential tokens on the Hoodi testnet (ethers-based stack).
+**Audience:** Partners integrating Zama confidential tokens on the Hoodi testnet (ethers-based stack), including on-chain ACL delegation.
 
 **What this document covers:** context and motivation, how the cleartext stack works, prerequisites, step-by-step operation walkthrough, minting instructions, environment variable reference, and troubleshooting.
 
@@ -26,18 +26,21 @@ Specifically:
 
 1. A user connects any injected EIP-1193 wallet.
 2. They can select between two tokens (USDT Mock / Test Token).
-3. All four ERC-7984 protocol operations work end-to-end.
+3. All ERC-7984 protocol operations work end-to-end: shield, transfer, unshield, balance decryption, and on-chain ACL delegation (grant, revoke, decrypt-as).
 
 ---
 
 ## Supported operations
 
-| Operation                    | SDK API                      | Source file                       | Transactions          |
-| ---------------------------- | ---------------------------- | --------------------------------- | --------------------- |
-| Decrypt confidential balance | `useConfidentialBalance`     | `src/app/page.tsx`                | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()` | `src/components/ShieldCard.tsx`   | 1–3 (wrap, ± approve) |
-| Confidential transfer        | `useConfidentialTransfer`    | `src/components/TransferCard.tsx` | 1                     |
-| Unshield (cToken → ERC-20)   | `useUnshield`                | `src/components/UnshieldCard.tsx` | 2 (unwrap + finalize) |
+| Operation                    | SDK API                                       | Source file                                 | Transactions          |
+| ---------------------------- | --------------------------------------------- | ------------------------------------------- | --------------------- |
+| Decrypt confidential balance | `useConfidentialBalance`                      | `src/app/page.tsx`                          | 0 (read)              |
+| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                  | `src/components/ShieldCard.tsx`             | 1–3 (wrap, ± approve) |
+| Confidential transfer        | `useConfidentialTransfer`                     | `src/components/TransferCard.tsx`           | 1                     |
+| Unshield (cToken → ERC-20)   | `useUnshield`                                 | `src/components/UnshieldCard.tsx`           | 2 (unwrap + finalize) |
+| Grant decryption access      | `useDelegateDecryption`                       | `src/components/DelegateDecryptionCard.tsx` | 1                     |
+| Revoke decryption access     | `useRevokeDelegation`                         | `src/components/RevokeDelegationCard.tsx`   | 1                     |
+| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` | `src/components/DecryptAsCard.tsx`          | 0 (read)              |
 
 ---
 
@@ -98,6 +101,8 @@ page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield 
        └─ produces mock KMS signatures locally (no external call)
 ```
 
+**`getActiveUnshieldToken` bridge** (`src/lib/activeUnshield.ts`): module-level variable that stores the token address of an in-flight unshield. `ZamaSDKEvents.UnshieldPhase1Submitted` does not carry the token address, so `UnshieldCard` sets this variable just before calling `mutate()`. The `onEvent` handler in `providers.tsx` reads it to call `savePendingUnshield` with the correct wrapper address. A module-level variable is safe here — only one unshield can be in flight per browser tab.
+
 **Hybrid EIP-1193 provider:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` for fast, wallet-independent reads. The following calls are routed to the injected wallet's node instead, because `rpc.hoodi.ethpandaops.io` is a load balancer whose backends can be at different chain heights:
 
 - **`eth_getTransactionCount` (nonce):** a stale backend can return an outdated nonce, causing ethers to build a transaction with a nonce lower than MetaMask's actual next nonce and triggering a "nonce too low" rejection. The wallet is the authoritative nonce source.
@@ -150,6 +155,8 @@ Both `USDTMock` and `Test Token` have a permissionless `mint(address to, uint256
 Registry (DeploymentCoordinator): `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
 
 All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
+
+> These addresses are also defined in `src/lib/config.ts` and `src/app/page.tsx` (`TOKENS` constant). If contracts are redeployed, update all three locations.
 
 ---
 
@@ -265,6 +272,38 @@ After each operation, balances refresh automatically. All three operations (shie
 
 ---
 
+## Delegation walkthrough
+
+The three delegation cards are located below the core operation cards. They require **two separate wallets** — one acting as the token owner (delegator) and one as the delegate.
+
+### Step 9 — Grant decryption access (owner wallet)
+
+In the **Grant Decryption Access** card, enter the delegate's wallet address. By default, access is permanent (the **No expiration** checkbox is checked). To set a time limit, uncheck it and pick a date and time — the SDK sends `MAX_UINT64` on-chain for permanent delegations, or the expiry timestamp otherwise. **The ACL contract requires the expiry to be at least 1 hour in the future** (`expirationDate >= block.timestamp + 1 hours`); shorter values will revert on-chain.
+
+Click **Grant Access** and confirm the transaction in your wallet. One transaction is submitted to the on-chain ACL contract.
+
+### Step 10 — Decrypt balance as delegate (delegate wallet)
+
+Switch to the delegate wallet (or open a second browser profile with the delegate account). In the **Decrypt Balance On Behalf Of** card, enter the owner's wallet address.
+
+As soon as a valid address is entered, a live **delegation status** indicator appears:
+
+- **✓ Delegated · Permanent** — delegation is active and has no expiry.
+- **✓ Delegated · \<date\>** — delegation is active until the shown date.
+- **No active delegation for this token** — no delegation exists; go back to Step 9.
+
+Click **Decrypt Balance** to decrypt the owner's confidential balance. The result is displayed in token units.
+
+> **Cache behaviour:** decrypted values are cached locally in IndexedDB, keyed by the on-chain encrypted handle. If the owner's balance does not change between two decrypt calls, the second call returns the cached value without re-checking the ACL — this is intentional. See [Troubleshooting](#troubleshooting) for details.
+
+### Step 11 — Revoke decryption access (owner wallet)
+
+Switch back to the owner wallet. In the **Revoke Decryption Access** card, enter the delegate's address and click **Revoke Access**. One transaction is submitted. After confirmation, the delegation is removed from the on-chain ACL.
+
+> **Revocation and caching:** if the delegate calls Decrypt Balance again immediately after revocation and the owner's balance has not changed, the cached plaintext is returned — no new ACL check occurs. Revocation takes full effect for the delegate as soon as the owner's balance changes (any shield, transfer, or unshield), which produces a new on-chain handle and invalidates the cache entry.
+
+---
+
 ## SDK integration details
 
 ### Providers setup
@@ -325,9 +364,10 @@ import {
 const cTokenAddress = "0x..."; // ERC-7984 wrapper contract address
 const erc20Address = "0x..."; // Underlying ERC-20 contract address (from your config)
 
-// Fetch decimal precision for each contract — they may differ.
+// useMetadata reads name/symbol/decimals from any contract exposing the ERC-20
+// metadata interface — works on both plain ERC-20s and ERC-7984 wrappers.
 // Use erc20Decimals for shield (amounts are in ERC-20 units).
-// Use cTokenDecimals for transfer and unshield (amounts are in confidential token units).
+// Use cTokenDecimals for transfer and unshield (amounts are in cToken units).
 const { data: cTokenMetadata } = useMetadata(cTokenAddress);
 const { data: erc20Metadata } = useMetadata(erc20Address);
 const cTokenDecimals = cTokenMetadata?.decimals ?? 0;
@@ -414,6 +454,57 @@ unshield.mutate({
 });
 ```
 
+### Delegation hooks
+
+```tsx
+import {
+  useDelegateDecryption,
+  useRevokeDelegation,
+  useDelegationStatus,
+  useDecryptBalanceAs,
+} from "@zama-fhe/react-sdk";
+import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
+
+// Grant decryption access — 1 transaction.
+// expirationDate: undefined → SDK sends MAX_UINT64 on-chain (permanent delegation).
+const delegate = useDelegateDecryption({ tokenAddress: cTokenAddress });
+// Permanent delegation (no expiry):
+delegate.mutate({ delegateAddress: "0xDelegate" });
+// With expiry (must be at least 1 hour in the future):
+delegate.mutate({ delegateAddress: "0xDelegate", expirationDate: new Date("2027-01-01") });
+
+// Revoke decryption access — 1 transaction.
+const revoke = useRevokeDelegation({ tokenAddress: cTokenAddress });
+revoke.mutate({ delegateAddress: "0xDelegate" });
+
+// Query delegation status — fires automatically when both addresses are valid.
+// Pass undefined for either address to disable the query (useful before the user
+// has entered an address).
+const { data: status } = useDelegationStatus({
+  tokenAddress: cTokenAddress,
+  delegatorAddress: "0xOwner", // the wallet that granted the delegation
+  delegateAddress: "0xDelegate", // the wallet that received it (usually the connected wallet)
+});
+// status?.isDelegated       → boolean
+// status?.expiryTimestamp   → bigint (MAX_UINT64 for permanent delegations)
+
+// Decrypt owner's balance as a delegate — 0 transactions (read + local cache).
+// Throws DelegationNotFoundError / DelegationExpiredError if the ACL check fails.
+// Note: useDecryptBalanceAs takes a positional tokenAddress argument (unlike
+// useDelegateDecryption / useRevokeDelegation which use a config object { tokenAddress }).
+const decryptAs = useDecryptBalanceAs(cTokenAddress);
+decryptAs.mutate({ delegatorAddress: "0xOwner" });
+// decryptAs.data → bigint (raw balance)
+
+// Typed error handling:
+if (decryptAs.error instanceof DelegationNotFoundError) {
+  /* no delegation */
+}
+if (decryptAs.error instanceof DelegationExpiredError) {
+  /* expired */
+}
+```
+
 ---
 
 ## Environment variables
@@ -428,27 +519,31 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 
 ## Troubleshooting
 
-| Symptom                                                   | Likely cause                                                                            | Fix                                                                                                                                                                                                                                                                                                                                    |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "No wallet found" on connect                              | No EIP-1193 wallet extension installed                                                  | Install an EIP-1193 browser wallet ([Rabby](https://rabby.io) recommended; MetaMask or Phantom also work)                                                                                                                                                                                                                              |
-| Phantom shows a multi-chain connect dialog                | Phantom's generic picker — app auto-selects Phantom's Ethereum provider                 | Proceed normally; only Ethereum accounts are used. For a cleaner experience use [Rabby](https://rabby.io)                                                                                                                                                                                                                              |
-| Stuck on "Connect Wallet" after clicking                  | Wallet popup was dismissed or blocked                                                   | Open your wallet manually and approve the connection request                                                                                                                                                                                                                                                                           |
-| Network switch fails with error                           | Wallet cannot reach the Hoodi RPC                                                       | Check `NEXT_PUBLIC_HOODI_RPC_URL`; try the default `https://rpc.hoodi.ethpandaops.io`                                                                                                                                                                                                                                                  |
-| Wrong network screen appears                              | Wallet switched away from Hoodi                                                         | Click **Switch to Hoodi** to switch back to Hoodi                                                                                                                                                                                                                                                                                      |
-| ERC-20 balance shows `—`                                  | Not yet connected or query pending                                                      | Wait for the connection to complete                                                                                                                                                                                                                                                                                                    |
-| ERC-20 balance shows `0`                                  | Tokens not yet minted                                                                   | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens)                                                                                                                                                                                                                                     |
-| Confidential balance shows `—` immediately after connect  | No shielded balance yet — no encrypted handle to read                                   | Shield some tokens first; the balance will display once there is something to decrypt                                                                                                                                                                                                                                                  |
-| "Decrypting…" stays indefinitely                          | Wallet EIP-712 signature request was missed (small notification badge)                  | Open your wallet and approve the pending signature request; balance will update immediately                                                                                                                                                                                                                                            |
-| Asked to sign an EIP-712 message after each action        | Session not yet cached (first use — expected)                                           | Approve once — subsequent decryptions reuse the IndexedDB-persisted session credential (30-day TTL). If the prompt recurs every time, make sure `storage` and `sessionStorage` in `ZamaProvider` point to **different** `IndexedDBStorage` instances — sharing the same instance corrupts the stored credentials (see Providers setup) |
-| Shield fails immediately after approving spend cap        | Approval transaction not yet confirmed on Hoodi when wrap was attempted                 | Wait for the approval confirmation and retry — the app detects this and shows a hint                                                                                                                                                                                                                                                   |
-| Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                              | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                               |
-| Shield stuck on "Shielding… (1/2)"                        | Ran out of Hoodi ETH after the approval transaction                                     | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                        |
-| Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                    | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); call `useMetadata` on both contracts                                                                                                                                                                                                           |
-| "nonce too low: next nonce X, tx nonce Y"                 | The Hoodi public RPC returned a stale nonce; ethers built the tx with an outdated value | This is fixed by routing `eth_getTransactionCount` through the wallet in the hybrid provider. If you see this in your own integration, ensure `eth_getTransactionCount` is NOT routed to a load-balanced RPC — it must go through the same node that will receive your `eth_sendTransaction`                                           |
-| "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                            | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                                                                                                                                                                                                                    |
-| Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the Phase 2 receipt                                          | Normal on Hoodi — the public RPC can be slow; the app polls receipt via the wallet's node for consistency                                                                                                                                                                                                                              |
-| Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                               | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                               |
-| Amounts displayed as very large or very small numbers     | Raw units displayed without decimal conversion                                          | Always use `formatUnits(balance, decimals)` for display and `parseUnits(input, decimals)` for input; fetch decimals via `useMetadata`                                                                                                                                                                                                  |
+| Symptom                                                   | Likely cause                                                                                                                                             | Fix                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "No wallet found" on connect                              | No EIP-1193 wallet extension installed                                                                                                                   | Install an EIP-1193 browser wallet ([Rabby](https://rabby.io) recommended; MetaMask or Phantom also work)                                                                                                                                                                                                                                                        |
+| Phantom shows a multi-chain connect dialog                | Phantom's generic picker — app auto-selects Phantom's Ethereum provider                                                                                  | Proceed normally; only Ethereum accounts are used. For a cleaner experience use [Rabby](https://rabby.io)                                                                                                                                                                                                                                                        |
+| Stuck on "Connect Wallet" after clicking                  | Wallet popup was dismissed or blocked                                                                                                                    | Open your wallet manually and approve the connection request                                                                                                                                                                                                                                                                                                     |
+| Network switch fails with error                           | Wallet cannot reach the Hoodi RPC                                                                                                                        | Check `NEXT_PUBLIC_HOODI_RPC_URL`; try the default `https://rpc.hoodi.ethpandaops.io`                                                                                                                                                                                                                                                                            |
+| Wrong network screen appears                              | Wallet switched away from Hoodi                                                                                                                          | Click **Switch to Hoodi** to switch back to Hoodi                                                                                                                                                                                                                                                                                                                |
+| ERC-20 balance shows `—`                                  | Not yet connected or query pending                                                                                                                       | Wait for the connection to complete                                                                                                                                                                                                                                                                                                                              |
+| ERC-20 balance shows `0`                                  | Tokens not yet minted                                                                                                                                    | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens)                                                                                                                                                                                                                                                               |
+| Confidential balance shows `—` immediately after connect  | No shielded balance yet — no encrypted handle to read                                                                                                    | Shield some tokens first; the balance will display once there is something to decrypt                                                                                                                                                                                                                                                                            |
+| "Decrypting…" stays indefinitely                          | Wallet EIP-712 signature request was missed (small notification badge)                                                                                   | Open your wallet and approve the pending signature request; balance will update immediately                                                                                                                                                                                                                                                                      |
+| Asked to sign an EIP-712 message after each action        | Session not yet cached (first use — expected)                                                                                                            | Approve once — subsequent decryptions reuse the IndexedDB-persisted session credential (30-day TTL). If the prompt recurs every time, make sure `storage` and `sessionStorage` in `ZamaProvider` point to **different** `IndexedDBStorage` instances — sharing the same instance corrupts the stored credentials (see Providers setup)                           |
+| Shield fails immediately after approving spend cap        | Approval transaction not yet confirmed on Hoodi when wrap was attempted                                                                                  | Wait for the approval confirmation and retry — the app detects this and shows a hint                                                                                                                                                                                                                                                                             |
+| Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                               | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                         |
+| Shield stuck on "Shielding… (1/2)"                        | Ran out of Hoodi ETH after the approval transaction                                                                                                      | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                                                  |
+| Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); call `useMetadata` on both contracts                                                                                                                                                                                                                                     |
+| "nonce too low: next nonce X, tx nonce Y"                 | The Hoodi public RPC returned a stale nonce; ethers built the tx with an outdated value                                                                  | This is fixed by routing `eth_getTransactionCount` through the wallet in the hybrid provider. If you see this in your own integration, ensure `eth_getTransactionCount` is NOT routed to a load-balanced RPC — it must go through the same node that will receive your `eth_sendTransaction`                                                                     |
+| "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                                                                                             | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                                                                                                                                                                                                                                              |
+| Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow; the app polls receipt via the wallet's node for consistency                                                                                                                                                                                                                                                        |
+| Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                                                         |
+| Amounts displayed as very large or very small numbers     | Raw units displayed without decimal conversion                                                                                                           | Always use `formatUnits(balance, decimals)` for display and `parseUnits(input, decimals)` for input; fetch decimals via `useMetadata`                                                                                                                                                                                                                            |
+| Delegate can still decrypt after revocation               | Expected behavior — decrypted values are cached in IndexedDB keyed by `(token, owner, handle)`; the cache is served without re-checking the on-chain ACL | This is by design: the SDK uses the on-chain encrypted handle as the cache key (no TTL). Revocation takes effect for the delegate as soon as the owner's balance changes (via shield, transfer, or unshield), which produces a new handle and automatically invalidates the cache entry. Until then, the previously decrypted value is still accessible locally. |
+| Grant Access reverts with `ExpirationDateBeforeOneHour`   | Expiration date is less than 1 hour in the future (ACL contract requirement)                                                                             | Set the expiry to at least 1 hour from now. The contract compares against `block.timestamp` (UTC), not your local clock — account for any clock skew. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                     |
+| Grant Access reverts with `SenderCannotBeDelegate`        | Attempted to delegate decryption access to your own address                                                                                              | Enter a different wallet address. The ACL contract does not allow self-delegation. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                                                        |
+| Revoke Access reverts with `NotDelegatedYet`              | No active delegation exists for the entered address and token                                                                                            | Verify the delegate address is correct and that a grant was previously confirmed on-chain for the selected token. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                         |
 
 ---
 
@@ -460,7 +555,7 @@ This example ships with a Playwright e2e test suite. Tests run against the real 
 # Install deps (first time only)
 npm install
 
-# Run all 18 tests — starts the dev server automatically
+# Run all tests — starts the dev server automatically
 npm run test:e2e
 
 # Interactive mode — watch each test run step-by-step in the browser
@@ -470,7 +565,7 @@ npx playwright test --ui
 npx playwright test e2e/connect.spec.ts
 ```
 
-Covered flows: connect screen (no wallet, install error, auto-detect, click-to-connect), wrong-network screen (display, chain ID, switch button), main UI (cards, token selector, buttons disabled before metadata loads, balance display, loading hint, token switching, pending unshield absence, mint button state).
+Covered flows: connect screen (no wallet, install error, page title, auto-detect, click-to-connect), wrong-network screen (display, chain ID, switch button), main UI (all cards rendered, connected address, ETH balance, token selector, buttons disabled before metadata loads, balance display, loading hint, token switching, pending unshield absence, mint button state), delegation section (section labels, buttons disabled before address entry, Grant Access and Revoke Access enabled after valid address entry).
 
 Tests run automatically on CI for every pull request that touches `examples/example-hoodi/`.
 
@@ -482,17 +577,16 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 - **Production use** — replace `RelayerCleartext` with `RelayerWeb` (browser) or `RelayerNode` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
 - **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances in a single relayer call.
 - **Optimistic balance updates** — for `useConfidentialTransfer`, pass `optimistic: true` to immediately update the cached confidential balance while the transaction confirms, then roll back automatically on error. Improves perceived responsiveness in production UIs.
-- **On-chain ACL delegation** — grant another wallet the right to decrypt your confidential balance via `useDelegateDecryption`, revoke it with `useRevokeDelegation`, and let delegates decrypt on your behalf with `useDecryptBalanceAs`.
 
 ---
 
 ## Tech stack
 
-| Package                 | Version       | Role                                                                                            |
-| ----------------------- | ------------- | ----------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | 1.2.0-alpha.5 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                |
-| `@zama-fhe/react-sdk`   | 1.2.0-alpha.5 | React hooks — `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useMetadata` |
-| `ethers`                | ^6.13.0       | Ethereum client (via `EthersSigner`)                                                            |
-| `@tanstack/react-query` | ^5.90.0       | Async state management                                                                          |
-| `next`                  | ^16.0.0       | React framework (App Router)                                                                    |
-| **Chain**               | Hoodi testnet | chainId 560048                                                                                  |
+| Package                 | Version            | Role                                                                                                                                                                                          |
+| ----------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                              |
+| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useMetadata`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
+| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                          |
+| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                        |
+| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                  |
+| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                |

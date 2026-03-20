@@ -16,6 +16,9 @@ import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
 import { UnshieldCard } from "@/components/UnshieldCard";
 import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
+import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
+import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
+import { DecryptAsCard } from "@/components/DecryptAsCard";
 import {
   HOODI_CHAIN_ID,
   HOODI_CHAIN_ID_HEX,
@@ -171,10 +174,12 @@ export default function Home() {
       const accounts = (await ethereum.request({
         method: "eth_requestAccounts",
       })) as string[];
-      setAddress(accounts[0] ?? null);
 
-      // Switch to Hoodi — updates chainId based on actual result, never throws.
+      // Switch before setting address: both chainId and address are then known
+      // when the first non-connect-screen render fires, avoiding a brief flash
+      // of the wrong-network screen between the two state updates.
       await handleSwitchToHoodi();
+      setAddress(accounts[0] ?? null);
     } catch (err) {
       console.error("Failed to connect wallet:", err);
       setConnectError(err instanceof Error ? err.message : "Failed to connect wallet");
@@ -183,9 +188,10 @@ export default function Home() {
     }
   }
 
-  // useMetadata fetches name/symbol/decimals for each contract.
-  // erc20Metadata is used for the shield amount and ERC-20 balance display;
-  // cTokenMetadata (ERC-7984) is used for transfer/unshield amounts and confidential balance display.
+  // useMetadata reads name/symbol/decimals from any contract that exposes the standard
+  // ERC-20 metadata interface — it works equally on plain ERC-20s and ERC-7984 wrappers.
+  // erc20Metadata drives shield amounts and ERC-20 balance display.
+  // cTokenMetadata drives transfer/unshield amounts and confidential balance display.
   const cTokenMetadata = useMetadata(token.confidential);
   const erc20Metadata = useMetadata(token.erc20);
 
@@ -331,6 +337,8 @@ export default function Home() {
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
+        // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
+        // balance.isLoading: decrypting it via RelayerCleartext (Phase 2).
         isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
@@ -349,7 +357,7 @@ export default function Home() {
         />
       ))}
 
-      <hr className="divider" />
+      <div className="section-label">Operations</div>
 
       {/* key includes address and selectedToken so cards remount (inputs + state reset) on wallet or token change */}
       <ShieldCard
@@ -378,6 +386,37 @@ export default function Home() {
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
         onSuccess={refreshBalances}
+      />
+
+      {/* ── Delegation — token owner perspective ──────────────────────────────
+          These cards are used by the wallet that OWNS the token.
+          Grant or revoke another wallet's right to decrypt your balance. */}
+      <div className="section-label">Delegation — as owner</div>
+
+      <DelegateDecryptionCard
+        key={`grant-delegation-${address}-${selectedToken}`}
+        tokenAddress={token.confidential}
+        disabled={!isHoodi}
+      />
+
+      <RevokeDelegationCard
+        key={`revoke-delegation-${address}-${selectedToken}`}
+        tokenAddress={token.confidential}
+        disabled={!isHoodi}
+      />
+
+      {/* ── Delegation — delegate perspective ────────────────────────────────
+          This card is used by the wallet that RECEIVED a delegation.
+          Decrypt another wallet's confidential balance on their behalf. */}
+      <div className="section-label">Delegation — as delegate</div>
+
+      <DecryptAsCard
+        key={`decrypt-as-${address}-${selectedToken}`}
+        tokenAddress={token.confidential}
+        decimals={decimals}
+        symbol={confidentialSymbol}
+        disabled={!isHoodi || !cTokenMetadata.data}
+        connectedAddress={address as Address}
       />
     </div>
   );

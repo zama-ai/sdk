@@ -4,7 +4,7 @@
 
 ### Bug Fixes
 
-* **sdk:** colocate node worker with node entrypoint ([#138](https://github.com/zama-ai/sdk/issues/138)) ([294d76e](https://github.com/zama-ai/sdk/commit/294d76eb9a753b663857e29dd7d4267dca7c3801))
+- **sdk:** colocate node worker with node entrypoint ([#138](https://github.com/zama-ai/sdk/issues/138)) ([294d76e](https://github.com/zama-ai/sdk/commit/294d76eb9a753b663857e29dd7d4267dca7c3801))
 
 ## [2.0.0](https://github.com/zama-ai/sdk/compare/v1.1.0...v2.0.0) (2026-03-20)
 
