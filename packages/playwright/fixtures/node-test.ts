@@ -133,7 +133,9 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
     await use(sdk);
     sdk.terminate();
   },
-  initialBalances: async ({ sdk, contracts, readErc20Balance }, use) => {
+  // Depend on anvilState so the snapshot is taken before allow() mutates chain state.
+  initialBalances: async ({ sdk, contracts, readErc20Balance, anvilState }, use) => {
+    void anvilState;
     await sdk.allow(contracts.cUSDT as Address, contracts.cUSDC as Address);
     const readUSDT = sdk.createReadonlyToken(contracts.cUSDT as Address);
     const readUSDC = sdk.createReadonlyToken(contracts.cUSDC as Address);
@@ -150,7 +152,14 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
     async ({ viemClient }, use) => {
       const id = await viemClient.snapshot();
       await use(undefined);
-      await viemClient.revert({ id });
+      try {
+        await viemClient.revert({ id });
+      } catch (cause) {
+        throw new Error(
+          `Anvil snapshot revert failed (id=${id}). Subsequent tests may have stale state.`,
+          { cause },
+        );
+      }
     },
     { auto: true },
   ],

@@ -66,12 +66,19 @@ test("batchDelegateDecryption delegates across multiple tokens", async ({ sdk, c
   await tokenUSDT.shield(100n * 10n ** 6n);
   await tokenUSDC.shield(100n * 10n ** 6n);
 
-  // Delegate sequentially — the batch API sends parallel txs which causes nonce
-  // contention on a single-account anvil. Test the delegation logic directly.
-  const resultUSDT = await tokenUSDT.delegateDecryption({ delegateAddress: account2.address });
-  const resultUSDC = await tokenUSDC.delegateDecryption({ delegateAddress: account2.address });
-  expect(resultUSDT.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
-  expect(resultUSDC.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
+  // Batch delegate
+  const results = await Token.batchDelegateDecryption({
+    tokens: [tokenUSDT, tokenUSDC],
+    delegateAddress: account2.address,
+  });
+
+  expect(results.size).toBe(2);
+  for (const [, result] of results) {
+    expect(result).toHaveProperty("txHash");
+    if ("txHash" in result) {
+      expect(result.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
+    }
+  }
 
   // Verify delegations are active (use underlying address to match delegation target)
   const readUSDT = sdk.createReadonlyToken(contracts.USDT);
@@ -91,35 +98,62 @@ test("batchRevokeDelegation revokes across multiple tokens", async ({
   contracts,
   viemClient,
 }) => {
-  const tokenUSDT = sdk.createToken(contracts.cUSDT as Address);
-  const tokenUSDC = sdk.createToken(contracts.cUSDC as Address);
+  // Use (underlying, wrapper) — delegation targets the underlying address
+  const tokenUSDT = sdk.createToken(contracts.USDT, contracts.cUSDT as Address);
+  const tokenUSDC = sdk.createToken(contracts.USDC, contracts.cUSDC as Address);
   await tokenUSDT.shield(100n * 10n ** 6n);
   await tokenUSDC.shield(100n * 10n ** 6n);
 
-  // Delegate first
-  await Token.batchDelegateDecryption({
+  // Batch delegate
+  const delegateResults = await Token.batchDelegateDecryption({
     tokens: [tokenUSDT, tokenUSDC],
     delegateAddress: account2.address,
   });
+  expect(delegateResults.size).toBe(2);
+  for (const [, result] of delegateResults) {
+    expect(result).toHaveProperty("txHash");
+  }
+
+  // Verify delegations are active before revoking
+  const signerAddress = (await sdk.signer.getAddress()) as Address;
+  const readUSDT = sdk.createReadonlyToken(contracts.USDT);
+  const readUSDC = sdk.createReadonlyToken(contracts.USDC);
+  expect(
+    await readUSDT.isDelegated({
+      delegatorAddress: signerAddress,
+      delegateAddress: account2.address,
+    }),
+  ).toBe(true);
+  expect(
+    await readUSDC.isDelegated({
+      delegatorAddress: signerAddress,
+      delegateAddress: account2.address,
+    }),
+  ).toBe(true);
 
   // Wait for cooldown
   await viemClient.increaseTime({ seconds: 2 });
   await viemClient.mine({ blocks: 1 });
 
   // Batch revoke
-  const results = await Token.batchRevokeDelegation({
+  const revokeResults = await Token.batchRevokeDelegation({
     tokens: [tokenUSDT, tokenUSDC],
     delegateAddress: account2.address,
   });
-
-  expect(results.size).toBe(2);
+  expect(revokeResults.size).toBe(2);
+  for (const [, result] of revokeResults) {
+    expect(result).toHaveProperty("txHash");
+  }
 
   // Verify delegations are revoked
-  const readUSDT = sdk.createReadonlyToken(contracts.cUSDT as Address);
-  const signerAddress = (await sdk.signer.getAddress()) as Address;
-
   expect(
     await readUSDT.isDelegated({
+      delegatorAddress: signerAddress,
+      delegateAddress: account2.address,
+    }),
+  ).toBe(false);
+  expect(
+    await readUSDC.isDelegated({
       delegatorAddress: signerAddress,
       delegateAddress: account2.address,
     }),

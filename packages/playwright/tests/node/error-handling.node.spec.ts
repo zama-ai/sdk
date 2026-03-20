@@ -3,7 +3,12 @@
  * and that matchZamaError enables structured error handling.
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";
-import { matchZamaError, HardhatConfig, type ZamaError } from "@zama-fhe/sdk";
+import {
+  matchZamaError,
+  HardhatConfig,
+  DecryptionFailedError,
+  NoCiphertextError,
+} from "@zama-fhe/sdk";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "viem";
 
@@ -15,22 +20,32 @@ test("operations after terminate throw", async ({ sdk }) => {
   }).rejects.toThrow();
 });
 
-test("matchZamaError routes to the correct handler", async ({ sdk, contracts }) => {
-  // Try an operation that will fail (e.g. decrypt without session)
-  const readonlyToken = sdk.createReadonlyToken(contracts.cUSDT as Address);
-
-  try {
-    await readonlyToken.balanceOf();
-    // If it succeeds (no ciphertext), that's fine — skip the error matching
-  } catch (error) {
-    const matched = matchZamaError(error as ZamaError, {
+test("matchZamaError routes to the correct handler", async () => {
+  // Test matchZamaError directly with constructed errors — the cleartext mock
+  // does not enforce sessions, so we cannot reliably trigger ZamaErrors from SDK calls.
+  const decErr = new DecryptionFailedError("test decryption failure");
+  expect(
+    matchZamaError(decErr, {
       DECRYPTION_FAILED: () => "decryption_failed",
-      NO_CIPHERTEXT: () => "no_ciphertext",
-      KEYPAIR_EXPIRED: () => "keypair_expired",
       _: () => "other",
-    });
-    expect(["decryption_failed", "no_ciphertext", "keypair_expired", "other"]).toContain(matched);
-  }
+    }),
+  ).toBe("decryption_failed");
+
+  const noCipherErr = new NoCiphertextError("no ciphertext");
+  expect(
+    matchZamaError(noCipherErr, {
+      NO_CIPHERTEXT: () => "no_ciphertext",
+      _: () => "other",
+    }),
+  ).toBe("no_ciphertext");
+
+  // Fallback handler receives unmatched codes
+  expect(
+    matchZamaError(decErr, {
+      NO_CIPHERTEXT: () => "no_ciphertext",
+      _: () => "fallback",
+    }),
+  ).toBe("fallback");
 });
 
 test("zero poolSize defaults gracefully at construction", async ({ anvilPort }) => {

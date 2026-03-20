@@ -855,17 +855,18 @@ export class Token extends ReadonlyToken {
     errorMessage: string,
   ): Promise<Map<Address, TransactionResult | ZamaError>> {
     const results = new Map<Address, TransactionResult | ZamaError>();
-    const settled = await Promise.allSettled(tokens.map(op));
+    // Run sequentially: parallel writeContract calls from the same signer
+    // cause nonce contention. The value of the batch API is partial-success
+    // semantics (per-token results without throwing), not parallelism.
     for (let i = 0; i < tokens.length; i++) {
-      const outcome = settled[i]!;
-      if (outcome.status === "fulfilled") {
-        results.set(tokens[i]!.address, outcome.value);
-      } else {
+      try {
+        results.set(tokens[i]!.address, await op(tokens[i]!));
+      } catch (reason) {
         const err =
-          outcome.reason instanceof ZamaError
-            ? outcome.reason
+          reason instanceof ZamaError
+            ? reason
             : new TransactionRevertedError(errorMessage, {
-                cause: outcome.reason,
+                cause: reason instanceof Error ? reason : undefined,
               });
         results.set(tokens[i]!.address, err);
       }
