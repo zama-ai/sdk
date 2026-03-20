@@ -1,6 +1,16 @@
-# Hoodi + Cleartext Example
+# Example Hoodi app with cleartext Zama Protocol support
 
-Next.js app demonstrating the four core ERC-7984 operations on the **Hoodi** testnet using the **cleartext stack** and **ethers**.
+Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet and **ethers** — including on-chain ACL delegation.
+
+## Cleartext Zama Protocol
+
+[Zama Protocol](https://docs.zama.org/protocol) is currently supported officially on Ethereum mainnet and Sepolia testnet. This setup uses a co-processor model to offload FHE computation from the host chain to a decentralised network.
+
+To provide support for yet-unsupported testnets, such as Hoodi, this example app simulates Zama Protocol using a **cleartext stack**. Essentially, it uses mocked FHE contracts to provide an API-compatible surface to write the values to the host chain, without needing an actual co-processor or relayer support to be added by Zama Protocol.
+
+This mode allows developers to test **smart contracts** and **app/backend integrations** with Hoodi chain in an API-compatible fashion with the real Zama Protocol.
+
+**WARNING**: Support for testnets such as Hoodi via this cleartext Zama Protocol method is only intended for **testing** purposes. A **the "encrypted" values are stored in cleartext** on Hoodi testnet.
 
 ## Stack
 
@@ -13,18 +23,23 @@ Next.js app demonstrating the four core ERC-7984 operations on the **Hoodi** tes
 
 ## Operations demonstrated
 
-| Operation                    | SDK API                      |
-| ---------------------------- | ---------------------------- |
-| Decrypt confidential balance | `useConfidentialBalance`     |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()` |
-| Confidential transfer        | `useConfidentialTransfer`    |
-| Unshield (cToken → ERC-20)   | `useUnshield`                |
+| Operation                    | SDK API                                       |
+| ---------------------------- | --------------------------------------------- |
+| Decrypt confidential balance | `useConfidentialBalance`                      |
+| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                  |
+| Confidential transfer        | `useConfidentialTransfer`                     |
+| Unshield (cToken → ERC-20)   | `useUnshield`                                 |
+| Grant decryption access      | `useDelegateDecryption`                       |
+| Revoke decryption access     | `useRevokeDelegation`                         |
+| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` |
 
 > **Shield** uses `token.shield()` directly (via `sdk.createToken()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
 
 > **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
 
 > **Separate IndexedDB instances** for `storage` and `sessionStorage` in `ZamaProvider`: both use the same key internally, so sharing a single `IndexedDBStorage` instance causes the session entry to overwrite the encrypted keypair, forcing a re-sign on every balance decryption.
+
+> **Delegation revocation cache:** `useDecryptBalanceAs` caches decrypted values in IndexedDB keyed by `(token, owner, handle)`. When delegation is revoked, the cached plaintext is still served until the owner's balance changes (via shield, transfer, or unshield), which produces a new on-chain handle and invalidates the cache entry. No TTL is applied — the handle itself is the cache key.
 
 ## How it differs from `react-ethers`
 
@@ -69,7 +84,7 @@ npm run test:e2e          # run all tests (starts dev server automatically)
 npx playwright test --ui  # interactive mode — watch tests run in the browser
 ```
 
-18 Playwright e2e tests covering the connect flow, wrong-network screen, and main UI (no real wallet or transactions required — uses a mocked EIP-1193 provider).
+Playwright e2e tests covering the connect flow, wrong-network screen, main UI, and delegation section (no real wallet or transactions required — uses a mocked EIP-1193 provider).
 
 ## Environment variables
 
