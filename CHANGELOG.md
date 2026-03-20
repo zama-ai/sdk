@@ -1,5 +1,90 @@
 # Changelog
 
+## [2.0.1-alpha.1](https://github.com/zama-ai/sdk/compare/v2.0.0...v2.0.1-alpha.1) (2026-03-20)
+
+### Bug Fixes
+
+* **sdk:** colocate node worker with node entrypoint ([#138](https://github.com/zama-ai/sdk/issues/138)) ([294d76e](https://github.com/zama-ai/sdk/commit/294d76eb9a753b663857e29dd7d4267dca7c3801))
+
+## [2.0.0](https://github.com/zama-ai/sdk/compare/v1.1.0...v2.0.0) (2026-03-20)
+
+### ⚠ BREAKING CHANGES
+
+- useUserDecryptFlow removed, useUserDecrypt now has the
+  flow hook's signature. Old low-level useUserDecrypt accepting
+  UserDecryptParams is removed.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- docs(react-sdk): fix stale JSDoc example in useEncrypt
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk,react-sdk): extract userDecryptMutationOptions and remove decryptionKeys wrapper
+
+Move the user-decrypt orchestration logic (credential resolution, handle
+grouping, relayer calls) into `userDecryptMutationOptions` in the SDK query
+module so it can be shared. The react-sdk `useUserDecrypt` hook now delegates
+to these options instead of reimplementing the logic inline.
+
+Also remove the `decryptionKeys` indirection — all code now uses
+`zamaQueryKeys.decryption.handle()` directly from `@zama-fhe/sdk/query`.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk,react-sdk): extract all relayer mutation options into SDK query module
+
+Move all remaining inline relayer mutation logic from react-sdk hooks into
+shared mutation option factories in `@zama-fhe/sdk/query`. Hooks now delegate
+to these options instead of calling `sdk.relayer.*` directly.
+
+New SDK mutation options:
+
+- generateKeypairMutationOptions
+- createEIP712MutationOptions
+- createDelegatedUserDecryptEIP712MutationOptions
+- delegatedUserDecryptMutationOptions
+- publicDecryptMutationOptions
+- requestZKProofVerificationMutationOptions
+
+Also adds `onSuccess` to `MutationFactoryOptions` using TanStack Query v5's
+`MutationFunctionContext` — decrypt mutations now populate the query cache via
+`context.client.setQueryData()` directly in the options, removing the need for
+hooks to manage cache population.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- chore: regenerate API reports after mutation options refactor
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+### Features
+
+- add delegated decryption support [SDK-12] ([#72](https://github.com/zama-ai/sdk/issues/72)) ([7bcaeb6](https://github.com/zama-ai/sdk/commit/7bcaeb612b3268a3b94fa71217c09b8763391735)), closes [#batchDelegationOp](https://github.com/zama-ai/sdk/issues/batchDelegationOp) [#storage](https://github.com/zama-ai/sdk/issues/storage) [#batchDecryptCore](https://github.com/zama-ai/sdk/issues/batchDecryptCore)
+- **examples:** add example-hoodi — ERC-7984 demo on Hoodi testnet ([#111](https://github.com/zama-ai/sdk/issues/111)) ([438f90a](https://github.com/zama-ai/sdk/commit/438f90aff0d16056ba03d78dd20731a3ac5cb8d8))
+- **sdk:** persist FHE public key and params with artifact-level revalidation ([#110](https://github.com/zama-ai/sdk/issues/110)) ([e2dd6ae](https://github.com/zama-ai/sdk/commit/e2dd6aef7af39975981fc511a4d6f649b2adf93b))
+
+### Bug Fixes
+
+- remove ABI re-exports from react-sdk that are no longer in sdk public API ([ad24185](https://github.com/zama-ai/sdk/commit/ad24185280469a363e293ed65249667e5333d8ff))
+- **sdk:** auto-detect browser extensions and fall back to file-based worker URL ([292bd3b](https://github.com/zama-ai/sdk/commit/292bd3bacd18bdadbf04985f053c43e873b6378a))
+- **sdk:** detect session expiry with 30s staleTime on isAllowed query ([#124](https://github.com/zama-ai/sdk/issues/124)) ([532fb92](https://github.com/zama-ai/sdk/commit/532fb9298a5e2ff333b7bf72cd4256b3a9db05ba))
+- **sdk:** fix extension runtime fallback and revoke blob URL after worker creation ([e7c6d07](https://github.com/zama-ai/sdk/commit/e7c6d074bcbe8c0bed3565db3243fab0b52b3218))
+- **sdk:** inline worker code via blob URL to eliminate Vite optimizeDeps workaround ([60f09b1](https://github.com/zama-ai/sdk/commit/60f09b1a833e98852c0abd5982ff14019dd26c04))
+- **sdk:** make worker blob URL creation lazy to avoid SSR crashes ([9a9311a](https://github.com/zama-ai/sdk/commit/9a9311a6ef03420d311b4092d4fbc3d9c9a8986c))
+- **sdk:** support browser extensions and lazy worker creation ([c0fcd44](https://github.com/zama-ai/sdk/commit/c0fcd44f7d8884dc4f580066f83ef5e6cd18eea4))
+- **sdk:** use proper TypeScript assertion type narrowing in utility guards ([632bb80](https://github.com/zama-ai/sdk/commit/632bb80d27e6390c4effd795b0fcb29e6b4d0277))
+- **test:** use forks pool for react-sdk in CI instead of default ([4eca9aa](https://github.com/zama-ai/sdk/commit/4eca9aa3df6ad8285e8d096421aa75dcf5678149))
+
+### Performance Improvements
+
+- reduce bundle size by inlining slim ABI fragments ([613321c](https://github.com/zama-ai/sdk/commit/613321c09eb73d560a2aeb36cf77956870e584d9))
+- **test:** use vmForks locally, vmThreads in CI for both test projects ([d6f9de9](https://github.com/zama-ai/sdk/commit/d6f9de9e5d03ca4e2dab982afcd2460a0dd01f19))
+
+### Documentation
+
+- improve documentation for useEncrypt and useUserDecrypt ([#81](https://github.com/zama-ai/sdk/issues/81)) ([5ce5f2e](https://github.com/zama-ai/sdk/commit/5ce5f2ede175f14813b9c1c663ab7696d754d787)), closes [#114](https://github.com/zama-ai/sdk/issues/114)
+
 ## [2.0.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.0.0-alpha.3...v2.0.0-alpha.4) (2026-03-19)
 
 ### Features
