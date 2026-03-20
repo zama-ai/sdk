@@ -50,8 +50,12 @@ export function confidentialBalancesQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handles: keyHandles }] = context.queryKey;
-      if (!keyOwner) throw new Error("owner is required");
-      if (!keyHandles) throw new Error("handles are required");
+      if (!keyOwner) {
+        throw new Error("owner is required");
+      }
+      if (!keyHandles) {
+        throw new Error("handles are required");
+      }
       const perTokenErrors = new Map<Address, Error>();
 
       const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
@@ -75,7 +79,9 @@ export function confidentialBalancesQueryOptions(
           errors.set(originalAddr, tokenError);
         } else {
           const balance = raw.get(tokenAddr);
-          if (balance !== undefined) balances.set(originalAddr, balance);
+          if (balance !== undefined) {
+            balances.set(originalAddr, balance);
+          }
         }
       }
 

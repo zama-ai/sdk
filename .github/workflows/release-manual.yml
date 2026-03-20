@@ -35,8 +35,6 @@ jobs:
   playwright:
     needs: [validate-branch]
     uses: ./.github/workflows/playwright.yml
-    secrets:
-      SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
   release:
     needs: [vitest, playwright]
@@ -49,7 +47,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
 
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
@@ -63,7 +61,7 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build packages
         run: pnpm build

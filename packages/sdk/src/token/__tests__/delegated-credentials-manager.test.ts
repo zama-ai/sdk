@@ -1,5 +1,6 @@
 import { describe, expect, vi, afterEach } from "vitest";
-import { test, createMockRelayer, createMockSigner, createMockStorage } from "../../test-fixtures";
+import type { createMockRelayer } from "../../test-fixtures";
+import { test, createMockSigner, createMockStorage } from "../../test-fixtures";
 import { DelegatedCredentialsManager } from "../delegated-credentials-manager";
 import type { Address } from "viem";
 

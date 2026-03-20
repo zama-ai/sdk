@@ -3,7 +3,9 @@ import { test, expect } from "../fixtures";
 test("worker loads without SyntaxError in Vite ESM environment", async ({ page, contracts }) => {
   const errors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error") errors.push(msg.text());
+    if (msg.type() === "error") {
+      errors.push(msg.text());
+    }
   });
   page.on("pageerror", (err) => errors.push(err.message));
 

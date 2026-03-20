@@ -3,7 +3,7 @@
 import {
   useMutation,
   useQueryClient,
-  UseMutationOptions,
+  type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";

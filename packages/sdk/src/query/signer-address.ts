@@ -9,7 +9,9 @@ let nextSignerScope = 1;
 
 function getSignerScope(signer: GenericSigner): number {
   const existingScope = signerScopes.get(signer);
-  if (existingScope !== undefined) return existingScope;
+  if (existingScope !== undefined) {
+    return existingScope;
+  }
   const newScope = nextSignerScope++;
   signerScopes.set(signer, newScope);
   return newScope;

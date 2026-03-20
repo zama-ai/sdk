@@ -3,17 +3,20 @@ import { test as base, vi } from "vitest";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { Handle } from "./relayer/relayer-sdk.types";
+import type { QueryClient } from "@tanstack/query-core";
 import type { Address, Hex } from "viem";
-import { CredentialsManager, CredentialsManagerConfig } from "./token/credentials-manager";
-import {
-  DelegatedCredentialsManager,
-  DelegatedCredentialsManagerConfig,
-} from "./token/delegated-credentials-manager";
+import type { CredentialsManagerConfig } from "./token/credentials-manager";
+import { CredentialsManager } from "./token/credentials-manager";
+import type { DelegatedCredentialsManagerConfig } from "./token/delegated-credentials-manager";
+import { DelegatedCredentialsManager } from "./token/delegated-credentials-manager";
 import { MemoryStorage } from "./token/memory-storage";
-import { ReadonlyToken, ReadonlyTokenConfig } from "./token/readonly-token";
-import { Token, TokenConfig } from "./token/token";
+import type { ReadonlyTokenConfig } from "./token/readonly-token";
+import { ReadonlyToken } from "./token/readonly-token";
+import type { TokenConfig } from "./token/token";
+import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, TransactionResult } from "./token/token.types";
-import { ZamaSDK, ZamaSDKConfig } from "./token/zama-sdk";
+import type { ZamaSDKConfig } from "./token/zama-sdk";
+import { ZamaSDK } from "./token/zama-sdk";
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -62,12 +65,14 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     delegatedUserDecrypt: vi.fn(),
     requestZKProofVerification: vi.fn(),
     getAclAddress: vi.fn().mockResolvedValue(ACL),
-    getPublicKey: vi
-      .fn()
-      .mockResolvedValue({ publicKeyId: "pk-1", publicKey: new Uint8Array([1]) }),
-    getPublicParams: vi
-      .fn()
-      .mockResolvedValue({ publicParams: new Uint8Array([2]), publicParamsId: "pp-1" }),
+    getPublicKey: vi.fn().mockResolvedValue({
+      publicKeyId: "pk-1",
+      publicKey: new Uint8Array([1]),
+    }),
+    getPublicParams: vi.fn().mockResolvedValue({
+      publicParams: new Uint8Array([2]),
+      publicParamsId: "pp-1",
+    }),
     terminate: vi.fn(),
     ...overrides,
   } as unknown as RelayerSDK;
@@ -301,7 +306,11 @@ export const test = base.extend<SdkFixtures>({
     function factory(
       addressOrArgs?:
         | Address
-        | { address?: Address; signer?: GenericSigner; txResult?: TransactionResult },
+        | {
+            address?: Address;
+            signer?: GenericSigner;
+            txResult?: TransactionResult;
+          },
     ) {
       const addr =
         typeof addressOrArgs === "string"
@@ -341,7 +350,13 @@ export const test = base.extend<SdkFixtures>({
   },
   createSDK: async ({ signer, relayer, storage, sessionStorage }, use) => {
     await use((overrides?: Partial<ZamaSDKConfig>) => {
-      return new ZamaSDK({ relayer, signer, storage, sessionStorage, ...overrides });
+      return new ZamaSDK({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        ...overrides,
+      });
     });
   },
   events: ZamaSDKEvents,
@@ -360,7 +375,7 @@ export function mockQueryContext<TQueryKey extends readonly unknown[]>(queryKey:
     // Our factories never access client — they extract params from queryKey.
     // A typed stub satisfies the QueryFunctionContext contract without pulling
     // in a real QueryClient + its transitive deps.
-    client: {} as import("@tanstack/query-core").QueryClient,
+    client: {} as QueryClient,
     signal: AbortSignal.timeout(5000),
     meta: undefined,
   };

@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test } from "../../test-fixtures";
-import { vi } from "vitest";
+
 import { useIsAllowed } from "../use-is-allowed";
 
-vi.mock("@tanstack/react-query", async () => {
+vi.mock(import("@tanstack/react-query"), async () => {
   const actual =
-    await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+    await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query"); // oxlint-disable-line typescript-eslint/consistent-type-imports
   return { ...actual, useQuery: vi.fn(() => ({ data: true })) };
 });
 

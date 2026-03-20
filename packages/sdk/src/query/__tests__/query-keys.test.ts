@@ -1,7 +1,6 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { getAddress } from "viem";
-import { type Address } from "viem";
-import { expectTypeOf } from "vitest";
+import type { Address } from "viem";
 
 import { zamaQueryKeys } from "../query-keys";
 
@@ -198,7 +197,7 @@ describe("zamaQueryKeys", () => {
     ];
 
     expect(lowerVariants).toEqual(upperVariants);
-    expect(lowerVariants[0]![1]).toMatchObject({ tokenAddress: getAddress(TOKEN_LOWER) });
+    expect(lowerVariants[0][1]).toMatchObject({ tokenAddress: getAddress(TOKEN_LOWER) });
   });
 
   test("normalizes address fields in all other address-bearing factories", () => {

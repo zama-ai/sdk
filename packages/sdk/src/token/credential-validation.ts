@@ -75,13 +75,15 @@ export function isCredentialValid(
   creds: { startTimestamp: number; durationDays: number; contractAddresses: Address[] },
   requiredContracts: Address[],
 ): boolean {
-  if (!isTimeValid(creds)) return false;
+  if (!isTimeValid(creds)) {
+    return false;
+  }
   return coversContracts(creds.contractAddresses, requiredContracts);
 }
 
 /** Deduplicate and sort a list of addresses by their checksummed form. */
 export function normalizeAddresses(addresses: Address[]): Address[] {
-  return [...new Set(addresses.map((address) => getAddress(address)))].sort();
+  return [...new Set(addresses.map((address) => getAddress(address)))].toSorted();
 }
 
 /** Compute a truncated SHA-256 store key from arbitrary identity segments. */

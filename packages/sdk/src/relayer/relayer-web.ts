@@ -7,7 +7,9 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import type { GenericStorage } from "../token/token.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
+import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   DelegatedUserDecryptParams,
@@ -21,6 +23,7 @@ import type {
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
+import { IndexedDBStorage } from "../token/indexeddb-storage";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.
@@ -63,6 +66,8 @@ export class RelayerWeb implements RelayerSDK {
   #ensureLock: Promise<RelayerWorkerClient> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
+  #artifactCache: FheArtifactCache | null = null;
+  #artifactStorage: GenericStorage | null = null;
   #status: RelayerSDKStatus = "idle";
   #initError: Error | undefined;
   readonly #config: RelayerWebConfig;
@@ -95,7 +100,7 @@ export class RelayerWeb implements RelayerSDK {
       throw new Error(`Invalid thread count: ${threads}. Must be a positive integer.`);
     }
 
-    if (threads !== undefined && typeof globalThis.SharedArrayBuffer === "undefined") {
+    if (threads !== undefined && globalThis.SharedArrayBuffer === undefined) {
       this.#config.logger?.warn(
         "threads option requires SharedArrayBuffer (COOP/COEP headers). Falling back to single-threaded.",
       );
@@ -119,13 +124,22 @@ export class RelayerWeb implements RelayerSDK {
    * Resets on failure to allow retries.
    */
   async #ensureWorker(): Promise<RelayerWorkerClient> {
-    if (this.#ensureLock) return this.#ensureLock;
+    if (this.#ensureLock) {
+      return this.#ensureLock;
+    }
     this.#ensureLock = this.#ensureWorkerInner();
     try {
       return await this.#ensureLock;
     } finally {
       this.#ensureLock = null;
     }
+  }
+
+  #tearDown(): void {
+    this.#workerClient?.terminate();
+    this.#workerClient = null;
+    this.#initPromise = null;
+    this.#artifactCache = null;
   }
 
   async #ensureWorkerInner(): Promise<RelayerWorkerClient> {
@@ -142,12 +156,44 @@ export class RelayerWeb implements RelayerSDK {
 
     // Chain changed → tear down old worker, re-init
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#workerClient?.terminate();
-      this.#workerClient = null;
-      this.#initPromise = null;
+      this.#tearDown();
     }
 
     this.#resolvedChainId = chainId;
+
+    // Create cache for current chain.
+    // Storage is chain-independent — reuse across chain switches.
+    if (!this.#artifactStorage) {
+      this.#artifactStorage =
+        this.#config.fheArtifactStorage ?? new IndexedDBStorage("FheArtifactCache", 1, "artifacts");
+    }
+    if (!this.#artifactCache) {
+      const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+      this.#artifactCache = new FheArtifactCache({
+        storage: this.#artifactStorage,
+        chainId,
+        relayerUrl: config.relayerUrl,
+        ttl: this.#config.fheArtifactCacheTTL,
+        logger: this.#config.logger,
+      });
+    }
+
+    // Revalidate cached artifacts if due — never let revalidation block init
+    if (this.#artifactCache) {
+      let stale = false;
+      try {
+        stale = await this.#artifactCache.revalidateIfDue();
+      } catch (err) {
+        this.#config.logger?.warn(
+          "Artifact revalidation failed, proceeding with potentially stale cache",
+          { error: err instanceof Error ? err.message : String(err) },
+        );
+      }
+      if (stale) {
+        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
+        this.#tearDown();
+      }
+    }
 
     if (!this.#initPromise) {
       this.#setStatus("initializing");
@@ -233,7 +279,7 @@ export class RelayerWeb implements RelayerSDK {
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<EIP712TypedData> {
     const worker = await this.#ensureWorker();
     const result = await worker.createEIP712({
@@ -268,7 +314,7 @@ export class RelayerWeb implements RelayerSDK {
 
   /**
    * Encrypt values for use in smart contract calls.
-   * Each value must specify its FHE type (ebool, euint4–256, eaddress).
+   * Each value must specify its FHE type (ebool, euint8–256, eaddress).
    */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     const { values, contractAddress, userAddress } = params;
@@ -276,7 +322,11 @@ export class RelayerWeb implements RelayerSDK {
     return withRetry(async () => {
       const worker = await this.#ensureWorker();
       await this.#refreshCsrfToken();
-      const result = await worker.encrypt({ values, contractAddress, userAddress });
+      const result = await worker.encrypt({
+        values,
+        contractAddress,
+        userAddress,
+      });
       return { handles: result.handles, inputProof: result.inputProof };
     });
   }
@@ -319,7 +369,7 @@ export class RelayerWeb implements RelayerSDK {
     contractAddresses: Address[],
     delegatorAddress: Address,
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const worker = await this.#ensureWorker();
     return worker.createDelegatedUserDecryptEIP712({
@@ -359,22 +409,33 @@ export class RelayerWeb implements RelayerSDK {
 
   /**
    * Get the TFHE compact public key.
+   * When storage is configured, the result is cached persistently.
    */
   async getPublicKey(): Promise<{
     publicKeyId: string;
     publicKey: Uint8Array;
   } | null> {
     const worker = await this.#ensureWorker();
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicKey(async () => (await worker.getPublicKey()).result);
+    }
     return (await worker.getPublicKey()).result;
   }
 
   /**
    * Get public parameters for encryption capacity.
+   * When storage is configured, the result is cached persistently.
    */
   async getPublicParams(
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const worker = await this.#ensureWorker();
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicParams(
+        bits,
+        async () => (await worker.getPublicParams(bits)).result,
+      );
+    }
     return (await worker.getPublicParams(bits)).result;
   }
 

@@ -70,7 +70,9 @@ export class NodeWorkerPool {
   }
 
   async initPool(): Promise<void> {
-    if (this.#workers.length > 0) return;
+    if (this.#workers.length > 0) {
+      return;
+    }
     if (!this.#initPromise) {
       this.#initPromise = this.#doInitPool().finally(() => {
         this.#initPromise = null;

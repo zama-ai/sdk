@@ -82,14 +82,15 @@ function stripFrontmatter(content) {
   return content.replace(/^---\n[\s\S]*?\n---\n/, "");
 }
 
-/** Convert absolute links (/guides/foo) to relative (../guides/foo.md). */
+/** Convert absolute links (/guides/foo) to include .md so mdbook can resolve them. */
 function fixLinks(content) {
   // Match markdown links with absolute paths: [text](/path/to/page)
   return content.replace(/\]\(\/([^)]+)\)/g, (_match, path) => {
-    // Add .md extension if not present and not an anchor
-    const hasExt = /\.\w+$/.test(path.split("#")[0]);
-    const fixed = hasExt ? path : path + ".md";
-    return `](/${fixed})`;
+    const [pathPart, ...rest] = path.split("#");
+    const hasExt = /\.\w+$/.test(pathPart);
+    const fixedPath = hasExt ? pathPart : pathPart + ".md";
+    const anchor = rest.length > 0 ? "#" + rest.join("#") : "";
+    return `](/${fixedPath}${anchor})`;
   });
 }
 

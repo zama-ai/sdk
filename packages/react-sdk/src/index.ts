@@ -12,7 +12,13 @@ export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
-export { useUserDecrypt } from "./relayer/use-user-decrypt";
+export {
+  useUserDecrypt,
+  type DecryptHandle,
+  type DecryptParams,
+  type DecryptCallbacks,
+  type UseUserDecryptConfig,
+} from "./relayer/use-user-decrypt";
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
 export { useCreateEIP712 } from "./relayer/use-create-eip712";
@@ -24,19 +30,9 @@ export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-ve
 export { usePublicKey, type PublicKeyData } from "./relayer/use-public-key";
 export { usePublicParams, type PublicParamsData } from "./relayer/use-public-params";
 
-// Orchestration hooks
-export {
-  useUserDecryptFlow,
-  type DecryptHandle,
-  type UserDecryptFlowParams,
-  type UserDecryptFlowCallbacks,
-  type UseUserDecryptFlowConfig,
-} from "./relayer/use-user-decrypt-flow";
-
 // Read hooks (cached lookups)
 export { useUserDecryptedValue } from "./relayer/use-user-decrypted-value";
 export { useUserDecryptedValues } from "./relayer/use-user-decrypted-values";
-export { decryptionKeys } from "./relayer/decryption-cache";
 
 // Re-export core classes
 export {
@@ -45,6 +41,7 @@ export {
   Token,
   ReadonlyToken,
   MemoryStorage,
+  memoryStorage,
   IndexedDBStorage,
   indexedDBStorage,
   CredentialsManager,
@@ -289,6 +286,15 @@ export {
   finalizeUnwrapMutationOptions,
   type FinalizeUnwrapParams,
   encryptMutationOptions,
+  generateKeypairMutationOptions,
+  createEIP712MutationOptions,
+  createDelegatedUserDecryptEIP712MutationOptions,
+  delegatedUserDecryptMutationOptions,
+  publicDecryptMutationOptions,
+  requestZKProofVerificationMutationOptions,
+  userDecryptMutationOptions,
+  type UserDecryptMutationParams,
+  type UserDecryptCallbacks,
   allowMutationOptions,
   isAllowedQueryOptions,
   revokeMutationOptions,

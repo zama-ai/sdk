@@ -1,22 +1,12 @@
 "use client";
 
-import type { Address, KmsDelegatedUserDecryptEIP712Type } from "@zama-fhe/sdk";
+import type { KmsDelegatedUserDecryptEIP712Type } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
+import { createDelegatedUserDecryptEIP712MutationOptions } from "@zama-fhe/sdk/query";
+import type { CreateDelegatedUserDecryptEIP712Params } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-/** Parameters for {@link useCreateDelegatedUserDecryptEIP712}. */
-export interface CreateDelegatedUserDecryptEIP712Params {
-  /** The FHE public key (hex-encoded). */
-  publicKey: `0x${string}`;
-  /** Contract addresses the credential authorizes decryption for. */
-  contractAddresses: Address[];
-  /** Address of the wallet that delegated decrypt authority. */
-  delegatorAddress: Address;
-  /** Unix timestamp (seconds) when the credential becomes valid. */
-  startTimestamp: number;
-  /** Number of days the credential remains valid. Default: 1. */
-  durationDays?: number;
-}
+export type { CreateDelegatedUserDecryptEIP712Params };
 
 /**
  * Create EIP-712 typed data for a delegated user decrypt credential.
@@ -41,20 +31,5 @@ export function useCreateDelegatedUserDecryptEIP712() {
     KmsDelegatedUserDecryptEIP712Type,
     Error,
     CreateDelegatedUserDecryptEIP712Params
-  >({
-    mutationFn: ({
-      publicKey,
-      contractAddresses,
-      delegatorAddress,
-      startTimestamp,
-      durationDays,
-    }) =>
-      sdk.relayer.createDelegatedUserDecryptEIP712(
-        publicKey,
-        contractAddresses,
-        delegatorAddress,
-        startTimestamp,
-        durationDays,
-      ),
-  });
+  >(createDelegatedUserDecryptEIP712MutationOptions(sdk));
 }
