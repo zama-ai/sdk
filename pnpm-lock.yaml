@@ -182,6 +182,9 @@ importers:
 
   packages/sdk:
     dependencies:
+      '@zama-fhe/relayer-sdk':
+        specifier: ~0.4.2
+        version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       ethers:
         specifier: '>=6'
         version: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -192,9 +195,6 @@ importers:
       '@tanstack/query-core':
         specifier: ^5.90.20
         version: 5.90.20
-      '@zama-fhe/relayer-sdk':
-        specifier: 0.4.2
-        version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       rolldown:
         specifier: 1.0.0-rc.7
         version: 1.0.0-rc.7
@@ -5396,7 +5396,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
       '@types/debug': 4.1.12
-      debug: 4.3.4
+      debug: 4.4.3
       pony-cause: 2.1.11
       semver: 7.7.4
       uuid: 9.0.1
@@ -5411,7 +5411,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
       '@types/debug': 4.1.12
-      debug: 4.3.4
+      debug: 4.4.3
       pony-cause: 2.1.11
       semver: 7.7.4
       uuid: 9.0.1
