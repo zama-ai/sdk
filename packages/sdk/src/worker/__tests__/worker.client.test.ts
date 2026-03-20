@@ -275,7 +275,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("getInitPayload() returns INIT type with config and sdkUrl in payload", async () => {
+  it("getInitPayload() returns INIT type with CDN URL and integrity in payload", async () => {
     setupAutoResolvingWebWorker();
     const config = defaultWebConfig();
     const client = new RelayerWorkerClient(config);
@@ -283,9 +283,14 @@ describe("RelayerWorkerClient", () => {
 
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toMatchObject(config);
-    expect(req.payload).toHaveProperty("sdkUrl");
-    expect((req.payload as { sdkUrl: string }).sdkUrl).toContain("relayer-sdk-js.umd.cjs");
+    expect(req.payload).toMatchObject({
+      fhevmConfig: config.fhevmConfig,
+      csrfToken: config.csrfToken,
+    });
+    expect(req.payload).toHaveProperty("cdnUrl");
+    expect(req.payload).toHaveProperty("integrity");
+    expect((req.payload as { cdnUrl: string }).cdnUrl).toContain("cdn.zama.org");
+    expect((req.payload as { cdnUrl: string }).cdnUrl).toContain("relayer-sdk-js.umd.cjs");
 
     client.terminate();
   });
@@ -300,7 +305,10 @@ describe("RelayerWorkerClient", () => {
 
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toMatchObject(config);
+    expect(req.payload).toMatchObject({
+      fhevmConfig: config.fhevmConfig,
+      csrfToken: config.csrfToken,
+    });
 
     client.terminate();
   });

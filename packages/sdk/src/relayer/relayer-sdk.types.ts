@@ -21,6 +21,12 @@ export type NetworkType = "hardhat" | "sepolia" | "mainnet";
 export interface RelayerWebSecurityConfig {
   /** Resolve the current CSRF token. Called before each authenticated network request. */
   getCsrfToken?: () => string;
+  /**
+   * Verify the SHA-384 integrity of the relayer-sdk UMD bundle fetched from CDN.
+   * Defaults to `true`. Set to `false` to skip runtime integrity verification
+   * (not recommended in production).
+   */
+  integrityCheck?: boolean;
 }
 
 /** Configuration for RelayerWeb (browser backend) initialization. */
@@ -46,27 +52,6 @@ export interface RelayerWebConfig {
    * When omitted, the relayer SDK uses its default (single-threaded).
    */
   threads?: number;
-  /**
-   * Resolve asset filenames to URLs for the Web Worker and relayer-sdk UMD bundle.
-   *
-   * Called with `"relayer-sdk.worker.js"` and `"relayer-sdk-js.umd.cjs"`.
-   * Must return a URL (string or URL object) that the browser can fetch.
-   *
-   * Defaults to `(filename) => new URL(filename, import.meta.url)` which
-   * works automatically with Vite, webpack 5, and Next.js.
-   *
-   * For bundlers that don't handle `new URL(..., import.meta.url)` in
-   * dependencies (Rollup, esbuild), pass the resolver from your own module
-   * so the bundler sees the pattern in your code:
-   *
-   * ```ts
-   * const relayer = new RelayerWeb({
-   *   resolveAssetUrl: (name) => new URL(name, import.meta.url),
-   *   // ...
-   * });
-   * ```
-   */
-  resolveAssetUrl?: (filename: string) => URL | string;
   /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
   onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
 }

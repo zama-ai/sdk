@@ -1,6 +1,6 @@
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
-import { relayerSdkUmd } from "./relayer-sdk-umd-plugin";
+import { relayerSdkCdn } from "./relayer-sdk-cdn-plugin";
 
 const shared = {
   external: [/^viem/, /^ethers/, /^@zama-fhe\/relayer-sdk/, /^@tanstack\/query-core/, /^node:/],
@@ -33,7 +33,7 @@ export default defineConfig([
       minify: true,
     },
     ...shared,
-    plugins: [dts({ tsconfig: "tsconfig.build.json" }), relayerSdkUmd()],
+    plugins: [dts({ tsconfig: "tsconfig.build.json" }), relayerSdkCdn()],
   },
   // Browser worker build (IIFE — classic workers can't use ES imports)
   {

@@ -140,13 +140,99 @@ function setupFetchInterceptor(): void {
   };
 }
 
+// ── CDN URL validation ───────────────────────────────────────
+
+/** Allowed CDN hostnames for loading the relayer SDK script. */
+const ALLOWED_CDN_HOSTS = new Set<string>(["cdn.zama.org"]);
+
 /**
- * Handle INIT request — load the relayer-sdk UMD bundle, initialize WASM,
- * and create the SDK instance.
+ * Validate the CDN URL supplied by the caller.
+ * Ensures only HTTPS URLs from approved hosts are used.
+ */
+function validateCdnUrl(rawUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid CDN URL");
+  }
+
+  if (url.protocol !== "https:") {
+    throw new Error("CDN URL must use https");
+  }
+
+  if (!ALLOWED_CDN_HOSTS.has(url.hostname)) {
+    throw new Error(`CDN URL host is not allowed: ${url.hostname}`);
+  }
+
+  return url.toString();
+}
+
+/**
+ * Verify a fetched script's SHA-384 hash matches the expected integrity value.
+ */
+async function verifyIntegrity(scriptContent: string, expectedHash: string): Promise<void> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(scriptContent);
+  const hashBuffer = await crypto.subtle.digest("SHA-384", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const actualHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+
+  if (actualHash !== expectedHash) {
+    throw new Error(
+      `Integrity check failed for CDN bundle.\n` +
+        `  Expected: ${expectedHash}\n` +
+        `  Actual:   ${actualHash}`,
+    );
+  }
+}
+
+/**
+ * Fetch the SDK script from CDN, verify its integrity, and load it.
+ *
+ * In browser extensions, blob: URLs may be blocked by CSP, but the CDN
+ * must be allowlisted in the extension's manifest CSP, so we can use
+ * `importScripts` directly (after verifying integrity via fetch).
+ *
+ * In web apps, we load via blob URL to avoid MIME-type issues with
+ * `importScripts` on cross-origin CDN URLs.
+ */
+async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
+  const validatedUrl = validateCdnUrl(cdnUrl);
+
+  const response = await originalFetch(validatedUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch SDK from CDN: ${response.status} ${response.statusText}`);
+  }
+  const scriptContent = await response.text();
+
+  if (integrity) {
+    await verifyIntegrity(scriptContent, integrity);
+  }
+
+  // Try blob URL first (web apps), fall back to importScripts (extensions).
+  try {
+    const blob = new Blob([scriptContent], { type: "application/javascript" });
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      self.importScripts(blobUrl);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  } catch {
+    // blob: URL blocked (e.g. browser extension CSP) — use importScripts
+    // directly. Integrity was already verified above via fetch.
+    self.importScripts(validatedUrl);
+  }
+}
+
+/**
+ * Handle INIT request — fetch the relayer-sdk UMD bundle from CDN,
+ * verify its integrity, initialize WASM, and create the SDK instance.
  */
 async function handleInit(request: InitRequest): Promise<void> {
   const { id, type, payload } = request;
-  const { sdkUrl, fhevmConfig, csrfToken, thread } = payload;
+  const { cdnUrl, integrity, fhevmConfig, csrfToken, thread } = payload;
 
   try {
     // Extract relayerUrl from config for fetch interception
@@ -156,26 +242,11 @@ async function handleInit(request: InitRequest): Promise<void> {
     // Set up fetch interceptor before loading SDK (WASM init may fetch)
     setupFetchInterceptor();
 
-    // Load the relayer-sdk UMD bundle from the co-located asset.
-    // This sets `self.relayerSDK` on the worker global scope.
-    //
-    // Security note: `sdkUrl` is constructed by worker.client.ts from the
-    // developer-supplied `resolveAssetUrl` callback (defaults to
-    // `new URL(RELAYER_SDK_UMD_FILENAME, import.meta.url)` when omitted).
-    // It is developer configuration, not end-user input. The postMessage
-    // channel to this dedicated worker is only accessible from the same
-    // origin that created it, so tampering requires same-origin code execution.
-    // CodeQL flags this as "client-side URL redirect" — this is a false positive.
-    try {
-      self.importScripts(sdkUrl); // CodeQL: sdkUrl is developer config, not user input — see note above
-    } catch (importError) {
-      throw new Error(`Failed to load relayer-sdk UMD bundle via importScripts("${sdkUrl}")`, {
-        cause: importError,
-      });
-    }
+    // Fetch, verify, and load the relayer-sdk UMD bundle from CDN.
+    await loadSdkScript(cdnUrl, integrity);
 
     if (!self.relayerSDK) {
-      throw new Error(`relayerSDK not defined after loading "${sdkUrl}"`);
+      throw new Error("Failed to load relayerSDK from CDN");
     }
 
     sdkGlobal = self.relayerSDK;

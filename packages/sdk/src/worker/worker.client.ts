@@ -7,7 +7,11 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
-import { RELAYER_SDK_UMD_FILENAME, RELAYER_SDK_WORKER_FILENAME } from "./worker.constants";
+import {
+  RELAYER_SDK_CDN_URL,
+  RELAYER_SDK_UMD_INTEGRITY,
+  RELAYER_SDK_WORKER_CDN_URL,
+} from "./worker.constants";
 
 /** Configuration for the worker client */
 export interface WorkerClientConfig {
@@ -17,56 +21,25 @@ export interface WorkerClientConfig {
   logger?: GenericLogger;
   /** Number of WASM threads for parallel FHE operations (passed to `initSDK({ thread })`). */
   thread?: number;
-  /** Resolve asset filenames to URLs. Defaults to `new URL(name, import.meta.url)`. */
-  resolveAssetUrl?: (filename: string) => URL | string;
-}
-
-/**
- * Default asset resolver — works with Vite, webpack 5, Next.js, Turbopack.
- *
- * Bundlers require the first argument of `new URL(..., import.meta.url)` to be
- * a **string literal** so they can statically resolve the asset at build time.
- * A dynamic variable (e.g. `new URL(filename, ...)`) triggers "Can't resolve
- * <dynamic>" errors. We therefore map each known filename to its own static
- * `new URL()` expression.
- */
-function defaultResolveAssetUrl(filename: string): URL {
-  switch (filename) {
-    case RELAYER_SDK_UMD_FILENAME:
-      return new URL("./relayer-sdk-js.umd.cjs", import.meta.url);
-    case RELAYER_SDK_WORKER_FILENAME:
-      return new URL("./relayer-sdk.worker.js", import.meta.url);
-    default:
-      throw new Error(
-        `defaultResolveAssetUrl: unknown asset "${filename}". ` +
-          `Provide a custom resolveAssetUrl in your config.`,
-      );
-  }
-}
-
-/** Normalize a URL | string to a string href. */
-function toHref(url: URL | string): string {
-  return url instanceof URL ? url.href : String(url);
+  /** Whether to verify CDN bundle integrity at runtime. Defaults to `true`. */
+  integrityCheck?: boolean;
 }
 
 /**
  * Client for communicating with the RelayerSDK Web Worker.
  * Provides a promise-based API for FHE operations.
  *
- * The worker IIFE and relayer-sdk UMD bundle are loaded on demand from
- * co-located files, keeping the main bundle small.
+ * Both the worker IIFE and the relayer-sdk UMD bundle are loaded from
+ * cdn.zama.org at runtime. The UMD bundle is verified with SHA-384
+ * integrity inside the worker.
  */
 export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientConfig> {
-  readonly #resolveAssetUrl: (filename: string) => URL | string;
-
   constructor(config: WorkerClientConfig) {
     super(config, config.logger);
-    this.#resolveAssetUrl = config.resolveAssetUrl ?? defaultResolveAssetUrl;
   }
 
   protected createWorker(): Worker {
-    const url = this.#resolveAssetUrl(RELAYER_SDK_WORKER_FILENAME);
-    return new Worker(url);
+    return new Worker(RELAYER_SDK_WORKER_CDN_URL);
   }
 
   protected wireEvents(worker: Worker): void {
@@ -92,14 +65,18 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     type: WorkerRequestType;
     payload: WorkerRequest["payload"];
   } {
-    const sdkUrl = toHref(this.#resolveAssetUrl(RELAYER_SDK_UMD_FILENAME));
-
     // Only spread serializable fields — `logger` contains functions
     // which cannot be cloned by `postMessage`.
-    const { fhevmConfig, csrfToken, thread } = this.config;
+    const { fhevmConfig, csrfToken, thread, integrityCheck } = this.config;
     return {
       type: "INIT",
-      payload: { sdkUrl, fhevmConfig, csrfToken, thread },
+      payload: {
+        cdnUrl: RELAYER_SDK_CDN_URL,
+        integrity: integrityCheck === false ? undefined : RELAYER_SDK_UMD_INTEGRITY,
+        fhevmConfig,
+        csrfToken,
+        thread,
+      },
     };
   }
 

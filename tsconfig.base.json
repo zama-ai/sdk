@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": ["vitest/importMeta"],
+    "types": ["vitest/importMeta", "node"],
     "strict": true,
     "allowJs": false,
     "skipLibCheck": true,

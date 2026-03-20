@@ -2,9 +2,8 @@
  * Build-level smoke tests for the worker bundling pipeline.
  *
  * These verify that `pnpm build` produces valid output:
- * - The standalone worker file exists
- * - The relayer-sdk UMD bundle is emitted as a sibling asset
- * - The main bundle references filenames without inlining content
+ * - The standalone worker IIFE file exists
+ * - The main bundle references CDN URLs (no co-located UMD)
  *
  * Run `pnpm build` before running these tests.
  */
@@ -17,7 +16,6 @@ const hasBuild = existsSync(resolve(DIST, "relayer-sdk.worker.js"));
 
 describe.skipIf(!hasBuild)("worker build smoke tests", () => {
   const workerPath = resolve(DIST, "relayer-sdk.worker.js");
-  const sdkUmdPath = resolve(DIST, "relayer-sdk-js.umd.cjs");
   const indexPath = resolve(DIST, "index.js");
 
   it("dist/esm/relayer-sdk.worker.js exists", () => {
@@ -29,15 +27,9 @@ describe.skipIf(!hasBuild)("worker build smoke tests", () => {
     expect(content).toContain("onmessage");
   });
 
-  it("relayer-sdk UMD bundle is emitted as a sibling asset", () => {
-    expect(existsSync(sdkUmdPath)).toBe(true);
-    const content = readFileSync(sdkUmdPath, "utf-8");
-    expect(content).toContain("relayerSDK");
-  });
-
-  it("main bundle references worker and SDK filenames", () => {
+  it("main bundle references CDN URL for the UMD bundle", () => {
     const content = readFileSync(indexPath, "utf-8");
-    expect(content).toContain("relayer-sdk.worker.js");
+    expect(content).toContain("cdn.zama.org");
     expect(content).toContain("relayer-sdk-js.umd.cjs");
   });
 });
