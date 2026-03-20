@@ -1,6 +1,16 @@
-# Hoodi + Cleartext Example
+# Example Hoodi app with cleartext Zama Protocol support
 
-Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet using the **cleartext stack** and **ethers** — including on-chain ACL delegation.
+Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet and **ethers** — including on-chain ACL delegation.
+
+## Cleartext Zama Protocol
+
+[Zama Protocol](https://docs.zama.org/protocol) is currently supported officially on Ethereum mainnet and Sepolia testnet. This setup uses a co-processor model to offload FHE computation from the host chain to a decentralised network.
+
+To provide support for yet-unsupported testnets, such as Hoodi, this example app simulates Zama Protocol using a **cleartext stack**. Essentially, it uses mocked FHE contracts to provide an API-compatible surface to write the values to the host chain, without needing an actual co-processor or relayer support to be added by Zama Protocol.
+
+This mode allows developers to test **smart contracts** and **app/backend integrations** with Hoodi chain in an API-compatible fashion with the real Zama Protocol.
+
+**WARNING**: Support for testnets such as Hoodi via this cleartext Zama Protocol method is only intended for **testing** purposes. A **the "encrypted" values are stored in cleartext** on Hoodi testnet.
 
 ## Stack
 
@@ -74,7 +84,7 @@ npm run test:e2e          # run all tests (starts dev server automatically)
 npx playwright test --ui  # interactive mode — watch tests run in the browser
 ```
 
-22 Playwright e2e tests covering the connect flow, wrong-network screen, main UI, and delegation section (no real wallet or transactions required — uses a mocked EIP-1193 provider).
+Playwright e2e tests covering the connect flow, wrong-network screen, main UI, and delegation section (no real wallet or transactions required — uses a mocked EIP-1193 provider).
 
 ## Environment variables
 

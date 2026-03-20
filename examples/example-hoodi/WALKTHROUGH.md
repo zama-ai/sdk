@@ -156,6 +156,8 @@ Registry (DeploymentCoordinator): `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
 
 All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
 
+> These addresses are also defined in `src/lib/config.ts` and `src/app/page.tsx` (`TOKENS` constant). If contracts are redeployed, update all three locations.
+
 ---
 
 ## Minting test tokens
@@ -466,7 +468,9 @@ import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
 // Grant decryption access — 1 transaction.
 // expirationDate: undefined → SDK sends MAX_UINT64 on-chain (permanent delegation).
 const delegate = useDelegateDecryption({ tokenAddress: cTokenAddress });
+// Permanent delegation (no expiry):
 delegate.mutate({ delegateAddress: "0xDelegate" });
+// With expiry (must be at least 1 hour in the future):
 delegate.mutate({ delegateAddress: "0xDelegate", expirationDate: new Date("2027-01-01") });
 
 // Revoke decryption access — 1 transaction.
@@ -537,6 +541,9 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 | Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                                                         |
 | Amounts displayed as very large or very small numbers     | Raw units displayed without decimal conversion                                                                                                           | Always use `formatUnits(balance, decimals)` for display and `parseUnits(input, decimals)` for input; fetch decimals via `useMetadata`                                                                                                                                                                                                                            |
 | Delegate can still decrypt after revocation               | Expected behavior — decrypted values are cached in IndexedDB keyed by `(token, owner, handle)`; the cache is served without re-checking the on-chain ACL | This is by design: the SDK uses the on-chain encrypted handle as the cache key (no TTL). Revocation takes effect for the delegate as soon as the owner's balance changes (via shield, transfer, or unshield), which produces a new handle and automatically invalidates the cache entry. Until then, the previously decrypted value is still accessible locally. |
+| Grant Access reverts with `ExpirationDateBeforeOneHour`   | Expiration date is less than 1 hour in the future (ACL contract requirement)                                                                             | Set the expiry to at least 1 hour from now. The contract compares against `block.timestamp` (UTC), not your local clock — account for any clock skew. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                     |
+| Grant Access reverts with `SenderCannotBeDelegate`        | Attempted to delegate decryption access to your own address                                                                                              | Enter a different wallet address. The ACL contract does not allow self-delegation. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                                                        |
+| Revoke Access reverts with `NotDelegatedYet`              | No active delegation exists for the entered address and token                                                                                            | Verify the delegate address is correct and that a grant was previously confirmed on-chain for the selected token. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                         |
 
 ---
 
@@ -548,7 +555,7 @@ This example ships with a Playwright e2e test suite. Tests run against the real 
 # Install deps (first time only)
 npm install
 
-# Run all 22 tests — starts the dev server automatically
+# Run all tests — starts the dev server automatically
 npm run test:e2e
 
 # Interactive mode — watch each test run step-by-step in the browser
@@ -575,11 +582,11 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 ## Tech stack
 
-| Package                 | Version       | Role                                                                                                                                                                                          |
-| ----------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | 2.0.0-alpha.2 | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                              |
-| `@zama-fhe/react-sdk`   | 2.0.0-alpha.2 | React hooks — `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useMetadata`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `ethers`                | ^6.13.0       | Ethereum client (via `EthersSigner`)                                                                                                                                                          |
-| `@tanstack/react-query` | ^5.90.0       | Async state management                                                                                                                                                                        |
-| `next`                  | ^16.0.0       | React framework (App Router)                                                                                                                                                                  |
-| **Chain**               | Hoodi testnet | chainId 560048                                                                                                                                                                                |
+| Package                 | Version            | Role                                                                                                                                                                                          |
+| ----------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                              |
+| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useMetadata`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
+| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                          |
+| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                        |
+| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                  |
+| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                |
