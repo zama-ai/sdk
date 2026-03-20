@@ -1,3 +1,8 @@
+// Patch the conventionalcommits preset to use `-` bullets instead of `*`.
+// The preset hardcodes `*` in its Handlebars templates with no config option
+// to change it, so we load the expanded templates and do a targeted replacement.
+const { writer } = require("conventional-changelog-conventionalcommits").default();
+
 module.exports = {
   branches: ["main", { name: "prerelease", channel: "alpha", prerelease: "alpha" }],
   tagFormat: "v${version}",
@@ -29,6 +34,10 @@ module.exports = {
       "@semantic-release/release-notes-generator",
       {
         preset: "conventionalcommits",
+        writerOpts: {
+          mainTemplate: writer.mainTemplate.replaceAll("* ", "- "),
+          commitPartial: writer.commitPartial.replace(/^\*/, "-"),
+        },
       },
     ],
     [
