@@ -4,6 +4,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 
 const ACCOUNT_1_PK = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+const ACCOUNT_2_PK = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a";
 
 function createAccount1Client(port: number) {
   const account1 = privateKeyToAccount(ACCOUNT_1_PK);
@@ -14,6 +15,43 @@ function createAccount1Client(port: number) {
   });
   return { account1, client };
 }
+
+function createAccount2Client(port: number) {
+  const account2 = privateKeyToAccount(ACCOUNT_2_PK);
+  const client = createWalletClient({
+    account: account2,
+    chain: foundry,
+    transport: http(`http://127.0.0.1:${port}`),
+  });
+  return { account2, client };
+}
+
+const aclDelegateAbi = [
+  {
+    type: "function" as const,
+    name: "delegateForUserDecryption" as const,
+    stateMutability: "nonpayable" as const,
+    inputs: [
+      { name: "delegate", type: "address" },
+      { name: "contractAddress", type: "address" },
+      { name: "expirationDate", type: "uint64" },
+    ],
+    outputs: [],
+  },
+] as const;
+
+const aclRevokeAbi = [
+  {
+    type: "function" as const,
+    name: "revokeDelegationForUserDecryption" as const,
+    stateMutability: "nonpayable" as const,
+    inputs: [
+      { name: "delegate", type: "address" },
+      { name: "contractAddress", type: "address" },
+    ],
+    outputs: [],
+  },
+] as const;
 
 test.describe("Token.delegateDecryption — on-chain writes", () => {
   test("delegateDecryption writes delegation to ACL", async ({ sdk, contracts, anvilPort }) => {
@@ -40,14 +78,11 @@ test.describe("Token.delegateDecryption — on-chain writes", () => {
 
     const { account1 } = createAccount1Client(anvilPort);
 
-    // Delegate first
     await token.delegateDecryption({ delegateAddress: account1.address });
 
-    // Advance time to clear cooldown
     await viemClient.increaseTime({ seconds: 2 });
     await viemClient.mine({ blocks: 1 });
 
-    // Then revoke
     const result = await token.revokeDelegation({ delegateAddress: account1.address });
     expect(result).toBeDefined();
     expect(result.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
@@ -83,20 +118,6 @@ test.describe("ReadonlyToken — delegation queries", () => {
 
     const { account1, client: account1Client } = createAccount1Client(anvilPort);
 
-    const aclDelegateAbi = [
-      {
-        type: "function" as const,
-        name: "delegateForUserDecryption" as const,
-        stateMutability: "nonpayable" as const,
-        inputs: [
-          { name: "delegate", type: "address" },
-          { name: "contractAddress", type: "address" },
-          { name: "expirationDate", type: "uint64" },
-        ],
-        outputs: [],
-      },
-    ] as const;
-
     const hash = await account1Client.writeContract({
       address: contracts.acl,
       abi: aclDelegateAbi,
@@ -119,7 +140,6 @@ test.describe("ReadonlyToken — delegation queries", () => {
     account,
     anvilPort,
   }) => {
-    // Use cUSDC (not cUSDT) to avoid leaking state from previous delegation tests
     const token = sdk.createReadonlyToken(contracts.cUSDC as Address);
     const { account1 } = createAccount1Client(anvilPort);
 
@@ -144,20 +164,6 @@ test.describe("ReadonlyToken — delegation queries", () => {
     const latestBlock = await viemClient.getBlock();
     const expirationDate = latestBlock.timestamp + 7200n;
 
-    const aclDelegateAbi = [
-      {
-        type: "function" as const,
-        name: "delegateForUserDecryption" as const,
-        stateMutability: "nonpayable" as const,
-        inputs: [
-          { name: "delegate", type: "address" },
-          { name: "contractAddress", type: "address" },
-          { name: "expirationDate", type: "uint64" },
-        ],
-        outputs: [],
-      },
-    ] as const;
-
     const hash = await account1Client.writeContract({
       address: contracts.acl,
       abi: aclDelegateAbi,
@@ -172,6 +178,82 @@ test.describe("ReadonlyToken — delegation queries", () => {
       delegateAddress: account.address,
     });
     expect(expiry).toBe(expirationDate);
+  });
+
+  test("overwrite delegation with a different expiry", async ({
+    sdk,
+    contracts,
+    viemClient,
+    anvilPort,
+    account,
+  }) => {
+    const token = sdk.createToken(contracts.USDT, contracts.cUSDT as Address);
+    await token.shield(100n * 10n ** 6n);
+
+    const { account2, client: account2Client } = createAccount2Client(anvilPort);
+
+    // Delegate with max expiry
+    const hash1 = await account2Client.writeContract({
+      address: contracts.acl,
+      abi: aclDelegateAbi,
+      functionName: "delegateForUserDecryption",
+      args: [account.address, contracts.cUSDT as Address, 2n ** 64n - 1n],
+    });
+    await viemClient.waitForTransactionReceipt({ hash: hash1 });
+
+    // Overwrite with shorter expiry
+    const latestBlock = await viemClient.getBlock();
+    const newExpiry = latestBlock.timestamp + 7200n;
+
+    const hash2 = await account2Client.writeContract({
+      address: contracts.acl,
+      abi: aclDelegateAbi,
+      functionName: "delegateForUserDecryption",
+      args: [account.address, contracts.cUSDT as Address, newExpiry],
+    });
+    await viemClient.waitForTransactionReceipt({ hash: hash2 });
+
+    const readonlyToken = sdk.createReadonlyToken(contracts.cUSDT as Address);
+    const storedExpiry = await readonlyToken.getDelegationExpiry({
+      delegatorAddress: account2.address,
+      delegateAddress: account.address,
+    });
+    expect(storedExpiry).toBe(newExpiry);
+  });
+
+  test("reject delegation with expiry less than one hour", async ({
+    contracts,
+    viemClient,
+    anvilPort,
+    account,
+  }) => {
+    const { client: account2Client } = createAccount2Client(anvilPort);
+
+    const latestBlock = await viemClient.getBlock();
+    const tooSoonExpiry = latestBlock.timestamp + 1800n; // 30 minutes
+
+    await expect(
+      account2Client.writeContract({
+        address: contracts.acl,
+        abi: aclDelegateAbi,
+        functionName: "delegateForUserDecryption",
+        args: [account.address, contracts.cUSDT as Address, tooSoonExpiry],
+      }),
+    ).rejects.toThrow();
+  });
+
+  test("reject revocation when no delegation exists", async ({ contracts, anvilPort, account }) => {
+    const { client: account2Client } = createAccount2Client(anvilPort);
+
+    // Use cUSDC where account2 has never delegated
+    await expect(
+      account2Client.writeContract({
+        address: contracts.acl,
+        abi: aclRevokeAbi,
+        functionName: "revokeDelegationForUserDecryption",
+        args: [account.address, contracts.cUSDC as Address],
+      }),
+    ).rejects.toThrow();
   });
 
   test("confidentialBalanceOf returns a raw handle", async ({ sdk, contracts }) => {
