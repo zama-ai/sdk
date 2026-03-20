@@ -4,6 +4,6 @@
     "lib": ["ESNext", "DOM"],
     "types": ["node"]
   },
-  "include": ["fixtures", "*.ts", "../sdk/src/worker/iife.d.ts"],
+  "include": ["fixtures", "*.ts"],
   "exclude": ["node_modules"]
 }
