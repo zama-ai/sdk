@@ -10,7 +10,7 @@ import type { Address } from "viem";
 import { createPublicClient, createTestClient, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { TEST_PRIVATE_KEY, MINTED, NODE_ANVIL_PORT } from "./constants";
+import { TEST_PRIVATE_KEY, NODE_ANVIL_PORT } from "./constants";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
 import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { RelayerNode } from "@zama-fhe/sdk/node";
@@ -29,19 +29,6 @@ const contracts = {
   feeManager: deployments.feeManager as Address,
   acl: hardhatCleartextConfig.aclContractAddress as Address,
 } as const;
-
-const mintAbi = [
-  {
-    type: "function",
-    name: "mint",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "account", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-] as const;
 
 const erc20BalanceOfAbi = [
   {
@@ -76,6 +63,18 @@ export interface NodeWorkerFixtures {
   viemClient: ViemClient;
 }
 
+/** Initial balances from Deploy.s.sol (10,000 ERC-20 minted, 1,000 wrapped confidential). */
+export interface InitialBalances {
+  /** Confidential balance for cUSDT (after deploy wrap fee). */
+  cUSDT: bigint;
+  /** Confidential balance for cUSDC (after deploy wrap fee). */
+  cUSDC: bigint;
+  /** ERC-20 balance for USDT. */
+  USDT: bigint;
+  /** ERC-20 balance for USDC. */
+  USDC: bigint;
+}
+
 export interface NodeTestFixtures {
   account: typeof account;
   contracts: typeof contracts;
@@ -83,6 +82,9 @@ export interface NodeTestFixtures {
   relayer: RelayerNode;
   sdk: ZamaSDK;
   readErc20Balance: (tokenAddress: Address, owner?: Address) => Promise<bigint>;
+  /** Pre-deployed confidential balances (requires allow → balanceOf). */
+  initialBalances: InitialBalances;
+  anvilState: undefined;
 }
 
 export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
@@ -131,38 +133,27 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
     await use(sdk);
     sdk.terminate();
   },
-  // Override page fixture — node tests don't use a browser.
-  // Mint tokens + snapshot/revert like the browser fixture.
-  page: async ({ page, viemClient, account }, use) => {
-    const nonce = await viemClient.getTransactionCount({
-      address: account.address,
-    });
-    const usdcHash = await viemClient.writeContract({
-      address: contracts.USDC,
-      abi: mintAbi,
-      functionName: "mint",
-      args: [account.address, MINTED],
-      nonce,
-    });
-    const usdtHash = await viemClient.writeContract({
-      address: contracts.USDT,
-      abi: mintAbi,
-      functionName: "mint",
-      args: [account.address, MINTED],
-      nonce: nonce + 1,
-    });
-    await Promise.all([
-      viemClient.waitForTransactionReceipt({ hash: usdcHash }),
-      viemClient.waitForTransactionReceipt({ hash: usdtHash }),
+  initialBalances: async ({ sdk, contracts, readErc20Balance }, use) => {
+    await sdk.allow(contracts.cUSDT as Address, contracts.cUSDC as Address);
+    const readUSDT = sdk.createReadonlyToken(contracts.cUSDT as Address);
+    const readUSDC = sdk.createReadonlyToken(contracts.cUSDC as Address);
+    const [cUSDT, cUSDC, USDT, USDC] = await Promise.all([
+      readUSDT.balanceOf(),
+      readUSDC.balanceOf(),
+      readErc20Balance(contracts.USDT),
+      readErc20Balance(contracts.USDC),
     ]);
-
-    const id = await viemClient.snapshot();
-
-    // Pass null as page — node tests don't use it
-    await use(page);
-
-    await viemClient.revert({ id });
+    await use({ cUSDT, cUSDC, USDT, USDC });
   },
+  // Auto-use fixture: snapshot anvil before each test, revert after.
+  anvilState: [
+    async ({ viemClient }, use) => {
+      const id = await viemClient.snapshot();
+      await use(undefined);
+      await viemClient.revert({ id });
+    },
+    { auto: true },
+  ],
 });
 
 export const expect = nodeTest.expect;

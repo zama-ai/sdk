@@ -27,11 +27,14 @@ test("transfer to self preserves balance", async ({ sdk, contracts }) => {
   expect(balanceAfterSelfTransfer).toBe(balanceAfterShield);
 });
 
-test("approve operator → transferFrom succeeds", async ({ sdk, contracts, computeFee }) => {
+test("approve operator → transferFrom succeeds", async ({
+  sdk,
+  contracts,
+  computeFee,
+  initialBalances,
+}) => {
   const shieldAmount = 1000n * 10n ** 6n;
   const transferAmount = 300n * 10n ** 6n;
-
-  await sdk.allow(contracts.cUSDT as Address);
 
   const token = sdk.createToken(contracts.cUSDT as Address);
   await token.shield(shieldAmount);
@@ -50,7 +53,7 @@ test("approve operator → transferFrom succeeds", async ({ sdk, contracts, comp
   // Sender balance decreased
   const readonlyToken = sdk.createReadonlyToken(contracts.cUSDT as Address);
   const senderBalance = await readonlyToken.balanceOf();
-  const expected = shieldAmount - computeFee(shieldAmount) - transferAmount;
+  const expected = initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount) - transferAmount;
   expect(senderBalance).toBe(expected);
 });
 
@@ -76,13 +79,12 @@ test("multiple sequential transfers accumulate correctly at recipient", async ({
   sdk,
   contracts,
   computeFee,
+  initialBalances,
 }) => {
   const shieldAmount = 1000n * 10n ** 6n;
   const transfer1 = 100n * 10n ** 6n;
   const transfer2 = 200n * 10n ** 6n;
   const transfer3 = 150n * 10n ** 6n;
-
-  await sdk.allow(contracts.cUSDT as Address);
 
   const token = sdk.createToken(contracts.cUSDT as Address);
   await token.shield(shieldAmount);
@@ -94,6 +96,11 @@ test("multiple sequential transfers accumulate correctly at recipient", async ({
   const readonlyToken = sdk.createReadonlyToken(contracts.cUSDT as Address);
   const senderBalance = await readonlyToken.balanceOf();
   const expectedSender =
-    shieldAmount - computeFee(shieldAmount) - transfer1 - transfer2 - transfer3;
+    initialBalances.cUSDT +
+    shieldAmount -
+    computeFee(shieldAmount) -
+    transfer1 -
+    transfer2 -
+    transfer3;
   expect(senderBalance).toBe(expectedSender);
 });

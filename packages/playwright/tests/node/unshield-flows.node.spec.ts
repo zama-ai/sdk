@@ -10,6 +10,7 @@ test("unshieldAll returns entire confidential balance to ERC-20", async ({
   contracts,
   readErc20Balance,
   computeFee,
+  initialBalances,
 }) => {
   const shieldAmount = 800n * 10n ** 6n;
 
@@ -18,21 +19,21 @@ test("unshieldAll returns entire confidential balance to ERC-20", async ({
   const token = sdk.createToken(contracts.cUSDT as Address);
   await token.shield(shieldAmount);
 
-  // Unshield everything
+  // Unshield everything (including the pre-deployed confidential balance)
   await token.unshieldAll();
 
   const erc20After = await readErc20Balance(contracts.USDT);
 
-  // The user gets back the net amount minus fees on both shield and unshield
-  const netAfterShield = shieldAmount - computeFee(shieldAmount);
-  const netAfterUnshield = netAfterShield - computeFee(netAfterShield);
+  // Total confidential before unshield = initial + shielded - shield fee
+  const totalConfidential = initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount);
+  // Net received after unshield fee
+  const netAfterUnshield = totalConfidential - computeFee(totalConfidential);
   expect(erc20After).toBe(erc20Before - shieldAmount + netAfterUnshield);
 
   // Confidential balance should be zero
   await sdk.allow(contracts.cUSDT as Address);
   const readonlyToken = sdk.createReadonlyToken(contracts.cUSDT as Address);
-  const confidentialBalance = await readonlyToken.balanceOf();
-  expect(confidentialBalance).toBe(0n);
+  expect(await readonlyToken.balanceOf()).toBe(0n);
 });
 
 test("shield → partial unshield → second partial unshield", async ({
@@ -40,6 +41,7 @@ test("shield → partial unshield → second partial unshield", async ({
   contracts,
   readErc20Balance,
   computeFee,
+  initialBalances,
 }) => {
   const shieldAmount = 1000n * 10n ** 6n;
   const unshield1 = 300n * 10n ** 6n;
@@ -64,12 +66,12 @@ test("shield → partial unshield → second partial unshield", async ({
     computeFee(unshield2);
   expect(erc20After).toBe(expected);
 
-  // Confidential balance = netAfterShield - unshield1 - unshield2
+  // Confidential balance = initial + netAfterShield - unshield1 - unshield2
   await sdk.allow(contracts.cUSDT as Address);
   const readonlyToken = sdk.createReadonlyToken(contracts.cUSDT as Address);
-  const confidentialBalance = await readonlyToken.balanceOf();
-  const expectedConfidential = shieldAmount - computeFee(shieldAmount) - unshield1 - unshield2;
-  expect(confidentialBalance).toBe(expectedConfidential);
+  const expectedConfidential =
+    initialBalances.cUSDT + shieldAmount - computeFee(shieldAmount) - unshield1 - unshield2;
+  expect(await readonlyToken.balanceOf()).toBe(expectedConfidential);
 });
 
 test("unshield fees are consistent across USDT and USDC", async ({
