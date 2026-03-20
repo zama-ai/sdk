@@ -1,6 +1,7 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
+import type { GenericStorage } from "../token/token.types";
 
 // ============================================================================
 // Application Types
@@ -50,6 +51,19 @@ export interface RelayerWebConfig {
   threads?: number;
   /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
   onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
+  /**
+   * Persistent storage for caching FHE public key and params across sessions.
+   *
+   * Defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")`.
+   * Pass a custom `IndexedDBStorage` instance to configure the database name,
+   * version, or store name. FHE public params can be several MB — avoid
+   * `localStorage`-backed storage which caps at ~5 MB.
+   *
+   * **Not to be confused with `ZamaProvider.storage`** which stores credentials.
+   */
+  fheArtifactStorage?: GenericStorage;
+  /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
+  fheArtifactCacheTTL?: number;
 }
 
 /** Result from encryption operation */

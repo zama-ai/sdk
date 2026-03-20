@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach } from "../../test-fixtures";
+import { vi } from "vitest";
+import { afterEach, describe, it, expect, beforeEach } from "../../test-fixtures";
 import { EncryptionFailedError } from "../../token/errors";
+import { MemoryStorage } from "../../token/memory-storage";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks (available inside vi.mock factories)
@@ -46,15 +48,20 @@ const { mockWorkerClient, MockRelayerWorkerClient, mockPool, MockNodeWorkerPool 
       return mockPool;
     });
 
-    return { mockWorkerClient, MockRelayerWorkerClient, mockPool, MockNodeWorkerPool };
+    return {
+      mockWorkerClient,
+      MockRelayerWorkerClient,
+      mockPool,
+      MockNodeWorkerPool,
+    };
   },
 );
 
-vi.mock(import("../../worker/worker.client"), () => ({
+vi.mock("../../worker/worker.client", () => ({
   RelayerWorkerClient: MockRelayerWorkerClient,
 }));
 
-vi.mock(import("../../worker/worker.node-pool"), () => ({
+vi.mock("../../worker/worker.node-pool", () => ({
   NodeWorkerPool: MockNodeWorkerPool,
 }));
 
@@ -82,6 +89,8 @@ function createWebRelayer(
   return new RelayerWeb({
     getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
     transports: TRANSPORTS,
+    // Override default IndexedDBStorage with per-test MemoryStorage for isolation
+    fheArtifactStorage: new MemoryStorage(),
     ...overrides,
   });
 }
@@ -533,6 +542,196 @@ describe("RelayerWeb", () => {
       expect(onStatusChange).toHaveBeenCalledWith("error", expect.any(Error));
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Persistent caching integration
+  // -------------------------------------------------------------------------
+
+  describe("persistent caching", () => {
+    it("caches getPublicKey when storage is provided", async () => {
+      const storage = new MemoryStorage();
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1, 2, 3]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createWebRelayer({ fheArtifactStorage: storage });
+      const result = await relayer.getPublicKey();
+      expect(result).toEqual(pk);
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
+
+      // Second call — served from cache, worker not called again
+      const result2 = await relayer.getPublicKey();
+      expect(result2).toEqual(pk);
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
+    });
+
+    it("caches getPublicParams when storage is provided", async () => {
+      const storage = new MemoryStorage();
+      const pp = {
+        publicParamsId: "pp-1",
+        publicParams: new Uint8Array([4, 5]),
+      };
+      mockWorkerClient.getPublicParams.mockResolvedValue({ result: pp });
+
+      const relayer = createWebRelayer({ fheArtifactStorage: storage });
+      const result = await relayer.getPublicParams(2048);
+      expect(result).toEqual(pp);
+      expect(mockWorkerClient.getPublicParams).toHaveBeenCalledOnce();
+
+      const result2 = await relayer.getPublicParams(2048);
+      expect(result2).toEqual(pp);
+      expect(mockWorkerClient.getPublicParams).toHaveBeenCalledOnce();
+    });
+
+    it("restores cache across instances from persistent storage", async () => {
+      const storage = new MemoryStorage();
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([10]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      // First instance — fetches and persists
+      const relayer1 = createWebRelayer({ fheArtifactStorage: storage });
+      await relayer1.getPublicKey();
+      relayer1.terminate();
+
+      // Second instance — restores from storage without worker call
+      resetMocks();
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: null });
+      const relayer2 = createWebRelayer({ fheArtifactStorage: storage });
+      const result = await relayer2.getPublicKey();
+      expect(result).toEqual(pk);
+      expect(mockWorkerClient.getPublicKey).not.toHaveBeenCalled();
+    });
+
+    it("caches by default even when no storage is explicitly provided", async () => {
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createWebRelayer();
+      await relayer.getPublicKey();
+      await relayer.getPublicKey();
+
+      // Caching is always on — worker called only once
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
+    });
+
+    it("clears cache on chain switch", async () => {
+      const storage = new MemoryStorage();
+      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createWebRelayer({
+        fheArtifactStorage: storage,
+        getChainId,
+      });
+      await relayer.getPublicKey();
+      expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
+
+      // Switch chain — cache should be cleared
+      getChainId.mockResolvedValue(1);
+      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk2 });
+      const result = await relayer.getPublicKey();
+      expect(result).toEqual(pk2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Revalidation integration
+  // -------------------------------------------------------------------------
+
+  describe("revalidation", () => {
+    let originalFetch: typeof globalThis.fetch;
+
+    beforeEach(() => {
+      originalFetch = globalThis.fetch;
+    });
+
+    afterEach(() => {
+      globalThis.fetch = originalFetch;
+    });
+
+    it("tears down worker when revalidation detects stale artifacts", async () => {
+      const storage = new MemoryStorage();
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createWebRelayer({
+        fheArtifactStorage: storage,
+        fheArtifactCacheTTL: 0,
+      });
+
+      // First call — init worker, fetch and cache pk
+      await relayer.getPublicKey();
+      expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
+
+      // Seed artifact metadata + force expired timestamp so revalidation
+      // issues a conditional GET instead of just capturing validators.
+      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
+      const cached = await storage.get<Record<string, unknown>>(pkKey);
+      if (cached) {
+        cached.lastValidatedAt = 0;
+        cached.artifactUrl = "https://cdn.example.com/pk.bin";
+        cached.etag = '"pk-etag-1"';
+        await storage.set(pkKey, cached);
+      }
+
+      // Mock fetch for revalidation: manifest + artifact returns 200 (changed)
+      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+        const urlStr = String(url);
+        if (urlStr.includes("/keyurl")) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                fhePublicKey: {
+                  urls: ["https://cdn.example.com/pk.bin"],
+                },
+                crs: {},
+              }),
+          });
+        }
+        if (urlStr.includes("pk.bin")) {
+          return Promise.resolve({
+            status: 200,
+            ok: true,
+            headers: new Headers({ etag: '"pk-etag-ROTATED"' }),
+            body: null,
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      });
+
+      // Next call triggers revalidation → stale → worker teardown + re-init
+      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk2 });
+      const result = await relayer.getPublicKey();
+
+      // Worker was re-created (2nd time)
+      expect(RelayerWorkerClient).toHaveBeenCalledTimes(2);
+      expect(result).toEqual(pk2);
+    });
+
+    it("does not teardown when revalidation finds fresh artifacts", async () => {
+      const storage = new MemoryStorage();
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
+      mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createWebRelayer({
+        fheArtifactStorage: storage,
+        fheArtifactCacheTTL: 86_400,
+      });
+
+      // First call — init worker, fetch and cache pk
+      await relayer.getPublicKey();
+      expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
+
+      // No fetch mock needed — interval hasn't elapsed, so no revalidation
+      // Second call reuses same worker
+      await relayer.getPublicKey();
+      expect(RelayerWorkerClient).toHaveBeenCalledTimes(1);
+      expect(mockWorkerClient.terminate).not.toHaveBeenCalled();
+    });
+  });
 });
 
 // ===========================================================================
@@ -843,6 +1042,172 @@ describe("RelayerNode", () => {
 
       expect(result).toEqual(pp);
       expect(mockPool.getPublicParams).toHaveBeenCalledWith(2048);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Persistent caching integration
+  // -------------------------------------------------------------------------
+
+  describe("persistent caching", () => {
+    it("caches getPublicKey when storage is provided", async () => {
+      const storage = new MemoryStorage();
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1, 2, 3]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createNodeRelayer({ fheArtifactStorage: storage });
+      const result = await relayer.getPublicKey();
+      expect(result).toEqual(pk);
+      expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
+
+      // Second call — served from cache
+      const result2 = await relayer.getPublicKey();
+      expect(result2).toEqual(pk);
+      expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
+    });
+
+    it("caches getPublicParams when storage is provided", async () => {
+      const storage = new MemoryStorage();
+      const pp = {
+        publicParamsId: "pp-1",
+        publicParams: new Uint8Array([4, 5]),
+      };
+      mockPool.getPublicParams.mockResolvedValue({ result: pp });
+
+      const relayer = createNodeRelayer({ fheArtifactStorage: storage });
+      const result = await relayer.getPublicParams(2048);
+      expect(result).toEqual(pp);
+      expect(mockPool.getPublicParams).toHaveBeenCalledOnce();
+
+      const result2 = await relayer.getPublicParams(2048);
+      expect(result2).toEqual(pp);
+      expect(mockPool.getPublicParams).toHaveBeenCalledOnce();
+    });
+
+    it("caches getPublicKey when storage is not provided (MemoryStorage fallback)", async () => {
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createNodeRelayer(); // no storage
+      await relayer.getPublicKey();
+      await relayer.getPublicKey();
+
+      expect(mockPool.getPublicKey).toHaveBeenCalledTimes(1);
+    });
+
+    it("clears cache on chain switch", async () => {
+      const storage = new MemoryStorage();
+      const getChainId = vi.fn().mockResolvedValue(CHAIN_ID);
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createNodeRelayer({
+        fheArtifactStorage: storage,
+        getChainId,
+      });
+      await relayer.getPublicKey();
+      expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
+
+      // Switch chain — cache should be cleared
+      getChainId.mockResolvedValue(1);
+      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk2 });
+      const result = await relayer.getPublicKey();
+      expect(result).toEqual(pk2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Revalidation integration
+  // -------------------------------------------------------------------------
+
+  describe("revalidation", () => {
+    let originalFetch: typeof globalThis.fetch;
+
+    beforeEach(() => {
+      originalFetch = globalThis.fetch;
+    });
+
+    afterEach(() => {
+      globalThis.fetch = originalFetch;
+    });
+
+    it("tears down pool when revalidation detects stale artifacts", async () => {
+      const storage = new MemoryStorage();
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createNodeRelayer({
+        fheArtifactStorage: storage,
+        fheArtifactCacheTTL: 0,
+      });
+
+      // First call — init pool, fetch and cache pk
+      await relayer.getPublicKey();
+      expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
+
+      // Seed artifact metadata + force expired timestamp
+      const pkKey = `fhe:pubkey:${CHAIN_ID}`;
+      const cached = await storage.get<Record<string, unknown>>(pkKey);
+      if (cached) {
+        cached.lastValidatedAt = 0;
+        cached.artifactUrl = "https://cdn.example.com/pk.bin";
+        cached.etag = '"pk-etag-1"';
+        await storage.set(pkKey, cached);
+      }
+
+      // Mock fetch: manifest + artifact returns 200 (changed)
+      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+        const urlStr = String(url);
+        if (urlStr.includes("/keyurl")) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                fhePublicKey: {
+                  urls: ["https://cdn.example.com/pk.bin"],
+                },
+                crs: {},
+              }),
+          });
+        }
+        if (urlStr.includes("pk.bin")) {
+          return Promise.resolve({
+            status: 200,
+            ok: true,
+            headers: new Headers({ etag: '"pk-etag-ROTATED"' }),
+            body: null,
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      });
+
+      // Next call triggers revalidation → stale → pool teardown + re-init
+      const pk2 = { publicKeyId: "pk-2", publicKey: new Uint8Array([2]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk2 });
+      const result = await relayer.getPublicKey();
+
+      expect(NodeWorkerPool).toHaveBeenCalledTimes(2);
+      expect(result).toEqual(pk2);
+    });
+
+    it("does not teardown when revalidation finds fresh artifacts", async () => {
+      const storage = new MemoryStorage();
+      const pk = { publicKeyId: "pk-1", publicKey: new Uint8Array([1]) };
+      mockPool.getPublicKey.mockResolvedValue({ result: pk });
+
+      const relayer = createNodeRelayer({
+        fheArtifactStorage: storage,
+        fheArtifactCacheTTL: 86_400,
+      });
+
+      await relayer.getPublicKey();
+      expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
+
+      // Interval hasn't elapsed — no revalidation, same pool
+      await relayer.getPublicKey();
+      expect(NodeWorkerPool).toHaveBeenCalledTimes(1);
+      expect(mockPool.terminate).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.0.0-alpha.3...v2.0.0-alpha.4) (2026-03-19)
+
+### Features
+
+* **sdk:** persist FHE public key and params with artifact-level revalidation ([#110](https://github.com/zama-ai/sdk/issues/110)) ([e2dd6ae](https://github.com/zama-ai/sdk/commit/e2dd6aef7af39975981fc511a4d6f649b2adf93b))
+
+## [2.0.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.0.0-alpha.2...v2.0.0-alpha.3) (2026-03-19)
+
+### Features
+
+- **examples:** add example-hoodi — ERC-7984 demo on Hoodi testnet ([#111](https://github.com/zama-ai/sdk/issues/111)) ([438f90a](https://github.com/zama-ai/sdk/commit/438f90aff0d16056ba03d78dd20731a3ac5cb8d8))
+
 ## [2.0.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.0.0-alpha.1...v2.0.0-alpha.2) (2026-03-18)
 
 ### Bug Fixes
