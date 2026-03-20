@@ -13,7 +13,7 @@ const extract = (name) => {
   return re.exec(src)?.[1] ?? "";
 };
 
-const mainTemplate = extract("mainTemplate").replaceAll("* ", "- ");
+const mainTemplate = extract("mainTemplate").replace(/^\* /gm, "- ");
 const commitPartial = extract("commitPartial").replace(/^\*/, "-");
 
 module.exports = {
