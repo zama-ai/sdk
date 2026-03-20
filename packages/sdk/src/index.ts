@@ -148,10 +148,20 @@ export type {
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
+  DelegatedForUserDecryptionEvent,
+  RevokedDelegationForUserDecryptionEvent,
+  AclEvent,
 } from "./events/onchain-events";
 export {
   Topics,
   TOKEN_TOPICS,
+  ACL_TOPICS,
+  decodeDelegatedForUserDecryption,
+  decodeRevokedDelegationForUserDecryption,
+  decodeAclEvent,
+  decodeAclEvents,
+  findDelegatedForUserDecryption,
+  findRevokedDelegationForUserDecryption,
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
@@ -216,5 +226,6 @@ export {
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
+  isHandleDelegatedContract,
 } from "./contracts";
 export type { BatchTransferData } from "./contracts";

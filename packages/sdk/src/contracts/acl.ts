@@ -33,6 +33,18 @@ export const aclAbi = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [
+      { internalType: "address", name: "delegator", type: "address" },
+      { internalType: "address", name: "delegate", type: "address" },
+      { internalType: "address", name: "contractAddress", type: "address" },
+      { internalType: "bytes32", name: "handle", type: "bytes32" },
+    ],
+    name: "isHandleDelegatedForUserDecryption",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;
 
 /**
@@ -103,5 +115,30 @@ export function getDelegationExpiryContract(
     abi: aclAbi,
     functionName: "getUserDecryptionDelegationExpirationDate",
     args: [delegatorAddress, delegateAddress, contractAddress],
+  } as const;
+}
+
+/**
+ * Returns the contract config to check if a specific handle is delegated.
+ *
+ * @example
+ * ```ts
+ * const isDelegated = await signer.readContract(
+ *   isHandleDelegatedContract(aclAddress, delegatorAddress, delegateAddress, contractAddress, handle),
+ * );
+ * ```
+ */
+export function isHandleDelegatedContract(
+  aclAddress: Address,
+  delegatorAddress: Address,
+  delegateAddress: Address,
+  contractAddress: Address,
+  handle: `0x${string}`,
+) {
+  return {
+    address: aclAddress,
+    abi: aclAbi,
+    functionName: "isHandleDelegatedForUserDecryption",
+    args: [delegatorAddress, delegateAddress, contractAddress, handle],
   } as const;
 }

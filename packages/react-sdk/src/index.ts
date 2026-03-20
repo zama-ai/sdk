@@ -164,6 +164,10 @@ export {
   getUnwrapFeeContract,
   getBatchTransferFeeContract,
   getFeeRecipientContract,
+  delegateForUserDecryptionContract,
+  revokeDelegationContract,
+  getDelegationExpiryContract,
+  isHandleDelegatedContract,
 } from "@zama-fhe/sdk";
 
 // Token hooks
@@ -326,10 +330,20 @@ export type {
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
+  DelegatedForUserDecryptionEvent,
+  RevokedDelegationForUserDecryptionEvent,
+  AclEvent,
 } from "@zama-fhe/sdk";
 export {
   Topics,
   TOKEN_TOPICS,
+  ACL_TOPICS,
+  decodeDelegatedForUserDecryption,
+  decodeRevokedDelegationForUserDecryption,
+  decodeAclEvent,
+  decodeAclEvents,
+  findDelegatedForUserDecryption,
+  findRevokedDelegationForUserDecryption,
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,

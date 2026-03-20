@@ -66,6 +66,7 @@ export {
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
+  isHandleDelegatedContract,
 } from "./acl";
 
 export { MAX_UINT64 } from "./constants";

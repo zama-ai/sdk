@@ -599,6 +599,34 @@ describe("delegateDecryption validation", () => {
       token.delegateDecryption({ delegateAddress, expirationDate: pastDate }),
     ).rejects.toThrow(expect.objectContaining({ code: "CONFIGURATION" }));
   });
+
+  it("throws ConfigurationError when expiration date is less than 1 hour in the future", async ({
+    token,
+    delegateAddress,
+  }) => {
+    const tooSoon = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+
+    await expect(
+      token.delegateDecryption({ delegateAddress, expirationDate: tooSoon }),
+    ).rejects.toThrow(
+      expect.objectContaining({
+        code: "CONFIGURATION",
+        message: expect.stringContaining("at least 1 hour"),
+      }),
+    );
+  });
+
+  it("accepts expiration date exactly 1 hour in the future", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    const oneHourFromNow = new Date(Date.now() + 3600_000 + 1000); // 1 hour + 1 second
+
+    await token.delegateDecryption({ delegateAddress, expirationDate: oneHourFromNow });
+
+    expect(signer.writeContract).toHaveBeenCalled();
+  });
 });
 
 describe("batchDecryptBalancesAs edge cases", () => {

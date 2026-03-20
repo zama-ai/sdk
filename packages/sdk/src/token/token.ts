@@ -734,6 +734,9 @@ export class Token extends ReadonlyToken {
     if (expirationDate && expirationDate.getTime() <= Date.now()) {
       throw new ConfigurationError("Expiration date must be in the future");
     }
+    if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
+      throw new ConfigurationError("Expiration date must be at least 1 hour in the future");
+    }
 
     const acl = await this.getAclAddress();
     // uint64 max → no practical expiry
