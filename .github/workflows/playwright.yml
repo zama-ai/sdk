@@ -26,9 +26,6 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1.7.0
 
-      - name: Install forge-fhevm deps
-        run: cd contracts/lib/forge-fhevm && forge soldeer install
-
       - name: Restore Forge build cache
         id: forge-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -61,7 +58,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile
 
       - name: Restore Playwright browsers cache
         id: playwright-cache
