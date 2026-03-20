@@ -41,6 +41,10 @@ await token.delegateDecryption({
 
 Both return `{ txHash, receipt }`.
 
+{% hint style="warning" %}
+The expiration date must be **at least 1 hour in the future**. The SDK validates this client-side before sending the transaction — passing a closer date throws a `ConfigurationError`. This mirrors the on-chain `ExpirationDateBeforeOneHour` revert in the ACL contract.
+{% endhint %}
+
 ### How expiration dates work
 
 The SDK accepts a standard JavaScript `Date` object and converts it to a **UTC Unix timestamp** (seconds since epoch) before sending it on-chain. Since `Date.getTime()` always returns UTC milliseconds regardless of the local timezone, you don't need to normalize manually — a `Date` constructed from any timezone produces the same on-chain value.
@@ -251,6 +255,57 @@ try {
 > **Note:** `SigningRejectedError` is always propagated — if the user rejects a wallet prompt, the SDK never silently retries or falls through to a fresh credential flow. This ensures users can always cancel.
 
 > **Note:** The delegation-specific errors (`DelegationSelfNotAllowedError`, `DelegationCooldownError`, etc.) are not auto-mapped from ACL contract reverts. They are exported so dApp code can catch and re-throw them when parsing on-chain revert reasons (e.g. via viem's `decodeErrorResult`).
+
+## Checking per-handle delegation
+
+To check whether a specific ciphertext handle is covered by an active delegation, use the `isHandleDelegatedContract` builder:
+
+```ts
+import { isHandleDelegatedContract } from "@zama-fhe/sdk";
+
+const isDelegated = await publicClient.readContract(
+  isHandleDelegatedContract(aclAddress, delegatorAddress, delegateAddress, tokenAddress, handle),
+);
+```
+
+This calls `ACL.isHandleDelegatedForUserDecryption()` on-chain and returns `true` if the delegation covers that handle.
+
+## On-chain delegation events
+
+The ACL contract emits events when delegations are created or revoked. Use the ACL event decoders to parse these from transaction receipts or `getLogs` results:
+
+```ts
+import {
+  ACL_TOPICS,
+  decodeDelegatedForUserDecryption,
+  decodeRevokedDelegationForUserDecryption,
+  findDelegatedForUserDecryption,
+  decodeAclEvents,
+} from "@zama-fhe/sdk";
+
+// Fetch all delegation events from the ACL contract
+const logs = await publicClient.getLogs({
+  address: aclAddress,
+  topics: [ACL_TOPICS],
+  fromBlock: startBlock,
+  toBlock: "latest",
+});
+
+// Decode all delegation events at once
+const events = decodeAclEvents(logs);
+
+// Or find a specific event in a transaction receipt
+const delegated = findDelegatedForUserDecryption(receipt.logs);
+if (delegated) {
+  console.log(
+    `${delegated.delegator} delegated to ${delegated.delegate}`,
+    `for ${delegated.contractAddress}`,
+    `expires at ${delegated.newExpirationDate}`,
+  );
+}
+```
+
+See [Event Decoders](/reference/sdk/event-decoders#acl-delegation-events) for the full list of ACL event decoders and types.
 
 ## Related
 

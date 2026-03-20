@@ -65,6 +65,7 @@ import {
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
+  isHandleDelegatedContract,
 } from "@zama-fhe/sdk";
 ```
 
@@ -123,11 +124,12 @@ import {
 
 ## Delegation
 
-| Builder                                                              | What it does                 |
-| -------------------------------------------------------------------- | ---------------------------- |
-| `delegateForUserDecryptionContract(acl, delegate, contract, expiry)` | Grant decryption delegation  |
-| `revokeDelegationContract(acl, delegate, contract)`                  | Revoke decryption delegation |
-| `getDelegationExpiryContract(acl, delegator, delegate, contract)`    | Read delegation expiry date  |
+| Builder                                                                 | What it does                               |
+| ----------------------------------------------------------------------- | ------------------------------------------ |
+| `delegateForUserDecryptionContract(acl, delegate, contract, expiry)`    | Grant decryption delegation                |
+| `revokeDelegationContract(acl, delegate, contract)`                     | Revoke decryption delegation               |
+| `getDelegationExpiryContract(acl, delegator, delegate, contract)`       | Read delegation expiry date                |
+| `isHandleDelegatedContract(acl, delegator, delegate, contract, handle)` | Check if a handle is covered by delegation |
 
 ## Executing calls
 
