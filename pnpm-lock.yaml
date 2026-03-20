@@ -266,28 +266,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/test-node:
-    dependencies:
-      '@zama-fhe/sdk':
-        specifier: workspace:*
-        version: link:../sdk
-      ethers:
-        specifier: ^6.16.0
-        version: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-      viem:
-        specifier: ^2.47.4
-        version: 2.47.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.6)
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.15
-        version: 22.19.15
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: ^4.1.0
-        version: 4.1.0(@types/node@22.19.15)(@vitest/ui@4.1.0)(happy-dom@20.8.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@28.1.0(@noble/hashes@1.8.0))(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.2))
-
   packages/test-vite:
     dependencies:
       '@tanstack/react-query':

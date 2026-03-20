@@ -5,12 +5,11 @@
  * worker can initialize and operate against it. Uses RelayerCleartext under
  * the hood for FHE operations against the local anvil.
  */
-import { createServer, type Server, type ServerResponse, type IncomingMessage } from "node:http";
-import { randomUUID } from "node:crypto";
-import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
-import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { toHex, type Address, type Hex } from "viem";
 import { SepoliaConfig } from "@zama-fhe/sdk";
+import { hardhatCleartextConfig, RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import { randomUUID } from "node:crypto";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { toHex, type Address, type Hex } from "viem";
 
 // Resolved jobs: jobId → result
 const jobs = new Map<string, { status: string; result: unknown }>();
