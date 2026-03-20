@@ -14,11 +14,10 @@ yarn add @zama-fhe/sdk
 
 ### Peer dependencies
 
-| Package                 | Version | Required?                                          |
-| ----------------------- | ------- | -------------------------------------------------- |
-| `viem`                  | >= 2    | Optional — for the `@zama-fhe/sdk/viem` adapter    |
-| `ethers`                | >= 6    | Optional — for the `@zama-fhe/sdk/ethers` adapter  |
-| `@zama-fhe/relayer-sdk` | >= 0.4  | Optional — only for `@zama-fhe/sdk/node` (Node.js) |
+| Package  | Version | Required?                                         |
+| -------- | ------- | ------------------------------------------------- |
+| `viem`   | >= 2    | Optional — for the `@zama-fhe/sdk/viem` adapter   |
+| `ethers` | >= 6    | Optional — for the `@zama-fhe/sdk/ethers` adapter |
 
 ## Module Systems (ESM & CJS)
 

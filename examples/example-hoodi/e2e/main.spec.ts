@@ -13,6 +13,9 @@ test.describe("main screen", () => {
     await expect(page.getByText("Shield — ERC-20 → Confidential")).toBeVisible();
     await expect(page.getByText("Confidential Transfer")).toBeVisible();
     await expect(page.getByText("Unshield — Confidential → ERC-20")).toBeVisible();
+    await expect(page.getByText("Grant Decryption Access")).toBeVisible();
+    await expect(page.getByText("Revoke Decryption Access")).toBeVisible();
+    await expect(page.getByText("Decrypt Balance On Behalf Of")).toBeVisible();
   });
 
   test("shows connected address in header", async ({ page }) => {
@@ -35,6 +38,8 @@ test.describe("main screen", () => {
     await expect(page.getByRole("button", { name: "Shield", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Transfer", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Unshield", exact: true })).toBeDisabled();
+    // Decrypt Balance requires cTokenMetadata (for decimals/symbol) — disabled until metadata loads.
+    await expect(page.getByRole("button", { name: "Decrypt Balance", exact: true })).toBeDisabled();
   });
 
   test("shows dash for ERC-20 and confidential balances when data unavailable", async ({

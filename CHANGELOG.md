@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.1.0-alpha.1...v2.1.0-alpha.2) (2026-03-20)
+
+## [2.1.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.0.1-alpha.1...v2.1.0-alpha.1) (2026-03-20)
+
+### Features
+
+- **example-hoodi:** add on-chain ACL delegation flows (SDK-41) ([#126](https://github.com/zama-ai/sdk/issues/126)) ([2ea2349](https://github.com/zama-ai/sdk/commit/2ea2349dbc868c16763e1e000f3d6057e7d0a14a))
+
+## [2.0.1-alpha.1](https://github.com/zama-ai/sdk/compare/v2.0.0...v2.0.1-alpha.1) (2026-03-20)
+
+### Bug Fixes
+
+- **sdk:** colocate node worker with node entrypoint ([#138](https://github.com/zama-ai/sdk/issues/138)) ([294d76e](https://github.com/zama-ai/sdk/commit/294d76eb9a753b663857e29dd7d4267dca7c3801))
+
 ## [2.0.0](https://github.com/zama-ai/sdk/compare/v1.1.0...v2.0.0) (2026-03-20)
 
 ### ⚠ BREAKING CHANGES
