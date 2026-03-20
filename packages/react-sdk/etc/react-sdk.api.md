@@ -4,6 +4,8 @@
 
 ```ts
 
+import { ACL_TOPICS } from '@zama-fhe/sdk';
+import { AclEvent } from '@zama-fhe/sdk';
 import { ActivityAmount } from '@zama-fhe/sdk';
 import { ActivityDirection } from '@zama-fhe/sdk';
 import { activityFeedQueryOptions } from '@zama-fhe/sdk/query';
@@ -65,9 +67,13 @@ import { CredentialsManager } from '@zama-fhe/sdk';
 import { CredentialsManagerConfig } from '@zama-fhe/sdk';
 import { CredentialsRevokedEvent } from '@zama-fhe/sdk';
 import { decimalsContract } from '@zama-fhe/sdk';
+import { decodeAclEvent } from '@zama-fhe/sdk';
+import { decodeAclEvents } from '@zama-fhe/sdk';
 import { decodeConfidentialTransfer } from '@zama-fhe/sdk';
+import { decodeDelegatedForUserDecryption } from '@zama-fhe/sdk';
 import { decodeOnChainEvent } from '@zama-fhe/sdk';
 import { decodeOnChainEvents } from '@zama-fhe/sdk';
+import { decodeRevokedDelegationForUserDecryption } from '@zama-fhe/sdk';
 import { decodeUnwrappedFinalized } from '@zama-fhe/sdk';
 import { decodeUnwrappedStarted } from '@zama-fhe/sdk';
 import { decodeUnwrapRequested } from '@zama-fhe/sdk';
@@ -83,9 +89,11 @@ import { DelegatedCredentialsManager } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManagerConfig } from '@zama-fhe/sdk';
 import { delegateDecryptionMutationOptions } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
+import { DelegatedForUserDecryptionEvent } from '@zama-fhe/sdk';
 import { DelegatedStoredCredentials } from '@zama-fhe/sdk';
 import { delegatedUserDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { DelegatedUserDecryptParams } from '@zama-fhe/sdk';
+import { delegateForUserDecryptionContract } from '@zama-fhe/sdk';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { DelegationStatusQueryConfig } from '@zama-fhe/sdk/query';
 import { delegationStatusQueryOptions } from '@zama-fhe/sdk/query';
@@ -110,12 +118,15 @@ import { finalizeUnwrapContract } from '@zama-fhe/sdk';
 import { finalizeUnwrapMutationOptions } from '@zama-fhe/sdk/query';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { FinalizeUnwrapSubmittedEvent } from '@zama-fhe/sdk';
+import { findDelegatedForUserDecryption } from '@zama-fhe/sdk';
+import { findRevokedDelegationForUserDecryption } from '@zama-fhe/sdk';
 import { findUnwrapRequested } from '@zama-fhe/sdk';
 import { findWrapped } from '@zama-fhe/sdk';
 import { generateKeypairMutationOptions } from '@zama-fhe/sdk/query';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { GenericStorage } from '@zama-fhe/sdk';
 import { getBatchTransferFeeContract } from '@zama-fhe/sdk';
+import { getDelegationExpiryContract } from '@zama-fhe/sdk';
 import { getFeeRecipientContract } from '@zama-fhe/sdk';
 import { getUnwrapFeeContract } from '@zama-fhe/sdk';
 import { getWrapFeeContract } from '@zama-fhe/sdk';
@@ -133,6 +144,7 @@ import { isConfidentialQueryOptions } from '@zama-fhe/sdk/query';
 import { isConfidentialTokenContract } from '@zama-fhe/sdk';
 import { isConfidentialWrapperContract } from '@zama-fhe/sdk';
 import { isFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
+import { isHandleDelegatedContract } from '@zama-fhe/sdk';
 import { isOperatorContract } from '@zama-fhe/sdk';
 import { isWrapperQueryOptions } from '@zama-fhe/sdk/query';
 import { KeypairExpiredError } from '@zama-fhe/sdk';
@@ -172,6 +184,8 @@ import { RelayerWebSecurityConfig } from '@zama-fhe/sdk';
 import { requestZKProofVerificationMutationOptions } from '@zama-fhe/sdk/query';
 import { resumeUnshieldMutationOptions } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
+import { RevokedDelegationForUserDecryptionEvent } from '@zama-fhe/sdk';
+import { revokeDelegationContract } from '@zama-fhe/sdk';
 import { revokeDelegationMutationOptions } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { revokeMutationOptions } from '@zama-fhe/sdk/query';
@@ -261,6 +275,10 @@ import { ZamaSDKEvents } from '@zama-fhe/sdk';
 import { ZamaSDKEventType } from '@zama-fhe/sdk';
 import { ZERO_HANDLE } from '@zama-fhe/sdk';
 import { ZKProofLike } from '@zama-fhe/sdk';
+
+export { ACL_TOPICS }
+
+export { AclEvent }
 
 export { ActivityAmount }
 
@@ -384,11 +402,19 @@ export { CredentialsRevokedEvent }
 
 export { decimalsContract }
 
+export { decodeAclEvent }
+
+export { decodeAclEvents }
+
 export { decodeConfidentialTransfer }
+
+export { decodeDelegatedForUserDecryption }
 
 export { decodeOnChainEvent }
 
 export { decodeOnChainEvents }
+
+export { decodeRevokedDelegationForUserDecryption }
 
 export { decodeUnwrappedFinalized }
 
@@ -420,11 +446,15 @@ export { delegateDecryptionMutationOptions }
 
 export { DelegateDecryptionParams }
 
+export { DelegatedForUserDecryptionEvent }
+
 export { DelegatedStoredCredentials }
 
 export { delegatedUserDecryptMutationOptions }
 
 export { DelegatedUserDecryptParams }
+
+export { delegateForUserDecryptionContract }
 
 export { DelegationStatusData }
 
@@ -474,6 +504,10 @@ export { FinalizeUnwrapParams }
 
 export { FinalizeUnwrapSubmittedEvent }
 
+export { findDelegatedForUserDecryption }
+
+export { findRevokedDelegationForUserDecryption }
+
 export { findUnwrapRequested }
 
 export { findWrapped }
@@ -485,6 +519,8 @@ export { GenericSigner }
 export { GenericStorage }
 
 export { getBatchTransferFeeContract }
+
+export { getDelegationExpiryContract }
 
 export { getFeeRecipientContract }
 
@@ -519,6 +555,8 @@ export { isConfidentialTokenContract }
 export { isConfidentialWrapperContract }
 
 export { isFinalizeUnwrapOperatorContract }
+
+export { isHandleDelegatedContract }
 
 export { isOperatorContract }
 
@@ -614,6 +652,10 @@ export { requestZKProofVerificationMutationOptions }
 export { resumeUnshieldMutationOptions }
 
 export { ResumeUnshieldParams }
+
+export { RevokedDelegationForUserDecryptionEvent }
+
+export { revokeDelegationContract }
 
 export { revokeDelegationMutationOptions }
 
