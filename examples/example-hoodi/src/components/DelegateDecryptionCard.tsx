@@ -67,9 +67,11 @@ export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecry
         </label>
       </div>
       {!noExpiry && !expirationInput && (
-        <p className="token-meta card-gap">Select an expiration date.</p>
+        <p className="token-meta card-gap">
+          Select an expiration date and time (ACL contract requires at least 1 hour from now).
+        </p>
       )}
-      {!noExpiry && expirationInput && new Date(expirationInput) <= new Date() && (
+      {!noExpiry && expirationInput && !isExpiryValid && (
         <p className="token-meta token-meta-error card-gap">Date must be in the future.</p>
       )}
       <button

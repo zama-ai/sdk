@@ -276,7 +276,7 @@ The three delegation cards are located below the core operation cards. They requ
 
 ### Step 9 — Grant decryption access (owner wallet)
 
-In the **Grant Decryption Access** card, enter the delegate's wallet address. By default, access is permanent (the **No expiration** checkbox is checked). To set a time limit, uncheck it and pick a date — the SDK sends `MAX_UINT64` on-chain for permanent delegations, or the expiry timestamp otherwise.
+In the **Grant Decryption Access** card, enter the delegate's wallet address. By default, access is permanent (the **No expiration** checkbox is checked). To set a time limit, uncheck it and pick a date and time — the SDK sends `MAX_UINT64` on-chain for permanent delegations, or the expiry timestamp otherwise. **The ACL contract requires the expiry to be at least 1 hour in the future** (`expirationDate >= block.timestamp + 1 hours`); shorter values will revert on-chain.
 
 Click **Grant Access** and confirm the transaction in your wallet. One transaction is submitted to the on-chain ACL contract.
 
@@ -558,7 +558,7 @@ npx playwright test --ui
 npx playwright test e2e/connect.spec.ts
 ```
 
-Covered flows: connect screen (no wallet, install error, auto-detect, click-to-connect), wrong-network screen (display, chain ID, switch button), main UI (cards, token selector, buttons disabled before metadata loads, balance display, loading hint, token switching, pending unshield absence, mint button state), delegation section (section labels, buttons disabled before address entry, Grant Access and Revoke Access enabled after valid address entry).
+Covered flows: connect screen (no wallet, install error, page title, auto-detect, click-to-connect), wrong-network screen (display, chain ID, switch button), main UI (all cards rendered, connected address, ETH balance, token selector, buttons disabled before metadata loads, balance display, loading hint, token switching, pending unshield absence, mint button state), delegation section (section labels, buttons disabled before address entry, Grant Access and Revoke Access enabled after valid address entry).
 
 Tests run automatically on CI for every pull request that touches `examples/example-hoodi/`.
 
