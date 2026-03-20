@@ -15,3 +15,7 @@ export const NODE_ANVIL_PORT = 8547;
 
 /** Port for the mock relayer server used by the node project. */
 export const MOCK_RELAYER_PORT = 4200;
+
+export const NEXTJS_PORT = 3100;
+
+export const VITE_PORT = 3200;
