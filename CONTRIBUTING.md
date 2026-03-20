@@ -8,6 +8,7 @@ Thank you for your interest in contributing to the Zama SDK! This guide will hel
 
 - **Node.js** >= 22
 - **pnpm** >= 10
+- **Foundry** >= 1.0.0
 
 ### Getting Started
 

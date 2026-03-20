@@ -51,3 +51,9 @@ packages/react-sdk/temp/
 
 # devcontainer
 .devcontainer
+
+# foundry (contracts/)
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/.forge-deploy-lock/

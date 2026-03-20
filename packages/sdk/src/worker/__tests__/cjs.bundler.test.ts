@@ -47,7 +47,7 @@ describe("CJS build smoke tests", () => {
   });
 
   it("node worker file exists in ESM output", () => {
-    expect(existsSync(resolve(DIST_ESM, "relayer-sdk.node-worker.js"))).toBe(true);
+    expect(existsSync(resolve(DIST_ESM, "node/relayer-sdk.node-worker.js"))).toBe(true);
   });
 });
 

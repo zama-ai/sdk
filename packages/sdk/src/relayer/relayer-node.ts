@@ -8,7 +8,11 @@ import type {
 } from "@zama-fhe/relayer-sdk/node";
 import type { Address, Hex } from "viem";
 import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import { MemoryStorage } from "../token/memory-storage";
+import type { GenericStorage } from "../token/token.types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import type { GenericLogger } from "../worker/worker.types";
+import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   DelegatedUserDecryptParams,
@@ -20,7 +24,6 @@ import type {
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
-import type { GenericLogger } from "../worker/worker.types";
 
 export interface RelayerNodeConfig {
   transports: Record<number, Partial<FhevmInstanceConfig>>;
@@ -29,6 +32,14 @@ export interface RelayerNodeConfig {
   poolSize?: number;
   /** Optional logger for observing worker lifecycle and request timing. */
   logger?: GenericLogger;
+  /**
+   * Persistent storage for caching FHE public key and params across sessions.
+   * Defaults to `new MemoryStorage()` (in-process, lost on restart).
+   * Pass a custom `GenericStorage` with redis for cross-restart persistence.
+   */
+  fheArtifactStorage?: GenericStorage;
+  /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. */
+  fheArtifactCacheTTL?: number;
 }
 
 /**
@@ -47,9 +58,10 @@ export class RelayerNode implements RelayerSDK {
   #ensureLock: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
+  #artifactCache: FheArtifactCache | null = null;
 
   constructor(config: RelayerNodeConfig) {
-    this.#config = config;
+    this.#config = { fheArtifactStorage: new MemoryStorage(), ...config };
   }
 
   async #getPoolConfig(): Promise<NodeWorkerPoolConfig> {
@@ -75,6 +87,13 @@ export class RelayerNode implements RelayerSDK {
     }
   }
 
+  #tearDown(): void {
+    this.#pool?.terminate();
+    this.#pool = null;
+    this.#initPromise = null;
+    this.#artifactCache = null;
+  }
+
   async #ensurePoolInner(): Promise<NodeWorkerPool> {
     if (this.#terminated) {
       throw new EncryptionFailedError("RelayerNode has been terminated");
@@ -84,12 +103,39 @@ export class RelayerNode implements RelayerSDK {
 
     // Chain changed → tear down old pool, re-init
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#pool?.terminate();
-      this.#pool = null;
-      this.#initPromise = null;
+      this.#tearDown();
     }
 
     this.#resolvedChainId = chainId;
+
+    // Create cache for current chain (when storage is provided)
+    if (!this.#artifactCache && this.#config.fheArtifactStorage) {
+      const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+      this.#artifactCache = new FheArtifactCache({
+        storage: this.#config.fheArtifactStorage,
+        chainId,
+        relayerUrl: config.relayerUrl,
+        ttl: this.#config.fheArtifactCacheTTL,
+        logger: this.#config.logger,
+      });
+    }
+
+    // Revalidate cached artifacts if due — never let revalidation block init
+    if (this.#artifactCache) {
+      let stale = false;
+      try {
+        stale = await this.#artifactCache.revalidateIfDue();
+      } catch (err) {
+        this.#config.logger?.warn(
+          "Artifact revalidation failed, proceeding with potentially stale cache",
+          { error: err instanceof Error ? err.message : String(err) },
+        );
+      }
+      if (stale) {
+        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
+        this.#tearDown();
+      }
+    }
 
     if (!this.#initPromise) {
       this.#initPromise = this.#initPool().catch((error) => {
@@ -239,6 +285,9 @@ export class RelayerNode implements RelayerSDK {
     publicKey: Uint8Array;
   } | null> {
     const pool = await this.#ensurePool();
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicKey(async () => (await pool.getPublicKey()).result);
+    }
     return (await pool.getPublicKey()).result;
   }
 
@@ -246,6 +295,12 @@ export class RelayerNode implements RelayerSDK {
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const pool = await this.#ensurePool();
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicParams(
+        bits,
+        async () => (await pool.getPublicParams(bits)).result,
+      );
+    }
     return (await pool.getPublicParams(bits)).result;
   }
 
