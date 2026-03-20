@@ -26,6 +26,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Kill any stale process on the port from a previous run
+if lsof -ti :"$PORT" >/dev/null 2>&1; then
+  lsof -ti :"$PORT" | xargs kill -9 2>/dev/null || true
+  sleep 1
+fi
+
 # Start anvil in the background
 anvil --port "$PORT" --chain-id 31337 --silent &
 ANVIL_PID=$!
