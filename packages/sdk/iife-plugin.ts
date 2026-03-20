@@ -41,7 +41,10 @@ export function iife({ tsconfig }: { tsconfig: string }): Plugin {
       const filename = basename(filePath).replace(/\.ts$/, ".js");
       this.emitFile({ type: "asset", fileName: filename, source: code });
 
-      return `export default ${JSON.stringify(code)};\nexport const filename = ${JSON.stringify(filename)};`;
+      return {
+        code: `const code = ${JSON.stringify(code)};\nexport default code;\nexport const filename = ${JSON.stringify(filename)};`,
+        moduleType: "js",
+      };
     },
   };
 }

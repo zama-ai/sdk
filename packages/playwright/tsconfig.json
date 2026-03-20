@@ -1,9 +1,9 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "lib": ["ES2023", "DOM"],
+    "lib": ["ESNext", "DOM"],
     "types": ["node"]
   },
-  "include": ["fixtures", "*.ts"],
+  "include": ["fixtures", "*.ts", "../sdk/src/worker/iife.d.ts"],
   "exclude": ["node_modules"]
 }
