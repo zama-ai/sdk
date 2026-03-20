@@ -1,10 +1,9 @@
 import { defineConfig } from "@playwright/test";
 import type { NodeWorkerFixtures } from "./fixtures/node-test";
-import { NODE_ANVIL_PORT } from "./fixtures/constants";
+import { NODE_ANVIL_PORT, MOCK_RELAYER_PORT } from "./fixtures/constants";
 
 export default defineConfig<{}, NodeWorkerFixtures>({
   tsconfig: "./tsconfig.node.json",
-  globalSetup: ["./fixtures/node-global-setup.ts"],
   testDir: "./tests/node",
   outputDir: "./test-results/node/",
   fullyParallel: false,
@@ -32,6 +31,14 @@ export default defineConfig<{}, NodeWorkerFixtures>({
         stdout: /Anvil ready on port (\d+)/,
       },
       timeout: 60_000,
+    },
+    {
+      command: `npx tsx --tsconfig tsconfig.node.json start-mock-relayer.ts ${MOCK_RELAYER_PORT} ${NODE_ANVIL_PORT}`,
+      name: "mock-relayer",
+      wait: {
+        stdout: /Mock relayer ready on port (\d+)/,
+      },
+      timeout: 30_000,
     },
   ],
 });

@@ -12,3 +12,6 @@ export const VITE_ANVIL_PORT = 8546;
 
 /** Anvil port assigned to the node project. */
 export const NODE_ANVIL_PORT = 8547;
+
+/** Port for the mock relayer server used by the node project. */
+export const MOCK_RELAYER_PORT = 4200;

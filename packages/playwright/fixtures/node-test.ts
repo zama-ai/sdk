@@ -1,16 +1,16 @@
 /**
  * Playwright fixtures for Node.js SDK tests (no browser required).
  *
- * Uses RelayerNode backed by a mock worker (relayer-sdk.node-worker.mock.mjs)
- * that delegates to RelayerCleartext — the Node.js equivalent of the browser
- * mock relayer-sdk.js.
+ * Uses RelayerNode backed by a mock relayer HTTP server (started as a
+ * webServer in playwright.node.config.ts) that implements the relayer V2
+ * async API, delegating FHE operations to RelayerCleartext against anvil.
  */
 import { test as base } from "@playwright/test";
 import type { Address } from "viem";
 import { createPublicClient, createTestClient, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { TEST_PRIVATE_KEY, MINTED, NODE_ANVIL_PORT } from "./constants";
+import { TEST_PRIVATE_KEY, MINTED, NODE_ANVIL_PORT, MOCK_RELAYER_PORT } from "./constants";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
 import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { RelayerNode } from "@zama-fhe/sdk/node";
@@ -112,6 +112,7 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
       transports: {
         [HardhatConfig.chainId]: {
           ...HardhatConfig,
+          relayerUrl: `http://127.0.0.1:${MOCK_RELAYER_PORT}`,
           network: `http://127.0.0.1:${anvilPort}`,
         },
       },
@@ -133,8 +134,10 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
   },
   // Override page fixture — node tests don't use a browser.
   // Mint tokens + snapshot/revert like the browser fixture.
-  page: async ({ viemClient, account }, use) => {
-    const nonce = await viemClient.getTransactionCount({ address: account.address });
+  page: async ({ page, viemClient, account }, use) => {
+    const nonce = await viemClient.getTransactionCount({
+      address: account.address,
+    });
     const usdcHash = await viemClient.writeContract({
       address: contracts.USDC,
       abi: mintAbi,
@@ -157,7 +160,7 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
     const id = await viemClient.snapshot();
 
     // Pass null as page — node tests don't use it
-    await use(null as any);
+    await use(page);
 
     await viemClient.revert({ id });
   },
