@@ -9,3 +9,6 @@ export const NEXTJS_ANVIL_PORT = 8545;
 
 /** Anvil port assigned to the vite project. */
 export const VITE_ANVIL_PORT = 8546;
+
+/** Anvil port assigned to the node project. */
+export const NODE_ANVIL_PORT = 8547;

@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import type { WorkerFixtures } from "./fixtures/test";
-import { NEXTJS_ANVIL_PORT, VITE_ANVIL_PORT } from "./fixtures/constants";
+import { NEXTJS_ANVIL_PORT, VITE_ANVIL_PORT, NODE_ANVIL_PORT } from "./fixtures/constants";
 
 const NEXTJS_PORT = 3100;
 const VITE_PORT = 3200;
@@ -42,6 +42,15 @@ export default defineConfig<{}, WorkerFixtures>({
       },
       timeout: 30000,
     },
+    {
+      name: "node",
+      testDir: "./tests-node",
+      workers: 1,
+      use: {
+        anvilPort: NODE_ANVIL_PORT,
+      },
+      timeout: 60000,
+    },
   ],
   webServer: [
     {
@@ -55,6 +64,14 @@ export default defineConfig<{}, WorkerFixtures>({
     {
       command: `./start-anvil.sh ${VITE_ANVIL_PORT}`,
       name: "anvil-vite",
+      wait: {
+        stdout: /Anvil ready on port (\d+)/,
+      },
+      timeout: 30_000,
+    },
+    {
+      command: `./start-anvil.sh ${NODE_ANVIL_PORT}`,
+      name: "anvil-node",
       wait: {
         stdout: /Anvil ready on port (\d+)/,
       },

@@ -38,6 +38,7 @@
     "e2e:test:ui": "pnpm --filter @zama-fhe/playwright e2e:test:ui",
     "e2e:test:nextjs": "pnpm --filter @zama-fhe/playwright e2e:test:nextjs",
     "e2e:test:vite": "pnpm --filter @zama-fhe/playwright e2e:test:vite",
+    "e2e:test:node": "pnpm build:sdk && pnpm --filter @zama-fhe/playwright e2e:test:node",
     "docs:diagrams": "node scripts/docs/generate-diagrams.mjs",
     "docs:preview": "mdbook serve docs/gitbook --open",
     "docs:build": "mdbook build docs/gitbook",
