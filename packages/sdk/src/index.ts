@@ -136,6 +136,10 @@ export {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  DelegationDelegateEqualsContractError,
+  DelegationExpiryUnchangedError,
+  AclPausedError,
+  DelegationContractIsSelfError,
   matchZamaError,
 } from "./token/errors";
 

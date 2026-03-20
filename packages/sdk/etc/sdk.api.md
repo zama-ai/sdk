@@ -26,6 +26,11 @@ export const ACL_TOPICS: readonly ["0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce
 export type AclEvent = DelegatedForUserDecryptionEvent | RevokedDelegationForUserDecryptionEvent;
 
 // @public
+export class AclPausedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export type ActivityAmount = {
     readonly type: "clear";
     readonly value: bigint;
@@ -2094,12 +2099,27 @@ export function delegateForUserDecryptionContract(aclAddress: Address, delegateA
 };
 
 // @public
+export class DelegationContractIsSelfError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class DelegationCooldownError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
 // @public
+export class DelegationDelegateEqualsContractError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class DelegationExpiredError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class DelegationExpiryUnchangedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
@@ -6376,7 +6396,11 @@ export const ZamaErrorCode: {
     readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED"; /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
     readonly DelegationCooldown: "DELEGATION_COOLDOWN"; /** No active delegation found for this (delegator, delegate, contract) tuple. */
     readonly DelegationNotFound: "DELEGATION_NOT_FOUND"; /** The delegation has expired. */
-    readonly DelegationExpired: "DELEGATION_EXPIRED";
+    readonly DelegationExpired: "DELEGATION_EXPIRED"; /** Delegate address equals the contract address. */
+    readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT"; /** The new expiration date is the same as the current one. */
+    readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED"; /** The contract address equals the caller. */
+    readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */
+    readonly AclPaused: "ACL_PAUSED";
 };
 
 // @public

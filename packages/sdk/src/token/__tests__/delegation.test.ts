@@ -172,15 +172,58 @@ describe("delegation write methods", () => {
     );
   });
 
+  it("delegateDecryption maps AlreadyDelegatedOrRevokedInSameBlock to DelegationCooldownError", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    vi.mocked(signer.writeContract).mockRejectedValue(
+      new Error("AlreadyDelegatedOrRevokedInSameBlock"),
+    );
+
+    await expect(token.delegateDecryption({ delegateAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "DELEGATION_COOLDOWN" }),
+    );
+  });
+
+  it("delegateDecryption maps EnforcedPause to AclPausedError", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("EnforcedPause"));
+
+    await expect(token.delegateDecryption({ delegateAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "ACL_PAUSED" }),
+    );
+  });
+
   it("revokeDelegation wraps revert as TransactionRevertedError", async ({
     signer,
     token,
     delegateAddress,
   }) => {
+    // readContract returns active delegation for pre-flight check
+    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("revert"));
 
     await expect(token.revokeDelegation({ delegateAddress })).rejects.toThrow(
       expect.objectContaining({ code: "TRANSACTION_REVERTED" }),
+    );
+  });
+
+  it("revokeDelegation maps AlreadyDelegatedOrRevokedInSameBlock to DelegationCooldownError", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
+    vi.mocked(signer.writeContract).mockRejectedValue(
+      new Error("AlreadyDelegatedOrRevokedInSameBlock"),
+    );
+
+    await expect(token.revokeDelegation({ delegateAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "DELEGATION_COOLDOWN" }),
     );
   });
 
@@ -626,6 +669,65 @@ describe("delegateDecryption validation", () => {
     await token.delegateDecryption({ delegateAddress, expirationDate: oneHourFromNow });
 
     expect(signer.writeContract).toHaveBeenCalled();
+  });
+
+  it("throws DelegationSelfNotAllowedError when delegate is the signer", async ({
+    token,
+    userAddress,
+  }) => {
+    await expect(token.delegateDecryption({ delegateAddress: userAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "DELEGATION_SELF_NOT_ALLOWED" }),
+    );
+  });
+
+  it("throws DelegationDelegateEqualsContractError when delegate is the token address", async ({
+    token,
+    tokenAddress,
+  }) => {
+    await expect(token.delegateDecryption({ delegateAddress: tokenAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "DELEGATION_DELEGATE_EQUALS_CONTRACT" }),
+    );
+  });
+
+  it("throws DelegationExpiryUnchangedError when expiry matches current", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    const expiry = new Date("2030-01-01T00:00:00Z");
+    const expiryTimestamp = BigInt(Math.floor(expiry.getTime() / 1000));
+    // readContract returns the same expiry as the one being set
+    vi.mocked(signer.readContract).mockResolvedValue(expiryTimestamp);
+
+    await expect(
+      token.delegateDecryption({ delegateAddress, expirationDate: expiry }),
+    ).rejects.toThrow(expect.objectContaining({ code: "DELEGATION_EXPIRY_UNCHANGED" }));
+  });
+});
+
+describe("revokeDelegation validation", () => {
+  it("throws DelegationNotFoundError when no delegation exists", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(0n);
+
+    await expect(token.revokeDelegation({ delegateAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
+    );
+  });
+
+  it("throws DelegationNotFoundError when delegation has expired", async ({
+    signer,
+    token,
+    delegateAddress,
+  }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(1000n); // expired timestamp
+
+    await expect(token.revokeDelegation({ delegateAddress })).rejects.toThrow(
+      expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
+    );
   });
 });
 

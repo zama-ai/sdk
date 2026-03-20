@@ -44,6 +44,14 @@ export const ZamaErrorCode = {
   DelegationNotFound: "DELEGATION_NOT_FOUND",
   /** The delegation has expired. */
   DelegationExpired: "DELEGATION_EXPIRED",
+  /** Delegate address equals the contract address. */
+  DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT",
+  /** The new expiration date is the same as the current one. */
+  DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED",
+  /** The contract address equals the caller. */
+  DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF",
+  /** The ACL contract is paused. */
+  AclPaused: "ACL_PAUSED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -194,6 +202,38 @@ export class DelegationExpiredError extends ZamaError {
   }
 }
 
+/** Delegate address equals the contract address. */
+export class DelegationDelegateEqualsContractError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationDelegateEqualsContract, message, options);
+    this.name = "DelegationDelegateEqualsContractError";
+  }
+}
+
+/** The new expiration date is the same as the current one. */
+export class DelegationExpiryUnchangedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationExpiryUnchanged, message, options);
+    this.name = "DelegationExpiryUnchangedError";
+  }
+}
+
+/** The ACL contract is paused. */
+export class AclPausedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.AclPaused, message, options);
+    this.name = "AclPausedError";
+  }
+}
+
+/** The contract address equals the caller. */
+export class DelegationContractIsSelfError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationContractIsSelf, message, options);
+    this.name = "DelegationContractIsSelfError";
+  }
+}
+
 /**
  * Wrap a signing error as {@link SigningRejectedError} or {@link SigningFailedError}.
  * Detects user rejection via EIP-1193 code 4001 or message heuristics.
@@ -238,4 +278,61 @@ export function matchZamaError<R>(
     }
   }
   return handlers._?.(error);
+}
+
+/**
+ * Map known ACL Solidity revert error names to typed ZamaError subclasses.
+ * Returns `null` if the revert reason is not recognized.
+ * @internal
+ */
+export function matchAclRevert(error: unknown): ZamaError | null {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("AlreadyDelegatedOrRevokedInSameBlock")) {
+    return new DelegationCooldownError(
+      "Only one delegate/revoke per (delegator, delegate, contract) per block. Wait for the next block before retrying.",
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  if (message.includes("SenderCannotBeContractAddress")) {
+    return new DelegationContractIsSelfError("The contract address cannot be the caller address.", {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+  if (message.includes("EnforcedPause")) {
+    return new AclPausedError(
+      "The ACL contract is paused. Delegation operations are temporarily disabled.",
+      {
+        cause: error instanceof Error ? error : undefined,
+      },
+    );
+  }
+  if (message.includes("SenderCannotBeDelegate")) {
+    return new DelegationSelfNotAllowedError(
+      "Cannot delegate to yourself (delegate === msg.sender).",
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  if (message.includes("DelegateCannotBeContractAddress")) {
+    return new DelegationDelegateEqualsContractError(
+      "Delegate address cannot be the same as the contract address.",
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  if (message.includes("ExpirationDateBeforeOneHour")) {
+    return new ConfigurationError("Expiration date must be at least 1 hour in the future.", {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+  if (message.includes("ExpirationDateAlreadySetToSameValue")) {
+    return new DelegationExpiryUnchangedError(
+      "The new expiration date is the same as the current one.",
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+  if (message.includes("NotDelegatedYet")) {
+    return new DelegationNotFoundError("Cannot revoke: no active delegation exists.", {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+  return null;
 }

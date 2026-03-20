@@ -24,6 +24,14 @@ import {
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  DelegationSelfNotAllowedError,
+  DelegationDelegateEqualsContractError,
+  DelegationExpiryUnchangedError,
+  DelegationNotFoundError,
+  DelegationExpiredError,
+  DelegationCooldownError,
+  DelegationContractIsSelfError,
+  AclPausedError,
 } from "@zama-fhe/sdk";
 ```
 
@@ -52,19 +60,27 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 
 ## Error summary
 
-| Error class                 | Code                     | Description                                       |
-| --------------------------- | ------------------------ | ------------------------------------------------- |
-| `SigningRejectedError`      | `SIGNING_REJECTED`       | User rejected the wallet signature                |
-| `SigningFailedError`        | `SIGNING_FAILED`         | Wallet signature failed (connectivity, firmware)  |
-| `EncryptionFailedError`     | `ENCRYPTION_FAILED`      | FHE encryption failed in the Web Worker           |
-| `DecryptionFailedError`     | `DECRYPTION_FAILED`      | FHE decryption failed                             |
-| `ApprovalFailedError`       | `APPROVAL_FAILED`        | ERC-20 approval transaction failed                |
-| `TransactionRevertedError`  | `TRANSACTION_REVERTED`   | On-chain transaction reverted                     |
-| `InvalidKeypairError`       | `INVALID_KEYPAIR`        | Relayer rejected FHE keypair (stale or malformed) |
-| `KeypairExpiredError`       | `KEYPAIR_EXPIRED`        | FHE keypair expired — user must re-sign           |
-| `NoCiphertextError`         | `NO_CIPHERTEXT`          | No encrypted balance for this account             |
-| `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP request failed                       |
-| `ConfigurationError`        | `CONFIGURATION`          | Invalid SDK configuration                         |
+| Error class                             | Code                                  | Description                                       |
+| --------------------------------------- | ------------------------------------- | ------------------------------------------------- |
+| `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                |
+| `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)  |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker           |
+| `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                             |
+| `ApprovalFailedError`                   | `APPROVAL_FAILED`                     | ERC-20 approval transaction failed                |
+| `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted                     |
+| `InvalidKeypairError`                   | `INVALID_KEYPAIR`                     | Relayer rejected FHE keypair (stale or malformed) |
+| `KeypairExpiredError`                   | `KEYPAIR_EXPIRED`                     | FHE keypair expired — user must re-sign           |
+| `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account             |
+| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                       |
+| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration                         |
+| `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                  |
+| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address                  |
+| `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value              |
+| `DelegationNotFoundError`               | `DELEGATION_NOT_FOUND`                | No active delegation exists                       |
+| `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | Delegation has expired                            |
+| `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Same-block delegate/revoke not allowed            |
+| `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                    |
+| `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                            |
 
 ## Error details
 

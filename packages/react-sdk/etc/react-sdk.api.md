@@ -6,6 +6,7 @@
 
 import { ACL_TOPICS } from '@zama-fhe/sdk';
 import { AclEvent } from '@zama-fhe/sdk';
+import { AclPausedError } from '@zama-fhe/sdk';
 import { ActivityAmount } from '@zama-fhe/sdk';
 import { ActivityDirection } from '@zama-fhe/sdk';
 import { activityFeedQueryOptions } from '@zama-fhe/sdk/query';
@@ -52,6 +53,7 @@ import { confidentialTransferFromMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { confidentialTransferMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
+import { ConfigurationError } from '@zama-fhe/sdk';
 import { ContractAbi } from '@zama-fhe/sdk';
 import { createDelegatedUserDecryptEIP712MutationOptions } from '@zama-fhe/sdk/query';
 import { CreateDelegatedUserDecryptEIP712Params } from '@zama-fhe/sdk/query';
@@ -94,6 +96,13 @@ import { DelegatedStoredCredentials } from '@zama-fhe/sdk';
 import { delegatedUserDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { DelegatedUserDecryptParams } from '@zama-fhe/sdk';
 import { delegateForUserDecryptionContract } from '@zama-fhe/sdk';
+import { DelegationContractIsSelfError } from '@zama-fhe/sdk';
+import { DelegationCooldownError } from '@zama-fhe/sdk';
+import { DelegationDelegateEqualsContractError } from '@zama-fhe/sdk';
+import { DelegationExpiredError } from '@zama-fhe/sdk';
+import { DelegationExpiryUnchangedError } from '@zama-fhe/sdk';
+import { DelegationNotFoundError } from '@zama-fhe/sdk';
+import { DelegationSelfNotAllowedError } from '@zama-fhe/sdk';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { DelegationStatusQueryConfig } from '@zama-fhe/sdk/query';
 import { delegationStatusQueryOptions } from '@zama-fhe/sdk/query';
@@ -280,6 +289,8 @@ export { ACL_TOPICS }
 
 export { AclEvent }
 
+export { AclPausedError }
+
 export { ActivityAmount }
 
 export { ActivityDirection }
@@ -372,6 +383,8 @@ export { confidentialTransferMutationOptions }
 
 export { ConfidentialTransferParams }
 
+export { ConfigurationError }
+
 export { ContractAbi }
 
 export { createDelegatedUserDecryptEIP712MutationOptions }
@@ -455,6 +468,20 @@ export { delegatedUserDecryptMutationOptions }
 export { DelegatedUserDecryptParams }
 
 export { delegateForUserDecryptionContract }
+
+export { DelegationContractIsSelfError }
+
+export { DelegationCooldownError }
+
+export { DelegationDelegateEqualsContractError }
+
+export { DelegationExpiredError }
+
+export { DelegationExpiryUnchangedError }
+
+export { DelegationNotFoundError }
+
+export { DelegationSelfNotAllowedError }
 
 export { DelegationStatusData }
 
