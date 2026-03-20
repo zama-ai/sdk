@@ -19,6 +19,7 @@ import {
   relayer,
   utils,
 } from "@fhevm/mock-utils";
+import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -30,6 +31,8 @@ const port = parentPort;
 let instance = null;
 /** @type {MockCoprocessor | null} */
 let coprocessor = null;
+/** @type {RelayerCleartext | null} */
+let cleartext = null;
 /** @type {number} */
 let chainId = 0;
 /** @type {string} */
@@ -222,6 +225,20 @@ async function handleMessage(request) {
           },
         );
 
+        // RelayerCleartext for encrypt — produces input proofs the on-chain
+        // InputVerifier accepts (same approach as browser e2e tests)
+        cleartext = new RelayerCleartext({
+          ...hardhatCleartextConfig,
+          chainId: fhevmConfig.chainId,
+          gatewayChainId: fhevmConfig.gatewayChainId,
+          network: fhevmConfig.network,
+          aclContractAddress: fhevmConfig.aclContractAddress,
+          inputVerifierContractAddress: fhevmConfig.inputVerifierContractAddress,
+          verifyingContractAddressDecryption: fhevmConfig.verifyingContractAddressDecryption,
+          verifyingContractAddressInputVerification:
+            fhevmConfig.verifyingContractAddressInputVerification,
+        });
+
         send(id, type, { initialized: true });
         break;
       }
@@ -272,47 +289,13 @@ async function handleMessage(request) {
       }
 
       case "ENCRYPT": {
-        if (!instance) throw new Error("Not initialized");
-        const { values, contractAddress, userAddress } = request.payload;
-        const input = instance.createEncryptedInput(contractAddress, userAddress);
-        for (const entry of values) {
-          switch (entry.type) {
-            case "ebool":
-              input.addBool(typeof entry.value === "boolean" ? entry.value : entry.value !== 0n);
-              break;
-            case "euint8":
-              input.add8(typeof entry.value === "boolean" ? (entry.value ? 1n : 0n) : entry.value);
-              break;
-            case "euint16":
-              input.add16(typeof entry.value === "boolean" ? (entry.value ? 1n : 0n) : entry.value);
-              break;
-            case "euint32":
-              input.add32(typeof entry.value === "boolean" ? (entry.value ? 1n : 0n) : entry.value);
-              break;
-            case "euint64":
-              input.add64(typeof entry.value === "boolean" ? (entry.value ? 1n : 0n) : entry.value);
-              break;
-            case "euint128":
-              input.add128(
-                typeof entry.value === "boolean" ? (entry.value ? 1n : 0n) : entry.value,
-              );
-              break;
-            case "euint256":
-              input.add256(
-                typeof entry.value === "boolean" ? (entry.value ? 1n : 0n) : entry.value,
-              );
-              break;
-            case "eaddress":
-              input.addAddress(String(entry.value));
-              break;
-            default:
-              throw new Error(`Unsupported FHE type: ${entry.type}`);
-          }
-        }
-        const encrypted = await input.encrypt();
+        if (!cleartext) throw new Error("Not initialized");
+        // Use RelayerCleartext for encrypt — produces input proofs that the
+        // on-chain CleartextFHEVMExecutor's InputVerifier accepts.
+        const result = await cleartext.encrypt(request.payload);
         send(id, type, {
-          handles: encrypted.handles,
-          inputProof: encrypted.inputProof,
+          handles: result.handles,
+          inputProof: result.inputProof,
         });
         break;
       }
