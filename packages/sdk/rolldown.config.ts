@@ -24,7 +24,7 @@ export default defineConfig([
     input: {
       ...entryPoints,
       "node/index": "src/node/index.ts",
-      "relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
+      "node/relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
     },
     output: {
       dir: "dist/esm",
