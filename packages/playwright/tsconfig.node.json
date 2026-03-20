@@ -4,12 +4,6 @@
     "lib": ["ESNext"],
     "types": ["node"]
   },
-  "include": [
-    "fixtures/node-test.ts",
-    "fixtures/node-global-setup.ts",
-    "fixtures/constants.ts",
-    "tests/node",
-    "**/*.node.spec.ts"
-  ],
+  "include": ["fixtures", "tests/node", "**/*.node.spec.ts"],
   "exclude": ["node_modules"]
 }
