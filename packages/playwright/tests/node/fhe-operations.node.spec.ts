@@ -103,10 +103,7 @@ test("shield, transfer, then decrypt shows reduced balance", async ({
   expect(balanceAfter - balanceBefore).toBe(expectedDelta);
 });
 
-// TODO: unshield requires publicDecrypt of the burn amount handle, which needs
-// the gateway callback to mark the handle as allowed for decryption.
-// In cleartext mode this timing is tricky — skipped for now.
-test.skip("shield then unshield returns correct ERC-20 balance", async ({
+test("shield then unshield returns correct ERC-20 balance", async ({
   sdk,
   contracts,
   readErc20Balance,

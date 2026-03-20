@@ -322,9 +322,11 @@ async function handleMessage(request) {
       }
 
       case "PUBLIC_DECRYPT": {
-        if (!instance) throw new Error("Not initialized");
-        await coprocessor.awaitCoprocessor();
-        const pdResult = await instance.publicDecrypt(request.payload.handles);
+        if (!cleartext) throw new Error("Not initialized");
+        // Bypass MockFhevmInstance.publicDecrypt (which checks ACL isAllowedForDecryption
+        // — fails for handles from unwrap before gateway callback).
+        // Read directly from on-chain CleartextFHEVMExecutor instead.
+        const pdResult = await cleartext.publicDecrypt(request.payload.handles);
         send(id, type, pdResult);
         break;
       }
