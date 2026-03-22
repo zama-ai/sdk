@@ -1,9 +1,8 @@
 /**
- * Playwright fixtures for Node.js SDK tests (no browser required).
+ * Playwright fixtures for Node.js SDK transport-layer tests (no browser).
  *
- * Uses RelayerNode backed by a mock relayer HTTP server (started as a
- * webServer in playwright.node.config.ts) that implements the relayer V2
- * async API, delegating FHE operations to RelayerCleartext against anvil.
+ * Tests RelayerNode pool lifecycle, chain switching, and concurrency.
+ * Domain-level FHE scenarios are covered by the browser e2e suite.
  */
 import { test as base } from "@playwright/test";
 import type { Address } from "viem";
@@ -30,16 +29,6 @@ const contracts = {
   acl: hardhatCleartextConfig.aclContractAddress as Address,
 } as const;
 
-const erc20BalanceOfAbi = [
-  {
-    type: "function",
-    name: "balanceOf",
-    stateMutability: "view",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-] as const;
-
 function createViemClient(port: number) {
   return createTestClient({
     account,
@@ -53,37 +42,16 @@ function createViemClient(port: number) {
 
 type ViemClient = ReturnType<typeof createViemClient>;
 
-/** Fee: ceiling division of (amount * 100) / 10000 — matches FeeManager.sol */
-function computeFee(amount: bigint): bigint {
-  return (amount * 100n + 9999n) / 10000n;
-}
-
 export interface NodeWorkerFixtures {
   anvilPort: number;
   viemClient: ViemClient;
 }
 
-/** Initial balances from Deploy.s.sol (10,000 ERC-20 minted, 1,000 wrapped confidential). */
-export interface InitialBalances {
-  /** Confidential balance for cUSDT (after deploy wrap fee). */
-  cUSDT: bigint;
-  /** Confidential balance for cUSDC (after deploy wrap fee). */
-  cUSDC: bigint;
-  /** ERC-20 balance for USDT. */
-  USDT: bigint;
-  /** ERC-20 balance for USDC. */
-  USDC: bigint;
-}
-
 export interface NodeTestFixtures {
   account: typeof account;
   contracts: typeof contracts;
-  computeFee: typeof computeFee;
   relayer: RelayerNode;
   sdk: ZamaSDK;
-  readErc20Balance: (tokenAddress: Address, owner?: Address) => Promise<bigint>;
-  /** Pre-deployed confidential balances (requires allow → balanceOf). */
-  initialBalances: InitialBalances;
   anvilState: undefined;
 }
 
@@ -97,17 +65,6 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
   ],
   account,
   contracts,
-  computeFee: async ({}, use) => use(computeFee),
-  readErc20Balance: async ({ viemClient, account }, use) => {
-    await use((tokenAddress: Address, owner: Address = account.address) =>
-      viemClient.readContract({
-        address: tokenAddress,
-        abi: erc20BalanceOfAbi,
-        functionName: "balanceOf",
-        args: [owner],
-      }),
-    );
-  },
   relayer: async ({ anvilPort }, use) => {
     const relayer = new RelayerNode({
       getChainId: async () => HardhatConfig.chainId,
@@ -132,20 +89,6 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
     const sdk = new ZamaSDK({ relayer, signer, storage });
     await use(sdk);
     sdk.terminate();
-  },
-  // Depend on anvilState so the snapshot is taken before allow() mutates chain state.
-  initialBalances: async ({ sdk, contracts, readErc20Balance, anvilState }, use) => {
-    void anvilState;
-    await sdk.allow(contracts.cUSDT as Address, contracts.cUSDC as Address);
-    const readUSDT = sdk.createReadonlyToken(contracts.cUSDT as Address);
-    const readUSDC = sdk.createReadonlyToken(contracts.cUSDC as Address);
-    const [cUSDT, cUSDC, USDT, USDC] = await Promise.all([
-      readUSDT.balanceOf(),
-      readUSDC.balanceOf(),
-      readErc20Balance(contracts.USDT),
-      readErc20Balance(contracts.USDC),
-    ]);
-    await use({ cUSDT, cUSDC, USDT, USDC });
   },
   // Auto-use fixture: snapshot anvil before each test, revert after.
   anvilState: [

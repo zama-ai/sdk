@@ -1,25 +1,13 @@
 /**
- * Mock Node.js worker using @fhevm/mock-utils.
+ * Mock Node.js worker for transport-layer tests.
  *
- * Uses MockFhevmInstance + MockCoprocessor to handle the full FHE lifecycle:
- * encrypt → on-chain input proof → decrypt. The custom RPC methods
- * (fhevm_relayer_v1_input_proof, fhevm_getClearText, etc.) are intercepted
- * in the provider's send function, matching what @fhevm/hardhat-plugin does.
+ * Supports keypair generation, EIP-712 creation, and public key/params retrieval.
+ * Encrypt/decrypt operations are NOT needed here — domain-level FHE scenarios
+ * are covered by the browser e2e suite.
  */
 import { parentPort } from "node:worker_threads";
 import { ethers } from "ethers";
-import {
-  MockFhevmInstance,
-  MockCoprocessor,
-  FhevmMockProvider,
-  FhevmMockProviderType,
-  FhevmDBMap,
-  FhevmHandle,
-  constants,
-  relayer,
-  utils,
-} from "@fhevm/mock-utils";
-import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { MockFhevmInstance, FhevmMockProvider, FhevmMockProviderType } from "@fhevm/mock-utils";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -29,16 +17,6 @@ const port = parentPort;
 
 /** @type {MockFhevmInstance | null} */
 let instance = null;
-/** @type {MockCoprocessor | null} */
-let coprocessor = null;
-/** @type {RelayerCleartext | null} */
-let cleartext = null;
-/** @type {number} */
-let chainId = 0;
-/** @type {string} */
-let aclAddress = "";
-/** @type {string} */
-let gatewayDecryptionAddress = "";
 
 function send(id, type, data) {
   port.postMessage({ id, type, success: true, data });
@@ -62,139 +40,11 @@ async function handleMessage(request) {
     switch (type) {
       case "NODE_INIT": {
         const { fhevmConfig } = request.payload;
-        chainId = fhevmConfig.chainId;
-        aclAddress = fhevmConfig.aclContractAddress;
-        gatewayDecryptionAddress = fhevmConfig.verifyingContractAddressDecryption;
-
         const ethersProvider = new ethers.JsonRpcProvider(fhevmConfig.network);
 
-        // Create coprocessor signer from the same key used in deploy-local.sh
-        const coprocessorSignerWallet = new ethers.Wallet(
-          "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901",
-          ethersProvider,
-        );
-
-        // Create MockCoprocessor with initialized DB
-        const db = new FhevmDBMap();
-        const blockNumber = await ethersProvider.getBlockNumber();
-        db.init(blockNumber);
-
-        // CleartextFHEVMExecutor address — hardcoded for hardhat local deployment
-        const executorAddress = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
-        coprocessor = await MockCoprocessor.create(ethersProvider, {
-          coprocessorContractAddress: executorAddress,
-          coprocessorSigners: [coprocessorSignerWallet],
-          inputVerifierContractAddress: fhevmConfig.inputVerifierContractAddress,
-          db,
-        });
-
-        // Create provider that intercepts fhevm_* RPC calls
+        // Minimal provider — forwards all RPC to anvil (no fhevm_* intercepts needed)
         const minimalProvider = {
-          send: async (method, params) => {
-            // Handle fhevm-specific RPC methods
-            switch (method) {
-              case relayer.RELAYER_V1_INPUT_PROOF: {
-                const payload = params[0];
-                relayer.assertIsMockRelayerV1InputProofPayload(payload);
-                const contractChainId = utils.toUIntNumber(
-                  payload.contractChainId,
-                  "contractChainId",
-                );
-
-                const handlesBytes32List = FhevmHandle.computeHandles(
-                  ethers.getBytes(payload.ciphertextWithInputVerification),
-                  payload.mockData.fhevmTypes,
-                  payload.mockData.aclContractAddress,
-                  contractChainId,
-                  constants.FHEVM_HANDLE_VERSION,
-                );
-
-                const response = await coprocessor.computeCoprocessorSignatures(
-                  handlesBytes32List,
-                  contractChainId,
-                  payload.contractAddress,
-                  payload.userAddress,
-                  payload.extraData,
-                );
-
-                // Insert cleartext values into mock DB
-                for (let i = 0; i < response.handles.length; i++) {
-                  await coprocessor.insertHandleBytes32(
-                    utils.ensurePrefix(response.handles[i], "0x"),
-                    payload.mockData.clearTextValuesBigIntHex[i],
-                    payload.mockData.metadatas[i],
-                  );
-                }
-
-                return response;
-              }
-
-              case relayer.FHEVM_GET_CLEAR_TEXT: {
-                // Read plaintexts directly from CleartextFHEVMExecutor on-chain
-                const handleList = params[0];
-                const executorContract = new ethers.Contract(
-                  executorAddress,
-                  ["function plaintexts(bytes32 handle) view returns (uint256)"],
-                  ethersProvider,
-                );
-                const results = await Promise.all(
-                  handleList.map(async (h) => {
-                    const hex = utils.ensurePrefix(h, "0x");
-                    const val = await executorContract.plaintexts(hex);
-                    return ethers.toBeHex(val, 32);
-                  }),
-                );
-                return results;
-              }
-
-              case relayer.RELAYER_V1_USER_DECRYPT:
-              case relayer.RELAYER_V1_DELEGATED_USER_DECRYPT: {
-                // Read plaintexts from on-chain executor
-                const payload = params[0];
-                const handleBytes32HexList = payload.handleContractPairs.map((h) =>
-                  ethers.toBeHex(ethers.toBigInt(h.handle), 32),
-                );
-                const executorForDecrypt = new ethers.Contract(
-                  executorAddress,
-                  ["function plaintexts(bytes32 handle) view returns (uint256)"],
-                  ethersProvider,
-                );
-                const clearTextHexList = await Promise.all(
-                  handleBytes32HexList.map(async (h) => {
-                    const val = await executorForDecrypt.plaintexts(h);
-                    return ethers.toBeHex(val, 32);
-                  }),
-                );
-                return {
-                  payload: { decrypted_values: clearTextHexList },
-                  signature: ethers.ZeroHash,
-                };
-              }
-
-              case relayer.RELAYER_V1_PUBLIC_DECRYPT: {
-                const payload = params[0];
-                const executorForPD = new ethers.Contract(
-                  executorAddress,
-                  ["function plaintexts(bytes32 handle) view returns (uint256)"],
-                  ethersProvider,
-                );
-                const clearValues = await Promise.all(
-                  payload.ciphertextHandles.map(async (h) => {
-                    const val = await executorForPD.plaintexts(h);
-                    return ethers.toBeHex(val, 32);
-                  }),
-                );
-                return {
-                  decrypted_value: clearValues[0] ?? "0x",
-                  signatures: ["0x" + "00".repeat(65)],
-                };
-              }
-
-              default:
-                // Forward to real anvil RPC
-                return ethersProvider.send(method, params ?? []);
-            }
-          },
+          send: async (method, params) => ethersProvider.send(method, params ?? []),
         };
 
         const relayerProvider = await FhevmMockProvider.create(
@@ -224,20 +74,6 @@ async function handleMessage(request) {
             kmsVerifierProperties: {},
           },
         );
-
-        // RelayerCleartext for encrypt — produces input proofs the on-chain
-        // InputVerifier accepts (same approach as browser e2e tests)
-        cleartext = new RelayerCleartext({
-          ...hardhatCleartextConfig,
-          chainId: fhevmConfig.chainId,
-          gatewayChainId: fhevmConfig.gatewayChainId,
-          network: fhevmConfig.network,
-          aclContractAddress: fhevmConfig.aclContractAddress,
-          inputVerifierContractAddress: fhevmConfig.inputVerifierContractAddress,
-          verifyingContractAddressDecryption: fhevmConfig.verifyingContractAddressDecryption,
-          verifyingContractAddressInputVerification:
-            fhevmConfig.verifyingContractAddressInputVerification,
-        });
 
         send(id, type, { initialized: true });
         break;
@@ -288,72 +124,6 @@ async function handleMessage(request) {
         break;
       }
 
-      case "ENCRYPT": {
-        if (!cleartext) throw new Error("Not initialized");
-        // Use RelayerCleartext for encrypt — produces input proofs that the
-        // on-chain CleartextFHEVMExecutor's InputVerifier accepts.
-        const result = await cleartext.encrypt(request.payload);
-        send(id, type, {
-          handles: result.handles,
-          inputProof: result.inputProof,
-        });
-        break;
-      }
-
-      case "USER_DECRYPT": {
-        if (!instance) throw new Error("Not initialized");
-        const p = request.payload;
-        const handleContractPairs = p.handles.map((handle) => ({
-          handle,
-          contractAddress: p.contractAddress,
-        }));
-        const result = await instance.userDecrypt(
-          handleContractPairs,
-          remove0x(p.privateKey),
-          remove0x(p.publicKey),
-          p.signature,
-          p.signedContractAddresses,
-          p.signerAddress,
-          p.startTimestamp,
-          p.durationDays,
-        );
-        send(id, type, { clearValues: result });
-        break;
-      }
-
-      case "PUBLIC_DECRYPT": {
-        if (!cleartext) throw new Error("Not initialized");
-        // Bypass MockFhevmInstance.publicDecrypt (which checks ACL isAllowedForDecryption
-        // — fails for handles from unwrap before gateway callback).
-        // Read directly from on-chain CleartextFHEVMExecutor instead.
-        const pdResult = await cleartext.publicDecrypt(request.payload.handles);
-        send(id, type, pdResult);
-        break;
-      }
-
-      case "DELEGATED_USER_DECRYPT": {
-        if (!instance) throw new Error("Not initialized");
-        await coprocessor.awaitCoprocessor();
-        const dp = request.payload;
-        const dpPairs = dp.handles.map((handle) => ({
-          handle,
-          contractAddress: dp.contractAddress,
-        }));
-        const dudResult = await instance.delegatedUserDecrypt(
-          dpPairs,
-          remove0x(dp.privateKey),
-          remove0x(dp.publicKey),
-          dp.signature,
-          dp.signedContractAddresses,
-          dp.delegatorAddress,
-          dp.delegateAddress,
-          dp.startTimestamp,
-          dp.durationDays,
-        );
-        send(id, type, { clearValues: dudResult });
-        break;
-      }
-
       case "CREATE_DELEGATED_EIP712": {
         if (!instance) throw new Error("Not initialized");
         const {
@@ -388,9 +158,6 @@ async function handleMessage(request) {
           },
         });
         break;
-
-      case "REQUEST_ZK_PROOF_VERIFICATION":
-        throw new Error("Not implemented in mock worker");
 
       default:
         sendError(id, type, `Unknown request type: ${type}`);
