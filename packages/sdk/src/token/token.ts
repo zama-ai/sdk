@@ -820,7 +820,9 @@ export class Token extends ReadonlyToken {
     const signerAddress = await this.signer.getAddress();
     const acl = await this.getAclAddress();
 
-    // Pre-flight with RPC: check delegation exists and is active (NotDelegatedYet)
+    // Pre-flight: reject if never delegated (expiry === 0).
+    // Expired delegations (non-zero expiry in the past) are allowed through —
+    // the ACL contract accepts revocation of expired delegations.
     const currentExpiry = await this.getDelegationExpiry({
       delegatorAddress: signerAddress,
       delegateAddress: normalizedDelegate,
@@ -828,12 +830,6 @@ export class Token extends ReadonlyToken {
     if (currentExpiry === 0n) {
       throw new DelegationNotFoundError(
         `No active delegation found for delegate ${normalizedDelegate} on contract ${this.address}.`,
-      );
-    }
-    // Also check if expired (unless permanent)
-    if (currentExpiry !== MAX_UINT64 && currentExpiry <= BigInt(Math.floor(Date.now() / 1000))) {
-      throw new DelegationNotFoundError(
-        `Delegation for delegate ${normalizedDelegate} on contract ${this.address} has already expired.`,
       );
     }
 

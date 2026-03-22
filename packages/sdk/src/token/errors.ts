@@ -1,17 +1,6 @@
 /**
- * Typed error codes thrown by the SDK.
- * Use `error.code` or `instanceof` to programmatically handle specific failure modes.
- *
- * @example
- * ```ts
- * try {
- *   await token.confidentialTransfer("0xTo", 100n);
- * } catch (e) {
- *   if (e instanceof SigningRejectedError) {
- *     // User rejected the wallet signature
- *   }
- * }
- * ```
+ * Machine-readable error codes for all SDK errors.
+ * Use with {@link matchZamaError} for exhaustive error handling.
  */
 export const ZamaErrorCode = {
   /** User rejected the wallet signature prompt. */
@@ -44,22 +33,20 @@ export const ZamaErrorCode = {
   DelegationNotFound: "DELEGATION_NOT_FOUND",
   /** The delegation has expired. */
   DelegationExpired: "DELEGATION_EXPIRED",
-  /** Delegate address equals the contract address. */
-  DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT",
-  /** The new expiration date is the same as the current one. */
+  /** The new expiration date equals the current one — no on-chain change needed. */
   DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED",
-  /** The contract address equals the caller. */
+  /** Delegate address cannot be the contract address. */
+  DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT",
+  /** Contract address cannot be the sender address. */
   DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF",
   /** The ACL contract is paused. */
   AclPaused: "ACL_PAUSED",
 } as const;
 
-/** Union of all {@link ZamaErrorCode} string values. */
 export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 
 /**
- * Base error thrown by all SDK operations.
- * Carries a {@link ZamaErrorCode} for programmatic error handling.
+ * Base class for all typed SDK errors.
  * Prefer catching specific subclasses (e.g. {@link EncryptionFailedError}).
  */
 export class ZamaError extends Error {
@@ -68,8 +55,8 @@ export class ZamaError extends Error {
 
   constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = "ZamaError";
     this.code = code;
+    this.name = "ZamaError";
   }
 }
 
@@ -149,7 +136,6 @@ export class NoCiphertextError extends ZamaError {
 export class RelayerRequestFailedError extends ZamaError {
   /** HTTP status code from the relayer, if available. */
   readonly statusCode: number | undefined;
-
   constructor(message: string, statusCode?: number, options?: ErrorOptions) {
     super(ZamaErrorCode.RelayerRequestFailed, message, options);
     this.name = "RelayerRequestFailedError";
@@ -165,10 +151,8 @@ export class ConfigurationError extends ZamaError {
   }
 }
 
-// Delegation errors — the SDK does NOT auto-map ACL contract reverts to these.
-// They are exported so dApp code can catch and re-throw them when parsing
-// on-chain revert reasons (e.g. via viem's `decodeErrorResult`).
-// See the design doc for the list of ACL revert selectors.
+// Delegation errors — the SDK auto-maps ACL contract revert selectors to these
+// via matchAclRevert(). They are also exported so dApp code can catch them directly.
 
 /** Delegation cannot target self (delegate === msg.sender). */
 export class DelegationSelfNotAllowedError extends ZamaError {
@@ -202,7 +186,15 @@ export class DelegationExpiredError extends ZamaError {
   }
 }
 
-/** Delegate address equals the contract address. */
+/** The new expiration date equals the current one. */
+export class DelegationExpiryUnchangedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationExpiryUnchanged, message, options);
+    this.name = "DelegationExpiryUnchangedError";
+  }
+}
+
+/** Delegate address cannot be the contract address. */
 export class DelegationDelegateEqualsContractError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
     super(ZamaErrorCode.DelegationDelegateEqualsContract, message, options);
@@ -210,11 +202,11 @@ export class DelegationDelegateEqualsContractError extends ZamaError {
   }
 }
 
-/** The new expiration date is the same as the current one. */
-export class DelegationExpiryUnchangedError extends ZamaError {
+/** Contract address cannot be the sender address. */
+export class DelegationContractIsSelfError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(ZamaErrorCode.DelegationExpiryUnchanged, message, options);
-    this.name = "DelegationExpiryUnchangedError";
+    super(ZamaErrorCode.DelegationContractIsSelf, message, options);
+    this.name = "DelegationContractIsSelfError";
   }
 }
 
@@ -226,17 +218,11 @@ export class AclPausedError extends ZamaError {
   }
 }
 
-/** The contract address equals the caller. */
-export class DelegationContractIsSelfError extends ZamaError {
-  constructor(message: string, options?: ErrorOptions) {
-    super(ZamaErrorCode.DelegationContractIsSelf, message, options);
-    this.name = "DelegationContractIsSelfError";
-  }
-}
+// ─── Error routing utilities ───────────────────────────────────────────
 
 /**
- * Wrap a signing error as {@link SigningRejectedError} or {@link SigningFailedError}.
- * Detects user rejection via EIP-1193 code 4001 or message heuristics.
+ * Wrap a wallet signing error as a typed SDK error.
+ * Detects EIP-1193 rejection codes and common message patterns.
  */
 export function wrapSigningError(error: unknown, context: string): never {
   const isRejected =
@@ -280,59 +266,84 @@ export function matchZamaError<R>(
   return handlers._?.(error);
 }
 
+/** Extract the decoded error name from a viem ContractFunctionRevertedError. */
+function extractRevertErrorName(error: unknown): string | null {
+  if (
+    error instanceof Error &&
+    "cause" in error &&
+    error.cause !== null &&
+    error.cause !== undefined &&
+    typeof error.cause === "object" &&
+    "data" in error.cause &&
+    error.cause.data !== null &&
+    error.cause.data !== undefined &&
+    typeof error.cause.data === "object" &&
+    "errorName" in error.cause.data &&
+    typeof error.cause.data.errorName === "string"
+  ) {
+    return error.cause.data.errorName;
+  }
+  return null;
+}
+
+/** ACL error name → typed SDK error mapping. */
+const ACL_ERROR_MAP: Record<string, (cause: Error | undefined) => ZamaError> = {
+  AlreadyDelegatedOrRevokedInSameBlock: (cause) =>
+    new DelegationCooldownError(
+      "Only one delegate/revoke per (delegator, delegate, contract) per block. Wait for the next block before retrying.",
+      { cause },
+    ),
+  SenderCannotBeContractAddress: (cause) =>
+    new DelegationContractIsSelfError("The contract address cannot be the caller address.", {
+      cause,
+    }),
+  EnforcedPause: (cause) =>
+    new AclPausedError(
+      "The ACL contract is paused. Delegation operations are temporarily disabled.",
+      { cause },
+    ),
+  SenderCannotBeDelegate: (cause) =>
+    new DelegationSelfNotAllowedError("Cannot delegate to yourself (delegate === msg.sender).", {
+      cause,
+    }),
+  DelegateCannotBeContractAddress: (cause) =>
+    new DelegationDelegateEqualsContractError(
+      "Delegate address cannot be the same as the contract address.",
+      { cause },
+    ),
+  ExpirationDateBeforeOneHour: (cause) =>
+    new ConfigurationError("Expiration date must be at least 1 hour in the future.", { cause }),
+  ExpirationDateAlreadySetToSameValue: (cause) =>
+    new DelegationExpiryUnchangedError("The new expiration date is the same as the current one.", {
+      cause,
+    }),
+  NotDelegatedYet: (cause) =>
+    new DelegationNotFoundError("Cannot revoke: no active delegation exists.", { cause }),
+};
+
 /**
  * Map known ACL Solidity revert error names to typed ZamaError subclasses.
+ * Prefers viem's structured `error.cause.data.errorName` when available,
+ * falling back to string-includes matching on the error message.
  * Returns `null` if the revert reason is not recognized.
  * @internal
  */
 export function matchAclRevert(error: unknown): ZamaError | null {
+  const cause = error instanceof Error ? error : undefined;
+
+  // Prefer structured error data from viem's ContractFunctionRevertedError
+  const errorName = extractRevertErrorName(error);
+  if (errorName && errorName in ACL_ERROR_MAP) {
+    return ACL_ERROR_MAP[errorName]?.(cause) ?? null;
+  }
+
+  // Fallback: string matching for non-viem RPC providers
   const message = error instanceof Error ? error.message : String(error);
-  if (message.includes("AlreadyDelegatedOrRevokedInSameBlock")) {
-    return new DelegationCooldownError(
-      "Only one delegate/revoke per (delegator, delegate, contract) per block. Wait for the next block before retrying.",
-      { cause: error instanceof Error ? error : undefined },
-    );
+  for (const [name, factory] of Object.entries(ACL_ERROR_MAP)) {
+    if (message.includes(name)) {
+      return factory(cause);
+    }
   }
-  if (message.includes("SenderCannotBeContractAddress")) {
-    return new DelegationContractIsSelfError("The contract address cannot be the caller address.", {
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-  if (message.includes("EnforcedPause")) {
-    return new AclPausedError(
-      "The ACL contract is paused. Delegation operations are temporarily disabled.",
-      {
-        cause: error instanceof Error ? error : undefined,
-      },
-    );
-  }
-  if (message.includes("SenderCannotBeDelegate")) {
-    return new DelegationSelfNotAllowedError(
-      "Cannot delegate to yourself (delegate === msg.sender).",
-      { cause: error instanceof Error ? error : undefined },
-    );
-  }
-  if (message.includes("DelegateCannotBeContractAddress")) {
-    return new DelegationDelegateEqualsContractError(
-      "Delegate address cannot be the same as the contract address.",
-      { cause: error instanceof Error ? error : undefined },
-    );
-  }
-  if (message.includes("ExpirationDateBeforeOneHour")) {
-    return new ConfigurationError("Expiration date must be at least 1 hour in the future.", {
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-  if (message.includes("ExpirationDateAlreadySetToSameValue")) {
-    return new DelegationExpiryUnchangedError(
-      "The new expiration date is the same as the current one.",
-      { cause: error instanceof Error ? error : undefined },
-    );
-  }
-  if (message.includes("NotDelegatedYet")) {
-    return new DelegationNotFoundError("Cannot revoke: no active delegation exists.", {
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
+
   return null;
 }

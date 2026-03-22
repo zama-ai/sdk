@@ -16,7 +16,10 @@ describe("delegation read methods", () => {
   }) => {
     vi.mocked(signer.readContract).mockResolvedValue(1700000000n);
 
-    const expiry = await readonlyToken.getDelegationExpiry({ delegatorAddress, delegateAddress });
+    const expiry = await readonlyToken.getDelegationExpiry({
+      delegatorAddress,
+      delegateAddress,
+    });
 
     expect(signer.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -306,7 +309,12 @@ describe("decryptBalanceAs", () => {
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry (permanent → active)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-      domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
+      domain: {
+        name: "Decryption",
+        version: "1",
+        chainId: 1n,
+        verifyingContract: "0xkms",
+      },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
         publicKey: "0xpub",
@@ -373,7 +381,12 @@ describe("decryptBalanceAs", () => {
       .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry (first call)
       .mockResolvedValueOnce(handle); // confidentialBalanceOf (second call — cache hit skips delegation check)
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-      domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
+      domain: {
+        name: "Decryption",
+        version: "1",
+        chainId: 1n,
+        verifyingContract: "0xkms",
+      },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
         publicKey: "0xpub",
@@ -385,14 +398,22 @@ describe("decryptBalanceAs", () => {
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
-    vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [handle]: 42n });
+    vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({
+      [handle]: 42n,
+    });
 
     // First call populates cache keyed by owner (userAddress), not delegator.
-    await readonlyToken.decryptBalanceAs({ delegatorAddress, owner: userAddress });
+    await readonlyToken.decryptBalanceAs({
+      delegatorAddress,
+      owner: userAddress,
+    });
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
 
     // Second call with same owner should hit cache — no second decrypt call.
-    const balance = await readonlyToken.decryptBalanceAs({ delegatorAddress, owner: userAddress });
+    const balance = await readonlyToken.decryptBalanceAs({
+      delegatorAddress,
+      owner: userAddress,
+    });
     expect(balance).toBe(42n);
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
   });
@@ -451,7 +472,12 @@ describe("decryptBalanceAs", () => {
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-      domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
+      domain: {
+        name: "Decryption",
+        version: "1",
+        chainId: 1n,
+        verifyingContract: "0xkms",
+      },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
         publicKey: "0xpub",
@@ -486,7 +512,12 @@ describe("decryptBalanceAs", () => {
       .mockResolvedValueOnce(handle) // confidentialBalanceOf
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-      domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
+      domain: {
+        name: "Decryption",
+        version: "1",
+        chainId: 1n,
+        verifyingContract: "0xkms",
+      },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
         publicKey: "0xpub",
@@ -666,7 +697,10 @@ describe("delegateDecryption validation", () => {
   }) => {
     const oneHourFromNow = new Date(Date.now() + 3600_000 + 1000); // 1 hour + 1 second
 
-    await token.delegateDecryption({ delegateAddress, expirationDate: oneHourFromNow });
+    await token.delegateDecryption({
+      delegateAddress,
+      expirationDate: oneHourFromNow,
+    });
 
     expect(signer.writeContract).toHaveBeenCalled();
   });
@@ -718,16 +752,19 @@ describe("revokeDelegation validation", () => {
     );
   });
 
-  it("throws DelegationNotFoundError when delegation has expired", async ({
+  it("allows revoking an expired delegation (ACL accepts it)", async ({
     signer,
     token,
     delegateAddress,
   }) => {
+    // Expired delegation (non-zero expiry in the past) — the SDK should NOT
+    // block revocation; the ACL contract accepts it for cleanup.
     vi.mocked(signer.readContract).mockResolvedValue(1000n); // expired timestamp
+    vi.mocked(signer.writeContract).mockResolvedValue(`0x${"ab".repeat(32)}`);
+    vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({} as never);
 
-    await expect(token.revokeDelegation({ delegateAddress })).rejects.toThrow(
-      expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
-    );
+    const result = await token.revokeDelegation({ delegateAddress });
+    expect(result.txHash).toMatch(/^0x/);
   });
 });
 
