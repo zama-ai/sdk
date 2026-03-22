@@ -109,7 +109,6 @@ export default defineConfig({
         "**/index.ts",
         "**/worker/relayer-sdk.worker.ts",
         "**/worker/relayer-sdk.node-worker.ts",
-        "**/node/relayer-sdk.node-worker.js",
       ],
       thresholds: {
         lines: 80,

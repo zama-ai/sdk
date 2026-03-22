@@ -15,7 +15,7 @@ const sdkNodeEntry = require.resolve("@zama-fhe/sdk/node");
 const sdkNodeDir = dirname(sdkNodeEntry);
 const workerPath = resolve(sdkNodeDir, "relayer-sdk.node-worker.js");
 const backupPath = resolve(sdkNodeDir, "relayer-sdk.node-worker.js.bak");
-const mockPath = resolve(import.meta.dirname, "../../sdk/src/node/relayer-sdk.node-worker.js");
+const mockPath = resolve(import.meta.dirname, "relayer-sdk.node-worker.mjs");
 
 export default async function globalSetup() {
   if (existsSync(workerPath)) {
