@@ -498,7 +498,8 @@ export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> 
 };
 
 // @public
-export class RelayerNode implements RelayerSDK {
+export class RelayerNode implements RelayerSDK, Disposable {
+    [Symbol.dispose](): void;
     constructor(config: RelayerNodeConfig);
     // (undocumented)
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type_2>;
@@ -545,7 +546,7 @@ export interface RelayerNodeConfig {
 }
 
 // @public
-export interface RelayerSDK {
+export interface RelayerSDK extends Disposable {
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;

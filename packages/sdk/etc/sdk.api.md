@@ -4054,7 +4054,7 @@ export class RelayerRequestFailedError extends ZamaError {
 }
 
 // @public
-export interface RelayerSDK {
+export interface RelayerSDK extends Disposable {
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
@@ -4080,6 +4080,7 @@ export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
 // @public
 export class RelayerWeb implements RelayerSDK {
+    [Symbol.dispose](): void;
     constructor(config: RelayerWebConfig);
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
@@ -6171,6 +6172,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 
 // @public
 export class ZamaSDK {
+    [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
     allow(...contractAddresses: Address[]): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
