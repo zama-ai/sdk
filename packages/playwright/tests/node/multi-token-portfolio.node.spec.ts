@@ -33,6 +33,10 @@ test("shield both tokens → query metadata → discover wrappers → check hand
   expect(await readUSDC.isWrapper()).toBe(true);
   expect(await readUSDT.decimals()).toBe(6);
   expect(await readUSDC.decimals()).toBe(6);
+  expect(await readUSDT.name()).toBe("Confidential Tether USD");
+  expect(await readUSDC.name()).toBe("Confidential ERC20 Token");
+  expect(await readUSDT.symbol()).toBe("cUSDT");
+  expect(await readUSDC.symbol()).toBe("cERC20");
 
   // Verify underlying tokens
   expect((await readUSDT.underlyingToken()).toLowerCase()).toBe(contracts.USDT.toLowerCase());
