@@ -10,7 +10,7 @@ import type { Address } from "viem";
 test("pool re-initializes when chain ID changes", async ({ anvilPort }) => {
   let chainId: number = HardhatConfig.chainId;
 
-  const relayer = new RelayerNode({
+  using relayer = new RelayerNode({
     getChainId: async () => chainId,
     transports: {
       [HardhatConfig.chainId]: {
@@ -25,19 +25,15 @@ test("pool re-initializes when chain ID changes", async ({ anvilPort }) => {
     poolSize: 1,
   });
 
-  try {
-    // Generate on chain 31337
-    const kp1 = await relayer.generateKeypair();
-    expect(kp1.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
+  // Generate on chain 31337
+  const kp1 = await relayer.generateKeypair();
+  expect(kp1.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
 
-    // Switch chain → pool tears down and re-inits
-    chainId = 99999;
-    const kp2 = await relayer.generateKeypair();
-    expect(kp2.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
-    expect(kp1.publicKey).not.toBe(kp2.publicKey);
-  } finally {
-    relayer.terminate();
-  }
+  // Switch chain → pool tears down and re-inits
+  chainId = 99999;
+  const kp2 = await relayer.generateKeypair();
+  expect(kp2.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
+  expect(kp1.publicKey).not.toBe(kp2.publicKey);
 });
 
 test("getAclAddress reflects current chain config after switch", async ({
@@ -47,7 +43,7 @@ test("getAclAddress reflects current chain config after switch", async ({
   let chainId: number = HardhatConfig.chainId;
   const altAcl = "0x1234567890abcdef1234567890abcdef12345678" as Address;
 
-  const relayer = new RelayerNode({
+  using relayer = new RelayerNode({
     getChainId: async () => chainId,
     transports: {
       [HardhatConfig.chainId]: {
@@ -63,12 +59,8 @@ test("getAclAddress reflects current chain config after switch", async ({
     poolSize: 1,
   });
 
-  try {
-    expect(await relayer.getAclAddress()).toBe(contracts.acl);
+  expect(await relayer.getAclAddress()).toBe(contracts.acl);
 
-    chainId = 99999;
-    expect(await relayer.getAclAddress()).toBe(altAcl);
-  } finally {
-    relayer.terminate();
-  }
+  chainId = 99999;
+  expect(await relayer.getAclAddress()).toBe(altAcl);
 });

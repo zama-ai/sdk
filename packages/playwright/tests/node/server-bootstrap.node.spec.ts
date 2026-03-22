@@ -13,7 +13,6 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   anvilPort,
   viemClient,
   contracts,
-  readErc20Balance,
 }) => {
   // 1. Server creates RelayerNode with worker pool
   const relayer = new RelayerNode({
@@ -31,9 +30,11 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
     transport: http(`http://127.0.0.1:${anvilPort}`),
   });
   const signer = new ViemSigner({ walletClient: viemClient, publicClient });
-  const sdk = new ZamaSDK({ relayer, signer, storage: new MemoryStorage() });
 
-  try {
+  // Use a block scope so `using` disposes before the post-terminate check
+  {
+    using sdk = new ZamaSDK({ relayer, signer, storage: new MemoryStorage() });
+
     // 2. Verify ACL contract is reachable
     const aclAddress = await relayer.getAclAddress();
     expect(aclAddress).toMatch(/^0x[0-9a-fA-F]{40}$/);
@@ -74,10 +75,8 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
     expect(await readonlyUSDT.decimals()).toBe(6);
     const name = await readonlyUSDT.name();
     expect(name.length).toBeGreaterThan(0);
-  } finally {
-    // 8. Clean shutdown
-    sdk.terminate();
   }
+  // 8. sdk disposed here → relayer terminated
 
   // 9. Post-terminate, relayer rejects requests
   await expect(relayer.generateKeypair()).rejects.toThrow("terminated");

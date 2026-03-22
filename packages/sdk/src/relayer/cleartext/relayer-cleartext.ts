@@ -378,6 +378,11 @@ export class RelayerCleartext implements RelayerSDK {
     // No resources to release in cleartext mode.
   }
 
+  /** Calls {@link terminate} (no-op in cleartext mode). */
+  [Symbol.dispose](): void {
+    this.terminate();
+  }
+
   async #decryptHandles(
     normalizedHandles: Handle[],
   ): Promise<Readonly<Record<Handle, ClearValueType>>> {

@@ -20,7 +20,7 @@ import type { Address, Hex } from "viem";
  * Interface for FHE relayer operations.
  * Implemented by `RelayerWeb` (browser, via Web Worker + WASM) and `RelayerNode` (Node.js, direct).
  */
-export interface RelayerSDK {
+export interface RelayerSDK extends Disposable {
   /** Generate an FHE keypair (public + private key). */
   generateKeypair(): Promise<KeypairType<Hex>>;
 

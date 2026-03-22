@@ -247,6 +247,11 @@ export class RelayerWeb implements RelayerSDK {
     this.#ensureLock = null;
   }
 
+  /** Calls {@link terminate}, shutting down the Web Worker. */
+  [Symbol.dispose](): void {
+    this.terminate();
+  }
+
   /**
    * Refresh the CSRF token in the worker.
    * Call this before making authenticated network requests.

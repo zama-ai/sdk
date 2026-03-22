@@ -89,26 +89,21 @@ test("two accounts maintain independent sessions concurrently", async ({
     },
     poolSize: 1,
   });
-  const sdk1 = new ZamaSDK({
+  using sdk1 = new ZamaSDK({
     relayer: relayer1,
     signer: new ViemSigner({ walletClient, publicClient }),
     storage: new MemoryStorage(),
   });
 
-  try {
-    // Both accounts allow the same token — sessions should be independent
-    await sdk0.allow(contracts.cUSDT as Address);
-    await sdk1.allow(contracts.cUSDT as Address);
+  // Both accounts allow the same token — sessions should be independent
+  await sdk0.allow(contracts.cUSDT as Address);
+  await sdk1.allow(contracts.cUSDT as Address);
 
-    expect(await sdk0.isAllowed()).toBe(true);
-    expect(await sdk1.isAllowed()).toBe(true);
+  expect(await sdk0.isAllowed()).toBe(true);
+  expect(await sdk1.isAllowed()).toBe(true);
 
-    // Revoking account #0 does not affect account #1
-    await sdk0.revokeSession();
-    expect(await sdk0.isAllowed()).toBe(false);
-    expect(await sdk1.isAllowed()).toBe(true);
-  } finally {
-    sdk1.terminate();
-    relayer1.terminate();
-  }
+  // Revoking account #0 does not affect account #1
+  await sdk0.revokeSession();
+  expect(await sdk0.isAllowed()).toBe(false);
+  expect(await sdk1.isAllowed()).toBe(true);
 });

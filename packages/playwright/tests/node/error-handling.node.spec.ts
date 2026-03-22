@@ -49,7 +49,8 @@ test("matchZamaError routes to the correct handler", async () => {
 });
 
 test("zero poolSize defaults gracefully at construction", async ({ anvilPort }) => {
-  const relayer = new RelayerNode({
+  // poolSize: 0 is accepted — the SDK creates a zero-worker pool without throwing
+  using relayer = new RelayerNode({
     getChainId: async () => HardhatConfig.chainId,
     transports: {
       [HardhatConfig.chainId]: {
@@ -59,9 +60,7 @@ test("zero poolSize defaults gracefully at construction", async ({ anvilPort }) 
     },
     poolSize: 0,
   });
-  // poolSize: 0 is accepted — the SDK creates a zero-worker pool without throwing
   expect(relayer).toBeDefined();
-  relayer.terminate();
 });
 
 test("shield with zero amount succeeds without error", async ({ sdk, contracts }) => {
