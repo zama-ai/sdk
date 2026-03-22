@@ -1,4 +1,4 @@
-import type { GenericStorage } from "../token/token.types";
+import type { GenericStorage } from "../types";
 import { assertObject, assertStringProp, toError } from "../utils";
 import type { GenericLogger } from "../worker/worker.types";
 

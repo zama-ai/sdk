@@ -1,7 +1,7 @@
 import { getAddress, type Address, type Hex } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { StoredCredentials } from "./token.types";
-import { MemoryStorage } from "./memory-storage";
+import type { StoredCredentials } from "../types";
+import { MemoryStorage } from "../storage/memory-storage";
 import {
   BaseCredentialsManager,
   type CredentialsConfig,
@@ -60,6 +60,7 @@ export class CredentialsManager extends BaseCredentialsManager<
     const chromeNamespace =
       typeof globalThis !== "undefined" ? Reflect.get(globalThis, "chrome") : undefined;
     if (hasExtensionRuntimeId(chromeNamespace) && config.sessionStorage instanceof MemoryStorage) {
+      // oxlint-disable-next-line no-console
       console.warn(
         "[zama-sdk] Detected Chrome extension context with in-memory session storage. " +
           "Session signatures will be lost on service worker restart and won't be shared across contexts. " +

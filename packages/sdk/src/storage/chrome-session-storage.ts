@@ -1,4 +1,4 @@
-import type { GenericStorage } from "./token.types";
+import type { GenericStorage } from "../types";
 
 /** Minimal chrome.storage.session typings (avoids depending on @types/chrome). */
 declare const chrome: {

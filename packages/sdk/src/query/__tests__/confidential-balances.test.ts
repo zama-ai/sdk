@@ -1,6 +1,6 @@
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
 import { ReadonlyToken } from "../../token/readonly-token";
-import { DecryptionFailedError } from "../../token/errors";
+import { DecryptionFailedError } from "../../errors";
 
 import { confidentialBalancesQueryOptions } from "../confidential-balances";
 import { zamaQueryKeys } from "../query-keys";

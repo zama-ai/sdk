@@ -1,6 +1,6 @@
 "use client";
 
-import type { GenericStorage } from "./token.types";
+import type { GenericStorage } from "../types";
 
 /**
  * IndexedDB-backed {@link GenericStorage}.

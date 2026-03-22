@@ -7,7 +7,7 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
-import { getBrowserExtensionRuntime } from "../utils";
+import { getBrowserExtensionRuntime } from "./browser-extension";
 import { default as workerCode, filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
 
 /** Configuration for the worker client */

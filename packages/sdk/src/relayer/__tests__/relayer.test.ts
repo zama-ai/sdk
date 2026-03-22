@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { afterEach, describe, it, expect, beforeEach } from "../../test-fixtures";
-import { EncryptionFailedError } from "../../token/errors";
-import { MemoryStorage } from "../../token/memory-storage";
+import { EncryptionFailedError } from "../../errors";
+import { MemoryStorage } from "../../storage/memory-storage";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks (available inside vi.mock factories)

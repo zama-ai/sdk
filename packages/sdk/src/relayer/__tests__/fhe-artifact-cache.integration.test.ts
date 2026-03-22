@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import http from "node:http";
 import { test as base, describe, expect } from "vitest";
-import { MemoryStorage } from "../../token/memory-storage";
+import { MemoryStorage } from "../../storage/memory-storage";
 import { FheArtifactCache } from "../fhe-artifact-cache";
 
 // ── Test HTTP server ────────────────────────────────────────

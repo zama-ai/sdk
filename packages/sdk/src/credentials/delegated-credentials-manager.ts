@@ -1,6 +1,6 @@
 import { getAddress, type Address, type Hex } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { DelegatedStoredCredentials } from "./token.types";
+import type { DelegatedStoredCredentials } from "../types";
 import {
   BaseCredentialsManager,
   type CredentialsConfig,

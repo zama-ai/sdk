@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, type Mock } from "../../test-fixtures";
+import { describe, it, expect, vi, type Mock } from "../test-fixtures";
 import { ZamaSDK } from "../zama-sdk";
-import { ReadonlyToken } from "../readonly-token";
-import { Token } from "../token";
-import { CredentialsManager } from "../credentials-manager";
-import { ZamaSDKEvents } from "../../events/sdk-events";
-import type { SignerLifecycleCallbacks } from "../token.types";
+import { ReadonlyToken } from "../token/readonly-token";
+import { Token } from "../token/token";
+import { CredentialsManager } from "../credentials/credentials-manager";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { SignerLifecycleCallbacks } from "../types";
 import type { Address } from "viem";
 
 const NEXT_USER_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;

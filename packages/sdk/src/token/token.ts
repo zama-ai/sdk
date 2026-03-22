@@ -26,14 +26,14 @@ import {
   EncryptionFailedError,
   TransactionRevertedError,
   ZamaError,
-} from "./errors";
+} from "../errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import type {
   ShieldCallbacks,
   TransactionResult,
   TransferCallbacks,
   UnshieldCallbacks,
-} from "./token.types";
+} from "../types";
 import { toError } from "../utils";
 
 /**

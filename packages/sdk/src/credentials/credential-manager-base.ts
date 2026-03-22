@@ -9,9 +9,9 @@ import {
   isTimeValid,
   normalizeAddresses,
 } from "./credential-validation";
-import { SigningFailedError, SigningRejectedError, wrapSigningError } from "./errors";
+import { SigningFailedError, SigningRejectedError, wrapSigningError } from "../errors";
 import { SessionSignatures } from "./session-signatures";
-import type { GenericSigner, GenericStorage, StoredCredentials } from "./token.types";
+import type { GenericSigner, GenericStorage, StoredCredentials } from "../types";
 
 /** Shared configuration accepted by both credential manager variants. */
 export interface CredentialsConfig {
@@ -223,6 +223,7 @@ export abstract class BaseCredentialsManager<
       if (error instanceof SigningRejectedError || error instanceof SigningFailedError) {
         throw error;
       }
+      // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] Credential resolution failed, recreating:", error);
       await this.#deleteCredentials(key);
     }
@@ -262,6 +263,7 @@ export abstract class BaseCredentialsManager<
       const requiredContracts = contractAddress ? [contractAddress] : [];
       return !isCredentialValid(stored, requiredContracts);
     } catch (error) {
+      // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] isExpired check failed, treating as expired:", error);
       return true;
     }
@@ -399,6 +401,7 @@ export abstract class BaseCredentialsManager<
       const encrypted = await this.encryptCredentials(credentials);
       await this.storage.set(key, encrypted);
     } catch (error) {
+      // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] Failed to encrypt credentials for persistence:", error);
       return;
     }
@@ -408,6 +411,7 @@ export abstract class BaseCredentialsManager<
     try {
       await this.storage.delete(key);
     } catch (error) {
+      // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] Failed to delete credentials:", error);
     }
   }
