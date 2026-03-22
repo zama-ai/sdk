@@ -1,5 +1,5 @@
-import { describe, it, expect } from "../test-fixtures";
-import { assertObject, assertString, assertArray } from "../utils";
+import { describe, it, expect } from "../../test-fixtures";
+import { assertObject, assertString, assertArray } from "..";
 
 describe("assertObject", () => {
   it("accepts a plain object", () => {

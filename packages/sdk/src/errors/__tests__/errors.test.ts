@@ -1,4 +1,4 @@
-import { describe, it, expect } from "../test-fixtures";
+import { describe, it, expect } from "../../test-fixtures";
 import {
   ZamaError,
   ZamaErrorCode,
@@ -14,7 +14,7 @@ import {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
-} from "../errors";
+} from "..";
 
 describe("InvalidKeypairError", () => {
   it("is instanceof ZamaError", () => {
