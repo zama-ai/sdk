@@ -4,23 +4,20 @@
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";
 import { RelayerNode } from "@zama-fhe/sdk/node";
-import { HardhatConfig } from "@zama-fhe/sdk";
+import { HardhatConfig, type FhevmInstanceConfig } from "@zama-fhe/sdk";
 
-function createRelayer(anvilPort: number, poolSize: number) {
+function createRelayer(transport: FhevmInstanceConfig, poolSize: number) {
   return new RelayerNode({
     getChainId: async () => HardhatConfig.chainId,
     transports: {
-      [HardhatConfig.chainId]: {
-        ...HardhatConfig,
-        network: `http://127.0.0.1:${anvilPort}`,
-      },
+      [HardhatConfig.chainId]: transport,
     },
     poolSize,
   });
 }
 
-test("2-worker pool generates 4 unique keypairs concurrently", async ({ anvilPort }) => {
-  using relayer = createRelayer(anvilPort, 2);
+test("2-worker pool generates 4 unique keypairs concurrently", async ({ transport }) => {
+  using relayer = createRelayer(transport, 2);
   const results = await Promise.all([
     relayer.generateKeypair(),
     relayer.generateKeypair(),
@@ -32,8 +29,8 @@ test("2-worker pool generates 4 unique keypairs concurrently", async ({ anvilPor
   expect(publicKeys.size).toBe(4);
 });
 
-test("4-worker pool handles parallel EIP-712 creation", async ({ anvilPort, contracts }) => {
-  using relayer = createRelayer(anvilPort, 4);
+test("4-worker pool handles parallel EIP-712 creation", async ({ transport, contracts }) => {
+  using relayer = createRelayer(transport, 4);
   const keypair = await relayer.generateKeypair();
   const now = Math.floor(Date.now() / 1000);
 
@@ -49,15 +46,15 @@ test("4-worker pool handles parallel EIP-712 creation", async ({ anvilPort, cont
   }
 });
 
-test("terminate shuts down all workers in the pool", async ({ anvilPort }) => {
-  const relayer = createRelayer(anvilPort, 2);
+test("terminate shuts down all workers in the pool", async ({ transport }) => {
+  const relayer = createRelayer(transport, 2);
   await relayer.generateKeypair();
   relayer.terminate();
   await expect(relayer.generateKeypair()).rejects.toThrow("terminated");
 });
 
-test("concurrent init requests share pool initialization", async ({ anvilPort }) => {
-  using relayer = createRelayer(anvilPort, 2);
+test("concurrent init requests share pool initialization", async ({ transport }) => {
+  using relayer = createRelayer(transport, 2);
   const [kp1, kp2] = await Promise.all([relayer.generateKeypair(), relayer.generateKeypair()]);
   expect(kp1.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
   expect(kp2.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);

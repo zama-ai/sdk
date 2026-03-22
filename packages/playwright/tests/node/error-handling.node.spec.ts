@@ -45,14 +45,11 @@ test("matchZamaError routes to the correct handler", async () => {
   ).toBe("fallback");
 });
 
-test("zero poolSize defaults gracefully at construction", async ({ anvilPort }) => {
+test("zero poolSize defaults gracefully at construction", async ({ transport }) => {
   using relayer = new RelayerNode({
     getChainId: async () => HardhatConfig.chainId,
     transports: {
-      [HardhatConfig.chainId]: {
-        ...HardhatConfig,
-        network: `http://127.0.0.1:${anvilPort}`,
-      },
+      [HardhatConfig.chainId]: transport,
     },
     poolSize: 0,
   });
@@ -70,7 +67,8 @@ test("init failure resets so next call retries", async () => {
     transports: {
       [HardhatConfig.chainId]: {
         ...HardhatConfig,
-        network: "http://127.0.0.1:1", // unreachable, but first call fails before reaching it
+        relayerUrl: "http://127.0.0.1:1",
+        network: "http://127.0.0.1:1",
       },
     },
     poolSize: 1,
@@ -84,14 +82,11 @@ test("init failure resets so next call retries", async () => {
   await expect(relayer.generateKeypair()).rejects.toThrow();
 });
 
-test("terminate during pool init rejects cleanly", async ({ anvilPort }) => {
+test("terminate during pool init rejects cleanly", async ({ transport }) => {
   const relayer = new RelayerNode({
     getChainId: async () => HardhatConfig.chainId,
     transports: {
-      [HardhatConfig.chainId]: {
-        ...HardhatConfig,
-        network: `http://127.0.0.1:${anvilPort}`,
-      },
+      [HardhatConfig.chainId]: transport,
     },
     poolSize: 1,
   });

@@ -7,20 +7,14 @@ import { RelayerNode } from "@zama-fhe/sdk/node";
 import { HardhatConfig } from "@zama-fhe/sdk";
 import type { Address } from "viem";
 
-test("pool re-initializes when chain ID changes", async ({ anvilPort }) => {
+test("pool re-initializes when chain ID changes", async ({ transport }) => {
   let chainId: number = HardhatConfig.chainId;
 
   using relayer = new RelayerNode({
     getChainId: async () => chainId,
     transports: {
-      [HardhatConfig.chainId]: {
-        ...HardhatConfig,
-        network: `http://127.0.0.1:${anvilPort}`,
-      },
-      [99999]: {
-        ...HardhatConfig,
-        network: `http://127.0.0.1:${anvilPort}`,
-      },
+      [HardhatConfig.chainId]: transport,
+      [99999]: transport,
     },
     poolSize: 1,
   });
@@ -37,7 +31,7 @@ test("pool re-initializes when chain ID changes", async ({ anvilPort }) => {
 });
 
 test("getAclAddress reflects current chain config after switch", async ({
-  anvilPort,
+  transport,
   contracts,
 }) => {
   let chainId: number = HardhatConfig.chainId;
@@ -46,14 +40,10 @@ test("getAclAddress reflects current chain config after switch", async ({
   using relayer = new RelayerNode({
     getChainId: async () => chainId,
     transports: {
-      [HardhatConfig.chainId]: {
-        ...HardhatConfig,
-        network: `http://127.0.0.1:${anvilPort}`,
-      },
+      [HardhatConfig.chainId]: transport,
       [99999]: {
-        ...HardhatConfig,
+        ...transport,
         aclContractAddress: altAcl,
-        network: `http://127.0.0.1:${anvilPort}`,
       },
     },
     poolSize: 1,

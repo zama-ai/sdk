@@ -5,16 +5,16 @@
  * Domain-level FHE scenarios are covered by the browser e2e suite.
  */
 import { test as base } from "@playwright/test";
+import { HardhatConfig, MemoryStorage, ZamaSDK, type FhevmInstanceConfig } from "@zama-fhe/sdk";
+import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { RelayerNode } from "@zama-fhe/sdk/node";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 import type { Address } from "viem";
 import { createPublicClient, createTestClient, http, publicActions, walletActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { TEST_PRIVATE_KEY, NODE_ANVIL_PORT } from "./constants";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
-import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { MemoryStorage, ZamaSDK, HardhatConfig } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { NODE_ANVIL_PORT, TEST_PRIVATE_KEY } from "./constants";
 
 const privateKey = TEST_PRIVATE_KEY;
 const account = privateKeyToAccount(privateKey);
@@ -50,6 +50,7 @@ export interface NodeWorkerFixtures {
 export interface NodeTestFixtures {
   account: typeof account;
   contracts: typeof contracts;
+  transport: FhevmInstanceConfig;
   relayer: RelayerNode;
   sdk: ZamaSDK;
   anvilState: undefined;
@@ -65,24 +66,25 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
   ],
   account,
   contracts,
-  relayer: async ({ anvilPort }, use) => {
+  transport: async ({ anvilPort }, use) => {
+    const network = `http://127.0.0.1:${anvilPort}`;
+    await use({ ...HardhatConfig, network, relayerUrl: network });
+  },
+  relayer: async ({ transport }, use) => {
     const relayer = new RelayerNode({
       getChainId: async () => HardhatConfig.chainId,
       transports: {
-        [HardhatConfig.chainId]: {
-          ...HardhatConfig,
-          network: `http://127.0.0.1:${anvilPort}`,
-        },
+        [HardhatConfig.chainId]: transport,
       },
       poolSize: 1,
     });
     await use(relayer);
     relayer.terminate();
   },
-  sdk: async ({ viemClient, anvilPort, relayer }, use) => {
+  sdk: async ({ viemClient, transport, relayer }, use) => {
     const publicClient = createPublicClient({
       chain: foundry,
-      transport: http(`http://127.0.0.1:${anvilPort}`),
+      transport: http(transport.network as string),
     });
     const signer = new ViemSigner({ walletClient: viemClient, publicClient });
     const storage = new MemoryStorage();

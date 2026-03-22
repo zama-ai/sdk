@@ -10,7 +10,7 @@ import { createPublicClient, http, type Address } from "viem";
 import { foundry } from "viem/chains";
 
 test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async ({
-  anvilPort,
+  transport,
   viemClient,
   contracts,
 }) => {
@@ -18,16 +18,13 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   const relayer = new RelayerNode({
     getChainId: async () => HardhatConfig.chainId,
     transports: {
-      [HardhatConfig.chainId]: {
-        ...HardhatConfig,
-        network: `http://127.0.0.1:${anvilPort}`,
-      },
+      [HardhatConfig.chainId]: transport,
     },
     poolSize: 2,
   });
   const publicClient = createPublicClient({
     chain: foundry,
-    transport: http(`http://127.0.0.1:${anvilPort}`),
+    transport: http(transport.network as string),
   });
   const signer = new ViemSigner({ walletClient: viemClient, publicClient });
 
