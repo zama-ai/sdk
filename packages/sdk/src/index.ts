@@ -41,8 +41,8 @@ export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-u
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
 
 // Token abstraction layer
-export { ZamaSDK } from "./token/zama-sdk";
-export type { ZamaSDKConfig } from "./token/zama-sdk";
+export { ZamaSDK } from "./zama-sdk";
+export type { ZamaSDKConfig } from "./zama-sdk";
 export { Token } from "./token/token";
 export type { TokenConfig } from "./token/token";
 export { ReadonlyToken } from "./token/readonly-token";
@@ -52,13 +52,13 @@ export type {
   BatchDecryptAsOptions,
 } from "./token/readonly-token";
 export { ZERO_HANDLE } from "./token/readonly-token";
-export { MemoryStorage, memoryStorage } from "./token/memory-storage";
-export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
-export { ChromeSessionStorage, chromeSessionStorage } from "./token/chrome-session-storage";
-export { CredentialsManager } from "./token/credentials-manager";
-export type { CredentialsManagerConfig } from "./token/credentials-manager";
-export { DelegatedCredentialsManager } from "./token/delegated-credentials-manager";
-export type { DelegatedCredentialsManagerConfig } from "./token/delegated-credentials-manager";
+export { MemoryStorage, memoryStorage } from "./storage/memory-storage";
+export { IndexedDBStorage, indexedDBStorage } from "./storage/indexeddb-storage";
+export { ChromeSessionStorage, chromeSessionStorage } from "./storage/chrome-session-storage";
+export { CredentialsManager } from "./credentials/credentials-manager";
+export type { CredentialsManagerConfig } from "./credentials/credentials-manager";
+export { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
+export type { DelegatedCredentialsManagerConfig } from "./credentials/delegated-credentials-manager";
 export {
   savePendingUnshield,
   loadPendingUnshield,
@@ -83,7 +83,7 @@ export type {
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
-} from "./token/token.types";
+} from "./types";
 export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events/sdk-events";
 export type {
@@ -137,7 +137,7 @@ export {
   DelegationNotFoundError,
   DelegationExpiredError,
   matchZamaError,
-} from "./token/errors";
+} from "./errors";
 
 // Event decoders and types
 export type {

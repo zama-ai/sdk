@@ -1,5 +1,5 @@
-import { describe, it, expect } from "../test-fixtures";
-import { pLimit } from "../utils";
+import { describe, it, expect } from "../../test-fixtures";
+import { pLimit } from "../concurrency";
 
 describe("pLimit", () => {
   it("resolves all results in order", async () => {

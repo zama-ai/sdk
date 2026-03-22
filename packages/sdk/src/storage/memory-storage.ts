@@ -1,4 +1,4 @@
-import type { GenericStorage } from "./token.types";
+import type { GenericStorage } from "../types";
 
 /** In-memory credential store. Credentials are lost on page reload. */
 export class MemoryStorage implements GenericStorage {

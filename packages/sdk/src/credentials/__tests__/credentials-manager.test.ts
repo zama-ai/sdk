@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
-import { ZamaError, ZamaErrorCode, KeypairExpiredError } from "../errors";
+import { ZamaError, ZamaErrorCode, KeypairExpiredError } from "../../errors";
 
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { GenericSigner } from "../token.types";
+import type { GenericSigner } from "../../types";
 import { ZamaSDKEvents } from "../../events";
 import { getAddress, type Address } from "viem";
 

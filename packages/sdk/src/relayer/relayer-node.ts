@@ -7,9 +7,9 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
 import type { Address, Hex } from "viem";
-import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
-import { MemoryStorage } from "../token/memory-storage";
-import type { GenericStorage } from "../token/token.types";
+import { ConfigurationError, EncryptionFailedError, ZamaError } from "../errors";
+import { MemoryStorage } from "../storage/memory-storage";
+import type { GenericStorage } from "../types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
 import { FheArtifactCache } from "./fhe-artifact-cache";

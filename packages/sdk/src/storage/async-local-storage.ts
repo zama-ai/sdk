@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { GenericStorage } from "./token.types";
+import type { GenericStorage } from "../types";
 
 /**
  * {@link GenericStorage} backed by Node.js {@link AsyncLocalStorage}.

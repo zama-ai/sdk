@@ -157,10 +157,10 @@ export type {
 export type { ReadonlyToken } from "../token/readonly-token";
 export type { TokenConfig } from "../token/token";
 export type { Token } from "../token/token";
-export type { ZamaSDKConfig } from "../token/zama-sdk";
-export type { ZamaSDK } from "../token/zama-sdk";
-export type { CredentialsManager } from "../token/credentials-manager";
-export type { CredentialsManagerConfig } from "../token/credentials-manager";
+export type { ZamaSDKConfig } from "../zama-sdk";
+export type { ZamaSDK } from "../zama-sdk";
+export type { CredentialsManager } from "../credentials/credentials-manager";
+export type { CredentialsManagerConfig } from "../credentials/credentials-manager";
 export type {
   GenericSigner,
   GenericStorage,
@@ -171,7 +171,7 @@ export type {
   TransactionResult,
   TransferCallbacks,
   UnshieldCallbacks,
-} from "../token/token.types";
+} from "../types";
 export { ZamaSDKEvents } from "../events/sdk-events";
 export type {
   ApproveSubmittedEvent,

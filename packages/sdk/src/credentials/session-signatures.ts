@@ -1,6 +1,6 @@
 import type { Hex } from "viem";
 import { assertCondition, assertObject, assertString } from "../utils";
-import type { GenericStorage } from "./token.types";
+import type { GenericStorage } from "../types";
 
 /** Structured session entry stored in session storage. */
 export interface SessionEntry {

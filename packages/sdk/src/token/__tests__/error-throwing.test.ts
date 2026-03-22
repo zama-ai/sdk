@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "../../test-fixtures";
-import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "../errors";
+import { DecryptionFailedError, NoCiphertextError, RelayerRequestFailedError } from "../../errors";
 
 describe("NoCiphertextError detection (P3)", () => {
   it("throws NoCiphertextError when relayer returns 400", async ({

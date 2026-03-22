@@ -1,4 +1,4 @@
-import { describe, it, expect } from "../../test-fixtures";
+import { describe, it, expect } from "../test-fixtures";
 import {
   ZamaError,
   ZamaErrorCode,
