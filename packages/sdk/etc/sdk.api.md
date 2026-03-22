@@ -1637,7 +1637,7 @@ export class ConfigurationError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// @public (undocumented)
+// @public
 export type ContractAbi = Abi | readonly unknown[];
 
 // @public (undocumented)
@@ -2055,6 +2055,14 @@ export class DelegationNotFoundError extends ZamaError {
 // @public
 export class DelegationSelfNotAllowedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
+}
+
+// @public (undocumented)
+export interface DelegationSubmittedEvent extends BaseEvent {
+    // (undocumented)
+    txHash: Hex;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.DelegationSubmitted;
 }
 
 // @public
@@ -2511,11 +2519,8 @@ export interface GenericSigner {
 
 // @public
 export interface GenericStorage {
-    // (undocumented)
     delete(key: string): Promise<void>;
-    // (undocumented)
     get<T = unknown>(key: string): Promise<T | null>;
-    // (undocumented)
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
@@ -3962,7 +3967,7 @@ export interface RawLog {
     readonly topics: readonly Hex[];
 }
 
-// @public (undocumented)
+// @public
 export type ReadContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>> = ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>;
 
 // @public
@@ -3973,10 +3978,10 @@ export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFun
     readonly functionName: TFunctionName;
 }
 
-// @public (undocumented)
+// @public
 export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>, TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>> = ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>;
 
-// @public (undocumented)
+// @public
 export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
 
 // @public
@@ -4184,6 +4189,14 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
     readonly functionName: "revokeDelegationForUserDecryption";
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
+
+// @public (undocumented)
+export interface RevokeDelegationSubmittedEvent extends BaseEvent {
+    // (undocumented)
+    txHash: Hex;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
+}
 
 // @public
 export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
@@ -6125,7 +6138,7 @@ export function wrapperExistsContract(coordinator: Address, tokenAddress: Addres
     readonly args: readonly [`0x${string}`];
 };
 
-// @public (undocumented)
+// @public
 export type WriteContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>> = ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>;
 
 // @public
@@ -6138,7 +6151,7 @@ export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFu
     readonly value?: bigint;
 }
 
-// @public (undocumented)
+// @public
 export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "nonpayable" | "payable">;
 
 // @public
@@ -6206,9 +6219,6 @@ export interface ZamaSDKConfig {
     storage: GenericStorage;
 }
 
-// Warning: (ae-forgotten-export) The symbol "DelegationSubmittedEvent" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "RevokeDelegationSubmittedEvent" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 

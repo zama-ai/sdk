@@ -1,6 +1,6 @@
-import { describe, it, expect } from "../test-fixtures";
+import { describe, it, expect } from "../../test-fixtures";
 import { toHex } from "viem";
-import { prefixHex, unprefixHex } from "../utils";
+import { prefixHex, unprefixHex } from "..";
 
 describe("toHex", () => {
   it("converts empty Uint8Array to 0x", () => {

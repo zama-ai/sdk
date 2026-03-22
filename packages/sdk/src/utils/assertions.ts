@@ -1,21 +1,3 @@
-import type { Hex } from "viem";
-
-/** Coerce an unknown caught value to an Error instance. */
-export function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
-}
-
-/** Normalize a un-prefixed hex payload to a 0x-prefixed `Hex` value. */
-export function prefixHex(value: string): Hex {
-  return (value.startsWith("0x") ? value : `0x${value}`) as Hex;
-}
-
-/** Convert a public `Hex` value back an unprefixed format. */
-export function unprefixHex(value: Hex): string {
-  assertCondition(value.startsWith("0x"), `Expected 0x-prefixed hex, got: ${value}`);
-  return value.slice(2);
-}
-
 export function assertObject(
   value: unknown,
   context: string,

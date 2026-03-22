@@ -621,11 +621,8 @@ export interface GenericSigner {
 
 // @public
 export interface GenericStorage {
-    // (undocumented)
     delete(key: string): Promise<void>;
-    // (undocumented)
     get<T = unknown>(key: string): Promise<T | null>;
-    // (undocumented)
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
@@ -1541,7 +1538,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DaNXJQI6.d.ts:1406:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DC6Sxgut.d.ts:1344:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
