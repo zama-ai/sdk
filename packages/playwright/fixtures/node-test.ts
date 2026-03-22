@@ -71,7 +71,7 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
     await use({ ...HardhatConfig, network, relayerUrl: network });
   },
   relayer: async ({ transport }, use) => {
-    const relayer = new RelayerNode({
+    using relayer = new RelayerNode({
       getChainId: async () => HardhatConfig.chainId,
       transports: {
         [HardhatConfig.chainId]: transport,
@@ -79,7 +79,6 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
       poolSize: 1,
     });
     await use(relayer);
-    relayer.terminate();
   },
   sdk: async ({ viemClient, transport, relayer }, use) => {
     const publicClient = createPublicClient({
@@ -88,9 +87,8 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
     });
     const signer = new ViemSigner({ walletClient: viemClient, publicClient });
     const storage = new MemoryStorage();
-    const sdk = new ZamaSDK({ relayer, signer, storage });
+    using sdk = new ZamaSDK({ relayer, signer, storage });
     await use(sdk);
-    sdk.terminate();
   },
   // Auto-use fixture: snapshot anvil before each test, revert after.
   anvilState: [
