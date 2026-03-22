@@ -1,9 +1,9 @@
 /**
  * Scenario: A user shields tokens and then explores every unshield path —
- * partial unshield, full-balance unshieldAll, and fee verification.
+ * partial unshield, full-balance unshieldAll, resumeUnshield, and fee verification.
  */
 import { nodeTest as test, expect } from "../../fixtures/node-test";
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 
 test("unshieldAll returns entire confidential balance to ERC-20", async ({
   sdk,
@@ -105,4 +105,32 @@ test("unshield fees are consistent across USDT and USDC", async ({
   // And match the expected fee calculation
   const expectedDelta = amount - unshieldAmount + computeFee(unshieldAmount);
   expect(usdtDelta).toBe(expectedDelta);
+});
+
+test("resumeUnshield completes a two-phase unshield from an existing unwrap tx", async ({
+  sdk,
+  contracts,
+  readErc20Balance,
+  computeFee,
+}) => {
+  const shieldAmount = 500n * 10n ** 6n;
+  const unwrapAmount = 200n * 10n ** 6n;
+
+  const erc20Before = await readErc20Balance(contracts.USDT);
+
+  const token = sdk.createToken(contracts.cUSDT as Address);
+  await token.shield(shieldAmount);
+
+  // Phase 1: submit unwrap (but don't finalize via unshield — call unwrap directly)
+  const unwrapResult = await token.unwrap(unwrapAmount);
+  expect(unwrapResult.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
+
+  // Phase 2: resume from the unwrap tx hash (simulates page reload recovery)
+  const finalizeResult = await token.resumeUnshield(unwrapResult.txHash as Hex);
+  expect(finalizeResult.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
+
+  // ERC-20 should reflect the unshield
+  const erc20After = await readErc20Balance(contracts.USDT);
+  const expected = erc20Before - shieldAmount + unwrapAmount - computeFee(unwrapAmount);
+  expect(erc20After).toBe(expected);
 });

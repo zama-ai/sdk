@@ -158,3 +158,42 @@ test("decryptBalanceAs fails without delegation", async ({
     relayer.terminate();
   }
 });
+
+test("decryptBalanceAs fails after delegation expires", async ({
+  sdk: delegatorSdk,
+  contracts,
+  anvilPort,
+  viemClient,
+  account: delegatorAccount,
+}) => {
+  // Delegator shields and delegates with a 2-hour expiry (minimum ACL allows)
+  const token = delegatorSdk.createToken(contracts.cUSDT as Address);
+  await token.shield(100n * 10n ** 6n);
+
+  const block = await viemClient.getBlock();
+  const twoHoursFromNow = new Date(Number(block.timestamp + 7200n) * 1000);
+  await token.delegateDecryption({
+    delegateAddress: delegateAccount.address,
+    expirationDate: twoHoursFromNow,
+  });
+
+  // Fast-forward past the expiry
+  await viemClient.increaseTime({ seconds: 7201 });
+  await viemClient.mine({ blocks: 1 });
+
+  // Delegate tries to decrypt — delegation has expired
+  const { sdk: delegateSdk, relayer } = createDelegateSdk(anvilPort);
+  try {
+    await delegateSdk.allow(contracts.cUSDT as Address);
+
+    const readToken = delegateSdk.createReadonlyToken(contracts.cUSDT as Address);
+    await expect(
+      readToken.decryptBalanceAs({
+        delegatorAddress: delegatorAccount.address,
+      }),
+    ).rejects.toThrow();
+  } finally {
+    delegateSdk.terminate();
+    relayer.terminate();
+  }
+});
