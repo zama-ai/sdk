@@ -15,7 +15,7 @@ self.relayerSDK = {
     return true;
   },
 
-  createInstance: async function (config) {
+  createInstance: async function (_config) {
     console.log("[Mock SDK] createInstance called");
 
     return {

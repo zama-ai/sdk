@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures";
-import { parseUnits } from "viem";
 
 test("should show shield and transfer events with decrypted amounts", async ({
   page,

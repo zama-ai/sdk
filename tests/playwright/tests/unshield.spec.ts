@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures";
-import { parseUnits } from "viem";
 
 test("should shield USDT then unshield back to ERC20", async ({
   page,

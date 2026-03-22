@@ -1,3 +1,4 @@
+// oxlint-disable no-empty-pattern
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, type BrowserContext } from "@playwright/test";
 import type { Address } from "viem";
@@ -126,7 +127,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     const cUSDC = parseUnits((await cERC20Row.getByTestId("balance").textContent())!.trim(), 6);
     await use({ cUSDT, cUSDC });
   },
-  page: async ({ page, baseURL, privateKey, account, viemClient, contracts }, use) => {
+  page: async ({ page, privateKey, account, viemClient, contracts }, use) => {
     // Mint ERC-20 tokens to the test account before snapshotting, so every test
     // starts from a funded state regardless of what the deploy script did.
     const nonce = await viemClient.getTransactionCount({
