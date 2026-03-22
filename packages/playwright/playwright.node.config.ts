@@ -6,7 +6,6 @@ const CI = !!process.env.CI;
 
 export default defineConfig<{}, NodeWorkerFixtures>({
   tsconfig: "./tsconfig.node.json",
-  globalSetup: ["./fixtures/node-global-setup.ts"],
   testDir: "./tests/node",
   testMatch: ["**/node/**", "**/*.node.spec.ts"],
   outputDir: "./test-results/node/",
