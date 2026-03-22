@@ -26,6 +26,9 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1.7.0
 
+      - name: Install soldeer dependencies
+        run: cd contracts/lib/forge-fhevm && forge soldeer install
+
       - name: Restore Forge build cache
         id: forge-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -126,6 +129,9 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1.7.0
 
+      - name: Install soldeer dependencies
+        run: cd contracts/lib/forge-fhevm && forge soldeer install
+
       - name: Restore Forge build cache
         id: forge-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -209,6 +215,9 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1.7.0
+
+      - name: Install soldeer dependencies
+        run: cd contracts/lib/forge-fhevm && forge soldeer install
 
       - name: Restore Forge build cache
         id: forge-build-cache
