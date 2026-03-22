@@ -35,6 +35,12 @@ jobs:
             contracts/cache
           key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml') }}
 
+      - name: Install Soldeer dependencies
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+
       - name: Build contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
         run: cd contracts && forge build
@@ -82,8 +88,8 @@ jobs:
         id: nextjs-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
-          path: packages/test-nextjs/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-nextjs/src/**/*.ts', 'packages/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
+          path: test/test-nextjs/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('test/test-nextjs/src/**/*.ts', 'test/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
           restore-keys: |
             nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
@@ -99,8 +105,8 @@ jobs:
         if: steps.nextjs-build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
-          path: packages/test-nextjs/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-nextjs/src/**/*.ts', 'packages/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
+          path: test/test-nextjs/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('test/test-nextjs/src/**/*.ts', 'test/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
 
       - name: Build Vite test-vite
         run: pnpm build:test-vite
@@ -115,5 +121,5 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
-          path: packages/playwright/test-results/
+          path: test/playwright/test-results/
           retention-days: 7
