@@ -45,7 +45,9 @@ async function handleMessage(request) {
 
         const ethersProvider = new ethers.JsonRpcProvider(rpcUrl);
         const relayerProvider = await FhevmMockProvider.create(
-          { send: (method, params) => ethersProvider.send(method, params ?? []) },
+          {
+            send: (method, params) => ethersProvider.send(method, params ?? []),
+          },
           ethersProvider,
           "anvil",
           FhevmMockProviderType.Anvil,
@@ -283,5 +285,9 @@ async function handleMessage(request) {
 }
 
 port.on("message", (request) => {
-  handleMessage(request).catch((err) => sendError(request.id, request.type, err.message));
+  try {
+    handleMessage(request);
+  } catch (error) {
+    sendError(request.id, request.type, error instanceof Error ? err.message : String(err));
+  }
 });
