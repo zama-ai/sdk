@@ -8,7 +8,6 @@ import {
   SigningRejectedError,
   EncryptionFailedError,
   matchZamaError,
-  SigningFailedError,
   wrapSigningError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
@@ -131,24 +130,22 @@ describe("wrapSigningError", () => {
 
   it("preserves non-Error cause instead of dropping it", () => {
     const stringError = "string error value";
-    try {
-      wrapSigningError(stringError, "test");
-    } catch (err) {
-      expect(err).toBeInstanceOf(SigningFailedError);
-      // RED: currently `cause` is `undefined` because non-Error is dropped
-      expect((err as SigningFailedError).cause).toBe(stringError);
-    }
+    expect(() => wrapSigningError(stringError, "test")).toThrow(
+      expect.objectContaining({
+        code: "SIGNING_FAILED",
+        cause: stringError,
+      }),
+    );
   });
 
   it("preserves object cause instead of dropping it", () => {
     const objError = { message: "something went wrong", code: 42 };
-    try {
-      wrapSigningError(objError, "test");
-    } catch (err) {
-      expect(err).toBeInstanceOf(SigningFailedError);
-      // RED: currently `cause` is `undefined` because non-Error is dropped
-      expect((err as SigningFailedError).cause).toBe(objError);
-    }
+    expect(() => wrapSigningError(objError, "test")).toThrow(
+      expect.objectContaining({
+        code: "SIGNING_FAILED",
+        cause: objError,
+      }),
+    );
   });
 });
 

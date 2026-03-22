@@ -38,4 +38,8 @@ describe("hex prefix helpers", () => {
   it("removes the 0x prefix for relayer SDK inputs", () => {
     expect(unprefixHex("0xabcd")).toBe("abcd");
   });
+
+  it("throws when value lacks 0x prefix", () => {
+    expect(() => unprefixHex("abcd" as `0x${string}`)).toThrow("Expected 0x-prefixed hex");
+  });
 });
