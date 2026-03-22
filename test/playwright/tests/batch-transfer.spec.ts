@@ -1,5 +1,5 @@
 import { test, expect } from "../fixtures";
-import { WRAPPER_ABI } from "../../sdk/src/abi/wrapper.abi";
+import { WRAPPER_ABI } from "../../../packages/sdk/src/abi/wrapper.abi";
 
 test("should shield USDT then batch transfer to two recipients", async ({
   page,
