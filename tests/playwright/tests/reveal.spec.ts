@@ -1,5 +1,5 @@
 import { test, expect } from "../fixtures";
-import { formatUnits, parseUnits } from "viem";
+import { formatUnits } from "viem";
 
 test("should show masked balances until reveal is clicked", async ({
   page,
