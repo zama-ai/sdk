@@ -85,7 +85,7 @@ test("init failure resets so next call retries", async () => {
 });
 
 test("terminate during pool init rejects cleanly", async ({ anvilPort }) => {
-  using relayer = new RelayerNode({
+  const relayer = new RelayerNode({
     getChainId: async () => HardhatConfig.chainId,
     transports: {
       [HardhatConfig.chainId]: {
