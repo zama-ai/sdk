@@ -53,7 +53,7 @@ const sessionDBStorage = new IndexedDBStorage("SessionStore");
 /**
  * Methods routed to the injected wallet rather than the direct Hoodi RPC.
  *
- * Three categories:
+ * Four categories:
  *
  * 1. Chain management — must go through the wallet. Note: eth_requestAccounts /
  *    eth_accounts are NOT in this set; they are intercepted before routing and always
