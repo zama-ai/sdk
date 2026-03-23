@@ -280,7 +280,23 @@ Never use raw `BigInt(string)` for token amounts — it ignores decimal precisio
 
 ---
 
-## 10. E2E tests
+## 10. Notes
+
+### `||` not `??` for `NEXT_PUBLIC_*` env vars
+
+Next.js replaces unset `NEXT_PUBLIC_*` variables with an **empty string** at build time, not `undefined`. The nullish coalescing operator (`??`) treats `""` as a valid value and would use it as the RPC URL, causing a runtime `UrlRequiredError`:
+
+```ts
+// ✗ Wrong — empty string passes through ?? and becomes the RPC URL
+export const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? SEPOLIA_RPC_DEFAULT;
+
+// ✓ Correct — || treats empty string as falsy and falls back to the default
+export const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || SEPOLIA_RPC_DEFAULT;
+```
+
+---
+
+## 11. E2E tests
 
 Tests use Playwright with a mock EIP-1193 provider injected via `page.addInitScript` (see `e2e/fixtures.ts`). No wallet extension or real network is needed.
 
