@@ -29,7 +29,12 @@ describe("Unshield callbacks (P4)", () => {
     const onFinalizing = vi.fn();
     const onFinalizeSubmitted = vi.fn();
 
-    await token.unshield(50n, { onUnwrapSubmitted, onFinalizing, onFinalizeSubmitted });
+    await token.unshield(50n, {
+      skipBalanceCheck: true,
+      onUnwrapSubmitted,
+      onFinalizing,
+      onFinalizeSubmitted,
+    });
 
     expect(onUnwrapSubmitted).toHaveBeenCalledWith("0xtxhash");
     expect(onFinalizing).toHaveBeenCalledOnce();
@@ -67,7 +72,7 @@ describe("Unshield callbacks (P4)", () => {
   it("works without callbacks (backward compatible)", async ({ signer, userAddress, token }) => {
     mockReceiptWithUnwrapRequested(signer, userAddress);
 
-    const result = await token.unshield(50n);
+    const result = await token.unshield(50n, { skipBalanceCheck: true });
     expect(result.txHash).toBe("0xtxhash");
     expect(result.receipt).toBeDefined();
   });
@@ -76,6 +81,7 @@ describe("Unshield callbacks (P4)", () => {
     mockReceiptWithUnwrapRequested(signer, userAddress);
 
     const result = await token.unshield(50n, {
+      skipBalanceCheck: true,
       onUnwrapSubmitted: () => {
         throw new Error("callback exploded");
       },
@@ -96,6 +102,7 @@ describe("Unshield callbacks (P4)", () => {
 
     const order: string[] = [];
     await token.unshield(50n, {
+      skipBalanceCheck: true,
       onUnwrapSubmitted: () => order.push("unwrapSubmitted"),
       onFinalizing: () => order.push("finalizing"),
       onFinalizeSubmitted: () => order.push("finalizeSubmitted"),
@@ -107,7 +114,9 @@ describe("Unshield callbacks (P4)", () => {
   it("throws TransactionRevertedError when receipt fetch fails", async ({ signer, token }) => {
     vi.mocked(signer.waitForTransactionReceipt).mockRejectedValue(new Error("network error"));
 
-    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
+    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBeInstanceOf(
+      TransactionRevertedError,
+    );
   });
 
   it("throws TransactionRevertedError when no UnwrapRequested event in receipt", async ({
@@ -116,7 +125,9 @@ describe("Unshield callbacks (P4)", () => {
   }) => {
     vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
-    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
+    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBeInstanceOf(
+      TransactionRevertedError,
+    );
   });
 
   it("throws TransactionRevertedError when finalize writeContract fails", async ({
@@ -129,7 +140,9 @@ describe("Unshield callbacks (P4)", () => {
       .mockResolvedValueOnce("0xunwraphash") // unwrap succeeds
       .mockRejectedValueOnce(new Error("finalize failed")); // finalize fails
 
-    await expect(token.unshield(50n)).rejects.toBeInstanceOf(TransactionRevertedError);
+    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBeInstanceOf(
+      TransactionRevertedError,
+    );
   });
 
   it("throws DecryptionFailedError when publicDecrypt fails during finalize", async ({
@@ -141,7 +154,9 @@ describe("Unshield callbacks (P4)", () => {
     mockReceiptWithUnwrapRequested(signer, userAddress);
     vi.mocked(relayer.publicDecrypt).mockRejectedValue(new Error("decrypt error"));
 
-    await expect(token.unshield(50n)).rejects.toBeInstanceOf(DecryptionFailedError);
+    await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toBeInstanceOf(
+      DecryptionFailedError,
+    );
   });
 });
 
@@ -168,6 +183,7 @@ describe("Shield callbacks (SDK-19)", () => {
     // Mock allowance to 0 so approval is needed
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying()
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n); // allowance()
 
     const onApprovalSubmitted = vi.fn();
@@ -202,6 +218,7 @@ describe("Shield callbacks (SDK-19)", () => {
     // Mock allowance to be greater than amount
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // underlying()
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(1000n); // allowance() > 100n
 
     const onApprovalSubmitted = vi.fn();
@@ -235,6 +252,7 @@ describe("Shield callbacks (SDK-19)", () => {
 
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n);
 
     const result = await token.shield(100n, {
@@ -271,7 +289,8 @@ describe("Shield callbacks (SDK-19)", () => {
 
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
-      .mockResolvedValueOnce(1000n);
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(1000n); // allowance
 
     const recipient = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
     await token.shield(100n, { to: recipient });
@@ -289,7 +308,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     await token.confidentialTransfer(
       "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,
-      { onEncryptComplete, onTransferSubmitted },
+      { skipBalanceCheck: true, onEncryptComplete, onTransferSubmitted },
     );
 
     expect(onEncryptComplete).toHaveBeenCalledOnce();
@@ -303,6 +322,7 @@ describe("Transfer callbacks (SDK-19)", () => {
       "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,
       {
+        skipBalanceCheck: true,
         onEncryptComplete: () => order.push("encrypted"),
         onTransferSubmitted: () => order.push("submitted"),
       },
@@ -315,6 +335,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     const result = await token.confidentialTransfer(
       "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,
+      { skipBalanceCheck: true },
     );
 
     expect(result.txHash).toBe("0xtxhash");
@@ -325,6 +346,7 @@ describe("Transfer callbacks (SDK-19)", () => {
       "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,
       {
+        skipBalanceCheck: true,
         onEncryptComplete: () => {
           throw new Error("callback exploded");
         },

@@ -21,7 +21,10 @@ describe("Token.shield", () => {
       address: tokenAddress,
       wrapper: tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(0n);
 
     const onApprovalSubmitted = vi.fn();
     const onShieldSubmitted = vi.fn();
@@ -51,7 +54,10 @@ describe("Token.shield", () => {
       address: tokenAddress,
       wrapper: tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(1000n); // allowance
 
     const onApprovalSubmitted = vi.fn();
     const onShieldSubmitted = vi.fn();
@@ -81,7 +87,10 @@ describe("Token.shield", () => {
       address: tokenAddress,
       wrapper: tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(0n);
 
     const result = await token.shield(100n, {
       callbacks: {
@@ -114,7 +123,10 @@ describe("Token.shield", () => {
       address: tokenAddress,
       wrapper: tokenAddress,
     });
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
+      .mockResolvedValueOnce(1000n); // allowance
 
     const recipient = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
     await token.shield(100n, { to: recipient });
@@ -142,6 +154,7 @@ describe("Token.shield", () => {
     });
     vi.mocked(signer.readContract)
       .mockResolvedValueOnce(UNDERLYING)
+      .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n)
       .mockResolvedValueOnce(fixtureHandle);
 

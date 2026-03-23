@@ -44,6 +44,12 @@ export const ZamaErrorCode = {
   DelegationNotFound: "DELEGATION_NOT_FOUND",
   /** The delegation has expired. */
   DelegationExpired: "DELEGATION_EXPIRED",
+  /** Confidential (cToken) balance is insufficient for the requested operation. */
+  InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE",
+  /** ERC-20 balance is insufficient for the requested shield amount. */
+  InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE",
+  /** Balance validation could not be performed (no cached credentials and decryption not possible). */
+  BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -191,6 +197,30 @@ export class DelegationExpiredError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
     super(ZamaErrorCode.DelegationExpired, message, options);
     this.name = "DelegationExpiredError";
+  }
+}
+
+/** Confidential (cToken) balance is insufficient for the requested operation. */
+export class InsufficientConfidentialBalanceError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.InsufficientConfidentialBalance, message, options);
+    this.name = "InsufficientConfidentialBalanceError";
+  }
+}
+
+/** ERC-20 balance is insufficient for the requested shield amount. */
+export class InsufficientERC20BalanceError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.InsufficientERC20Balance, message, options);
+    this.name = "InsufficientERC20BalanceError";
+  }
+}
+
+/** Balance validation could not be performed (no cached credentials and decryption not possible). */
+export class BalanceCheckUnavailableError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.BalanceCheckUnavailable, message, options);
+    this.name = "BalanceCheckUnavailableError";
   }
 }
 

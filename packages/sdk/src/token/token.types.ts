@@ -214,3 +214,15 @@ export interface TransferCallbacks {
   /** Fired after the transfer transaction is submitted. */
   onTransferSubmitted?: (txHash: Hex) => void;
 }
+
+/** Options for {@link ConfidentialToken.confidentialTransfer}. */
+export interface TransferOptions extends TransferCallbacks {
+  /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */
+  skipBalanceCheck?: boolean;
+}
+
+/** Options for {@link ConfidentialToken.unshield}. */
+export interface UnshieldOptions extends UnshieldCallbacks {
+  /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */
+  skipBalanceCheck?: boolean;
+}

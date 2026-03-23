@@ -2,11 +2,13 @@ import { type Address, getAddress, type Hex, hexToBigInt } from "viem";
 import {
   allowanceContract,
   approveContract,
+  balanceOfContract,
   confidentialTransferContract,
   confidentialTransferFromContract,
   delegateForUserDecryptionContract,
   finalizeUnwrapContract,
   isOperatorContract,
+  MAX_UINT64,
   revokeDelegationContract,
   setOperatorContract,
   underlyingContract,
@@ -14,16 +16,19 @@ import {
   unwrapFromBalanceContract,
   wrapContract,
   wrapETHContract,
-  MAX_UINT64,
 } from "../contracts";
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
+import { toError } from "../utils";
 import {
   ApprovalFailedError,
+  BalanceCheckUnavailableError,
   ConfigurationError,
   DecryptionFailedError,
   EncryptionFailedError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
   TransactionRevertedError,
   ZamaError,
 } from "./errors";
@@ -32,9 +37,10 @@ import type {
   ShieldCallbacks,
   TransactionResult,
   TransferCallbacks,
+  TransferOptions,
   UnshieldCallbacks,
+  UnshieldOptions,
 } from "./token.types";
-import { toError } from "../utils";
 
 /**
  * ERC-20-like interface for a single confidential token.
@@ -87,23 +93,38 @@ export class Token extends ReadonlyToken {
    * Confidential transfer. Encrypts the amount via FHE, then calls the contract.
    * Returns the transaction hash.
    *
+   * By default, the SDK validates the confidential balance before submitting.
+   * If the balance is not yet decrypted and credentials are cached, it auto-decrypts.
+   * Set `skipBalanceCheck: true` to bypass this validation (e.g. for smart wallets).
+   *
    * @param to - Recipient address.
    * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
+   * @param options - Optional: `skipBalanceCheck` (default `false`)`.
    * @returns The transaction hash and mined receipt.
+   * @throws {@link InsufficientConfidentialBalanceError} if the confidential balance is less than `amount`.
+   * @throws {@link BalanceCheckUnavailableError} if balance validation is required but decryption is not possible (no cached credentials).
    * @throws {@link EncryptionFailedError} if FHE encryption fails.
    * @throws {@link TransactionRevertedError} if the on-chain transfer reverts.
    *
    * @example
    * ```ts
    * const txHash = await token.confidentialTransfer("0xRecipient", 1000n);
+   * // Smart wallet (skip balance check):
+   * const txHash = await token.confidentialTransfer("0xRecipient", 1000n, { skipBalanceCheck: true });
    * ```
    */
   async confidentialTransfer(
     to: Address,
     amount: bigint,
-    callbacks?: TransferCallbacks,
+    options?: TransferOptions,
   ): Promise<TransactionResult> {
+    const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
+
     const normalizedTo = getAddress(to);
+
+    if (!skipBalanceCheck) {
+      await this.#assertConfidentialBalance(amount);
+    }
 
     let handles: Uint8Array[];
     let inputProof: Uint8Array;
@@ -119,7 +140,7 @@ export class Token extends ReadonlyToken {
         type: ZamaSDKEvents.EncryptEnd,
         durationMs: Date.now() - t0,
       });
-      safeCallback(() => callbacks?.onEncryptComplete?.());
+      safeCallback(() => onEncryptComplete?.());
     } catch (error) {
       this.emit({
         type: ZamaSDKEvents.EncryptError,
@@ -143,7 +164,7 @@ export class Token extends ReadonlyToken {
         confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
       );
       this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
-      safeCallback(() => callbacks?.onTransferSubmitted?.(txHash));
+      safeCallback(() => onTransferSubmitted?.(txHash));
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {
@@ -315,9 +336,13 @@ export class Token extends ReadonlyToken {
    * Handles ERC-20 approval automatically based on `approvalStrategy`
    * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
+   * The ERC-20 balance is always validated before submitting (even when
+   * `skipBalanceCheck: true`) since it is a public read with no signing requirement.
+   *
    * @param amount - The plaintext amount to shield.
-   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`), `fees` (extra ETH for native wrappers).
+   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`), `fees` (extra ETH for native wrappers), `skipBalanceCheck` (default `false`).
    * @returns The transaction hash and mined receipt.
+   * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
    * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
    * @throws {@link TransactionRevertedError} if the shield transaction reverts.
    *
@@ -337,12 +362,23 @@ export class Token extends ReadonlyToken {
       to?: Address;
       /** Progress callbacks for the multi-step shield flow. */
       callbacks?: ShieldCallbacks;
+      /** Skip confidential balance validation. ERC-20 balance check always runs. Default: `false`. */
+      skipBalanceCheck?: boolean;
     },
   ): Promise<TransactionResult> {
     const underlying = await this.#getUnderlying();
 
     if (underlying === Token.ZERO_ADDRESS) {
       return this.shieldETH(amount, amount + (options?.fees ?? 0n));
+    }
+
+    // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
+    const userAddress = await this.signer.getAddress();
+    const erc20Balance = await this.signer.readContract(balanceOfContract(underlying, userAddress));
+    if (erc20Balance < amount) {
+      throw new InsufficientERC20BalanceError(
+        `Insufficient ERC-20 balance: requested ${amount}, available ${erc20Balance} (token: ${underlying})`,
+      );
     }
 
     const strategy = options?.approvalStrategy ?? "exact";
@@ -528,21 +564,44 @@ export class Token extends ReadonlyToken {
    * Unshield a specific amount and finalize in one call.
    * Orchestrates: unshield → wait for receipt → parse event → finalize.
    *
+   * By default, the SDK validates the confidential balance before submitting.
+   * Set `skipBalanceCheck: true` to bypass this validation (e.g. for smart wallets).
+   *
    * @param amount - The plaintext amount to unshield.
-   * @param callbacks - Optional progress callbacks for each phase.
+   * @param options - Optional: `skipBalanceCheck` (default `false`), `callbacks`.
    * @returns The finalize transaction hash and mined receipt.
+   * @throws {@link InsufficientConfidentialBalanceError} if the confidential balance is less than `amount`.
+   * @throws {@link BalanceCheckUnavailableError} if balance validation is required but decryption is not possible.
    * @throws {@link EncryptionFailedError} if FHE encryption fails.
    * @throws {@link TransactionRevertedError} if any transaction in the flow reverts.
    *
    * @example
    * ```ts
    * const txHash = await token.unshield(500n);
+   * // Smart wallet (skip balance check):
+   * const txHash = await token.unshield(500n, { skipBalanceCheck: true });
    * ```
    */
-  async unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
+  async unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult> {
+    const {
+      skipBalanceCheck = false,
+      onUnwrapSubmitted,
+      onFinalizing,
+      onFinalizeSubmitted,
+    } = options ?? {};
+
+    if (!skipBalanceCheck) {
+      await this.#assertConfidentialBalance(amount);
+    }
+
+    const callbacks: UnshieldCallbacks = {
+      onUnwrapSubmitted,
+      onFinalizing,
+      onFinalizeSubmitted,
+    };
     const operationId = crypto.randomUUID();
     const unwrapResult = await this.unwrap(amount);
-    safeCallback(() => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash));
+    safeCallback(() => onUnwrapSubmitted?.(unwrapResult.txHash));
     return this.#waitAndFinalizeUnshield(unwrapResult.txHash, callbacks, operationId);
   }
 
@@ -874,6 +933,41 @@ export class Token extends ReadonlyToken {
   }
 
   // PRIVATE HELPERS
+
+  /**
+   * Pre-flight check: decrypt the confidential balance and compare against the
+   * requested amount. If credentials are cached the decrypt happens silently;
+   * if not, throws {@link BalanceCheckUnavailableError} instead of triggering
+   * a surprise EIP-712 popup.
+   */
+  async #assertConfidentialBalance(amount: bigint): Promise<void> {
+    const userAddress = await this.signer.getAddress();
+    const handle = await this.readConfidentialBalanceOf(userAddress);
+
+    if (this.isZeroHandle(handle)) {
+      throw new InsufficientConfidentialBalanceError(
+        `Insufficient confidential balance: requested ${amount}, available 0 (token: ${this.address})`,
+      );
+    }
+
+    // Only attempt decryption when credentials are already cached.
+    // This avoids triggering an unexpected EIP-712 signing popup during
+    // a transfer/unshield flow (respects the explicit-action pattern from SDK-42).
+    const hasCredentials = await this.isAllowed();
+    if (!hasCredentials) {
+      throw new BalanceCheckUnavailableError(
+        `Cannot validate confidential balance: no cached credentials. ` +
+          `Call allow() first or use skipBalanceCheck: true for smart wallets (token: ${this.address})`,
+      );
+    }
+
+    const balance = await this.decryptBalance(handle, userAddress);
+    if (balance < amount) {
+      throw new InsufficientConfidentialBalanceError(
+        `Insufficient confidential balance: requested ${amount}, available ${balance} (token: ${this.address})`,
+      );
+    }
+  }
 
   async #waitAndFinalizeUnshield(
     unshieldHash: Hex,

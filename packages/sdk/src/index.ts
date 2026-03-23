@@ -81,8 +81,10 @@ export type {
   TransactionReceipt,
   TransactionResult,
   UnshieldCallbacks,
+  UnshieldOptions,
   ShieldCallbacks,
   TransferCallbacks,
+  TransferOptions,
 } from "./token/token.types";
 export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events/sdk-events";
@@ -136,6 +138,9 @@ export {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
+  BalanceCheckUnavailableError,
   matchZamaError,
 } from "./token/errors";
 
