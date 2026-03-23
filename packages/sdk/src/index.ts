@@ -83,6 +83,7 @@ export type {
   UnshieldCallbacks,
   UnshieldOptions,
   ShieldCallbacks,
+  ShieldOptions,
   TransferCallbacks,
   TransferOptions,
 } from "./token/token.types";

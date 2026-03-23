@@ -221,6 +221,18 @@ export interface TransferOptions extends TransferCallbacks {
   skipBalanceCheck?: boolean;
 }
 
+/** Options for {@link Token.shield}. */
+export interface ShieldOptions {
+  /** ERC-20 approval strategy: `"exact"` approves only `amount`, `"max"` approves unlimited, `"skip"` assumes pre-existing approval. Default: `"exact"`. */
+  approvalStrategy?: "max" | "exact" | "skip";
+  /** Extra ETH to send for native wrappers. */
+  fees?: bigint;
+  /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
+  to?: Address;
+  /** Progress callbacks for the multi-step shield flow. */
+  callbacks?: ShieldCallbacks;
+}
+
 /** Options for {@link ConfidentialToken.unshield}. */
 export interface UnshieldOptions extends UnshieldCallbacks {
   /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */

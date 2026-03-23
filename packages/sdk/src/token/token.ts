@@ -35,6 +35,7 @@ import {
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import type {
   ShieldCallbacks,
+  ShieldOptions,
   TransactionResult,
   TransferCallbacks,
   TransferOptions,
@@ -348,11 +349,11 @@ export class Token extends ReadonlyToken {
    * Handles ERC-20 approval automatically based on `approvalStrategy`
    * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
-   * The ERC-20 balance is always validated before submitting (even when
-   * `skipBalanceCheck: true`) since it is a public read with no signing requirement.
+   * The ERC-20 balance is always validated before submitting since it is a
+   * public read with no signing requirement.
    *
    * @param amount - The plaintext amount to shield.
-   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`), `fees` (extra ETH for native wrappers), `skipBalanceCheck` (default `false`).
+   * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`), `fees` (extra ETH for native wrappers).
    * @returns The transaction hash and mined receipt.
    * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
    * @throws {@link ApprovalFailedError} if the ERC-20 approval step fails.
@@ -367,16 +368,7 @@ export class Token extends ReadonlyToken {
    */
   async shield(
     amount: bigint,
-    options?: {
-      approvalStrategy?: "max" | "exact" | "skip";
-      fees?: bigint;
-      /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
-      to?: Address;
-      /** Progress callbacks for the multi-step shield flow. */
-      callbacks?: ShieldCallbacks;
-      /** Skip confidential balance validation. ERC-20 balance check always runs. Default: `false`. */
-      skipBalanceCheck?: boolean;
-    },
+    options?: ShieldOptions,
   ): Promise<TransactionResult> {
     const underlying = await this.#getUnderlying();
 
@@ -392,6 +384,7 @@ export class Token extends ReadonlyToken {
     if (erc20Balance < amount) {
       throw new InsufficientERC20BalanceError(
         `Insufficient ERC-20 balance: requested ${amount}, available ${erc20Balance} (token: ${underlying})`,
+        { requested: amount, available: erc20Balance, token: underlying },
       );
     }
 
@@ -631,7 +624,6 @@ export class Token extends ReadonlyToken {
     }
 
     const callbacks: UnshieldCallbacks = {
-      onUnwrapSubmitted,
       onFinalizing,
       onFinalizeSubmitted,
     };
@@ -640,8 +632,8 @@ export class Token extends ReadonlyToken {
     safeCallback(() => onUnwrapSubmitted?.(unwrapResult.txHash));
     return this.#waitAndFinalizeUnshield(
       unwrapResult.txHash,
-      callbacks,
       operationId,
+      callbacks,
     );
   }
 
@@ -665,8 +657,8 @@ export class Token extends ReadonlyToken {
     safeCallback(() => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash));
     return this.#waitAndFinalizeUnshield(
       unwrapResult.txHash,
-      callbacks,
       operationId,
+      callbacks,
     );
   }
 
@@ -691,8 +683,8 @@ export class Token extends ReadonlyToken {
   ): Promise<TransactionResult> {
     return this.#waitAndFinalizeUnshield(
       unwrapTxHash,
-      callbacks,
       crypto.randomUUID(),
+      callbacks,
     );
   }
 
@@ -1014,6 +1006,7 @@ export class Token extends ReadonlyToken {
     if (this.isZeroHandle(handle)) {
       throw new InsufficientConfidentialBalanceError(
         `Insufficient confidential balance: requested ${amount}, available 0 (token: ${this.address})`,
+        { requested: amount, available: 0n, token: this.address },
       );
     }
 
@@ -1028,18 +1021,31 @@ export class Token extends ReadonlyToken {
       );
     }
 
-    const balance = await this.decryptBalance(handle, userAddress);
+    let balance: bigint;
+    try {
+      balance = await this.decryptBalance(handle, userAddress);
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new BalanceCheckUnavailableError(
+        `Balance validation failed: could not decrypt confidential balance (token: ${this.address})`,
+        { cause: error instanceof Error ? error : undefined },
+      );
+    }
+
     if (balance < amount) {
       throw new InsufficientConfidentialBalanceError(
         `Insufficient confidential balance: requested ${amount}, available ${balance} (token: ${this.address})`,
+        { requested: amount, available: balance, token: this.address },
       );
     }
   }
 
   async #waitAndFinalizeUnshield(
     unshieldHash: Hex,
-    callbacks: UnshieldCallbacks | undefined,
     operationId: string,
+    callbacks: UnshieldCallbacks | undefined,
   ): Promise<TransactionResult> {
     this.emit({
       type: ZamaSDKEvents.UnshieldPhase1Submitted,
