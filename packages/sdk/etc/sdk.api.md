@@ -2948,12 +2948,26 @@ export { InputProofBytesType }
 
 // @public
 export class InsufficientConfidentialBalanceError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
+    constructor(message: string, details: {
+        requested: bigint;
+        available: bigint;
+        token: string;
+    }, options?: ErrorOptions);
+    readonly available: bigint;
+    readonly requested: bigint;
+    readonly token: string;
 }
 
 // @public
 export class InsufficientERC20BalanceError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
+    constructor(message: string, details: {
+        requested: bigint;
+        available: bigint;
+        token: string;
+    }, options?: ErrorOptions);
+    readonly available: bigint;
+    readonly requested: bigint;
+    readonly token: string;
 }
 
 // @public
@@ -4737,6 +4751,14 @@ export interface ShieldCallbacks {
     onShieldSubmitted?: (txHash: Hex) => void;
 }
 
+// @public
+export interface ShieldOptions {
+    approvalStrategy?: "max" | "exact" | "skip";
+    callbacks?: ShieldCallbacks;
+    fees?: bigint;
+    to?: Address;
+}
+
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -4965,13 +4987,7 @@ export class Token extends ReadonlyToken {
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
-    shield(amount: bigint, options?: {
-        approvalStrategy?: "max" | "exact" | "skip";
-        fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
-        to?: Address; /** Progress callbacks for the multi-step shield flow. */
-        callbacks?: ShieldCallbacks; /** Skip confidential balance validation. ERC-20 balance check always runs. Default: `false`. */
-        skipBalanceCheck?: boolean;
-    }): Promise<TransactionResult>;
+    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;

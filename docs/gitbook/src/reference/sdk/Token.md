@@ -59,7 +59,7 @@ const relayer = new RelayerWeb({
 
 ### shield
 
-`(amount: bigint, opts?) => Promise<TransactionResult>`
+`(amount: bigint, options?: ShieldOptions) => Promise<TransactionResult>`
 
 Converts public ERC-20 tokens into their encrypted form. The SDK handles the ERC-20 approval automatically based on the strategy.
 
@@ -86,7 +86,7 @@ await token.shield(1000n, { approvalStrategy: "skip" });
 
 **Throws:**
 
-- `InsufficientERC20BalanceError` — if the ERC-20 balance is less than `amount`
+- `InsufficientERC20BalanceError` — if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
 
 ### shieldETH
 
@@ -145,7 +145,7 @@ await token.confidentialTransfer("0xRecipient", 500n, { skipBalanceCheck: true }
 
 **Throws:**
 
-- `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount`
+- `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
 - `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
 
 ### confidentialTransferFrom
@@ -189,7 +189,7 @@ await token.unshield(500n, { skipBalanceCheck: true });
 
 **Throws:**
 
-- `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount`
+- `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
 - `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible
 
 ### unshieldAll
