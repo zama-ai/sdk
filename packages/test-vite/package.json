@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-query": "^5.95.2",
     "@zama-fhe/react-sdk": "workspace:*",
     "@zama-fhe/sdk": "workspace:*",
     "@zama-fhe/test-components": "workspace:*",
