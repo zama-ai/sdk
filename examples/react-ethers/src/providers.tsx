@@ -124,8 +124,17 @@ export function Providers({ children }: { children: ReactNode }) {
   // Recreated on wallet switch so the new EthersSigner is bound to the new account address.
   const signer = useMemo(() => {
     const ethereum = getEthereumProvider();
+    // EthersSigner requires a non-null EIP-1193 provider — it throws on undefined/null.
+    // When no wallet is installed, use a no-op provider that satisfies the interface.
+    // All SDK operations in page.tsx are gated behind address/isSepolia checks so
+    // this signer is never actually called until the user connects a wallet.
+    const provider = ethereum ?? {
+      request: async () => null,
+      on: () => {},
+      removeListener: () => {},
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return new EthersSigner({ ethereum: ethereum as any });
+    return new EthersSigner({ ethereum: provider as any });
   }, [walletKey]);
 
   return (
