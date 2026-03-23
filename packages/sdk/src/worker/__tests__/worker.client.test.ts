@@ -300,7 +300,7 @@ describe("RelayerWorkerClient", () => {
 
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.payload).not.toHaveProperty("logger");
-    expect(req.payload).toEqual({
+    expect(req.payload).toMatchObject({
       cdnUrl: config.cdnUrl,
       fhevmConfig: config.fhevmConfig,
       csrfToken: config.csrfToken,

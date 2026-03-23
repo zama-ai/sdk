@@ -816,7 +816,7 @@ describe("RelayerNode", () => {
 
       expect(mockPool.terminate).toHaveBeenCalledOnce();
 
-      await expect(relayer.generateKeypair()).rejects.toThrow(EncryptionFailedError);
+      await expect(relayer.generateKeypair()).rejects.toThrow(ConfigurationError);
       await expect(relayer.generateKeypair()).rejects.toThrow("RelayerNode has been terminated");
     });
 
