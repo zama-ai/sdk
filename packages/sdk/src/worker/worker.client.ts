@@ -57,7 +57,10 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     type: WorkerRequestType;
     payload: WorkerRequest["payload"];
   } {
-    return { type: "INIT", payload: this.config };
+    // Destructure to exclude `logger` — functions cannot be cloned by
+    // the structured clone algorithm used by `worker.postMessage()`.
+    const { logger: _, ...serializableConfig } = this.config;
+    return { type: "INIT", payload: serializableConfig };
   }
 
   /**

@@ -264,7 +264,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("getInitPayload() returns INIT type with full config as payload", async () => {
+  it("getInitPayload() returns INIT type with serializable config as payload", async () => {
     setupAutoResolvingWebWorker();
     const config = defaultWebConfig();
     const client = new RelayerWorkerClient(config);
@@ -273,6 +273,24 @@ describe("RelayerWorkerClient", () => {
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
     expect(req.payload).toEqual(config);
+
+    client.terminate();
+  });
+
+  it("getInitPayload() excludes logger from the payload sent to the worker", async () => {
+    setupAutoResolvingWebWorker();
+    const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const config = { ...defaultWebConfig(), logger };
+    const client = new RelayerWorkerClient(config);
+    await client.initWorker();
+
+    const req = getFirstPostedRequest(lastMockWorker!);
+    expect(req.payload).not.toHaveProperty("logger");
+    expect(req.payload).toEqual({
+      cdnUrl: config.cdnUrl,
+      fhevmConfig: config.fhevmConfig,
+      csrfToken: config.csrfToken,
+    });
 
     client.terminate();
   });
