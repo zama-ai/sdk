@@ -7,7 +7,9 @@ import type { Address } from "@zama-fhe/react-sdk";
 import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
 
 // Sentinel value used by the ACL contract to represent permanent (no-expiry) delegations.
-// The SDK sends this on-chain when expirationDate is undefined. Not exported by the SDK.
+// The SDK sends this on-chain when expirationDate is undefined. Not exported by the SDK —
+// if this value changes in a future SDK version, formatExpiry will silently display wrong dates.
+// Track: https://github.com/zama-ai/sdk/issues (search PERMANENT_DELEGATION) for a public export.
 const PERMANENT_DELEGATION = 2n ** 64n - 1n;
 
 interface DecryptAsCardProps {
