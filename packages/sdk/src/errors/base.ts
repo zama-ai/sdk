@@ -60,6 +60,7 @@ export class ZamaError extends Error {
 
   constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions) {
     super(message, options);
+    Object.setPrototypeOf(this, new.target.prototype);
     this.name = "ZamaError";
     this.code = code;
   }

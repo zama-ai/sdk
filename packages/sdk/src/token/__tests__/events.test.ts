@@ -46,8 +46,8 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.RevokeDelegationSubmitted).toBe("revokeDelegation:submitted");
   });
 
-  it("has exactly 27 event types", () => {
-    expect(Object.keys(ZamaSDKEvents)).toHaveLength(27);
+  it("has exactly 29 event types", () => {
+    expect(Object.keys(ZamaSDKEvents)).toHaveLength(29);
   });
 
   it("has unique event values", () => {

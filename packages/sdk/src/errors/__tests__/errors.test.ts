@@ -147,6 +147,16 @@ describe("wrapSigningError", () => {
       }),
     );
   });
+
+  it("detects rejection from non-Error objects with code 4001", () => {
+    const walletError = { code: 4001, message: "User rejected" };
+    expect(() => wrapSigningError(walletError, "test")).toThrow(
+      expect.objectContaining({
+        code: "SIGNING_REJECTED",
+        cause: walletError,
+      }),
+    );
+  });
 });
 
 // --- Delegation errors ---

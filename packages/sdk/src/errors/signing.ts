@@ -21,11 +21,15 @@ export class SigningFailedError extends ZamaError {
  * Detects user rejection via EIP-1193 code 4001 or message heuristics.
  */
 export function wrapSigningError(error: unknown, context: string): never {
-  const isRejected =
-    (error instanceof Error && "code" in error && error.code === 4001) ||
-    (error instanceof Error &&
-      (error.message.includes("rejected") || error.message.includes("denied")));
-  if (isRejected) {
+  const hasCode4001 =
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: unknown }).code === 4001;
+  const hasRejectionMessage =
+    error instanceof Error &&
+    (error.message.includes("rejected") || error.message.includes("denied"));
+  if (hasCode4001 || hasRejectionMessage) {
     throw new SigningRejectedError(context, { cause: error });
   }
   throw new SigningFailedError(context, {

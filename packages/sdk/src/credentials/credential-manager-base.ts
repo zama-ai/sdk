@@ -10,6 +10,7 @@ import {
   normalizeAddresses,
 } from "./credential-validation";
 import { SigningFailedError, SigningRejectedError, wrapSigningError } from "../errors";
+import { toError } from "../utils/error";
 import { SessionSignatures } from "./session-signatures";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "../types";
 
@@ -225,6 +226,10 @@ export abstract class BaseCredentialsManager<
       }
       // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] Credential resolution failed, recreating:", error);
+      this.emit({
+        type: ZamaSDKEvents.CredentialsCorrupted,
+        error: toError(error),
+      });
       await this.#deleteCredentials(key);
     }
 
@@ -403,7 +408,10 @@ export abstract class BaseCredentialsManager<
     } catch (error) {
       // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] Failed to encrypt credentials for persistence:", error);
-      return;
+      this.emit({
+        type: ZamaSDKEvents.CredentialsPersistFailed,
+        error: toError(error),
+      });
     }
   }
 
@@ -413,6 +421,10 @@ export abstract class BaseCredentialsManager<
     } catch (error) {
       // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] Failed to delete credentials:", error);
+      this.emit({
+        type: ZamaSDKEvents.CredentialsPersistFailed,
+        error: toError(error),
+      });
     }
   }
 }
