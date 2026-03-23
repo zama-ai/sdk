@@ -92,6 +92,19 @@ export default defineConfig({
         },
         resolve: sharedResolve,
       },
+      {
+        plugins: [iifeStub()],
+        test: {
+          name: "integration",
+          environment: "node",
+          pool: "forks",
+          include: ["packages/sdk/**/*integration.test.ts"],
+          exclude: ["**/node_modules/**"],
+          globals: true,
+          testTimeout: 30_000,
+        },
+        resolve: sharedResolve,
+      },
     ],
     coverage: {
       provider: "v8",

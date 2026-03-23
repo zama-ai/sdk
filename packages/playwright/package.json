@@ -10,7 +10,6 @@
     "e2e:test:ui": "playwright test --ui",
     "e2e:test:nextjs": "playwright test --config playwright.nextjs.config.ts",
     "e2e:test:vite": "playwright test --config playwright.vite.config.ts",
-    "e2e:test:node": "playwright test --config playwright.node.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
