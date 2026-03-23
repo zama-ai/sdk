@@ -149,6 +149,12 @@ export function Providers({ children }: { children: ReactNode }) {
           // ZamaSDKEvents.UnshieldPhase1Submitted fires right after the Phase 1 tx is submitted
           // (before it is mined). Saving here ensures the pending state survives a tab close.
           // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
+          //
+          // NOTE: indexedDBStorage here is the same instance passed as the `storage` prop above.
+          // savePendingUnshield writes the pending tx hash into that store; PendingUnshieldCard
+          // reads it back via useZamaSDK().storage (which resolves to the same singleton).
+          // If the storage prop is ever changed to a different instance, this call must be updated
+          // to match — they must always point to the same underlying store.
           if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
             const wrapperAddress = getActiveUnshieldToken();
             if (wrapperAddress) {
