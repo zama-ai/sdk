@@ -56,7 +56,8 @@ export interface TokenConfig extends ReadonlyTokenConfig {
 }
 
 export class Token extends ReadonlyToken {
-  static readonly ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
+  static readonly ZERO_ADDRESS: Address =
+    "0x0000000000000000000000000000000000000000";
 
   readonly wrapper: Address;
   #underlying: Address | undefined;
@@ -118,7 +119,11 @@ export class Token extends ReadonlyToken {
     amount: bigint,
     options?: TransferOptions,
   ): Promise<TransactionResult> {
-    const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
+    const {
+      skipBalanceCheck = false,
+      onEncryptComplete,
+      onTransferSubmitted,
+    } = options ?? {};
 
     const normalizedTo = getAddress(to);
 
@@ -161,7 +166,12 @@ export class Token extends ReadonlyToken {
 
     try {
       const txHash = await this.signer.writeContract(
-        confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
+        confidentialTransferContract(
+          this.address,
+          normalizedTo,
+          handles[0]!,
+          inputProof,
+        ),
       );
       this.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash });
       safeCallback(() => onTransferSubmitted?.(txHash));
@@ -325,7 +335,9 @@ export class Token extends ReadonlyToken {
    */
   async isApproved(spender: Address, holder?: Address): Promise<boolean> {
     const normalizedSpender = getAddress(spender);
-    const resolvedHolder = holder ? getAddress(holder) : await this.signer.getAddress();
+    const resolvedHolder = holder
+      ? getAddress(holder)
+      : await this.signer.getAddress();
     return this.signer.readContract(
       isOperatorContract(this.address, resolvedHolder, normalizedSpender),
     );
@@ -374,7 +386,9 @@ export class Token extends ReadonlyToken {
 
     // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
     const userAddress = await this.signer.getAddress();
-    const erc20Balance = await this.signer.readContract(balanceOfContract(underlying, userAddress));
+    const erc20Balance = await this.signer.readContract(
+      balanceOfContract(underlying, userAddress),
+    );
     if (erc20Balance < amount) {
       throw new InsufficientERC20BalanceError(
         `Insufficient ERC-20 balance: requested ${amount}, available ${erc20Balance} (token: ${underlying})`,
@@ -383,12 +397,20 @@ export class Token extends ReadonlyToken {
 
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
-      await this.#ensureAllowance(amount, strategy === "max", options?.callbacks);
+      await this.#ensureAllowance(
+        amount,
+        strategy === "max",
+        options?.callbacks,
+      );
     }
 
     try {
-      const recipient = options?.to ? getAddress(options.to) : await this.signer.getAddress();
-      const txHash = await this.signer.writeContract(wrapContract(this.wrapper, recipient, amount));
+      const recipient = options?.to
+        ? getAddress(options.to)
+        : await this.signer.getAddress();
+      const txHash = await this.signer.writeContract(
+        wrapContract(this.wrapper, recipient, amount),
+      );
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
       safeCallback(() => options?.callbacks?.onShieldSubmitted?.(txHash));
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
@@ -496,7 +518,13 @@ export class Token extends ReadonlyToken {
 
     try {
       const txHash = await this.signer.writeContract(
-        unwrapContract(this.address, userAddress, userAddress, handles[0]!, inputProof),
+        unwrapContract(
+          this.address,
+          userAddress,
+          userAddress,
+          handles[0]!,
+          inputProof,
+        ),
       );
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
@@ -540,7 +568,12 @@ export class Token extends ReadonlyToken {
 
     try {
       const txHash = await this.signer.writeContract(
-        unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
+        unwrapFromBalanceContract(
+          this.address,
+          userAddress,
+          userAddress,
+          handle,
+        ),
       );
       this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
@@ -582,7 +615,10 @@ export class Token extends ReadonlyToken {
    * const txHash = await token.unshield(500n, { skipBalanceCheck: true });
    * ```
    */
-  async unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult> {
+  async unshield(
+    amount: bigint,
+    options?: UnshieldOptions,
+  ): Promise<TransactionResult> {
     const {
       skipBalanceCheck = false,
       onUnwrapSubmitted,
@@ -602,7 +638,11 @@ export class Token extends ReadonlyToken {
     const operationId = crypto.randomUUID();
     const unwrapResult = await this.unwrap(amount);
     safeCallback(() => onUnwrapSubmitted?.(unwrapResult.txHash));
-    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, callbacks, operationId);
+    return this.#waitAndFinalizeUnshield(
+      unwrapResult.txHash,
+      callbacks,
+      operationId,
+    );
   }
 
   /**
@@ -623,7 +663,11 @@ export class Token extends ReadonlyToken {
     const operationId = crypto.randomUUID();
     const unwrapResult = await this.unwrapAll();
     safeCallback(() => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash));
-    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, callbacks, operationId);
+    return this.#waitAndFinalizeUnshield(
+      unwrapResult.txHash,
+      callbacks,
+      operationId,
+    );
   }
 
   /**
@@ -645,7 +689,11 @@ export class Token extends ReadonlyToken {
     unwrapTxHash: Hex,
     callbacks?: UnshieldCallbacks,
   ): Promise<TransactionResult> {
-    return this.#waitAndFinalizeUnshield(unwrapTxHash, callbacks, crypto.randomUUID());
+    return this.#waitAndFinalizeUnshield(
+      unwrapTxHash,
+      callbacks,
+      crypto.randomUUID(),
+    );
   }
 
   /**
@@ -699,7 +747,12 @@ export class Token extends ReadonlyToken {
 
     try {
       const txHash = await this.signer.writeContract(
-        finalizeUnwrapContract(this.wrapper, burnAmountHandle, clearValue, decryptionProof),
+        finalizeUnwrapContract(
+          this.wrapper,
+          burnAmountHandle,
+          clearValue,
+          decryptionProof,
+        ),
       );
       this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
@@ -747,7 +800,9 @@ export class Token extends ReadonlyToken {
         );
 
         if (currentAllowance > 0n) {
-          await this.signer.writeContract(approveContract(underlying, this.wrapper, 0n));
+          await this.signer.writeContract(
+            approveContract(underlying, this.wrapper, 0n),
+          );
         }
       }
 
@@ -802,7 +857,12 @@ export class Token extends ReadonlyToken {
 
     try {
       const txHash = await this.signer.writeContract(
-        delegateForUserDecryptionContract(acl, getAddress(delegateAddress), this.address, expDate),
+        delegateForUserDecryptionContract(
+          acl,
+          getAddress(delegateAddress),
+          this.address,
+          expDate,
+        ),
       );
       this.emit({ type: ZamaSDKEvents.DelegationSubmitted, txHash });
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
@@ -839,7 +899,11 @@ export class Token extends ReadonlyToken {
 
     try {
       const txHash = await this.signer.writeContract(
-        revokeDelegationContract(acl, getAddress(delegateAddress), this.address),
+        revokeDelegationContract(
+          acl,
+          getAddress(delegateAddress),
+          this.address,
+        ),
       );
       this.emit({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash });
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
@@ -853,9 +917,12 @@ export class Token extends ReadonlyToken {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new TransactionRevertedError("Revoke delegation transaction failed", {
-        cause: error instanceof Error ? error : undefined,
-      });
+      throw new TransactionRevertedError(
+        "Revoke delegation transaction failed",
+        {
+          cause: error instanceof Error ? error : undefined,
+        },
+      );
     }
   }
 
@@ -992,7 +1059,9 @@ export class Token extends ReadonlyToken {
     }
     const event = findUnwrapRequested(receipt.logs);
     if (!event) {
-      throw new TransactionRevertedError("No UnwrapRequested event found in unshield receipt");
+      throw new TransactionRevertedError(
+        "No UnwrapRequested event found in unshield receipt",
+      );
     }
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
     safeCallback(() => callbacks?.onFinalizing?.());
@@ -1027,7 +1096,9 @@ export class Token extends ReadonlyToken {
       // Required by non-standard tokens like USDT, and also mitigates the
       // ERC-20 approve race condition for all tokens.
       if (allowance > 0n) {
-        await this.signer.writeContract(approveContract(underlying, this.wrapper, 0n));
+        await this.signer.writeContract(
+          approveContract(underlying, this.wrapper, 0n),
+        );
       }
 
       const approvalAmount = maxApproval ? 2n ** 256n - 1n : amount;
