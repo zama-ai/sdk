@@ -40,6 +40,8 @@ export {
   ZamaSDK,
   Token,
   ReadonlyToken,
+  WrappersRegistry,
+  DefaultWrappersRegistryAddresses,
   MemoryStorage,
   memoryStorage,
   IndexedDBStorage,
@@ -77,10 +79,14 @@ export type {
   ZKProofLike,
   InputProofBytesType,
   BatchTransferData,
+  EnrichedTokenWrapperPair,
+  PaginatedResult,
   StoredCredentials,
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
+  WrappersRegistryConfig,
+  ListPairsOptions,
   DelegatedCredentialsManagerConfig,
   DelegatedStoredCredentials,
   BatchDecryptAsOptions,
@@ -246,6 +252,7 @@ export { useTokenPair } from "./wrappers-registry/use-token-pair";
 export { useConfidentialTokenAddress } from "./wrappers-registry/use-confidential-token-address";
 export { useTokenAddress } from "./wrappers-registry/use-token-address";
 export { useIsConfidentialTokenValid } from "./wrappers-registry/use-is-confidential-token-valid";
+export { useListPairs } from "./wrappers-registry/use-list-pairs";
 
 // Re-export query utilities and factories from core sdk/query
 export {
@@ -320,6 +327,8 @@ export {
   delegationStatusQueryOptions,
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
+  listPairsQueryOptions,
+  type ListPairsQueryConfig,
 } from "@zama-fhe/sdk/query";
 export type {
   OptimisticBalanceSnapshot,

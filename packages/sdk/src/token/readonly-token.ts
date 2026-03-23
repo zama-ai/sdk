@@ -7,12 +7,10 @@ import {
   confidentialBalanceOfContract,
   decimalsContract,
   getDelegationExpiryContract,
-  getWrapperContract,
   nameContract,
   supportsInterfaceContract,
   symbolContract,
   underlyingContract,
-  wrapperExistsContract,
 } from "../contracts";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -20,6 +18,7 @@ import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import { pLimit, toError } from "../utils";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import { WrappersRegistry } from "./wrappers-registry";
 import { CredentialsManager } from "./credentials-manager";
 import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
 import {
@@ -491,27 +490,26 @@ export class ReadonlyToken {
   }
 
   /**
-   * Look up the wrapper contract for this token via the deployment coordinator.
-   * Returns `null` if no wrapper is deployed.
+   * Discover the confidential wrapper for a given ERC-20 token address.
    *
-   * @param coordinatorAddress - The deployment coordinator contract address.
-   * @returns The wrapper address, or `null` if no wrapper exists.
+   * Resolves the wrappers registry from the chain config automatically.
+   * Returns `null` if no wrapper is registered for the given ERC-20.
+   *
+   * @param erc20Address - The plain ERC-20 token address to find a wrapper for.
+   * @returns The confidential wrapper address, or `null` if none exists.
    *
    * @example
    * ```ts
-   * const wrapper = await token.discoverWrapper("0xCoordinator");
+   * const wrapper = await token.discoverWrapper("0xUSDC");
    * if (wrapper) {
-   *   const fullToken = sdk.createToken(token.address, wrapper);
+   *   const fullToken = sdk.createToken(wrapper);
    * }
    * ```
    */
-  async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
-    const coordinator = getAddress(coordinatorAddress);
-    const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
-    if (!exists) {
-      return null;
-    }
-    return this.signer.readContract(getWrapperContract(coordinator, this.address));
+  async discoverWrapper(erc20Address: Address): Promise<Address | null> {
+    const registry = new WrappersRegistry({ signer: this.signer });
+    const result = await registry.getConfidentialToken(getAddress(erc20Address));
+    return result ? result.confidentialTokenAddress : null;
   }
 
   /**

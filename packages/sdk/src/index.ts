@@ -47,7 +47,7 @@ export { Token } from "./token/token";
 export type { TokenConfig } from "./token/token";
 export { ReadonlyToken } from "./token/readonly-token";
 export { WrappersRegistry, DefaultWrappersRegistryAddresses } from "./token/wrappers-registry";
-export type { WrappersRegistryConfig } from "./token/wrappers-registry";
+export type { WrappersRegistryConfig, ListPairsOptions } from "./token/wrappers-registry";
 export type {
   ReadonlyTokenConfig,
   BatchDecryptOptions,
@@ -226,4 +226,9 @@ export {
   getTokenAddressContract,
   isConfidentialTokenValidContract,
 } from "./contracts";
-export type { BatchTransferData, TokenWrapperPair } from "./contracts";
+export type {
+  BatchTransferData,
+  TokenWrapperPair,
+  EnrichedTokenWrapperPair,
+  PaginatedResult,
+} from "./contracts";

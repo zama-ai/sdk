@@ -90,6 +90,8 @@ export {
   type TokenPairsSliceQueryConfig,
   type TokenPairQueryConfig,
   type IsConfidentialTokenValidQueryConfig,
+  listPairsQueryOptions,
+  type ListPairsQueryConfig,
 } from "./wrappers-registry";
 
 export { shieldMutationOptions, type ShieldParams } from "./shield";

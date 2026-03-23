@@ -2,12 +2,12 @@ import { describe, expect, test, vi, mockQueryContext } from "../../test-fixture
 import { wrapperDiscoveryQueryOptions } from "../wrapper-discovery";
 
 describe("wrapperDiscoveryQueryOptions", () => {
-  test("includes coordinatorAddress in query key", ({ signer }) => {
+  test("includes erc20Address in query key", ({ signer }) => {
     const options = wrapperDiscoveryQueryOptions(
       signer,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+        erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -15,19 +15,24 @@ describe("wrapperDiscoveryQueryOptions", () => {
       "zama.wrapperDiscovery",
       {
         tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+        erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     ]);
   });
 
-  test("returns null when wrapper does not exist", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(false);
+  test("returns null when no wrapper exists", async ({ signer }) => {
+    // Mock chainId to Mainnet (has default registry)
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
+    vi.mocked(signer.readContract).mockResolvedValueOnce([
+      false,
+      "0x0000000000000000000000000000000000000000",
+    ]);
 
     const options = wrapperDiscoveryQueryOptions(
       signer,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+        erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
@@ -35,47 +40,21 @@ describe("wrapperDiscoveryQueryOptions", () => {
     expect(wrapper).toBeNull();
   });
 
-  test("reads wrapper when it exists", async ({ signer }) => {
+  test("returns wrapper address when it exists", async ({ signer }) => {
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
     vi.mocked(signer.readContract)
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce("0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D");
+      .mockResolvedValueOnce([true, "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D"]) // getConfidentialTokenAddress
+      .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
     const options = wrapperDiscoveryQueryOptions(
       signer,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
-        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+        erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
       },
     );
 
     const wrapper = await options.queryFn(mockQueryContext(options.queryKey));
     expect(wrapper).toBe("0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D");
-  });
-
-  test("queryFn uses coordinatorAddress from context.queryKey", async ({ signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(false);
-
-    const options = wrapperDiscoveryQueryOptions(
-      signer,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
-
-    const queryKey = [
-      "zama.wrapperDiscovery",
-      {
-        tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-        coordinatorAddress: "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e",
-      },
-    ] as const;
-
-    await options.queryFn(mockQueryContext(queryKey));
-
-    expect(vi.mocked(signer.readContract).mock.calls[0]?.[0]).toMatchObject({
-      address: "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e",
-      args: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
-    });
   });
 });

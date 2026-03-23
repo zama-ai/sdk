@@ -311,32 +311,35 @@ describe("Token", () => {
   });
 
   describe("discoverWrapper", () => {
-    const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-    const WRAPPER_ADDR = "0xdiscoveredWrapper" as Address;
+    const ERC20_ADDR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
+    const WRAPPER_ADDR = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
     it("returns wrapper address when it exists", async ({ signer, token }) => {
+      // discoverWrapper now uses the WrappersRegistry internally.
+      // Mock chainId to Mainnet (has default registry) and registry calls.
+      vi.mocked(signer.getChainId).mockResolvedValue(1);
       vi.mocked(signer.readContract)
-        .mockResolvedValueOnce(true) // wrapperExists
-        .mockResolvedValueOnce(WRAPPER_ADDR); // getWrapper
+        .mockResolvedValueOnce([true, WRAPPER_ADDR]) // getConfidentialTokenAddress
+        .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
-      const result = await token.discoverWrapper(COORDINATOR);
+      const result = await token.discoverWrapper(ERC20_ADDR);
 
       expect(result).toBe(WRAPPER_ADDR);
       expect(signer.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "wrapperExists" }),
-      );
-      expect(signer.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "getWrapper" }),
+        expect.objectContaining({ functionName: "getConfidentialTokenAddress" }),
       );
     });
 
     it("returns null when wrapper does not exist", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(false);
+      vi.mocked(signer.getChainId).mockResolvedValue(1);
+      vi.mocked(signer.readContract).mockResolvedValueOnce([
+        false,
+        "0x0000000000000000000000000000000000000000",
+      ]);
 
-      const result = await token.discoverWrapper(COORDINATOR);
+      const result = await token.discoverWrapper(ERC20_ADDR);
 
       expect(result).toBeNull();
-      expect(signer.readContract).toHaveBeenCalledOnce();
     });
   });
 

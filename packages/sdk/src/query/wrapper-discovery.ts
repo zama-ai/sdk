@@ -1,12 +1,16 @@
 import type { Address } from "viem";
-import { getWrapperContract, wrapperExistsContract } from "../contracts";
+import { WrappersRegistry } from "../token/wrappers-registry";
 import type { GenericSigner } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
 export interface WrapperDiscoveryQueryConfig {
-  coordinatorAddress: Address;
+  /**
+   * The ERC-20 token address to discover the confidential wrapper for.
+   * The registry is resolved automatically from chain config.
+   */
+  erc20Address: Address;
   query?: Record<string, unknown>;
 }
 
@@ -20,21 +24,15 @@ export function wrapperDiscoveryQueryOptions(
   Address | null,
   ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>
 > {
-  const queryKey = zamaQueryKeys.wrapperDiscovery.token(tokenAddress, config.coordinatorAddress);
+  const queryKey = zamaQueryKeys.wrapperDiscovery.token(tokenAddress, config.erc20Address);
 
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
-      const [, { tokenAddress: keyTokenAddress, coordinatorAddress: keyCoordinatorAddress }] =
-        context.queryKey;
-      const exists = await signer.readContract(
-        wrapperExistsContract(keyCoordinatorAddress, keyTokenAddress),
-      );
-      if (!exists) {
-        return null;
-      }
-      return signer.readContract(getWrapperContract(keyCoordinatorAddress, keyTokenAddress));
+    queryFn: async () => {
+      const registry = new WrappersRegistry({ signer });
+      const result = await registry.getConfidentialToken(config.erc20Address);
+      return result ? result.confidentialTokenAddress : null;
     },
     staleTime: Infinity,
     enabled: Boolean(tokenAddress) && config.query?.enabled !== false,

@@ -124,6 +124,29 @@ export interface TokenWrapperPair {
   readonly isValid: boolean;
 }
 
+/** Extended pair with on-chain metadata for both tokens. */
+export interface EnrichedTokenWrapperPair extends TokenWrapperPair {
+  readonly underlying: {
+    readonly name: string;
+    readonly symbol: string;
+    readonly decimals: number;
+    readonly totalSupply: bigint;
+  };
+  readonly confidential: {
+    readonly name: string;
+    readonly symbol: string;
+    readonly decimals: number;
+  };
+}
+
+/** Paginated result set modelled after standard API pagination. */
+export interface PaginatedResult<T> {
+  readonly items: T[];
+  readonly total: number;
+  readonly page: number;
+  readonly pageSize: number;
+}
+
 /**
  * Returns the contract config to fetch all token wrapper pairs.
  *

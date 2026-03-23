@@ -97,12 +97,12 @@ export const zamaQueryKeys = {
 
   wrapperDiscovery: {
     all: ["zama.wrapperDiscovery"] as const,
-    token: (tokenAddress: Address, coordinatorAddress: Address) =>
+    token: (tokenAddress: Address, erc20Address: Address) =>
       [
         "zama.wrapperDiscovery",
         {
           tokenAddress: getAddress(tokenAddress),
-          coordinatorAddress: getAddress(coordinatorAddress),
+          erc20Address: getAddress(erc20Address),
         },
       ] as const,
   },
@@ -310,6 +310,22 @@ export const zamaQueryKeys = {
           type: "isConfidentialTokenValid",
           wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
           confidentialTokenAddress: getAddress(confidentialTokenAddress),
+        },
+      ] as const,
+    listPairs: (
+      wrappersRegistryAddress: Address,
+      page: number,
+      pageSize: number,
+      enriched: boolean,
+    ) =>
+      [
+        "zama.wrappersRegistry",
+        {
+          type: "listPairs",
+          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          page,
+          pageSize,
+          enriched,
         },
       ] as const,
   },

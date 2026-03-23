@@ -41,6 +41,11 @@ export interface ZamaSDKConfig {
   sessionTTL?: number | "infinite";
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
+  /**
+   * How long cached registry results remain valid, in seconds.
+   * Default: `86400` (24 hours). Consistent with `keypairTTL`/`sessionTTL`.
+   */
+  registryTTL?: number;
   /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
   signerLifecycleCallbacks?: SignerLifecycleCallbacks;
 }
@@ -57,6 +62,8 @@ export class ZamaSDK {
   readonly credentials: CredentialsManager;
   readonly delegatedCredentials: DelegatedCredentialsManager;
   readonly #onEvent: ZamaSDKEventListener;
+  readonly #registryTTL: number | undefined;
+  #registryInstance: WrappersRegistry | undefined;
   #unsubscribeSigner?: () => void;
   // oxlint false positive: awaited in #revokeByTrackedIdentity() and revokeSession()
   // eslint-disable-next-line no-unused-private-class-members
@@ -70,6 +77,7 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.#onEvent = config.onEvent ?? function () {};
+    this.#registryTTL = config.registryTTL;
     const credentialsConfig = {
       relayer: this.relayer,
       signer: this.signer,
@@ -167,6 +175,27 @@ export class ZamaSDK {
       type: ZamaSDKEvents.CredentialsRevoked,
       timestamp: Date.now(),
     });
+  }
+
+  /**
+   * A {@link WrappersRegistry} instance auto-configured for the current chain.
+   * Lazily instantiated on first access. Uses default registry addresses
+   * and the SDK's `registryTTL` if configured.
+   *
+   * @example
+   * ```ts
+   * const pairs = await sdk.registry.listPairs({ page: 1 });
+   * const result = await sdk.registry.getConfidentialToken(erc20Address);
+   * ```
+   */
+  get registry(): WrappersRegistry {
+    if (!this.#registryInstance) {
+      this.#registryInstance = new WrappersRegistry({
+        signer: this.signer,
+        registryTTL: this.#registryTTL,
+      });
+    }
+    return this.#registryInstance;
   }
 
   /**

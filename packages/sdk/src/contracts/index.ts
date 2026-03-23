@@ -78,6 +78,8 @@ export {
   getTokenAddressContract,
   isConfidentialTokenValidContract,
   type TokenWrapperPair,
+  type EnrichedTokenWrapperPair,
+  type PaginatedResult,
 } from "./wrappers-registry";
 
 export { MAX_UINT64 } from "./constants";

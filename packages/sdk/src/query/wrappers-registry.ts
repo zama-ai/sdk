@@ -8,7 +8,12 @@ import {
   getTokenAddressContract,
   isConfidentialTokenValidContract,
 } from "../contracts";
-import type { TokenWrapperPair } from "../contracts/wrappers-registry";
+import type {
+  TokenWrapperPair,
+  EnrichedTokenWrapperPair,
+  PaginatedResult,
+} from "../contracts/wrappers-registry";
+import { WrappersRegistry } from "../token/wrappers-registry";
 import type { GenericSigner } from "../token/token.types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
@@ -233,6 +238,49 @@ export function isConfidentialTokenValidQueryOptions(
       return signer.readContract(
         isConfidentialTokenValidContract(wrappersRegistryAddress, confidentialTokenAddress),
       );
+    },
+    enabled,
+  };
+}
+
+export interface ListPairsQueryConfig extends WrappersRegistryQueryConfig {
+  page?: number;
+  pageSize?: number;
+  enriched?: boolean;
+  registryTTL?: number;
+}
+
+export function listPairsQueryOptions(
+  signer: GenericSigner,
+  config: ListPairsQueryConfig,
+): QueryFactoryOptions<
+  PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>,
+  Error,
+  PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>,
+  ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>
+> {
+  const page = config.page ?? 1;
+  const pageSize = config.pageSize ?? 100;
+  const enriched = config.enriched ?? false;
+  const enabled = Boolean(config.wrappersRegistryAddress) && config.query?.enabled !== false;
+  const queryKey = zamaQueryKeys.wrappersRegistry.listPairs(
+    config.wrappersRegistryAddress ?? zeroAddress,
+    page,
+    pageSize,
+    enriched,
+  );
+  return {
+    ...filterQueryOptions(config.query ?? {}),
+    queryKey,
+    queryFn: async () => {
+      const registry = new WrappersRegistry({
+        signer,
+        wrappersRegistryAddresses: config.wrappersRegistryAddress
+          ? { [await signer.getChainId()]: config.wrappersRegistryAddress }
+          : undefined,
+        registryTTL: config.registryTTL,
+      });
+      return registry.listPairs({ page, pageSize, enriched });
     },
     enabled,
   };
