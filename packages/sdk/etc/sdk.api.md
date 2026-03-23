@@ -366,6 +366,11 @@ export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
 }
 
 // @public
+export class BalanceCheckUnavailableError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export function balanceOfContract(tokenAddress: Address, account: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -2942,6 +2947,16 @@ export const indexedDBStorage: IndexedDBStorage;
 export { InputProofBytesType }
 
 // @public
+export class InsufficientConfidentialBalanceError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class InsufficientERC20BalanceError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class InvalidKeypairError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -4938,7 +4953,7 @@ export class Token extends ReadonlyToken {
         tokens: Token[];
         delegateAddress: Address;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
         delegateAddress: Address;
@@ -4954,10 +4969,11 @@ export class Token extends ReadonlyToken {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
         to?: Address; /** Progress callbacks for the multi-step shield flow. */
-        callbacks?: ShieldCallbacks;
+        callbacks?: ShieldCallbacks; /** Skip confidential balance validation. ERC-20 balance check always runs. Default: `false`. */
+        skipBalanceCheck?: boolean;
     }): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
-    unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
     unwrapAll(): Promise<TransactionResult>;
@@ -5276,6 +5292,11 @@ export interface TransferFromSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransferFromSubmitted;
 }
 
+// @public
+export interface TransferOptions extends TransferCallbacks {
+    skipBalanceCheck?: boolean;
+}
+
 // @public (undocumented)
 export interface TransferSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -5353,6 +5374,11 @@ export interface UnshieldCallbacks {
     onFinalizeSubmitted?: (txHash: Hex) => void;
     onFinalizing?: () => void;
     onUnwrapSubmitted?: (txHash: Hex) => void;
+}
+
+// @public
+export interface UnshieldOptions extends UnshieldCallbacks {
+    skipBalanceCheck?: boolean;
 }
 
 // @public (undocumented)
@@ -6163,7 +6189,10 @@ export const ZamaErrorCode: {
     readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED"; /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
     readonly DelegationCooldown: "DELEGATION_COOLDOWN"; /** No active delegation found for this (delegator, delegate, contract) tuple. */
     readonly DelegationNotFound: "DELEGATION_NOT_FOUND"; /** The delegation has expired. */
-    readonly DelegationExpired: "DELEGATION_EXPIRED";
+    readonly DelegationExpired: "DELEGATION_EXPIRED"; /** Confidential (cToken) balance is insufficient for the requested operation. */
+    readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE"; /** ERC-20 balance is insufficient for the requested shield amount. */
+    readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE"; /** Balance validation could not be performed (no cached credentials and decryption not possible). */
+    readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE";
 };
 
 // @public

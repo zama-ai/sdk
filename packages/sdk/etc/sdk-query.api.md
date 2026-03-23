@@ -990,7 +990,8 @@ export class Token extends ReadonlyToken {
         tokens: Token[];
         delegateAddress: Address;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    // Warning: (ae-forgotten-export) The symbol "TransferOptions" needs to be exported by the entry point index.d.ts
+    confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
         delegateAddress: Address;
@@ -1006,10 +1007,12 @@ export class Token extends ReadonlyToken {
         approvalStrategy?: "max" | "exact" | "skip";
         fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
         to?: Address; /** Progress callbacks for the multi-step shield flow. */
-        callbacks?: ShieldCallbacks;
+        callbacks?: ShieldCallbacks; /** Skip confidential balance validation. ERC-20 balance check always runs. Default: `false`. */
+        skipBalanceCheck?: boolean;
     }): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
-    unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    // Warning: (ae-forgotten-export) The symbol "UnshieldOptions" needs to be exported by the entry point index.d.ts
+    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
     unwrapAll(): Promise<TransactionResult>;
@@ -1541,7 +1544,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DaNXJQI6.d.ts:1406:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-BGxBqEts.d.ts:1442:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
