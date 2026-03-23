@@ -5,7 +5,7 @@ import { useUnderlyingAllowance } from "../use-underlying-allowance";
 import { TOKEN, WRAPPER, USER } from "../../__tests__/mutation-test-helpers";
 
 describe("useUnderlyingAllowance", () => {
-  const UNDERLYING = "0x5555555555555555555555555555555555555555";
+  const UNDERLYING = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e";
 
   test("default", async ({ renderWithProviders, signer }) => {
     vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(1000n);

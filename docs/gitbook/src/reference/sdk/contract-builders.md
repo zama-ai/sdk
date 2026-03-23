@@ -62,6 +62,9 @@ import {
   getBatchTransferFeeContract,
   getFeeRecipientContract,
   confidentialBatchTransferContract,
+  delegateForUserDecryptionContract,
+  revokeDelegationContract,
+  getDelegationExpiryContract,
 } from "@zama-fhe/sdk";
 ```
 
@@ -117,6 +120,14 @@ import {
 | `getBatchTransferFeeContract(feeManager)`                                  | Get batch transfer fee                |
 | `getFeeRecipientContract(feeManager)`                                      | Get fee recipient address             |
 | `confidentialBatchTransferContract(batcher, token, from, transfers, fees)` | Batch encrypted transfers             |
+
+## Delegation
+
+| Builder                                                              | What it does                 |
+| -------------------------------------------------------------------- | ---------------------------- |
+| `delegateForUserDecryptionContract(acl, delegate, contract, expiry)` | Grant decryption delegation  |
+| `revokeDelegationContract(acl, delegate, contract)`                  | Revoke decryption delegation |
+| `getDelegationExpiryContract(acl, delegator, delegate, contract)`    | Read delegation expiry date  |
 
 ## Executing calls
 

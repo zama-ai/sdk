@@ -1,5 +1,5 @@
 import { describe, it, expect } from "../../test-fixtures";
-import { type Address } from "viem";
+import type { Address } from "viem";
 
 // ERC-20
 import {
@@ -34,7 +34,7 @@ import {
   deploymentCoordinatorContract,
   isFinalizeUnwrapOperatorContract,
   setFinalizeUnwrapOperatorContract,
-} from "../encryption";
+} from "../encrypted";
 
 // Wrapper
 import {
@@ -58,10 +58,10 @@ import {
 // Transfer batcher
 import { confidentialBatchTransferContract } from "../transfer-batcher";
 
-const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
-const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
-const FEE_MANAGER = "0x6666666666666666666666666666666666666666" as Address;
-const BATCHER = "0x7777777777777777777777777777777777777777" as Address;
+const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
+const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
+const FEE_MANAGER = "0x6f6F6f6f6f6f6f6f6f6F6f6F6F6F6F6f6F6F6f6F" as Address;
+const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 
 describe("ERC-20 contract builders", () => {
   it("nameContract", ({ tokenAddress }) => {

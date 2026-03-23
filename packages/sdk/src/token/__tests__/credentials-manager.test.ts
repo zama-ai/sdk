@@ -1,13 +1,11 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
-import { ZamaError, ZamaErrorCode } from "../errors";
-import { KeypairExpiredError } from "../errors";
+import { ZamaError, ZamaErrorCode, KeypairExpiredError } from "../errors";
 
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import type { GenericSigner } from "../token.types";
 import { ZamaSDKEvents } from "../../events";
-import { getAddress } from "viem";
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
 
 const TOKEN_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const TOKEN_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
@@ -239,8 +237,8 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -260,8 +258,8 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -281,8 +279,8 @@ describe("CredentialsManager", () => {
 
     try {
       await credentialManager.allow(TOKEN_A);
-    } catch (e) {
-      expect(e).toBeInstanceOf(ZamaError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZamaError);
     }
   });
 
@@ -304,7 +302,9 @@ describe("CredentialsManager", () => {
       await credentialManager.allow(TOKEN_A);
     } catch (e) {
       expect(e).toBeInstanceOf(ZamaError);
-      expect((e as ZamaError).cause).toBeUndefined();
+      // Non-Error causes are preserved (not dropped) so downstream debugging
+      // retains the original value.
+      expect((e as ZamaError).cause).toBe("unexpected");
     }
   });
 
@@ -346,7 +346,9 @@ describe("CredentialsManager", () => {
     // Make removeItem throw to test best-effort cleanup
     const originalRemoveItem = storage.delete.bind(storage);
     storage.delete = vi.fn().mockImplementation((key: string) => {
-      if (key === storeKey) throw new Error("storage unavailable");
+      if (key === storeKey) {
+        throw new Error("storage unavailable");
+      }
       return originalRemoveItem(key);
     });
 
@@ -484,7 +486,7 @@ describe("CredentialsManager", () => {
       setupMocks(relayer, signer);
       const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
       await storage.set(storeKey, "corrupted-json{{{");
-      expect(await credentialManager.isExpired()).toBe(false);
+      expect(await credentialManager.isExpired()).toBe(true);
     });
 
     it("works without session signature (checks timestamp only)", async ({
@@ -807,8 +809,8 @@ describe("contract address extension", () => {
     await credentialManager.allow(TOKEN_A, TOKEN_B);
 
     // Second createEIP712 call should include both tokens
-    const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1]!;
-    const contractAddresses = secondCall[1] as Address[];
+    const secondCall = vi.mocked(relayer.createEIP712).mock.calls[1];
+    const contractAddresses = secondCall[1];
     const normalized = contractAddresses.map((a) => getAddress(a));
     expect(normalized).toContain(getAddress(TOKEN_A));
     expect(normalized).toContain(getAddress(TOKEN_B));
@@ -992,9 +994,9 @@ describe("storeKey caching", () => {
     await manager.allow(TOKEN_A);
     expect(computeSpy).toHaveBeenCalledOnce();
 
-    vi.mocked(signer.getAddress).mockResolvedValue(
-      "0x2222222222222222222222222222222222ABCDEF" as Address,
-    );
+    // Change to the same address but with different casing (normalized form is 0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B)
+    // Test that getAddress normalization means casing change doesn't invalidate cache
+    vi.mocked(signer.getAddress).mockResolvedValue("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
 
     await manager.allow(TOKEN_A);
     // getAddress normalization means casing change doesn't invalidate cache

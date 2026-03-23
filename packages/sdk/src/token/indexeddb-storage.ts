@@ -14,16 +14,21 @@ export class IndexedDBStorage implements GenericStorage {
   #dbPromise: Promise<IDBDatabase> | null = null;
   #dbName: string;
   #dbVersion: number;
-  #storeName = "credentials";
+  #storeName: string;
 
-  constructor(dbName = "CredentialStore", dbVersion = 1) {
+  constructor(dbName = "CredentialStore", dbVersion = 1, storeName = "credentials") {
     this.#dbName = dbName;
     this.#dbVersion = dbVersion;
+    this.#storeName = storeName;
   }
 
   #getDB(): Promise<IDBDatabase> {
-    if (this.#db) return Promise.resolve(this.#db);
-    if (this.#dbPromise) return this.#dbPromise;
+    if (this.#db) {
+      return Promise.resolve(this.#db);
+    }
+    if (this.#dbPromise) {
+      return this.#dbPromise;
+    }
 
     this.#dbPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(this.#dbName, this.#dbVersion);
@@ -39,6 +44,10 @@ export class IndexedDBStorage implements GenericStorage {
         this.#db = request.result;
         this.#dbPromise = null;
         this.#db.onversionchange = () => {
+          // oxlint-disable-next-line no-console
+          console.warn(
+            `IndexedDB "${this.#dbName}" closing due to version change from another tab`,
+          );
           this.#db?.close();
           this.#db = null;
           this.#dbPromise = null;

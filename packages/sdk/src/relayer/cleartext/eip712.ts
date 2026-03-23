@@ -1,5 +1,4 @@
-import type { TypedDataDomain } from "viem";
-import type { Address } from "viem";
+import type { Address, TypedDataDomain } from "viem";
 import type {
   CoprocessorEIP712TypesType,
   KmsDelegatedUserDecryptEIP712TypesType,

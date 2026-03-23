@@ -32,8 +32,12 @@ export function confidentialIsApprovedQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, holder: keyHolder, spender: keySpender }] =
         context.queryKey;
-      if (!keyHolder) throw new Error("holder is required");
-      if (!keySpender) throw new Error("spender is required");
+      if (!keyHolder) {
+        throw new Error("holder is required");
+      }
+      if (!keySpender) {
+        throw new Error("spender is required");
+      }
       return signer.readContract(isOperatorContract(keyTokenAddress, keyHolder, keySpender));
     },
     staleTime: 30_000,

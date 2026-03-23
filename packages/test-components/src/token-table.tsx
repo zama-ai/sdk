@@ -4,7 +4,7 @@ import {
   balanceOfContract,
   decimalsContract,
   symbolContract,
-  useAllow,
+  useAllowTokens,
   useConfidentialBalances,
   useMetadata,
   type Address,
@@ -62,12 +62,14 @@ function ERC20TokenRow({
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const { address: connectedAddress } = useConnection();
-  const enabled = !!connectedAddress;
+  const balanceContract = connectedAddress
+    ? balanceOfContract(tokenAddress, connectedAddress)
+    : undefined;
   const { data, isLoading, error } = useReadContracts({
     contracts: [
       symbolContract(tokenAddress),
       decimalsContract(tokenAddress),
-      enabled ? balanceOfContract(tokenAddress, connectedAddress) : {},
+      balanceContract ?? {},
     ],
   });
 
@@ -105,7 +107,7 @@ export function TokenTable({
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const [revealed, setRevealed] = useState(false);
-  const { mutate: allowTokens } = useAllow();
+  const { mutate: allowTokens } = useAllowTokens();
   const {
     data: balances,
     isFetching,

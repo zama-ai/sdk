@@ -36,6 +36,14 @@ export const ZamaErrorCode = {
   RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
   /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
   Configuration: "CONFIGURATION",
+  /** Delegation cannot target self (delegate === msg.sender). */
+  DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED",
+  /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
+  DelegationCooldown: "DELEGATION_COOLDOWN",
+  /** No active delegation found for this (delegator, delegate, contract) tuple. */
+  DelegationNotFound: "DELEGATION_NOT_FOUND",
+  /** The delegation has expired. */
+  DelegationExpired: "DELEGATION_EXPIRED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -149,6 +157,60 @@ export class ConfigurationError extends ZamaError {
   }
 }
 
+// Delegation errors — the SDK does NOT auto-map ACL contract reverts to these.
+// They are exported so dApp code can catch and re-throw them when parsing
+// on-chain revert reasons (e.g. via viem's `decodeErrorResult`).
+// See the design doc for the list of ACL revert selectors.
+
+/** Delegation cannot target self (delegate === msg.sender). */
+export class DelegationSelfNotAllowedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationSelfNotAllowed, message, options);
+    this.name = "DelegationSelfNotAllowedError";
+  }
+}
+
+/** Only one delegate/revoke per (delegator, delegate, contract) per block. */
+export class DelegationCooldownError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationCooldown, message, options);
+    this.name = "DelegationCooldownError";
+  }
+}
+
+/** No active delegation found for this (delegator, delegate, contract) tuple. */
+export class DelegationNotFoundError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationNotFound, message, options);
+    this.name = "DelegationNotFoundError";
+  }
+}
+
+/** The delegation has expired. */
+export class DelegationExpiredError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationExpired, message, options);
+    this.name = "DelegationExpiredError";
+  }
+}
+
+/**
+ * Wrap a signing error as {@link SigningRejectedError} or {@link SigningFailedError}.
+ * Detects user rejection via EIP-1193 code 4001 or message heuristics.
+ */
+export function wrapSigningError(error: unknown, context: string): never {
+  const isRejected =
+    (error instanceof Error && "code" in error && error.code === 4001) ||
+    (error instanceof Error &&
+      (error.message.includes("rejected") || error.message.includes("denied")));
+  if (isRejected) {
+    throw new SigningRejectedError(context, { cause: error });
+  }
+  throw new SigningFailedError(context, {
+    cause: error,
+  });
+}
+
 /**
  * Pattern-match on a {@link ZamaError} by its error code.
  * Falls through to the `_` wildcard handler if no specific handler matches.
@@ -171,7 +233,9 @@ export function matchZamaError<R>(
 ): R | undefined {
   if (error instanceof ZamaError) {
     const handler = handlers[error.code];
-    if (handler) return handler(error);
+    if (handler) {
+      return handler(error);
+    }
   }
   return handlers._?.(error);
 }

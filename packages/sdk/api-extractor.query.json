@@ -1,6 +1,6 @@
 {
   "extends": "../../api-extractor.base.json",
-  "mainEntryPointFilePath": "<projectFolder>/dist/query/index.d.ts",
+  "mainEntryPointFilePath": "<projectFolder>/dist/esm/query/index.d.ts",
   "apiReport": {
     "enabled": true,
     "reportFileName": "sdk-query.api.md",

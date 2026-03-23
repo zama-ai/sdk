@@ -22,7 +22,7 @@ test("should discover wrapper via coordinator", async ({ page, contracts, viemCl
 
   // Read the coordinator address from the cUSDT contract
   const coordinatorAddress = await viemClient.readContract({
-    address: contracts.cUSDT as `0x${string}`,
+    address: contracts.cUSDT,
     abi: coordAbi,
     functionName: "deploymentCoordinator",
   });
@@ -30,7 +30,7 @@ test("should discover wrapper via coordinator", async ({ page, contracts, viemCl
   // Read the actual underlying ERC20 address from the wrapper contract
   // (contracts.USDT from fixtures may differ from what the coordinator registered)
   const underlyingAddress = await viemClient.readContract({
-    address: contracts.cUSDT as `0x${string}`,
+    address: contracts.cUSDT,
     abi: underlyingAbi,
     functionName: "underlying",
   });

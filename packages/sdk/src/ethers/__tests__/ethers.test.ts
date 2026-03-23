@@ -1,5 +1,5 @@
-import { vi } from "vitest";
-import { encodeAbiParameters, Address, Hex } from "viem";
+import type { Address, Hex } from "viem";
+import { encodeAbiParameters } from "viem";
 import { test as base, describe, expect } from "../../test-fixtures";
 import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
 
@@ -14,7 +14,9 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
       {},
       {
         get(_target, prop) {
-          if (prop === "then") return undefined;
+          if (prop === "then") {
+            return undefined;
+          }
           return mockContractMethod;
         },
       },
@@ -24,6 +26,7 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
   const mockGetSigner = vi.fn();
 
   class MockBrowserProvider {
+    // eslint-disable-next-line no-useless-constructor -- mock accepts provider arg to match BrowserProvider signature
     constructor(_provider: unknown) {}
     getSigner() {
       return mockGetSigner();
@@ -33,7 +36,7 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
   return { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner };
 });
 
-vi.mock("ethers", () => {
+vi.mock(import("ethers"), () => {
   return {
     ethers: { Contract: MockContract },
     Contract: MockContract,
@@ -62,11 +65,11 @@ import {
 
 // ── Test constants ───────────────────────────────────────────
 
-const SPENDER = "0x3333333333333333333333333333333333333333" as Address;
-const COORDINATOR = "0x5555555555555555555555555555555555555555" as Address;
-const BATCHER = "0x7777777777777777777777777777777777777777" as Address;
+const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
+const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
+const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 const TX_HASH = "0xdeadbeef" as Hex;
-const MOCK_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
+const MOCK_ADDRESS = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const MOCK_SIGNATURE = ("0x" + "12".repeat(65)) as Hex;
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Hex;
 const VALID_PROOF = ("0x" + "cd".repeat(32)) as Hex;
@@ -371,7 +374,7 @@ describe("EthersSigner", () => {
       const ethersSigner = new EthersSigner({ signer: signer as never });
 
       const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
-      expect(receipt.logs[0]!.topics).toEqual(["0xa", "0xb"]);
+      expect(receipt.logs[0].topics).toEqual(["0xa", "0xb"]);
     });
 
     eit("throws when signer has no provider", async ({ createEthersMockSigner }) => {
@@ -540,8 +543,8 @@ describe("ethers write contract helpers", () => {
     const batchData = [
       {
         to: userAddress,
-        encryptedAmount: VALID_HANDLE as Address,
-        inputProof: VALID_PROOF as Address,
+        encryptedAmount: VALID_HANDLE,
+        inputProof: VALID_PROOF,
         retryFor: 0n,
       },
     ];
@@ -573,7 +576,7 @@ describe("ethers write contract helpers", () => {
 
   eit("writeUnwrapFromBalanceContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({ hash: TX_HASH });
-    const balance = VALID_HANDLE as Address;
+    const balance = VALID_HANDLE;
     const hash = await writeUnwrapFromBalanceContract(
       mockSigner,
       tokenAddress,
@@ -586,8 +589,8 @@ describe("ethers write contract helpers", () => {
 
   eit("writeFinalizeUnwrapContract", async ({ wrapperAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({ hash: TX_HASH });
-    const burnt = VALID_HANDLE as Address;
-    const proof = VALID_PROOF as Address;
+    const burnt = VALID_HANDLE;
+    const proof = VALID_PROOF;
     const hash = await writeFinalizeUnwrapContract(mockSigner, wrapperAddress, burnt, 500n, proof);
     expect(hash).toBe(TX_HASH);
   });

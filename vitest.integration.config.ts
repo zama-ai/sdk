@@ -1,10 +1,13 @@
 import { defineConfig } from "vitest/config";
-import path from "path";
+import path from "node:path";
 
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["packages/**/__tests__/integration.test.ts"],
+    include: [
+      "packages/**/__tests__/*.integration.test.ts",
+      "packages/**/__tests__/integration.test.ts",
+    ],
     testTimeout: 30_000,
     hookTimeout: 30_000,
   },

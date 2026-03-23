@@ -15,6 +15,7 @@
     "hardhat",
     "docs/gitbook/build",
     "packages/sdk/etc",
-    "packages/react-sdk/etc"
+    "packages/react-sdk/etc",
+    "contracts/lib"
   ]
 }

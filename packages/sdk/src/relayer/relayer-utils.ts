@@ -26,7 +26,9 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES):
 }
 
 function isTransientError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
+  if (!(error instanceof Error)) {
+    return false;
+  }
   const msg = error.message.toLowerCase();
   return (
     msg.includes("timed out") ||
@@ -97,15 +99,15 @@ export const HardhatConfig = {
   network: "http://127.0.0.1:8545",
   aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
   inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
-  kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
+  kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
 } as const satisfies FhevmInstanceConfig;
 
 export const DefaultConfigs: Record<number, FhevmInstanceConfig> = {
-  [1]: MainnetConfig,
-  [11155111]: SepoliaConfig,
-  [31337]: HardhatConfig,
+  1: MainnetConfig,
+  11155111: SepoliaConfig,
+  31337: HardhatConfig,
 } as const;
 
 /** EIP-712 domain field → Solidity type. Order follows the EIP-712 spec. */
@@ -123,22 +125,8 @@ const DOMAIN_FIELD_TYPES: Record<string, string> = {
  */
 export function buildEIP712DomainType(
   domain: EIP712TypedData["domain"],
-): Array<{ name: string; type: string }> {
+): { name: string; type: string }[] {
   return Object.keys(DOMAIN_FIELD_TYPES)
     .filter((k) => k in domain)
     .map((k) => ({ name: k, type: DOMAIN_FIELD_TYPES[k]! }));
-}
-
-/**
- * Merge user overrides on top of SDK defaults for a given chain.
- */
-export function mergeFhevmConfig(
-  chainId: number,
-  overrides?: Partial<FhevmInstanceConfig>,
-): FhevmInstanceConfig {
-  const base = DefaultConfigs[chainId];
-  if (!base && (!overrides || Object.keys(overrides).length === 0)) {
-    throw new Error(`No config for chainId: ${chainId}`);
-  }
-  return { ...base, ...overrides } as FhevmInstanceConfig;
 }

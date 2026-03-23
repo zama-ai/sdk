@@ -1,5 +1,6 @@
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
+import { iife } from "./iife-plugin";
 
 const shared = {
   external: [/^viem/, /^ethers/, /^@zama-fhe\/relayer-sdk/, /^@tanstack\/query-core/, /^node:/],
@@ -9,38 +10,43 @@ const shared = {
   treeshake: true,
 };
 
+const entryPoints = {
+  index: "src/index.ts",
+  "cleartext/index": "src/relayer/cleartext/index.ts",
+  "query/index": "src/query/index.ts",
+  "viem/index": "src/viem/index.ts",
+  "ethers/index": "src/ethers/index.ts",
+};
+
 export default defineConfig([
+  // ESM build (primary)
   {
     input: {
-      index: "src/index.ts",
-      "cleartext/index": "src/relayer/cleartext/index.ts",
-      "query/index": "src/query/index.ts",
-      "viem/index": "src/viem/index.ts",
-      "ethers/index": "src/ethers/index.ts",
+      ...entryPoints,
       "node/index": "src/node/index.ts",
-      "relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
+      "node/relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
     },
     output: {
-      dir: "dist",
+      dir: "dist/esm",
       format: "esm",
       sourcemap: true,
       minify: true,
     },
     ...shared,
-    plugins: [dts({ tsconfig: "tsconfig.build.json" })],
+    plugins: [iife({ tsconfig: "tsconfig.build.json" }), dts({ tsconfig: "tsconfig.build.json" })],
   },
+  // CJS build (for moduleResolution: "node" / CommonJS consumers)
   {
-    input: {
-      "relayer-sdk.worker": "src/worker/relayer-sdk.worker.ts",
-    },
+    input: entryPoints,
     output: {
-      dir: "dist",
-      format: "iife",
+      dir: "dist/cjs",
+      format: "cjs",
+      entryFileNames: "[name].cjs",
+      chunkFileNames: "[name].cjs",
       sourcemap: true,
-      entryFileNames: "[name].js",
       minify: true,
     },
     ...shared,
-    external: [],
+    plugins: [iife({ tsconfig: "tsconfig.build.json" })],
   },
 ]);

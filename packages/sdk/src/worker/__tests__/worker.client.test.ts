@@ -1,4 +1,3 @@
-import { vi } from "vitest";
 import { describe, it, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
 
@@ -29,12 +28,12 @@ const { MockNodeWorkerClass, nodeUuidFn } = vi.hoisted(() => {
   return { MockNodeWorkerClass, nodeUuidFn };
 });
 
-vi.mock("node:worker_threads", () => ({
+vi.mock(import("node:worker_threads"), () => ({
   default: { Worker: MockNodeWorkerClass },
   Worker: MockNodeWorkerClass,
 }));
 
-vi.mock("node:crypto", () => ({
+vi.mock(import("node:crypto"), () => ({
   default: { randomUUID: (...args: unknown[]) => nodeUuidFn(...args) },
   randomUUID: (...args: unknown[]) => nodeUuidFn(...args),
 }));
@@ -89,7 +88,9 @@ function createMockNodeWorker(): MockNodeWorker {
     on: vi.fn(),
   };
   worker.on.mockImplementation((event: string, handler: (...args: unknown[]) => void) => {
-    if (!worker.listeners[event]) worker.listeners[event] = [];
+    if (!worker.listeners[event]) {
+      worker.listeners[event] = [];
+    }
     worker.listeners[event].push(handler);
     return worker;
   });
@@ -170,7 +171,7 @@ function flush(): Promise<void> {
 }
 
 function getFirstPostedRequest(worker: MockWorker | MockNodeWorker): WorkerRequest {
-  return worker.postMessage.mock.calls[0]![0] as WorkerRequest;
+  return worker.postMessage.mock.calls[0][0] as WorkerRequest;
 }
 
 function getLastPostedRequest(worker: MockWorker | MockNodeWorker): WorkerRequest {
@@ -205,6 +206,19 @@ describe("RelayerWorkerClient", () => {
     expect(lastMockWorker).not.toBeNull();
 
     client.terminate();
+  });
+
+  it("createWorker() revokes the blob URL after constructing the Worker", async () => {
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    setupAutoResolvingWebWorker();
+    const client = new RelayerWorkerClient(defaultWebConfig());
+    await client.initWorker();
+
+    expect(revokeSpy).toHaveBeenCalledOnce();
+
+    client.terminate();
+    revokeSpy.mockRestore();
   });
 
   it("wireEvents() sets onmessage, onerror, onmessageerror on the worker", () => {

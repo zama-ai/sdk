@@ -1,0 +1,26 @@
+{
+  "name": "hoodi-example",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.0",
+    "@zama-fhe/react-sdk": "2.0.0-alpha.2",
+    "@zama-fhe/sdk": "2.0.0-alpha.2",
+    "ethers": "^6.13.0",
+    "next": "^16.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "typescript": "^5.8.0"
+  }
+}

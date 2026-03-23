@@ -1,14 +1,13 @@
-import { hashFn } from "@zama-fhe/sdk/query";
+import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, test } from "../../test-fixtures";
 import { useUserDecryptedValue } from "../use-user-decrypted-value";
-import { decryptionKeys } from "../decryption-cache";
 
 describe("useUserDecryptedValue", () => {
   test("default", ({ createWrapper }) => {
     const cached = 1000n;
     const ctx = createWrapper();
-    ctx.queryClient.setQueryData(decryptionKeys.value("0xhandle"), cached);
+    ctx.queryClient.setQueryData(zamaQueryKeys.decryption.handle("0xhandle"), cached);
 
     const { result } = renderHook(() => useUserDecryptedValue("0xhandle"), {
       wrapper: ctx.Wrapper,
@@ -51,7 +50,7 @@ describe("useUserDecryptedValue", () => {
   test("behavior: re-render preserves cached data", ({ createWrapper }) => {
     const cached = 1000n;
     const ctx = createWrapper();
-    ctx.queryClient.setQueryData(decryptionKeys.value("0xhandle"), cached);
+    ctx.queryClient.setQueryData(zamaQueryKeys.decryption.handle("0xhandle"), cached);
 
     const { result, rerender } = renderHook(() => useUserDecryptedValue("0xhandle"), {
       wrapper: ctx.Wrapper,
@@ -71,9 +70,11 @@ describe("useUserDecryptedValue (cache behavior)", () => {
 
     expect(result.current.data).toBeUndefined();
 
-    queryClient.setQueryData(decryptionKeys.value("0xhandle1"), 42n);
+    queryClient.setQueryData(zamaQueryKeys.decryption.handle("0xhandle1"), 42n);
 
-    const query = queryClient.getQueryCache().find({ queryKey: decryptionKeys.value("0xhandle1") });
+    const query = queryClient
+      .getQueryCache()
+      .find({ queryKey: zamaQueryKeys.decryption.handle("0xhandle1") });
     expect(query?.options.queryKeyHashFn).toBe(hashFn);
   });
 

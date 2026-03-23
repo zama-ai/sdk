@@ -10,7 +10,7 @@ import type {
   Address,
   Hex,
 } from "viem";
-import { writeContract } from "viem/actions";
+import type { writeContract } from "viem/actions";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   GenericSigner,
@@ -57,13 +57,17 @@ export class ViemSigner implements GenericSigner {
   }
 
   #requireWalletClient(): WalletClient {
-    if (!this.#walletClient) throw new TypeError("No walletClient configured — read-only mode");
+    if (!this.#walletClient) {
+      throw new TypeError("No walletClient configured — read-only mode");
+    }
     return this.#walletClient;
   }
 
   #requireWalletAndAccount(): { walletClient: WalletClient; account: Account } {
     const walletClient = this.#requireWalletClient();
-    if (!walletClient.account) throw new TypeError("WalletClient has no account");
+    if (!walletClient.account) {
+      throw new TypeError("WalletClient has no account");
+    }
     return { walletClient, account: walletClient.account };
   }
 
@@ -93,7 +97,6 @@ export class ViemSigner implements GenericSigner {
     const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
     const { walletClient, account } = this.#requireWalletAndAccount();
-    if (!account) throw new TypeError("WalletClient has no account");
     return walletClient.writeContract({
       chain: walletClient.chain,
       account,
@@ -115,8 +118,15 @@ export class ViemSigner implements GenericSigner {
     return this.#publicClient.waitForTransactionReceipt({ hash });
   }
 
+  async getBlockTimestamp(): Promise<bigint> {
+    const block = await this.#publicClient.getBlock();
+    return block.timestamp;
+  }
+
   subscribe(callbacks: SignerLifecycleCallbacks): () => void {
-    if (!this.#walletClient) return () => {};
+    if (!this.#walletClient) {
+      return () => {};
+    }
     return eip1193Subscribe(this.#ethereum, () => this.getAddress(), callbacks);
   }
 }

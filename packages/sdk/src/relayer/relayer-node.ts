@@ -6,9 +6,14 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
+import type { Address, Hex } from "viem";
+import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import { MemoryStorage } from "../token/memory-storage";
+import type { GenericStorage } from "../token/token.types";
+import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import type { GenericLogger } from "../worker/worker.types";
+import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
-import { buildEIP712DomainType, mergeFhevmConfig, withRetry } from "./relayer-utils";
-import { ZamaError, EncryptionFailedError } from "../token/errors";
 import type {
   DelegatedUserDecryptParams,
   EIP712TypedData,
@@ -18,8 +23,7 @@ import type {
   PublicDecryptResult,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-import type { Address, Hex } from "viem";
-import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
+import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
 
 export interface RelayerNodeConfig {
   transports: Record<number, Partial<FhevmInstanceConfig>>;
@@ -27,7 +31,15 @@ export interface RelayerNodeConfig {
   getChainId: () => Promise<number>;
   poolSize?: number;
   /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: import("../worker/worker.types").GenericLogger;
+  logger?: GenericLogger;
+  /**
+   * Persistent storage for caching FHE public key and params across sessions.
+   * Defaults to `new MemoryStorage()` (in-process, lost on restart).
+   * Pass a custom `GenericStorage` with redis for cross-restart persistence.
+   */
+  fheArtifactStorage?: GenericStorage;
+  /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. */
+  fheArtifactCacheTTL?: number;
 }
 
 /**
@@ -46,9 +58,10 @@ export class RelayerNode implements RelayerSDK {
   #ensureLock: Promise<NodeWorkerPool> | null = null;
   #terminated = false;
   #resolvedChainId: number | null = null;
+  #artifactCache: FheArtifactCache | null = null;
 
   constructor(config: RelayerNodeConfig) {
-    this.#config = config;
+    this.#config = { fheArtifactStorage: new MemoryStorage(), ...config };
   }
 
   async #getPoolConfig(): Promise<NodeWorkerPoolConfig> {
@@ -56,20 +69,29 @@ export class RelayerNode implements RelayerSDK {
     const { transports, poolSize } = this.#config;
 
     return {
-      fhevmConfig: mergeFhevmConfig(chainId, transports[chainId]),
+      fhevmConfig: Object.assign({}, DefaultConfigs[chainId], transports[chainId]),
       poolSize,
       logger: this.#config.logger,
     };
   }
 
   async #ensurePool(): Promise<NodeWorkerPool> {
-    if (this.#ensureLock) return this.#ensureLock;
+    if (this.#ensureLock) {
+      return this.#ensureLock;
+    }
     this.#ensureLock = this.#ensurePoolInner();
     try {
       return await this.#ensureLock;
     } finally {
       this.#ensureLock = null;
     }
+  }
+
+  #tearDown(): void {
+    this.#pool?.terminate();
+    this.#pool = null;
+    this.#initPromise = null;
+    this.#artifactCache = null;
   }
 
   async #ensurePoolInner(): Promise<NodeWorkerPool> {
@@ -81,12 +103,39 @@ export class RelayerNode implements RelayerSDK {
 
     // Chain changed → tear down old pool, re-init
     if (this.#resolvedChainId !== null && chainId !== this.#resolvedChainId) {
-      this.#pool?.terminate();
-      this.#pool = null;
-      this.#initPromise = null;
+      this.#tearDown();
     }
 
     this.#resolvedChainId = chainId;
+
+    // Create cache for current chain (when storage is provided)
+    if (!this.#artifactCache && this.#config.fheArtifactStorage) {
+      const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+      this.#artifactCache = new FheArtifactCache({
+        storage: this.#config.fheArtifactStorage,
+        chainId,
+        relayerUrl: config.relayerUrl,
+        ttl: this.#config.fheArtifactCacheTTL,
+        logger: this.#config.logger,
+      });
+    }
+
+    // Revalidate cached artifacts if due — never let revalidation block init
+    if (this.#artifactCache) {
+      let stale = false;
+      try {
+        stale = await this.#artifactCache.revalidateIfDue();
+      } catch (err) {
+        this.#config.logger?.warn(
+          "Artifact revalidation failed, proceeding with potentially stale cache",
+          { error: err instanceof Error ? err.message : String(err) },
+        );
+      }
+      if (stale) {
+        this.#config.logger?.info("Cached FHE artifacts are stale — reinitializing");
+        this.#tearDown();
+      }
+    }
 
     if (!this.#initPromise) {
       this.#initPromise = this.#initPool().catch((error) => {
@@ -136,7 +185,7 @@ export class RelayerNode implements RelayerSDK {
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<EIP712TypedData> {
     const pool = await this.#ensurePool();
     const result = await pool.createEIP712({
@@ -202,7 +251,7 @@ export class RelayerNode implements RelayerSDK {
     contractAddresses: Address[],
     delegatorAddress: Address,
     startTimestamp: number,
-    durationDays: number = 7,
+    durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const pool = await this.#ensurePool();
     return pool.createDelegatedUserDecryptEIP712({
@@ -236,6 +285,9 @@ export class RelayerNode implements RelayerSDK {
     publicKey: Uint8Array;
   } | null> {
     const pool = await this.#ensurePool();
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicKey(async () => (await pool.getPublicKey()).result);
+    }
     return (await pool.getPublicKey()).result;
   }
 
@@ -243,6 +295,21 @@ export class RelayerNode implements RelayerSDK {
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
     const pool = await this.#ensurePool();
+    if (this.#artifactCache) {
+      return this.#artifactCache.getPublicParams(
+        bits,
+        async () => (await pool.getPublicParams(bits)).result,
+      );
+    }
     return (await pool.getPublicParams(bits)).result;
+  }
+
+  async getAclAddress(): Promise<Address> {
+    const chainId = await this.#config.getChainId();
+    const config = Object.assign({}, DefaultConfigs[chainId], this.#config.transports[chainId]);
+    if (!config.aclContractAddress) {
+      throw new ConfigurationError(`No ACL address configured for chain ${chainId}`);
+    }
+    return config.aclContractAddress as Address;
   }
 }

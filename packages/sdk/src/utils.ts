@@ -1,4 +1,4 @@
-import { type Hex } from "viem";
+import type { Hex } from "viem";
 
 /** Coerce an unknown caught value to an Error instance. */
 export function toError(error: unknown): Error {
@@ -37,10 +37,71 @@ export function assertArray(value: unknown, context: string): asserts value is u
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+export function assertFunction(value: unknown, context: string): asserts value is Function {
+  if (typeof value !== "function") {
+    throw new TypeError(`${context} must be a function, got ${typeof value}`);
+  }
+}
+
+/** Assert that `obj[key]` is a string. Narrows `obj` to include `{ [key]: string }`. */
+export function assertStringProp<
+  K extends string,
+  O extends Record<string, unknown> = Record<string, unknown>,
+>(obj: O, key: K, context: string): asserts obj is O & Record<K, string> {
+  assertString(obj[key], context);
+}
+
+/** Assert that `obj[key]` is a function. Narrows `obj` to include `{ [key]: F }`. */
+export function assertFunctionProp<
+  K extends string,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+  F extends Function,
+  O extends Record<string, unknown> = Record<string, unknown>,
+>(obj: O, key: K, context: string): asserts obj is O & Record<K, F> {
+  assertFunction(obj[key], context);
+}
+
 export function assertCondition(condition: boolean, message: string): asserts condition {
   if (!condition) {
     throw new TypeError(message);
   }
+}
+
+// ── Environment detection ────────────────────────────────────
+
+/**
+ * Subset of the WebExtensions `runtime` API used by the SDK.
+ * @see https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime
+ */
+export interface BrowserExtensionRuntime {
+  /** The ID of the extension. */
+  id: string;
+  /** Convert a relative path within the extension to a fully-qualified URL. */
+  getURL: (path: string) => string;
+}
+
+/**
+ * Return the browser extension runtime object, or `undefined` outside extensions.
+ * Works across Chrome/Edge (`chrome.runtime`) and Firefox/Safari (`browser.runtime`).
+ * Extensions have restricted CSP that blocks `blob:` URLs, so callers use
+ * this to detect the environment and resolve file URLs via `runtime.getURL`.
+ */
+export function getBrowserExtensionRuntime(): BrowserExtensionRuntime | undefined {
+  const g = globalThis as unknown as Record<string, unknown>;
+  for (const ns of [g.chrome, g.browser]) {
+    try {
+      assertObject(ns, "ns");
+      const { runtime } = ns;
+      assertObject(runtime, "runtime");
+      assertStringProp(runtime, "id", "runtime.id");
+      assertFunctionProp<"getURL", (path: string) => string>(runtime, "getURL", "runtime.getURL");
+      return runtime;
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
 }
 
 // ── Concurrency helper ──────────────────────────────────────
@@ -50,14 +111,14 @@ export function assertCondition(condition: boolean, message: string): asserts co
  * Defaults to `Infinity` (equivalent to `Promise.all`).
  */
 export async function pLimit<T>(
-  fns: Array<() => Promise<T>>,
+  fns: (() => Promise<T>)[],
   maxConcurrency = Infinity,
 ): Promise<T[]> {
-  if (!isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
+  if (!Number.isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
     return Promise.all(fns.map((f) => f()));
   }
 
-  const results: T[] = new Array(fns.length);
+  const results: T[] = Array.from({ length: fns.length });
   let index = 0;
 
   async function worker() {

@@ -37,6 +37,8 @@ export class ViemSigner implements GenericSigner {
     // (undocumented)
     getAddress(): Promise<Address>;
     // (undocumented)
+    getBlockTimestamp(): Promise<bigint>;
+    // (undocumented)
     getChainId(): Promise<number>;
     // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
     //

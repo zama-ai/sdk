@@ -14,6 +14,7 @@ export default defineConfig({
           if (/node_modules\/(viem|wagmi)\//.test(id)) {
             return "web3";
           }
+          return;
         },
       },
     },

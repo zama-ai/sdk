@@ -36,7 +36,9 @@ export interface ActivityFeedQueryConfig {
 export function deriveActivityFeedLogsKey(
   logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[],
 ): string | undefined {
-  if (!logs) return undefined;
+  if (!logs) {
+    return undefined;
+  }
 
   return hashFn([
     "zama.activityFeed.logs",
@@ -84,14 +86,22 @@ export function activityFeedQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { userAddress: keyUserAddress, decrypt: keyDecrypt }] = context.queryKey;
-      if (!keyUserAddress) throw new Error("userAddress is required");
-      if (!logs) throw new Error("logs are required");
+      if (!keyUserAddress) {
+        throw new Error("userAddress is required");
+      }
+      if (!logs) {
+        throw new Error("logs are required");
+      }
 
       const parsed = parseActivityFeed(logs, keyUserAddress);
-      if (!keyDecrypt) return sortByBlockNumber(parsed);
+      if (!keyDecrypt) {
+        return sortByBlockNumber(parsed);
+      }
 
       const handles = extractEncryptedHandles(parsed);
-      if (handles.length === 0) return sortByBlockNumber(parsed);
+      if (handles.length === 0) {
+        return sortByBlockNumber(parsed);
+      }
 
       const decrypted = await token.decryptHandles(handles, keyUserAddress);
       return sortByBlockNumber(applyDecryptedValues(parsed, decrypted));

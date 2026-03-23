@@ -6,7 +6,7 @@ console.log("[Mock SDK] Loading mock relayerSDK");
 const BASE_URL = "__BASE_URL__";
 
 if (BASE_URL === "__BASE_URL__") {
-  throw Error('"__BASE_URL__" must be replaced by a base url');
+  throw new Error('"__BASE_URL__" must be replaced by a base url');
 }
 
 self.relayerSDK = {
@@ -106,6 +106,82 @@ self.relayerSDK = {
         console.log("[Mock SDK] userDecrypt result:", result);
 
         // Convert string values back to BigInt
+        const clearValues = {};
+        for (const [key, value] of Object.entries(result)) {
+          clearValues[key] = BigInt(value);
+        }
+        return clearValues;
+      },
+
+      createDelegatedUserDecryptEIP712: function (
+        publicKey,
+        contractAddresses,
+        delegatorAddress,
+        startTimestamp,
+        durationDays,
+      ) {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${BASE_URL}/createDelegatedEIP712`, false);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.send(
+          JSON.stringify({
+            publicKey,
+            contractAddresses,
+            delegatorAddress,
+            startTimestamp,
+            durationDays,
+          }),
+        );
+        const result = JSON.parse(xhr.responseText);
+        return {
+          ...result,
+          message: {
+            ...result.message,
+            startTimestamp: BigInt(result.message.startTimestamp),
+            durationDays: BigInt(result.message.durationDays),
+          },
+        };
+      },
+
+      delegatedUserDecrypt: async function (
+        handleContractPairs,
+        privateKey,
+        publicKey,
+        signature,
+        signedContractAddresses,
+        delegatorAddress,
+        delegateAddress,
+        startTimestamp,
+        durationDays,
+      ) {
+        console.log(
+          "[Mock SDK] delegatedUserDecrypt called with",
+          handleContractPairs.length,
+          "handles",
+        );
+        const handles = handleContractPairs.map((p) => p.handle);
+        const contractAddress = handleContractPairs[0]?.contractAddress || "";
+
+        const response = await fetch(`${BASE_URL}/delegatedUserDecrypt`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            handles,
+            contractAddress,
+            signedContractAddresses,
+            privateKey,
+            publicKey,
+            signature,
+            delegatorAddress,
+            delegateAddress,
+            startTimestamp,
+            durationDays,
+          }),
+        });
+
+        const result = await response.json();
+        console.log("[Mock SDK] delegatedUserDecrypt result:", result);
+
         const clearValues = {};
         for (const [key, value] of Object.entries(result)) {
           clearValues[key] = BigInt(value);

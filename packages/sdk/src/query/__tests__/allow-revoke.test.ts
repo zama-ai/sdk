@@ -16,8 +16,8 @@ describe("allowMutationOptions", () => {
     expect(options.mutationKey).toEqual(["zama.allow"]);
 
     const addresses = [
-      "0x1111111111111111111111111111111111111111",
-      "0x2222222222222222222222222222222222222222",
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
     ] as Address[];
     await options.mutationFn(addresses);
 
@@ -33,7 +33,7 @@ describe("revokeMutationOptions", () => {
     const options = revokeMutationOptions(sdk);
     expect(options.mutationKey).toEqual(["zama.revoke"]);
 
-    const addresses = ["0x1111111111111111111111111111111111111111"] as Address[];
+    const addresses = ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"] as Address[];
     await options.mutationFn(addresses);
 
     expect(revokeSpy).toHaveBeenCalledWith(...addresses);
@@ -60,11 +60,11 @@ describe("isAllowedQueryOptions", () => {
     const isAllowedSpy = vi.spyOn(sdk, "isAllowed").mockResolvedValue(true);
 
     const options = isAllowedQueryOptions(sdk, {
-      account: "0x1111111111111111111111111111111111111111",
+      account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     });
     expect(options.queryKey).toEqual([
       "zama.isAllowed",
-      { account: "0x1111111111111111111111111111111111111111" },
+      { account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" },
     ]);
 
     const result = await options.queryFn({
@@ -74,21 +74,21 @@ describe("isAllowedQueryOptions", () => {
     expect(isAllowedSpy).toHaveBeenCalledTimes(1);
   });
 
-  test("sets staleTime to Infinity", ({ signer, relayer, storage }) => {
+  test("staleTime should be 30 seconds", ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
 
     const options = isAllowedQueryOptions(sdk, {
-      account: "0x1111111111111111111111111111111111111111",
+      account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     });
 
-    expect(options.staleTime).toBe(Infinity);
+    expect(options.staleTime).toBe(30_000);
   });
 
   test("enabled is false when query.enabled is false", ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
 
     const options = isAllowedQueryOptions(sdk, {
-      account: "0x1111111111111111111111111111111111111111",
+      account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       query: { enabled: false },
     });
 

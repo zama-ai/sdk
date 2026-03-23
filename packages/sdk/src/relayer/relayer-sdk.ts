@@ -69,6 +69,9 @@ export interface RelayerSDK {
     bits: number,
   ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null>;
 
+  /** Return the ACL contract address for the current chain. */
+  getAclAddress(): Promise<Address>;
+
   /** Terminate the relayer backend and release resources. */
   terminate(): void;
 }
