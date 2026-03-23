@@ -17,7 +17,7 @@ import { useWrappersRegistryAddress } from "./use-wrappers-registry-address";
  *
  * @param options.page - Page number (1-indexed). Default: `1`.
  * @param options.pageSize - Items per page. Default: `100`.
- * @param options.enriched - Fetch on-chain metadata for both tokens. Default: `false`.
+ * @param options.metadata - Fetch on-chain metadata for both tokens. Default: `false`.
  *
  * @example
  * ```tsx
@@ -30,13 +30,13 @@ import { useWrappersRegistryAddress } from "./use-wrappers-registry-address";
 export function useListPairs({
   page = 1,
   pageSize = 100,
-  enriched = false,
+  metadata = false,
   wrappersRegistryAddresses = DefaultWrappersRegistryAddresses,
   registryTTL,
 }: {
   page?: number;
   pageSize?: number;
-  enriched?: boolean;
+  metadata?: boolean;
   wrappersRegistryAddresses?: Record<number, Address>;
   registryTTL?: number;
 } = {}) {
@@ -48,7 +48,7 @@ export function useListPairs({
       wrappersRegistryAddress,
       page,
       pageSize,
-      enriched,
+      metadata,
       registryTTL,
     }),
   );

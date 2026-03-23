@@ -211,7 +211,7 @@ describe("WrappersRegistry", () => {
       );
     });
 
-    it("enriches pairs when enriched: true", async ({ signer }) => {
+    it("enriches pairs when metadata: true", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(1n) // length
@@ -227,7 +227,7 @@ describe("WrappersRegistry", () => {
         .mockResolvedValueOnce(6); // decimals (confidential)
       const registry = new WrappersRegistry({ signer });
 
-      const result = await registry.listPairs({ enriched: true });
+      const result = await registry.listPairs({ metadata: true });
 
       expect(result.items).toHaveLength(1);
       const pair = result.items[0]!;

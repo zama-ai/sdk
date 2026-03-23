@@ -316,7 +316,7 @@ export const zamaQueryKeys = {
       wrappersRegistryAddress: Address,
       page: number,
       pageSize: number,
-      enriched: boolean,
+      metadata: boolean,
     ) =>
       [
         "zama.wrappersRegistry",
@@ -325,7 +325,7 @@ export const zamaQueryKeys = {
           wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
           page,
           pageSize,
-          enriched,
+          metadata,
         },
       ] as const,
   },

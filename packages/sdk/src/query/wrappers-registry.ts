@@ -246,7 +246,7 @@ export function isConfidentialTokenValidQueryOptions(
 export interface ListPairsQueryConfig extends WrappersRegistryQueryConfig {
   page?: number;
   pageSize?: number;
-  enriched?: boolean;
+  metadata?: boolean;
   registryTTL?: number;
 }
 
@@ -261,13 +261,13 @@ export function listPairsQueryOptions(
 > {
   const page = config.page ?? 1;
   const pageSize = config.pageSize ?? 100;
-  const enriched = config.enriched ?? false;
+  const metadata = config.metadata ?? false;
   const enabled = Boolean(config.wrappersRegistryAddress) && config.query?.enabled !== false;
   const queryKey = zamaQueryKeys.wrappersRegistry.listPairs(
     config.wrappersRegistryAddress ?? zeroAddress,
     page,
     pageSize,
-    enriched,
+    metadata,
   );
   return {
     ...filterQueryOptions(config.query ?? {}),
@@ -280,7 +280,7 @@ export function listPairsQueryOptions(
           : undefined,
         registryTTL: config.registryTTL,
       });
-      return registry.listPairs({ page, pageSize, enriched });
+      return registry.listPairs({ page, pageSize, metadata });
     },
     enabled,
   };

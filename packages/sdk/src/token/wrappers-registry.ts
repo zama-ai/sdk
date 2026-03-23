@@ -66,7 +66,7 @@ export interface ListPairsOptions {
    * the ERC-20 and confidential token, plus totalSupply for the ERC-20.
    * Default: `false`.
    */
-  enriched?: boolean;
+  metadata?: boolean;
 }
 
 /** Cache entry with expiry timestamp. */
@@ -185,9 +185,9 @@ export class WrappersRegistry {
    * const result = await registry.listPairs({ page: 1, pageSize: 20 });
    * console.log(`${result.total} pairs, showing page ${result.page}`);
    *
-   * // With enriched metadata
-   * const enriched = await registry.listPairs({ enriched: true, pageSize: 10 });
-   * for (const pair of enriched.items) {
+   * // With on-chain metadata
+   * const withMeta = await registry.listPairs({ metadata: true, pageSize: 10 });
+   * for (const pair of withMeta.items) {
    *   console.log(pair.underlying.symbol, "→", pair.confidential.symbol);
    * }
    * ```
@@ -197,7 +197,7 @@ export class WrappersRegistry {
   ): Promise<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>> {
     const page = options.page ?? 1;
     const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
-    const enriched = options.enriched ?? false;
+    const metadata = options.metadata ?? false;
 
     const registry = await this.getRegistryAddress();
 
@@ -223,21 +223,21 @@ export class WrappersRegistry {
       items = this.#setCached(sliceCacheKey, [...raw]);
     }
 
-    if (!enriched) {
+    if (!metadata) {
       return { items, total, page, pageSize };
     }
 
     // Enrich with on-chain metadata
-    const enrichedCacheKey = `enriched:${registry}:${fromIndex}:${toIndex}`;
-    let enrichedItems = this.#getCached<EnrichedTokenWrapperPair[]>(enrichedCacheKey);
-    if (enrichedItems === undefined) {
-      enrichedItems = this.#setCached(
-        enrichedCacheKey,
+    const metadataCacheKey = `metadata:${registry}:${fromIndex}:${toIndex}`;
+    let metadataItems = this.#getCached<EnrichedTokenWrapperPair[]>(metadataCacheKey);
+    if (metadataItems === undefined) {
+      metadataItems = this.#setCached(
+        metadataCacheKey,
         await Promise.all(items.map((pair) => this.#enrichPair(pair))),
       );
     }
 
-    return { items: enrichedItems, total, page, pageSize };
+    return { items: metadataItems, total, page, pageSize };
   }
 
   async #enrichPair(pair: TokenWrapperPair): Promise<EnrichedTokenWrapperPair> {
