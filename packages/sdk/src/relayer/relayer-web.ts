@@ -6,7 +6,7 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import { ConfigurationError, ZamaError } from "../token/errors";
 import type { GenericStorage } from "../token/token.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import { FheArtifactCache } from "./fhe-artifact-cache";
@@ -207,7 +207,7 @@ export class RelayerWeb implements RelayerSDK {
           const wrappedError =
             error instanceof ZamaError
               ? error
-              : new EncryptionFailedError("Failed to initialize FHE worker", {
+              : new ConfigurationError("Failed to initialize FHE worker", {
                   cause: error instanceof Error ? error : undefined,
                 });
           this.#setStatus("error", wrappedError);

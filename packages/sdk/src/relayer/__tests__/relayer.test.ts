@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 import { afterEach, describe, it, expect, beforeEach } from "../../test-fixtures";
-import { EncryptionFailedError } from "../../token/errors";
+import { ConfigurationError, EncryptionFailedError } from "../../token/errors";
 import { MemoryStorage } from "../../token/memory-storage";
 
 // ---------------------------------------------------------------------------
@@ -234,12 +234,12 @@ describe("RelayerWeb", () => {
   // -------------------------------------------------------------------------
 
   describe("initialization errors", () => {
-    it("wraps non-ZamaError init failures in EncryptionFailedError", async () => {
+    it("wraps non-ZamaError init failures in ConfigurationError", async () => {
       mockWorkerClient.initWorker.mockRejectedValueOnce(new Error("WASM load failed"));
       const relayer = createWebRelayer();
 
       const promise = relayer.generateKeypair();
-      await expect(promise).rejects.toThrow(EncryptionFailedError);
+      await expect(promise).rejects.toThrow(ConfigurationError);
       await expect(promise).rejects.toThrow("Failed to initialize FHE worker");
     });
 
@@ -831,12 +831,12 @@ describe("RelayerNode", () => {
   // -------------------------------------------------------------------------
 
   describe("initialization errors", () => {
-    it("wraps non-ZamaError init failures in EncryptionFailedError", async () => {
+    it("wraps non-ZamaError init failures in ConfigurationError", async () => {
       mockPool.initPool.mockRejectedValueOnce(new Error("pool init failed"));
       const relayer = createNodeRelayer();
 
       const promise = relayer.generateKeypair();
-      await expect(promise).rejects.toThrow(EncryptionFailedError);
+      await expect(promise).rejects.toThrow(ConfigurationError);
       await expect(promise).rejects.toThrow("Failed to initialize FHE worker pool");
     });
 
