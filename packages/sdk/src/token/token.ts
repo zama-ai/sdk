@@ -99,7 +99,7 @@ export class Token extends ReadonlyToken {
    *
    * @param to - Recipient address.
    * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
-   * @param options - Optional: `skipBalanceCheck` (default `false`)`.
+   * @param options - Optional: `skipBalanceCheck` (default `false`).
    * @returns The transaction hash and mined receipt.
    * @throws {@link InsufficientConfidentialBalanceError} if the confidential balance is less than `amount`.
    * @throws {@link BalanceCheckUnavailableError} if balance validation is required but decryption is not possible (no cached credentials).
