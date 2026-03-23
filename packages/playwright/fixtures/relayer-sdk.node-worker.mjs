@@ -288,6 +288,6 @@ port.on("message", (request) => {
   try {
     handleMessage(request);
   } catch (error) {
-    sendError(request.id, request.type, error instanceof Error ? err.message : String(err));
+    sendError(request.id, request.type, error instanceof Error ? error.message : String(error));
   }
 });
