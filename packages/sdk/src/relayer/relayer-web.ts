@@ -6,7 +6,7 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import { ConfigurationError, EncryptionFailedError, ZamaError } from "../token/errors";
+import { ConfigurationError, ZamaError } from "../token/errors";
 import type { GenericStorage } from "../token/token.types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import { FheArtifactCache } from "./fhe-artifact-cache";
@@ -30,11 +30,11 @@ import { IndexedDBStorage } from "../token/indexeddb-storage";
  * Update this when upgrading @zama-fhe/relayer-sdk, and keep the
  * peerDependencies range in package.json in sync (~x.y.z).
  */
-const RELAYER_SDK_VERSION = "0.4.1";
+const RELAYER_SDK_VERSION = "0.4.2";
 const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
 /** SHA-384 hex digest of the pinned CDN bundle for integrity verification. */
 const CDN_INTEGRITY =
-  "2bd5401738b74509549bed2029bbbabedd481b10ac260f66e64a4ff3723d6d704180c51e882757c56ca1840491e90e33";
+  "114438b01d518b53a447fa3e8bfbe6e71031cb42ac43219bb9f53488456fdfa4bbc8989628366d436e68f6526c7647eb";
 
 /**
  * RelayerWeb — browser encryption/decryption layer using a Web Worker.
@@ -207,8 +207,8 @@ export class RelayerWeb implements RelayerSDK {
           const wrappedError =
             error instanceof ZamaError
               ? error
-              : new EncryptionFailedError("Failed to initialize FHE worker", {
-                  cause: error instanceof Error ? error : undefined,
+              : new ConfigurationError("Failed to initialize FHE worker", {
+                  cause: error,
                 });
           this.#setStatus("error", wrappedError);
           throw wrappedError;
