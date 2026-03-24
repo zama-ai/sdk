@@ -1655,6 +1655,13 @@ export interface CredentialsCachedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
+export interface CredentialsCorruptedEvent extends BaseEvent {
+    error: Error;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.CredentialsCorrupted;
+}
+
+// @public (undocumented)
 export interface CredentialsCreatedEvent extends BaseEvent {
     contractAddresses?: Address[];
     // (undocumented)
@@ -1715,6 +1722,13 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
 // @public
 export interface CredentialsManagerConfig extends CredentialsConfig {
     relayer: RelayerSDK;
+}
+
+// @public (undocumented)
+export interface CredentialsPersistFailedEvent extends BaseEvent {
+    error: Error;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.CredentialsPersistFailed;
 }
 
 // @public (undocumented)
@@ -6220,9 +6234,6 @@ export interface ZamaSDKConfig {
     storage: GenericStorage;
 }
 
-// Warning: (ae-forgotten-export) The symbol "CredentialsPersistFailedEvent" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "CredentialsCorruptedEvent" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | CredentialsPersistFailedEvent | CredentialsCorruptedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
