@@ -52,7 +52,8 @@ jobs:
         run: |
           mkdir -p /tmp/api-reports/pr
           cp packages/sdk/etc/*.api.md packages/react-sdk/etc/*.api.md /tmp/api-reports/pr/
-          diff -ru /tmp/api-reports/base /tmp/api-reports/pr > /tmp/api-reports/raw.diff || true
+          diff -ru /tmp/api-reports/base /tmp/api-reports/pr | \
+            sed 's|/tmp/api-reports/base/|a/|;s|/tmp/api-reports/pr/|b/|' > /tmp/api-reports/raw.diff || true
 
           if [ -s /tmp/api-reports/raw.diff ]; then
             {
