@@ -77,7 +77,7 @@ jobs:
                 '<details>', '<summary>Expand to see full diff</summary>', '',
                 '```diff', diff, '```', '', '</details>'].join('\n');
             } else {
-              body = [marker, 'No public API changes detected.'].join('\n');
+              body = [marker, '## Public API Changes', '', ':white_check_mark: No public API changes detected.'].join('\n');
             }
 
             const { data: comments } = await github.rest.issues.listComments({
