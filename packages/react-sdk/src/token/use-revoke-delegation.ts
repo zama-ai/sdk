@@ -31,8 +31,11 @@ export function useRevokeDelegation(
     ...revokeDelegationMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
-      options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.invalidateQueries({ queryKey: zamaQueryKeys.delegationStatus.all });
+      try {
+        options?.onSuccess?.(data, variables, onMutateResult, context);
+      } finally {
+        context.client.invalidateQueries({ queryKey: zamaQueryKeys.delegationStatus.all });
+      }
     },
   });
 }
