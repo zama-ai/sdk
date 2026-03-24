@@ -19,7 +19,12 @@ import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
 import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
-import { SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, SEPOLIA_RPC_URL } from "@/lib/config";
+import {
+  SEPOLIA_CHAIN_ID,
+  SEPOLIA_CHAIN_ID_HEX,
+  SEPOLIA_EXPLORER_URL,
+  SEPOLIA_RPC_URL,
+} from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // ─── CONFIGURATION ────────────────────────────────────────────────────────────
@@ -48,22 +53,71 @@ const MINT_ABI = ["function mint(address to, uint256 amount)"];
 // and independent of the injected wallet's own RPC endpoint.
 const rpcProvider = new JsonRpcProvider(SEPOLIA_RPC_URL);
 
+// Attempt to switch to Sepolia. If the network is unknown to the wallet (error 4902),
+// prompt to add it. Errors from wallet_switchEthereumChain (including 4001 user rejection)
+// are swallowed — the caller re-reads the current chainId to determine the outcome.
+// Errors from wallet_addEthereumChain propagate to the caller.
+async function switchToSepolia(ethereum: NonNullable<ReturnType<typeof getEthereumProvider>>) {
+  try {
+    await ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }],
+    });
+  } catch (err: unknown) {
+    if ((err as { code: number }).code === 4902) {
+      await ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: SEPOLIA_CHAIN_ID_HEX,
+            chainName: "Sepolia",
+            nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: [SEPOLIA_RPC_URL],
+            blockExplorerUrls: [SEPOLIA_EXPLORER_URL],
+          },
+        ],
+      });
+    }
+    // wallet_switchEthereumChain errors other than 4902 (including 4001 rejection) are
+    // intentionally ignored — chainId is re-read in the finally block of the caller.
+  }
+}
+
 type TokenKey = keyof typeof TOKENS;
 
 export default function Home() {
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
   const [selectedToken, setSelectedToken] = useState<TokenKey>("usdc");
   const [connectError, setConnectError] = useState<string | null>(null);
 
   const token = TOKENS[selectedToken];
-  const isSepolia = chainId === SEPOLIA_CHAIN_ID_HEX;
+  // Case-insensitive: some wallets return uppercase hex (e.g. "0xAA36A7" instead of "0xaa36a7").
+  const isSepolia = chainId?.toLowerCase() === SEPOLIA_CHAIN_ID_HEX;
 
   // Stable reference from the QueryClientProvider in providers.tsx.
   // Used in handleAccountsChanged (inside the useEffect below) to invalidate balance caches.
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
+
+  // Attempt to switch to Sepolia and update chainId based on the actual result.
+  // Safe to call concurrently — duplicate calls are harmless (last write wins).
+  async function handleSwitchToSepolia() {
+    const ethereum = getEthereumProvider();
+    if (!ethereum) return;
+    setIsSwitching(true);
+    try {
+      await switchToSepolia(ethereum);
+    } catch (err) {
+      console.error("Failed to switch to Sepolia:", err);
+    } finally {
+      const current = (await ethereum.request({ method: "eth_chainId" })) as string;
+      setChainId(current);
+      setIsSwitching(false);
+    }
+  }
 
   // Detect existing connection on page load and listen for account/chain changes.
   // Note: providers.tsx has a second accountsChanged listener that manages the
@@ -114,9 +168,11 @@ export default function Home() {
         method: "eth_requestAccounts",
       })) as string[];
 
-      const currentChainId = (await ethereum.request({ method: "eth_chainId" })) as string;
+      // Switch before setting address: both chainId and address are then known
+      // when the first non-connect-screen render fires, avoiding a brief flash
+      // of the wrong-network screen between the two state updates.
+      await handleSwitchToSepolia();
       setAddress(accounts[0] ?? null);
-      setChainId(currentChainId);
     } catch (err) {
       console.error("Failed to connect wallet:", err);
       setConnectError(err instanceof Error ? err.message : "Failed to connect wallet");
@@ -229,10 +285,14 @@ export default function Home() {
         <p className="subtitle">
           This app only works on the Sepolia testnet (chain ID {SEPOLIA_CHAIN_ID}).
         </p>
-        <p className="subtitle">
-          Please switch to <strong>Sepolia</strong> in your wallet — this page will update
-          automatically.
-        </p>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleSwitchToSepolia}
+          disabled={isSwitching}
+        >
+          {isSwitching ? "Switching…" : "Switch to Sepolia"}
+        </button>
       </div>
     );
   }
