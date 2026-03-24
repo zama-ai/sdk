@@ -182,6 +182,9 @@ importers:
 
   packages/sdk:
     dependencies:
+      '@zama-fhe/relayer-sdk':
+        specifier: ~0.4.2
+        version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       ethers:
         specifier: '>=6'
         version: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -192,9 +195,6 @@ importers:
       '@tanstack/query-core':
         specifier: ^5.90.20
         version: 5.90.20
-      '@zama-fhe/relayer-sdk':
-        specifier: 0.4.2
-        version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       rolldown:
         specifier: 1.0.0-rc.7
         version: 1.0.0-rc.7
@@ -4191,8 +4191,8 @@ packages:
     resolution: {integrity: sha512-uP0bpjWrjQmUt5DTHq9RuoCBdFJF10cdX9X+a368j/Ft0wmaVgxlrjvK3kjvgCODOMMOz9lcaRzxmso0bTWZ/g==}
     engines: {node: '>=10.0.0'}
 
-  socket.io-parser@4.2.5:
-    resolution: {integrity: sha512-bPMmpy/5WWKHea5Y/jYAP6k74A+hvmRCQaJuJB6I/ML5JZq/KfNieUVo/3Mh7SAqn7TyFdIo6wqYHInG1MU1bQ==}
+  socket.io-parser@4.2.6:
+    resolution: {integrity: sha512-asJqbVBDsBCJx0pTqw3WfesSY0iRX+2xzWEWzrpcH7L6fLzrhyF8WPI8UaeM4YCuDfpwA/cgsdugMsmtz8EJeg==}
     engines: {node: '>=10.0.0'}
 
   source-map-js@1.2.1:
@@ -8530,14 +8530,14 @@ snapshots:
       '@socket.io/component-emitter': 3.1.2
       debug: 4.4.3
       engine.io-client: 6.6.4(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-      socket.io-parser: 4.2.5
+      socket.io-parser: 4.2.6
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
     optional: true
 
-  socket.io-parser@4.2.5:
+  socket.io-parser@4.2.6:
     dependencies:
       '@socket.io/component-emitter': 3.1.2
       debug: 4.4.3

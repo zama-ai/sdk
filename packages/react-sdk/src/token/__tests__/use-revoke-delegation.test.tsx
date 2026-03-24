@@ -1,4 +1,5 @@
 import { act, waitFor } from "@testing-library/react";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useRevokeDelegation } from "../use-revoke-delegation";
 import {
@@ -54,5 +55,37 @@ describe("useRevokeDelegation", () => {
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalledOnce();
     });
+  });
+
+  test("behavior: onSuccess fires before cache invalidation", async ({
+    renderWithProviders,
+    signer,
+  }) => {
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+
+    const delegationKey = zamaQueryKeys.delegationStatus.all;
+    let cacheWasValidDuringOnSuccess = false;
+
+    const onSuccess = vi.fn((_data, _variables, _onMutateResult, context) => {
+      const state = context.client.getQueryState(delegationKey);
+      cacheWasValidDuringOnSuccess = state !== undefined && !state.isInvalidated;
+    });
+
+    const { result, queryClient } = renderWithProviders(() =>
+      useRevokeDelegation({ tokenAddress: TOKEN }, { onSuccess }),
+    );
+
+    // Seed the cache so invalidation is observable
+    queryClient.setQueryData(delegationKey, { delegated: false });
+
+    act(() => {
+      result.current.mutate({ delegateAddress: RECIPIENT });
+    });
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledOnce();
+    });
+
+    expect(cacheWasValidDuringOnSuccess).toBe(true);
   });
 });

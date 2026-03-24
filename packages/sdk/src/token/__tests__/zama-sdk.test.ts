@@ -168,6 +168,19 @@ describe("ZamaSDK", () => {
     );
   });
 
+  it("revokeSession calls clearCaches on credentials manager", async ({
+    relayer,
+    signer,
+    storage,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const clearCachesSpy = vi.spyOn(sdk.credentials, "clearCaches" as never);
+
+    await sdk.revokeSession();
+
+    expect(clearCachesSpy).toHaveBeenCalledOnce();
+  });
+
   describe("lifecycle auto-revoke", () => {
     it("onDisconnect emits TransactionError when the composed lifecycle callback throws", async ({
       createMockRelayer,
@@ -314,6 +327,76 @@ describe("ZamaSDK", () => {
           }),
         );
       });
+    });
+
+    it("onDisconnect calls clearCaches on credentials manager", async ({
+      createMockRelayer,
+      createMockSigner,
+      storage,
+      sessionStorage,
+    }) => {
+      let subscribeCbs: Required<SignerLifecycleCallbacks>;
+
+      const mockSigner = createMockSigner();
+      const signer = {
+        ...mockSigner,
+        subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+          subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
+          return () => {};
+        }),
+      };
+
+      const sdk = new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage,
+        sessionStorage,
+      });
+
+      const clearCachesSpy = vi.spyOn(sdk.credentials, "clearCaches" as never);
+
+      subscribeCbs!.onDisconnect();
+
+      await vi.waitFor(() => {
+        expect(clearCachesSpy).toHaveBeenCalledOnce();
+      });
+
+      sdk.terminate();
+    });
+
+    it("onAccountChange calls clearCaches on credentials manager", async ({
+      createMockRelayer,
+      createMockSigner,
+      storage,
+      sessionStorage,
+    }) => {
+      let subscribeCbs: Required<SignerLifecycleCallbacks>;
+
+      const mockSigner = createMockSigner();
+      const signer = {
+        ...mockSigner,
+        subscribe: vi.fn((cbs: SignerLifecycleCallbacks) => {
+          subscribeCbs = cbs as Required<SignerLifecycleCallbacks>;
+          return () => {};
+        }),
+      };
+
+      const sdk = new ZamaSDK({
+        relayer: createMockRelayer(),
+        signer,
+        storage,
+        sessionStorage,
+      });
+
+      const clearCachesSpy = vi.spyOn(sdk.credentials, "clearCaches" as never);
+
+      subscribeCbs!.onAccountChange(NEXT_USER_ADDRESS);
+
+      await vi.waitFor(() => {
+        expect(clearCachesSpy).toHaveBeenCalledOnce();
+      });
+
+      sdk.terminate();
     });
 
     it("onAccountChange revokes the PREVIOUS account session, not the new one", async ({
