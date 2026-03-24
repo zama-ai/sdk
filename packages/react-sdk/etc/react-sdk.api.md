@@ -1326,7 +1326,7 @@ export function useUserDecryptedValue(handle: Handle | undefined): _tanstack_rea
 // @public
 export function useUserDecryptedValues(handles: Handle[]): {
     data: Record<`0x${string}`, ClearValueType | undefined>;
-    results: (_tanstack_react_query0.UseQueryResult<unknown, Error> | _tanstack_react_query0.UseQueryResult<unknown, unknown>)[];
+    results: (_tanstack_react_query0.UseQueryResult<unknown, unknown> | _tanstack_react_query0.UseQueryResult<unknown, Error>)[];
 };
 
 // @public
