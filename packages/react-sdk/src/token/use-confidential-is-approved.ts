@@ -10,7 +10,7 @@ import { useToken, type UseZamaConfig } from "./use-token";
 export { confidentialIsApprovedQueryOptions };
 
 /** Configuration for {@link useConfidentialIsApproved}. */
-export interface UseConfidentialIsApprovedConfig extends Omit<UseZamaConfig, "tokenAddress"> {
+export interface UseConfidentialIsApprovedConfig {
   /** Address of the confidential token contract. Pass `undefined` to disable the query. */
   tokenAddress: Address | undefined;
   /** Address to check approval for. Pass `undefined` to disable the query. */
@@ -51,7 +51,7 @@ export function useConfidentialIsApproved(
   const sdk = useZamaSDK();
   const holderQuery = useQuery<Address>({
     ...signerAddressQueryOptions(sdk.signer),
-    enabled: tokenAddress !== undefined && holder === undefined,
+    enabled: tokenAddress !== undefined && spender !== undefined && holder === undefined,
   });
   const resolvedHolder = holder ?? holderQuery.data;
   const baseOpts = confidentialIsApprovedQueryOptions(sdk.signer, tokenAddress, {
