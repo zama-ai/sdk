@@ -208,7 +208,7 @@ export class RelayerWeb implements RelayerSDK {
             error instanceof ZamaError
               ? error
               : new ConfigurationError("Failed to initialize FHE worker", {
-                  cause: error instanceof Error ? error : undefined,
+                  cause: error,
                 });
           this.#setStatus("error", wrappedError);
           throw wrappedError;

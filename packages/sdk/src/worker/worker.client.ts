@@ -68,10 +68,11 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     type: WorkerRequestType;
     payload: WorkerRequest["payload"];
   } {
-    // Destructure to exclude `logger` — functions cannot be cloned by
-    // the structured clone algorithm used by `worker.postMessage()`.
-    const { logger: _, ...serializableConfig } = this.config;
-    return { type: "INIT", payload: serializableConfig };
+    // Explicitly construct the payload from serializable fields only.
+    // Functions (e.g. `logger`) cannot be cloned by the structured clone
+    // algorithm used by `worker.postMessage()`.
+    const { cdnUrl, fhevmConfig, csrfToken, integrity, thread } = this.config;
+    return { type: "INIT", payload: { cdnUrl, fhevmConfig, csrfToken, integrity, thread } };
   }
 
   /**

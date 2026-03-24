@@ -143,7 +143,7 @@ export class RelayerNode implements RelayerSDK {
         throw error instanceof ZamaError
           ? error
           : new ConfigurationError("Failed to initialize FHE worker pool", {
-              cause: error instanceof Error ? error : undefined,
+              cause: error,
             });
       });
     }
