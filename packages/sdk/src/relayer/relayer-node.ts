@@ -7,7 +7,7 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
 import type { Address, Hex } from "viem";
-import { ConfigurationError, EncryptionFailedError, ZamaError } from "../errors";
+import { ConfigurationError, ZamaError } from "../errors";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
 import { NodeWorkerPool, type NodeWorkerPoolConfig } from "../worker/worker.node-pool";
@@ -96,7 +96,7 @@ export class RelayerNode implements RelayerSDK {
 
   async #ensurePoolInner(): Promise<NodeWorkerPool> {
     if (this.#terminated) {
-      throw new EncryptionFailedError("RelayerNode has been terminated");
+      throw new ConfigurationError("RelayerNode has been terminated");
     }
 
     const chainId = await this.#config.getChainId();
@@ -142,8 +142,8 @@ export class RelayerNode implements RelayerSDK {
         this.#initPromise = null;
         throw error instanceof ZamaError
           ? error
-          : new EncryptionFailedError("Failed to initialize FHE worker pool", {
-              cause: error instanceof Error ? error : undefined,
+          : new ConfigurationError("Failed to initialize FHE worker pool", {
+              cause: error,
             });
       });
     }

@@ -6,13 +6,13 @@ import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
 export interface WrapperDiscoveryQueryConfig {
-  coordinatorAddress: Address;
+  coordinatorAddress?: Address;
   query?: Record<string, unknown>;
 }
 
 export function wrapperDiscoveryQueryOptions(
   signer: GenericSigner,
-  tokenAddress: Address,
+  tokenAddress: Address | undefined,
   config: WrapperDiscoveryQueryConfig,
 ): QueryFactoryOptions<
   Address | null,
@@ -28,6 +28,12 @@ export function wrapperDiscoveryQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, coordinatorAddress: keyCoordinatorAddress }] =
         context.queryKey;
+      if (!keyTokenAddress) {
+        throw new Error("tokenAddress is required");
+      }
+      if (!keyCoordinatorAddress) {
+        throw new Error("coordinatorAddress is required");
+      }
       const exists = await signer.readContract(
         wrapperExistsContract(keyCoordinatorAddress, keyTokenAddress),
       );
@@ -37,6 +43,6 @@ export function wrapperDiscoveryQueryOptions(
       return signer.readContract(getWrapperContract(keyCoordinatorAddress, keyTokenAddress));
     },
     staleTime: Infinity,
-    enabled: Boolean(tokenAddress) && config.query?.enabled !== false,
+    enabled: Boolean(tokenAddress && config.coordinatorAddress) && config.query?.enabled !== false,
   };
 }

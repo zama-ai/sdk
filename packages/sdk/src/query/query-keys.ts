@@ -4,6 +4,8 @@ import type { Handle } from "../relayer/relayer-sdk.types";
 
 const normalizeAddresses = (addresses: Address[]): Address[] =>
   addresses.map((address) => getAddress(address));
+const normalizeAddress = (address?: Address): Address | undefined =>
+  address === undefined ? undefined : getAddress(address);
 
 /**
  * Canonical query-key namespace for `@zama-fhe/sdk/query`.
@@ -97,14 +99,17 @@ export const zamaQueryKeys = {
 
   wrapperDiscovery: {
     all: ["zama.wrapperDiscovery"] as const,
-    token: (tokenAddress: Address, coordinatorAddress: Address) =>
-      [
+    token: (tokenAddress?: Address, coordinatorAddress?: Address) => {
+      const t = normalizeAddress(tokenAddress);
+      const c = normalizeAddress(coordinatorAddress);
+      return [
         "zama.wrapperDiscovery",
         {
-          tokenAddress: getAddress(tokenAddress),
-          coordinatorAddress: getAddress(coordinatorAddress),
+          ...(t ? { tokenAddress: t } : {}),
+          ...(c ? { coordinatorAddress: c } : {}),
         },
-      ] as const,
+      ] as const;
+    },
   },
 
   underlyingAllowance: {
@@ -124,17 +129,23 @@ export const zamaQueryKeys = {
 
   confidentialIsApproved: {
     all: ["zama.confidentialIsApproved"] as const,
-    token: (tokenAddress: Address) =>
-      ["zama.confidentialIsApproved", { tokenAddress: getAddress(tokenAddress) }] as const,
-    scope: (tokenAddress: Address, holder?: Address, spender?: Address) =>
-      [
+    token: (tokenAddress?: Address) => {
+      const t = normalizeAddress(tokenAddress);
+      return ["zama.confidentialIsApproved", t ? { tokenAddress: t } : {}] as const;
+    },
+    scope: (tokenAddress?: Address, holder?: Address, spender?: Address) => {
+      const t = normalizeAddress(tokenAddress);
+      const h = normalizeAddress(holder);
+      const s = normalizeAddress(spender);
+      return [
         "zama.confidentialIsApproved",
         {
-          tokenAddress: getAddress(tokenAddress),
-          ...(holder ? { holder: getAddress(holder) } : {}),
-          ...(spender ? { spender: getAddress(spender) } : {}),
+          ...(t ? { tokenAddress: t } : {}),
+          ...(h ? { holder: h } : {}),
+          ...(s ? { spender: s } : {}),
         },
-      ] as const,
+      ] as const;
+    },
   },
 
   totalSupply: {
@@ -217,17 +228,23 @@ export const zamaQueryKeys = {
 
   delegationStatus: {
     all: ["zama.delegationStatus"] as const,
-    token: (tokenAddress: string) =>
-      ["zama.delegationStatus", { tokenAddress: getAddress(tokenAddress) }] as const,
-    scope: (tokenAddress: string, delegator: string, delegate: string) =>
-      [
+    token: (tokenAddress?: Address) => {
+      const t = normalizeAddress(tokenAddress);
+      return ["zama.delegationStatus", t ? { tokenAddress: t } : {}] as const;
+    },
+    scope: (tokenAddress?: Address, delegator?: Address, delegate?: Address) => {
+      const t = normalizeAddress(tokenAddress);
+      const dr = normalizeAddress(delegator);
+      const de = normalizeAddress(delegate);
+      return [
         "zama.delegationStatus",
         {
-          tokenAddress: getAddress(tokenAddress),
-          delegatorAddress: getAddress(delegator),
-          delegateAddress: getAddress(delegate),
+          ...(t ? { tokenAddress: t } : {}),
+          ...(dr ? { delegatorAddress: dr } : {}),
+          ...(de ? { delegateAddress: de } : {}),
         },
-      ] as const,
+      ] as const;
+    },
   },
 
   decryption: {

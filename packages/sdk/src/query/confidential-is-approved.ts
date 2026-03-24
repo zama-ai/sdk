@@ -13,7 +13,7 @@ export interface ConfidentialIsApprovedQueryConfig {
 
 export function confidentialIsApprovedQueryOptions(
   signer: GenericSigner,
-  tokenAddress: Address,
+  tokenAddress: Address | undefined,
   config: ConfidentialIsApprovedQueryConfig,
 ): QueryFactoryOptions<
   boolean,
@@ -32,6 +32,9 @@ export function confidentialIsApprovedQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, holder: keyHolder, spender: keySpender }] =
         context.queryKey;
+      if (!keyTokenAddress) {
+        throw new Error("tokenAddress is required");
+      }
       if (!keyHolder) {
         throw new Error("holder is required");
       }
@@ -41,6 +44,6 @@ export function confidentialIsApprovedQueryOptions(
       return signer.readContract(isOperatorContract(keyTokenAddress, keyHolder, keySpender));
     },
     staleTime: 30_000,
-    enabled: Boolean(holderKey && spenderKey) && queryEnabled,
+    enabled: Boolean(tokenAddress && holderKey && spenderKey) && queryEnabled,
   };
 }
