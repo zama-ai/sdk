@@ -8,12 +8,12 @@ import {
   SigningRejectedError,
   EncryptionFailedError,
   matchZamaError,
-  wrapSigningError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
 } from "..";
+import { wrapSigningError } from "../signing";
 
 describe("InvalidKeypairError", () => {
   it("is instanceof ZamaError", () => {
@@ -155,6 +155,27 @@ describe("wrapSigningError", () => {
         code: "SIGNING_REJECTED",
         cause: walletError,
       }),
+    );
+  });
+
+  it("detects rejection from 'user rejected' message without code 4001", () => {
+    const error = new Error("user rejected the request");
+    expect(() => wrapSigningError(error, "test")).toThrow(
+      expect.objectContaining({ code: "SIGNING_REJECTED", cause: error }),
+    );
+  });
+
+  it("detects rejection from 'user denied' message without code 4001", () => {
+    const error = new Error("user denied transaction signature");
+    expect(() => wrapSigningError(error, "test")).toThrow(
+      expect.objectContaining({ code: "SIGNING_REJECTED", cause: error }),
+    );
+  });
+
+  it("does not classify generic 'denied' as rejection", () => {
+    const error = new Error("Permission denied");
+    expect(() => wrapSigningError(error, "test")).toThrow(
+      expect.objectContaining({ code: "SIGNING_FAILED", cause: error }),
     );
   });
 });

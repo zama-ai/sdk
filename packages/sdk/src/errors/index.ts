@@ -1,5 +1,5 @@
 export { ZamaError, ZamaErrorCode, matchZamaError } from "./base";
-export { SigningRejectedError, SigningFailedError, wrapSigningError } from "./signing";
+export { SigningRejectedError, SigningFailedError } from "./signing";
 export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
 export { ApprovalFailedError, TransactionRevertedError } from "./transaction";
 export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./credential";

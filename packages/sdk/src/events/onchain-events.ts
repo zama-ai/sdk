@@ -6,18 +6,8 @@
 import type { Handle } from "../relayer/relayer-sdk.types";
 import { getAddress, type Address, type Hex } from "viem";
 import { prefixHex } from "../utils";
-
-// ---------------------------------------------------------------------------
-// Generic log shape
-// ---------------------------------------------------------------------------
-
-/** Framework-agnostic log shape compatible with any Ethereum provider. */
-export interface RawLog {
-  /** Indexed event topics (topic[0] is the event signature hash). */
-  readonly topics: readonly Hex[];
-  /** ABI-encoded non-indexed event data. */
-  readonly data: Hex;
-}
+export type { RawLog } from "../types/transaction";
+import type { RawLog } from "../types/transaction";
 
 // ---------------------------------------------------------------------------
 // Event topic0 constants (keccak256 of canonical signature)

@@ -6,7 +6,7 @@ import {
   BaseCredentialsManager,
   type CredentialsConfig,
   type SigningMeta,
-} from "./credential-manager-base";
+} from "./credentials-manager-base";
 import {
   type BaseEncryptedCredentials,
   assertBaseEncryptedCredentials,

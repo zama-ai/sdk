@@ -30,6 +30,14 @@ export function assertBaseEncryptedCredentials(
   assertObject(data.encryptedPrivateKey, "credentials.encryptedPrivateKey");
   assertString(data.encryptedPrivateKey.iv, "encryptedPrivateKey.iv");
   assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
+  assertCondition(
+    typeof data.startTimestamp === "number",
+    "Expected credentials.startTimestamp to be a number",
+  );
+  assertCondition(
+    typeof data.durationDays === "number",
+    "Expected credentials.durationDays to be a number",
+  );
 }
 
 /**

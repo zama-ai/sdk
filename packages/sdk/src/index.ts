@@ -124,6 +124,8 @@ export type {
   SessionExpiredEvent,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
+  CredentialsPersistFailedEvent,
+  CredentialsCorruptedEvent,
 } from "./events";
 export {
   ZamaError,

@@ -1,6 +1,9 @@
 import type { Address, Hex } from "viem";
+import { SigningFailedError, SigningRejectedError } from "../errors";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
+import type { GenericSigner, GenericStorage, StoredCredentials } from "../types";
+import { toError } from "../utils/error";
 import { CredentialCrypto } from "./credential-crypto";
 import type { BaseEncryptedCredentials } from "./credential-validation";
 import {
@@ -9,10 +12,7 @@ import {
   isTimeValid,
   normalizeAddresses,
 } from "./credential-validation";
-import { SigningFailedError, SigningRejectedError, wrapSigningError } from "../errors";
-import { toError } from "../utils/error";
 import { SessionSignatures } from "./session-signatures";
-import type { GenericSigner, GenericStorage, StoredCredentials } from "../types";
 
 /** Shared configuration accepted by both credential manager variants. */
 export interface CredentialsConfig {
@@ -256,7 +256,8 @@ export abstract class BaseCredentialsManager<
 
   /**
    * Check whether stored credentials are expired or don't cover the given contract.
-   * Returns `true` if credentials are missing, expired, or corrupted.
+   * Returns `true` if stored credentials are expired or corrupted.
+   * Returns `false` if no credentials exist yet.
    */
   protected async checkExpired(key: string, contractAddress?: Address): Promise<boolean> {
     try {
@@ -327,7 +328,16 @@ export abstract class BaseCredentialsManager<
       this.emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
     } catch (error) {
-      wrapSigningError(error, errorContext);
+      const hasCode4001 =
+        typeof error === "object" && error !== null && "code" in error && error.code === 4001;
+      const msg = error instanceof Error ? error.message.toLowerCase() : "";
+      const hasRejectionMessage = msg.includes("user rejected") || msg.includes("user denied");
+      if (hasCode4001 || hasRejectionMessage) {
+        throw new SigningRejectedError(errorContext, { cause: error });
+      }
+      throw new SigningFailedError(errorContext, {
+        cause: error,
+      });
     }
   }
 

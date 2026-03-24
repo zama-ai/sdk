@@ -331,6 +331,64 @@ describe("CredentialsManager", () => {
     expect(stored).not.toBe("not-valid-json{{{{");
   });
 
+  it("emits CredentialsCorrupted event when stored data is corrupted", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const events: string[] = [];
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+      onEvent: (e) => events.push(e.type),
+    });
+    const storeKey = await CredentialsManager.computeStoreKey(await signer.getAddress(), 31337);
+
+    await storage.set(storeKey, "corrupted-data{{{{");
+    await manager.allow(TOKEN_A);
+
+    expect(events).toContain(ZamaSDKEvents.CredentialsCorrupted);
+  });
+
+  it("emits CredentialsPersistFailed event when storage.set throws", async ({
+    relayer,
+    signer,
+    storage,
+    createMockStorage,
+  }) => {
+    setupMocks(relayer, signer);
+    const events: string[] = [];
+    const manager = new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage: createMockStorage(),
+      keypairTTL: 86400,
+      onEvent: (e) => events.push(e.type),
+    });
+
+    // Stub storage.set to throw after initial setup
+    const originalSet = storage.set.bind(storage);
+    let callCount = 0;
+    storage.set = vi.fn().mockImplementation(async (...args: unknown[]) => {
+      callCount++;
+      // Let the first set() succeed (session signature), fail on credential persist
+      if (callCount > 0) {
+        throw new Error("storage write failed");
+      }
+      return originalSet(...(args as Parameters<typeof originalSet>));
+    });
+
+    await manager.allow(TOKEN_A);
+
+    expect(events).toContain(ZamaSDKEvents.CredentialsPersistFailed);
+  });
+
   it("continues when storage removeItem fails during cleanup", async ({
     relayer,
     signer,
