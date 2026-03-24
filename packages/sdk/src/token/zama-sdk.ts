@@ -152,20 +152,11 @@ export class ZamaSDK {
 
   async #revokeByTrackedIdentity(): Promise<void> {
     await this.#identityReady;
-    if (
-      this.#lastAddress === null ||
-      this.#lastAddress === undefined ||
-      this.#lastChainId === null ||
-      this.#lastChainId === undefined
-    ) {
+    if (this.#lastAddress === null || this.#lastChainId === null) {
       return;
     }
     const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
-    await this.sessionStorage.delete(storeKey);
-    this.#onEvent?.({
-      type: ZamaSDKEvents.CredentialsRevoked,
-      timestamp: Date.now(),
-    });
+    await this.credentials.revokeByKey(storeKey);
   }
 
   /**
@@ -258,11 +249,7 @@ export class ZamaSDK {
     const address = this.#lastAddress ?? (await this.signer.getAddress());
     const chainId = this.#lastChainId ?? (await this.signer.getChainId());
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
-    await this.sessionStorage.delete(storeKey);
-    this.#onEvent?.({
-      type: ZamaSDKEvents.CredentialsRevoked,
-      timestamp: Date.now(),
-    });
+    await this.credentials.revokeByKey(storeKey);
   }
 
   /**

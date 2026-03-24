@@ -358,6 +358,7 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
     isAllowed(): Promise<boolean>;
     isExpired(contractAddress?: Address): Promise<boolean>;
     revoke(...contractAddresses: Address[]): Promise<void>;
+    revokeByKey(key: string): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -1541,7 +1542,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DaNXJQI6.d.ts:1406:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-yXr2YiwY.d.ts:1408:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
