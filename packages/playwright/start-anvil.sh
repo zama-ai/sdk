@@ -63,6 +63,10 @@ while ! mkdir "$LOCK_DIR" 2>/dev/null; do
       rm -rf "$LOCK_DIR" 2>/dev/null || true
       continue
     fi
+  else
+    # Lock dir exists but no pid file — stale from a hard kill. Clean up.
+    rm -rf "$LOCK_DIR" 2>/dev/null || true
+    continue
   fi
   sleep 0.5
   lock_wait=$((lock_wait + 1))

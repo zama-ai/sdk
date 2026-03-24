@@ -45,7 +45,7 @@ test("matchZamaError routes to the correct handler", async () => {
   ).toBe("fallback");
 });
 
-test("zero poolSize defaults gracefully at construction", async ({ transport }) => {
+test("zero poolSize rejects on first operation", async ({ transport }) => {
   using relayer = new RelayerNode({
     getChainId: async () => HardhatConfig.chainId,
     transports: {
@@ -54,6 +54,7 @@ test("zero poolSize defaults gracefully at construction", async ({ transport }) 
     poolSize: 0,
   });
   expect(relayer).toBeDefined();
+  await expect(relayer.generateKeypair()).rejects.toThrow();
 });
 
 test("init failure resets so next call retries", async () => {

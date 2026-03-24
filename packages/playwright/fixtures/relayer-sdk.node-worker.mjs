@@ -284,10 +284,5 @@ async function handleMessage(request) {
   }
 }
 
-port.on("message", (request) => {
-  try {
-    handleMessage(request);
-  } catch (error) {
-    sendError(request.id, request.type, error instanceof Error ? error.message : String(error));
-  }
-});
+// handleMessage is async and catches all errors internally via sendError
+port.on("message", handleMessage);

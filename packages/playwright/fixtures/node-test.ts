@@ -71,7 +71,7 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
     await use({ ...HardhatConfig, network, relayerUrl: network });
   },
   relayer: async ({ transport }, use) => {
-    using relayer = new RelayerNode({
+    const relayer = new RelayerNode({
       getChainId: async () => HardhatConfig.chainId,
       transports: {
         [HardhatConfig.chainId]: transport,
@@ -79,6 +79,9 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
       poolSize: 1,
     });
     await use(relayer);
+    // Lifecycle owned by the sdk fixture via sdk.terminate() → relayer.terminate().
+    // Explicit terminate here as a safety net for tests that use relayer directly.
+    relayer.terminate();
   },
   sdk: async ({ viemClient, transport, relayer }, use) => {
     const publicClient = createPublicClient({
