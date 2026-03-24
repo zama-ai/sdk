@@ -1,10 +1,10 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
-export const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7"; // must match src/lib/config.ts
-export const WRONG_CHAIN_ID = "0x1"; // Ethereum mainnet
+export const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7"; // 11155111 in hex — Sepolia chain ID
+export const WRONG_CHAIN_ID = "0x1"; // Ethereum mainnet — used for wrong-network tests
 export const TEST_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 
-interface WalletConfig {
+export interface WalletConfig {
   /**
    * Accounts returned by `eth_accounts` (determines auto-connect state on page load).
    * Set to `[]` to show the "Connect Wallet" screen on load.
@@ -114,11 +114,10 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
  */
 async function interceptRpc(page: Page) {
   await page.route("**/ethereum-sepolia-rpc.publicnode.com**", async (route) => {
-    const body = route.request().postDataJSON() as {
-      id?: number;
-      method?: string;
-    } | null;
-    const id = body?.id ?? 1;
+    const body = route.request().postDataJSON() as
+      | { id?: number; method?: string }
+      | { id?: number; method?: string }[]
+      | null;
 
     const staticResults: Record<string, unknown> = {
       eth_chainId: "0xaa36a7",
@@ -130,20 +129,23 @@ async function interceptRpc(page: Page) {
       net_version: "11155111",
     };
 
+    function respond(req: { id?: number; method?: string } | null) {
+      return { jsonrpc: "2.0", id: req?.id ?? 1, result: staticResults[req?.method ?? ""] ?? null };
+    }
+
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id,
-        result: staticResults[body?.method ?? ""] ?? null,
-      }),
+      // viem may send batch requests (array of JSON-RPC objects) — handle both forms.
+      body: JSON.stringify(Array.isArray(body) ? body.map(respond) : respond(body)),
     });
   });
 }
 
 interface TestFixtures {
+  /** Call with a WalletConfig to inject a mock EIP-1193 provider before page load. */
   mockWallet: (config: WalletConfig) => Promise<void>;
+  /** Call to intercept Sepolia RPC requests with static responses. */
   mockRpc: () => Promise<void>;
 }
 

@@ -46,8 +46,9 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
     return (
       <div className="card">
         <div className="card-title">Pending Unshield — {label}</div>
-        <div className="alert alert-error">
-          Unable to load pending unshield state. Refresh to retry.
+        <div className="alert alert-error card-status">
+          Unable to load pending unshield state. If you have an interrupted unshield, check your
+          browser&apos;s storage settings.
         </div>
       </div>
     );

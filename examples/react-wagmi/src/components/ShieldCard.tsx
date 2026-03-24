@@ -89,8 +89,10 @@ export function ShieldCard({
             await sdk.signer.waitForTransactionReceipt(txHash);
           } catch (err) {
             if (err instanceof UserRejectedRequestError) throw err; // user said no — stop here
-            if (!(err instanceof ContractFunctionExecutionError)) throw err; // unexpected error
-            needsReset = true; // estimateGas reverted → USDT-style token
+            // Only treat contract reverts as USDT-style (estimateGas reverted before wallet prompt).
+            // Network errors, nonce issues, etc. are re-thrown to surface the real failure.
+            if (!(err instanceof ContractFunctionExecutionError)) throw err;
+            needsReset = true;
           }
 
           if (needsReset) {

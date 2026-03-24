@@ -1,10 +1,14 @@
 import type { Address } from "@zama-fhe/react-sdk";
 
 /**
- * Module-level bridge between UnshieldCard and the ZamaProvider onEvent handler.
- * UnshieldCard sets this before calling mutate(); the onEvent handler reads it to
- * associate the Phase 1 txHash with the correct wrapperAddress for savePendingUnshield.
- * A module-level variable is intentional — only one unshield can be in flight per tab.
+ * Module-level bridge used to associate an in-flight unwrap transaction hash
+ * (received via ZamaSDKEvents.UnshieldPhase1Submitted, which carries no token address)
+ * with the correct wrapperAddress so providers.tsx can call savePendingUnshield
+ * before the Phase 1 transaction is mined.
+ *
+ * Set by UnshieldCard just before mutate() is called; read by the onEvent handler
+ * in ZamaProvider. A module-level variable is intentional here — only one unshield
+ * can be in flight at a time per browser tab.
  */
 let _wrapperAddress: Address | null = null;
 
