@@ -6,8 +6,8 @@
 import type { Handle } from "../relayer/relayer-sdk.types";
 import { getAddress, type Address, type Hex } from "viem";
 import { prefixHex } from "../utils";
-export type { RawLog } from "../types/transaction";
 import type { RawLog } from "../types/transaction";
+export type { RawLog } from "../types/transaction";
 
 // ---------------------------------------------------------------------------
 // Event topic0 constants (keccak256 of canonical signature)
