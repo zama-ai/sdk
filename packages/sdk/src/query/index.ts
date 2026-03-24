@@ -202,4 +202,9 @@ export type {
   ZamaSDKEvent,
   ZamaSDKEventInput,
   ZamaSDKEventListener,
+  SessionExpiredEvent,
+  DelegationSubmittedEvent,
+  RevokeDelegationSubmittedEvent,
+  CredentialsPersistFailedEvent,
+  CredentialsCorruptedEvent,
 } from "../events/sdk-events";

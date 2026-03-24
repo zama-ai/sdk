@@ -310,6 +310,13 @@ export interface CredentialsCachedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
+export interface CredentialsCorruptedEvent extends BaseEvent {
+    error: Error;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.CredentialsCorrupted;
+}
+
+// @public (undocumented)
 export interface CredentialsCreatedEvent extends BaseEvent {
     contractAddresses?: Address[];
     // (undocumented)
@@ -370,6 +377,13 @@ export class CredentialsManager extends BaseCredentialsManager<StoredCredentials
 // @public
 export interface CredentialsManagerConfig extends CredentialsConfig {
     relayer: RelayerSDK;
+}
+
+// @public (undocumented)
+export interface CredentialsPersistFailedEvent extends BaseEvent {
+    error: Error;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.CredentialsPersistFailed;
 }
 
 // @public (undocumented)
@@ -480,6 +494,14 @@ export interface DelegationStatusQueryConfig {
 
 // @public (undocumented)
 export function delegationStatusQueryOptions(signer: GenericSigner, relayer: RelayerSDK, tokenAddress: Address | undefined, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
+
+// @public (undocumented)
+export interface DelegationSubmittedEvent extends BaseEvent {
+    // (undocumented)
+    txHash: Hex;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.DelegationSubmitted;
+}
 
 // @public
 export function deriveActivityFeedLogsKey(logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[]): string | undefined;
@@ -884,10 +906,25 @@ export interface RevokeDelegationParams {
 }
 
 // @public (undocumented)
+export interface RevokeDelegationSubmittedEvent extends BaseEvent {
+    // (undocumented)
+    txHash: Hex;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
+}
+
+// @public (undocumented)
 export function revokeMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.revoke"], Address[], void>;
 
 // @public (undocumented)
 export function revokeSessionMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.revokeSession"], void, void>;
+
+// @public (undocumented)
+export interface SessionExpiredEvent extends BaseEvent {
+    reason: "ttl";
+    // (undocumented)
+    type: typeof ZamaSDKEvents.SessionExpired;
+}
 
 // @public
 export interface ShieldCallbacks {
@@ -1494,12 +1531,6 @@ export interface ZamaSDKConfig {
     storage: GenericStorage;
 }
 
-// Warning: (ae-forgotten-export) The symbol "CredentialsPersistFailedEvent" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "CredentialsCorruptedEvent" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "SessionExpiredEvent" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "DelegationSubmittedEvent" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "RevokeDelegationSubmittedEvent" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | CredentialsPersistFailedEvent | CredentialsCorruptedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 

@@ -3,7 +3,6 @@ import { ZamaError, ZamaErrorCode } from "./base";
 // Delegation errors — the SDK does NOT auto-map ACL contract reverts to these.
 // They are exported so dApp code can catch and re-throw them when parsing
 // on-chain revert reasons (e.g. via viem's `decodeErrorResult`).
-// See the design doc for the list of ACL revert selectors.
 
 /** Delegation cannot target self (delegate === msg.sender). */
 export class DelegationSelfNotAllowedError extends ZamaError {

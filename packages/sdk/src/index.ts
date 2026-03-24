@@ -1,7 +1,7 @@
 /**
- * Core SDK for confidential token operations using Fully Homomorphic Encryption.
+ * TypeScript SDK for Zama's fhEVM — confidential smart contracts powered by Fully Homomorphic Encryption.
  *
- * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link RelayerWeb}.
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link CredentialsManager}, {@link RelayerWeb}.
  *
  * @packageDocumentation
  */

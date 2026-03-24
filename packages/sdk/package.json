@@ -128,7 +128,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@zama-fhe/relayer-sdk": "0.4.2",
+    "@zama-fhe/relayer-sdk": "~0.4.2",
     "viem": "^2.47.6"
   },
   "devDependencies": {
