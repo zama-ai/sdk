@@ -1,5 +1,4 @@
 import type { Address } from "viem";
-import { getAddress } from "viem";
 import { MAX_UINT64 } from "../contracts";
 import { getDelegationExpiryContract } from "../contracts/acl";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
@@ -51,12 +50,7 @@ export function delegationStatusQueryOptions(
       }
       const acl = await relayer.getAclAddress();
       const expiryTimestamp = await signer.readContract(
-        getDelegationExpiryContract(
-          acl,
-          getAddress(delegatorAddress),
-          getAddress(delegateAddress),
-          getAddress(keyTokenAddress),
-        ),
+        getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, keyTokenAddress),
       );
       // Derive isDelegated from expiry + chain time to stay consistent
       // with ReadonlyToken.isDelegated() (avoids client-clock skew).
