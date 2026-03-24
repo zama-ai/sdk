@@ -29,6 +29,9 @@ export interface WalletConfig {
  * - `window.__emitChainChanged(chainId)` is exposed so tests can simulate a
  *   user switching networks in their wallet, triggering the `chainChanged` event
  *   that page.tsx listens for to transition between screens.
+ * - `window.__emitAccountsChanged(accounts)` is exposed so tests can simulate a
+ *   user switching accounts, triggering the `accountsChanged` event that
+ *   providers.tsx listens for to remount ZamaProvider with the new account.
  */
 async function injectMockWallet(page: Page, config: WalletConfig) {
   await page.addInitScript((cfg: WalletConfig) => {
@@ -85,6 +88,16 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
         listener(id);
       }
     };
+
+    // Simulate the user switching accounts in their wallet.
+    // Fires the accountsChanged event that providers.tsx listens for to remount ZamaProvider
+    // with a fresh ViemSigner bound to the new account.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__emitAccountsChanged = (accounts: string[]) => {
+      for (const listener of listeners["accountsChanged"] ?? []) {
+        listener(accounts);
+      }
+    };
   }, config);
 }
 
@@ -96,11 +109,10 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
  */
 async function interceptRpc(page: Page) {
   await page.route("**/ethereum-sepolia-rpc.publicnode.com**", async (route) => {
-    const body = route.request().postDataJSON() as {
-      id?: number;
-      method?: string;
-    } | null;
-    const id = body?.id ?? 1;
+    const body = route.request().postDataJSON() as
+      | { id?: number; method?: string }
+      | { id?: number; method?: string }[]
+      | null;
 
     const staticResults: Record<string, unknown> = {
       eth_chainId: "0xaa36a7",
@@ -112,14 +124,15 @@ async function interceptRpc(page: Page) {
       net_version: "11155111",
     };
 
+    function respond(req: { id?: number; method?: string } | null) {
+      return { jsonrpc: "2.0", id: req?.id ?? 1, result: staticResults[req?.method ?? ""] ?? null };
+    }
+
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id,
-        result: staticResults[body?.method ?? ""] ?? null,
-      }),
+      // viem may send batch requests (array of JSON-RPC objects) — handle both forms.
+      body: JSON.stringify(Array.isArray(body) ? body.map(respond) : respond(body)),
     });
   });
 }

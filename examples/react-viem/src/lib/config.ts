@@ -1,3 +1,6 @@
+// ─── Sepolia network configuration ────────────────────────────────────────────
+// Edit these values to target a different network.
+
 export const SEPOLIA_CHAIN_ID = 11155111;
 export const SEPOLIA_CHAIN_ID_HEX = `0x${SEPOLIA_CHAIN_ID.toString(16)}`; // "0xaa36a7"
 export const SEPOLIA_EXPLORER_URL = "https://sepolia.etherscan.io";

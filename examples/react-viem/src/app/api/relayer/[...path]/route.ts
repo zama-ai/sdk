@@ -57,6 +57,8 @@ async function proxy(req: NextRequest, path: string[]) {
       method: req.method,
       headers: forwardHeaders(req.headers),
       body: req.body,
+      // Abort after 30 s so a hanging relayer doesn't block the Next.js server indefinitely.
+      signal: AbortSignal.timeout(30_000),
       // @ts-expect-error -- Node fetch supports duplex for streaming bodies
       duplex: "half",
     });
