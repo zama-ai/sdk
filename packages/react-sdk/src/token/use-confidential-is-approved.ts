@@ -8,12 +8,15 @@ import {
   signerAddressQueryOptions,
   zamaQueryKeys,
 } from "@zama-fhe/sdk/query";
+import { useZamaSDK } from "../provider";
 import { useToken, type UseZamaConfig } from "./use-token";
 
 export { confidentialIsApprovedQueryOptions };
 
 /** Configuration for {@link useConfidentialIsApproved}. */
-export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
+export interface UseConfidentialIsApprovedConfig {
+  /** Address of the confidential token contract. Pass `undefined` to disable the query. */
+  tokenAddress: Address | undefined;
   /** Address to check approval for. Pass `undefined` to disable the query. */
   spender: Address | undefined;
   /** Token holder address. Defaults to the connected wallet. */
@@ -48,23 +51,25 @@ export function useConfidentialIsApproved(
   config: UseConfidentialIsApprovedConfig,
   options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
-  const { spender, holder, ...tokenConfig } = config;
+  const { tokenAddress, spender, holder } = config;
   const userEnabled = options?.enabled;
-  const token = useToken(tokenConfig);
+  const sdk = useZamaSDK();
   const holderQuery = useQuery<Address>({
-    ...signerAddressQueryOptions(token.signer),
+    ...signerAddressQueryOptions(sdk.signer),
     enabled: holder === undefined,
   });
   const resolvedHolder = holder ?? holderQuery.data;
 
   const baseOpts =
-    spender && resolvedHolder
-      ? confidentialIsApprovedQueryOptions(token.signer, token.address, {
+    tokenAddress && spender && resolvedHolder
+      ? confidentialIsApprovedQueryOptions(sdk.signer, tokenAddress, {
           holder: resolvedHolder,
           spender,
         })
       : {
-          queryKey: zamaQueryKeys.confidentialIsApproved.token(config.tokenAddress),
+          queryKey: tokenAddress
+            ? zamaQueryKeys.confidentialIsApproved.token(tokenAddress)
+            : zamaQueryKeys.confidentialIsApproved.all,
           queryFn: skipToken,
         };
   return useQuery({

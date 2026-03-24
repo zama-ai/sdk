@@ -8,6 +8,16 @@ import {
 import { TOKEN, SPENDER } from "../../__tests__/mutation-test-helpers";
 
 describe("useConfidentialIsApproved", () => {
+  test("behavior: disabled when tokenAddress is undefined", ({ renderWithProviders }) => {
+    const { result } = renderWithProviders(() =>
+      useConfidentialIsApproved({ tokenAddress: undefined, spender: SPENDER }),
+    );
+
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
+  });
+
   test("behavior: disabled when spender is undefined", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
       useConfidentialIsApproved({ tokenAddress: TOKEN, spender: undefined }),
@@ -16,6 +26,27 @@ describe("useConfidentialIsApproved", () => {
     expect(result.current.isPending).toBe(true);
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
+  });
+
+  test("behavior: tokenAddress undefined -> defined", async ({ createWrapper, signer }) => {
+    vi.mocked(signer.readContract).mockResolvedValue(true);
+
+    const ctx = createWrapper({ signer });
+    const { result, rerender } = renderHook(
+      ({ tokenAddress }) => useConfidentialIsApproved({ tokenAddress, spender: SPENDER }),
+      {
+        wrapper: ctx.Wrapper,
+        initialProps: { tokenAddress: undefined as Address | undefined },
+      },
+    );
+
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+
+    rerender({ tokenAddress: TOKEN });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBe(true);
   });
 
   test("behavior: spender undefined -> defined", async ({ createWrapper, signer }) => {

@@ -1122,9 +1122,10 @@ export type UseConfidentialBalancesOptions = Omit<UseQueryOptions<ConfidentialBa
 export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<unknown, Error>;
 
 // @public
-export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
+export interface UseConfidentialIsApprovedConfig {
     holder?: Address;
     spender: Address | undefined;
+    tokenAddress: Address | undefined;
 }
 
 // @public
