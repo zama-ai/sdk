@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import { SigningFailedError, SigningRejectedError } from "../errors";
+import { SigningFailedError, SigningRejectedError, wrapSigningError } from "../errors/signing";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "../types";
@@ -328,16 +328,7 @@ export abstract class BaseCredentialsManager<
       this.emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
     } catch (error) {
-      const hasCode4001 =
-        typeof error === "object" && error !== null && "code" in error && error.code === 4001;
-      const msg = error instanceof Error ? error.message.toLowerCase() : "";
-      const hasRejectionMessage = msg.includes("user rejected") || msg.includes("user denied");
-      if (hasCode4001 || hasRejectionMessage) {
-        throw new SigningRejectedError(errorContext, { cause: error });
-      }
-      throw new SigningFailedError(errorContext, {
-        cause: error,
-      });
+      wrapSigningError(error, errorContext);
     }
   }
 
