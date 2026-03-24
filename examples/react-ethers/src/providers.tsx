@@ -158,7 +158,9 @@ export function Providers({ children }: { children: ReactNode }) {
           if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
             const wrapperAddress = getActiveUnshieldToken();
             if (wrapperAddress) {
-              savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash);
+              savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
+                console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
+              );
               setActiveUnshieldToken(null);
             }
           }

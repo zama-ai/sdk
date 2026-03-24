@@ -12,6 +12,9 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Force the default RPC URL so mockRpc's intercept pattern always matches.
+    // Without this, a dev's .env.local override would bypass the route mock.
+    env: { NEXT_PUBLIC_SEPOLIA_RPC_URL: "" },
   },
   projects: [
     {

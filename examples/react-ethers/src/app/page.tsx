@@ -178,16 +178,17 @@ export default function Home() {
         args: [address as Address, parseUnits("10", erc20Decimals)],
       });
       await sdk.signer.waitForTransactionReceipt(txHash);
+      return txHash;
     },
     onSuccess: refreshBalances,
   });
 
   // Clear stale mint state when the wallet account changes so the BalancesCard
   // does not show a pending/success/error badge belonging to the previous account.
-  // mint.reset is stable across renders (TanStack Query guarantee).
+  // mint.reset is stable (TanStack Query guarantee) — safe to include in deps.
   useEffect(() => {
     mint.reset();
-  }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [address, mint.reset]);
 
   // Guard on metadata too: if balance resolves before metadata, decimals defaults to 0
   // and symbol to "" — the raw integer would be displayed without unit or decimal conversion.
@@ -280,6 +281,8 @@ export default function Home() {
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}
         mintDisabled={actionsDisabled}
+        mintError={mint.isError ? (mint.error?.message ?? null) : null}
+        mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
       />
 
       {/* Pending unshield resume — checked for every token, not just the selected one.

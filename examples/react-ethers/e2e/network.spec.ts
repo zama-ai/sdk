@@ -1,25 +1,27 @@
 import {
   test,
   expect,
-  mockWallet,
-  mockRpc,
   WRONG_CHAIN_ID,
   SEPOLIA_CHAIN_ID_HEX,
   TEST_ADDRESS,
 } from "./fixtures";
 
 test.describe("wrong network screen", () => {
-  test("shows wrong network screen when connected on wrong chain", async ({ page }) => {
-    await mockRpc(page);
-    await mockWallet(page, { accounts: [TEST_ADDRESS], chainId: WRONG_CHAIN_ID });
+  test("shows wrong network screen when connected on wrong chain", async ({
+    page,
+    mockRpc,
+    mockWallet,
+  }) => {
+    await mockRpc();
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: WRONG_CHAIN_ID });
     await page.goto("/");
 
     await expect(page.getByText("Sepolia Network Required")).toBeVisible();
   });
 
-  test("shows chain ID in wrong network message", async ({ page }) => {
-    await mockRpc(page);
-    await mockWallet(page, { accounts: [TEST_ADDRESS], chainId: WRONG_CHAIN_ID });
+  test("shows chain ID in wrong network message", async ({ page, mockRpc, mockWallet }) => {
+    await mockRpc();
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: WRONG_CHAIN_ID });
     await page.goto("/");
 
     // The page embeds the numeric chain ID (11155111) in the wrong-network message.
@@ -28,9 +30,11 @@ test.describe("wrong network screen", () => {
 
   test("transitions to main screen when user switches to Sepolia in their wallet", async ({
     page,
+    mockRpc,
+    mockWallet,
   }) => {
-    await mockRpc(page);
-    await mockWallet(page, { accounts: [TEST_ADDRESS], chainId: WRONG_CHAIN_ID });
+    await mockRpc();
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: WRONG_CHAIN_ID });
     await page.goto("/");
 
     await expect(page.getByText("Sepolia Network Required")).toBeVisible();

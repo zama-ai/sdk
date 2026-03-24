@@ -1,5 +1,7 @@
 "use client";
 
+import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
+
 interface BalancesCardProps {
   formattedErc20: string;
   formattedConfidential: string;
@@ -8,6 +10,8 @@ interface BalancesCardProps {
   onMint: () => void;
   isMinting: boolean;
   mintDisabled: boolean;
+  mintError?: string | null;
+  mintTxHash?: string | null;
 }
 
 export function BalancesCard({
@@ -18,6 +22,8 @@ export function BalancesCard({
   onMint,
   isMinting,
   mintDisabled,
+  mintError,
+  mintTxHash,
 }: BalancesCardProps) {
   const confidentialDisplay = isLoadingConfidential ? <i>Decrypting…</i> : formattedConfidential;
 
@@ -44,6 +50,15 @@ export function BalancesCard({
           {confidentialDisplay}
         </span>
       </div>
+      {mintError && <div className="alert alert-error card-status">{mintError}</div>}
+      {mintTxHash && (
+        <div className="alert alert-success card-status">
+          Minted!{" "}
+          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${mintTxHash}`} target="_blank" rel="noreferrer">
+            {mintTxHash.slice(0, 10)}…
+          </a>
+        </div>
+      )}
     </div>
   );
 }

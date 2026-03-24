@@ -34,7 +34,20 @@ function forwardHeaders(incoming: Headers): Headers {
 // would cause the browser to attempt a second decompression pass, producing garbage.
 const RESPONSE_DROP = new Set(["content-encoding", "content-length", "transfer-encoding"]);
 
+// Only allow alphanumeric characters, dots, hyphens, and underscores in path segments.
+// This prevents path traversal or injection attempts from being forwarded to the relayer.
+const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/;
+
 async function proxy(req: NextRequest, path: string[]) {
+  for (const segment of path) {
+    if (!SAFE_SEGMENT.test(segment)) {
+      return new Response(JSON.stringify({ error: "Invalid path" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
+    }
+  }
+
   const url = new URL(path.join("/"), RELAYER_URL + "/");
   url.search = req.nextUrl.search;
 
@@ -44,12 +57,15 @@ async function proxy(req: NextRequest, path: string[]) {
       method: req.method,
       headers: forwardHeaders(req.headers),
       body: req.body,
+      // Abort after 30 s so a hanging relayer doesn't block the Next.js server indefinitely.
+      signal: AbortSignal.timeout(30_000),
       // @ts-expect-error -- Node fetch supports duplex for streaming bodies
       duplex: "half",
     });
-  } catch {
+  } catch (err) {
     // Network failure (unreachable host, DNS error, timeout) — return a JSON error so
     // the RelayerWeb worker gets valid JSON instead of an HTML 500 page from Next.js.
+    console.error("[relayer-proxy]", url.toString(), err);
     return new Response(JSON.stringify({ error: "Relayer unreachable" }), {
       status: 503,
       headers: { "content-type": "application/json" },

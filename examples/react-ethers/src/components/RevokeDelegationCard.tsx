@@ -8,10 +8,10 @@ import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface RevokeDelegationCardProps {
   tokenAddress: Address;
-  disabled: boolean;
+  disabled?: boolean;
 }
 
-export function RevokeDelegationCard({ tokenAddress, disabled }: RevokeDelegationCardProps) {
+export function RevokeDelegationCard({ tokenAddress, disabled = false }: RevokeDelegationCardProps) {
   const [delegateAddress, setDelegateAddress] = useState("");
 
   const revoke = useRevokeDelegation(
