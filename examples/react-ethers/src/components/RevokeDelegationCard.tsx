@@ -11,7 +11,10 @@ interface RevokeDelegationCardProps {
   disabled?: boolean;
 }
 
-export function RevokeDelegationCard({ tokenAddress, disabled = false }: RevokeDelegationCardProps) {
+export function RevokeDelegationCard({
+  tokenAddress,
+  disabled = false,
+}: RevokeDelegationCardProps) {
   const [delegateAddress, setDelegateAddress] = useState("");
 
   const revoke = useRevokeDelegation(

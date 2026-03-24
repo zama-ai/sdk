@@ -1,10 +1,4 @@
-import {
-  test,
-  expect,
-  WRONG_CHAIN_ID,
-  SEPOLIA_CHAIN_ID_HEX,
-  TEST_ADDRESS,
-} from "./fixtures";
+import { test, expect, WRONG_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
 
 test.describe("wrong network screen", () => {
   test("shows wrong network screen when connected on wrong chain", async ({

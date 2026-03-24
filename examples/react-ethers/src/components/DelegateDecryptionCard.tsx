@@ -11,7 +11,10 @@ interface DelegateDecryptionCardProps {
   disabled?: boolean;
 }
 
-export function DelegateDecryptionCard({ tokenAddress, disabled = false }: DelegateDecryptionCardProps) {
+export function DelegateDecryptionCard({
+  tokenAddress,
+  disabled = false,
+}: DelegateDecryptionCardProps) {
   const [delegateAddress, setDelegateAddress] = useState("");
   // Checked by default so a developer can grant access in one click during testing.
   const [noExpiry, setNoExpiry] = useState(true);
