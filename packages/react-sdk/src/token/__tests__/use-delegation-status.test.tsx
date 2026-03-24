@@ -11,6 +11,24 @@ vi.mock("@tanstack/react-query", async () => {
 });
 
 describe("useDelegationStatus", () => {
+  test("disables query when tokenAddress is missing", ({ renderWithProviders }) => {
+    vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
+
+    renderWithProviders(() =>
+      useDelegationStatus({
+        tokenAddress: undefined,
+        delegatorAddress: USER,
+        delegateAddress: RECIPIENT,
+      }),
+    );
+
+    expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        enabled: false,
+      }),
+    );
+  });
+
   test("passes the shared queryKeyHashFn when addresses are provided", ({
     renderWithProviders,
   }) => {

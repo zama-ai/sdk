@@ -5,6 +5,16 @@ import { useWrapperDiscovery } from "../use-wrapper-discovery";
 import { TOKEN, COORDINATOR } from "../../__tests__/mutation-test-helpers";
 
 describe("useWrapperDiscovery", () => {
+  test("behavior: disabled when tokenAddress is undefined", ({ renderWithProviders }) => {
+    const { result } = renderWithProviders(() =>
+      useWrapperDiscovery({ tokenAddress: undefined, coordinatorAddress: COORDINATOR }),
+    );
+
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
+  });
+
   test("behavior: disabled when coordinatorAddress is undefined", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
       useWrapperDiscovery({ tokenAddress: TOKEN, coordinatorAddress: undefined }),
@@ -44,6 +54,28 @@ describe("useWrapperDiscovery", () => {
     expect(result.current.fetchStatus).toBe("idle");
 
     rerender({ coordinatorAddress: COORDINATOR });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBe(wrapperAddress);
+  });
+
+  test("behavior: tokenAddress: undefined -> defined", async ({ createWrapper, signer }) => {
+    const wrapperAddress = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
+    vi.mocked(signer.readContract).mockResolvedValue(wrapperAddress);
+
+    const ctx = createWrapper({ signer });
+    const { result, rerender } = renderHook(
+      ({ tokenAddress }) => useWrapperDiscovery({ tokenAddress, coordinatorAddress: COORDINATOR }),
+      {
+        wrapper: ctx.Wrapper,
+        initialProps: { tokenAddress: undefined as Address | undefined },
+      },
+    );
+
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+
+    rerender({ tokenAddress: TOKEN });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(wrapperAddress);

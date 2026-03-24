@@ -2,6 +2,20 @@ import { describe, expect, test, vi, mockQueryContext } from "../../test-fixture
 import { wrapperDiscoveryQueryOptions } from "../wrapper-discovery";
 
 describe("wrapperDiscoveryQueryOptions", () => {
+  test("is disabled when tokenAddress or coordinatorAddress is missing", ({ signer }) => {
+    const missingToken = wrapperDiscoveryQueryOptions(signer, undefined, {
+      coordinatorAddress: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+    });
+    const missingCoordinator = wrapperDiscoveryQueryOptions(
+      signer,
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      {},
+    );
+
+    expect(missingToken.enabled).toBe(false);
+    expect(missingCoordinator.enabled).toBe(false);
+  });
+
   test("includes coordinatorAddress in query key", ({ signer }) => {
     const options = wrapperDiscoveryQueryOptions(
       signer,
@@ -77,5 +91,15 @@ describe("wrapperDiscoveryQueryOptions", () => {
       address: "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e",
       args: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
     });
+  });
+
+  test("queryFn throws when required params are missing from context.queryKey", async ({
+    signer,
+  }) => {
+    const options = wrapperDiscoveryQueryOptions(signer, undefined, {});
+
+    await expect(options.queryFn(mockQueryContext(options.queryKey))).rejects.toThrow(
+      "tokenAddress is required",
+    );
   });
 });

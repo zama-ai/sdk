@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.1.0-alpha.3...v2.1.0-alpha.4) (2026-03-24)
+
+### Bug Fixes
+
+- gate queries on undefined tokenAddress ([#163](https://github.com/zama-ai/sdk/issues/163)) ([5803e78]())
+
 ## [2.1.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.1.0-alpha.2...v2.1.0-alpha.3) (2026-03-24)
 
 ## [2.1.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.1.0-alpha.1...v2.1.0-alpha.2) (2026-03-20)
