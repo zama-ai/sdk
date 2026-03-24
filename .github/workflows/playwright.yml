@@ -46,9 +46,9 @@ jobs:
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
         run: cd contracts/lib/forge-fhevm && forge build
 
-      - name: Install Soldeer dependencies
+      - name: Install soldeer dependencies
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: cd contracts && forge soldeer install
+        run: cd contracts/lib/forge-fhevm && forge soldeer install
 
       - name: Build contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
