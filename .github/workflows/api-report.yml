@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   api-report:
@@ -47,8 +48,9 @@ jobs:
             git show "$BASE_SHA:$f" > "/tmp/api-reports/base/$(basename "$f")" 2>/dev/null || true
           done
 
-      - name: Report API changes
+      - name: Generate API diff
         if: github.event_name == 'pull_request'
+        id: api-diff
         run: |
           mkdir -p /tmp/api-reports/pr
           cp packages/sdk/etc/*.api.md packages/react-sdk/etc/*.api.md /tmp/api-reports/pr/
@@ -56,18 +58,47 @@ jobs:
             sed 's|/tmp/api-reports/base/|a/|;s|/tmp/api-reports/pr/|b/|' > /tmp/api-reports/raw.diff || true
 
           if [ -s /tmp/api-reports/raw.diff ]; then
-            {
-              echo "## Public API Changes"
-              echo ""
-              echo "<details>"
-              echo "<summary>Expand to see full diff</summary>"
-              echo ""
-              echo '```diff'
-              cat /tmp/api-reports/raw.diff
-              echo '```'
-              echo ""
-              echo "</details>"
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "No public API changes detected." >> "$GITHUB_STEP_SUMMARY"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Post or update PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- api-report-diff -->';
+            const hasChanges = '${{ steps.api-diff.outputs.has_changes }}' === 'true';
+
+            let body;
+            if (hasChanges) {
+              const diff = fs.readFileSync('/tmp/api-reports/raw.diff', 'utf8');
+              body = [marker, '## Public API Changes', '',
+                '<details>', '<summary>Expand to see full diff</summary>', '',
+                '```diff', diff, '```', '', '</details>'].join('\n');
+            } else {
+              body = [marker, 'No public API changes detected.'].join('\n');
+            }
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body?.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
