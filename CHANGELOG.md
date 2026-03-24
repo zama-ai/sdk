@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.1.0-alpha.4...v2.1.0-alpha.5) (2026-03-24)
+
+### Bug Fixes
+
+- exclude logger from web worker init payload ([#146](https://github.com/zama-ai/sdk/issues/146)) ([1b8d50f]()), closes [#145]()
+
 ## [2.1.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.1.0-alpha.3...v2.1.0-alpha.4) (2026-03-24)
 
 ### Bug Fixes
