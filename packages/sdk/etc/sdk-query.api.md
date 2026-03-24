@@ -226,7 +226,7 @@ export interface ConfidentialIsApprovedQueryConfig {
 }
 
 // @public (undocumented)
-export function confidentialIsApprovedQueryOptions(signer: GenericSigner, tokenAddress: Address, config: ConfidentialIsApprovedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>>;
+export function confidentialIsApprovedQueryOptions(signer: GenericSigner, tokenAddress: Address | undefined, config: ConfidentialIsApprovedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.confidentialIsApproved.scope>>;
 
 // @public
 export interface ConfidentialTransferEvent {
@@ -471,15 +471,15 @@ export interface DelegationStatusData {
 // @public (undocumented)
 export interface DelegationStatusQueryConfig {
     // (undocumented)
-    delegateAddress: Address;
+    delegateAddress?: Address;
     // (undocumented)
-    delegatorAddress: Address;
+    delegatorAddress?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
 }
 
 // @public (undocumented)
-export function delegationStatusQueryOptions(readonlyToken: ReadonlyToken, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
+export function delegationStatusQueryOptions(signer: GenericSigner, relayer: RelayerSDK, tokenAddress: Address | undefined, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
 
 // @public
 export function deriveActivityFeedLogsKey(logs?: readonly (RawLog & Partial<ActivityLogMetadata>)[]): string | undefined;
@@ -1276,13 +1276,13 @@ export interface WrappedEvent {
 // @public (undocumented)
 export interface WrapperDiscoveryQueryConfig {
     // (undocumented)
-    coordinatorAddress: Address;
+    coordinatorAddress?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
 }
 
 // @public (undocumented)
-export function wrapperDiscoveryQueryOptions(signer: GenericSigner, tokenAddress: Address, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<Address | null, Error, Address | null, ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>>;
+export function wrapperDiscoveryQueryOptions(signer: GenericSigner, tokenAddress: Address | undefined, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<Address | null, Error, Address | null, ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>>;
 
 // @public
 export const zamaQueryKeys: {
@@ -1351,9 +1351,9 @@ export const zamaQueryKeys: {
     };
     readonly wrapperDiscovery: {
         readonly all: readonly ["zama.wrapperDiscovery"];
-        readonly token: (tokenAddress: Address, coordinatorAddress: Address) => readonly ["zama.wrapperDiscovery", {
-            readonly tokenAddress: `0x${string}`;
-            readonly coordinatorAddress: `0x${string}`;
+        readonly token: (tokenAddress?: Address, coordinatorAddress?: Address) => readonly ["zama.wrapperDiscovery", {
+            readonly coordinatorAddress?: `0x${string}` | undefined;
+            readonly tokenAddress?: `0x${string}` | undefined;
         }];
     };
     readonly underlyingAllowance: {
@@ -1369,13 +1369,15 @@ export const zamaQueryKeys: {
     };
     readonly confidentialIsApproved: {
         readonly all: readonly ["zama.confidentialIsApproved"];
-        readonly token: (tokenAddress: Address) => readonly ["zama.confidentialIsApproved", {
-            readonly tokenAddress: `0x${string}`;
+        readonly token: (tokenAddress?: Address) => readonly ["zama.confidentialIsApproved", {
+            tokenAddress: `0x${string}`;
+        } | {
+            tokenAddress?: undefined;
         }];
-        readonly scope: (tokenAddress: Address, holder?: Address, spender?: Address) => readonly ["zama.confidentialIsApproved", {
+        readonly scope: (tokenAddress?: Address, holder?: Address, spender?: Address) => readonly ["zama.confidentialIsApproved", {
             readonly spender?: `0x${string}` | undefined;
             readonly holder?: `0x${string}` | undefined;
-            readonly tokenAddress: `0x${string}`;
+            readonly tokenAddress?: `0x${string}` | undefined;
         }];
     };
     readonly totalSupply: {
@@ -1438,13 +1440,15 @@ export const zamaQueryKeys: {
     };
     readonly delegationStatus: {
         readonly all: readonly ["zama.delegationStatus"];
-        readonly token: (tokenAddress: string) => readonly ["zama.delegationStatus", {
-            readonly tokenAddress: `0x${string}`;
+        readonly token: (tokenAddress?: Address) => readonly ["zama.delegationStatus", {
+            tokenAddress: `0x${string}`;
+        } | {
+            tokenAddress?: undefined;
         }];
-        readonly scope: (tokenAddress: string, delegator: string, delegate: string) => readonly ["zama.delegationStatus", {
-            readonly tokenAddress: `0x${string}`;
-            readonly delegatorAddress: `0x${string}`;
-            readonly delegateAddress: `0x${string}`;
+        readonly scope: (tokenAddress?: Address, delegator?: Address, delegate?: Address) => readonly ["zama.delegationStatus", {
+            readonly delegateAddress?: `0x${string}` | undefined;
+            readonly delegatorAddress?: `0x${string}` | undefined;
+            readonly tokenAddress?: `0x${string}` | undefined;
         }];
     };
     readonly decryption: {
