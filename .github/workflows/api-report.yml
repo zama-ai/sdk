@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   api-report:
@@ -35,3 +36,65 @@ jobs:
 
       - name: Check API reports are up to date
         run: pnpm api-report:check
+
+      - name: Save PR API reports
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p /tmp/api-reports/pr
+          cp packages/sdk/etc/*.api.md /tmp/api-reports/pr/
+          cp packages/react-sdk/etc/*.api.md /tmp/api-reports/pr/
+
+      - name: Checkout base branch reports
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          submodules: false
+
+      - name: Save base API reports
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p /tmp/api-reports/base
+          # Copy what exists on the base branch; missing files are fine (new packages)
+          cp packages/sdk/etc/*.api.md /tmp/api-reports/base/ 2>/dev/null || true
+          cp packages/react-sdk/etc/*.api.md /tmp/api-reports/base/ 2>/dev/null || true
+
+      - name: Generate API diff comment
+        if: github.event_name == 'pull_request'
+        id: api-diff
+        run: |
+          DIFF=$(diff -ru /tmp/api-reports/base /tmp/api-reports/pr || true)
+
+          if [ -z "$DIFF" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+
+            # Build the comment body
+            {
+              echo "## Public API Changes"
+              echo ""
+              echo "<details>"
+              echo "<summary>Expand to see full diff</summary>"
+              echo ""
+              echo '```diff'
+              echo "$DIFF"
+              echo '```'
+              echo ""
+              echo "</details>"
+            } > /tmp/api-reports/comment.md
+          fi
+
+      - name: Post or update PR comment
+        if: github.event_name == 'pull_request' && steps.api-diff.outputs.has_changes == 'true'
+        uses: marocchino/sticky-pull-request-comment@67d0dec7b07ed060a405f9b2a64b8ab319fdd7db # v2.9.2
+        with:
+          header: api-report-diff
+          path: /tmp/api-reports/comment.md
+
+      - name: Remove stale comment if no changes
+        if: github.event_name == 'pull_request' && steps.api-diff.outputs.has_changes == 'false'
+        uses: marocchino/sticky-pull-request-comment@67d0dec7b07ed060a405f9b2a64b8ab319fdd7db # v2.9.2
+        with:
+          header: api-report-diff
+          delete: true
