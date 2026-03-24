@@ -1,19 +1,18 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "../utils/query";
-import { skipToken, type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import {
-  confidentialIsApprovedQueryOptions,
-  signerAddressQueryOptions,
-  zamaQueryKeys,
-} from "@zama-fhe/sdk/query";
+import { confidentialIsApprovedQueryOptions, signerAddressQueryOptions } from "@zama-fhe/sdk/query";
+import { useZamaSDK } from "../provider";
 import { useToken, type UseZamaConfig } from "./use-token";
 
 export { confidentialIsApprovedQueryOptions };
 
 /** Configuration for {@link useConfidentialIsApproved}. */
-export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
+export interface UseConfidentialIsApprovedConfig {
+  /** Address of the confidential token contract. Pass `undefined` to disable the query. */
+  tokenAddress: Address | undefined;
   /** Address to check approval for. Pass `undefined` to disable the query. */
   spender: Address | undefined;
   /** Token holder address. Defaults to the connected wallet. */
@@ -48,29 +47,21 @@ export function useConfidentialIsApproved(
   config: UseConfidentialIsApprovedConfig,
   options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">,
 ) {
-  const { spender, holder, ...tokenConfig } = config;
-  const userEnabled = options?.enabled;
-  const token = useToken(tokenConfig);
+  const { tokenAddress, spender, holder } = config;
+  const sdk = useZamaSDK();
   const holderQuery = useQuery<Address>({
-    ...signerAddressQueryOptions(token.signer),
-    enabled: holder === undefined,
+    ...signerAddressQueryOptions(sdk.signer),
+    enabled: tokenAddress !== undefined && spender !== undefined && holder === undefined,
   });
   const resolvedHolder = holder ?? holderQuery.data;
-
-  const baseOpts =
-    spender && resolvedHolder
-      ? confidentialIsApprovedQueryOptions(token.signer, token.address, {
-          holder: resolvedHolder,
-          spender,
-        })
-      : {
-          queryKey: zamaQueryKeys.confidentialIsApproved.token(config.tokenAddress),
-          queryFn: skipToken,
-        };
+  const baseOpts = confidentialIsApprovedQueryOptions(sdk.signer, tokenAddress, {
+    holder: resolvedHolder,
+    spender,
+  });
   return useQuery({
     ...baseOpts,
     ...options,
-    enabled: ("enabled" in baseOpts ? (baseOpts.enabled ?? true) : true) && (userEnabled ?? true),
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
