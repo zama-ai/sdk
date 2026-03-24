@@ -28,7 +28,7 @@ export function UnshieldCard({
   const { storage } = useZamaSDK();
 
   const unshield = useUnshield(
-    // For ERC-7984 tokens, the wrapper contract and the cToken share the same address.
+    // For ERC-7984 tokens, the wrapper IS the token — tokenAddress and wrapperAddress are the same.
     { tokenAddress, wrapperAddress: tokenAddress },
     {
       onSuccess: () => {

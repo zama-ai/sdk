@@ -38,6 +38,10 @@ jobs:
             contracts/cache
           key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml') }}
 
+      - name: Install soldeer dependencies
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: cd contracts/lib/forge-fhevm && forge soldeer install
+
       - name: Build contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
         run: cd contracts && forge build
