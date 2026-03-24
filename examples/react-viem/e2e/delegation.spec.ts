@@ -1,13 +1,13 @@
-import { test, expect, mockWallet, mockRpc, SEPOLIA_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
+import { test, expect, SEPOLIA_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
 
 // A valid Ethereum address different from TEST_ADDRESS — used to fill delegate inputs.
 const VALID_DELEGATE = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
 
 // All tests start with the wallet already connected on Sepolia.
 test.describe("delegation section", () => {
-  test.beforeEach(async ({ page }) => {
-    await mockRpc(page);
-    await mockWallet(page, { accounts: [TEST_ADDRESS], chainId: SEPOLIA_CHAIN_ID_HEX });
+  test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
+    await mockRpc();
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: SEPOLIA_CHAIN_ID_HEX });
     await page.goto("/");
   });
 

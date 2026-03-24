@@ -19,11 +19,15 @@ interface PendingUnshieldCardProps {
 export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingUnshieldCardProps) {
   const { storage } = useZamaSDK();
   const [pendingTxHash, setPendingTxHash] = useState<Hex | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     loadPendingUnshield(storage, tokenAddress)
       .then(setPendingTxHash)
-      .catch((err) => console.error("[PendingUnshieldCard] loadPendingUnshield failed:", err));
+      .catch((err) => {
+        console.error("[PendingUnshieldCard] loadPendingUnshield failed:", err);
+        setLoadError(true);
+      });
   }, [storage, tokenAddress]);
 
   const resume = useResumeUnshield(
@@ -37,6 +41,18 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
       },
     },
   );
+
+  if (loadError) {
+    return (
+      <div className="card">
+        <div className="card-title">Pending Unshield — {label}</div>
+        <div className="alert alert-error card-status">
+          Unable to load pending unshield state. If you have an interrupted unshield, check your
+          browser&apos;s storage settings.
+        </div>
+      </div>
+    );
+  }
 
   if (!pendingTxHash) return null;
 

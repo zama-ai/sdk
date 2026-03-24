@@ -1,4 +1,4 @@
-import { test, expect, mockWallet, mockRpc, SEPOLIA_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
+import { test, expect, SEPOLIA_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
 
 test.describe("connect flow", () => {
   test("shows connect screen when no wallet is installed", async ({ page }) => {
@@ -21,22 +21,26 @@ test.describe("connect flow", () => {
     ).toBeVisible();
   });
 
-  test("auto-detects existing connection and shows main screen", async ({ page }) => {
-    await mockRpc(page);
+  test("auto-detects existing connection and shows main screen", async ({
+    page,
+    mockRpc,
+    mockWallet,
+  }) => {
+    await mockRpc();
     // Wallet already connected on Sepolia — page auto-detects via useEffect.
-    await mockWallet(page, { accounts: [TEST_ADDRESS], chainId: SEPOLIA_CHAIN_ID_HEX });
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: SEPOLIA_CHAIN_ID_HEX });
     await page.goto("/");
 
     await expect(page.getByText("Balances")).toBeVisible();
     await expect(page.getByText(/Connected:/)).toBeVisible();
   });
 
-  test("connects after clicking and shows main screen", async ({ page }) => {
-    await mockRpc(page);
+  test("connects after clicking and shows main screen", async ({ page, mockRpc, mockWallet }) => {
+    await mockRpc();
     // accounts: [] → eth_accounts returns [] → page shows "Connect Wallet" screen.
     // requestAccounts: [TEST_ADDRESS] → eth_requestAccounts returns the address when
     // connect() is called, without touching the eth_accounts read path.
-    await mockWallet(page, {
+    await mockWallet({
       accounts: [],
       chainId: SEPOLIA_CHAIN_ID_HEX,
       requestAccounts: [TEST_ADDRESS],

@@ -191,10 +191,10 @@ export default function Home() {
 
   // Clear stale mint state when the wallet account changes so the BalancesCard
   // does not show a pending/success/error badge belonging to the previous account.
-  // mint.reset is stable across renders (TanStack Query guarantee).
+  // mint.reset is stable across renders (TanStack Query guarantee) — safe to include in deps.
   useEffect(() => {
     mint.reset();
-  }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [address, mint.reset]);
 
   // Guard on metadata too: if balance resolves before metadata, decimals defaults to 0
   // and symbol to "" — the raw integer would be displayed without unit or decimal conversion.
@@ -341,13 +341,11 @@ export default function Home() {
       <DelegateDecryptionCard
         key={`grant-delegation-${address}-${selectedToken}`}
         tokenAddress={token.confidential}
-        disabled={!isSepolia}
       />
 
       <RevokeDelegationCard
         key={`revoke-delegation-${address}-${selectedToken}`}
         tokenAddress={token.confidential}
-        disabled={!isSepolia}
       />
 
       {/* ── Delegation — delegate perspective ────────────────────────────────
@@ -360,7 +358,7 @@ export default function Home() {
         tokenAddress={token.confidential}
         decimals={decimals}
         symbol={confidentialSymbol}
-        disabled={!isSepolia || !cTokenMetadata.data}
+        disabled={!cTokenMetadata.data}
         connectedAddress={address as Address}
       />
     </div>

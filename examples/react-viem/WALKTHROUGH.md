@@ -133,7 +133,7 @@ const walletClient = createWalletClient({
 });
 ```
 
-`eth_accounts` returns lowercase addresses. The relayer-sdk worker validates addresses with `getAddress(addr) === addr` (EIP-55 checksum check). Passing a lowercase address would cause unshield / encrypt operations to fail with "User address is not a valid address". `getAddress()` from viem normalizes to checksummed format before the address is bound to the wallet client.
+`eth_accounts` returns lowercase addresses. Lowercase addresses can cause relayer address validation failures — `getAddress()` from viem normalizes to EIP-55 checksummed format before the address is bound to the wallet client, preventing this.
 
 ---
 
@@ -355,9 +355,9 @@ export const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || SEPOLI
 
 Tests use Playwright with a mock EIP-1193 provider injected via `page.addInitScript` (see `e2e/fixtures.ts`). No wallet extension or real network is needed.
 
-- `mockWallet` — injects `window.ethereum` with configurable `eth_accounts`, `eth_requestAccounts`, and `eth_chainId`; exposes `window.__emitChainChanged(chainId)` to simulate wallet network switches
-- `mockRpc` — intercepts Sepolia RPC calls, returns static responses; `eth_call → "0x"` so `useMetadata` fails gracefully and `actionsDisabled` stays true
-- `_autoMockRelayer` — Playwright `auto` fixture (applied to every test automatically) that aborts all `/api/relayer/**` requests; no real network calls to the Zama relayer in CI
+- `mockWallet` — fixture that injects `window.ethereum` with configurable `eth_accounts`, `eth_requestAccounts`, and `eth_chainId`; exposes `window.__emitChainChanged(chainId)` to simulate wallet network switches
+- `mockRpc` — fixture that intercepts Sepolia RPC calls, returns static responses; `eth_call → "0x"` so `useMetadata` fails gracefully and `actionsDisabled` stays true
+- `page` override — aborts all `/api/relayer/**` requests for every test; no real network calls to the Zama relayer in CI
 
 ```bash
 npm run test:e2e   # starts dev server and runs all specs

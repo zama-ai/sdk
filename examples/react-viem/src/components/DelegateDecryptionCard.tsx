@@ -8,10 +8,13 @@ import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface DelegateDecryptionCardProps {
   tokenAddress: Address;
-  disabled: boolean;
+  disabled?: boolean;
 }
 
-export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecryptionCardProps) {
+export function DelegateDecryptionCard({
+  tokenAddress,
+  disabled = false,
+}: DelegateDecryptionCardProps) {
   const [delegateAddress, setDelegateAddress] = useState("");
   // Checked by default so a developer can grant access in one click during testing.
   const [noExpiry, setNoExpiry] = useState(true);

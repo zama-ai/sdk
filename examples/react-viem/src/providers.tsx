@@ -60,10 +60,7 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // See WALKTHROUGH.md §"Architecture at a glance" for the full rationale.
 // ──────────────────────────────────────────────────────────────────────────────
 
-// Separate IndexedDB database for session signatures (EIP-712 wallet signatures that
-// authorize decryption). Must be distinct from indexedDBStorage ("CredentialStore") because
-// both use the same storage key — storing them in the same DB would cause the session entry
-// to overwrite the encrypted keypair, corrupting credentials on the next decrypt attempt.
+// Separate DB from indexedDBStorage — see block comment above for the reason.
 const sessionDBStorage = new IndexedDBStorage("SessionStore");
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -169,9 +166,9 @@ export function Providers({ children }: { children: ReactNode }) {
     // walletKey is bumped synchronously after liveAccountsRef is updated (both in the
     // eth_accounts seed and in handleAccountsChanged).
     //
-    // getAddress() normalizes to EIP-55 checksummed format. The relayer-sdk worker
-    // validates addresses with `getAddress(addr) === addr` — lowercase addresses from
-    // eth_accounts would fail this check without normalization.
+    // getAddress() normalizes to EIP-55 checksummed format. Lowercase addresses
+    // returned by eth_accounts can cause relayer address validation failures —
+    // normalization prevents this.
     const rawAddress = liveAccountsRef.current[0];
     const account = rawAddress ? (getAddress(rawAddress) as Address) : undefined;
     const walletClient = createWalletClient({
@@ -191,19 +188,16 @@ export function Providers({ children }: { children: ReactNode }) {
         sessionStorage={sessionDBStorage}
         signer={signer}
         onEvent={(event) => {
-          // ZamaSDKEvents.UnshieldPhase1Submitted fires right after the Phase 1 tx is submitted
-          // (before it is mined). Saving here ensures the pending state survives a tab close.
+          // Fires right after the Phase 1 tx is submitted (before it is mined).
+          // Saving here ensures the pending state survives a tab close between phases.
           // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
-          //
-          // NOTE: indexedDBStorage here is the same instance passed as the `storage` prop above.
-          // savePendingUnshield writes the pending tx hash into that store; PendingUnshieldCard
-          // reads it back via useZamaSDK().storage (which resolves to the same singleton).
-          // If the storage prop is ever changed to a different instance, this call must be updated
-          // to match — they must always point to the same underlying store.
+          // NOTE: indexedDBStorage must be the same instance as the `storage` prop above.
           if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
             const wrapperAddress = getActiveUnshieldToken();
             if (wrapperAddress) {
-              savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash);
+              savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
+                console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
+              );
               setActiveUnshieldToken(null);
             }
           }

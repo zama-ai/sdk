@@ -1,10 +1,10 @@
-import { test, expect, mockWallet, mockRpc, SEPOLIA_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
+import { test, expect, SEPOLIA_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
 
 // All tests in this suite start with the wallet already connected on Sepolia.
 test.describe("main screen", () => {
-  test.beforeEach(async ({ page }) => {
-    await mockRpc(page);
-    await mockWallet(page, { accounts: [TEST_ADDRESS], chainId: SEPOLIA_CHAIN_ID_HEX });
+  test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
+    await mockRpc();
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: SEPOLIA_CHAIN_ID_HEX });
     await page.goto("/");
   });
 
