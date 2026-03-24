@@ -1,17 +1,18 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "../utils/query";
-import { skipToken, type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { wrapperDiscoveryQueryOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { wrapperDiscoveryQueryOptions } from "@zama-fhe/sdk/query";
+import { useZamaSDK } from "../provider";
 import { useReadonlyToken } from "./use-readonly-token";
 
 export { wrapperDiscoveryQueryOptions };
 
 /** Configuration for {@link useWrapperDiscovery}. */
 export interface UseWrapperDiscoveryConfig {
-  /** Address of the underlying ERC-20 token. */
-  tokenAddress: Address;
+  /** Address of the underlying ERC-20 token. Pass `undefined` to disable the query. */
+  tokenAddress: Address | undefined;
   /** Address of the wrapper coordinator. Pass `undefined` to disable the query. */
   coordinatorAddress: Address | undefined;
 }
@@ -46,16 +47,13 @@ export function useWrapperDiscovery(
   options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">,
 ) {
   const { tokenAddress, coordinatorAddress } = config;
-  const token = useReadonlyToken(tokenAddress);
+  const sdk = useZamaSDK();
+  const baseOpts = wrapperDiscoveryQueryOptions(sdk.signer, tokenAddress, { coordinatorAddress });
 
   return useQuery<Address | null>({
-    ...(coordinatorAddress
-      ? wrapperDiscoveryQueryOptions(token.signer, tokenAddress, { coordinatorAddress })
-      : {
-          queryKey: zamaQueryKeys.wrapperDiscovery.all,
-          queryFn: skipToken,
-        }),
+    ...baseOpts,
     ...options,
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
