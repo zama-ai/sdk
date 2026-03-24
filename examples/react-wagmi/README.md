@@ -1,42 +1,32 @@
 # React + wagmi Example
 
-Next.js 15 app using `@zama-fhe/react-sdk` with wagmi v2.
+Next.js app using `@zama-fhe/react-sdk` with wagmi v3 on Sepolia testnet.
+
+See [WALKTHROUGH.md](./WALKTHROUGH.md) for a detailed developer guide.
 
 ## Setup
 
 ```bash
-cp .env.example .env.local
-# Fill in your values
-
+cp .env.example .env.local   # all values are optional — defaults work for testnet
 npm install
-```
-
-## Run
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and connect your wallet (MetaMask or any injected wallet).
+Open [http://localhost:3000](http://localhost:3000) and connect your wallet.
 
 ## Stack
 
-- **Next.js 15** (App Router)
-- **React 18** + wagmi v2
+- **Next.js** (App Router, `"use client"`)
+- **React 19** + **wagmi v3** + **viem v2**
 - **@tanstack/react-query** for async state
-- **ZamaProvider** + **WagmiSigner** — uses wagmi's config for wallet access
+- **ZamaProvider** + **WagmiSigner** — wallet reactivity via wagmi's `watchConnection`
+- **RelayerWeb** + local `/api/relayer` proxy (keeps `RELAYER_API_KEY` server-side)
 
 ## What it does
 
-- Connect/disconnect wallet via wagmi's injected connector
-- Display decrypted confidential balance (auto-polling)
-- Shield public tokens into confidential tokens
+- Connect wallet via `useConnect({ connector: injected() })` — no manual `eth_accounts` polling
+- Prompt chain switch to Sepolia if needed via `useSwitchChain`
+- Shield ERC-20 tokens into confidential tokens (with USDT-style approval handling)
 - Confidential transfer to another address
-- Unshield tokens back to public
-
-## Authentication
-
-The relayer may require authentication. You can either:
-
-- **Proxy approach**: Run a proxy server that injects auth headers before forwarding to the relayer
-- **Direct auth**: Pass an `auth` transport option in the relayer config (see SDK docs)
+- Unshield confidential tokens back to ERC-20 (two-phase, with pending recovery)
+- Delegate / revoke / decrypt-as flows for ERC-7984 delegated decryption

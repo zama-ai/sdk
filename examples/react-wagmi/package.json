@@ -5,19 +5,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",
-    "@zama-fhe/react-sdk": "1.0.0-alpha.16",
-    "@zama-fhe/sdk": "1.0.0-alpha.16",
+    "@zama-fhe/react-sdk": "2.1.0-alpha.2",
+    "@zama-fhe/sdk": "2.1.0-alpha.2",
     "next": "^16.1.7",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "viem": "^2.30.0",
-    "wagmi": "^2.15.0"
+    "viem": "^2.47.0",
+    "wagmi": "^3.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@types/react": "^19.2.0",
     "typescript": "^5.8.0"
   },
