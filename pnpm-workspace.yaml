@@ -8,3 +8,6 @@ packages:
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - "@zama-fhe/relayer-sdk"
+  - "@tanstack/react-query"
+  - "@tanstack/query-core"
+  - "typescript"
