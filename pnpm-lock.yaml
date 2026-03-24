@@ -154,6 +154,9 @@ importers:
         specifier: ^2.47.4
         version: 2.47.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.6)
     devDependencies:
+      '@fhevm/mock-utils':
+        specifier: 0.4.2
+        version: 0.4.2(@zama-fhe/relayer-sdk@0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@5.9.3)
       '@types/node':
         specifier: ^22.19.15
         version: 22.19.15
@@ -2221,6 +2224,11 @@ packages:
         optional: true
       typescript:
         optional: true
+
+  '@zama-fhe/relayer-sdk@0.4.1':
+    resolution: {integrity: sha512-bS7tVQbXnsPFgiqm5R4pJ8hbPMYZuRh/Pv89S+jxO60y0mD296F4qIKEO7dgiHjC87V5GFM9DqCLNejjCNVw2Q==}
+    engines: {node: '>=22'}
+    hasBin: true
 
   '@zama-fhe/relayer-sdk@0.4.2':
     resolution: {integrity: sha512-3Q0tINKxz6YseaDxOrNP/648j5Wr2C4Utnjx5npZESjLAc20tWgWFE7BOfx0Kjhs8cx/ykU+tMZBq40+DsiUvA==}
@@ -5160,6 +5168,13 @@ snapshots:
 
   '@faker-js/faker@10.3.0': {}
 
+  '@fhevm/mock-utils@0.4.2(@zama-fhe/relayer-sdk@0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@5.9.3)':
+    dependencies:
+      '@zama-fhe/relayer-sdk': 0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ethers: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    optionalDependencies:
+      typescript: 5.9.3
+
   '@fhevm/mock-utils@0.4.2(@zama-fhe/relayer-sdk@0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10))(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(typescript@5.9.3)':
     dependencies:
       '@zama-fhe/relayer-sdk': 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -6490,6 +6505,21 @@ snapshots:
       - immer
       - react
       - use-sync-external-store
+
+  '@zama-fhe/relayer-sdk@0.4.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)':
+    dependencies:
+      commander: 14.0.3
+      ethers: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      fetch-retry: 6.0.0
+      keccak: 3.0.4
+      node-tfhe: 1.4.0-alpha.3
+      node-tkms: 0.12.8
+      tfhe: 1.4.0-alpha.3
+      tkms: 0.12.8
+      wasm-feature-detect: 1.8.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@zama-fhe/relayer-sdk@0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)':
     dependencies:

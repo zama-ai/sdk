@@ -20,6 +20,7 @@
     "viem": "^2.47.4"
   },
   "devDependencies": {
+    "@fhevm/mock-utils": "0.4.2",
     "@types/node": "^22.19.15"
   }
 }
