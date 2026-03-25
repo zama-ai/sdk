@@ -4,6 +4,12 @@
 
 ### ⚠ BREAKING CHANGES
 
+- **react-sdk**: `useUserDecryptedValue` and `useUserDecryptedValues` hooks removed — use `useUserDecrypt({ handles }).values` instead
+- **react-sdk**: `DecryptParams` type removed — use `UserDecryptMutationParams` (from `@zama-fhe/sdk/query`)
+- **react-sdk**: `DecryptCallbacks` type removed — use `UserDecryptCallbacks` (from `@zama-fhe/sdk/query`)
+- **react-sdk**: `DecryptResult` type moved from `@zama-fhe/react-sdk` to `@zama-fhe/sdk/query`
+- **react-sdk**: `MutateCallbackOptions` type removed from public API (internal only)
+- **react-sdk**: `useUserDecrypt` return type now includes `values` map and optional `mutate()`/`mutateAsync()` params
 - useUserDecryptFlow removed, useUserDecrypt now has the
   flow hook's signature. Old low-level useUserDecrypt accepting
   UserDecryptParams is removed.

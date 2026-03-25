@@ -11,6 +11,9 @@ export interface DecryptHandle {
   contractAddress: Address;
 }
 
+/** A map of handles to their decrypted clear-text values. */
+export type DecryptResult = Record<Handle, ClearValueType>;
+
 /** Variables for {@link userDecryptMutationOptions}. */
 export interface UserDecryptMutationParams {
   handles: DecryptHandle[];
@@ -21,7 +24,7 @@ export interface UserDecryptCallbacks {
   /** Fired after credentials are ready (either from cache or freshly generated). */
   onCredentialsReady?: () => void;
   /** Fired after decryption completes. */
-  onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
+  onDecrypted?: (values: DecryptResult) => void;
 }
 
 export function userDecryptMutationOptions(

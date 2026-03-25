@@ -15,8 +15,7 @@ export { useEncrypt } from "./relayer/use-encrypt";
 export {
   useUserDecrypt,
   type UseUserDecryptConfig,
-  type DecryptResult,
-  type MutateCallbackOptions,
+  type UseUserDecryptResult,
 } from "./relayer/use-user-decrypt";
 
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
@@ -289,6 +288,7 @@ export {
   publicDecryptMutationOptions,
   requestZKProofVerificationMutationOptions,
   userDecryptMutationOptions,
+  type DecryptResult,
   type UserDecryptMutationParams,
   type UserDecryptCallbacks,
   type DecryptHandle,

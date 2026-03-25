@@ -415,6 +415,9 @@ export interface DecryptHandle {
     handle: Handle;
 }
 
+// @public
+export type DecryptResult = Record<Handle, ClearValueType>;
+
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
     // (undocumented)
@@ -1227,7 +1230,7 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 // @public
 export interface UserDecryptCallbacks {
     onCredentialsReady?: () => void;
-    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
+    onDecrypted?: (values: DecryptResult) => void;
 }
 
 // @public (undocumented)

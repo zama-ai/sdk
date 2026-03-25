@@ -839,7 +839,7 @@ const result = await decrypt.mutateAsync({
 | Hook                        | Input                        | Output                   | Description                                                                  |
 | --------------------------- | ---------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
 | `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                                     |
-| `useUserDecrypt()`          | `DecryptParams`              | `Record<string, bigint>` | Full decrypt orchestration with progress callbacks. Populates cache.         |
+| `useUserDecrypt()`          | `UserDecryptMutationParams`  | `DecryptResult`          | Full decrypt orchestration with progress callbacks. Populates cache.         |
 | `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption (no authorization needed). Populates the decryption cache. |
 | `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                                      |
 

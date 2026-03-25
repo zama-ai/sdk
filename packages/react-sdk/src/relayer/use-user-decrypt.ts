@@ -4,18 +4,12 @@ import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import type { ClearValueType, Handle } from "@zama-fhe/sdk";
 import type {
   DecryptHandle,
+  DecryptResult,
   UserDecryptCallbacks,
   UserDecryptMutationParams,
 } from "@zama-fhe/sdk/query";
 import { hashFn, userDecryptMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-
-/** A map of handles to their decrypted clear-text values. */
-export type DecryptResult = Record<Handle, ClearValueType>;
-/** Callback options forwarded to the underlying `useMutation.mutate()`. */
-export type MutateCallbackOptions = Parameters<
-  ReturnType<typeof useMutation<DecryptResult, Error, UserDecryptMutationParams>>["mutate"]
->[1];
 
 /** Configuration for {@link useUserDecrypt}. */
 export interface UseUserDecryptConfig extends UserDecryptCallbacks {
@@ -35,8 +29,8 @@ export interface UseUserDecryptConfig extends UserDecryptCallbacks {
  * | Field | Type | Description |
  * |-------|------|-------------|
  * | `mutate(params?)` | `function` | Trigger decryption. Without args, decrypts uncached handles from `config.handles`. No-op if all are cached. |
- * | `mutateAsync(params?)` | `function` | Same as `mutate` but returns `Promise<Record<Handle, ClearValueType>>`. Resolves to `{}` if all cached. |
- * | `data` | `Record<Handle, ClearValueType> \| undefined` | Result of the last successful `mutate` call. |
+ * | `mutateAsync(params?)` | `function` | Same as `mutate` but returns `Promise<DecryptResult>`. Resolves with cached values if all cached. |
+ * | `data` | `DecryptResult \| undefined` | Result of the last successful `mutate` call. |
  * | `values` | `Record<Handle, ClearValueType \| undefined>` | Reactive cache of all tracked handles (populated across calls). |
  * | `isPending` | `boolean` | `true` while decryption is in progress. |
  * | `isSuccess` | `boolean` | `true` after a successful decryption. |
@@ -84,8 +78,9 @@ export function useUserDecrypt(config?: UseUserDecryptConfig) {
   const sdk = useZamaSDK();
   const queryClient = useQueryClient();
   const handles = config?.handles ?? [];
+  const { handles: _handles, ...callbacks } = config ?? {};
 
-  // Reactively read cached decrypted values for all tracked handles
+  // Reactively subscribe to cached decrypted values for all tracked handles
   const cacheResults = useQueries({
     queries: handles.map((h) => ({
       queryKey: zamaQueryKeys.decryption.handle(h.handle),
@@ -105,67 +100,61 @@ export function useUserDecrypt(config?: UseUserDecryptConfig) {
     values[handles[i]!.handle] = cacheResults[i]?.data as ClearValueType | undefined;
   }
 
-  const { handles: _handles, ...callbacks } = config ?? {};
-
   const mutation = useMutation<DecryptResult, Error, UserDecryptMutationParams>(
     userDecryptMutationOptions(sdk, callbacks),
   );
 
-  /**
-   * Trigger decryption. Without arguments, decrypts all tracked handles
-   * that are not yet in the cache. Pass explicit params to override.
-   *
-   * When all handles are already cached this is a no-op: the mutation is
-   * not triggered and its state (`isSuccess`, `data`) is not updated.
-   * Use the `values` map to read cached results reactively.
-   */
-  function mutate(
-    params: UserDecryptMutationParams = {
-      handles: getUncachedHandles(handles, queryClient),
-    },
-    options?: MutateCallbackOptions,
-  ) {
-    if (params.handles.length === 0) {
-      return;
-    }
-    mutation.mutate(params, options);
+  function getDefaultParams(): UserDecryptMutationParams {
+    const uncached = handles.filter((h) => {
+      const state = queryClient.getQueryState(zamaQueryKeys.decryption.handle(h.handle));
+      return state?.dataUpdatedAt === undefined || state.dataUpdatedAt === 0;
+    });
+    return { handles: uncached };
   }
 
-  /**
-   * Same as `mutate` but returns a promise.
-   * Resolves immediately with `{}` when all handles are already cached
-   * (the mutation is not triggered in this case).
-   */
+  function getCachedValues(requestedHandles: DecryptHandle[]): DecryptResult {
+    const cached: DecryptResult = {};
+    for (const h of requestedHandles) {
+      const state = queryClient.getQueryState(zamaQueryKeys.decryption.handle(h.handle));
+      if (state?.data !== undefined) {
+        cached[h.handle] = state.data as ClearValueType;
+      }
+    }
+    return cached;
+  }
+
+  function mutate(params?: UserDecryptMutationParams, options?: MutateCallbackOptions) {
+    const resolved = params ?? getDefaultParams();
+    if (resolved.handles.length === 0) {
+      return;
+    }
+    mutation.mutate(resolved, options);
+  }
+
   function mutateAsync(
-    params: UserDecryptMutationParams = {
-      handles: getUncachedHandles(handles, queryClient),
-    },
+    params?: UserDecryptMutationParams,
     options?: MutateCallbackOptions,
   ): Promise<DecryptResult> {
-    if (params.handles.length === 0) {
-      return Promise.resolve({} as DecryptResult);
+    const resolved = params ?? getDefaultParams();
+    if (resolved.handles.length === 0) {
+      return Promise.resolve(getCachedValues(handles));
     }
-    return mutation.mutateAsync(params, options);
+    return mutation.mutateAsync(resolved, options);
   }
 
   return {
     ...mutation,
-    /** Trigger decryption (fire-and-forget). Without args, decrypts uncached handles from config. */
     mutate,
-    /** Trigger decryption (returns promise). Without args, decrypts uncached handles from config. */
     mutateAsync,
     /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values,
   };
 }
 
-/** Returns handles whose decrypted value is not yet in the query cache. */
-function getUncachedHandles(
-  handles: DecryptHandle[],
-  queryClient: ReturnType<typeof useQueryClient>,
-): DecryptHandle[] {
-  return handles.filter((h) => {
-    const state = queryClient.getQueryState(zamaQueryKeys.decryption.handle(h.handle));
-    return state?.dataUpdatedAt === undefined || state.dataUpdatedAt === 0;
-  });
-}
+/** Return type of {@link useUserDecrypt}. */
+export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
+
+/** Callback options forwarded to the underlying `useMutation.mutate()`. */
+type MutateCallbackOptions = Parameters<
+  ReturnType<typeof useMutation<DecryptResult, Error, UserDecryptMutationParams>>["mutate"]
+>[1];

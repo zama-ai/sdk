@@ -114,6 +114,7 @@ export {
 } from "./delegate-decryption";
 export {
   userDecryptMutationOptions,
+  type DecryptResult,
   type UserDecryptMutationParams,
   type UserDecryptCallbacks,
   type DecryptHandle,

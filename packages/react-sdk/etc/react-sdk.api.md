@@ -78,6 +78,7 @@ import { DecryptEndEvent } from '@zama-fhe/sdk';
 import { DecryptErrorEvent } from '@zama-fhe/sdk';
 import { DecryptHandle } from '@zama-fhe/sdk/query';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
+import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DecryptStartEvent } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManager } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManagerConfig } from '@zama-fhe/sdk';
@@ -411,8 +412,7 @@ export { DecryptHandle }
 
 export { DecryptionFailedError }
 
-// @public
-export type DecryptResult = Record<Handle, ClearValueType>;
+export { DecryptResult }
 
 export { DecryptStartEvent }
 
@@ -543,9 +543,6 @@ export { matchZamaError }
 export { MemoryStorage }
 
 export { memoryStorage }
-
-// @public
-export type MutateCallbackOptions = Parameters<ReturnType<typeof useMutation<DecryptResult, Error, UserDecryptMutationParams>>["mutate"]>[1];
 
 export { nameContract }
 
@@ -1320,7 +1317,7 @@ export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions
 
 // @public
 export function useUserDecrypt(config?: UseUserDecryptConfig): {
-    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void; /** Trigger decryption (returns promise). Without args, decrypts uncached handles from config. */
+    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
     mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values: Record<`0x${string}`, ClearValueType | undefined>;
     data: undefined;
@@ -1338,7 +1335,7 @@ export function useUserDecrypt(config?: UseUserDecryptConfig): {
     isPaused: boolean;
     submittedAt: number;
 } | {
-    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void; /** Trigger decryption (returns promise). Without args, decrypts uncached handles from config. */
+    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
     mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values: Record<`0x${string}`, ClearValueType | undefined>;
     data: undefined;
@@ -1356,7 +1353,7 @@ export function useUserDecrypt(config?: UseUserDecryptConfig): {
     isPaused: boolean;
     submittedAt: number;
 } | {
-    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void; /** Trigger decryption (returns promise). Without args, decrypts uncached handles from config. */
+    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
     mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values: Record<`0x${string}`, ClearValueType | undefined>;
     data: undefined;
@@ -1374,7 +1371,7 @@ export function useUserDecrypt(config?: UseUserDecryptConfig): {
     isPaused: boolean;
     submittedAt: number;
 } | {
-    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void; /** Trigger decryption (returns promise). Without args, decrypts uncached handles from config. */
+    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
     mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values: Record<`0x${string}`, ClearValueType | undefined>;
     data: DecryptResult;
@@ -1397,6 +1394,9 @@ export function useUserDecrypt(config?: UseUserDecryptConfig): {
 export interface UseUserDecryptConfig extends UserDecryptCallbacks {
     handles?: DecryptHandle[];
 }
+
+// @public
+export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
 
 // @public
 export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<`0x${string}` | null, Error>;
@@ -1478,6 +1478,10 @@ export { ZamaSDKEventType }
 export { ZERO_HANDLE }
 
 export { ZKProofLike }
+
+// Warnings were encountered during analysis:
+//
+// dist/index.d.ts:156:3 - (ae-forgotten-export) The symbol "MutateCallbackOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -346,7 +346,7 @@ describe("useUserDecrypt", () => {
     );
   });
 
-  it("mutateAsync() resolves to {} when all handles are cached", async ({
+  it("mutateAsync() resolves to cached values when all handles are cached", async ({
     relayer,
     signer,
     tokenAddress,
@@ -364,7 +364,7 @@ describe("useUserDecrypt", () => {
 
     const data = await result.current.mutateAsync();
 
-    expect(data).toEqual({});
+    expect(data).toEqual({ "0xh1": 100n });
     expect(relayer.userDecrypt).not.toHaveBeenCalled();
   });
 
