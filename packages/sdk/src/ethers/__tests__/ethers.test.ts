@@ -89,9 +89,9 @@ interface EthersFixtures {
 
 const eit = base.extend<EthersFixtures>({
   // eslint-disable-next-line no-empty-pattern
-  createEthersMockSigner: async ({}, provideFixture) => {
+  createEthersMockSigner: async ({}, use) => {
     vi.clearAllMocks();
-    await provideFixture(() => ({
+    await use(() => ({
       getAddress: vi.fn().mockResolvedValue(MOCK_ADDRESS),
       signTypedData: vi.fn().mockResolvedValue(MOCK_SIGNATURE),
       provider: {

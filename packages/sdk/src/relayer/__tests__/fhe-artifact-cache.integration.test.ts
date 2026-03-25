@@ -102,19 +102,19 @@ interface CacheFixtures {
 
 /* eslint-disable no-empty-pattern */
 const test = base.extend<CacheFixtures>({
-  testServer: async ({}, provideFixture) => {
+  testServer: async ({}, use) => {
     const { server, start } = createTestServer();
     const ts = await start();
-    await provideFixture(ts);
+    await use(ts);
     await new Promise<void>((resolve) => server.close(() => resolve()));
   },
 
-  storage: async ({}, provideFixture) => {
-    await provideFixture(new MemoryStorage());
+  storage: async ({}, use) => {
+    await use(new MemoryStorage());
   },
 
-  createCache: async ({ testServer, storage }, provideFixture) => {
-    await provideFixture(
+  createCache: async ({ testServer, storage }, use) => {
+    await use(
       (opts) =>
         new FheArtifactCache({
           storage,
@@ -125,19 +125,19 @@ const test = base.extend<CacheFixtures>({
     );
   },
 
-  cache: async ({ createCache }, provideFixture) => {
-    await provideFixture(createCache());
+  cache: async ({ createCache }, use) => {
+    await use(createCache());
   },
 
-  pkFetcher: async ({}, provideFixture) => {
-    await provideFixture(async () => ({
+  pkFetcher: async ({}, use) => {
+    await use(async () => ({
       publicKeyId: "pk-id-1",
       publicKey: new Uint8Array([1, 2, 3]),
     }));
   },
 
-  paramsFetcher: async ({}, provideFixture) => {
-    await provideFixture(async () => ({
+  paramsFetcher: async ({}, use) => {
+    await use(async () => ({
       publicParamsId: "crs-id-1",
       publicParams: new Uint8Array([4, 5, 6]),
     }));

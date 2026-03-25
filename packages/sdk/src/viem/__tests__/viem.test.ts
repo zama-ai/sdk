@@ -40,8 +40,8 @@ interface ViemFixtures {
 }
 
 const viemTest = base.extend<ViemFixtures>({
-  createMockPublicClient: async ({}, provideFixture) => {
-    await provideFixture(
+  createMockPublicClient: async ({}, use) => {
+    await use(
       () =>
         ({
           getChainId: vi.fn().mockResolvedValue(1),
@@ -51,8 +51,8 @@ const viemTest = base.extend<ViemFixtures>({
         }) as unknown as PublicClient,
     );
   },
-  createMockWalletClient: async ({}, provideFixture) => {
-    await provideFixture(
+  createMockWalletClient: async ({}, use) => {
+    await use(
       (withAccount = true) =>
         ({
           account: withAccount ? { address: ACCOUNT_ADDRESS, type: "json-rpc" } : undefined,
@@ -62,14 +62,14 @@ const viemTest = base.extend<ViemFixtures>({
         }) as unknown as WalletClient,
     );
   },
-  publicClient: async ({ createMockPublicClient }, provideFixture) => {
-    await provideFixture(createMockPublicClient());
+  publicClient: async ({ createMockPublicClient }, use) => {
+    await use(createMockPublicClient());
   },
-  walletClient: async ({ createMockWalletClient }, provideFixture) => {
-    await provideFixture(createMockWalletClient());
+  walletClient: async ({ createMockWalletClient }, use) => {
+    await use(createMockWalletClient());
   },
-  viemSigner: async ({ walletClient, publicClient }, provideFixture) => {
-    await provideFixture(new ViemSigner({ walletClient, publicClient }));
+  viemSigner: async ({ walletClient, publicClient }, use) => {
+    await use(new ViemSigner({ walletClient, publicClient }));
   },
 });
 
