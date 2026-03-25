@@ -934,7 +934,9 @@ export class Token extends ReadonlyToken {
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
     if (this.isZeroHandle(handle)) {
-      if (amount === 0n) {return;} // 0 >= 0 satisfies the constraint
+      if (amount === 0n) {
+        return;
+      } // 0 >= 0 satisfies the constraint
       throw new InsufficientConfidentialBalanceError(
         `Insufficient confidential balance: requested ${amount}, available 0 (token: ${this.address})`,
         { requested: amount, available: 0n, token: this.address },
