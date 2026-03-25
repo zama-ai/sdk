@@ -51,14 +51,14 @@ transfer instead.
 
 ### Section 3 — Confidential token lifecycle
 
-| Step | Description |
-|---|---|
-| Decrypt balance | Read Account A's confidential cUSDT balance |
-| Shield | Approve + wrap 100 USDT into 100 cUSDT |
-| Decrypt balance | Confirm new cUSDT balance |
-| Confidential transfer | Send 10 cUSDT from A to B (amount encrypted on-chain) |
-| Unshield | Unwrap 50 cUSDT back to USDT (two-phase: unwrap + finalize) |
-| Final balances | Show cUSDT and USDT balances for Account A |
+| Step                  | Description                                                 |
+| --------------------- | ----------------------------------------------------------- |
+| Decrypt balance       | Read Account A's confidential cUSDT balance                 |
+| Shield                | Approve + wrap 100 USDT into 100 cUSDT                      |
+| Decrypt balance       | Confirm new cUSDT balance                                   |
+| Confidential transfer | Send 10 cUSDT from A to B (amount encrypted on-chain)       |
+| Unshield              | Unwrap 50 cUSDT back to USDT (two-phase: unwrap + finalize) |
+| Final balances        | Show cUSDT and USDT balances for Account A                  |
 
 `unshield()` is a two-phase operation. The SDK handles both phases
 automatically; progress callbacks let you log each step.
@@ -68,12 +68,12 @@ automatically; progress callbacks let you log each step.
 Demonstrates how a backend service (Account B) can decrypt confidential balances
 on behalf of users (Account A) without holding their private key:
 
-| Step | Description |
-|---|---|
-| Grant | Account A grants Account B decrypt rights via `delegateDecryption()` |
-| Decrypt as delegate | Account B reads Account A's cUSDT balance via `decryptBalanceAs()` |
-| Revoke | Account A revokes delegation via `revokeDelegation()` |
-| Verify | Confirm delegation is inactive with `isDelegated()` |
+| Step                | Description                                                          |
+| ------------------- | -------------------------------------------------------------------- |
+| Grant               | Account A grants Account B decrypt rights via `delegateDecryption()` |
+| Decrypt as delegate | Account B reads Account A's cUSDT balance via `decryptBalanceAs()`   |
+| Revoke              | Account A revokes delegation via `revokeDelegation()`                |
+| Verify              | Confirm delegation is inactive with `isDelegated()`                  |
 
 ---
 
