@@ -934,6 +934,7 @@ export class Token extends ReadonlyToken {
     const handle = await this.readConfidentialBalanceOf(userAddress);
 
     if (this.isZeroHandle(handle)) {
+      if (amount === 0n) {return;} // 0 >= 0 satisfies the constraint
       throw new InsufficientConfidentialBalanceError(
         `Insufficient confidential balance: requested ${amount}, available 0 (token: ${this.address})`,
         { requested: amount, available: 0n, token: this.address },
@@ -943,6 +944,13 @@ export class Token extends ReadonlyToken {
     // Only attempt decryption when credentials are already cached.
     // This avoids triggering an unexpected EIP-712 signing popup during
     // a transfer/unshield flow (respects the explicit-action pattern from SDK-42).
+    //
+    // Note: isAllowed() is a session-level check (wallet-scoped). The subsequent
+    // decryptBalance() call internally does credentials.allow(this.address) which
+    // is contract-scoped. If the session was created for a different set of
+    // contract addresses, resolveCredentials may extend the credential set via
+    // #extendContracts — which re-signs with the existing key (no new EIP-712
+    // popup) as long as the underlying credential is time-valid.
     const hasCredentials = await this.isAllowed();
     if (!hasCredentials) {
       throw new BalanceCheckUnavailableError(

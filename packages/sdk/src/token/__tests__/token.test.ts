@@ -1444,6 +1444,31 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
       expect(onEncryptComplete).toHaveBeenCalled();
     });
+
+    it("allows zero-amount transfer when handle is zero", async ({ signer, token }) => {
+      vi.mocked(signer.readContract).mockResolvedValueOnce(ZERO_HANDLE); // confidentialBalanceOf
+
+      const result = await token.confidentialTransfer(RECIPIENT, 0n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("re-throws ZamaError from decryptBalance (e.g. DecryptionFailedError)", async ({
+      signer,
+      token,
+      handle,
+      relayer,
+    }) => {
+      await token.allow();
+
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new TypeError("network failure"));
+
+      // decryptBalance wraps the TypeError as DecryptionFailedError (a ZamaError),
+      // so #assertConfidentialBalance re-throws it as-is rather than wrapping again.
+      await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
+        code: ZamaErrorCode.DecryptionFailed,
+      });
+    });
   });
 
   describe("balance validation: shield", () => {

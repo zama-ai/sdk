@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### ⚠ BREAKING CHANGES
+
+- **sdk:** `confidentialTransfer()` and `unshield()` now validate confidential balance by default before submitting a transaction. If no cached credentials exist (i.e. `allow()` has not been called), the SDK throws `BalanceCheckUnavailableError` instead of proceeding to the signing step. Previously, these operations would trigger an EIP-712 popup mid-flow. Pass `skipBalanceCheck: true` to restore the previous behavior (required for smart wallets that cannot produce EIP-712 signatures). ([#147](https://github.com/zama-ai/sdk/issues/147))
+- **sdk:** `shield()` now validates the ERC-20 balance before submitting and throws `InsufficientERC20BalanceError` if the balance is insufficient. This check is unconditional (runs even with `skipBalanceCheck: true`) since it is a public read with no signing requirement.
+- **sdk:** Callback parameters for `confidentialTransfer` and `unshield` are now flattened into the options object instead of nested under a `callbacks` key. **Migration:** replace `{ callbacks: { onTransferSubmitted } }` with `{ onTransferSubmitted }` (same for unshield callbacks).
+
+### Features
+
+- **sdk:** pre-flight balance validation for `confidentialTransfer`, `shield`, and `unshield` (SDK-52) ([#147](https://github.com/zama-ai/sdk/issues/147))
+- **sdk:** new error types: `InsufficientConfidentialBalanceError`, `InsufficientERC20BalanceError`, `BalanceCheckUnavailableError`
+- **sdk:** `skipBalanceCheck` option for `confidentialTransfer` and `unshield` (smart wallet support)
+
 ## [2.1.0](https://github.com/zama-ai/sdk/compare/v2.0.0...v2.1.0) (2026-03-24)
 
 ### Features
