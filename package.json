@@ -21,7 +21,7 @@
     "test:coverage": "vitest --coverage",
     "test:integration": "vitest run --reporter=verbose --config vitest.integration.config.ts",
     "typecheck": "pnpm run --parallel --recursive '/^typecheck/'",
-    "lint": "oxlint",
+    "lint": "oxlint && ast-grep scan --config sgconfig.yml",
     "lint:fix": "oxlint --fix --fix-suggestions",
     "format": "oxfmt",
     "format:check": "oxfmt --check",

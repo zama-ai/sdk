@@ -9,6 +9,7 @@ Thank you for your interest in contributing to the Zama SDK! This guide will hel
 - **Node.js** >= 22
 - **pnpm** >= 10
 - **Foundry** >= 1.0.0
+- **ast-grep** >= 0.40 — `brew install ast-grep` or see [ast-grep.github.io](https://ast-grep.github.io)
 
 ### Getting Started
 
