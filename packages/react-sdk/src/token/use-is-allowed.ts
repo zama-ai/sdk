@@ -25,17 +25,17 @@ export function useIsAllowed() {
     ...signerAddressQueryOptions(sdk.signer),
   });
   const account = addressQuery.data;
-  if (!account) {
-    return useQuery<boolean>({
-      queryKey: zamaQueryKeys.isAllowed.all,
-      queryFn: skipToken,
-      enabled: false,
-    });
-  }
+  const baseOpts = account
+    ? isAllowedQueryOptions(sdk, { account })
+    : ({
+        queryKey: zamaQueryKeys.isAllowed.all,
+        queryFn: skipToken,
+        enabled: false,
+      } as const);
+  const { enabled = true } = baseOpts;
 
-  const baseOpts = isAllowedQueryOptions(sdk, { account });
   return useQuery<boolean>({
     ...baseOpts,
-    enabled: baseOpts.enabled ?? true,
+    enabled,
   });
 }
