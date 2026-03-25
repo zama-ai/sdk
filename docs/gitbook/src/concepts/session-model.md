@@ -153,17 +153,17 @@ The user switches networks (e.g., Sepolia to Mainnet) while keeping the same add
 
 Without wiring, cached signatures remain valid until TTL expiry. This is not a security vulnerability (signatures are time-bounded and address-scoped), but it creates confusing UX when switching accounts.
 
-## Multi-token batching
+## Multi-contract batching
 
-A single `allow()` call can cover multiple token contracts:
+A single `allow()` call can cover multiple contracts:
 
 ```ts
-await sdk.allow("0xTokenA", "0xTokenB", "0xTokenC");
+await sdk.allow("0xContractA", "0xContractB", "0xContractC");
 ```
 
-This produces one EIP-712 signature covering all three contracts. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on TokenA, TokenB, or TokenC reuses the cached signature without additional popups.
+This produces one EIP-712 signature covering all three contracts. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on ContractA, ContractB, or ContractC reuses the cached signature without additional popups.
 
-The tradeoff: if you later need to add TokenD, the SDK must generate a new keypair and request a fresh signature covering `[A, B, C, D]`. Plan your token set upfront when possible.
+The tradeoff: if you later need to add ContractD, the SDK must generate a new keypair and request a fresh signature covering `[A, B, C, D]`. Plan your contract set upfront when possible.
 
 ## Web extensions
 

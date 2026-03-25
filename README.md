@@ -6,13 +6,13 @@
 [![Unit tests](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml/badge.svg)](https://github.com/zama-ai/sdk/actions/workflows/vitest.yml)
 [![E2E tests](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml/badge.svg)](https://github.com/zama-ai/sdk/actions/workflows/playwright.yml)
 
-TypeScript SDKs for privacy-preserving ERC-20 token operations using [Fully Homomorphic Encryption on Zama Protocol](https://docs.zama.org/protocol/protocol/overview). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
+TypeScript SDKs for privacy-preserving confidential contract operations using [Fully Homomorphic Encryption on Zama Protocol](https://docs.zama.org/protocol/protocol/overview). Shield, transfer, and unshield tokens with encrypted balances — no one sees your amounts on-chain.
 
 ## Packages
 
 | Package                                        | Description                                                                                                              |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential token operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
+| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
 | [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                          |
 
 ## Install
