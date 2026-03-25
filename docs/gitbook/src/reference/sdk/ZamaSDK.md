@@ -1,11 +1,11 @@
 ---
 title: ZamaSDK
-description: Entry point for all confidential token operations.
+description: Entry point for all confidential contract operations.
 ---
 
 # ZamaSDK
 
-Entry point for all confidential token operations — creates tokens, manages sessions, and coordinates the relayer and signer.
+Entry point for all confidential contract operations — creates tokens, manages sessions, and coordinates the relayer and signer.
 
 ## Import
 
