@@ -54,7 +54,6 @@
     "packages/test-nextjs/playwright/**",
     "packages/test-vite/**",
     "packages/test-vite/playwright/**",
-    "test/**",
     "contracts/lib/**",
     "docs/api/**",
     "docs/gitbook/**",
@@ -137,7 +136,11 @@
         "packages/playwright/**",
         "packages/test-components/**",
         "packages/test-nextjs/**",
-        "packages/test-vite/**"
+        "packages/test-vite/**",
+        "test/playwright/**",
+        "test/test-components/**",
+        "test/test-nextjs/**",
+        "test/test-vite/**"
       ],
       "rules": {
         "@typescript-eslint/no-floating-promises": "off",
