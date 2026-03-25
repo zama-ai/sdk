@@ -721,7 +721,7 @@ export function isConfidentialTokenValidQueryOptions(signer: GenericSigner, conf
 export function isWrapperQueryOptions(signer: GenericSigner, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
 // @public (undocumented)
-export interface ListPairsQueryConfig extends WrappersRegistryQueryConfig {
+export interface ListPairsQueryConfig {
     // (undocumented)
     metadata?: boolean;
     // (undocumented)
@@ -729,7 +729,9 @@ export interface ListPairsQueryConfig extends WrappersRegistryQueryConfig {
     // (undocumented)
     pageSize?: number;
     // (undocumented)
-    registryTTL?: number;
+    query?: Record<string, unknown>;
+    // (undocumented)
+    wrappersRegistryAddress: Address | undefined;
 }
 
 // Warning: (ae-forgotten-export) The symbol "PaginatedResult" needs to be exported by the entry point index.d.ts
@@ -737,7 +739,7 @@ export interface ListPairsQueryConfig extends WrappersRegistryQueryConfig {
 // Warning: (ae-forgotten-export) The symbol "EnrichedTokenWrapperPair" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export function listPairsQueryOptions(signer: GenericSigner, config: ListPairsQueryConfig): QueryFactoryOptions<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, Error, PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>>;
+export function listPairsQueryOptions(registry: WrappersRegistry, config: ListPairsQueryConfig): QueryFactoryOptions<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, Error, PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>>;
 
 // @public (undocumented)
 export interface MutationFactoryOptions<TMutationKey extends readonly unknown[], TVariables, TData, TOnMutateResult = unknown> {

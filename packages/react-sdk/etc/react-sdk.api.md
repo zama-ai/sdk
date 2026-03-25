@@ -1252,7 +1252,6 @@ export function useListPairs(input?: {
     pageSize?: number;
     metadata?: boolean;
     wrappersRegistryAddresses?: Record<number, Address>;
-    registryTTL?: number;
 }): _tanstack_react_query0.UseQueryResult<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, Error>;
 
 // @public

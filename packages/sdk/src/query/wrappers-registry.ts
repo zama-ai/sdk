@@ -13,11 +13,14 @@ import type {
   EnrichedTokenWrapperPair,
   PaginatedResult,
 } from "../contracts/wrappers-registry";
-import { WrappersRegistry } from "../token/wrappers-registry";
+import type { WrappersRegistry } from "../token/wrappers-registry";
 import type { GenericSigner } from "../types/signer";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
+
+/** Default registry TTL in milliseconds — matches {@link WrappersRegistry} default of 86400 s. */
+const DEFAULT_STALE_TIME_MS = 86400 * 1000;
 
 export interface WrappersRegistryQueryConfig {
   wrappersRegistryAddress: Address | undefined;
@@ -44,6 +47,7 @@ export function tokenPairsQueryOptions(
       const [, { wrappersRegistryAddress }] = context.queryKey;
       return signer.readContract(getTokenPairsContract(wrappersRegistryAddress));
     },
+    staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
   };
 }
@@ -78,6 +82,7 @@ export function confidentialTokenAddressQueryOptions(
         getConfidentialTokenAddressContract(wrappersRegistryAddress, tokenAddress),
       );
     },
+    staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
   };
 }
@@ -112,6 +117,7 @@ export function tokenAddressQueryOptions(
         getTokenAddressContract(wrappersRegistryAddress, confidentialTokenAddress),
       );
     },
+    staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
   };
 }
@@ -136,6 +142,7 @@ export function tokenPairsLengthQueryOptions(
       const [, { wrappersRegistryAddress }] = context.queryKey;
       return signer.readContract(getTokenPairsLengthContract(wrappersRegistryAddress));
     },
+    staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
   };
 }
@@ -173,6 +180,7 @@ export function tokenPairsSliceQueryOptions(
         getTokenPairsSliceContract(wrappersRegistryAddress, BigInt(fromIndex), BigInt(toIndex)),
       );
     },
+    staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
   };
 }
@@ -205,6 +213,7 @@ export function tokenPairQueryOptions(
       const [, { wrappersRegistryAddress, index }] = context.queryKey;
       return signer.readContract(getTokenPairContract(wrappersRegistryAddress, BigInt(index)));
     },
+    staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
   };
 }
@@ -239,19 +248,34 @@ export function isConfidentialTokenValidQueryOptions(
         isConfidentialTokenValidContract(wrappersRegistryAddress, confidentialTokenAddress),
       );
     },
+    staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
   };
 }
 
-export interface ListPairsQueryConfig extends WrappersRegistryQueryConfig {
+export interface ListPairsQueryConfig {
+  /**
+   * The registry address for this chain — used as a query key discriminator.
+   * The registry instance already knows how to resolve the address for the
+   * current chain; this field just keeps the TanStack Query cache isolated
+   * per registry contract.
+   */
+  wrappersRegistryAddress: Address | undefined;
   page?: number;
   pageSize?: number;
   metadata?: boolean;
-  registryTTL?: number;
+  query?: Record<string, unknown>;
 }
 
+/**
+ * Query options for paginated listing of token wrapper pairs.
+ *
+ * Accepts a {@link WrappersRegistry} instance rather than a raw signer so that the
+ * class-level TTL cache is shared across multiple `queryFn` executions. Pass
+ * `sdk.registry` (the ZamaSDK lazy singleton) to ensure a single shared cache.
+ */
 export function listPairsQueryOptions(
-  signer: GenericSigner,
+  registry: WrappersRegistry,
   config: ListPairsQueryConfig,
 ): QueryFactoryOptions<
   PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>,
@@ -272,16 +296,10 @@ export function listPairsQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async () => {
-      const registry = new WrappersRegistry({
-        signer,
-        wrappersRegistryAddresses: config.wrappersRegistryAddress
-          ? { [await signer.getChainId()]: config.wrappersRegistryAddress }
-          : undefined,
-        registryTTL: config.registryTTL,
-      });
-      return registry.listPairs({ page, pageSize, metadata });
-    },
+    queryFn: async () => registry.listPairs({ page, pageSize, metadata }),
+    // Use the registry's own TTL so TanStack Query and the class-level cache
+    // operate under the same freshness contract.
+    staleTime: registry.ttlMs,
     enabled,
   };
 }

@@ -142,6 +142,14 @@ export class WrappersRegistry {
     this.#cache.clear();
   }
 
+  /**
+   * The cache TTL in milliseconds.
+   * Exposed so query option factories can set a matching `staleTime`.
+   */
+  get ttlMs(): number {
+    return this.#ttlMs;
+  }
+
   // ---------------------------------------------------------------------------
   // Registry address resolution
   // ---------------------------------------------------------------------------

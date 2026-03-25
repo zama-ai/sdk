@@ -1,15 +1,6 @@
 import { test, expect } from "../fixtures";
 
-test("should discover wrapper via coordinator", async ({ page, contracts, viemClient }) => {
-  const coordAbi = [
-    {
-      type: "function",
-      name: "deploymentCoordinator",
-      inputs: [],
-      outputs: [{ type: "address" }],
-      stateMutability: "view",
-    },
-  ] as const;
+test("should discover wrapper via registry", async ({ page, contracts, viemClient }) => {
   const underlyingAbi = [
     {
       type: "function",
@@ -20,23 +11,17 @@ test("should discover wrapper via coordinator", async ({ page, contracts, viemCl
     },
   ] as const;
 
-  // Read the coordinator address from the cUSDT contract
-  const coordinatorAddress = await viemClient.readContract({
-    address: contracts.cUSDT,
-    abi: coordAbi,
-    functionName: "deploymentCoordinator",
-  });
-
-  // Read the actual underlying ERC20 address from the wrapper contract
-  // (contracts.USDT from fixtures may differ from what the coordinator registered)
+  // Read the actual underlying ERC20 address from the confidential wrapper contract
   const underlyingAddress = await viemClient.readContract({
     address: contracts.cUSDT,
     abi: underlyingAbi,
     functionName: "underlying",
   });
 
+  // tokenAddress = the confidential wrapper (provides the signer context)
+  // erc20Address = the underlying ERC-20 to look up in the registry
   await page.goto(
-    `/wrapper-discovery?token=${underlyingAddress}&coordinator=${coordinatorAddress}`,
+    `/wrapper-discovery?tokenAddress=${contracts.cUSDT}&erc20Address=${underlyingAddress}`,
   );
 
   await expect(page.getByTestId("wrapper-discovery-result")).toContainText(contracts.cUSDT, {
