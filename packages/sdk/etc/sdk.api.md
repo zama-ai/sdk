@@ -30525,6 +30525,7 @@ export class WrappersRegistry {
     refresh(): void;
     // (undocumented)
     readonly signer: GenericSigner;
+    get ttlMs(): number;
 }
 
 // @public

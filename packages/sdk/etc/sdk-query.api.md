@@ -730,15 +730,15 @@ export interface ListPairsQueryConfig {
     pageSize?: number;
     // (undocumented)
     query?: Record<string, unknown>;
-    // (undocumented)
     wrappersRegistryAddress: Address | undefined;
 }
 
+// Warning: (ae-forgotten-export) The symbol "WrappersRegistry" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "PaginatedResult" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "TokenWrapperPair" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "EnrichedTokenWrapperPair" needs to be exported by the entry point index.d.ts
 //
-// @public (undocumented)
+// @public
 export function listPairsQueryOptions(registry: WrappersRegistry, config: ListPairsQueryConfig): QueryFactoryOptions<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, Error, PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>>;
 
 // @public (undocumented)
@@ -1635,7 +1635,6 @@ export class ZamaSDK {
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
     isAllowed(): Promise<boolean>;
-    // Warning: (ae-forgotten-export) The symbol "WrappersRegistry" needs to be exported by the entry point index.d.ts
     get registry(): WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
@@ -1710,7 +1709,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-D8nStvKf.d.ts:1747:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DcLylRrs.d.ts:1752:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
