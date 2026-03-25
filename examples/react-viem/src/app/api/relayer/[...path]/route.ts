@@ -30,17 +30,22 @@ function forwardHeaders(incoming: Headers): Headers {
 }
 
 // Headers that must not be forwarded from the relayer response back to the browser.
-// Node.js fetch() auto-decompresses gzip/brotli bodies, so re-forwarding content-encoding
-// would cause the browser to attempt a second decompression pass, producing garbage.
-const RESPONSE_DROP = new Set(["content-encoding", "content-length", "transfer-encoding"]);
+// Includes all hop-by-hop headers (must not cross proxy boundaries) plus content-encoding
+// and content-length: Node.js fetch() auto-decompresses gzip/brotli bodies, so
+// re-forwarding content-encoding would cause the browser to attempt a second decompression
+// pass, producing garbage.
+const RESPONSE_DROP = new Set([...HOP_BY_HOP, "content-encoding", "content-length"]);
 
 // Only allow alphanumeric characters, dots, hyphens, and underscores in path segments.
-// This prevents path traversal or injection attempts from being forwarded to the relayer.
+// Dot-only segments (`.` and `..`) are rejected to prevent path traversal.
 const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/;
 
 async function proxy(req: NextRequest, path: string[]) {
   for (const segment of path) {
-    if (!SAFE_SEGMENT.test(segment)) {
+    // Reject segments that fail the character allowlist or are dot-only (`.`, `..`).
+    // Dot-only segments would resolve to parent directories via URL normalization,
+    // allowing a request like /api/relayer/../v1/admin to escape the /v2 base path.
+    if (!SAFE_SEGMENT.test(segment) || segment === "." || segment === "..") {
       return new Response(JSON.stringify({ error: "Invalid path" }), {
         status: 400,
         headers: { "content-type": "application/json" },
