@@ -1,4 +1,4 @@
-export const WRAPPER_ABI = [
+export const wrapperAbi = [
   {
     inputs: [],
     stateMutability: "nonpayable",

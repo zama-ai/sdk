@@ -2,7 +2,7 @@ import type { Address } from "viem";
 import { MAX_UINT64 } from "../contracts";
 import { getDelegationExpiryContract } from "../contracts/acl";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { GenericSigner } from "../token/token.types";
+import type { GenericSigner } from "../types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";

@@ -9,8 +9,8 @@ import {
   type ZamaSDKEventListener,
   ZamaSDKEvents,
 } from "../../events/sdk-events";
-import { CredentialsManager } from "../credentials-manager";
-import type { GenericSigner, GenericStorage } from "../token.types";
+import { CredentialsManager } from "../../credentials/credentials-manager";
+import type { GenericSigner, GenericStorage } from "../../types";
 import type { Address } from "viem";
 
 const ZERO_HANDLE = "0x" + "0".repeat(64);
@@ -46,8 +46,8 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.RevokeDelegationSubmitted).toBe("revokeDelegation:submitted");
   });
 
-  it("has exactly 27 event types", () => {
-    expect(Object.keys(ZamaSDKEvents)).toHaveLength(27);
+  it("has exactly 29 event types", () => {
+    expect(Object.keys(ZamaSDKEvents)).toHaveLength(29);
   });
 
   it("has unique event values", () => {
