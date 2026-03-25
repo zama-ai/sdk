@@ -34,10 +34,10 @@ interface WagmiFixtures {
 
 const wit = base.extend<WagmiFixtures>({
   // eslint-disable-next-line no-empty-pattern
-  wagmiSigner: async ({}, use) => {
+  wagmiSigner: async ({}, provideFixture) => {
     capturedOnChange = undefined;
     mockUnsubscribe.mockClear();
-    await use(new WagmiSigner({ config: {} as unknown as Config }));
+    await provideFixture(new WagmiSigner({ config: {} as unknown as Config }));
   },
 });
 

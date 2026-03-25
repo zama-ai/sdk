@@ -10,8 +10,8 @@ interface IdbFixtures {
 
 const iit = base.extend<IdbFixtures>({
   // eslint-disable-next-line no-empty-pattern
-  idbStorage: async ({}, use) => {
-    await use(new IndexedDBStorage(`TestDB-${Date.now()}-${Math.random()}`));
+  idbStorage: async ({}, provideFixture) => {
+    await provideFixture(new IndexedDBStorage(`TestDB-${Date.now()}-${Math.random()}`));
   },
 });
 

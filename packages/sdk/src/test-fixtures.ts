@@ -181,17 +181,17 @@ export const test = base.extend<SdkFixtures>({
   delegateAddress: DELEGATE,
   handle: VALID_HANDLE,
   // Per-test instances — fresh mocks for each test
-  relayer: async ({}, use) => {
-    await use(createMockRelayer());
+  relayer: async ({}, provideFixture) => {
+    await provideFixture(createMockRelayer());
   },
-  signer: async ({ userAddress }, use) => {
-    await use(createMockSigner(userAddress));
+  signer: async ({ userAddress }, provideFixture) => {
+    await provideFixture(createMockSigner(userAddress));
   },
   credentialManager: async (
     { relayer, signer, storage, sessionStorage, createCredentialManager },
-    use,
+    provideFixture,
   ) => {
-    await use(
+    await provideFixture(
       createCredentialManager({
         relayer,
         signer,
@@ -202,14 +202,14 @@ export const test = base.extend<SdkFixtures>({
       }),
     );
   },
-  storage: async ({}, use) => {
-    await use(new MemoryStorage());
+  storage: async ({}, provideFixture) => {
+    await provideFixture(new MemoryStorage());
   },
-  sessionStorage: async ({}, use) => {
-    await use(new MemoryStorage());
+  sessionStorage: async ({}, provideFixture) => {
+    await provideFixture(new MemoryStorage());
   },
-  token: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, use) => {
-    await use(
+  token: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, provideFixture) => {
+    await provideFixture(
       new Token({
         relayer,
         signer,
@@ -219,8 +219,11 @@ export const test = base.extend<SdkFixtures>({
       }),
     );
   },
-  readonlyToken: async ({ relayer, signer, storage, sessionStorage, tokenAddress }, use) => {
-    await use(
+  readonlyToken: async (
+    { relayer, signer, storage, sessionStorage, tokenAddress },
+    provideFixture,
+  ) => {
+    await provideFixture(
       new ReadonlyToken({
         relayer,
         signer,
@@ -230,23 +233,23 @@ export const test = base.extend<SdkFixtures>({
       }),
     );
   },
-  mockToken: async ({ createMockToken }, use) => {
-    await use(createMockToken());
+  mockToken: async ({ createMockToken }, provideFixture) => {
+    await provideFixture(createMockToken());
   },
-  createMockRelayer: async ({}, use) => {
-    await use(createMockRelayer);
+  createMockRelayer: async ({}, provideFixture) => {
+    await provideFixture(createMockRelayer);
   },
-  createMockSigner: async ({ userAddress }, use) => {
-    await use((addressOrOverrides?: Address | Partial<GenericSigner>) => {
+  createMockSigner: async ({ userAddress }, provideFixture) => {
+    await provideFixture((addressOrOverrides?: Address | Partial<GenericSigner>) => {
       const address = typeof addressOrOverrides === "string" ? addressOrOverrides : userAddress;
       const overrides = typeof addressOrOverrides === "object" ? addressOrOverrides : {};
       return createMockSigner(address, overrides);
     });
   },
-  createMockStorage: async ({}, use) => {
-    await use(createMockStorage);
+  createMockStorage: async ({}, provideFixture) => {
+    await provideFixture(createMockStorage);
   },
-  createCredentialManager: async ({}, use) => {
+  createCredentialManager: async ({}, provideFixture) => {
     function factory(config: CredentialsManagerConfig) {
       return new CredentialsManager({
         relayer: config.relayer,
@@ -258,9 +261,9 @@ export const test = base.extend<SdkFixtures>({
         onEvent: config.onEvent,
       });
     }
-    await use(factory);
+    await provideFixture(factory);
   },
-  createDelegatedCredentialManager: async ({}, use) => {
+  createDelegatedCredentialManager: async ({}, provideFixture) => {
     function factory(config: DelegatedCredentialsManagerConfig) {
       return new DelegatedCredentialsManager({
         relayer: config.relayer,
@@ -272,13 +275,13 @@ export const test = base.extend<SdkFixtures>({
         onEvent: config.onEvent,
       });
     }
-    await use(factory);
+    await provideFixture(factory);
   },
   delegatedCredentialManager: async (
     { relayer, signer, storage, sessionStorage, createDelegatedCredentialManager },
-    use,
+    provideFixture,
   ) => {
-    await use(
+    await provideFixture(
       createDelegatedCredentialManager({
         relayer,
         signer,
@@ -289,16 +292,16 @@ export const test = base.extend<SdkFixtures>({
       }),
     );
   },
-  createToken: async ({}, use) => {
-    await use((config: TokenConfig) => new Token(config));
+  createToken: async ({}, provideFixture) => {
+    await provideFixture((config: TokenConfig) => new Token(config));
   },
-  createReadonlyToken: async ({}, use) => {
+  createReadonlyToken: async ({}, provideFixture) => {
     function createReadonlyToken(config: ReadonlyTokenConfig) {
       return new ReadonlyToken(config);
     }
-    await use(createReadonlyToken);
+    await provideFixture(createReadonlyToken);
   },
-  createMockToken: async ({ tokenAddress, signer }, use) => {
+  createMockToken: async ({ tokenAddress, signer }, provideFixture) => {
     const defaultTxResult: TransactionResult = {
       txHash: ("0x" + "11".repeat(32)) as Hex,
       receipt: { logs: [] },
@@ -340,16 +343,18 @@ export const test = base.extend<SdkFixtures>({
         revokeDelegation: vi.fn().mockResolvedValue(txResult),
       } as unknown as Token;
     }
-    await use(factory);
+    await provideFixture(factory);
   },
-  createMockReadonlyToken: async ({ tokenAddress, signer }, use) => {
-    await use((address?: Address) => createMockReadonlyToken(address ?? tokenAddress, signer));
+  createMockReadonlyToken: async ({ tokenAddress, signer }, provideFixture) => {
+    await provideFixture((address?: Address) =>
+      createMockReadonlyToken(address ?? tokenAddress, signer),
+    );
   },
-  sdk: async ({ relayer, signer, storage, sessionStorage }, use) => {
-    await use(new ZamaSDK({ relayer, signer, storage, sessionStorage }));
+  sdk: async ({ relayer, signer, storage, sessionStorage }, provideFixture) => {
+    await provideFixture(new ZamaSDK({ relayer, signer, storage, sessionStorage }));
   },
-  createSDK: async ({ signer, relayer, storage, sessionStorage }, use) => {
-    await use((overrides?: Partial<ZamaSDKConfig>) => {
+  createSDK: async ({ signer, relayer, storage, sessionStorage }, provideFixture) => {
+    await provideFixture((overrides?: Partial<ZamaSDKConfig>) => {
       return new ZamaSDK({
         relayer,
         signer,

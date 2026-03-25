@@ -91,6 +91,7 @@
     "unicorn/consistent-function-scoping": "off",
     "unicorn/prefer-add-event-listener": "off",
     "unicorn/require-post-message-target-origin": "off",
+    "react/rules-of-hooks": "error",
     "react/react-in-jsx-scope": "off",
     "react/jsx-uses-react": "off",
     "import/no-unassigned-import": "off",

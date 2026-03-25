@@ -38,17 +38,17 @@ interface EipFixtures {
 }
 
 const eit = base.extend<EipFixtures>({
-  provider: async ({}, use) => {
-    await use(createFakeProvider());
+  provider: async ({}, provideFixture) => {
+    await provideFixture(createFakeProvider());
   },
-  onDisconnect: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
-    await use(vi.fn());
+  onDisconnect: async ({}, provideFixture: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
+    await provideFixture(vi.fn());
   },
-  onAccountChange: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
-    await use(vi.fn());
+  onAccountChange: async ({}, provideFixture: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
+    await provideFixture(vi.fn());
   },
-  onChainChange: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
-    await use(vi.fn());
+  onChainChange: async ({}, provideFixture: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
+    await provideFixture(vi.fn());
   },
 });
 

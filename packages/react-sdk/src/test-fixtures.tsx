@@ -49,17 +49,20 @@ interface ReactSdkFixtures {
 }
 
 export const test = base.extend<ReactSdkFixtures>({
-  token: async ({}, use) => {
-    await use(createMockToken());
+  token: async ({}, provideFixture) => {
+    await provideFixture(createMockToken());
   },
-  queryClient: async ({}, use) => {
-    await use(
+  queryClient: async ({}, provideFixture) => {
+    await provideFixture(
       new QueryClient({
         defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
       }),
     );
   },
-  createWrapper: async ({ relayer, signer, storage, sessionStorage, queryClient }, use) => {
+  createWrapper: async (
+    { relayer, signer, storage, sessionStorage, queryClient },
+    provideFixture,
+  ) => {
     function createWrapper(overrides?: Partial<ZamaProviderProps>) {
       const props = { relayer, signer, storage, sessionStorage, ...overrides };
 
@@ -79,9 +82,9 @@ export const test = base.extend<ReactSdkFixtures>({
         storage: props.storage,
       };
     }
-    await use(createWrapper);
+    await provideFixture(createWrapper);
   },
-  renderWithProviders: async ({ createWrapper }, use) => {
+  renderWithProviders: async ({ createWrapper }, provideFixture) => {
     function renderWithProviders<TResult>(
       hook: () => TResult,
       overrides?: Partial<ZamaProviderProps>,
@@ -90,7 +93,7 @@ export const test = base.extend<ReactSdkFixtures>({
       const { Wrapper, queryClient } = createWrapper(overrides);
       return { ...renderHook(hook, { wrapper: Wrapper, ...options }), queryClient };
     }
-    await use(renderWithProviders);
+    await provideFixture(renderWithProviders);
   },
 });
 
