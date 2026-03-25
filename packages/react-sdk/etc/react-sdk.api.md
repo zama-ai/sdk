@@ -935,7 +935,9 @@ export interface UseConfidentialBalanceConfig {
 }
 
 // @public
-export type UseConfidentialBalanceOptions = Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">;
+export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
+}
 
 // @public
 export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): {
@@ -1116,10 +1118,12 @@ export interface UseConfidentialBalancesConfig {
 }
 
 // @public
-export type UseConfidentialBalancesOptions = Omit<UseQueryOptions<ConfidentialBalancesData>, "queryKey" | "queryFn">;
+export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<ConfidentialBalancesData>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
+}
 
 // @public
-export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<unknown, Error>;
+export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<boolean, Error>;
 
 // @public
 export interface UseConfidentialIsApprovedConfig {
@@ -1199,7 +1203,7 @@ export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOp
 export function useGenerateKeypair(): _tanstack_react_query0.UseMutationResult<_zama_fhe_sdk0.KeypairType<`0x${string}`>, Error, void, unknown>;
 
 // @public
-export function useIsAllowed(): _tanstack_react_query0.UseQueryResult<unknown, Error>;
+export function useIsAllowed(): _tanstack_react_query0.UseQueryResult<boolean, Error>;
 
 // @public
 export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<boolean, Error>;
