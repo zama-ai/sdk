@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir -p /tmp/api-reports/base
           git fetch --depth=1 origin "$BASE_SHA"
-          for f in $(git ls-tree --name-only "$BASE_SHA" -- packages/sdk/etc/ packages/react-sdk/etc/ 2>/dev/null | grep '\.api\.md$'); do
+          for f in $(git ls-tree -r --name-only "$BASE_SHA" -- packages/sdk/etc packages/react-sdk/etc 2>/dev/null | grep '\.api\.md$'); do
             git show "$BASE_SHA:$f" > "/tmp/api-reports/base/$(basename "$f")" 2>/dev/null || true
           done
 

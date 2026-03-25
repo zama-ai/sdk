@@ -1,6 +1,6 @@
 # @zama-fhe/sdk
 
-A TypeScript SDK for building privacy-preserving token applications using Fully Homomorphic Encryption (FHE). It abstracts the complexity of encrypted ERC-20 operations — shielding, unshielding, confidential transfers, and balance decryption — behind a clean, high-level API. Works with any Web3 library (viem, ethers, or custom signers).
+A TypeScript SDK for building privacy-preserving applications on Zama's fhEVM using Fully Homomorphic Encryption (FHE). It abstracts the complexity of confidential contract operations — session management, encrypted state, shielding, unshielding, confidential transfers, and balance decryption — behind a clean, high-level API. Works with any Web3 library (viem, ethers, or custom signers).
 
 ## Installation
 
@@ -140,7 +140,7 @@ const balance = await token.balanceOf();
 
 ### ZamaSDK
 
-Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Acts as a factory for token instances.
+Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Manages sessions, credentials, and acts as a factory for contract instances.
 
 ```ts
 const sdk = new ZamaSDK({

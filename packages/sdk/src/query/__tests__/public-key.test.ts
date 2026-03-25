@@ -1,5 +1,5 @@
 import { describe, expect, test, mockQueryContext } from "../../test-fixtures";
-import { ZamaSDK } from "../../token/zama-sdk";
+import { ZamaSDK } from "../../zama-sdk";
 import { publicKeyQueryOptions } from "../public-key";
 
 describe("publicKeyQueryOptions", () => {

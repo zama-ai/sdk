@@ -26,14 +26,14 @@ import {
   EncryptionFailedError,
   TransactionRevertedError,
   ZamaError,
-} from "./errors";
+} from "../errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import type {
   ShieldCallbacks,
   TransactionResult,
   TransferCallbacks,
   UnshieldCallbacks,
-} from "./token.types";
+} from "../types";
 import { toError } from "../utils";
 
 /**
@@ -130,7 +130,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new EncryptionFailedError("Failed to encrypt transfer amount", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
 
@@ -156,7 +156,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("Transfer transaction failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -211,7 +211,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new EncryptionFailedError("Failed to encrypt transferFrom amount", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
 
@@ -243,7 +243,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("TransferFrom transaction failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -281,7 +281,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new ApprovalFailedError("Operator approval failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -367,7 +367,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("Shield transaction failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -404,7 +404,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("Shield ETH transaction failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -450,7 +450,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new EncryptionFailedError("Failed to encrypt unshield amount", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
 
@@ -475,7 +475,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("Unshield transaction failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -519,7 +519,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("Unshield-all transaction failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -634,7 +634,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new DecryptionFailedError("Failed to finalize unshield", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
 
@@ -655,7 +655,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("Failed to finalize unshield", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -708,7 +708,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new ApprovalFailedError("ERC-20 approval failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -758,7 +758,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("Delegation transaction failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -795,7 +795,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new TransactionRevertedError("Revoke delegation transaction failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }
@@ -948,7 +948,7 @@ export class Token extends ReadonlyToken {
         throw error;
       }
       throw new ApprovalFailedError("ERC-20 approval failed", {
-        cause: error instanceof Error ? error : undefined,
+        cause: error,
       });
     }
   }

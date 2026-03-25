@@ -1,7 +1,7 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
-import type { GenericStorage } from "../token/token.types";
+import type { GenericStorage } from "../types";
 
 // ============================================================================
 // Application Types

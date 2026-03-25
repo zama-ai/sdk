@@ -5,7 +5,8 @@
 
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
-import { getBrowserExtensionRuntime, prefixHex, unprefixHex } from "../utils";
+import { prefixHex, unprefixHex } from "../utils";
+import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,

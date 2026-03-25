@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
-import { ZamaErrorCode, DecryptionFailedError } from "../errors";
-import type { GenericSigner, GenericStorage } from "../token.types";
+import { ZamaErrorCode, DecryptionFailedError } from "../../errors";
+import type { GenericSigner, GenericStorage } from "../../types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
 import { saveCachedBalance } from "../balance-cache";
 import { getAddress, type Address } from "viem";
