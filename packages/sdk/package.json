@@ -125,7 +125,7 @@
   "scripts": {
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "oxlint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.build.json"
   },
   "dependencies": {
     "@zama-fhe/relayer-sdk": "~0.4.2",

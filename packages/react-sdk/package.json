@@ -49,7 +49,7 @@
   "scripts": {
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "oxlint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.build.json"
   },
   "devDependencies": {
     "@zama-fhe/sdk": "workspace:*",

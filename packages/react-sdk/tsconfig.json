@@ -4,13 +4,5 @@
     "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "../../iife.d.ts"],
-  "exclude": [
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/__tests__/**",
-    "src/test-helpers.ts",
-    "src/test-fixtures.tsx",
-    "dist",
-    "node_modules"
-  ]
+  "exclude": ["dist", "node_modules"]
 }
