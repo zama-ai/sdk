@@ -32,10 +32,6 @@ export function useIsAllowed() {
         queryFn: skipToken,
         enabled: false,
       } as const);
-  const { enabled = true } = baseOpts;
 
-  return useQuery<boolean>({
-    ...baseOpts,
-    enabled,
-  });
+  return useQuery<boolean>(baseOpts);
 }
