@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from "../test-fixtures";
-import { WrappersRegistry, DefaultRegistryAddresses } from "../wrappers-registry";
+import type { Address } from "viem";
 import { ConfigurationError } from "../errors";
 import { MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
-import type { Address } from "viem";
+import { describe, expect, it, vi } from "../test-fixtures";
+import type { GenericSigner } from "../types";
+import { DefaultRegistryAddresses, WrappersRegistry } from "../wrappers-registry";
 
 const CUSTOM_REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -181,6 +182,33 @@ describe("WrappersRegistry", () => {
   });
 
   describe("listPairs", () => {
+    const PAIRS = Array.from({ length: 5 }, (_, i) => ({
+      tokenAddress: `0x${"a".repeat(39)}${i}` as Address,
+      confidentialTokenAddress: `0x${"b".repeat(39)}${i}` as Address,
+      isValid: true,
+    }));
+
+    /**
+     * Creates a registry backed by a mock that simulates an on-chain registry
+     * containing `entries` pairs. The mock responds to:
+     * - getTokenConfidentialTokenPairsLength → entries.length
+     * - getTokenConfidentialTokenPairsSlice(from, to) → entries.slice(from, to)
+     */
+    function makeRegistryWithEntries(signer: GenericSigner, entries: typeof PAIRS) {
+      vi.mocked(signer.getChainId).mockResolvedValue(1);
+      vi.mocked(signer.readContract).mockImplementation((config: any) => {
+        if (config.functionName === "getTokenConfidentialTokenPairsLength") {
+          return Promise.resolve(BigInt(entries.length));
+        }
+        if (config.functionName === "getTokenConfidentialTokenPairsSlice") {
+          const [from, to] = config.args as [bigint, bigint];
+          return Promise.resolve(entries.slice(Number(from), Number(to)));
+        }
+        return Promise.resolve(undefined);
+      });
+      return new WrappersRegistry({ signer });
+    }
+
     it("returns paginated result with defaults", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
       vi.mocked(signer.readContract)
@@ -254,6 +282,95 @@ describe("WrappersRegistry", () => {
         expect(pair.confidential.name).toBe("Confidential USDC");
         expect(pair.confidential.symbol).toBe("cUSDC");
       }
+    });
+
+    describe("multi-page iteration (5 entries)", () => {
+      const cases = [
+        { pageSize: 1, expectedPages: 5, lastPageSize: 1 },
+        { pageSize: 2, expectedPages: 3, lastPageSize: 1 },
+        { pageSize: 3, expectedPages: 2, lastPageSize: 2 },
+        { pageSize: 5, expectedPages: 1, lastPageSize: 5 },
+        { pageSize: 100, expectedPages: 1, lastPageSize: 5 },
+      ];
+
+      for (const { pageSize, expectedPages, lastPageSize } of cases) {
+        it(`pageSize=${pageSize} — collects all entries across ${expectedPages} page(s)`, async ({
+          signer,
+        }) => {
+          const registry = makeRegistryWithEntries(signer, PAIRS);
+          const allItems: typeof PAIRS = [];
+
+          for (let page = 1; page <= expectedPages; page++) {
+            const result = await registry.listPairs({ page, pageSize });
+            expect(result.total).toBe(5);
+            expect(result.page).toBe(page);
+            expect(result.pageSize).toBe(pageSize);
+
+            const isLastPage = page === expectedPages;
+            expect(result.items).toHaveLength(isLastPage ? lastPageSize : pageSize);
+            allItems.push(...result.items);
+          }
+
+          expect(allItems).toHaveLength(5);
+          for (let i = 0; i < 5; i++) {
+            expect(allItems[i]!.tokenAddress).toBe(PAIRS[i]!.tokenAddress);
+          }
+        });
+      }
+    });
+
+    describe("edge cases and negative tests", () => {
+      it("throws on page=0", async ({ signer }) => {
+        vi.mocked(signer.getChainId).mockResolvedValue(1);
+        const registry = new WrappersRegistry({ signer });
+        await expect(registry.listPairs({ page: 0 })).rejects.toThrow(ConfigurationError);
+        await expect(registry.listPairs({ page: 0 })).rejects.toThrow(/page must be >= 1/);
+      });
+
+      it("throws on negative page", async ({ signer }) => {
+        vi.mocked(signer.getChainId).mockResolvedValue(1);
+        const registry = new WrappersRegistry({ signer });
+        await expect(registry.listPairs({ page: -1 })).rejects.toThrow(ConfigurationError);
+      });
+
+      it("throws on pageSize=0", async ({ signer }) => {
+        vi.mocked(signer.getChainId).mockResolvedValue(1);
+        const registry = new WrappersRegistry({ signer });
+        await expect(registry.listPairs({ pageSize: 0 })).rejects.toThrow(ConfigurationError);
+        await expect(registry.listPairs({ pageSize: 0 })).rejects.toThrow(/pageSize must be >= 1/);
+      });
+
+      it("throws on negative pageSize", async ({ signer }) => {
+        vi.mocked(signer.getChainId).mockResolvedValue(1);
+        const registry = new WrappersRegistry({ signer });
+        await expect(registry.listPairs({ pageSize: -5 })).rejects.toThrow(ConfigurationError);
+      });
+
+      it("returns empty items when page is beyond total", async ({ signer }) => {
+        const registry = makeRegistryWithEntries(signer, PAIRS);
+
+        const result = await registry.listPairs({ page: 10, pageSize: 2 });
+        expect(result.items).toHaveLength(0);
+        expect(result.total).toBe(5);
+        expect(result.page).toBe(10);
+      });
+
+      it("returns empty items when registry has 0 entries", async ({ signer }) => {
+        const registry = makeRegistryWithEntries(signer, []);
+
+        const result = await registry.listPairs();
+        expect(result.items).toHaveLength(0);
+        expect(result.total).toBe(0);
+        expect(result.page).toBe(1);
+      });
+
+      it("returns empty when page=2 but total fits in 1 page", async ({ signer }) => {
+        const registry = makeRegistryWithEntries(signer, PAIRS.slice(0, 2));
+
+        const result = await registry.listPairs({ page: 2, pageSize: 100 });
+        expect(result.items).toHaveLength(0);
+        expect(result.total).toBe(2);
+      });
     });
   });
 
