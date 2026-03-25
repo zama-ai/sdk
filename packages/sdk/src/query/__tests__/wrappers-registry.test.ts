@@ -1,7 +1,8 @@
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
-import { getAddress } from "viem";
+import { getAddress, zeroAddress } from "viem";
 import type { Address } from "viem";
 
+import type { WrappersRegistry } from "../../token/wrappers-registry";
 import {
   tokenPairsQueryOptions,
   tokenPairsLengthQueryOptions,
@@ -10,6 +11,7 @@ import {
   confidentialTokenAddressQueryOptions,
   tokenAddressQueryOptions,
   isConfidentialTokenValidQueryOptions,
+  listPairsQueryOptions,
 } from "../wrappers-registry";
 
 const REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
@@ -206,5 +208,73 @@ describe("isConfidentialTokenValidQueryOptions", () => {
         confidentialTokenAddress: getAddress(C_TOKEN),
       },
     ]);
+  });
+});
+
+describe("listPairsQueryOptions", () => {
+  function makeRegistry(ttlMs = 86400_000): WrappersRegistry {
+    return {
+      listPairs: vi.fn(),
+      ttlMs,
+    } as unknown as WrappersRegistry;
+  }
+
+  test("includes registry address, page, pageSize, metadata in query key", () => {
+    const registry = makeRegistry();
+    const options = listPairsQueryOptions(registry, {
+      wrappersRegistryAddress: REGISTRY,
+      page: 2,
+      pageSize: 50,
+      metadata: true,
+    });
+    expect(options.queryKey).toEqual([
+      "zama.wrappersRegistry",
+      {
+        type: "listPairs",
+        wrappersRegistryAddress: getAddress(REGISTRY),
+        page: 2,
+        pageSize: 50,
+        metadata: true,
+      },
+    ]);
+  });
+
+  test("staleTime equals registry.ttlMs", () => {
+    const registry = makeRegistry(3_600_000);
+    const options = listPairsQueryOptions(registry, {
+      wrappersRegistryAddress: REGISTRY,
+    });
+    expect(options.staleTime).toBe(3_600_000);
+  });
+
+  test("disabled when wrappersRegistryAddress is undefined", () => {
+    const registry = makeRegistry();
+    const options = listPairsQueryOptions(registry, {
+      wrappersRegistryAddress: undefined,
+    });
+    expect(options.enabled).toBe(false);
+  });
+
+  test("queryFn delegates to registry.listPairs with correct pagination args", async () => {
+    const registry = makeRegistry();
+    const page = { total: 1, page: 1, pageSize: 10, data: [] };
+    vi.mocked(registry.listPairs as ReturnType<typeof vi.fn>).mockResolvedValue(page);
+    const options = listPairsQueryOptions(registry, {
+      wrappersRegistryAddress: REGISTRY,
+      page: 3,
+      pageSize: 20,
+      metadata: true,
+    });
+    const result = await options.queryFn(mockQueryContext(options.queryKey));
+    expect(result).toEqual(page);
+    expect(registry.listPairs).toHaveBeenCalledWith({ page: 3, pageSize: 20, metadata: true });
+  });
+
+  test("uses zeroAddress in query key when wrappersRegistryAddress is undefined", () => {
+    const registry = makeRegistry();
+    const options = listPairsQueryOptions(registry, {
+      wrappersRegistryAddress: undefined,
+    });
+    expect(options.queryKey[1]).toMatchObject({ wrappersRegistryAddress: zeroAddress });
   });
 });

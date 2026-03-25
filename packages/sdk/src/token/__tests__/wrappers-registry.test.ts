@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { WrappersRegistry, DefaultWrappersRegistryAddresses } from "../wrappers-registry";
-import { ConfigurationError } from "../errors";
+import { ConfigurationError } from "../../errors";
 import { MainnetConfig, SepoliaConfig } from "../../relayer/relayer-utils";
 import type { Address } from "viem";
 
