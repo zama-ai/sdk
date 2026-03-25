@@ -13,7 +13,7 @@ import type {
   EnrichedTokenWrapperPair,
   PaginatedResult,
 } from "../contracts/wrappers-registry";
-import type { WrappersRegistry } from "../token/wrappers-registry";
+import type { WrappersRegistry } from "../wrappers-registry";
 import type { GenericSigner } from "../types/signer";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";

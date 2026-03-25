@@ -7,7 +7,7 @@ import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
-import { WrappersRegistry } from "./token/wrappers-registry";
+import { WrappersRegistry } from "./wrappers-registry";
 import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
 

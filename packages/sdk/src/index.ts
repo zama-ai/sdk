@@ -43,8 +43,8 @@ export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts"
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export type { ZamaSDKConfig } from "./zama-sdk";
-export { WrappersRegistry, DefaultRegistryAddresses } from "./token/wrappers-registry";
-export type { WrappersRegistryConfig, ListPairsOptions } from "./token/wrappers-registry";
+export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
+export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
   Token,
   type TokenConfig,

@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import { WrappersRegistry } from "../token/wrappers-registry";
+import { WrappersRegistry } from "../wrappers-registry";
 import type { GenericSigner } from "../types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";

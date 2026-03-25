@@ -1,5 +1,5 @@
 import { type Address, getAddress } from "viem";
-import type { EnrichedTokenWrapperPair, PaginatedResult, TokenWrapperPair } from "../contracts";
+import type { EnrichedTokenWrapperPair, PaginatedResult, TokenWrapperPair } from "./contracts";
 import {
   decimalsContract,
   getConfidentialTokenAddressContract,
@@ -12,17 +12,15 @@ import {
   nameContract,
   symbolContract,
   erc20TotalSupplyContract,
-} from "../contracts";
-import { DefaultConfigs } from "../relayer/relayer-utils";
-import { ConfigurationError } from "../errors/relayer";
-import type { GenericSigner } from "../types/signer";
+} from "./contracts";
+import { ConfigurationError } from "./errors/relayer";
+import type { GenericSigner } from "./types/signer";
 
 /** Default wrappers registry addresses extracted from built-in network configs. */
-export const DefaultRegistryAddresses: Record<number, Address> = Object.fromEntries(
-  Object.entries(DefaultConfigs)
-    .filter(([, cfg]) => cfg.registryAddress !== undefined)
-    .map(([chainId, cfg]) => [Number(chainId), cfg.registryAddress]),
-) as Record<number, Address>;
+export const DefaultRegistryAddresses = {
+  1: "0xeb5015ff021db115ace010f23f55c2591059bba0",
+  11155111: "0x2f0750bbb0a246059d80e94c454586a7f27a128e",
+} as const;
 
 /** Default page size for {@link WrappersRegistry.listPairs}. */
 const DEFAULT_PAGE_SIZE = 100;

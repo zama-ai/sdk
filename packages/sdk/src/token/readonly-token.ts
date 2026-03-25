@@ -13,7 +13,7 @@ import {
   underlyingContract,
 } from "../contracts";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import { WrappersRegistry } from "./wrappers-registry";
+import { WrappersRegistry } from "../wrappers-registry";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Handle } from "../relayer/relayer-sdk.types";

@@ -103,7 +103,7 @@ export const SepoliaConfig = {
   inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0",
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-  registryAddress: "0xDEbdfa2568dEd84044e9807500ee523acDe9308b",
+  registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e",
 } as const satisfies ExtendedFhevmInstanceConfig;
 
 /**
