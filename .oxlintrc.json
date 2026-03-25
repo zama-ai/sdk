@@ -22,7 +22,8 @@
     "nursery": "off"
   },
   "options": {
-    "denyWarnings": true
+    "denyWarnings": true,
+    "typeAware": true
   },
   "env": {
     "builtin": true
@@ -53,6 +54,7 @@
     "packages/test-nextjs/playwright/**",
     "packages/test-vite/**",
     "packages/test-vite/playwright/**",
+    "test/**",
     "contracts/lib/**",
     "docs/api/**",
     "docs/gitbook/**",
@@ -81,6 +83,8 @@
     "@typescript-eslint/no-non-null-assertion": "error",
     "@typescript-eslint/consistent-type-imports": "error",
     "@typescript-eslint/no-import-type-side-effects": "error",
+    "@typescript-eslint/no-floating-promises": ["error", { "ignoreVoid": true }],
+    "@typescript-eslint/await-thenable": "error",
     "@typescript-eslint/no-misused-promises": "error",
     "@typescript-eslint/no-unsafe-type-assertion": "off",
     "@typescript-eslint/no-unnecessary-type-assertion": "off",
