@@ -62,8 +62,7 @@ export class ZamaSDK {
   readonly credentials: CredentialsManager;
   readonly delegatedCredentials: DelegatedCredentialsManager;
   readonly #onEvent: ZamaSDKEventListener;
-  readonly #registryTTL: number | undefined;
-  #registryInstance: WrappersRegistry | undefined;
+  readonly #registry: WrappersRegistry;
   #unsubscribeSigner?: () => void;
   // oxlint false positive: awaited in #revokeByTrackedIdentity() and revokeSession()
   // eslint-disable-next-line no-unused-private-class-members
@@ -77,7 +76,10 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.#onEvent = config.onEvent ?? function () {};
-    this.#registryTTL = config.registryTTL;
+    this.#registry = new WrappersRegistry({
+      signer: this.signer,
+      registryTTL: config.registryTTL,
+    });
     const credentialsConfig = {
       relayer: this.relayer,
       signer: this.signer,
@@ -180,13 +182,7 @@ export class ZamaSDK {
    * ```
    */
   get registry(): WrappersRegistry {
-    if (!this.#registryInstance) {
-      this.#registryInstance = new WrappersRegistry({
-        signer: this.signer,
-        registryTTL: this.#registryTTL,
-      });
-    }
-    return this.#registryInstance;
+    return this.#registry;
   }
 
   /**
