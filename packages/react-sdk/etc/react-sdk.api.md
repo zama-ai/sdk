@@ -79,6 +79,7 @@ import { DecryptErrorEvent } from '@zama-fhe/sdk';
 import { DecryptHandle } from '@zama-fhe/sdk/query';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
 import { DecryptStartEvent } from '@zama-fhe/sdk';
+import { DefaultWrappersRegistryAddresses } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManager } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManagerConfig } from '@zama-fhe/sdk';
 import { delegateDecryptionMutationOptions } from '@zama-fhe/sdk/query';
@@ -99,6 +100,7 @@ import { encryptMutationOptions } from '@zama-fhe/sdk/query';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { EncryptStartEvent } from '@zama-fhe/sdk';
+import { EnrichedTokenWrapperPair } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
 import { extractEncryptedHandles } from '@zama-fhe/sdk';
@@ -138,6 +140,9 @@ import { isWrapperQueryOptions } from '@zama-fhe/sdk/query';
 import { KeypairExpiredError } from '@zama-fhe/sdk';
 import { KeypairType } from '@zama-fhe/sdk';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/sdk';
+import { ListPairsOptions } from '@zama-fhe/sdk';
+import { ListPairsQueryConfig } from '@zama-fhe/sdk/query';
+import { listPairsQueryOptions } from '@zama-fhe/sdk/query';
 import { loadPendingUnshield } from '@zama-fhe/sdk';
 import { MainnetConfig } from '@zama-fhe/sdk';
 import { matchZamaError } from '@zama-fhe/sdk';
@@ -147,6 +152,7 @@ import { nameContract } from '@zama-fhe/sdk';
 import { NetworkType } from '@zama-fhe/sdk';
 import { NoCiphertextError } from '@zama-fhe/sdk';
 import { OnChainEvent } from '@zama-fhe/sdk';
+import { PaginatedResult } from '@zama-fhe/sdk';
 import { parseActivityFeed } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { publicDecryptMutationOptions } from '@zama-fhe/sdk/query';
@@ -245,6 +251,8 @@ import { wrapETHContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
 import { wrapperDiscoveryQueryOptions } from '@zama-fhe/sdk/query';
 import { wrapperExistsContract } from '@zama-fhe/sdk';
+import { WrappersRegistry } from '@zama-fhe/sdk';
+import { WrappersRegistryConfig } from '@zama-fhe/sdk';
 import { WriteContractArgs } from '@zama-fhe/sdk';
 import { WriteContractConfig } from '@zama-fhe/sdk';
 import { WriteFunctionName } from '@zama-fhe/sdk';
@@ -413,6 +421,8 @@ export { DecryptionFailedError }
 
 export { DecryptStartEvent }
 
+export { DefaultWrappersRegistryAddresses }
+
 export { DelegatedCredentialsManager }
 
 export { DelegatedCredentialsManagerConfig }
@@ -452,6 +462,8 @@ export { EncryptParams }
 export { EncryptResult }
 
 export { EncryptStartEvent }
+
+export { EnrichedTokenWrapperPair }
 
 export { ERC7984_INTERFACE_ID }
 
@@ -531,6 +543,12 @@ export { KeypairType }
 
 export { KmsDelegatedUserDecryptEIP712Type }
 
+export { ListPairsOptions }
+
+export { ListPairsQueryConfig }
+
+export { listPairsQueryOptions }
+
 export { loadPendingUnshield }
 
 export { MainnetConfig }
@@ -559,6 +577,8 @@ export interface OptimisticMutateContext {
     // (undocumented)
     snapshot: OptimisticBalanceSnapshot;
 }
+
+export { PaginatedResult }
 
 export { parseActivityFeed }
 
@@ -1227,6 +1247,15 @@ export function useIsWrapper(tokenAddress: Address, options?: Omit<UseQueryOptio
 export function useIsWrapperSuspense(tokenAddress: Address): _tanstack_react_query0.UseSuspenseQueryResult<boolean, Error>;
 
 // @public
+export function useListPairs(input?: {
+    page?: number;
+    pageSize?: number;
+    metadata?: boolean;
+    wrappersRegistryAddresses?: Record<number, Address>;
+    registryTTL?: number;
+}): _tanstack_react_query0.UseQueryResult<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, Error>;
+
+// @public
 export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOptions<TokenMetadata>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<TokenMetadata, Error>;
 
 // @public
@@ -1379,8 +1408,8 @@ export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?:
 
 // @public
 export interface UseWrapperDiscoveryConfig {
-    coordinatorAddress: Address | undefined;
-    tokenAddress: Address | undefined;
+    erc20Address: Address | undefined;
+    tokenAddress: Address;
 }
 
 // @public
@@ -1388,7 +1417,7 @@ export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseC
 
 // @public
 export interface UseWrapperDiscoverySuspenseConfig {
-    coordinatorAddress: Address;
+    erc20Address: Address;
     tokenAddress: Address;
 }
 
@@ -1410,6 +1439,10 @@ export { WrappedEvent }
 export { wrapperDiscoveryQueryOptions }
 
 export { wrapperExistsContract }
+
+export { WrappersRegistry }
+
+export { WrappersRegistryConfig }
 
 export { WriteContractArgs }
 
