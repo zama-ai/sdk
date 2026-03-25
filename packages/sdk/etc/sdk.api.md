@@ -15611,6 +15611,11 @@ export const MainnetConfig: {
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
 };
 
+// Warning: (ae-internal-missing-underscore) The name "matchAclRevert" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
+export function matchAclRevert(error: unknown): ZamaError | null;
+
 // @public
 export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
     _?: (error: unknown) => R;
@@ -29685,7 +29690,7 @@ export const ZamaErrorCode: {
     readonly AclPaused: "ACL_PAUSED";
 };
 
-// @public (undocumented)
+// @public
 export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 
 // @public
