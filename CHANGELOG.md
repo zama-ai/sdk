@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### ⚠ BREAKING CHANGES
+
+- **wrapper-discovery:** `coordinatorAddress` has been renamed to `erc20Address` in `wrapperDiscoveryQueryOptions`, `UseWrapperDiscoveryConfig`, and `UseWrapperDiscoverySuspenseConfig`. Update call sites accordingly.
+- **wrapper-discovery:** `tokenAddress` in `UseWrapperDiscoveryConfig` is now required (`Address`, not `Address | undefined`). To disable the query conditionally, pass `erc20Address: undefined` instead.
+
 ## [2.1.1-alpha.2](https://github.com/zama-ai/sdk/compare/v2.1.1-alpha.1...v2.1.1-alpha.2) (2026-03-25)
 
 ### Bug Fixes

@@ -10,7 +10,11 @@ export { wrapperDiscoveryQueryOptions };
 
 /** Configuration for {@link useWrapperDiscovery}. */
 export interface UseWrapperDiscoveryConfig {
-  /** Address of the confidential token. */
+  /**
+   * Address of any confidential token you control.
+   * Used only to derive the signer context and to scope the query cache key —
+   * it does not affect which wrapper the registry returns.
+   */
   tokenAddress: Address;
   /** ERC-20 address to discover the wrapper for. Pass `undefined` to disable the query. */
   erc20Address: Address | undefined;
@@ -23,7 +27,11 @@ export interface UseWrapperDiscoveryConfig {
 
 /** Configuration for {@link useWrapperDiscoverySuspense}. */
 export interface UseWrapperDiscoverySuspenseConfig {
-  /** Address of the confidential token. */
+  /**
+   * Address of any confidential token you control.
+   * Used only to derive the signer context and to scope the query cache key —
+   * it does not affect which wrapper the registry returns.
+   */
   tokenAddress: Address;
   /** ERC-20 address to discover the wrapper for. */
   erc20Address: Address;
