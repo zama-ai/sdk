@@ -15,8 +15,7 @@ import { useWrappersRegistryAddress } from "./use-wrappers-registry-address";
 /**
  * Fetches paginated token wrapper pairs from the registry.
  *
- * @param options - Query options: `page` (1-indexed, default `1`), `pageSize` (default `100`),
- *   `metadata` (fetch on-chain metadata for both tokens, default `false`).
+ * @param options - Query options: `page` (1-indexed, default `1`), `pageSize` (default `100`), `metadata` (fetch on-chain metadata for both tokens, default `false`).
  *
  * @example
  * ```tsx
