@@ -31,6 +31,12 @@ export class AclPausedError extends ZamaError {
 }
 
 // @public
+export const AclTopics: {
+    readonly DelegatedForUserDecryption: "0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce8ac5b2fe1d3be8cfda5bfc"; /** `RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)` */
+    readonly RevokedDelegationForUserDecryption: "0x7aca80b6b7928b9038f186e3d9922a0fc5d52c398fbf144725c142c52a5277e4";
+};
+
+// @public
 export type ActivityAmount = {
     readonly type: "clear";
     readonly value: bigint;
@@ -7126,6 +7132,11 @@ export class DelegationCooldownError extends ZamaError {
 
 // @public
 export class DelegationDelegateEqualsContractError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class DelegationExpirationTooSoonError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
@@ -15611,9 +15622,7 @@ export const MainnetConfig: {
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
 };
 
-// Warning: (ae-internal-missing-underscore) The name "matchAclRevert" should be prefixed with an underscore because the declaration is marked as @internal
-//
-// @internal
+// @public
 export function matchAclRevert(error: unknown): ZamaError | null;
 
 // @public
@@ -29687,7 +29696,8 @@ export const ZamaErrorCode: {
     readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED"; /** Delegate address cannot be the contract address. */
     readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT"; /** Contract address cannot be the sender address. */
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */
-    readonly AclPaused: "ACL_PAUSED";
+    readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
+    readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON";
 };
 
 // @public
