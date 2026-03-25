@@ -1,39 +1,15 @@
-export const DEPLOYMENT_COORDINATOR_ABI = [
+export const deploymentCoordinatorAbi = [
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "originalToken",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "originalToken", type: "address" }],
     name: "getWrapper",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
+    outputs: [{ internalType: "address", name: "", type: "address" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "originalToken",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "originalToken", type: "address" }],
     name: "wrapperExists",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
