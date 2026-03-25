@@ -4,6 +4,7 @@ import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { wrapperDiscoveryQueryOptions } from "@zama-fhe/sdk/query";
+import { useZamaSDK } from "../provider";
 import { useReadonlyToken } from "./use-readonly-token";
 
 export { wrapperDiscoveryQueryOptions };
@@ -18,11 +19,6 @@ export interface UseWrapperDiscoveryConfig {
   tokenAddress: Address;
   /** ERC-20 address to discover the wrapper for. Pass `undefined` to disable the query. */
   erc20Address: Address | undefined;
-  /**
-   * Optional per-chain registry address overrides.
-   * Useful for local development chains (e.g. Hardhat) where no default registry is deployed.
-   */
-  registryAddresses?: Record<number, Address>;
 }
 
 /** Configuration for {@link useWrapperDiscoverySuspense}. */
@@ -58,11 +54,12 @@ export function useWrapperDiscovery(
   config: UseWrapperDiscoveryConfig,
   options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">,
 ) {
-  const { tokenAddress, erc20Address, registryAddresses } = config;
+  const { tokenAddress, erc20Address } = config;
+  const sdk = useZamaSDK();
   const token = useReadonlyToken(tokenAddress);
   const baseOpts = wrapperDiscoveryQueryOptions(token.signer, tokenAddress, {
     erc20Address,
-    registryAddresses,
+    registry: sdk.registry,
   });
 
   return useQuery<Address | null>({
@@ -89,11 +86,13 @@ export function useWrapperDiscovery(
  */
 export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseConfig) {
   const { tokenAddress, erc20Address } = config;
+  const sdk = useZamaSDK();
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<Address | null>({
     ...wrapperDiscoveryQueryOptions(token.signer, tokenAddress, {
       erc20Address,
+      registry: sdk.registry,
     }),
   });
 }

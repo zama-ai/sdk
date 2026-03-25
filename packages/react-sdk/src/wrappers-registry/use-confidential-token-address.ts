@@ -1,6 +1,6 @@
 "use client";
 
-import { DefaultRegistryAddresses, type Address } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { confidentialTokenAddressQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useQuery } from "../utils/query";
@@ -11,13 +11,11 @@ import { useWrappersRegistryAddress } from "./use-wrappers-registry-address";
  */
 export function useConfidentialTokenAddress({
   tokenAddress,
-  registryAddresses = DefaultRegistryAddresses,
 }: {
   tokenAddress: Address | undefined;
-  registryAddresses?: Record<number, Address>;
 }) {
   const sdk = useZamaSDK();
-  const registryAddress = useWrappersRegistryAddress(registryAddresses);
+  const registryAddress = useWrappersRegistryAddress();
 
   return useQuery<readonly [boolean, Address]>(
     confidentialTokenAddressQueryOptions(sdk.signer, {

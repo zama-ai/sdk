@@ -11,7 +11,7 @@ import {
   isConfidentialTokenValidContract,
   nameContract,
   symbolContract,
-  totalSupplyContract,
+  erc20TotalSupplyContract,
 } from "../contracts";
 import { DefaultConfigs } from "../relayer/relayer-utils";
 import { ConfigurationError } from "../errors/relayer";
@@ -69,6 +69,9 @@ export interface ListPairsOptions {
   metadata?: boolean;
 }
 
+/** Shorter TTL for negative lookups (5 minutes) so newly registered tokens are discoverable quickly. */
+const NEGATIVE_CACHE_TTL_MS = 5 * 60 * 1000;
+
 /** Cache entry with expiry timestamp. */
 interface CacheEntry<T> {
   data: T;
@@ -113,6 +116,14 @@ export class WrappersRegistry {
     this.#ttlMs = (config.registryTTL ?? DEFAULT_REGISTRY_TTL) * 1000;
   }
 
+  /**
+   * Synchronous lookup of the registry address for a given chain ID.
+   * Returns `undefined` if no address is configured for that chain.
+   */
+  getAddress(chainId: number): Address | undefined {
+    return this.#addresses[chainId];
+  }
+
   // ---------------------------------------------------------------------------
   // Cache helpers
   // ---------------------------------------------------------------------------
@@ -129,8 +140,11 @@ export class WrappersRegistry {
     return entry.data as T;
   }
 
-  #setCached<T>(key: string, data: T): T {
-    this.#cache.set(key, { data, expiresAt: Date.now() + this.#ttlMs });
+  #setCached<T>(key: string, data: T, ttlMs = this.#ttlMs): T {
+    this.#cache.set(key, {
+      data,
+      expiresAt: Date.now() + ttlMs,
+    });
     return data;
   }
 
@@ -201,11 +215,22 @@ export class WrappersRegistry {
    * ```
    */
   async listPairs(
+    options: ListPairsOptions & { metadata: true },
+  ): Promise<PaginatedResult<EnrichedTokenWrapperPair>>;
+  async listPairs(options?: ListPairsOptions): Promise<PaginatedResult<TokenWrapperPair>>;
+  async listPairs(
     options: ListPairsOptions = {},
   ): Promise<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>> {
     const page = options.page ?? 1;
     const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
     const metadata = options.metadata ?? false;
+
+    if (page < 1) {
+      throw new ConfigurationError(`page must be >= 1, got ${page}`);
+    }
+    if (pageSize < 1) {
+      throw new ConfigurationError(`pageSize must be >= 1, got ${pageSize}`);
+    }
 
     const registry = await this.getRegistryAddress();
 
@@ -217,16 +242,22 @@ export class WrappersRegistry {
       total = this.#setCached(totalCacheKey, Number(raw));
     }
 
-    // Compute slice indices
+    // Compute slice indices, clamping toIndex to total
     const fromIndex = BigInt((page - 1) * pageSize);
-    const toIndex = fromIndex + BigInt(pageSize);
+    const clampedToIndex =
+      fromIndex + BigInt(pageSize) > BigInt(total) ? BigInt(total) : fromIndex + BigInt(pageSize);
+
+    // Page beyond total — return empty
+    if (fromIndex >= BigInt(total)) {
+      return { items: [], total, page, pageSize };
+    }
 
     // Fetch slice (cached)
-    const sliceCacheKey = `slice:${registry}:${fromIndex}:${toIndex}`;
+    const sliceCacheKey = `slice:${registry}:${fromIndex}:${clampedToIndex}`;
     let items = this.#getCached<TokenWrapperPair[]>(sliceCacheKey);
     if (items === undefined) {
       const raw = await this.signer.readContract(
-        getTokenPairsSliceContract(registry, fromIndex, toIndex),
+        getTokenPairsSliceContract(registry, fromIndex, clampedToIndex),
       );
       items = this.#setCached(sliceCacheKey, [...raw]);
     }
@@ -235,13 +266,26 @@ export class WrappersRegistry {
       return { items, total, page, pageSize };
     }
 
-    // Enrich with on-chain metadata
-    const metadataCacheKey = `metadata:${registry}:${fromIndex}:${toIndex}`;
+    // Enrich with on-chain metadata (resilient — individual failures don't break the batch)
+    const metadataCacheKey = `metadata:${registry}:${fromIndex}:${clampedToIndex}`;
     let metadataItems = this.#getCached<EnrichedTokenWrapperPair[]>(metadataCacheKey);
     if (metadataItems === undefined) {
+      const settled = await Promise.allSettled(items.map((pair) => this.#enrichPair(pair)));
       metadataItems = this.#setCached(
         metadataCacheKey,
-        await Promise.all(items.map((pair) => this.#enrichPair(pair))),
+        settled.map((result, i) =>
+          result.status === "fulfilled"
+            ? result.value
+            : Object.assign({}, items[i], {
+                underlying: {
+                  name: "Unknown",
+                  symbol: "???",
+                  decimals: 0,
+                  totalSupply: 0n,
+                },
+                confidential: { name: "Unknown", symbol: "???", decimals: 0 },
+              }),
+        ),
       );
     }
 
@@ -253,7 +297,7 @@ export class WrappersRegistry {
       this.signer.readContract(nameContract(pair.tokenAddress)) as Promise<string>,
       this.signer.readContract(symbolContract(pair.tokenAddress)) as Promise<string>,
       this.signer.readContract(decimalsContract(pair.tokenAddress)) as Promise<number>,
-      this.signer.readContract(totalSupplyContract(pair.tokenAddress)) as Promise<bigint>,
+      this.signer.readContract(erc20TotalSupplyContract(pair.tokenAddress)) as Promise<bigint>,
       this.signer.readContract(nameContract(pair.confidentialTokenAddress)) as Promise<string>,
       this.signer.readContract(symbolContract(pair.confidentialTokenAddress)) as Promise<string>,
       this.signer.readContract(decimalsContract(pair.confidentialTokenAddress)) as Promise<number>,
@@ -309,7 +353,7 @@ export class WrappersRegistry {
     );
 
     if (!found) {
-      return this.#setCached(cacheKey, null);
+      return this.#setCached(cacheKey, null, NEGATIVE_CACHE_TTL_MS);
     }
 
     // Check validity via isConfidentialTokenValid
@@ -354,7 +398,7 @@ export class WrappersRegistry {
     );
 
     if (!found) {
-      return this.#setCached(cacheKey, null);
+      return this.#setCached(cacheKey, null, NEGATIVE_CACHE_TTL_MS);
     }
 
     const isValid = await this.signer.readContract(

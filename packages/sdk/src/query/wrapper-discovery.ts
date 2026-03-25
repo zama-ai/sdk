@@ -16,6 +16,11 @@ export interface WrapperDiscoveryQueryConfig {
    * Useful for local development chains (e.g. Hardhat) where no default registry exists.
    */
   registryAddresses?: Record<number, Address>;
+  /**
+   * Optional pre-existing registry instance. When provided, its cache is reused
+   * across calls instead of creating a fresh instance per query execution.
+   */
+  registry?: WrappersRegistry;
   query?: Record<string, unknown>;
 }
 
@@ -38,10 +43,12 @@ export function wrapperDiscoveryQueryOptions(
       if (!config.erc20Address) {
         return null;
       }
-      const registry = new WrappersRegistry({
-        signer,
-        registryAddresses: config.registryAddresses,
-      });
+      const registry =
+        config.registry ??
+        new WrappersRegistry({
+          signer,
+          registryAddresses: config.registryAddresses,
+        });
       const result = await registry.getConfidentialToken(config.erc20Address);
       return result ? result.confidentialTokenAddress : null;
     },

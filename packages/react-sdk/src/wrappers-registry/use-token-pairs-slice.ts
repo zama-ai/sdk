@@ -1,6 +1,6 @@
 "use client";
 
-import { DefaultRegistryAddresses, type Address, type TokenWrapperPair } from "@zama-fhe/sdk";
+import type { TokenWrapperPair } from "@zama-fhe/sdk";
 import { tokenPairsSliceQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useQuery } from "../utils/query";
@@ -15,14 +15,12 @@ import { useWrappersRegistryAddress } from "./use-wrappers-registry-address";
 export function useTokenPairsSlice({
   fromIndex,
   toIndex,
-  registryAddresses = DefaultRegistryAddresses,
 }: {
   fromIndex: bigint | undefined;
   toIndex: bigint | undefined;
-  registryAddresses?: Record<number, Address>;
 }) {
   const sdk = useZamaSDK();
-  const registryAddress = useWrappersRegistryAddress(registryAddresses);
+  const registryAddress = useWrappersRegistryAddress();
 
   return useQuery<readonly TokenWrapperPair[]>(
     tokenPairsSliceQueryOptions(sdk.signer, {

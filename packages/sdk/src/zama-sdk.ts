@@ -42,6 +42,11 @@ export interface ZamaSDKConfig {
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
   /**
+   * Per-chain wrappers registry address overrides, merged on top of built-in defaults.
+   * Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
+   */
+  registryAddresses?: Record<number, Address>;
+  /**
    * How long cached registry results remain valid, in seconds.
    * Default: `86400` (24 hours). Consistent with `keypairTTL`/`sessionTTL`.
    */
@@ -61,8 +66,19 @@ export class ZamaSDK {
   readonly sessionStorage: GenericStorage;
   readonly credentials: CredentialsManager;
   readonly delegatedCredentials: DelegatedCredentialsManager;
+  /**
+   * A {@link WrappersRegistry} instance auto-configured for the current chain.
+   * Lazily instantiated on first access. Uses default registry addresses
+   * and the SDK's `registryTTL` if configured.
+   *
+   * @example
+   * ```ts
+   * const pairs = await sdk.registry.listPairs({ page: 1 });
+   * const result = await sdk.registry.getConfidentialToken(erc20Address);
+   * ```
+   */
+  readonly registry: WrappersRegistry;
   readonly #onEvent: ZamaSDKEventListener;
-  readonly #registry: WrappersRegistry;
   #unsubscribeSigner?: () => void;
   // oxlint false positive: awaited in #revokeByTrackedIdentity() and revokeSession()
   // eslint-disable-next-line no-unused-private-class-members
@@ -76,8 +92,9 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.#onEvent = config.onEvent ?? function () {};
-    this.#registry = new WrappersRegistry({
+    this.registry = new WrappersRegistry({
       signer: this.signer,
+      registryAddresses: config.registryAddresses,
       registryTTL: config.registryTTL,
     });
     const credentialsConfig = {
@@ -168,21 +185,6 @@ export class ZamaSDK {
     }
     const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
     await this.credentials.revokeByKey(storeKey);
-  }
-
-  /**
-   * A {@link WrappersRegistry} instance auto-configured for the current chain.
-   * Lazily instantiated on first access. Uses default registry addresses
-   * and the SDK's `registryTTL` if configured.
-   *
-   * @example
-   * ```ts
-   * const pairs = await sdk.registry.listPairs({ page: 1 });
-   * const result = await sdk.registry.getConfidentialToken(erc20Address);
-   * ```
-   */
-  get registry(): WrappersRegistry {
-    return this.#registry;
   }
 
   /**

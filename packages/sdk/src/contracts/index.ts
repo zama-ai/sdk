@@ -25,6 +25,7 @@ export {
   nameContract,
   symbolContract,
   decimalsContract,
+  erc20TotalSupplyContract,
   balanceOfContract,
   allowanceContract,
   approveContract,

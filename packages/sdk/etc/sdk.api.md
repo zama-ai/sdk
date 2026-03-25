@@ -16661,7 +16661,7 @@ export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequ
 // @public
 export interface PaginatedResult<T> {
     // (undocumented)
-    readonly items: T[];
+    readonly items: readonly T[];
     // (undocumented)
     readonly page: number;
     // (undocumented)
@@ -30521,7 +30521,11 @@ export class WrappersRegistry {
         isValid: boolean;
     } | null>;
     isConfidentialTokenValid(confidentialTokenAddress: Address): Promise<boolean>;
-    listPairs(options?: ListPairsOptions): Promise<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>>;
+    listPairs(options: ListPairsOptions & {
+        metadata: true;
+    }): Promise<PaginatedResult<EnrichedTokenWrapperPair>>;
+    // (undocumented)
+    listPairs(options?: ListPairsOptions): Promise<PaginatedResult<TokenWrapperPair>>;
     refresh(): void;
     // (undocumented)
     readonly signer: GenericSigner;
@@ -30610,6 +30614,7 @@ export class ZamaSDK {
 export interface ZamaSDKConfig {
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
+    registryAddresses?: Record<number, Address>;
     registryTTL?: number;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;

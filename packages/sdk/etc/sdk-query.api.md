@@ -1386,6 +1386,7 @@ export interface WrapperDiscoveryQueryConfig {
     erc20Address?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
+    registry?: WrappersRegistry;
     registryAddresses?: Record<number, Address>;
 }
 
@@ -1654,6 +1655,7 @@ export class ZamaSDK {
 export interface ZamaSDKConfig {
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
+    registryAddresses?: Record<number, Address>;
     registryTTL?: number;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
@@ -1710,7 +1712,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-Dee03TU-.d.ts:1752:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-dV8OS7ZX.d.ts:1760:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
