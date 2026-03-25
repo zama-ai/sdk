@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { getWrapperContract, wrapperExistsContract } from "../contracts";
-import type { GenericSigner } from "../token/token.types";
+import type { GenericSigner } from "../types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";

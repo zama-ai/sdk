@@ -1,12 +1,12 @@
 ---
-description: TypeScript SDK for confidential ERC-20 tokens — shield, transfer, and unshield with Fully Homomorphic Encryption.
+description: TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
 ---
 
 # Zama SDK
 
 Integrate the Zama fhEVM into your app
 
-TypeScript SDK for confidential ERC-20 tokens — shield, transfer, and unshield with Fully Homomorphic Encryption.
+TypeScript SDK for confidential smart contracts — shield, transfer, and unshield tokens with Fully Homomorphic Encryption.
 
 ## Features
 

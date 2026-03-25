@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "tools/*"
+  - "test/*"
 
 # Only install packages published at least 3 days ago (4320 minutes),
 # reducing exposure to supply-chain attacks via newly published versions.
@@ -8,3 +9,4 @@ packages:
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - "@zama-fhe/relayer-sdk"
+  - "typescript"

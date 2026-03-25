@@ -1,5 +1,5 @@
 import { describe, expect, test } from "../../test-fixtures";
-import { ZamaSDK } from "../../token/zama-sdk";
+import { ZamaSDK } from "../../zama-sdk";
 
 import { encryptMutationOptions } from "../encrypt";
 import type { Address } from "viem";

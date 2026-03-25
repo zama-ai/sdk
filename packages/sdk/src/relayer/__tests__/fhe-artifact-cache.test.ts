@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { MemoryStorage } from "../../token/memory-storage";
+import { MemoryStorage } from "../../storage/memory-storage";
 import { FheArtifactCache } from "../fhe-artifact-cache";
 
 const DUMMY_RELAYER_URL = "https://relayer.example.com";

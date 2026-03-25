@@ -1,6 +1,6 @@
 import { confidentialBalanceOfContract } from "../contracts";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { GenericSigner } from "../token/token.types";
+import type { GenericSigner } from "../types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";

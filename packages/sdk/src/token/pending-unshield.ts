@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { GenericStorage } from "./token.types";
+import type { GenericStorage } from "../types";
 
 const STORAGE_PREFIX = "zama:pending-unshield:";
 

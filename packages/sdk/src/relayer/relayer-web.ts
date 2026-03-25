@@ -6,8 +6,9 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import { ConfigurationError, ZamaError } from "../token/errors";
-import type { GenericStorage } from "../token/token.types";
+import { ConfigurationError, ZamaError } from "../errors";
+import { IndexedDBStorage } from "../storage/indexeddb-storage";
+import type { GenericStorage } from "../types";
 import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.client";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
@@ -23,7 +24,6 @@ import type {
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import { buildEIP712DomainType, DefaultConfigs, withRetry } from "./relayer-utils";
-import { IndexedDBStorage } from "../token/indexeddb-storage";
 
 /**
  * Pinned relayer SDK version used for the WASM CDN bundle.

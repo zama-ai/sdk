@@ -1,5 +1,5 @@
 import { ReadonlyToken } from "../token/readonly-token";
-import { DecryptionFailedError } from "../token/errors";
+import { DecryptionFailedError } from "../errors";
 
 import type { EncryptedBalanceHandle } from "./confidential-balance";
 import type { QueryFactoryOptions } from "./factory-types";
