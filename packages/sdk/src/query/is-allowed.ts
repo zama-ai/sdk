@@ -1,4 +1,4 @@
-import type { ZamaSDK } from "../token/zama-sdk";
+import type { ZamaSDK } from "../zama-sdk";
 
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
@@ -18,7 +18,7 @@ export function isAllowedQueryOptions(
     ...filterQueryOptions(config.query ?? {}),
     queryKey: zamaQueryKeys.isAllowed.scope(config.account),
     queryFn: () => sdk.isAllowed(),
-    staleTime: Infinity,
+    staleTime: 30_000,
     enabled: config.query?.enabled !== false,
   } as const;
 }

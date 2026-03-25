@@ -4,7 +4,7 @@ import {
   type EIP1193EventMap,
   type EIP1193Provider,
 } from "viem";
-import type { SignerLifecycleCallbacks } from "./token.types";
+import type { SignerLifecycleCallbacks } from "../types";
 
 /**
  * Subscribe to EIP-1193 wallet lifecycle events on a raw provider.

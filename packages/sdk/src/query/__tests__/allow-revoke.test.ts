@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 
-import { ZamaSDK } from "../../token/zama-sdk";
+import { ZamaSDK } from "../../zama-sdk";
 import { allowMutationOptions } from "../allow";
 import { revokeMutationOptions } from "../revoke";
 import { revokeSessionMutationOptions } from "../revoke-session";
@@ -74,14 +74,14 @@ describe("isAllowedQueryOptions", () => {
     expect(isAllowedSpy).toHaveBeenCalledTimes(1);
   });
 
-  test("sets staleTime to Infinity", ({ signer, relayer, storage }) => {
+  test("staleTime should be 30 seconds", ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     });
 
-    expect(options.staleTime).toBe(Infinity);
+    expect(options.staleTime).toBe(30_000);
   });
 
   test("enabled is false when query.enabled is false", ({ signer, relayer, storage }) => {

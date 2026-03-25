@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   api-report:
@@ -31,7 +32,79 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Check API reports are up to date
         run: pnpm api-report:check
+
+      - name: Extract base branch reports
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p /tmp/api-reports/base
+          git fetch --depth=1 origin "$BASE_SHA"
+          for f in $(git ls-tree -r --name-only "$BASE_SHA" -- packages/sdk/etc packages/react-sdk/etc 2>/dev/null | grep '\.api\.md$'); do
+            git show "$BASE_SHA:$f" > "/tmp/api-reports/base/$(basename "$f")" 2>/dev/null || true
+          done
+
+      - name: Generate API diff
+        if: github.event_name == 'pull_request'
+        id: api-diff
+        run: |
+          mkdir -p /tmp/api-reports/pr
+          cp packages/sdk/etc/*.api.md packages/react-sdk/etc/*.api.md /tmp/api-reports/pr/
+          diff -ru /tmp/api-reports/base /tmp/api-reports/pr | \
+            sed 's|/tmp/api-reports/base/|a/|;s|/tmp/api-reports/pr/|b/|' > /tmp/api-reports/raw.diff || true
+
+          if [ -s /tmp/api-reports/raw.diff ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            { echo "## Public API Changes"; echo '```diff'; cat /tmp/api-reports/raw.diff; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No public API changes detected." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Post or update PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- api-report-diff -->';
+            const hasChanges = '${{ steps.api-diff.outputs.has_changes }}' === 'true';
+
+            let body;
+            if (hasChanges) {
+              let diff = fs.readFileSync('/tmp/api-reports/raw.diff', 'utf8');
+              if (diff.length > 60000) {
+                diff = diff.slice(0, 60000) + '\n... (truncated, see Actions run summary for full diff)';
+              }
+              body = [marker, '## Public API Changes', '',
+                '<details>', '<summary>Expand to see full diff</summary>', '',
+                '```diff', diff, '```', '', '</details>'].join('\n');
+            } else {
+              body = [marker, '## Public API Changes', '', ':white_check_mark: No public API changes detected.'].join('\n');
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body?.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

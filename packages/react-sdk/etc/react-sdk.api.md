@@ -747,7 +747,7 @@ export interface UseActivityFeedConfig {
 }
 
 // @public
-export function useAllowTokens(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
@@ -1126,9 +1126,10 @@ export type UseConfidentialBalancesOptions = Omit<UseQueryOptions<ConfidentialBa
 export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<unknown, Error>;
 
 // @public
-export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
+export interface UseConfidentialIsApprovedConfig {
     holder?: Address;
     spender: Address | undefined;
+    tokenAddress: Address | undefined;
 }
 
 // @public
@@ -1178,7 +1179,7 @@ export function useDelegationStatus(config: UseDelegationStatusConfig, options?:
 export interface UseDelegationStatusConfig {
     delegateAddress?: Address;
     delegatorAddress?: Address;
-    tokenAddress: Address;
+    tokenAddress: Address | undefined;
 }
 
 // @public
@@ -1252,13 +1253,13 @@ export function useRequestZKProofVerification(): _tanstack_react_query0.UseMutat
 export function useResumeUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
 
 // @public
+export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+
+// @public
 export function useRevokeDelegation(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, RevokeDelegationParams>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, RevokeDelegationParams, unknown>;
 
 // @public
 export function useRevokeSession(options?: UseMutationOptions<void>): _tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
-
-// @public
-export function useRevokeTokens(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useShield<TContext = unknown>(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;
@@ -1404,7 +1405,7 @@ export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?:
 // @public
 export interface UseWrapperDiscoveryConfig {
     coordinatorAddress: Address | undefined;
-    tokenAddress: Address;
+    tokenAddress: Address | undefined;
 }
 
 // @public

@@ -240,6 +240,10 @@ const sdk = new ZamaSDK({
 {% endtab %}
 {% endtabs %}
 
+{% hint style="info" %}
+**FHE artifact caching** — Both `RelayerWeb` and `RelayerNode` automatically cache the multi-MB FHE public key and parameters so they are not re-downloaded on every startup. `RelayerWeb` uses IndexedDB (persists across reloads), `RelayerNode` uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via `fheArtifactStorage` and `fheArtifactCacheTTL`. See [FheArtifactCache](/reference/sdk/FheArtifactCache) for details.
+{% endhint %}
+
 ## Your first confidential transfer
 
 {% tabs %}

@@ -1,11 +1,11 @@
 ---
 title: useRevoke
-description: Revoke the session signature for specific token addresses.
+description: Revoke the EIP-712 decrypt authorization for specific contract addresses.
 ---
 
 # useRevoke
 
-Revoke the session signature for specific token addresses. Stored credentials remain intact — the next decrypt requires a fresh wallet signature.
+Revoke the EIP-712 decrypt authorization for specific contract addresses. This is **not token-specific** — it works for any contract that uses FHE-encrypted values. Stored credentials remain intact — the next decrypt requires a fresh wallet signature.
 
 ## Import
 
@@ -21,12 +21,12 @@ import { useRevoke } from "@zama-fhe/react-sdk";
 ```tsx
 import { useRevoke } from "@zama-fhe/react-sdk";
 
-function RevokeButton({ tokens }: { tokens: `0x${string}`[] }) {
+function RevokeButton({ contracts }: { contracts: `0x${string}`[] }) {
   const { mutate: revoke, isPending, isSuccess } = useRevoke();
 
   return (
-    <button onClick={() => revoke(tokens)} disabled={isPending}>
-      {isPending ? "Revoking..." : "Revoke tokens"}
+    <button onClick={() => revoke(contracts)} disabled={isPending}>
+      {isPending ? "Revoking..." : "Revoke authorization"}
     </button>
   );
 }
@@ -45,12 +45,12 @@ function RevokeButton({ tokens }: { tokens: `0x${string}`[] }) {
 
 `Address[]`
 
-Array of token addresses to revoke session signatures for.
+Array of contract addresses to revoke decrypt authorization for. These can be any contracts that use FHE-encrypted values — not limited to tokens.
 
 ```ts
 const { mutate: revoke } = useRevoke();
 
-revoke(["0xTokenA", "0xTokenB"]);
+revoke(["0xContractA", "0xContractB"]);
 ```
 
 ## Return Type
@@ -59,7 +59,7 @@ revoke(["0xTokenA", "0xTokenB"]);
 
 ## Behavior
 
-- Clears the cached session signature for each token in the array.
+- Clears the cached session signature for each contract in the array.
 - Auto-invalidates all [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
 - Does **not** delete stored FHE credentials — only the session-level signature is cleared.
 
@@ -69,7 +69,7 @@ If you use [`WagmiSigner`](/reference/sdk/WagmiSigner), the SDK auto-revokes on 
 
 ## Related
 
-- [`useRevokeSession`](/reference/react/useRevokeSession) — revoke the entire session instead of specific tokens
-- [`useAllow`](/reference/react/useAllow) — pre-authorize tokens with a single wallet signature
+- [`useRevokeSession`](/reference/react/useRevokeSession) — revoke the entire session instead of specific contracts
+- [`useAllow`](/reference/react/useAllow) — authorize decryption for contracts with a single wallet signature
 - [`useIsAllowed`](/reference/react/useIsAllowed) — check whether a session signature is valid
 - [`Token.revoke()`](/reference/sdk/Token#revoke) — imperative equivalent on the SDK class

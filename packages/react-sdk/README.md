@@ -1,6 +1,6 @@
 # @zama-fhe/react-sdk
 
-React hooks for confidential token operations, built on [React Query](https://tanstack.com/query). Provides declarative, cache-aware hooks for balances, confidential transfers, shielding, unshielding, and decryption — so you never deal with raw FHE operations in your components.
+React hooks for confidential contract operations, built on [React Query](https://tanstack.com/query). Provides declarative, cache-aware hooks for session authorization, balances, confidential transfers, shielding, unshielding, and decryption — so you never deal with raw FHE operations in your components.
 
 ## Installation
 
@@ -275,53 +275,53 @@ const tokenABalance = balances?.get("0xTokenA");
 
 ### Authorization
 
-#### `useTokenAllow`
+#### `useAllow`
 
-Pre-authorize FHE decrypt credentials for a list of token addresses with a single wallet signature. Call this early (e.g. after loading the token list) so that subsequent individual decrypt operations reuse cached credentials without prompting the wallet again.
+Pre-authorize FHE decrypt credentials for a list of contract addresses with a single wallet signature. Call this early (e.g. after wallet connect) so that subsequent decrypt operations reuse cached credentials without prompting the wallet again.
 
 ```ts
-function useTokenAllow(): UseMutationResult<void, Error, Address[]>;
+function useAllow(): UseMutationResult<void, Error, Address[]>;
 ```
 
 ```tsx
-const { mutateAsync: tokenAllow, isPending } = useTokenAllow();
+const { mutateAsync: allow, isPending } = useAllow();
 
-// Pre-authorize all known tokens up front
-await tokenAllow(allTokenAddresses);
+// Pre-authorize all known contracts up front
+await allow(allContractAddresses);
 
 // Individual balance decrypts now reuse cached credentials
 const { data: balance } = useConfidentialBalance({ tokenAddress: "0xTokenA" });
 ```
 
-#### `useIsTokenAllowed`
+#### `useIsAllowed`
 
-Check whether a session signature is cached for a given token. Returns `true` if decrypt operations can proceed without a wallet prompt. Use this to conditionally enable UI elements (e.g. a "Reveal Balances" button).
+Check whether a session signature is cached and valid. Returns `true` if decrypt operations can proceed without a wallet prompt. Use this to conditionally enable UI elements (e.g. a "Reveal Balances" button).
 
 ```ts
-function useIsTokenAllowed(tokenAddress: Address): UseQueryResult<boolean, Error>;
+function useIsAllowed(): UseQueryResult<boolean, Error>;
 ```
 
 ```tsx
-const { data: allowed } = useIsTokenAllowed("0xTokenAddress");
+const { data: allowed } = useIsAllowed();
 
 <button disabled={!allowed}>Reveal Balance</button>;
 ```
 
-Automatically invalidated when `useTokenAllow` or `useTokenRevoke` succeed.
+Automatically invalidated when `useAllow` or `useRevoke` succeed.
 
-#### `useTokenRevoke`
+#### `useRevoke`
 
-Revoke the session signature for the connected wallet. Stored credentials remain intact, but the next decrypt operation will require a fresh wallet signature.
+Revoke decrypt authorization for specific contract addresses. Stored credentials remain intact, but the next decrypt operation will require a fresh wallet signature.
 
 ```ts
-function useTokenRevoke(): UseMutationResult<void, Error, Address[]>;
+function useRevoke(): UseMutationResult<void, Error, Address[]>;
 ```
 
 ```tsx
-const { mutate: tokenRevoke } = useTokenRevoke();
+const { mutate: revoke } = useRevoke();
 
-// Revoke session — addresses are included in the credentials:revoked event
-tokenRevoke(["0xTokenA", "0xTokenB"]);
+// Revoke — addresses are included in the credentials:revoked event
+revoke(["0xContractA", "0xContractB"]);
 ```
 
 ### Transfer Hooks
@@ -974,15 +974,15 @@ Place `ZamaProvider` inside your client-only layout. Do **not** create the relay
 
 ### FHE Credentials Lifecycle
 
-FHE decrypt credentials are generated once per wallet + token set and cached in the storage backend you provide (e.g. `IndexedDBStorage`). The wallet signature is kept **in memory only** — never persisted to disk. The lifecycle:
+FHE decrypt credentials are generated once per wallet + contract set and cached in the storage backend you provide (e.g. `IndexedDBStorage`). The wallet signature is kept **in memory only** — never persisted to disk. The lifecycle:
 
 1. **First decrypt** — SDK generates an FHE keypair, creates EIP-712 typed data, and prompts the wallet to sign. The encrypted credential is stored; the signature is cached in memory.
 2. **Same session** — Cached credentials and session signature are reused silently (no wallet prompt).
 3. **Page reload** — Encrypted credentials are loaded from storage; the wallet is prompted once to re-sign for the session.
 4. **Expiry** — Credentials expire based on `keypairTTL` (default: 86400s = 1 day). After expiry, the next decrypt regenerates and re-prompts.
-5. **Pre-authorization** — Call `useTokenAllow(tokenAddresses)` early to batch-authorize all tokens in one wallet prompt, avoiding repeated popups.
-6. **Check status** — Use `useIsTokenAllowed(tokenAddress)` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
-7. **Disconnect** — Call `useTokenRevoke(tokenAddresses)` or `await credentials.revoke()` to clear the session signature from memory.
+5. **Pre-authorization** — Call `useAllow(contractAddresses)` early to batch-authorize all contracts in one wallet prompt, avoiding repeated popups.
+6. **Check status** — Use `useIsAllowed()` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
+7. **Disconnect** — Call `useRevoke(contractAddresses)` or `await credentials.revoke()` to clear the session signature from memory.
 
 ### Web Extension Support
 

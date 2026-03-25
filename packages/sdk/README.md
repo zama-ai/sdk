@@ -1,6 +1,6 @@
 # @zama-fhe/sdk
 
-A TypeScript SDK for building privacy-preserving token applications using Fully Homomorphic Encryption (FHE). It abstracts the complexity of encrypted ERC-20 operations — shielding, unshielding, confidential transfers, and balance decryption — behind a clean, high-level API. Works with any Web3 library (viem, ethers, or custom signers).
+A TypeScript SDK for building privacy-preserving applications on Zama's fhEVM using Fully Homomorphic Encryption (FHE). It abstracts the complexity of confidential contract operations — session management, encrypted state, shielding, unshielding, confidential transfers, and balance decryption — behind a clean, high-level API. Works with any Web3 library (viem, ethers, or custom signers).
 
 ## Installation
 
@@ -14,11 +14,10 @@ yarn add @zama-fhe/sdk
 
 ### Peer dependencies
 
-| Package                 | Version | Required?                                          |
-| ----------------------- | ------- | -------------------------------------------------- |
-| `viem`                  | >= 2    | Optional — for the `@zama-fhe/sdk/viem` adapter    |
-| `ethers`                | >= 6    | Optional — for the `@zama-fhe/sdk/ethers` adapter  |
-| `@zama-fhe/relayer-sdk` | >= 0.4  | Optional — only for `@zama-fhe/sdk/node` (Node.js) |
+| Package  | Version | Required?                                         |
+| -------- | ------- | ------------------------------------------------- |
+| `viem`   | >= 2    | Optional — for the `@zama-fhe/sdk/viem` adapter   |
+| `ethers` | >= 6    | Optional — for the `@zama-fhe/sdk/ethers` adapter |
 
 ## Module Systems (ESM & CJS)
 
@@ -141,7 +140,7 @@ const balance = await token.balanceOf();
 
 ### ZamaSDK
 
-Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Acts as a factory for token instances.
+Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Manages sessions, credentials, and acts as a factory for contract instances.
 
 ```ts
 const sdk = new ZamaSDK({

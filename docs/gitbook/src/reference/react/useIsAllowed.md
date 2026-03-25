@@ -1,6 +1,6 @@
 ---
 title: useIsAllowed
-description: Query hook that checks whether a session signature is cached and valid for a token.
+description: Query hook that checks whether a session signature is cached and valid.
 ---
 
 # useIsAllowed
@@ -63,6 +63,6 @@ const { data: allowed } = useIsAllowed();
 
 ## Related
 
-- [`useAllow`](/reference/react/useAllow) -- pre-authorize tokens with one wallet signature
+- [`useAllow`](/reference/react/useAllow) -- pre-authorize contracts with one wallet signature
 - [`useRevoke`](/reference/react/useRevoke) -- revoke session credentials
 - [Session Model](/concepts/session-model) -- security model and TTL configuration

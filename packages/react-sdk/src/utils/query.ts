@@ -1,5 +1,8 @@
 import {
   type DefaultError,
+  type QueriesOptions,
+  type QueriesResults,
+  useQueries as tanstack_useQueries,
   useQuery as tanstack_useQuery,
   useSuspenseQuery as tanstack_useSuspenseQuery,
   type UseQueryResult,
@@ -40,4 +43,29 @@ export function useSuspenseQuery<TData = unknown, TError = DefaultError>(
     ...options,
     queryKeyHashFn: hashFn,
   }) as UseSuspenseQueryResult<TData, TError>;
+}
+
+/**
+ * Thin wrapper around TanStack's useQueries that injects our custom queryKeyHashFn
+ * on every query in the array.
+ */
+export function useQueries<
+  // oxlint-disable-next-line typescript/no-explicit-any
+  T extends Array<any>,
+  TCombinedResult = QueriesResults<T>,
+>({
+  queries,
+  ...options
+}: {
+  queries: readonly [...QueriesOptions<T>];
+  combine?: (result: QueriesResults<T>) => TCombinedResult;
+  subscribed?: boolean;
+}): TCombinedResult {
+  return tanstack_useQueries({
+    ...options,
+    queries: queries.map((q) => ({
+      ...q,
+      queryKeyHashFn: hashFn,
+    })) as [...QueriesOptions<T>],
+  });
 }

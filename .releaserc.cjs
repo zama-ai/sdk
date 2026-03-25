@@ -1,3 +1,21 @@
+// Override conventional-changelog templates to use `-` bullets instead of `*`.
+// oxfmt normalizes markdown bullets to `-`, so `*` from the default templates
+// causes formatting drift on every release.
+const { readFileSync } = require("node:fs");
+const { resolve, dirname } = require("node:path");
+
+const pkgEntry = require.resolve("conventional-changelog-conventionalcommits");
+const templatesPath = resolve(dirname(pkgEntry), "templates.js");
+const src = readFileSync(templatesPath, "utf8");
+
+const extract = (name) => {
+  const re = new RegExp(`export const ${name} = \`([\\s\\S]*?)\``, "m");
+  return re.exec(src)?.[1] ?? "";
+};
+
+const mainTemplate = extract("mainTemplate").replace(/^\* /gm, "- ");
+const commitPartial = extract("commitPartial").replace(/^\*/, "-");
+
 module.exports = {
   branches: ["main", { name: "prerelease", channel: "alpha", prerelease: "alpha" }],
   tagFormat: "v${version}",
@@ -29,6 +47,10 @@ module.exports = {
       "@semantic-release/release-notes-generator",
       {
         preset: "conventionalcommits",
+        writerOpts: {
+          mainTemplate,
+          commitPartial,
+        },
       },
     ],
     [

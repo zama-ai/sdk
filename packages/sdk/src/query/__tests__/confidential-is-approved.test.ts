@@ -37,6 +37,22 @@ describe("confidentialIsApprovedQueryOptions", () => {
     expect(missingSpender.enabled).toBe(false);
   });
 
+  test("is disabled when tokenAddress is missing", ({ signer }) => {
+    const options = confidentialIsApprovedQueryOptions(signer, undefined, {
+      holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+    });
+
+    expect(options.enabled).toBe(false);
+    expect(options.queryKey).toEqual([
+      "zama.confidentialIsApproved",
+      {
+        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+      },
+    ]);
+  });
+
   test("checks operator approval", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue(true);
 
@@ -178,5 +194,16 @@ describe("confidentialIsApprovedQueryOptions", () => {
         ),
       ),
     ).rejects.toThrow("holder is required");
+  });
+
+  test("queryFn throws when tokenAddress is missing from context.queryKey", async ({ signer }) => {
+    const options = confidentialIsApprovedQueryOptions(signer, undefined, {
+      holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+      spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+    });
+
+    await expect(options.queryFn(mockQueryContext(options.queryKey))).rejects.toThrow(
+      "tokenAddress is required",
+    );
   });
 });

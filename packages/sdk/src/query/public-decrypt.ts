@@ -1,6 +1,6 @@
 import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
 import type { Handle, PublicDecryptResult } from "../relayer/relayer-sdk.types";
-import type { ZamaSDK } from "../token/zama-sdk";
+import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 

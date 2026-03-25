@@ -1,5 +1,5 @@
 /**
- * React hooks for confidential token operations, built on React Query.
+ * React hooks for confidential contract operations, built on React Query.
  *
  * Requires {@link ZamaProvider} in the component tree. Re-exports all public
  * symbols from `@zama-fhe/sdk`.
@@ -161,7 +161,13 @@ export {
   getFeeRecipientContract,
 } from "@zama-fhe/sdk";
 
-// Token hooks
+// Authorization hooks (generic — any contract with encrypted state)
+export { useAllow } from "./token/use-allow";
+export { useIsAllowed } from "./token/use-is-allowed";
+export { useRevoke } from "./token/use-revoke";
+export { useRevokeSession } from "./token/use-revoke-session";
+
+// Token hooks (ERC-20 token operations)
 export { useToken, type UseZamaConfig } from "./token/use-token";
 export { useReadonlyToken } from "./token/use-readonly-token";
 export {
@@ -174,10 +180,6 @@ export {
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
-export { useAllowTokens } from "./token/use-allow-tokens";
-export { useIsAllowed } from "./token/use-is-allowed";
-export { useRevokeTokens } from "./token/use-revoke-tokens";
-export { useRevokeSession } from "./token/use-revoke-session";
 export {
   useConfidentialTransfer,
   type UseConfidentialTransferConfig,
@@ -353,7 +355,7 @@ export {
   sortByBlockNumber,
 } from "@zama-fhe/sdk";
 
-// Re-export token types from core SDK
+// Re-export core types from SDK
 export type {
   Address,
   Hex,

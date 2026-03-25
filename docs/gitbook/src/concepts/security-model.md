@@ -161,7 +161,7 @@ Two TTL controls are available:
 
 ### Address-scoped authorization
 
-The EIP-712 typed data includes the wallet address. A signature from address A cannot authorize decryption for address B. Combined with contract-scoped authorization (the signed message lists specific token contracts), each signature is tightly bound to a specific user and set of tokens.
+The EIP-712 typed data includes the wallet address. A signature from address A cannot authorize decryption for address B. Combined with contract-scoped authorization (the signed message lists specific contract addresses), each signature is tightly bound to a specific user and set of contracts.
 
 ### Revocation
 
