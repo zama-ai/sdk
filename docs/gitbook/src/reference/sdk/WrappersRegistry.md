@@ -72,6 +72,68 @@ Resolves the registry contract address for the current chain. Throws `Configurat
 const registryAddr = await registry.getRegistryAddress();
 ```
 
+### listPairs
+
+`(options?: ListPairsOptions) => Promise<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>>`
+
+List token wrapper pairs with page-based pagination. Pass `metadata: true` to enrich each pair with on-chain name, symbol, decimals, and totalSupply.
+
+```ts
+// Basic pagination
+const page1 = await registry.listPairs({ page: 1, pageSize: 20 });
+console.log(`${page1.total} pairs, showing page ${page1.page}`);
+
+// With on-chain metadata
+const enriched = await registry.listPairs({ metadata: true, pageSize: 10 });
+for (const pair of enriched.items) {
+  console.log(pair.underlying.symbol, "→", pair.confidential.symbol);
+}
+```
+
+#### ListPairsOptions
+
+| Option     | Type      | Default | Description                                         |
+| ---------- | --------- | ------- | --------------------------------------------------- |
+| `page`     | `number`  | `1`     | Page number (1-indexed)                              |
+| `pageSize` | `number`  | `100`   | Items per page                                       |
+| `metadata` | `boolean` | `false` | Fetch on-chain metadata for both tokens in each pair |
+
+### getConfidentialToken
+
+`(tokenAddress: Address) => Promise<{ confidentialTokenAddress: Address; isValid: boolean } | null>`
+
+Look up the confidential token for a given plain ERC-20. Returns `null` if no pair is registered. Negative lookups are cached for 5 minutes.
+
+```ts
+const result = await registry.getConfidentialToken(usdcAddress);
+if (result) {
+  console.log(result.confidentialTokenAddress, result.isValid);
+}
+```
+
+### getUnderlyingToken
+
+`(confidentialTokenAddress: Address) => Promise<{ tokenAddress: Address; isValid: boolean } | null>`
+
+Reverse lookup — find the plain ERC-20 for a confidential token. Returns `null` if no pair is registered.
+
+```ts
+const result = await registry.getUnderlyingToken(cUsdcAddress);
+if (result) {
+  console.log(result.tokenAddress, result.isValid);
+}
+```
+
+### refresh
+
+`() => void`
+
+Force-invalidate the in-memory cache. The next call to any read method will fetch fresh data from the chain.
+
+```ts
+registry.refresh();
+```
+
 ### getTokenPairs
 
 `() => Promise<readonly TokenWrapperPair[]>`
@@ -165,5 +227,9 @@ console.log(DefaultRegistryAddresses[1]); // "0xeb5015fF021DB115aCe010f23F55C259
 ## Related
 
 - [ZamaSDK](/reference/sdk/ZamaSDK) — `createWrappersRegistry()` factory method
+- [useListPairs](/reference/react/useListPairs) — React hook for paginated pair listing
+- [useConfidentialTokenAddress](/reference/react/useConfidentialTokenAddress) — React hook for forward lookup
+- [useTokenAddress](/reference/react/useTokenAddress) — React hook for reverse lookup
+- [useIsConfidentialTokenValid](/reference/react/useIsConfidentialTokenValid) — React hook for validity check
 - [Contract Builders](/reference/sdk/contract-builders) — low-level registry builders
 - [Network Presets](/reference/sdk/network-presets) — built-in chain configurations

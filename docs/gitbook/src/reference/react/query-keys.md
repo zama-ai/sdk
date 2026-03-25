@@ -116,6 +116,23 @@ Fee queries.
 | `.batchTransferFee(feeManager)`                 | Batch transfer fee    |
 | `.feeRecipient(feeManager)`                     | Fee recipient address |
 
+### `zamaQueryKeys.wrappersRegistry`
+
+On-chain wrappers registry queries.
+
+| Key                                                               | Scope                                      |
+| ----------------------------------------------------------------- | ------------------------------------------ |
+| `.all`                                                            | All registry queries                       |
+| `.chainId()`                                                      | Chain ID resolution                        |
+| `.tokenPairs(registryAddr)`                                       | All pairs for a registry                   |
+| `.tokenPairsLength(registryAddr)`                                 | Pair count                                 |
+| `.tokenPairsSlice(registryAddr, from, to)`                        | Index-based slice                          |
+| `.tokenPair(registryAddr, index)`                                 | Single pair by index                       |
+| `.confidentialTokenAddress(registryAddr, tokenAddr)`              | Forward lookup (plain &rarr; confidential) |
+| `.tokenAddress(registryAddr, confidentialAddr)`                   | Reverse lookup (confidential &rarr; plain) |
+| `.isConfidentialTokenValid(registryAddr, confidentialAddr)`       | Validity check                             |
+| `.listPairs(registryAddr, page, pageSize, metadata)`              | Paginated listing                          |
+
 ### `decryptionKeys`
 
 Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt) and read by `useUserDecryptedValue`.
