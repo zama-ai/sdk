@@ -1,5 +1,5 @@
 import type { Token } from "../token/token";
-import type { TransferCallbacks, TransactionResult } from "../token/token.types";
+import type { TransferCallbacks, TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 

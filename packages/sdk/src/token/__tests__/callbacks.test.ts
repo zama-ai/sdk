@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "../../test-fixtures";
 import { Topics } from "../../events";
 
-import { DecryptionFailedError, TransactionRevertedError } from "../errors";
-import type { GenericSigner } from "../token.types";
+import { DecryptionFailedError, TransactionRevertedError } from "../../errors";
+import type { GenericSigner } from "../../types";
 import type { Address } from "viem";
 
 describe("Unshield callbacks (P4)", () => {

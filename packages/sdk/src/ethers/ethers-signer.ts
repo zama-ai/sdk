@@ -17,7 +17,7 @@ import type {
   SignerLifecycleCallbacks,
   TransactionReceipt,
   WriteContractConfig,
-} from "../token/token.types";
+} from "../types";
 import { eip1193Subscribe } from "../token/eip1193-subscribe";
 
 /**

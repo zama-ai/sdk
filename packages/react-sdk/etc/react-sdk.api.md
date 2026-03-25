@@ -1122,9 +1122,10 @@ export type UseConfidentialBalancesOptions = Omit<UseQueryOptions<ConfidentialBa
 export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<unknown, Error>;
 
 // @public
-export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
+export interface UseConfidentialIsApprovedConfig {
     holder?: Address;
     spender: Address | undefined;
+    tokenAddress: Address | undefined;
 }
 
 // @public
@@ -1174,7 +1175,7 @@ export function useDelegationStatus(config: UseDelegationStatusConfig, options?:
 export interface UseDelegationStatusConfig {
     delegateAddress?: Address;
     delegatorAddress?: Address;
-    tokenAddress: Address;
+    tokenAddress: Address | undefined;
 }
 
 // @public
@@ -1325,7 +1326,7 @@ export function useUserDecryptedValue(handle: Handle | undefined): _tanstack_rea
 // @public
 export function useUserDecryptedValues(handles: Handle[]): {
     data: Record<`0x${string}`, ClearValueType | undefined>;
-    results: (_tanstack_query_core0.QueryObserverRefetchErrorResult<unknown, unknown> | _tanstack_query_core0.QueryObserverSuccessResult<unknown, unknown> | _tanstack_query_core0.QueryObserverLoadingErrorResult<unknown, unknown> | _tanstack_query_core0.QueryObserverLoadingResult<unknown, unknown> | _tanstack_query_core0.QueryObserverPendingResult<unknown, unknown> | _tanstack_query_core0.QueryObserverPlaceholderResult<unknown, unknown> | _tanstack_query_core0.QueryObserverRefetchErrorResult<unknown, Error> | _tanstack_query_core0.QueryObserverSuccessResult<unknown, Error> | _tanstack_query_core0.QueryObserverLoadingErrorResult<unknown, Error> | _tanstack_query_core0.QueryObserverLoadingResult<unknown, Error> | _tanstack_query_core0.QueryObserverPendingResult<unknown, Error> | _tanstack_query_core0.QueryObserverPlaceholderResult<unknown, Error>)[];
+    results: (_tanstack_react_query0.UseQueryResult<unknown, unknown> | _tanstack_react_query0.UseQueryResult<unknown, Error>)[];
 };
 
 // @public
@@ -1334,7 +1335,7 @@ export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?:
 // @public
 export interface UseWrapperDiscoveryConfig {
     coordinatorAddress: Address | undefined;
-    tokenAddress: Address;
+    tokenAddress: Address | undefined;
 }
 
 // @public

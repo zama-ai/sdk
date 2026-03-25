@@ -1,21 +1,5 @@
 import type { Address } from "viem";
-
-export const deploymentCoordinatorAbi = [
-  {
-    inputs: [{ internalType: "address", name: "originalToken", type: "address" }],
-    name: "getWrapper",
-    outputs: [{ internalType: "address", name: "", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "originalToken", type: "address" }],
-    name: "wrapperExists",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
+import { deploymentCoordinatorAbi } from "../abi/deployment-coordinator.abi";
 
 /**
  * Returns the contract config to look up a wrapper for a given ERC-20 token.
