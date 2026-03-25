@@ -2,6 +2,20 @@ import { describe, expect, test, vi, mockQueryContext } from "../../test-fixture
 import { wrapperDiscoveryQueryOptions } from "../wrapper-discovery";
 
 describe("wrapperDiscoveryQueryOptions", () => {
+  test("is disabled when tokenAddress or erc20Address is missing", ({ signer }) => {
+    const missingToken = wrapperDiscoveryQueryOptions(signer, undefined, {
+      erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+    });
+    const missingErc20 = wrapperDiscoveryQueryOptions(
+      signer,
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      {},
+    );
+
+    expect(missingToken.enabled).toBe(false);
+    expect(missingErc20.enabled).toBe(false);
+  });
+
   test("includes erc20Address in query key", ({ signer }) => {
     const options = wrapperDiscoveryQueryOptions(
       signer,

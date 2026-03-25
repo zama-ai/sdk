@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "../utils/query";
-import { skipToken, type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { wrapperDiscoveryQueryOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { wrapperDiscoveryQueryOptions } from "@zama-fhe/sdk/query";
 import { useReadonlyToken } from "./use-readonly-token";
 
 export { wrapperDiscoveryQueryOptions };
@@ -47,15 +47,14 @@ export function useWrapperDiscovery(
 ) {
   const { tokenAddress, erc20Address } = config;
   const token = useReadonlyToken(tokenAddress);
+  const baseOpts = wrapperDiscoveryQueryOptions(token.signer, tokenAddress, {
+    erc20Address,
+  });
 
   return useQuery<Address | null>({
-    ...(erc20Address
-      ? wrapperDiscoveryQueryOptions(token.signer, tokenAddress, { erc20Address })
-      : {
-          queryKey: zamaQueryKeys.wrapperDiscovery.all,
-          queryFn: skipToken,
-        }),
+    ...baseOpts,
     ...options,
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -79,6 +78,8 @@ export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseC
   const token = useReadonlyToken(tokenAddress);
 
   return useSuspenseQuery<Address | null>({
-    ...wrapperDiscoveryQueryOptions(token.signer, tokenAddress, { erc20Address }),
+    ...wrapperDiscoveryQueryOptions(token.signer, tokenAddress, {
+      erc20Address,
+    }),
   });
 }

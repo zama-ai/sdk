@@ -62,7 +62,7 @@ export type {
 } from "../relayer/relayer-sdk.types";
 
 // Storage
-export { asyncLocalStorage, AsyncLocalMapStorage } from "../token/async-local-storage";
+export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";
 
 // Network preset configs
 export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";

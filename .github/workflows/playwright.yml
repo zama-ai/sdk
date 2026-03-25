@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: [main, prerelease]
   workflow_call:
-    secrets:
-      SUBMODULE_TOKEN:
-        required: true
 
 concurrency:
   group: playwright-${{ github.ref }}
@@ -23,11 +20,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Checkout submodules
+      - name: Init submodules
+        run: git submodule update --init --recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1.7.0
+
+      - name: Restore Forge build cache
+        id: forge-build-cache
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            contracts/out
+            contracts/cache
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml') }}
+
+      - name: Install Soldeer dependencies
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
         run: |
-          git config --global url."https://${{ secrets.SUBMODULE_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          git submodule sync --recursive
-          git submodule update --init --recursive --depth=1
+          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+
+      - name: Build contracts
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: cd contracts && forge build
+
+      - name: Save Forge build cache
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            contracts/out
+            contracts/cache
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml') }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -59,62 +84,12 @@ jobs:
           path: /home/runner/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - name: Restore Hardhat dependencies cache
-        id: hardhat-deps-cache
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
-        with:
-          path: hardhat/node_modules
-          key: hardhat-deps-${{ runner.os }}-${{ hashFiles('hardhat/package-lock.json') }}
-
-      - name: Install Hardhat dependencies
-        if: steps.hardhat-deps-cache.outputs.cache-hit != 'true'
-        run: pnpm hardhat:install
-
-      - name: Validate Hardhat binary when cache is restored
-        if: steps.hardhat-deps-cache.outputs.cache-hit == 'true'
-        run: |
-          if [ ! -x hardhat/node_modules/.bin/hardhat ]; then
-            echo "Hardhat binary missing after cache restore, reinstalling dependencies."
-            pnpm hardhat:install
-          fi
-
-      - name: Save Hardhat dependencies cache
-        if: steps.hardhat-deps-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
-        with:
-          path: hardhat/node_modules
-          key: hardhat-deps-${{ runner.os }}-${{ hashFiles('hardhat/package-lock.json') }}
-
-      - name: Restore Hardhat compilation cache
-        id: hardhat-build-cache
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
-        with:
-          path: |
-            hardhat/artifacts
-            hardhat/cache
-            hardhat/typechain-types
-          key: hardhat-build-${{ runner.os }}-${{ hashFiles('hardhat/contracts/**/*.sol', 'hardhat/hardhat.config.ts') }}
-
-      - name: Compile Hardhat contracts
-        if: steps.hardhat-build-cache.outputs.cache-hit != 'true'
-        run: pnpm hardhat:compile
-
-      - name: Save Hardhat compilation cache
-        if: steps.hardhat-build-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
-        with:
-          path: |
-            hardhat/artifacts
-            hardhat/cache
-            hardhat/typechain-types
-          key: hardhat-build-${{ runner.os }}-${{ hashFiles('hardhat/contracts/**/*.sol', 'hardhat/hardhat.config.ts') }}
-
       - name: Restore Next.js build cache
         id: nextjs-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
-          path: packages/test-nextjs/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-nextjs/src/**/*.ts', 'packages/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
+          path: test/test-nextjs/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('test/test-nextjs/src/**/*.ts', 'test/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
           restore-keys: |
             nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
@@ -123,16 +98,20 @@ jobs:
 
       - name: Build Next.js test-nextjs
         run: pnpm build:test-nextjs
+        env:
+          NEXT_PUBLIC_ANVIL_PORT: 8545
 
       - name: Save Next.js build cache
         if: steps.nextjs-build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
-          path: packages/test-nextjs/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('packages/test-nextjs/src/**/*.ts', 'packages/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
+          path: test/test-nextjs/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('test/test-nextjs/src/**/*.ts', 'test/test-nextjs/src/**/*.tsx', 'packages/sdk/src/**/*.ts', 'packages/sdk/src/**/*.tsx', 'packages/react-sdk/src/**/*.ts', 'packages/react-sdk/src/**/*.tsx') }}
 
       - name: Build Vite test-vite
         run: pnpm build:test-vite
+        env:
+          VITE_ANVIL_PORT: 8546
 
       - name: Run Playwright tests
         run: pnpm e2e:test
@@ -142,5 +121,5 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
-          path: packages/playwright/test-results/
+          path: test/playwright/test-results/
           retention-days: 7

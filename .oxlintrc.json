@@ -53,6 +53,7 @@
     "packages/test-nextjs/playwright/**",
     "packages/test-vite/**",
     "packages/test-vite/playwright/**",
+    "contracts/lib/**",
     "docs/api/**",
     "docs/gitbook/**",
     "tools/**"

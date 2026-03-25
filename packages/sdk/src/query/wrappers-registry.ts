@@ -14,7 +14,7 @@ import type {
   PaginatedResult,
 } from "../contracts/wrappers-registry";
 import { WrappersRegistry } from "../token/wrappers-registry";
-import type { GenericSigner } from "../token/token.types";
+import type { GenericSigner } from "../types/signer";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";

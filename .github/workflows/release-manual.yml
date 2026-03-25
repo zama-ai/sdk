@@ -35,8 +35,6 @@ jobs:
   playwright:
     needs: [validate-branch]
     uses: ./.github/workflows/playwright.yml
-    secrets:
-      SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
   release:
     needs: [vitest, playwright]
@@ -63,7 +61,7 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build packages
         run: pnpm build

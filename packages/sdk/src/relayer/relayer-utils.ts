@@ -123,7 +123,7 @@ export const HardhatConfig = {
   network: "http://127.0.0.1:8545",
   aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
   inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
-  kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
+  kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
   wrappersRegistryAddress: undefined,

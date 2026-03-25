@@ -1,7 +1,7 @@
 import { Topics } from "../../events";
 import { Token } from "../token";
 import { getAddress, type Address } from "viem";
-import { ZamaError, ZamaErrorCode } from "../errors";
+import { ZamaError, ZamaErrorCode } from "../../errors";
 import { describe, expect, it, vi } from "../../test-fixtures";
 
 const ZERO_HANDLE = "0x" + "0".repeat(64);

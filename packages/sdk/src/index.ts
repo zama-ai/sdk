@@ -1,7 +1,7 @@
 /**
- * Core SDK for confidential token operations using Fully Homomorphic Encryption.
+ * TypeScript SDK for Zama's fhEVM — confidential smart contracts powered by Fully Homomorphic Encryption.
  *
- * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link RelayerWeb}.
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link CredentialsManager}, {@link RelayerWeb}.
  *
  * @packageDocumentation
  */
@@ -41,31 +41,36 @@ export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-u
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
 
 // Token abstraction layer
-export { ZamaSDK } from "./token/zama-sdk";
-export type { ZamaSDKConfig } from "./token/zama-sdk";
-export { Token } from "./token/token";
-export type { TokenConfig } from "./token/token";
-export { ReadonlyToken } from "./token/readonly-token";
+export { ZamaSDK } from "./zama-sdk";
+export type { ZamaSDKConfig } from "./zama-sdk";
 export { WrappersRegistry, DefaultWrappersRegistryAddresses } from "./token/wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./token/wrappers-registry";
-export type {
-  ReadonlyTokenConfig,
-  BatchDecryptOptions,
-  BatchDecryptAsOptions,
-} from "./token/readonly-token";
-export { ZERO_HANDLE } from "./token/readonly-token";
-export { MemoryStorage, memoryStorage } from "./token/memory-storage";
-export { IndexedDBStorage, indexedDBStorage } from "./token/indexeddb-storage";
-export { ChromeSessionStorage, chromeSessionStorage } from "./token/chrome-session-storage";
-export { CredentialsManager } from "./token/credentials-manager";
-export type { CredentialsManagerConfig } from "./token/credentials-manager";
-export { DelegatedCredentialsManager } from "./token/delegated-credentials-manager";
-export type { DelegatedCredentialsManagerConfig } from "./token/delegated-credentials-manager";
 export {
+  Token,
+  type TokenConfig,
+  ReadonlyToken,
+  type ReadonlyTokenConfig,
+  type BatchDecryptOptions,
+  type BatchDecryptAsOptions,
+  ZERO_HANDLE,
   savePendingUnshield,
   loadPendingUnshield,
   clearPendingUnshield,
-} from "./token/pending-unshield";
+} from "./token";
+export {
+  MemoryStorage,
+  memoryStorage,
+  IndexedDBStorage,
+  indexedDBStorage,
+  ChromeSessionStorage,
+  chromeSessionStorage,
+} from "./storage";
+export {
+  CredentialsManager,
+  type CredentialsManagerConfig,
+  DelegatedCredentialsManager,
+  type DelegatedCredentialsManagerConfig,
+} from "./credentials";
 export type {
   GenericSigner,
   GenericStorage,
@@ -85,9 +90,9 @@ export type {
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
-} from "./token/token.types";
+} from "./types";
 export type { Address, Hex } from "viem";
-export { ZamaSDKEvents } from "./events/sdk-events";
+export { ZamaSDKEvents } from "./events";
 export type {
   ZamaSDKEventType,
   ZamaSDKEvent,
@@ -119,7 +124,11 @@ export type {
   CredentialsRevokedEvent,
   CredentialsAllowedEvent,
   SessionExpiredEvent,
-} from "./events/sdk-events";
+  DelegationSubmittedEvent,
+  RevokeDelegationSubmittedEvent,
+  CredentialsPersistFailedEvent,
+  CredentialsCorruptedEvent,
+} from "./events";
 export {
   ZamaError,
   ZamaErrorCode,
@@ -139,7 +148,7 @@ export {
   DelegationNotFoundError,
   DelegationExpiredError,
   matchZamaError,
-} from "./token/errors";
+} from "./errors";
 
 // Event decoders and types
 export type {
@@ -150,7 +159,7 @@ export type {
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
-} from "./events/onchain-events";
+} from "./events";
 export {
   Topics,
   TOKEN_TOPICS,
@@ -163,7 +172,7 @@ export {
   decodeOnChainEvents,
   findUnwrapRequested,
   findWrapped,
-} from "./events/onchain-events";
+} from "./events";
 
 // Activity feed helpers and types
 export type {

@@ -13,14 +13,15 @@ import {
   underlyingContract,
 } from "../contracts";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
+import { WrappersRegistry } from "./wrappers-registry";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { pLimit, toError } from "../utils";
+import { toError } from "../utils";
+import { pLimit } from "./concurrency";
 import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
-import { WrappersRegistry } from "./wrappers-registry";
-import { CredentialsManager } from "./credentials-manager";
-import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
+import { CredentialsManager } from "../credentials/credentials-manager";
+import { DelegatedCredentialsManager } from "../credentials/delegated-credentials-manager";
 import {
   ConfigurationError,
   DecryptionFailedError,
@@ -30,8 +31,8 @@ import {
   RelayerRequestFailedError,
   SigningFailedError,
   SigningRejectedError,
-} from "./errors";
-import type { GenericSigner, GenericStorage } from "./token.types";
+} from "../errors";
+import type { GenericSigner, GenericStorage } from "../types";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =

@@ -40,8 +40,6 @@ jobs:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() }}
     uses: ./.github/workflows/playwright.yml
-    secrets:
-      SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
 
   api-report:
     needs: [validate-branch]
@@ -74,7 +72,7 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build packages
         run: pnpm build

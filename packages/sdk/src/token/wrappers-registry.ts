@@ -14,8 +14,8 @@ import {
   totalSupplyContract,
 } from "../contracts";
 import { DefaultConfigs } from "../relayer/relayer-utils";
-import { ConfigurationError } from "./errors";
-import type { GenericSigner } from "./token.types";
+import { ConfigurationError } from "../errors/relayer";
+import type { GenericSigner } from "../types/signer";
 
 /** Default wrappers registry addresses extracted from built-in network configs. */
 export const DefaultWrappersRegistryAddresses: Record<number, Address> = Object.fromEntries(
