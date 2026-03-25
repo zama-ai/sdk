@@ -52,6 +52,8 @@ export const ZamaErrorCode = {
   DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF",
   /** The ACL contract is paused. */
   AclPaused: "ACL_PAUSED",
+  /** Expiration date is too soon (must be at least 1 hour in the future). */
+  DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

@@ -13,5 +13,6 @@ export {
   DelegationDelegateEqualsContractError,
   DelegationContractIsSelfError,
   AclPausedError,
+  DelegationExpirationTooSoonError,
 } from "./delegation";
 export { matchAclRevert } from "./acl-revert";

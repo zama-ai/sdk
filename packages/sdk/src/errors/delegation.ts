@@ -1,8 +1,7 @@
 import { ZamaError, ZamaErrorCode } from "./base";
 
-// Delegation errors — the SDK does NOT auto-map ACL contract reverts to these.
-// They are exported so dApp code can catch and re-throw them when parsing
-// on-chain revert reasons (e.g. via viem's `decodeErrorResult`).
+// Delegation errors — thrown by SDK pre-flight checks and by `matchAclRevert()`
+// when it maps ACL Solidity revert reasons to typed errors.
 
 /** Delegation cannot target self (delegate === msg.sender). */
 export class DelegationSelfNotAllowedError extends ZamaError {
@@ -65,5 +64,13 @@ export class AclPausedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
     super(ZamaErrorCode.AclPaused, message, options);
     this.name = "AclPausedError";
+  }
+}
+
+/** Expiration date is too soon (must be at least 1 hour in the future). */
+export class DelegationExpirationTooSoonError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationExpirationTooSoon, message, options);
+    this.name = "DelegationExpirationTooSoonError";
   }
 }

@@ -1,10 +1,10 @@
 import type { ZamaError } from "./base";
-import { ConfigurationError } from "./relayer";
 import {
   AclPausedError,
   DelegationContractIsSelfError,
   DelegationCooldownError,
   DelegationDelegateEqualsContractError,
+  DelegationExpirationTooSoonError,
   DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
@@ -56,7 +56,9 @@ const ACL_ERROR_MAP: Record<string, (cause: Error | undefined) => ZamaError> = {
       { cause },
     ),
   ExpirationDateBeforeOneHour: (cause) =>
-    new ConfigurationError("Expiration date must be at least 1 hour in the future.", { cause }),
+    new DelegationExpirationTooSoonError("Expiration date must be at least 1 hour in the future.", {
+      cause,
+    }),
   ExpirationDateAlreadySetToSameValue: (cause) =>
     new DelegationExpiryUnchangedError("The new expiration date is the same as the current one.", {
       cause,
@@ -70,7 +72,7 @@ const ACL_ERROR_MAP: Record<string, (cause: Error | undefined) => ZamaError> = {
  * Prefers viem's structured `error.cause.data.errorName` when available,
  * falling back to string-includes matching on the error message.
  * Returns `null` if the revert reason is not recognized.
- * @internal
+ * @public
  */
 export function matchAclRevert(error: unknown): ZamaError | null {
   const cause = error instanceof Error ? error : undefined;

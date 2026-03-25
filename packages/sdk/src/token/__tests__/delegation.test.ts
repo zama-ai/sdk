@@ -140,7 +140,9 @@ describe("delegation write methods", () => {
     );
   });
 
-  it("delegateDecryption returns TransactionResult", async ({ token, delegateAddress }) => {
+  it("delegateDecryption returns TransactionResult", async ({ signer, token, delegateAddress }) => {
+    // Mock readContract to return a different expiry so the duplicate-expiry guard doesn't fire
+    vi.mocked(signer.readContract).mockResolvedValue(1000n);
     const result = await token.delegateDecryption({ delegateAddress });
     expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
   });
@@ -152,6 +154,8 @@ describe("delegation write methods", () => {
     tokenAddress,
     delegateAddress,
   }) => {
+    // Mock active delegation so pre-flight check passes
+    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
     await token.revokeDelegation({ delegateAddress });
 
     expect(signer.writeContract).toHaveBeenCalledWith(
@@ -230,7 +234,9 @@ describe("delegation write methods", () => {
     );
   });
 
-  it("revokeDelegation returns TransactionResult", async ({ token, delegateAddress }) => {
+  it("revokeDelegation returns TransactionResult", async ({ signer, token, delegateAddress }) => {
+    // Mock active delegation so pre-flight check passes
+    vi.mocked(signer.readContract).mockResolvedValue(MAX_UINT64);
     const result = await token.revokeDelegation({ delegateAddress });
     expect(result).toEqual({ txHash: "0xtxhash", receipt: { logs: [] } });
   });
@@ -663,7 +669,7 @@ describe("batch delegation", () => {
 });
 
 describe("delegateDecryption validation", () => {
-  it("throws ConfigurationError when expiration date is in the past", async ({
+  it("throws DelegationExpirationTooSoonError when expiration date is in the past", async ({
     token,
     delegateAddress,
   }) => {
@@ -671,10 +677,10 @@ describe("delegateDecryption validation", () => {
 
     await expect(
       token.delegateDecryption({ delegateAddress, expirationDate: pastDate }),
-    ).rejects.toThrow(expect.objectContaining({ code: "CONFIGURATION" }));
+    ).rejects.toThrow(expect.objectContaining({ code: "DELEGATION_EXPIRATION_TOO_SOON" }));
   });
 
-  it("throws ConfigurationError when expiration date is less than 1 hour in the future", async ({
+  it("throws DelegationExpirationTooSoonError when expiration date is less than 1 hour in the future", async ({
     token,
     delegateAddress,
   }) => {
@@ -684,7 +690,7 @@ describe("delegateDecryption validation", () => {
       token.delegateDecryption({ delegateAddress, expirationDate: tooSoon }),
     ).rejects.toThrow(
       expect.objectContaining({
-        code: "CONFIGURATION",
+        code: "DELEGATION_EXPIRATION_TOO_SOON",
         message: expect.stringContaining("at least 1 hour"),
       }),
     );

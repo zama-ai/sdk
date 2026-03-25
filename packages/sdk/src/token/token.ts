@@ -21,9 +21,9 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import {
   ApprovalFailedError,
-  ConfigurationError,
   DecryptionFailedError,
   DelegationDelegateEqualsContractError,
+  DelegationExpirationTooSoonError,
   DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationSelfNotAllowedError,
@@ -736,11 +736,10 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
     expirationDate?: Date;
   }): Promise<TransactionResult> {
-    if (expirationDate && expirationDate.getTime() <= Date.now()) {
-      throw new ConfigurationError("Expiration date must be in the future");
-    }
     if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
-      throw new ConfigurationError("Expiration date must be at least 1 hour in the future");
+      throw new DelegationExpirationTooSoonError(
+        "Expiration date must be at least 1 hour in the future",
+      );
     }
 
     const normalizedDelegate = getAddress(delegateAddress);

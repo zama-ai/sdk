@@ -149,6 +149,7 @@ export {
   DelegationExpiryUnchangedError,
   AclPausedError,
   DelegationContractIsSelfError,
+  DelegationExpirationTooSoonError,
   matchZamaError,
   matchAclRevert,
 } from "./errors";
@@ -168,6 +169,7 @@ export type {
 } from "./events";
 export {
   Topics,
+  AclTopics,
   TOKEN_TOPICS,
   ACL_TOPICS,
   decodeDelegatedForUserDecryption,
