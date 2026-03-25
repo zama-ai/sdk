@@ -6,6 +6,7 @@
         "name": "next"
       }
     ],
+    "noUncheckedSideEffectImports": false,
     "paths": {
       "@zama-fhe/sdk": ["../sdk/src/index.ts"],
       "@zama-fhe/sdk/cleartext": ["../sdk/src/relayer/cleartext/index.ts"],
