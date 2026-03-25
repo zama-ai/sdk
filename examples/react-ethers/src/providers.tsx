@@ -125,11 +125,13 @@ export function Providers({ children }: { children: ReactNode }) {
   const signer = useMemo(() => {
     const ethereum = getEthereumProvider();
     // EthersSigner requires a non-null EIP-1193 provider — it throws on undefined/null.
-    // When no wallet is installed, use a no-op provider that satisfies the interface.
+    // When no wallet is installed, use a stub provider that throws a descriptive error.
     // All SDK operations in page.tsx are gated behind address/isSepolia checks so
     // this signer is never actually called until the user connects a wallet.
     const provider = ethereum ?? {
-      request: async () => null,
+      request: async () => {
+        throw new Error("No Ethereum wallet detected. Connect a wallet to use this app.");
+      },
       on: () => {},
       removeListener: () => {},
     };

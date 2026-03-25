@@ -90,6 +90,7 @@ export default function Home() {
   const [chainId, setChainId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [switchFailed, setSwitchFailed] = useState(false);
   const [selectedToken, setSelectedToken] = useState<TokenKey>("usdc");
   const [connectError, setConnectError] = useState<string | null>(null);
 
@@ -108,6 +109,7 @@ export default function Home() {
     const ethereum = getEthereumProvider();
     if (!ethereum) return;
     setIsSwitching(true);
+    setSwitchFailed(false);
     try {
       await switchToSepolia(ethereum);
     } catch (err) {
@@ -116,6 +118,8 @@ export default function Home() {
       const current = (await ethereum.request({ method: "eth_chainId" })) as string;
       setChainId(current);
       setIsSwitching(false);
+      // If we're still on the wrong network after the attempt, tell the user.
+      setSwitchFailed(current.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX);
     }
   }
 
@@ -293,6 +297,11 @@ export default function Home() {
         >
           {isSwitching ? "Switching…" : "Switch to Sepolia"}
         </button>
+        {switchFailed && (
+          <div className="alert alert-error card-status">
+            Could not switch to Sepolia. Please switch manually in your wallet.
+          </div>
+        )}
       </div>
     );
   }

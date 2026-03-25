@@ -32,7 +32,9 @@ export function UnshieldCard({
     { tokenAddress, wrapperAddress: tokenAddress },
     {
       onSuccess: () => {
-        clearPendingUnshield(storage, tokenAddress);
+        clearPendingUnshield(storage, tokenAddress).catch((err) =>
+          console.error("[UnshieldCard] Failed to clear pending unshield:", err),
+        );
         onSuccess?.();
       },
       // Clear the active token ref on failure so a stale address is never used by the

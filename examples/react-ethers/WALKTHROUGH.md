@@ -105,13 +105,13 @@ const [walletKey, setWalletKey] = useState(0);
 
 Three screens, driven by `address` and `chainId` state:
 
-| Screen            | Condition               | What's shown                      |
-| ----------------- | ----------------------- | --------------------------------- |
-| 1 — No wallet     | `!address`              | "Connect Wallet" button           |
-| 2 — Wrong network | `address && !isSepolia` | Instructions to switch to Sepolia |
-| 3 — Main UI       | `address && isSepolia`  | All operation cards               |
+| Screen            | Condition               | What's shown                                     |
+| ----------------- | ----------------------- | ------------------------------------------------ |
+| 1 — No wallet     | `!address`              | "Connect Wallet" button                          |
+| 2 — Wrong network | `address && !isSepolia` | "Switch to Sepolia" button (+ error if rejected) |
+| 3 — Main UI       | `address && isSepolia`  | All operation cards                              |
 
-The app never calls `wallet_switchEthereumChain` programmatically. For built-in chains like Sepolia, MetaMask v11+ shows a multi-network permissions dialog for non-EVM Snaps that cannot be suppressed. The `chainChanged` event updates the UI automatically when the user switches in their wallet.
+`wallet_switchEthereumChain` is called on two explicit user actions only: clicking "Switch to Sepolia" on Screen 2, or during the connect flow. There is no automatic switch on page load. If the wallet does not know Sepolia (error code 4902), `wallet_addEthereumChain` is called as a fallback. If the user rejects the switch, the screen stays on Screen 2 and shows a "Could not switch" message. The `chainChanged` event updates the UI automatically when the user switches in their wallet.
 
 ---
 
