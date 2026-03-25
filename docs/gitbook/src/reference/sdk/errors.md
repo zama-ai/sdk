@@ -60,27 +60,27 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 
 ## Error summary
 
-| Error class                             | Code                                  | Description                                       |
-| --------------------------------------- | ------------------------------------- | ------------------------------------------------- |
-| `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                |
-| `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)  |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker           |
-| `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                             |
-| `ApprovalFailedError`                   | `APPROVAL_FAILED`                     | ERC-20 approval transaction failed                |
-| `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted                     |
-| `InvalidKeypairError`                   | `INVALID_KEYPAIR`                     | Relayer rejected FHE keypair (stale or malformed) |
-| `KeypairExpiredError`                   | `KEYPAIR_EXPIRED`                     | FHE keypair expired — user must re-sign           |
-| `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account             |
-| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                       |
-| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration                         |
-| `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                  |
-| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address                  |
-| `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value              |
-| `DelegationNotFoundError`               | `DELEGATION_NOT_FOUND`                | No active delegation exists                       |
-| `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | Delegation has expired                            |
-| `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Same-block delegate/revoke not allowed            |
-| `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                    |
-| `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                            |
+| Error class                             | Code                                  | Description                                                  |
+| --------------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                           |
+| `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)             |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                      |
+| `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                        |
+| `ApprovalFailedError`                   | `APPROVAL_FAILED`                     | ERC-20 approval transaction failed                           |
+| `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted                                |
+| `InvalidKeypairError`                   | `INVALID_KEYPAIR`                     | Relayer rejected FHE keypair (stale or malformed)            |
+| `KeypairExpiredError`                   | `KEYPAIR_EXPIRED`                     | FHE keypair expired — user must re-sign                      |
+| `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                        |
+| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                  |
+| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize |
+| `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                             |
+| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address                             |
+| `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value                         |
+| `DelegationNotFoundError`               | `DELEGATION_NOT_FOUND`                | No active delegation exists                                  |
+| `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | Delegation has expired                                       |
+| `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Same-block delegate/revoke not allowed                       |
+| `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                               |
+| `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                       |
 
 ## Error details
 
@@ -257,13 +257,88 @@ try {
 }
 ```
 
+### ConfigurationError
+
+**Code:** `CONFIGURATION`
+
+Thrown when the SDK configuration is invalid (e.g. forbidden chain ID, unsupported signer type) or when the FHE worker fails to initialize (e.g. missing WASM support, terminated relayer).
+
+```ts
+matchZamaError(error, {
+  CONFIGURATION: (e) => console.error("Configuration error:", e.message),
+});
+```
+
+**How to handle:** Check your transport config, CSP headers, and that the relayer has not been terminated. If the error mentions worker initialization, verify WASM support and `wasm-unsafe-eval` in your CSP.
+
+### DelegationSelfNotAllowedError
+
+**Code:** `DELEGATION_SELF_NOT_ALLOWED`
+
+Thrown when attempting to delegate decryption to your own address. The ACL contract rejects `delegate === msg.sender`.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_SELF_NOT_ALLOWED: () => showError("Cannot delegate to yourself"),
+});
+```
+
+**How to handle:** Use a different delegate address.
+
+### DelegationCooldownError
+
+**Code:** `DELEGATION_COOLDOWN`
+
+Only one delegate or revoke operation is allowed per `(delegator, delegate, contract)` tuple per block.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_COOLDOWN: () => showError("Please wait for the next block before retrying"),
+});
+```
+
+**How to handle:** Wait for the next block before retrying the operation.
+
+### DelegationNotFoundError
+
+**Code:** `DELEGATION_NOT_FOUND`
+
+No active delegation exists for the given `(delegator, delegate, contract)` tuple. Thrown when attempting to revoke a non-existent delegation.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_NOT_FOUND: () => showError("No active delegation found"),
+});
+```
+
+**How to handle:** Verify the delegator, delegate, and contract addresses are correct.
+
+### DelegationExpiredError
+
+**Code:** `DELEGATION_EXPIRED`
+
+The delegation has expired and can no longer be used for decryption.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_EXPIRED: () => showPrompt("Delegation expired — create a new one"),
+});
+```
+
+**How to handle:** Create a new delegation.
+
+{% hint style="info" %}
+The SDK does **not** auto-map ACL contract reverts to delegation errors. These error classes are exported so your dApp code can catch and re-throw them when parsing on-chain revert reasons (e.g. via viem's `decodeErrorResult`).
+{% endhint %}
+
 ## Common problems
 
 | Symptom                                   | Cause                                       | Fix                                                                                        |
 | ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature            | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates. |
 | Balance always `undefined`                | Encrypted handle is zero (never shielded)   | Catch `NoCiphertextError` and show an empty state.                                         |
-| `EncryptionFailedError`                   | Web Worker cannot load WASM                 | Add `wasm-unsafe-eval` to your CSP headers.                                                |
+| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Add `wasm-unsafe-eval` to your CSP headers.                                                |
 | `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `loadPendingUnshield()` on mount, then `resumeUnshield()` to complete.                |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash | Check unwrap state. If already finalized, call `clearPendingUnshield()`.                   |
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |

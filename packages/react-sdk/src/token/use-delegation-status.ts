@@ -1,18 +1,14 @@
 "use client";
 
-import { skipToken, type UseQueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import {
-  delegationStatusQueryOptions,
-  zamaQueryKeys,
-  type DelegationStatusData,
-} from "@zama-fhe/sdk/query";
+import { delegationStatusQueryOptions, type DelegationStatusData } from "@zama-fhe/sdk/query";
 import { useQuery } from "../utils/query";
-import { useReadonlyToken } from "./use-readonly-token";
+import { useZamaSDK } from "../provider";
 
 export interface UseDelegationStatusConfig {
-  /** Address of the confidential token contract. */
-  tokenAddress: Address;
+  /** Address of the confidential token contract. Pass `undefined` to disable the query. */
+  tokenAddress: Address | undefined;
   /** The address that granted the delegation. */
   delegatorAddress?: Address;
   /** The address that received delegation rights. */
@@ -40,23 +36,15 @@ export function useDelegationStatus(
   config: UseDelegationStatusConfig,
   options?: Omit<UseQueryOptions<DelegationStatusData, Error>, "queryKey" | "queryFn">,
 ) {
-  const readonlyToken = useReadonlyToken(config.tokenAddress);
-
-  const enabled = Boolean(config.delegatorAddress && config.delegateAddress);
-  const baseOpts =
-    config.delegatorAddress && config.delegateAddress
-      ? delegationStatusQueryOptions(readonlyToken, {
-          delegatorAddress: config.delegatorAddress,
-          delegateAddress: config.delegateAddress,
-        })
-      : {
-          queryKey: zamaQueryKeys.delegationStatus.all,
-          queryFn: skipToken as unknown as () => Promise<DelegationStatusData>,
-        };
+  const sdk = useZamaSDK();
+  const baseOpts = delegationStatusQueryOptions(sdk.signer, sdk.relayer, config.tokenAddress, {
+    delegatorAddress: config.delegatorAddress,
+    delegateAddress: config.delegateAddress,
+  });
 
   return useQuery<DelegationStatusData>({
     ...baseOpts,
-    enabled,
     ...options,
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }

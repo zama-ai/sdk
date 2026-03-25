@@ -1191,9 +1191,10 @@ export type UseConfidentialBalancesOptions = Omit<UseQueryOptions<ConfidentialBa
 export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<unknown, Error>;
 
 // @public
-export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
+export interface UseConfidentialIsApprovedConfig {
     holder?: Address;
     spender: Address | undefined;
+    tokenAddress: Address | undefined;
 }
 
 // @public
@@ -1243,7 +1244,7 @@ export function useDelegationStatus(config: UseDelegationStatusConfig, options?:
 export interface UseDelegationStatusConfig {
     delegateAddress?: Address;
     delegatorAddress?: Address;
-    tokenAddress: Address;
+    tokenAddress: Address | undefined;
 }
 
 // @public
@@ -1403,7 +1404,7 @@ export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?:
 // @public
 export interface UseWrapperDiscoveryConfig {
     coordinatorAddress: Address | undefined;
-    tokenAddress: Address;
+    tokenAddress: Address | undefined;
 }
 
 // @public
