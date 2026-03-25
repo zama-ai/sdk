@@ -80,15 +80,13 @@ on behalf of users (Account A) without holding their private key:
 ## Storage note
 
 This example uses `MemoryStorage` for simplicity — FHE credentials are lost when
-the process exits. In a production backend, pass a persistent `GenericStorage`
-implementation (e.g. Redis) so credentials survive restarts:
+the process exits. In a production backend, implement `GenericStorage` backed by
+a persistent store (e.g. Redis) so credentials survive process restarts.
 
-```ts
-import { AsyncLocalMapStorage } from "@zama-fhe/sdk/node";
-
-const storage = new AsyncLocalMapStorage(); // or your own Redis adapter
-const sdk = new ZamaSDK({ relayer, signer, storage });
-```
+For per-request isolation in an HTTP server (each request gets its own credential
+context), the SDK also exports `AsyncLocalMapStorage` from `@zama-fhe/sdk/node`,
+which uses Node.js `AsyncLocalStorage` under the hood — see the SDK documentation
+for usage.
 
 ---
 

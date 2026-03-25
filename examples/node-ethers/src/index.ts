@@ -1,5 +1,5 @@
 import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
-import { MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
+import { MemoryStorage, SepoliaConfig, ZamaSDK } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
@@ -16,8 +16,6 @@ const MINT_AMOUNT = 1_000n * 10n ** DECIMALS; //  1 000 USDT — minted to Accou
 const SHIELD_AMOUNT = 100n * 10n ** DECIMALS; //    100 USDT → shielded to cUSDT
 const TRANSFER_AMOUNT = 10n * 10n ** DECIMALS; //    10 cUSDT — transferred to Account B
 const UNSHIELD_AMOUNT = 50n * 10n ** DECIMALS; //    50 cUSDT → unshielded back to USDT
-
-const SEPOLIA_CHAIN_ID = 11155111;
 
 // ── ERC-20 ABI fragments ──────────────────────────────────────────────────────
 const ERC20_ABI = [
@@ -57,6 +55,9 @@ async function main() {
   console.log("Account A:", walletA.address);
   console.log("Account B:", walletB.address, "(delegate)");
 
+  const signerA = new EthersSigner({ signer: walletA });
+  const signerB = new EthersSigner({ signer: walletB });
+
   const auth = RELAYER_API_KEY
     ? { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY }
     : undefined;
@@ -66,12 +67,12 @@ async function main() {
   const relayer = new RelayerNode({
     getChainId: () => signerA.getChainId(),
     transports: {
-      [SEPOLIA_CHAIN_ID]: { ...(auth && { auth }) },
+      [SepoliaConfig.chainId]: {
+        network: SEPOLIA_RPC_URL,
+        ...(auth && { auth }),
+      },
     },
   });
-
-  const signerA = new EthersSigner({ signer: walletA });
-  const signerB = new EthersSigner({ signer: walletB });
 
   // Each SDK instance has its own signer context.
   // MemoryStorage is sufficient here; in production use a persistent store
