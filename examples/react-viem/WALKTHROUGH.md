@@ -307,7 +307,8 @@ All user inputs are parsed with:
 
 ```ts
 // src/lib/parseAmount.ts
-parseUnits(value, decimals); // from "viem" — returns 0n on invalid input
+parseAmount(value, decimals); // wraps viem's parseUnits — returns 0n on invalid or empty input
+// (viem's parseUnits itself throws on invalid input; parseAmount catches that and returns 0n)
 ```
 
 And displayed with:

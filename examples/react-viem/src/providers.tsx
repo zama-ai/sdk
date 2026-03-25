@@ -131,8 +131,12 @@ export function Providers({ children }: { children: ReactNode }) {
         getChainId: async () => {
           const ethereum = getEthereumProvider();
           if (!ethereum) return SepoliaConfig.chainId;
-          const hex = (await ethereum.request({ method: "eth_chainId" })) as string;
-          return parseInt(hex, 16);
+          try {
+            const hex = (await ethereum.request({ method: "eth_chainId" })) as string;
+            return parseInt(hex, 16);
+          } catch {
+            return SepoliaConfig.chainId;
+          }
         },
         transports: {
           [SepoliaConfig.chainId]: {

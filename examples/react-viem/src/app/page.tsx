@@ -191,7 +191,7 @@ export default function Home() {
 
   // Clear stale mint state when the wallet account changes so the BalancesCard
   // does not show a pending/success/error badge belonging to the previous account.
-  // mint.reset is stable across renders (TanStack Query guarantee) — safe to include in deps.
+  // mint.reset is stable in TanStack Query v5 (callbacks are stabilized internally) — safe to include in deps.
   useEffect(() => {
     mint.reset();
   }, [address, mint.reset]);
