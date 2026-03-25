@@ -19,7 +19,13 @@ export interface UseConfidentialBalanceConfig {
 }
 
 /** Query options for the decrypt phase of {@link useConfidentialBalance}. */
-export type UseConfidentialBalanceOptions = Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">;
+export interface UseConfidentialBalanceOptions extends Omit<
+  UseQueryOptions<bigint>,
+  "queryKey" | "queryFn" | "enabled"
+> {
+  /** Whether the query is enabled. Callback form is not supported in composite hooks. */
+  enabled?: boolean;
+}
 
 /**
  * Declarative hook to read the connected wallet's confidential token balance.
@@ -42,7 +48,7 @@ export function useConfidentialBalance(
   options?: UseConfidentialBalanceOptions,
 ) {
   const { tokenAddress, handleRefetchInterval } = config;
-  const userEnabled = options?.enabled;
+  const { enabled = true } = options ?? {};
   const token = useReadonlyToken(tokenAddress);
 
   const addressQuery = useQuery<Address>({
@@ -58,7 +64,7 @@ export function useConfidentialBalance(
   });
   const handleQuery = useQuery<Handle>({
     ...baseHandleQueryOptions,
-    enabled: (baseHandleQueryOptions.enabled ?? true) && (userEnabled ?? true),
+    enabled: baseHandleQueryOptions.enabled && enabled,
   });
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
@@ -70,7 +76,7 @@ export function useConfidentialBalance(
   const balanceQuery = useQuery<bigint>({
     ...baseBalanceQueryOptions,
     ...options,
-    enabled: (baseBalanceQueryOptions.enabled ?? true) && (userEnabled ?? true),
+    enabled: baseBalanceQueryOptions.enabled && enabled,
   });
 
   return { ...balanceQuery, handleQuery };
