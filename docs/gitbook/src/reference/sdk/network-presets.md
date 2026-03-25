@@ -36,7 +36,7 @@ Each preset provides the fields needed by a relayer transport:
 | `inputVerifierContractAddress`              | `Address`             | Input verifier contract address                                                                          |
 | `verifyingContractAddressDecryption`        | `Address`             | EIP-712 verifying contract for decrypt operations                                                        |
 | `verifyingContractAddressInputVerification` | `Address`             | EIP-712 verifying contract for encrypt operations                                                        |
-| `registryAddress`                   | `string \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
+| `registryAddress`                           | `string \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
 
 ## Usage
 
