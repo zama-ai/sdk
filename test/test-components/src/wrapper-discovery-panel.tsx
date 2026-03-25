@@ -2,8 +2,16 @@
 
 import { useWrapperDiscovery, type UseWrapperDiscoveryConfig } from "@zama-fhe/react-sdk";
 
-export function WrapperDiscoveryPanel({ tokenAddress, erc20Address }: UseWrapperDiscoveryConfig) {
-  const wrapperDiscovery = useWrapperDiscovery({ tokenAddress, erc20Address });
+export function WrapperDiscoveryPanel({
+  tokenAddress,
+  erc20Address,
+  wrappersRegistryAddresses,
+}: UseWrapperDiscoveryConfig) {
+  const wrapperDiscovery = useWrapperDiscovery({
+    tokenAddress,
+    erc20Address,
+    wrappersRegistryAddresses,
+  });
 
   return (
     <section className="space-y-2">

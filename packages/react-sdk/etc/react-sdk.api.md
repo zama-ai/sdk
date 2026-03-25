@@ -1409,6 +1409,7 @@ export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?:
 export interface UseWrapperDiscoveryConfig {
     erc20Address: Address | undefined;
     tokenAddress: Address;
+    wrappersRegistryAddresses?: Record<number, Address>;
 }
 
 // @public

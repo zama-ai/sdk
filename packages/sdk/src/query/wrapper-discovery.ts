@@ -11,6 +11,11 @@ export interface WrapperDiscoveryQueryConfig {
    * The registry is resolved automatically from chain config.
    */
   erc20Address?: Address;
+  /**
+   * Optional per-chain registry address overrides.
+   * Useful for local development chains (e.g. Hardhat) where no default registry exists.
+   */
+  wrappersRegistryAddresses?: Record<number, Address>;
   query?: Record<string, unknown>;
 }
 
@@ -33,7 +38,10 @@ export function wrapperDiscoveryQueryOptions(
       if (!config.erc20Address) {
         return null;
       }
-      const registry = new WrappersRegistry({ signer });
+      const registry = new WrappersRegistry({
+        signer,
+        wrappersRegistryAddresses: config.wrappersRegistryAddresses,
+      });
       const result = await registry.getConfidentialToken(config.erc20Address);
       return result ? result.confidentialTokenAddress : null;
     },

@@ -14,6 +14,11 @@ export interface UseWrapperDiscoveryConfig {
   tokenAddress: Address;
   /** ERC-20 address to discover the wrapper for. Pass `undefined` to disable the query. */
   erc20Address: Address | undefined;
+  /**
+   * Optional per-chain registry address overrides.
+   * Useful for local development chains (e.g. Hardhat) where no default registry is deployed.
+   */
+  wrappersRegistryAddresses?: Record<number, Address>;
 }
 
 /** Configuration for {@link useWrapperDiscoverySuspense}. */
@@ -45,10 +50,11 @@ export function useWrapperDiscovery(
   config: UseWrapperDiscoveryConfig,
   options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">,
 ) {
-  const { tokenAddress, erc20Address } = config;
+  const { tokenAddress, erc20Address, wrappersRegistryAddresses } = config;
   const token = useReadonlyToken(tokenAddress);
   const baseOpts = wrapperDiscoveryQueryOptions(token.signer, tokenAddress, {
     erc20Address,
+    wrappersRegistryAddresses,
   });
 
   return useQuery<Address | null>({

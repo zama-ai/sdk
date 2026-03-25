@@ -1386,6 +1386,7 @@ export interface WrapperDiscoveryQueryConfig {
     erc20Address?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
+    wrappersRegistryAddresses?: Record<number, Address>;
 }
 
 // @public (undocumented)
