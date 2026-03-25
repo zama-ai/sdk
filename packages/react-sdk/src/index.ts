@@ -79,6 +79,7 @@ export type {
   ZKProofLike,
   InputProofBytesType,
   BatchTransferData,
+  TokenWrapperPair,
   EnrichedTokenWrapperPair,
   PaginatedResult,
   StoredCredentials,
@@ -246,7 +247,7 @@ export {
 } from "./token/use-fees";
 
 // Registry hooks (wagmi-based, read from on-chain ConfidentialTokenWrappersRegistry)
-export { useWrappersRegistryAddress as useRegistryAddress } from "./wrappers-registry/use-wrappers-registry-address";
+export { useWrappersRegistryAddress } from "./wrappers-registry/use-wrappers-registry-address";
 export { useTokenPairsRegistry } from "./wrappers-registry/use-token-pairs-registry";
 export { useTokenPairsLength } from "./wrappers-registry/use-token-pairs-length";
 export { useTokenPairsSlice } from "./wrappers-registry/use-token-pairs-slice";

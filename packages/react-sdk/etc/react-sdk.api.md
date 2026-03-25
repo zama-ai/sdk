@@ -692,6 +692,8 @@ export { TokenMetadata }
 
 export { tokenMetadataQueryOptions }
 
+export { TokenWrapperPair }
+
 export { Topics }
 
 export { totalSupplyContract }
@@ -1283,9 +1285,6 @@ export { UserDecryptParams }
 export function useReadonlyToken(address: Address): _zama_fhe_sdk0.ReadonlyToken;
 
 // @public
-export function useRegistryAddress(wrappersRegistryAddresses?: Record<number, Address>): Address | undefined;
-
-// @public
 export function useRequestZKProofVerification(): _tanstack_react_query0.UseMutationResult<Readonly<{
     handles: Uint8Array[];
     inputProof: Uint8Array;
@@ -1420,6 +1419,9 @@ export interface UseWrapperDiscoverySuspenseConfig {
     erc20Address: Address;
     tokenAddress: Address;
 }
+
+// @public
+export function useWrappersRegistryAddress(wrappersRegistryAddresses?: Record<number, Address>): Address | undefined;
 
 // @public
 export interface UseZamaConfig {
