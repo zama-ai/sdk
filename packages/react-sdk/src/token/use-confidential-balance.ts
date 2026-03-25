@@ -42,7 +42,7 @@ export function useConfidentialBalance(
   options?: UseConfidentialBalanceOptions,
 ) {
   const { tokenAddress, handleRefetchInterval } = config;
-  const userEnabled = options?.enabled;
+  const userEnabled = typeof options?.enabled === "function" ? undefined : options?.enabled;
   const token = useReadonlyToken(tokenAddress);
 
   const addressQuery = useQuery<Address>({
@@ -58,7 +58,7 @@ export function useConfidentialBalance(
   });
   const handleQuery = useQuery<Handle>({
     ...baseHandleQueryOptions,
-    enabled: (baseHandleQueryOptions.enabled ?? true) && (userEnabled ?? true),
+    enabled: Boolean(baseHandleQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   // Phase 2: Decrypt only when handle changes (expensive relayer roundtrip)
@@ -70,7 +70,7 @@ export function useConfidentialBalance(
   const balanceQuery = useQuery<bigint>({
     ...baseBalanceQueryOptions,
     ...options,
-    enabled: (baseBalanceQueryOptions.enabled ?? true) && (userEnabled ?? true),
+    enabled: Boolean(baseBalanceQueryOptions.enabled ?? true) && (userEnabled ?? true),
   });
 
   return { ...balanceQuery, handleQuery };

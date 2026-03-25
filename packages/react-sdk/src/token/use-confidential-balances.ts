@@ -58,7 +58,7 @@ export function useConfidentialBalances(
   options?: UseConfidentialBalancesOptions,
 ) {
   const { tokenAddresses, handleRefetchInterval, maxConcurrency } = config;
-  const userEnabled = options?.enabled;
+  const userEnabled = typeof options?.enabled === "function" ? undefined : options?.enabled;
   const sdk = useZamaSDK();
 
   const addressQuery = useQuery<Address>({
