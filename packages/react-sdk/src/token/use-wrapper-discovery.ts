@@ -22,7 +22,7 @@ export interface UseWrapperDiscoveryConfig {
    * Optional per-chain registry address overrides.
    * Useful for local development chains (e.g. Hardhat) where no default registry is deployed.
    */
-  wrappersRegistryAddresses?: Record<number, Address>;
+  registryAddresses?: Record<number, Address>;
 }
 
 /** Configuration for {@link useWrapperDiscoverySuspense}. */
@@ -58,11 +58,11 @@ export function useWrapperDiscovery(
   config: UseWrapperDiscoveryConfig,
   options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">,
 ) {
-  const { tokenAddress, erc20Address, wrappersRegistryAddresses } = config;
+  const { tokenAddress, erc20Address, registryAddresses } = config;
   const token = useReadonlyToken(tokenAddress);
   const baseOpts = wrapperDiscoveryQueryOptions(token.signer, tokenAddress, {
     erc20Address,
-    wrappersRegistryAddresses,
+    registryAddresses,
   });
 
   return useQuery<Address | null>({

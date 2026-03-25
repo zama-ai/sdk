@@ -21,18 +21,18 @@ const C_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 describe("tokenPairsQueryOptions", () => {
   test("includes registry address in query key", ({ signer }) => {
     const options = tokenPairsQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
     });
     expect(options.queryKey).toEqual([
       "zama.wrappersRegistry",
-      { type: "tokenPairs", wrappersRegistryAddress: getAddress(REGISTRY) },
+      { type: "tokenPairs", registryAddress: getAddress(REGISTRY) },
     ]);
     expect(options.enabled).toBe(true);
   });
 
-  test("disabled when wrappersRegistryAddress is undefined", ({ signer }) => {
+  test("disabled when registryAddress is undefined", ({ signer }) => {
     const options = tokenPairsQueryOptions(signer, {
-      wrappersRegistryAddress: undefined,
+      registryAddress: undefined,
     });
     expect(options.enabled).toBe(false);
   });
@@ -40,7 +40,7 @@ describe("tokenPairsQueryOptions", () => {
   test("queryFn calls readContract", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue([]);
     const options = tokenPairsQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
     expect(result).toEqual([]);
@@ -53,18 +53,18 @@ describe("tokenPairsQueryOptions", () => {
 describe("tokenPairsLengthQueryOptions", () => {
   test("includes registry address in query key", ({ signer }) => {
     const options = tokenPairsLengthQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
     });
     expect(options.queryKey).toEqual([
       "zama.wrappersRegistry",
-      { type: "tokenPairsLength", wrappersRegistryAddress: getAddress(REGISTRY) },
+      { type: "tokenPairsLength", registryAddress: getAddress(REGISTRY) },
     ]);
   });
 
   test("queryFn returns bigint", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue(5n);
     const options = tokenPairsLengthQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
     expect(result).toBe(5n);
@@ -75,7 +75,7 @@ describe("tokenPairsSliceQueryOptions", () => {
   test("disabled when fromIndex or toIndex is undefined", ({ signer }) => {
     expect(
       tokenPairsSliceQueryOptions(signer, {
-        wrappersRegistryAddress: REGISTRY,
+        registryAddress: REGISTRY,
         fromIndex: undefined,
         toIndex: 10n,
       }).enabled,
@@ -83,7 +83,7 @@ describe("tokenPairsSliceQueryOptions", () => {
 
     expect(
       tokenPairsSliceQueryOptions(signer, {
-        wrappersRegistryAddress: REGISTRY,
+        registryAddress: REGISTRY,
         fromIndex: 0n,
         toIndex: undefined,
       }).enabled,
@@ -92,7 +92,7 @@ describe("tokenPairsSliceQueryOptions", () => {
 
   test("enabled when all params provided", ({ signer }) => {
     const options = tokenPairsSliceQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
       fromIndex: 0n,
       toIndex: 10n,
     });
@@ -102,7 +102,7 @@ describe("tokenPairsSliceQueryOptions", () => {
   test("queryFn passes bigint indices", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue([]);
     const options = tokenPairsSliceQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
       fromIndex: 5n,
       toIndex: 15n,
     });
@@ -115,7 +115,7 @@ describe("tokenPairQueryOptions", () => {
   test("disabled when index is undefined", ({ signer }) => {
     expect(
       tokenPairQueryOptions(signer, {
-        wrappersRegistryAddress: REGISTRY,
+        registryAddress: REGISTRY,
         index: undefined,
       }).enabled,
     ).toBe(false);
@@ -125,7 +125,7 @@ describe("tokenPairQueryOptions", () => {
     const pair = { tokenAddress: TOKEN, confidentialTokenAddress: C_TOKEN, isValid: true };
     vi.mocked(signer.readContract).mockResolvedValue(pair);
     const options = tokenPairQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
       index: 3n,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
@@ -137,7 +137,7 @@ describe("confidentialTokenAddressQueryOptions", () => {
   test("disabled when tokenAddress is undefined", ({ signer }) => {
     expect(
       confidentialTokenAddressQueryOptions(signer, {
-        wrappersRegistryAddress: REGISTRY,
+        registryAddress: REGISTRY,
         tokenAddress: undefined,
       }).enabled,
     ).toBe(false);
@@ -146,7 +146,7 @@ describe("confidentialTokenAddressQueryOptions", () => {
   test("queryFn returns [found, address] tuple", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue([true, C_TOKEN]);
     const options = confidentialTokenAddressQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
       tokenAddress: TOKEN,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
@@ -158,7 +158,7 @@ describe("tokenAddressQueryOptions", () => {
   test("disabled when confidentialTokenAddress is undefined", ({ signer }) => {
     expect(
       tokenAddressQueryOptions(signer, {
-        wrappersRegistryAddress: REGISTRY,
+        registryAddress: REGISTRY,
         confidentialTokenAddress: undefined,
       }).enabled,
     ).toBe(false);
@@ -167,7 +167,7 @@ describe("tokenAddressQueryOptions", () => {
   test("queryFn returns [found, address] tuple", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue([true, TOKEN]);
     const options = tokenAddressQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
       confidentialTokenAddress: C_TOKEN,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
@@ -179,7 +179,7 @@ describe("isConfidentialTokenValidQueryOptions", () => {
   test("disabled when confidentialTokenAddress is undefined", ({ signer }) => {
     expect(
       isConfidentialTokenValidQueryOptions(signer, {
-        wrappersRegistryAddress: REGISTRY,
+        registryAddress: REGISTRY,
         confidentialTokenAddress: undefined,
       }).enabled,
     ).toBe(false);
@@ -188,7 +188,7 @@ describe("isConfidentialTokenValidQueryOptions", () => {
   test("queryFn returns boolean", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue(true);
     const options = isConfidentialTokenValidQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
       confidentialTokenAddress: C_TOKEN,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
@@ -197,14 +197,14 @@ describe("isConfidentialTokenValidQueryOptions", () => {
 
   test("query key includes both addresses", ({ signer }) => {
     const options = isConfidentialTokenValidQueryOptions(signer, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
       confidentialTokenAddress: C_TOKEN,
     });
     expect(options.queryKey).toEqual([
       "zama.wrappersRegistry",
       {
         type: "isConfidentialTokenValid",
-        wrappersRegistryAddress: getAddress(REGISTRY),
+        registryAddress: getAddress(REGISTRY),
         confidentialTokenAddress: getAddress(C_TOKEN),
       },
     ]);
@@ -220,7 +220,7 @@ describe("listPairsQueryOptions", () => {
   test("includes registry address, page, pageSize, metadata in query key", () => {
     const { registry } = makeRegistry();
     const options = listPairsQueryOptions(registry, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
       page: 2,
       pageSize: 50,
       metadata: true,
@@ -229,7 +229,7 @@ describe("listPairsQueryOptions", () => {
       "zama.wrappersRegistry",
       {
         type: "listPairs",
-        wrappersRegistryAddress: getAddress(REGISTRY),
+        registryAddress: getAddress(REGISTRY),
         page: 2,
         pageSize: 50,
         metadata: true,
@@ -240,15 +240,15 @@ describe("listPairsQueryOptions", () => {
   test("staleTime equals registry.ttlMs", () => {
     const { registry } = makeRegistry(3_600_000);
     const options = listPairsQueryOptions(registry, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
     });
     expect(options.staleTime).toBe(3_600_000);
   });
 
-  test("disabled when wrappersRegistryAddress is undefined", () => {
+  test("disabled when registryAddress is undefined", () => {
     const { registry } = makeRegistry();
     const options = listPairsQueryOptions(registry, {
-      wrappersRegistryAddress: undefined,
+      registryAddress: undefined,
     });
     expect(options.enabled).toBe(false);
   });
@@ -258,7 +258,7 @@ describe("listPairsQueryOptions", () => {
     const mockResult = { total: 1, page: 3, pageSize: 20, items: [] };
     listPairs.mockResolvedValue(mockResult);
     const options = listPairsQueryOptions(registry, {
-      wrappersRegistryAddress: REGISTRY,
+      registryAddress: REGISTRY,
       page: 3,
       pageSize: 20,
       metadata: true,
@@ -268,11 +268,11 @@ describe("listPairsQueryOptions", () => {
     expect(listPairs).toHaveBeenCalledWith({ page: 3, pageSize: 20, metadata: true });
   });
 
-  test("uses zeroAddress in query key when wrappersRegistryAddress is undefined", () => {
+  test("uses zeroAddress in query key when registryAddress is undefined", () => {
     const { registry } = makeRegistry();
     const options = listPairsQueryOptions(registry, {
-      wrappersRegistryAddress: undefined,
+      registryAddress: undefined,
     });
-    expect(options.queryKey[1]).toMatchObject({ wrappersRegistryAddress: zeroAddress });
+    expect(options.queryKey[1]).toMatchObject({ registryAddress: zeroAddress });
   });
 });

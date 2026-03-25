@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
-import { WrappersRegistry, DefaultWrappersRegistryAddresses } from "../wrappers-registry";
+import { WrappersRegistry, DefaultRegistryAddresses } from "../wrappers-registry";
 import { ConfigurationError } from "../../errors";
 import { MainnetConfig, SepoliaConfig } from "../../relayer/relayer-utils";
 import type { Address } from "viem";
@@ -8,17 +8,17 @@ const CUSTOM_REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const C_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
-describe("DefaultWrappersRegistryAddresses", () => {
+describe("DefaultRegistryAddresses", () => {
   it("includes Mainnet", () => {
-    expect(DefaultWrappersRegistryAddresses[1]).toBe(MainnetConfig.wrappersRegistryAddress);
+    expect(DefaultRegistryAddresses[1]).toBe(MainnetConfig.registryAddress);
   });
 
   it("includes Sepolia", () => {
-    expect(DefaultWrappersRegistryAddresses[11155111]).toBe(SepoliaConfig.wrappersRegistryAddress);
+    expect(DefaultRegistryAddresses[11155111]).toBe(SepoliaConfig.registryAddress);
   });
 
   it("does not include Hardhat (no registry deployed)", () => {
-    expect(DefaultWrappersRegistryAddresses[31337]).toBeUndefined();
+    expect(DefaultRegistryAddresses[31337]).toBeUndefined();
   });
 });
 
@@ -28,21 +28,21 @@ describe("WrappersRegistry", () => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
       const registry = new WrappersRegistry({ signer });
       const addr = await registry.getRegistryAddress();
-      expect(addr).toBe(MainnetConfig.wrappersRegistryAddress);
+      expect(addr).toBe(MainnetConfig.registryAddress);
     });
 
     it("resolves from defaults for Sepolia", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(11155111);
       const registry = new WrappersRegistry({ signer });
       const addr = await registry.getRegistryAddress();
-      expect(addr).toBe(SepoliaConfig.wrappersRegistryAddress);
+      expect(addr).toBe(SepoliaConfig.registryAddress);
     });
 
     it("overrides take precedence over defaults", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
       const registry = new WrappersRegistry({
         signer,
-        wrappersRegistryAddresses: { [1]: CUSTOM_REGISTRY },
+        registryAddresses: { [1]: CUSTOM_REGISTRY },
       });
       const addr = await registry.getRegistryAddress();
       expect(addr).toBe(CUSTOM_REGISTRY);
@@ -52,7 +52,7 @@ describe("WrappersRegistry", () => {
       vi.mocked(signer.getChainId).mockResolvedValue(31337);
       const registry = new WrappersRegistry({
         signer,
-        wrappersRegistryAddresses: { [31337]: CUSTOM_REGISTRY },
+        registryAddresses: { [31337]: CUSTOM_REGISTRY },
       });
       const addr = await registry.getRegistryAddress();
       expect(addr).toBe(CUSTOM_REGISTRY);
@@ -76,7 +76,7 @@ describe("WrappersRegistry", () => {
 
       expect(signer.readContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: MainnetConfig.wrappersRegistryAddress,
+          address: MainnetConfig.registryAddress,
           functionName: "getTokenConfidentialTokenPairs",
         }),
       );

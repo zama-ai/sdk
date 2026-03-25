@@ -41,7 +41,7 @@ export {
   Token,
   ReadonlyToken,
   WrappersRegistry,
-  DefaultWrappersRegistryAddresses,
+  DefaultRegistryAddresses,
   MemoryStorage,
   memoryStorage,
   IndexedDBStorage,

@@ -60,7 +60,7 @@ export interface ExtendedFhevmInstanceConfig extends FhevmInstanceConfig {
    * Address of the `ConfidentialTokenWrappersRegistry` contract.
    * `undefined` for chains where no registry is deployed (e.g. Hardhat).
    */
-  wrappersRegistryAddress: Address | undefined;
+  registryAddress: Address | undefined;
 }
 
 /**
@@ -72,7 +72,7 @@ export interface ExtendedFhevmInstanceConfig extends FhevmInstanceConfig {
  * in WASM). `satisfies ExtendedFhevmInstanceConfig` ensures structural drift
  * is caught at compile time.
  *
- * Includes `wrappersRegistryAddress` for the on-chain token wrappers registry.
+ * Includes `registryAddress` for the on-chain token wrappers registry.
  */
 export const MainnetConfig = {
   chainId: 1,
@@ -84,14 +84,14 @@ export const MainnetConfig = {
   inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2",
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
-  wrappersRegistryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
+  registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
 } as const satisfies ExtendedFhevmInstanceConfig;
 
 /**
  * Sepolia testnet network configuration (chainId 11155111).
  *
  * See {@link MainnetConfig} for why addresses are hardcoded.
- * Includes `wrappersRegistryAddress` for the on-chain token wrappers registry.
+ * Includes `registryAddress` for the on-chain token wrappers registry.
  */
 export const SepoliaConfig = {
   chainId: 11155111,
@@ -103,7 +103,7 @@ export const SepoliaConfig = {
   inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0",
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-  wrappersRegistryAddress: "0xDEbdfa2568dEd84044e9807500ee523acDe9308b",
+  registryAddress: "0xDEbdfa2568dEd84044e9807500ee523acDe9308b",
 } as const satisfies ExtendedFhevmInstanceConfig;
 
 /**
@@ -113,8 +113,8 @@ export const SepoliaConfig = {
  * Ensure that the executor address and other contract addresses correspond to
  * the contracts deployed on your Hardhat network.
  *
- * `wrappersRegistryAddress` is `undefined` — pass it explicitly via
- * `wrappersRegistryAddresses` when creating a `WrappersRegistry`.
+ * `registryAddress` is `undefined` — pass it explicitly via
+ * `registryAddresses` when creating a `WrappersRegistry`.
  */
 export const HardhatConfig = {
   chainId: 31337,
@@ -126,7 +126,7 @@ export const HardhatConfig = {
   kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-  wrappersRegistryAddress: undefined,
+  registryAddress: undefined,
 } as const satisfies ExtendedFhevmInstanceConfig;
 
 /**

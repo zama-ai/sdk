@@ -730,7 +730,7 @@ export interface ListPairsQueryConfig {
     pageSize?: number;
     // (undocumented)
     query?: Record<string, unknown>;
-    wrappersRegistryAddress: Address | undefined;
+    registryAddress: Address | undefined;
 }
 
 // Warning: (ae-forgotten-export) The symbol "WrappersRegistry" needs to be exported by the entry point index.d.ts
@@ -1386,7 +1386,7 @@ export interface WrapperDiscoveryQueryConfig {
     erc20Address?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
-    wrappersRegistryAddresses?: Record<number, Address>;
+    registryAddresses?: Record<number, Address>;
 }
 
 // @public (undocumented)
@@ -1397,7 +1397,7 @@ export interface WrappersRegistryQueryConfig {
     // (undocumented)
     query?: Record<string, unknown>;
     // (undocumented)
-    wrappersRegistryAddress: Address | undefined;
+    registryAddress: Address | undefined;
 }
 
 // @public
@@ -1579,43 +1579,43 @@ export const zamaQueryKeys: {
         readonly chainId: () => readonly ["zama.wrappersRegistry", {
             readonly type: "chainId";
         }];
-        readonly tokenPairs: (wrappersRegistryAddress: Address) => readonly ["zama.wrappersRegistry", {
+        readonly tokenPairs: (registryAddress: Address) => readonly ["zama.wrappersRegistry", {
             readonly type: "tokenPairs";
-            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly registryAddress: `0x${string}`;
         }];
-        readonly confidentialTokenAddress: (wrappersRegistryAddress: Address, tokenAddress: Address) => readonly ["zama.wrappersRegistry", {
+        readonly confidentialTokenAddress: (registryAddress: Address, tokenAddress: Address) => readonly ["zama.wrappersRegistry", {
             readonly type: "confidentialTokenAddress";
-            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly registryAddress: `0x${string}`;
             readonly tokenAddress: `0x${string}`;
         }];
-        readonly tokenAddress: (wrappersRegistryAddress: Address, confidentialTokenAddress: Address) => readonly ["zama.wrappersRegistry", {
+        readonly tokenAddress: (registryAddress: Address, confidentialTokenAddress: Address) => readonly ["zama.wrappersRegistry", {
             readonly type: "tokenAddress";
-            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly registryAddress: `0x${string}`;
             readonly confidentialTokenAddress: `0x${string}`;
         }];
-        readonly tokenPairsLength: (wrappersRegistryAddress: Address) => readonly ["zama.wrappersRegistry", {
+        readonly tokenPairsLength: (registryAddress: Address) => readonly ["zama.wrappersRegistry", {
             readonly type: "tokenPairsLength";
-            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly registryAddress: `0x${string}`;
         }];
-        readonly tokenPairsSlice: (wrappersRegistryAddress: Address, fromIndex: string, toIndex: string) => readonly ["zama.wrappersRegistry", {
+        readonly tokenPairsSlice: (registryAddress: Address, fromIndex: string, toIndex: string) => readonly ["zama.wrappersRegistry", {
             readonly type: "tokenPairsSlice";
-            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly registryAddress: `0x${string}`;
             readonly fromIndex: string;
             readonly toIndex: string;
         }];
-        readonly tokenPair: (wrappersRegistryAddress: Address, index: string) => readonly ["zama.wrappersRegistry", {
+        readonly tokenPair: (registryAddress: Address, index: string) => readonly ["zama.wrappersRegistry", {
             readonly type: "tokenPair";
-            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly registryAddress: `0x${string}`;
             readonly index: string;
         }];
-        readonly isConfidentialTokenValid: (wrappersRegistryAddress: Address, confidentialTokenAddress: Address) => readonly ["zama.wrappersRegistry", {
+        readonly isConfidentialTokenValid: (registryAddress: Address, confidentialTokenAddress: Address) => readonly ["zama.wrappersRegistry", {
             readonly type: "isConfidentialTokenValid";
-            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly registryAddress: `0x${string}`;
             readonly confidentialTokenAddress: `0x${string}`;
         }];
-        readonly listPairs: (wrappersRegistryAddress: Address, page: number, pageSize: number, metadata: boolean) => readonly ["zama.wrappersRegistry", {
+        readonly listPairs: (registryAddress: Address, page: number, pageSize: number, metadata: boolean) => readonly ["zama.wrappersRegistry", {
             readonly type: "listPairs";
-            readonly wrappersRegistryAddress: `0x${string}`;
+            readonly registryAddress: `0x${string}`;
             readonly page: number;
             readonly pageSize: number;
             readonly metadata: boolean;
@@ -1629,7 +1629,7 @@ export class ZamaSDK {
     allow(...contractAddresses: Address[]): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
-    createWrappersRegistry(wrappersRegistryAddresses?: Record<number, Address>): WrappersRegistry;
+    createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
     readonly credentials: CredentialsManager;
     // (undocumented)
@@ -1710,7 +1710,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-BgYmN4g6.d.ts:1752:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-Dee03TU-.d.ts:1752:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

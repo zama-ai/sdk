@@ -79,7 +79,7 @@ import { DecryptErrorEvent } from '@zama-fhe/sdk';
 import { DecryptHandle } from '@zama-fhe/sdk/query';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
 import { DecryptStartEvent } from '@zama-fhe/sdk';
-import { DefaultWrappersRegistryAddresses } from '@zama-fhe/sdk';
+import { DefaultRegistryAddresses } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManager } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManagerConfig } from '@zama-fhe/sdk';
 import { delegateDecryptionMutationOptions } from '@zama-fhe/sdk/query';
@@ -421,7 +421,7 @@ export { DecryptionFailedError }
 
 export { DecryptStartEvent }
 
-export { DefaultWrappersRegistryAddresses }
+export { DefaultRegistryAddresses }
 
 export { DelegatedCredentialsManager }
 
@@ -1163,7 +1163,7 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
 // @public
 export function useConfidentialTokenAddress(input: {
     tokenAddress: Address | undefined;
-    wrappersRegistryAddresses?: Record<number, Address>;
+    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<readonly [boolean, `0x${string}`], Error>;
 
 // @public
@@ -1239,7 +1239,7 @@ export function useIsConfidentialSuspense(tokenAddress: Address): _tanstack_reac
 // @public
 export function useIsConfidentialTokenValid(input: {
     confidentialTokenAddress: Address | undefined;
-    wrappersRegistryAddresses?: Record<number, Address>;
+    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<boolean, Error>;
 
 // @public
@@ -1253,7 +1253,7 @@ export function useListPairs(input?: {
     page?: number;
     pageSize?: number;
     metadata?: boolean;
-    wrappersRegistryAddresses?: Record<number, Address>;
+    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, Error>;
 
 // @public
@@ -1327,30 +1327,30 @@ export function useToken(config: UseZamaConfig): _zama_fhe_sdk0.Token;
 // @public
 export function useTokenAddress(input: {
     confidentialTokenAddress: Address | undefined;
-    wrappersRegistryAddresses?: Record<number, Address>;
+    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<readonly [boolean, `0x${string}`], Error>;
 
 // @public
 export function useTokenPair(input: {
     index: bigint | undefined;
-    wrappersRegistryAddresses?: Record<number, Address>;
+    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<TokenWrapperPair, Error>;
 
 // @public
 export function useTokenPairsLength(input?: {
-    wrappersRegistryAddresses?: Record<number, Address>;
+    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public
 export function useTokenPairsRegistry(input?: {
-    wrappersRegistryAddresses?: Record<number, Address>;
+    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<readonly TokenWrapperPair[], Error>;
 
 // @public
 export function useTokenPairsSlice(input: {
     fromIndex: bigint | undefined;
     toIndex: bigint | undefined;
-    wrappersRegistryAddresses?: Record<number, Address>;
+    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<readonly TokenWrapperPair[], Error>;
 
 // @public
@@ -1407,8 +1407,8 @@ export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?:
 // @public
 export interface UseWrapperDiscoveryConfig {
     erc20Address: Address | undefined;
+    registryAddresses?: Record<number, Address>;
     tokenAddress: Address;
-    wrappersRegistryAddresses?: Record<number, Address>;
 }
 
 // @public
@@ -1421,7 +1421,7 @@ export interface UseWrapperDiscoverySuspenseConfig {
 }
 
 // @public
-export function useWrappersRegistryAddress(wrappersRegistryAddresses?: Record<number, Address>): Address | undefined;
+export function useWrappersRegistryAddress(registryAddresses?: Record<number, Address>): Address | undefined;
 
 // @public
 export interface UseZamaConfig {

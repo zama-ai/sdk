@@ -23,7 +23,7 @@ import { filterQueryOptions } from "./utils";
 const DEFAULT_STALE_TIME_MS = 86400 * 1000;
 
 export interface WrappersRegistryQueryConfig {
-  wrappersRegistryAddress: Address | undefined;
+  registryAddress: Address | undefined;
   query?: Record<string, unknown>;
 }
 
@@ -36,16 +36,14 @@ export function tokenPairsQueryOptions(
   readonly TokenWrapperPair[],
   ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairs>
 > {
-  const enabled = Boolean(config.wrappersRegistryAddress) && config.query?.enabled !== false;
-  const queryKey = zamaQueryKeys.wrappersRegistry.tokenPairs(
-    config.wrappersRegistryAddress ?? zeroAddress,
-  );
+  const enabled = Boolean(config.registryAddress) && config.query?.enabled !== false;
+  const queryKey = zamaQueryKeys.wrappersRegistry.tokenPairs(config.registryAddress ?? zeroAddress);
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { wrappersRegistryAddress }] = context.queryKey;
-      return signer.readContract(getTokenPairsContract(wrappersRegistryAddress));
+      const [, { registryAddress }] = context.queryKey;
+      return signer.readContract(getTokenPairsContract(registryAddress));
     },
     staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
@@ -66,20 +64,20 @@ export function confidentialTokenAddressQueryOptions(
   ReturnType<typeof zamaQueryKeys.wrappersRegistry.confidentialTokenAddress>
 > {
   const enabled =
-    Boolean(config.wrappersRegistryAddress) &&
+    Boolean(config.registryAddress) &&
     Boolean(config.tokenAddress) &&
     config.query?.enabled !== false;
   const queryKey = zamaQueryKeys.wrappersRegistry.confidentialTokenAddress(
-    config.wrappersRegistryAddress ?? zeroAddress,
+    config.registryAddress ?? zeroAddress,
     config.tokenAddress ?? zeroAddress,
   );
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { wrappersRegistryAddress, tokenAddress }] = context.queryKey;
+      const [, { registryAddress, tokenAddress }] = context.queryKey;
       return signer.readContract(
-        getConfidentialTokenAddressContract(wrappersRegistryAddress, tokenAddress),
+        getConfidentialTokenAddressContract(registryAddress, tokenAddress),
       );
     },
     staleTime: DEFAULT_STALE_TIME_MS,
@@ -101,20 +99,20 @@ export function tokenAddressQueryOptions(
   ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenAddress>
 > {
   const enabled =
-    Boolean(config.wrappersRegistryAddress) &&
+    Boolean(config.registryAddress) &&
     Boolean(config.confidentialTokenAddress) &&
     config.query?.enabled !== false;
   const queryKey = zamaQueryKeys.wrappersRegistry.tokenAddress(
-    config.wrappersRegistryAddress ?? zeroAddress,
+    config.registryAddress ?? zeroAddress,
     config.confidentialTokenAddress ?? zeroAddress,
   );
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { wrappersRegistryAddress, confidentialTokenAddress }] = context.queryKey;
+      const [, { registryAddress, confidentialTokenAddress }] = context.queryKey;
       return signer.readContract(
-        getTokenAddressContract(wrappersRegistryAddress, confidentialTokenAddress),
+        getTokenAddressContract(registryAddress, confidentialTokenAddress),
       );
     },
     staleTime: DEFAULT_STALE_TIME_MS,
@@ -131,16 +129,16 @@ export function tokenPairsLengthQueryOptions(
   bigint,
   ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsLength>
 > {
-  const enabled = Boolean(config.wrappersRegistryAddress) && config.query?.enabled !== false;
+  const enabled = Boolean(config.registryAddress) && config.query?.enabled !== false;
   const queryKey = zamaQueryKeys.wrappersRegistry.tokenPairsLength(
-    config.wrappersRegistryAddress ?? zeroAddress,
+    config.registryAddress ?? zeroAddress,
   );
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { wrappersRegistryAddress }] = context.queryKey;
-      return signer.readContract(getTokenPairsLengthContract(wrappersRegistryAddress));
+      const [, { registryAddress }] = context.queryKey;
+      return signer.readContract(getTokenPairsLengthContract(registryAddress));
     },
     staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
@@ -162,12 +160,12 @@ export function tokenPairsSliceQueryOptions(
   ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPairsSlice>
 > {
   const enabled =
-    Boolean(config.wrappersRegistryAddress) &&
+    Boolean(config.registryAddress) &&
     config.fromIndex !== undefined &&
     config.toIndex !== undefined &&
     config.query?.enabled !== false;
   const queryKey = zamaQueryKeys.wrappersRegistry.tokenPairsSlice(
-    config.wrappersRegistryAddress ?? zeroAddress,
+    config.registryAddress ?? zeroAddress,
     String(config.fromIndex ?? 0n),
     String(config.toIndex ?? 0n),
   );
@@ -175,9 +173,9 @@ export function tokenPairsSliceQueryOptions(
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { wrappersRegistryAddress, fromIndex, toIndex }] = context.queryKey;
+      const [, { registryAddress, fromIndex, toIndex }] = context.queryKey;
       return signer.readContract(
-        getTokenPairsSliceContract(wrappersRegistryAddress, BigInt(fromIndex), BigInt(toIndex)),
+        getTokenPairsSliceContract(registryAddress, BigInt(fromIndex), BigInt(toIndex)),
       );
     },
     staleTime: DEFAULT_STALE_TIME_MS,
@@ -199,19 +197,19 @@ export function tokenPairQueryOptions(
   ReturnType<typeof zamaQueryKeys.wrappersRegistry.tokenPair>
 > {
   const enabled =
-    Boolean(config.wrappersRegistryAddress) &&
+    Boolean(config.registryAddress) &&
     config.index !== undefined &&
     config.query?.enabled !== false;
   const queryKey = zamaQueryKeys.wrappersRegistry.tokenPair(
-    config.wrappersRegistryAddress ?? zeroAddress,
+    config.registryAddress ?? zeroAddress,
     String(config.index ?? 0n),
   );
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { wrappersRegistryAddress, index }] = context.queryKey;
-      return signer.readContract(getTokenPairContract(wrappersRegistryAddress, BigInt(index)));
+      const [, { registryAddress, index }] = context.queryKey;
+      return signer.readContract(getTokenPairContract(registryAddress, BigInt(index)));
     },
     staleTime: DEFAULT_STALE_TIME_MS,
     enabled,
@@ -232,20 +230,20 @@ export function isConfidentialTokenValidQueryOptions(
   ReturnType<typeof zamaQueryKeys.wrappersRegistry.isConfidentialTokenValid>
 > {
   const enabled =
-    Boolean(config.wrappersRegistryAddress) &&
+    Boolean(config.registryAddress) &&
     Boolean(config.confidentialTokenAddress) &&
     config.query?.enabled !== false;
   const queryKey = zamaQueryKeys.wrappersRegistry.isConfidentialTokenValid(
-    config.wrappersRegistryAddress ?? zeroAddress,
+    config.registryAddress ?? zeroAddress,
     config.confidentialTokenAddress ?? zeroAddress,
   );
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
     queryFn: async (context) => {
-      const [, { wrappersRegistryAddress, confidentialTokenAddress }] = context.queryKey;
+      const [, { registryAddress, confidentialTokenAddress }] = context.queryKey;
       return signer.readContract(
-        isConfidentialTokenValidContract(wrappersRegistryAddress, confidentialTokenAddress),
+        isConfidentialTokenValidContract(registryAddress, confidentialTokenAddress),
       );
     },
     staleTime: DEFAULT_STALE_TIME_MS,
@@ -260,7 +258,7 @@ export interface ListPairsQueryConfig {
    * current chain; this field just keeps the TanStack Query cache isolated
    * per registry contract.
    */
-  wrappersRegistryAddress: Address | undefined;
+  registryAddress: Address | undefined;
   page?: number;
   pageSize?: number;
   metadata?: boolean;
@@ -286,9 +284,9 @@ export function listPairsQueryOptions(
   const page = config.page ?? 1;
   const pageSize = config.pageSize ?? 100;
   const metadata = config.metadata ?? false;
-  const enabled = Boolean(config.wrappersRegistryAddress) && config.query?.enabled !== false;
+  const enabled = Boolean(config.registryAddress) && config.query?.enabled !== false;
   const queryKey = zamaQueryKeys.wrappersRegistry.listPairs(
-    config.wrappersRegistryAddress ?? zeroAddress,
+    config.registryAddress ?? zeroAddress,
     page,
     pageSize,
     metadata,

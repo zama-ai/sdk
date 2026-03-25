@@ -153,7 +153,7 @@ export interface PaginatedResult<T> {
  * @example
  * ```ts
  * const pairs = await client.readContract(
- *   getTokenPairsContract(wrappersRegistryAddress),
+ *   getTokenPairsContract(registryAddress),
  * );
  * ```
  */
@@ -172,7 +172,7 @@ export function getTokenPairsContract(registry: Address) {
  * @example
  * ```ts
  * const length = await client.readContract(
- *   getTokenPairsLengthContract(wrappersRegistryAddress),
+ *   getTokenPairsLengthContract(registryAddress),
  * );
  * ```
  */
@@ -191,7 +191,7 @@ export function getTokenPairsLengthContract(registry: Address) {
  * @example
  * ```ts
  * const pairs = await client.readContract(
- *   getTokenPairsSliceContract(wrappersRegistryAddress, 0n, 10n),
+ *   getTokenPairsSliceContract(registryAddress, 0n, 10n),
  * );
  * ```
  */
@@ -210,7 +210,7 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
  * @example
  * ```ts
  * const pair = await client.readContract(
- *   getTokenPairContract(wrappersRegistryAddress, 0n),
+ *   getTokenPairContract(registryAddress, 0n),
  * );
  * ```
  */
@@ -229,7 +229,7 @@ export function getTokenPairContract(registry: Address, index: bigint) {
  * @example
  * ```ts
  * const [found, confidentialToken] = await client.readContract(
- *   getConfidentialTokenAddressContract(wrappersRegistryAddress, tokenAddress),
+ *   getConfidentialTokenAddressContract(registryAddress, tokenAddress),
  * );
  * ```
  */
@@ -248,7 +248,7 @@ export function getConfidentialTokenAddressContract(registry: Address, tokenAddr
  * @example
  * ```ts
  * const [found, token] = await client.readContract(
- *   getTokenAddressContract(wrappersRegistryAddress, confidentialTokenAddress),
+ *   getTokenAddressContract(registryAddress, confidentialTokenAddress),
  * );
  * ```
  */
@@ -267,7 +267,7 @@ export function getTokenAddressContract(registry: Address, confidentialTokenAddr
  * @example
  * ```ts
  * const isValid = await client.readContract(
- *   isConfidentialTokenValidContract(wrappersRegistryAddress, confidentialTokenAddress),
+ *   isConfidentialTokenValidContract(registryAddress, confidentialTokenAddress),
  * );
  * ```
  */

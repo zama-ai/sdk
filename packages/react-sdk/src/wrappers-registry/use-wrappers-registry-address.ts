@@ -1,6 +1,6 @@
 "use client";
 
-import { DefaultWrappersRegistryAddresses, type Address } from "@zama-fhe/sdk";
+import { DefaultRegistryAddresses, type Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useQuery } from "../utils/query";
@@ -14,7 +14,7 @@ import { useQuery } from "../utils/query";
  * switches may take up to 30s to reflect.
  */
 export function useWrappersRegistryAddress(
-  wrappersRegistryAddresses: Record<number, Address> = DefaultWrappersRegistryAddresses,
+  registryAddresses: Record<number, Address> = DefaultRegistryAddresses,
 ): Address | undefined {
   const sdk = useZamaSDK();
 
@@ -24,5 +24,5 @@ export function useWrappersRegistryAddress(
     staleTime: 30_000,
   });
 
-  return chainId !== undefined ? wrappersRegistryAddresses[chainId] : undefined;
+  return chainId !== undefined ? registryAddresses[chainId] : undefined;
 }

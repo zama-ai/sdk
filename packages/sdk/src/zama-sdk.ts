@@ -235,7 +235,7 @@ export class ZamaSDK {
    * Create a {@link WrappersRegistry} instance bound to this SDK's signer.
    * On Mainnet and Sepolia the registry address is resolved automatically.
    *
-   * @param wrappersRegistryAddresses - Optional per-chain overrides (e.g. Hardhat).
+   * @param registryAddresses - Optional per-chain overrides (e.g. Hardhat).
    * @returns A {@link WrappersRegistry} instance.
    *
    * @example
@@ -249,10 +249,10 @@ export class ZamaSDK {
    * const pairs = await registry.getTokenPairs();
    * ```
    */
-  createWrappersRegistry(wrappersRegistryAddresses?: Record<number, Address>): WrappersRegistry {
+  createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry {
     return new WrappersRegistry({
       signer: this.signer,
-      wrappersRegistryAddresses,
+      registryAddresses,
     });
   }
 

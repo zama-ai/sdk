@@ -199,7 +199,7 @@ const readonlyToken = sdk.createReadonlyToken("0xEncryptedERC20");
 
 ### createWrappersRegistry
 
-`(wrappersRegistryAddresses?: Record<number, Address>) => WrappersRegistry`
+`(registryAddresses?: Record<number, Address>) => WrappersRegistry`
 
 Creates a wrappers registry instance for querying on-chain token wrapper pairs. On Mainnet and Sepolia the registry address is resolved automatically.
 

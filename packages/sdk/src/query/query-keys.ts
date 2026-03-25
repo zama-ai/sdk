@@ -264,82 +264,74 @@ export const zamaQueryKeys = {
   wrappersRegistry: {
     all: ["zama.wrappersRegistry"] as const,
     chainId: () => ["zama.wrappersRegistry", { type: "chainId" }] as const,
-    tokenPairs: (wrappersRegistryAddress: Address) =>
+    tokenPairs: (registryAddress: Address) =>
       [
         "zama.wrappersRegistry",
         {
           type: "tokenPairs",
-          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          registryAddress: getAddress(registryAddress),
         },
       ] as const,
-    confidentialTokenAddress: (wrappersRegistryAddress: Address, tokenAddress: Address) =>
+    confidentialTokenAddress: (registryAddress: Address, tokenAddress: Address) =>
       [
         "zama.wrappersRegistry",
         {
           type: "confidentialTokenAddress",
-          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          registryAddress: getAddress(registryAddress),
           tokenAddress: getAddress(tokenAddress),
         },
       ] as const,
-    tokenAddress: (wrappersRegistryAddress: Address, confidentialTokenAddress: Address) =>
+    tokenAddress: (registryAddress: Address, confidentialTokenAddress: Address) =>
       [
         "zama.wrappersRegistry",
         {
           type: "tokenAddress",
-          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          registryAddress: getAddress(registryAddress),
           confidentialTokenAddress: getAddress(confidentialTokenAddress),
         },
       ] as const,
-    tokenPairsLength: (wrappersRegistryAddress: Address) =>
+    tokenPairsLength: (registryAddress: Address) =>
       [
         "zama.wrappersRegistry",
         {
           type: "tokenPairsLength",
-          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          registryAddress: getAddress(registryAddress),
         },
       ] as const,
-    tokenPairsSlice: (wrappersRegistryAddress: Address, fromIndex: string, toIndex: string) =>
+    tokenPairsSlice: (registryAddress: Address, fromIndex: string, toIndex: string) =>
       [
         "zama.wrappersRegistry",
         {
           type: "tokenPairsSlice",
-          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          registryAddress: getAddress(registryAddress),
           fromIndex,
           toIndex,
         },
       ] as const,
-    tokenPair: (wrappersRegistryAddress: Address, index: string) =>
+    tokenPair: (registryAddress: Address, index: string) =>
       [
         "zama.wrappersRegistry",
         {
           type: "tokenPair",
-          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          registryAddress: getAddress(registryAddress),
           index,
         },
       ] as const,
-    isConfidentialTokenValid: (
-      wrappersRegistryAddress: Address,
-      confidentialTokenAddress: Address,
-    ) =>
+    isConfidentialTokenValid: (registryAddress: Address, confidentialTokenAddress: Address) =>
       [
         "zama.wrappersRegistry",
         {
           type: "isConfidentialTokenValid",
-          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          registryAddress: getAddress(registryAddress),
           confidentialTokenAddress: getAddress(confidentialTokenAddress),
         },
       ] as const,
-    listPairs: (
-      wrappersRegistryAddress: Address,
-      page: number,
-      pageSize: number,
-      metadata: boolean,
-    ) =>
+    listPairs: (registryAddress: Address, page: number, pageSize: number, metadata: boolean) =>
       [
         "zama.wrappersRegistry",
         {
           type: "listPairs",
-          wrappersRegistryAddress: getAddress(wrappersRegistryAddress),
+          registryAddress: getAddress(registryAddress),
           page,
           pageSize,
           metadata,

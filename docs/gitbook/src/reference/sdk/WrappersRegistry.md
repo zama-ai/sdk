@@ -10,7 +10,7 @@ High-level read interface for the on-chain `ConfidentialTokenWrappersRegistry` c
 ## Import
 
 ```ts
-import { WrappersRegistry, DefaultWrappersRegistryAddresses } from "@zama-fhe/sdk";
+import { WrappersRegistry, DefaultRegistryAddresses } from "@zama-fhe/sdk";
 ```
 
 ## Usage
@@ -42,7 +42,7 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourHardhatRegistry" }
 // Via constructor
 const registry = new WrappersRegistry({
   signer,
-  wrappersRegistryAddresses: { [31337]: "0xYourHardhatRegistry" },
+  registryAddresses: { [31337]: "0xYourHardhatRegistry" },
 });
 ```
 
@@ -54,11 +54,11 @@ const registry = new WrappersRegistry({
 
 Wallet signer for read calls. Any signer implementation works (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom).
 
-### wrappersRegistryAddresses
+### registryAddresses
 
 `Record<number, Address> | undefined`
 
-Per-chain registry address overrides, merged on top of `DefaultWrappersRegistryAddresses`. Mainnet and Sepolia are configured by default — pass this only for custom or local chains.
+Per-chain registry address overrides, merged on top of `DefaultRegistryAddresses`. Mainnet and Sepolia are configured by default — pass this only for custom or local chains.
 
 ## Methods
 
@@ -150,16 +150,16 @@ if (await registry.isConfidentialTokenValid("0xcUSDC")) {
 }
 ```
 
-## DefaultWrappersRegistryAddresses
+## DefaultRegistryAddresses
 
 `Record<number, Address>`
 
 Exported map of built-in registry addresses extracted from network presets. Includes Mainnet (`1`) and Sepolia (`11155111`).
 
 ```ts
-import { DefaultWrappersRegistryAddresses } from "@zama-fhe/sdk";
+import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
-console.log(DefaultWrappersRegistryAddresses[1]); // "0xeb5015fF021DB115aCe010f23F55C2591059bBA0"
+console.log(DefaultRegistryAddresses[1]); // "0xeb5015fF021DB115aCe010f23F55C2591059bBA0"
 ```
 
 ## Related

@@ -18,10 +18,10 @@ import { ConfigurationError } from "../errors/relayer";
 import type { GenericSigner } from "../types/signer";
 
 /** Default wrappers registry addresses extracted from built-in network configs. */
-export const DefaultWrappersRegistryAddresses: Record<number, Address> = Object.fromEntries(
+export const DefaultRegistryAddresses: Record<number, Address> = Object.fromEntries(
   Object.entries(DefaultConfigs)
-    .filter(([, cfg]) => cfg.wrappersRegistryAddress !== undefined)
-    .map(([chainId, cfg]) => [Number(chainId), cfg.wrappersRegistryAddress]),
+    .filter(([, cfg]) => cfg.registryAddress !== undefined)
+    .map(([chainId, cfg]) => [Number(chainId), cfg.registryAddress]),
 ) as Record<number, Address>;
 
 /** Default page size for {@link WrappersRegistry.listPairs}. */
@@ -36,18 +36,18 @@ export interface WrappersRegistryConfig {
   signer: GenericSigner;
   /**
    * Per-chain registry address overrides, merged on top of
-   * {@link DefaultWrappersRegistryAddresses}. Use this to supply a registry
+   * {@link DefaultRegistryAddresses}. Use this to supply a registry
    * address for custom or local chains (e.g. Hardhat).
    *
    * @example
    * ```ts
    * new WrappersRegistry({
    *   signer,
-   *   wrappersRegistryAddresses: { [31337]: "0xYourHardhatRegistry" },
+   *   registryAddresses: { [31337]: "0xYourHardhatRegistry" },
    * });
    * ```
    */
-  wrappersRegistryAddresses?: Record<number, Address>;
+  registryAddresses?: Record<number, Address>;
   /**
    * How long cached registry results remain valid, in seconds.
    * Default: `86400` (24 hours). Consistent with `keypairTTL`/`sessionTTL`.
@@ -107,8 +107,8 @@ export class WrappersRegistry {
   constructor(config: WrappersRegistryConfig) {
     this.signer = config.signer;
     this.#addresses = {
-      ...DefaultWrappersRegistryAddresses,
-      ...config.wrappersRegistryAddresses,
+      ...DefaultRegistryAddresses,
+      ...config.registryAddresses,
     };
     this.#ttlMs = (config.registryTTL ?? DEFAULT_REGISTRY_TTL) * 1000;
   }
@@ -157,7 +157,7 @@ export class WrappersRegistry {
   /**
    * Resolve the registry contract address for the current chain.
    *
-   * Priority: `wrappersRegistryAddresses[chainId]` \> built-in default.
+   * Priority: `registryAddresses[chainId]` \> built-in default.
    *
    * @returns The registry contract address for the connected chain.
    * @throws {@link ConfigurationError} if no address is configured for the chain.
@@ -169,7 +169,7 @@ export class WrappersRegistry {
     if (!address) {
       throw new ConfigurationError(
         `No wrappers registry address configured for chain ${chainId}.\n` +
-          `Pass a wrappersRegistryAddresses entry for this chain.`,
+          `Pass a registryAddresses entry for this chain.`,
       );
     }
 

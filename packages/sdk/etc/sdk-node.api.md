@@ -367,7 +367,7 @@ export const HardhatConfig: {
     readonly kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030";
     readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
-    readonly wrappersRegistryAddress: undefined;
+    readonly registryAddress: undefined;
 };
 
 // @public (undocumented)
@@ -395,7 +395,7 @@ export const MainnetConfig: {
     readonly inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2";
     readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
-    readonly wrappersRegistryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
+    readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
 };
 
 // @public (undocumented)
@@ -592,7 +592,7 @@ export const SepoliaConfig: {
     readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
-    readonly wrappersRegistryAddress: "0xDEbdfa2568dEd84044e9807500ee523acDe9308b";
+    readonly registryAddress: "0xDEbdfa2568dEd84044e9807500ee523acDe9308b";
 };
 
 // @public (undocumented)

@@ -7,9 +7,9 @@ export default function WrapperDiscoveryPage() {
   const tokenAddress = (searchParams.get("tokenAddress") as Address | undefined) ?? undefined;
   const erc20Address = (searchParams.get("erc20Address") as Address | undefined) ?? undefined;
   const wrappersRegistryOverride =
-    (searchParams.get("wrappersRegistryAddress") as Address | undefined) ?? undefined;
+    (searchParams.get("registryAddress") as Address | undefined) ?? undefined;
   // Hardhat chain ID 31337 — only relevant for local test environments
-  const wrappersRegistryAddresses = wrappersRegistryOverride
+  const registryAddresses = wrappersRegistryOverride
     ? { [31337]: wrappersRegistryOverride }
     : undefined;
 
@@ -27,7 +27,7 @@ export default function WrapperDiscoveryPage() {
       <WrapperDiscoveryPanel
         tokenAddress={tokenAddress}
         erc20Address={erc20Address}
-        wrappersRegistryAddresses={wrappersRegistryAddresses}
+        registryAddresses={registryAddresses}
       />
     </div>
   );

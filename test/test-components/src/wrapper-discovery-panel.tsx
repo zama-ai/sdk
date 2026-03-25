@@ -5,12 +5,12 @@ import { useWrapperDiscovery, type UseWrapperDiscoveryConfig } from "@zama-fhe/r
 export function WrapperDiscoveryPanel({
   tokenAddress,
   erc20Address,
-  wrappersRegistryAddresses,
+  registryAddresses,
 }: UseWrapperDiscoveryConfig) {
   const wrapperDiscovery = useWrapperDiscovery({
     tokenAddress,
     erc20Address,
-    wrappersRegistryAddresses,
+    registryAddresses,
   });
 
   return (

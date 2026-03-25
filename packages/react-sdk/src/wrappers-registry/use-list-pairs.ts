@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  DefaultWrappersRegistryAddresses,
+  DefaultRegistryAddresses,
   type Address,
   type TokenWrapperPair,
   type EnrichedTokenWrapperPair,
@@ -29,21 +29,21 @@ export function useListPairs({
   page = 1,
   pageSize = 100,
   metadata = false,
-  wrappersRegistryAddresses = DefaultWrappersRegistryAddresses,
+  registryAddresses = DefaultRegistryAddresses,
 }: {
   page?: number;
   pageSize?: number;
   metadata?: boolean;
-  wrappersRegistryAddresses?: Record<number, Address>;
+  registryAddresses?: Record<number, Address>;
 } = {}) {
   const sdk = useZamaSDK();
-  const wrappersRegistryAddress = useWrappersRegistryAddress(wrappersRegistryAddresses);
+  const registryAddress = useWrappersRegistryAddress(registryAddresses);
 
   // Pass sdk.registry (a lazy singleton) so the class-level TTL cache is shared
   // across all queryFn executions — rather than constructing a new instance each time.
   return useQuery<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>>(
     listPairsQueryOptions(sdk.registry, {
-      wrappersRegistryAddress,
+      registryAddress,
       page,
       pageSize,
       metadata,

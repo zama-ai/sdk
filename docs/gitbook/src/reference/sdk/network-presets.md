@@ -36,7 +36,7 @@ Each preset provides the fields needed by a relayer transport:
 | `inputVerifierContractAddress`              | `Address`             | Input verifier contract address                                                                          |
 | `verifyingContractAddressDecryption`        | `Address`             | EIP-712 verifying contract for decrypt operations                                                        |
 | `verifyingContractAddressInputVerification` | `Address`             | EIP-712 verifying contract for encrypt operations                                                        |
-| `wrappersRegistryAddress`                   | `string \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
+| `registryAddress`                   | `string \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
 
 ## Usage
 
@@ -127,19 +127,19 @@ const relayer = new RelayerWeb({
 
 The relayer selects the correct transport based on the chain ID returned by `getChainId()`.
 
-## DefaultWrappersRegistryAddresses
+## DefaultRegistryAddresses
 
 A convenience export that extracts valid registry addresses from the presets into a `Record<number, Address>` map. Used internally by the [WrappersRegistry](/reference/sdk/WrappersRegistry) class.
 
 ```ts
-import { DefaultWrappersRegistryAddresses } from "@zama-fhe/sdk";
+import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
 // { 1: "0xeb5015fF...", 11155111: "0xDEbdfa25..." }
-console.log(DefaultWrappersRegistryAddresses);
+console.log(DefaultRegistryAddresses);
 ```
 
 {% hint style="info" %}
-`HardhatConfig` has no registry address by default. Pass one explicitly via `wrappersRegistryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry).
+`HardhatConfig` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry).
 {% endhint %}
 
 ## Related
