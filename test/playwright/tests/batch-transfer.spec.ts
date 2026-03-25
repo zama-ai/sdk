@@ -1,5 +1,5 @@
 import { test, expect } from "../fixtures";
-import { WRAPPER_ABI } from "../../../packages/sdk/src/abi/wrapper.abi";
+import { wrapperAbi } from "../../../packages/sdk/src/abi/wrapper.abi";
 
 test("should shield USDT then batch transfer to two recipients", async ({
   page,
@@ -20,7 +20,7 @@ test("should shield USDT then batch transfer to two recipients", async ({
   // Approve the TransferBatcher as an operator on the cToken
   await viemClient.writeContract({
     address: contracts.cUSDT,
-    abi: WRAPPER_ABI,
+    abi: wrapperAbi,
     functionName: "setOperator",
     args: [contracts.transferBatcher, Math.floor(Date.now() / 1000) + 86400],
   });
