@@ -6,9 +6,11 @@ import { allowMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
- * Pre-authorize FHE decrypt credentials for a list of token addresses.
- * A single wallet signature covers all addresses, so subsequent decrypt
- * operations on any of these tokens reuse cached credentials.
+ * Sign an EIP-712 message authorizing decryption of confidential handles
+ * for a list of contract addresses. This is not token-specific — any
+ * contract that uses FHE-encrypted values (tokens, DeFi vaults, games, etc.)
+ * can be authorized in a single wallet signature. Subsequent decrypt
+ * operations on any of these contracts reuse cached credentials.
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
@@ -16,11 +18,11 @@ import { useZamaSDK } from "../provider";
  *
  * @example
  * ```tsx
- * const { mutateAsync: allowTokens, isPending } = useAllowTokens();
- * // Call allowTokens(allTokenAddresses) before any individual reveal
+ * const { mutateAsync: allow, isPending } = useAllow();
+ * // Call allow(contractAddresses) before any decrypt operation
  * ```
  */
-export function useAllowTokens(options?: UseMutationOptions<void, Error, Address[]>) {
+export function useAllow(options?: UseMutationOptions<void, Error, Address[]>) {
   const sdk = useZamaSDK();
 
   return useMutation<void, Error, Address[]>({

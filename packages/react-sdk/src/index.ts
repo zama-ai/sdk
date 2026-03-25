@@ -179,9 +179,9 @@ export {
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
-export { useAllowTokens } from "./token/use-allow-tokens";
+export { useAllow } from "./token/use-allow";
 export { useIsAllowed } from "./token/use-is-allowed";
-export { useRevokeTokens } from "./token/use-revoke-tokens";
+export { useRevoke } from "./token/use-revoke";
 export { useRevokeSession } from "./token/use-revoke-session";
 export {
   useConfidentialTransfer,

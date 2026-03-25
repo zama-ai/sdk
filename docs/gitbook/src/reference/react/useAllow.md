@@ -1,13 +1,13 @@
 ---
 title: useAllow
-description: Mutation hook that pre-authorizes an FHE keypair for multiple tokens with one wallet signature.
+description: Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.
 ---
 
 # useAllow
 
-Mutation hook that pre-authorizes an FHE keypair for multiple tokens with one wallet signature.
+Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
-Call this early (e.g. after wallet connect) so that subsequent balance decrypts do not trigger individual wallet popups. Automatically invalidates [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
+Call this early (e.g. after wallet connect) so that subsequent decrypt operations do not trigger individual wallet popups. Automatically invalidates [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
 
 ## Import
 
@@ -23,17 +23,17 @@ import { useAllow } from "@zama-fhe/react-sdk";
 ```tsx
 import { useAllow } from "@zama-fhe/react-sdk";
 
-function AllowButton({ tokens }: { tokens: `0x${string}`[] }) {
+function AllowButton({ contracts }: { contracts: `0x${string}`[] }) {
   const { mutateAsync: allow, isPending } = useAllow();
 
   const handleAllow = async () => {
-    await allow(tokens);
-    // All subsequent balance reads reuse the cached credential
+    await allow(contracts);
+    // All subsequent decrypt operations reuse the cached credential
   };
 
   return (
     <button onClick={handleAllow} disabled={isPending}>
-      {isPending ? "Signing..." : "Authorize tokens"}
+      {isPending ? "Signing..." : "Authorize contracts"}
     </button>
   );
 }
@@ -46,12 +46,12 @@ function AllowButton({ tokens }: { tokens: `0x${string}`[] }) {
 import { useAllow } from "@zama-fhe/react-sdk";
 import { useEffect } from "react";
 
-function AuthOnConnect({ tokens }: { tokens: `0x${string}`[] }) {
+function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
   const { mutateAsync: allow } = useAllow();
 
   useEffect(() => {
     // Pre-authorize on wallet connect
-    allow(tokens);
+    allow(contracts);
   }, []);
 
   return null;
@@ -71,10 +71,10 @@ function AuthOnConnect({ tokens }: { tokens: `0x${string}`[] }) {
 
 `Address[]`
 
-Array of confidential token wrapper addresses to authorize in a single wallet signature.
+Array of contract addresses to authorize decryption for in a single wallet signature. These can be any contracts that use FHE-encrypted values — not limited to tokens.
 
 ```tsx
-await allow(["0xTokenA", "0xTokenB", "0xTokenC"]);
+await allow(["0xContractA", "0xContractB", "0xContractC"]);
 ```
 
 ## Return Type
@@ -86,6 +86,6 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 ## Related
 
 - [`useIsAllowed`](/reference/react/useIsAllowed) -- check whether a session signature is cached
-- [`useRevoke`](/reference/react/useRevoke) -- revoke session credentials for specific tokens
+- [`useRevoke`](/reference/react/useRevoke) -- revoke decrypt authorization for specific contracts
 - [`useRevokeSession`](/reference/react/useRevokeSession) -- revoke the entire session
 - [Session Model](/concepts/session-model) -- security model and TTL configuration
