@@ -7,10 +7,10 @@ export default async function WrapperDiscoveryPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const token = params.token as Address | undefined;
-  const coordinator = params.coordinator as Address | undefined;
+  const tokenAddress = params.tokenAddress as Address | undefined;
+  const erc20Address = params.erc20Address as Address | undefined;
 
-  if (!token) {
+  if (!tokenAddress) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Wrapper Discovery</h1>
@@ -22,7 +22,7 @@ export default async function WrapperDiscoveryPage({
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Wrapper Discovery</h1>
-      <WrapperDiscoveryPanel tokenAddress={token} coordinatorAddress={coordinator} />
+      <WrapperDiscoveryPanel tokenAddress={tokenAddress} erc20Address={erc20Address} />
     </div>
   );
 }
