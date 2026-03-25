@@ -292,7 +292,7 @@ export {
   userDecryptMutationOptions,
   type DecryptResult,
   type UserDecryptMutationParams,
-  type UserDecryptCallbacks,
+  type UserDecryptOptions,
   type DecryptHandle,
   allowMutationOptions,
   isAllowedQueryOptions,

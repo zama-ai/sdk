@@ -66,7 +66,7 @@ function DecryptHandle() {
 import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
 ```
 
-`UseUserDecryptConfig` extends `UserDecryptCallbacks` — callbacks and tracked handles are passed directly as top-level properties.
+`UseUserDecryptConfig` extends `UserDecryptOptions` — options and tracked handles are passed directly as top-level properties.
 
 ### handles
 

@@ -237,7 +237,6 @@ import { useMutation } from '@tanstack/react-query';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
-import { UserDecryptCallbacks } from '@zama-fhe/sdk/query';
 import { userDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { UserDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { UserDecryptOptions } from '@zama-fhe/sdk/query';
@@ -1233,11 +1232,11 @@ export function usePublicKey(): _tanstack_react_query0.UseQueryResult<PublicKeyD
 // @public
 export function usePublicParams(bits: number): _tanstack_react_query0.UseQueryResult<PublicParamsData | null, Error>;
 
-export { UserDecryptCallbacks }
-
 export { userDecryptMutationOptions }
 
 export { UserDecryptMutationParams }
+
+export { UserDecryptOptions }
 
 export { UserDecryptParams }
 
