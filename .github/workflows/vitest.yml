@@ -31,6 +31,9 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Setup ast-grep
+        uses: ast-grep/action@cf62e780f0c88301228978d593a7784427a097a6
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
