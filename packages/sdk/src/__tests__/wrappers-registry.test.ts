@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from "../../test-fixtures";
+import { describe, it, expect, vi } from "../test-fixtures";
 import { WrappersRegistry, DefaultRegistryAddresses } from "../wrappers-registry";
-import { ConfigurationError } from "../../errors";
-import { MainnetConfig, SepoliaConfig } from "../../relayer/relayer-utils";
+import { ConfigurationError } from "../errors";
+import { MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
 import type { Address } from "viem";
 
 const CUSTOM_REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
@@ -10,11 +10,17 @@ const C_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
 describe("DefaultRegistryAddresses", () => {
   it("includes Mainnet", () => {
-    expect(DefaultRegistryAddresses[1]).toBe(MainnetConfig.registryAddress);
+    expect(DefaultRegistryAddresses[1]).toBeDefined();
+    expect(DefaultRegistryAddresses[1]!.toLowerCase()).toBe(
+      MainnetConfig.registryAddress!.toLowerCase(),
+    );
   });
 
   it("includes Sepolia", () => {
-    expect(DefaultRegistryAddresses[11155111]).toBe(SepoliaConfig.registryAddress);
+    expect(DefaultRegistryAddresses[11155111]).toBeDefined();
+    expect(DefaultRegistryAddresses[11155111]!.toLowerCase()).toBe(
+      SepoliaConfig.registryAddress!.toLowerCase(),
+    );
   });
 
   it("does not include Hardhat (no registry deployed)", () => {
@@ -28,14 +34,14 @@ describe("WrappersRegistry", () => {
       vi.mocked(signer.getChainId).mockResolvedValue(1);
       const registry = new WrappersRegistry({ signer });
       const addr = await registry.getRegistryAddress();
-      expect(addr).toBe(MainnetConfig.registryAddress);
+      expect(addr.toLowerCase()).toBe(MainnetConfig.registryAddress!.toLowerCase());
     });
 
     it("resolves from defaults for Sepolia", async ({ signer }) => {
       vi.mocked(signer.getChainId).mockResolvedValue(11155111);
       const registry = new WrappersRegistry({ signer });
       const addr = await registry.getRegistryAddress();
-      expect(addr).toBe(SepoliaConfig.registryAddress);
+      expect(addr.toLowerCase()).toBe(SepoliaConfig.registryAddress!.toLowerCase());
     });
 
     it("overrides take precedence over defaults", async ({ signer }) => {
@@ -76,7 +82,7 @@ describe("WrappersRegistry", () => {
 
       expect(signer.readContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: MainnetConfig.registryAddress,
+          address: DefaultRegistryAddresses[1],
           functionName: "getTokenConfidentialTokenPairs",
         }),
       );
@@ -180,7 +186,11 @@ describe("WrappersRegistry", () => {
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(3n) // getTokenConfidentialTokenPairsLength
         .mockResolvedValueOnce([
-          { tokenAddress: TOKEN, confidentialTokenAddress: C_TOKEN, isValid: true },
+          {
+            tokenAddress: TOKEN,
+            confidentialTokenAddress: C_TOKEN,
+            isValid: true,
+          },
         ]); // getTokenConfidentialTokenPairsSlice
       const registry = new WrappersRegistry({ signer });
 
@@ -216,7 +226,11 @@ describe("WrappersRegistry", () => {
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce(1n) // length
         .mockResolvedValueOnce([
-          { tokenAddress: TOKEN, confidentialTokenAddress: C_TOKEN, isValid: true },
+          {
+            tokenAddress: TOKEN,
+            confidentialTokenAddress: C_TOKEN,
+            isValid: true,
+          },
         ]) // slice
         .mockResolvedValueOnce("USD Coin") // name (underlying)
         .mockResolvedValueOnce("USDC") // symbol (underlying)
@@ -253,7 +267,10 @@ describe("WrappersRegistry", () => {
 
       const result = await registry.getConfidentialToken(TOKEN);
 
-      expect(result).toEqual({ confidentialTokenAddress: C_TOKEN, isValid: true });
+      expect(result).toEqual({
+        confidentialTokenAddress: C_TOKEN,
+        isValid: true,
+      });
     });
 
     it("returns null when not found", async ({ signer }) => {

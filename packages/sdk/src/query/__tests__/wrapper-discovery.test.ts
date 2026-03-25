@@ -1,13 +1,15 @@
 import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { WrappersRegistry } from "../../wrappers-registry";
 import { wrapperDiscoveryQueryOptions } from "../wrapper-discovery";
 
 describe("wrapperDiscoveryQueryOptions", () => {
   test("is disabled when tokenAddress or erc20Address is missing", ({ signer }) => {
-    const missingToken = wrapperDiscoveryQueryOptions(signer, undefined, {
+    const registry = new WrappersRegistry({ signer });
+    const missingToken = wrapperDiscoveryQueryOptions(registry, undefined, {
       erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
     const missingErc20 = wrapperDiscoveryQueryOptions(
-      signer,
+      registry,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {},
     );
@@ -17,8 +19,9 @@ describe("wrapperDiscoveryQueryOptions", () => {
   });
 
   test("staleTime is Infinity — wrapper mappings are immutable", ({ signer }) => {
+    const registry = new WrappersRegistry({ signer });
     const options = wrapperDiscoveryQueryOptions(
-      signer,
+      registry,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       { erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" },
     );
@@ -26,8 +29,9 @@ describe("wrapperDiscoveryQueryOptions", () => {
   });
 
   test("includes erc20Address in query key", ({ signer }) => {
+    const registry = new WrappersRegistry({ signer });
     const options = wrapperDiscoveryQueryOptions(
-      signer,
+      registry,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
@@ -51,8 +55,9 @@ describe("wrapperDiscoveryQueryOptions", () => {
       "0x0000000000000000000000000000000000000000",
     ]);
 
+    const registry = new WrappersRegistry({ signer });
     const options = wrapperDiscoveryQueryOptions(
-      signer,
+      registry,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
@@ -69,8 +74,9 @@ describe("wrapperDiscoveryQueryOptions", () => {
       .mockResolvedValueOnce([true, "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D"]) // getConfidentialTokenAddress
       .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
+    const registry = new WrappersRegistry({ signer });
     const options = wrapperDiscoveryQueryOptions(
-      signer,
+      registry,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
       {
         erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",

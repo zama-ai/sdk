@@ -17,7 +17,7 @@ import { ConfigurationError } from "./errors/relayer";
 import type { GenericSigner } from "./types/signer";
 
 /** Default wrappers registry addresses extracted from built-in network configs. */
-export const DefaultRegistryAddresses = {
+export const DefaultRegistryAddresses: Record<number, Address> = {
   1: "0xeb5015ff021db115ace010f23f55c2591059bba0",
   11155111: "0x2f0750bbb0a246059d80e94c454586a7f27a128e",
 } as const;
