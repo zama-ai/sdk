@@ -14,7 +14,7 @@ export default async function WrapperDiscoveryPage({
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Wrapper Discovery</h1>
-        <p>Missing ?token= query param</p>
+        <p>Missing ?tokenAddress= query param</p>
       </div>
     );
   }

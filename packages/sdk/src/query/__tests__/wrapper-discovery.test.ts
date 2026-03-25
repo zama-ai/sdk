@@ -16,6 +16,15 @@ describe("wrapperDiscoveryQueryOptions", () => {
     expect(missingErc20.enabled).toBe(false);
   });
 
+  test("staleTime is Infinity — wrapper mappings are immutable", ({ signer }) => {
+    const options = wrapperDiscoveryQueryOptions(
+      signer,
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      { erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" },
+    );
+    expect(options.staleTime).toBe(Infinity);
+  });
+
   test("includes erc20Address in query key", ({ signer }) => {
     const options = wrapperDiscoveryQueryOptions(
       signer,

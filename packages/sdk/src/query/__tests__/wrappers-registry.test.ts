@@ -212,15 +212,13 @@ describe("isConfidentialTokenValidQueryOptions", () => {
 });
 
 describe("listPairsQueryOptions", () => {
-  function makeRegistry(ttlMs = 86400_000): WrappersRegistry {
-    return {
-      listPairs: vi.fn(),
-      ttlMs,
-    } as unknown as WrappersRegistry;
+  function makeRegistry(ttlMs = 86400_000) {
+    const listPairs = vi.fn();
+    return { registry: { listPairs, ttlMs } as unknown as WrappersRegistry, listPairs };
   }
 
   test("includes registry address, page, pageSize, metadata in query key", () => {
-    const registry = makeRegistry();
+    const { registry } = makeRegistry();
     const options = listPairsQueryOptions(registry, {
       wrappersRegistryAddress: REGISTRY,
       page: 2,
@@ -240,7 +238,7 @@ describe("listPairsQueryOptions", () => {
   });
 
   test("staleTime equals registry.ttlMs", () => {
-    const registry = makeRegistry(3_600_000);
+    const { registry } = makeRegistry(3_600_000);
     const options = listPairsQueryOptions(registry, {
       wrappersRegistryAddress: REGISTRY,
     });
@@ -248,7 +246,7 @@ describe("listPairsQueryOptions", () => {
   });
 
   test("disabled when wrappersRegistryAddress is undefined", () => {
-    const registry = makeRegistry();
+    const { registry } = makeRegistry();
     const options = listPairsQueryOptions(registry, {
       wrappersRegistryAddress: undefined,
     });
@@ -256,9 +254,9 @@ describe("listPairsQueryOptions", () => {
   });
 
   test("queryFn delegates to registry.listPairs with correct pagination args", async () => {
-    const registry = makeRegistry();
-    const page = { total: 1, page: 1, pageSize: 10, data: [] };
-    vi.mocked(registry.listPairs as ReturnType<typeof vi.fn>).mockResolvedValue(page);
+    const { registry, listPairs } = makeRegistry();
+    const mockResult = { total: 1, page: 3, pageSize: 20, items: [] };
+    listPairs.mockResolvedValue(mockResult);
     const options = listPairsQueryOptions(registry, {
       wrappersRegistryAddress: REGISTRY,
       page: 3,
@@ -266,12 +264,12 @@ describe("listPairsQueryOptions", () => {
       metadata: true,
     });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
-    expect(result).toEqual(page);
-    expect(registry.listPairs).toHaveBeenCalledWith({ page: 3, pageSize: 20, metadata: true });
+    expect(result).toEqual(mockResult);
+    expect(listPairs).toHaveBeenCalledWith({ page: 3, pageSize: 20, metadata: true });
   });
 
   test("uses zeroAddress in query key when wrappersRegistryAddress is undefined", () => {
-    const registry = makeRegistry();
+    const { registry } = makeRegistry();
     const options = listPairsQueryOptions(registry, {
       wrappersRegistryAddress: undefined,
     });
