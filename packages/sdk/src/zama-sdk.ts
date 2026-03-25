@@ -51,8 +51,8 @@ export interface ZamaSDKConfig {
 }
 
 /**
- * ZamaSDK — composes a RelayerSDK with token abstraction.
- * Provides signer, storage, and high-level ERC-20-like token interface.
+ * ZamaSDK — composes a RelayerSDK with contract abstraction.
+ * Provides signer, storage, and high-level confidential contract interface.
  */
 export class ZamaSDK {
   readonly relayer: RelayerSDK;
@@ -259,13 +259,13 @@ export class ZamaSDK {
   /**
    * Pre-authorize FHE credentials for one or more contract addresses.
    * A single wallet signature covers all addresses, so subsequent decrypt
-   * operations on any of these tokens reuse cached credentials.
+   * operations on any of these contracts reuse cached credentials.
    *
-   * @param contractAddresses - Token contract addresses to authorize.
+   * @param contractAddresses - Contract addresses to authorize.
    *
    * @example
    * ```ts
-   * await sdk.allow("0xTokenA", "0xTokenB");
+   * await sdk.allow("0xContractA", "0xContractB");
    * ```
    */
   async allow(...contractAddresses: Address[]): Promise<void> {
@@ -282,7 +282,7 @@ export class ZamaSDK {
    * @example
    * ```ts
    * wallet.on("disconnect", () => sdk.revoke());
-   * await sdk.revoke("0xTokenA", "0xTokenB");
+   * await sdk.revoke("0xContractA", "0xContractB");
    * ```
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {

@@ -7,6 +7,6 @@ export function allowMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.allow"], Address[], void> {
   return {
     mutationKey: ["zama.allow"],
-    mutationFn: (tokenAddresses) => sdk.allow(...tokenAddresses),
+    mutationFn: (contractAddresses) => sdk.allow(...contractAddresses),
   };
 }

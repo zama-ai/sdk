@@ -1,12 +1,10 @@
 # Changelog
 
-## [Unreleased] — feat/wrappers-registry
+## [2.1.1-alpha.2](https://github.com/zama-ai/sdk/compare/v2.1.1-alpha.1...v2.1.1-alpha.2) (2026-03-25)
 
-### ⚠ BREAKING CHANGES
+### Bug Fixes
 
-- **wrappers-registry:** `listPairsQueryOptions` first argument changed from `signer: GenericSigner` to `registry: WrappersRegistry`. Callers should pass `sdk.registry` (the lazy singleton on `ZamaSDK`) instead of `sdk.signer`. The `registryTTL` field has been removed from `ListPairsQueryConfig` — the registry's own TTL is used automatically.
-
-- **wrappers-registry:** `useListPairs` no longer accepts a `registryTTL` option. The TTL is derived from the `ZamaSDK` configuration.
+- rename useAllowTokens/useRevokeTokens back to useAllow/useRevoke ([#167](https://github.com/zama-ai/sdk/issues/167)) ([f9d6b1a]())
 
 ## [2.1.1-alpha.1](https://github.com/zama-ai/sdk/compare/v2.1.0...v2.1.1-alpha.1) (2026-03-25)
 

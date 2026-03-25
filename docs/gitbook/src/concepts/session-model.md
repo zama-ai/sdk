@@ -21,7 +21,7 @@ The keypair is generated once and encrypted before storage. It persists across p
 
 The session signature is an EIP-712 typed data signature from the user's wallet. It serves two purposes:
 
-1. **Authorization** — proves the user consents to decrypt balances for specific token contracts.
+1. **Authorization** — proves the user consents to decrypt balances for specific contract addresses.
 2. **Key derivation** — the signature's raw bytes are used as input to PBKDF2, producing the AES-GCM key that encrypts and decrypts the FHE private key.
 
 By default, the session signature lives in memory only. It is lost on page reload, tab close, or explicit revocation.
@@ -114,7 +114,7 @@ Call `allow()` early — ideally right after wallet connect — to prompt the si
 A single signature covers all contract addresses passed to `allow()`. The signed EIP-712 message includes the exact set of contracts. If you later call `allow()` with a contract not in the original set, the SDK generates a fresh keypair and requests a new wallet signature.
 
 {% hint style="warning" %}
-Batch all token addresses into a single `allow()` call. Each call with a new contract set triggers a new keypair and wallet popup. Plan your allow calls to minimize signing prompts.
+Batch all contract addresses into a single `allow()` call. Each call with a new contract set triggers a new keypair and wallet popup. Plan your allow calls to minimize signing prompts.
 {% endhint %}
 
 ### Revoke (clear session)
@@ -153,17 +153,17 @@ The user switches networks (e.g., Sepolia to Mainnet) while keeping the same add
 
 Without wiring, cached signatures remain valid until TTL expiry. This is not a security vulnerability (signatures are time-bounded and address-scoped), but it creates confusing UX when switching accounts.
 
-## Multi-token batching
+## Multi-contract batching
 
-A single `allow()` call can cover multiple token contracts:
+A single `allow()` call can cover multiple contracts:
 
 ```ts
-await sdk.allow("0xTokenA", "0xTokenB", "0xTokenC");
+await sdk.allow("0xContractA", "0xContractB", "0xContractC");
 ```
 
-This produces one EIP-712 signature covering all three contracts. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on TokenA, TokenB, or TokenC reuses the cached signature without additional popups.
+This produces one EIP-712 signature covering all three contracts. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on ContractA, ContractB, or ContractC reuses the cached signature without additional popups.
 
-The tradeoff: if you later need to add TokenD, the SDK must generate a new keypair and request a fresh signature covering `[A, B, C, D]`. Plan your token set upfront when possible.
+The tradeoff: if you later need to add ContractD, the SDK must generate a new keypair and request a fresh signature covering `[A, B, C, D]`. Plan your contract set upfront when possible.
 
 ## Web extensions
 

@@ -4,7 +4,7 @@ import {
   balanceOfContract,
   decimalsContract,
   symbolContract,
-  useAllowTokens,
+  useAllow,
   useConfidentialBalances,
   useMetadata,
   type Address,
@@ -107,7 +107,7 @@ export function TokenTable({
   LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const [revealed, setRevealed] = useState(false);
-  const { mutate: allowTokens } = useAllowTokens();
+  const { mutate: allow } = useAllow();
   const {
     data: balances,
     isFetching,
@@ -120,7 +120,7 @@ export function TokenTable({
     <div className="space-y-4">
       <button
         onClick={() =>
-          allowTokens(tokenAddresses, {
+          allow(tokenAddresses, {
             onSuccess() {
               setRevealed(!revealed);
             },

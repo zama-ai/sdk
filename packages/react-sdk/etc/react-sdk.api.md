@@ -764,7 +764,7 @@ export interface UseActivityFeedConfig {
 }
 
 // @public
-export function useAllowTokens(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
@@ -1295,13 +1295,13 @@ export function useRequestZKProofVerification(): _tanstack_react_query0.UseMutat
 export function useResumeUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
 
 // @public
+export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+
+// @public
 export function useRevokeDelegation(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, RevokeDelegationParams>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, RevokeDelegationParams, unknown>;
 
 // @public
 export function useRevokeSession(options?: UseMutationOptions<void>): _tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
-
-// @public
-export function useRevokeTokens(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useShield<TContext = unknown>(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;
@@ -1399,7 +1399,7 @@ export function useUserDecryptedValue(handle: Handle | undefined): _tanstack_rea
 // @public
 export function useUserDecryptedValues(handles: Handle[]): {
     data: Record<`0x${string}`, ClearValueType | undefined>;
-    results: (_tanstack_react_query0.UseQueryResult<unknown, unknown> | _tanstack_react_query0.UseQueryResult<unknown, Error>)[];
+    results: _tanstack_react_query0.UseQueryResult<never, Error>[];
 };
 
 // @public
