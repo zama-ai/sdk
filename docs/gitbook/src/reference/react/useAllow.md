@@ -74,7 +74,8 @@ function AuthOnConnect({ contracts }: { contracts: `0x${string}`[] }) {
 Array of contract addresses to authorize decryption for in a single wallet signature. These can be any contracts that use FHE-encrypted values — not limited to tokens.
 
 ```tsx
-await allow(["0xContractA", "0xContractB", "0xContractC"]);
+// Authorize any contracts with encrypted state — tokens, auctions, governance, etc.
+await allow([confidentialTokenAddress, auctionAddress, governanceAddress]);
 ```
 
 ## Return Type

@@ -14,7 +14,9 @@ import { useZamaSDK } from "../provider";
  * @example
  * ```tsx
  * const { mutate: revoke } = useRevoke();
- * revoke(["0xContractA", "0xContractB"]);
+ *
+ * // Revoke for any contracts: tokens, auctions, governance, etc.
+ * revoke([tokenAddress, auctionAddress]);
  * ```
  */
 export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>) {

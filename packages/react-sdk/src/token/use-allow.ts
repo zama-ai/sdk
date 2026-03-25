@@ -19,7 +19,10 @@ import { useZamaSDK } from "../provider";
  * @example
  * ```tsx
  * const { mutateAsync: allow, isPending } = useAllow();
- * // Call allow(contractAddresses) before any decrypt operation
+ *
+ * // Authorize decryption for any contracts with encrypted state:
+ * // confidential tokens, auction contracts, governance contracts, etc.
+ * await allow([tokenAddress, auctionAddress, governanceAddress]);
  * ```
  */
 export function useAllow(options?: UseMutationOptions<void, Error, Address[]>) {
