@@ -41,8 +41,8 @@ async function main() {
   // ──────────────────────────────────────────────────────────────────────────
   section("SECTION 1 — Setup");
 
-  const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
-  const DELEGATE_PRIVATE_KEY = process.env.DELEGATE_PRIVATE_KEY as `0x${string}`;
+  const PRIVATE_KEY = process.env.PRIVATE_KEY;
+  const DELEGATE_PRIVATE_KEY = process.env.DELEGATE_PRIVATE_KEY;
   const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL;
   const RELAYER_API_KEY = process.env.RELAYER_API_KEY;
 
@@ -50,8 +50,8 @@ async function main() {
   if (!DELEGATE_PRIVATE_KEY) throw new Error("Missing env: DELEGATE_PRIVATE_KEY");
   if (!SEPOLIA_RPC_URL) throw new Error("Missing env: SEPOLIA_RPC_URL");
 
-  const accountA = privateKeyToAccount(PRIVATE_KEY);
-  const accountB = privateKeyToAccount(DELEGATE_PRIVATE_KEY);
+  const accountA = privateKeyToAccount(PRIVATE_KEY as `0x${string}`);
+  const accountB = privateKeyToAccount(DELEGATE_PRIVATE_KEY as `0x${string}`);
 
   console.log("Account A:", accountA.address);
   console.log("Account B:", accountB.address, "(delegate)");
@@ -65,6 +65,9 @@ async function main() {
   const walletClientA = createWalletClient({ account: accountA, chain: sepolia, transport });
   const walletClientB = createWalletClient({ account: accountB, chain: sepolia, transport });
 
+  const signerA = new ViemSigner({ walletClient: walletClientA, publicClient });
+  const signerB = new ViemSigner({ walletClient: walletClientB, publicClient });
+
   const auth = RELAYER_API_KEY
     ? { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY }
     : undefined;
@@ -74,12 +77,12 @@ async function main() {
   const relayer = new RelayerNode({
     getChainId: () => signerA.getChainId(),
     transports: {
-      [sepolia.id]: { ...(auth && { auth }) },
+      [sepolia.id]: {
+        network: SEPOLIA_RPC_URL,
+        ...(auth && { auth }),
+      },
     },
   });
-
-  const signerA = new ViemSigner({ walletClient: walletClientA, publicClient });
-  const signerB = new ViemSigner({ walletClient: walletClientB, publicClient });
 
   // Each SDK instance has its own signer context.
   // MemoryStorage is sufficient here; in production use a persistent store
