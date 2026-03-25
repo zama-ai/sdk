@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.1.1-alpha.2...v2.2.0-alpha.1) (2026-03-25)
+
+### Features
+
+- **react-sdk:** improve query wrappers types ([#168](https://github.com/zama-ai/sdk/issues/168)) ([db616c7]())
+
 ## [2.1.1-alpha.2](https://github.com/zama-ai/sdk/compare/v2.1.1-alpha.1...v2.1.1-alpha.2) (2026-03-25)
 
 ### Bug Fixes
