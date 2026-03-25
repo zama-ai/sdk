@@ -44,7 +44,11 @@ if ! nc -z 127.0.0.1 "$PORT" 2>/dev/null; then
 fi
 
 # Deploy fhevm host stack — independent per port, no lock needed.
-"$FORGE_FHEVM_DIR/deploy-local.sh" --anvil-port "$PORT"
+# In CI, artifacts are pre-built and cached; skip the internal forge build
+# to avoid failures when soldeer dependencies are absent (cache-hit path).
+DEPLOY_ARGS=(--anvil-port "$PORT")
+[ -n "${CI:-}" ] && DEPLOY_ARGS+=(--skip-build)
+"$FORGE_FHEVM_DIR/deploy-local.sh" "${DEPLOY_ARGS[@]}"
 
 # Acquire an exclusive lock for forge script only.
 # mkdir is atomic on all POSIX systems. Timeout after 120s.
