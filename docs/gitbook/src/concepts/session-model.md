@@ -21,7 +21,7 @@ The keypair is generated once and encrypted before storage. It persists across p
 
 The session signature is an EIP-712 typed data signature from the user's wallet. It serves two purposes:
 
-1. **Authorization** — proves the user consents to decrypt balances for specific token contracts.
+1. **Authorization** — proves the user consents to decrypt balances for specific contract addresses.
 2. **Key derivation** — the signature's raw bytes are used as input to PBKDF2, producing the AES-GCM key that encrypts and decrypts the FHE private key.
 
 By default, the session signature lives in memory only. It is lost on page reload, tab close, or explicit revocation.
@@ -114,7 +114,7 @@ Call `allow()` early — ideally right after wallet connect — to prompt the si
 A single signature covers all contract addresses passed to `allow()`. The signed EIP-712 message includes the exact set of contracts. If you later call `allow()` with a contract not in the original set, the SDK generates a fresh keypair and requests a new wallet signature.
 
 {% hint style="warning" %}
-Batch all token addresses into a single `allow()` call. Each call with a new contract set triggers a new keypair and wallet popup. Plan your allow calls to minimize signing prompts.
+Batch all contract addresses into a single `allow()` call. Each call with a new contract set triggers a new keypair and wallet popup. Plan your allow calls to minimize signing prompts.
 {% endhint %}
 
 ### Revoke (clear session)
