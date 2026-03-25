@@ -1,72 +1,215 @@
-import { Wallet, JsonRpcProvider } from "ethers";
+import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
 import { MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY!;
-const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL!;
-const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL!;
-const RELAYER_API_KEY = process.env.RELAYER_API_KEY!;
-const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS as Address;
-const RECIPIENT = process.env.RECIPIENT as Address;
+// ── Sepolia contract addresses ────────────────────────────────────────────────
+// USDT mock ERC-20 (mintable in this demo)
+const USDT_ADDRESS = "0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0" as Address;
+// Confidential USDT — ERC-7984 wrapper (the token the SDK operates on)
+const CUSDT_ADDRESS = "0x4E7B06D78965594eB5EF5414c357ca21E1554491" as Address;
 
-const MAINNET_CHAIN_ID = 1;
+// ── Token amounts (USDT uses 6 decimals) ─────────────────────────────────────
+const DECIMALS = 6n;
+const MINT_AMOUNT = 1_000n * 10n ** DECIMALS; //  1 000 USDT — minted to Account A
+const SHIELD_AMOUNT = 100n * 10n ** DECIMALS; //    100 USDT → shielded to cUSDT
+const TRANSFER_AMOUNT = 10n * 10n ** DECIMALS; //    10 cUSDT — transferred to Account B
+const UNSHIELD_AMOUNT = 50n * 10n ** DECIMALS; //    50 cUSDT → unshielded back to USDT
+
 const SEPOLIA_CHAIN_ID = 11155111;
 
-async function main() {
-  // 1. Create ethers signer
-  const provider = new JsonRpcProvider(SEPOLIA_RPC_URL);
-  const wallet = new Wallet(PRIVATE_KEY, provider);
+// ── ERC-20 ABI fragments ──────────────────────────────────────────────────────
+const ERC20_ABI = [
+  "function mint(address account, uint256 amount)",
+  "function balanceOf(address account) view returns (uint256)",
+] as const;
 
-  // 2. Create SDK components
-  const signer = new EthersSigner({ signer: wallet });
-  const authConfig = { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY };
+function fmt(amount: bigint): string {
+  return `${formatUnits(amount, Number(DECIMALS))} USDT`;
+}
+
+function section(title: string): void {
+  console.log(`\n${"═".repeat(56)}`);
+  console.log(`  ${title}`);
+  console.log(`${"═".repeat(56)}\n`);
+}
+
+async function main() {
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION 1 — Setup
+  // ──────────────────────────────────────────────────────────────────────────
+  section("SECTION 1 — Setup");
+
+  const PRIVATE_KEY = process.env.PRIVATE_KEY;
+  const DELEGATE_PRIVATE_KEY = process.env.DELEGATE_PRIVATE_KEY;
+  const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL;
+  const RELAYER_API_KEY = process.env.RELAYER_API_KEY;
+
+  if (!PRIVATE_KEY) throw new Error("Missing env: PRIVATE_KEY");
+  if (!DELEGATE_PRIVATE_KEY) throw new Error("Missing env: DELEGATE_PRIVATE_KEY");
+  if (!SEPOLIA_RPC_URL) throw new Error("Missing env: SEPOLIA_RPC_URL");
+
+  const provider = new JsonRpcProvider(SEPOLIA_RPC_URL);
+  const walletA = new Wallet(PRIVATE_KEY, provider);
+  const walletB = new Wallet(DELEGATE_PRIVATE_KEY, provider);
+
+  console.log("Account A:", walletA.address);
+  console.log("Account B:", walletB.address, "(delegate)");
+
+  const auth = RELAYER_API_KEY
+    ? { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY }
+    : undefined;
+
+  // RelayerNode uses Node.js worker_threads for FHE operations — pure backend,
+  // no browser dependencies. A single instance can be shared across SDK objects.
   const relayer = new RelayerNode({
-    getChainId: () => signer.getChainId(),
+    getChainId: () => signerA.getChainId(),
     transports: {
-      [MAINNET_CHAIN_ID]: { network: MAINNET_RPC_URL, auth: authConfig },
-      [SEPOLIA_CHAIN_ID]: { network: SEPOLIA_RPC_URL, auth: authConfig },
+      [SEPOLIA_CHAIN_ID]: { ...(auth && { auth }) },
     },
   });
-  const storage = new MemoryStorage();
 
-  const sdk = new ZamaSDK({ relayer, signer, storage });
+  const signerA = new EthersSigner({ signer: walletA });
+  const signerB = new EthersSigner({ signer: walletB });
 
-  // 3. Resolve wrapper address via the on-chain registry
-  const result = await sdk.registry.getConfidentialToken(TOKEN_ADDRESS);
-  if (!result) {
-    throw new Error(`No confidential wrapper registered for ${TOKEN_ADDRESS}`);
-  }
-  const token = sdk.createToken(TOKEN_ADDRESS, result.confidentialTokenAddress);
+  // Each SDK instance has its own signer context.
+  // MemoryStorage is sufficient here; in production use a persistent store
+  // (e.g. Redis via a custom GenericStorage) to cache FHE credentials across
+  // process restarts.
+  const sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
+  const sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
+
+  // createToken() takes the confidential token (ERC-7984 wrapper) address.
+  // The underlying ERC-20 address is resolved on-chain when needed.
+  const tokenA = sdkA.createToken(CUSDT_ADDRESS);
+  const tokenB = sdkB.createToken(CUSDT_ADDRESS);
 
   try {
-    // 3. Check balance
-    const balance = await token.balanceOf();
-    console.log("Decrypted balance:", balance);
+    // ────────────────────────────────────────────────────────────────────────
+    // SECTION 2 — Mint
+    // Mint USDT directly on the ERC-20 mock contract so Account A has tokens
+    // to shield. On a production token this step would not be available.
+    // ────────────────────────────────────────────────────────────────────────
+    section("SECTION 2 — Mint");
 
-    // 4. Shield (wrap public tokens into confidential)
-    console.log("Shielding 1000 tokens...");
-    const shieldTx = await token.shield(1000n);
-    console.log("Shield tx:", shieldTx);
+    const erc20 = new Contract(USDT_ADDRESS, ERC20_ABI, walletA);
+    const mintFn = erc20.getFunction("mint");
+    const balanceOfFn = erc20.getFunction("balanceOf");
 
-    // 5. Confidential transfer
-    console.log("Transferring 500 tokens to", RECIPIENT);
-    const transferTx = await token.confidentialTransfer(RECIPIENT, 500n);
-    console.log("Transfer tx:", transferTx);
+    const erc20BalanceBefore = (await balanceOfFn(walletA.address)) as bigint;
+    console.log("ERC-20 balance before mint:", fmt(erc20BalanceBefore));
 
-    // 6. Unshield (unwrap confidential tokens back to public)
-    console.log("Unshielding 200 tokens...");
-    const unshieldTx = await token.unshield(200n);
-    console.log("Unshield tx:", unshieldTx);
+    console.log(`Minting ${fmt(MINT_AMOUNT)} to Account A...`);
+    const mintTx = await mintFn(walletA.address, MINT_AMOUNT);
+    console.log("  Mint tx:", mintTx.hash);
+    await mintTx.wait();
 
-    // 7. Final balance
-    const finalBalance = await token.balanceOf();
-    console.log("Final balance:", finalBalance);
+    const erc20BalanceAfter = (await balanceOfFn(walletA.address)) as bigint;
+    console.log("ERC-20 balance after mint: ", fmt(erc20BalanceAfter));
+
+    // ────────────────────────────────────────────────────────────────────────
+    // SECTION 3 — Confidential Token Lifecycle
+    // ────────────────────────────────────────────────────────────────────────
+    section("SECTION 3 — Confidential Token Lifecycle");
+
+    // 3a. Initial confidential balance
+    console.log("── 3a. Initial balances ──");
+    const balanceA0 = await tokenA.balanceOf();
+    const balanceB0 = await tokenB.balanceOf();
+    console.log("cUSDT balance (A):", fmt(balanceA0));
+    console.log("cUSDT balance (B):", fmt(balanceB0));
+
+    // 3b. Shield: ERC-20 USDT → confidential cUSDT
+    // shield() handles approval + wrap in a single call.
+    console.log("\n── 3b. Shield ──");
+    console.log(`Shielding ${fmt(SHIELD_AMOUNT)} USDT → cUSDT (Account A)...`);
+    await tokenA.shield(SHIELD_AMOUNT, {
+      callbacks: {
+        onApprovalSubmitted: (tx) => console.log("  Approval submitted:", tx),
+        onShieldSubmitted: (tx) => console.log("  Shield submitted:  ", tx),
+      },
+    });
+
+    const balanceA1 = await tokenA.balanceOf();
+    console.log("cUSDT balance (A, after shield):", fmt(balanceA1));
+
+    // 3c. Confidential transfer: A → B
+    // The amount is encrypted client-side before being sent on-chain —
+    // only the recipient and the token contract can read it.
+    console.log("\n── 3c. Confidential transfer ──");
+    console.log(`Transferring ${fmt(TRANSFER_AMOUNT)} cUSDT: A → B...`);
+    await tokenA.confidentialTransfer(walletB.address as Address, TRANSFER_AMOUNT, {
+      onEncryptComplete: () => console.log("  Encryption complete"),
+      onTransferSubmitted: (tx) => console.log("  Transfer submitted:", tx),
+    });
+
+    const balanceA2 = await tokenA.balanceOf();
+    const balanceB2 = await tokenB.balanceOf();
+    console.log("cUSDT balance (A, after transfer):", fmt(balanceA2));
+    console.log("cUSDT balance (B, after transfer):", fmt(balanceB2));
+
+    // 3d. Unshield: confidential cUSDT → ERC-20 USDT
+    // unshield() is a two-phase operation (unwrap + finalizeUnwrap).
+    // The callbacks let you track each phase; both are awaited automatically.
+    console.log("\n── 3d. Unshield ──");
+    console.log(`Unshielding ${fmt(UNSHIELD_AMOUNT)} cUSDT → USDT (Account A)...`);
+    await tokenA.unshield(UNSHIELD_AMOUNT, {
+      onUnwrapSubmitted: (tx) => console.log("  Unwrap submitted:   ", tx),
+      onFinalizing: () => console.log("  Waiting for finalization..."),
+      onFinalizeSubmitted: (tx) => console.log("  Finalize submitted:", tx),
+    });
+
+    const balanceA3 = await tokenA.balanceOf();
+    const erc20BalanceFinal = (await balanceOfFn(walletA.address)) as bigint;
+    console.log("\ncUSDT balance (A, final):", fmt(balanceA3));
+    console.log("USDT  balance (A, final):", fmt(erc20BalanceFinal));
+
+    // ────────────────────────────────────────────────────────────────────────
+    // SECTION 4 — Delegation
+    // Account A grants Account B the right to decrypt A's confidential balance.
+    // This is useful in backend systems where a service account (B) needs to
+    // read balances on behalf of users (A) without holding their private key.
+    // ────────────────────────────────────────────────────────────────────────
+    section("SECTION 4 — Delegation");
+
+    // 4a. Grant: A delegates decrypt rights to B
+    console.log("── 4a. Grant delegation: A → B ──");
+    await tokenA.delegateDecryption({ delegateAddress: walletB.address as Address });
+
+    const isDelegated = await tokenA.isDelegated({
+      delegatorAddress: walletA.address as Address,
+      delegateAddress: walletB.address as Address,
+    });
+    console.log("Delegation active:", isDelegated);
+
+    // 4b. Decrypt as delegate: B reads A's balance without A's private key
+    console.log("\n── 4b. Decrypt as delegate ──");
+    console.log("Account B reading Account A's cUSDT balance...");
+    const balanceOfAasB = await tokenB.decryptBalanceAs({
+      delegatorAddress: walletA.address as Address,
+    });
+    console.log("cUSDT balance (A, seen by B):", fmt(balanceOfAasB));
+
+    // 4c. Revoke: A removes B's decrypt rights
+    console.log("\n── 4c. Revoke delegation ──");
+    await tokenA.revokeDelegation({ delegateAddress: walletB.address as Address });
+
+    const isDelegatedAfter = await tokenA.isDelegated({
+      delegatorAddress: walletA.address as Address,
+      delegateAddress: walletB.address as Address,
+    });
+    console.log("Delegation active after revoke:", isDelegatedAfter);
   } finally {
-    // 8. Cleanup worker pool
-    sdk.terminate();
+    // Always terminate to release Node.js worker threads.
+    // sdkB shares the same relayer instance — dispose() unsubscribes its
+    // signer listeners without killing the already-terminating relayer.
+    sdkB.dispose();
+    sdkA.terminate();
   }
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error("Fatal:", err);
+  process.exit(1);
+});
