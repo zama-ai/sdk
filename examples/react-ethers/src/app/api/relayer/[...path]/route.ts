@@ -16,10 +16,16 @@ const HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
+// Allowlist of request headers to forward to the upstream relayer.
+// Using an allowlist (rather than stripping hop-by-hop headers) prevents accidentally
+// forwarding browser cookies, Authorization headers, or other sensitive credentials.
+// RelayerWeb only sends content-type, accept, and content-length — no other headers needed.
+const REQUEST_ALLOW = new Set(["content-type", "accept", "content-length"]);
+
 function forwardHeaders(incoming: Headers): Headers {
   const out = new Headers();
   for (const [key, value] of incoming) {
-    if (!HOP_BY_HOP.has(key.toLowerCase()) && key.toLowerCase() !== "host") {
+    if (REQUEST_ALLOW.has(key.toLowerCase())) {
       out.set(key, value);
     }
   }

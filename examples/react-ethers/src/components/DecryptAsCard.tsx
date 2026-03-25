@@ -83,7 +83,9 @@ export function DecryptAsCard({
             <span className="delegation-status-checking">Checking delegation status…</span>
           )}
           {delegationStatus.isError && (
-            <span className="delegation-status-none">Unable to check delegation status</span>
+            <span className="delegation-status-none">
+              Unable to check delegation status: {delegationStatus.error?.message}
+            </span>
           )}
           {delegationStatus.data?.isDelegated && (
             <span className="delegation-status-active">

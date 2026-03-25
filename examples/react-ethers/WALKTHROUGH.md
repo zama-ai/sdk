@@ -267,7 +267,8 @@ All user inputs are parsed with:
 
 ```ts
 // src/lib/parseAmount.ts
-parseUnits(value, decimals); // returns 0n on invalid input
+parseAmount(value, decimals); // wraps ethers' parseUnits — returns 0n on invalid or empty input
+// (ethers' parseUnits itself throws on invalid input; parseAmount catches that and returns 0n)
 ```
 
 And displayed with:
