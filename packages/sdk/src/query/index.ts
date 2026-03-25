@@ -116,7 +116,7 @@ export {
   userDecryptMutationOptions,
   type DecryptResult,
   type UserDecryptMutationParams,
-  type UserDecryptCallbacks,
+  type UserDecryptOptions,
   type DecryptHandle,
 } from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";

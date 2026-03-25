@@ -19,34 +19,47 @@ export interface UserDecryptMutationParams {
   handles: DecryptHandle[];
 }
 
-/** Progress callbacks for the decrypt flow. */
-export interface UserDecryptCallbacks {
+export interface UserDecryptOptions {
   /** Fired after credentials are ready (either from cache or freshly generated). */
   onCredentialsReady?: () => void;
   /** Fired after decryption completes. */
   onDecrypted?: (values: DecryptResult) => void;
+  /**
+   * Returns `true` if the handle's decrypted value is already in the query cache.
+   * When provided, the mutation skips cached handles and only decrypts uncached ones.
+   */
+  isHandleCached?: (handle: Handle) => boolean;
 }
 
 export function userDecryptMutationOptions(
   sdk: ZamaSDK,
-  callbacks?: UserDecryptCallbacks,
-): MutationFactoryOptions<
-  readonly ["zama.userDecrypt"],
-  UserDecryptMutationParams,
-  Record<Handle, ClearValueType>
-> {
+  options?: UserDecryptOptions,
+): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, DecryptResult> {
   return {
     mutationKey: ["zama.userDecrypt"] as const,
     mutationFn: async ({ handles }) => {
-      const contractAddresses = [...new Set(handles.map((h) => h.contractAddress))];
+      const {
+        onCredentialsReady = () => {},
+        onDecrypted = () => {},
+        isHandleCached,
+      } = options ?? {};
+      const uncached = isHandleCached ? handles.filter((h) => !isHandleCached(h.handle)) : handles;
+
+      if (uncached.length === 0) {
+        return {};
+      }
+
+      const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
       const creds = await sdk.credentials.allow(...contractAddresses);
-      callbacks?.onCredentialsReady?.();
+      try {
+        onCredentialsReady();
+      } catch {}
 
       const signerAddress = await sdk.signer.getAddress();
-      const allResults: Record<Handle, ClearValueType> = {};
+      const allResults: DecryptResult = {};
 
       const handlesByContract = new Map<Address, Handle[]>();
-      for (const h of handles) {
+      for (const h of uncached) {
         const list = handlesByContract.get(h.contractAddress) ?? [];
         list.push(h.handle);
         handlesByContract.set(h.contractAddress, list);
@@ -67,7 +80,10 @@ export function userDecryptMutationOptions(
         Object.assign(allResults, result);
       }
 
-      callbacks?.onDecrypted?.(allResults);
+      try {
+        onDecrypted(allResults);
+      } catch {}
+
       return allResults;
     },
     onSuccess: (data, _variables, _onMutateResult, context) => {

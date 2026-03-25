@@ -1,18 +1,19 @@
 "use client";
 
-import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ClearValueType, Handle } from "@zama-fhe/sdk";
 import type {
   DecryptHandle,
   DecryptResult,
-  UserDecryptCallbacks,
   UserDecryptMutationParams,
+  UserDecryptOptions,
 } from "@zama-fhe/sdk/query";
-import { hashFn, userDecryptMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { userDecryptMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { useQueries } from "../utils/query";
 
 /** Configuration for {@link useUserDecrypt}. */
-export interface UseUserDecryptConfig extends UserDecryptCallbacks {
+export interface UseUserDecryptConfig extends UserDecryptOptions {
   /** Encrypted handles to track and decrypt. */
   handles?: DecryptHandle[];
 }
@@ -28,8 +29,8 @@ export interface UseUserDecryptConfig extends UserDecryptCallbacks {
  *
  * | Field | Type | Description |
  * |-------|------|-------------|
- * | `mutate(params?)` | `function` | Trigger decryption. Without args, decrypts uncached handles from `config.handles`. No-op if all are cached. |
- * | `mutateAsync(params?)` | `function` | Same as `mutate` but returns `Promise<DecryptResult>`. Resolves with cached values if all cached. |
+ * | `mutate(params?)` | `function` | Trigger decryption. Without args, decrypts all `config.handles`. Already-cached handles are skipped inside the mutation. |
+ * | `mutateAsync(params?)` | `function` | Same as `mutate` but returns `Promise<DecryptResult>`. |
  * | `data` | `DecryptResult \| undefined` | Result of the last successful `mutate` call. |
  * | `values` | `Record<Handle, ClearValueType \| undefined>` | Reactive cache of all tracked handles (populated across calls). |
  * | `isPending` | `boolean` | `true` while decryption is in progress. |
@@ -45,7 +46,6 @@ export interface UseUserDecryptConfig extends UserDecryptCallbacks {
  *
  * @example
  * ```tsx
- * // Basic usage — decrypt on button click
  * const { mutate, isPending, data } = useUserDecrypt();
  *
  * <button
@@ -60,7 +60,6 @@ export interface UseUserDecryptConfig extends UserDecryptCallbacks {
  *
  * @example
  * ```tsx
- * // Track handles — auto-decrypt uncached ones, read cached values reactively
  * const { values, mutate, isPending } = useUserDecrypt({
  *   handles: [
  *     { handle: "0xA", contractAddress: "0xContract" },
@@ -70,21 +69,18 @@ export interface UseUserDecryptConfig extends UserDecryptCallbacks {
  * });
  *
  * // values["0xA"] is the cached cleartext (or undefined if not yet decrypted)
- * // mutate() without args decrypts only uncached handles
  * <button onClick={() => mutate()} disabled={isPending}>Decrypt all</button>
  * ```
  */
 export function useUserDecrypt(config?: UseUserDecryptConfig) {
   const sdk = useZamaSDK();
   const queryClient = useQueryClient();
-  const handles = config?.handles ?? [];
-  const { handles: _handles, ...callbacks } = config ?? {};
+  const { handles = [], onCredentialsReady, onDecrypted } = config ?? {};
 
-  // Reactively subscribe to cached decrypted values for all tracked handles
+  // Reactive subscription to cached decrypted values for all tracked handles.
   const cacheResults = useQueries({
     queries: handles.map((h) => ({
       queryKey: zamaQueryKeys.decryption.handle(h.handle),
-      queryKeyHashFn: hashFn,
       queryFn: () => {
         throw new Error(
           `[useUserDecrypt] Cache-only query for handle ${h.handle} was unexpectedly executed`,
@@ -100,52 +96,27 @@ export function useUserDecrypt(config?: UseUserDecryptConfig) {
     values[handles[i]!.handle] = cacheResults[i]?.data as ClearValueType | undefined;
   }
 
+  const isHandleCached = (handle: Handle): boolean => {
+    const state = queryClient.getQueryState(zamaQueryKeys.decryption.handle(handle));
+    return state?.dataUpdatedAt !== undefined && state.dataUpdatedAt !== 0;
+  };
+
   const mutation = useMutation<DecryptResult, Error, UserDecryptMutationParams>(
-    userDecryptMutationOptions(sdk, callbacks),
+    userDecryptMutationOptions(sdk, {
+      onCredentialsReady,
+      onDecrypted,
+      isHandleCached,
+    }),
   );
-
-  function getDefaultParams(): UserDecryptMutationParams {
-    const uncached = handles.filter((h) => {
-      const state = queryClient.getQueryState(zamaQueryKeys.decryption.handle(h.handle));
-      return state?.dataUpdatedAt === undefined || state.dataUpdatedAt === 0;
-    });
-    return { handles: uncached };
-  }
-
-  function getCachedValues(requestedHandles: DecryptHandle[]): DecryptResult {
-    const cached: DecryptResult = {};
-    for (const h of requestedHandles) {
-      const state = queryClient.getQueryState(zamaQueryKeys.decryption.handle(h.handle));
-      if (state?.data !== undefined) {
-        cached[h.handle] = state.data as ClearValueType;
-      }
-    }
-    return cached;
-  }
-
-  function mutate(params?: UserDecryptMutationParams, options?: MutateCallbackOptions) {
-    const resolved = params ?? getDefaultParams();
-    if (resolved.handles.length === 0) {
-      return;
-    }
-    mutation.mutate(resolved, options);
-  }
-
-  function mutateAsync(
-    params?: UserDecryptMutationParams,
-    options?: MutateCallbackOptions,
-  ): Promise<DecryptResult> {
-    const resolved = params ?? getDefaultParams();
-    if (resolved.handles.length === 0) {
-      return Promise.resolve(getCachedValues(handles));
-    }
-    return mutation.mutateAsync(resolved, options);
-  }
 
   return {
     ...mutation,
-    mutate,
-    mutateAsync,
+    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => {
+      mutation.mutate(params ?? { handles }, options);
+    },
+    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => {
+      return mutation.mutateAsync(params ?? { handles }, options);
+    },
     /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values,
   };

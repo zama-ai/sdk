@@ -240,6 +240,7 @@ import { UseQueryOptions } from '@tanstack/react-query';
 import { UserDecryptCallbacks } from '@zama-fhe/sdk/query';
 import { userDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { UserDecryptMutationParams } from '@zama-fhe/sdk/query';
+import { UserDecryptOptions } from '@zama-fhe/sdk/query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
 import { wrapContract } from '@zama-fhe/sdk';
 import { wrapETHContract } from '@zama-fhe/sdk';
@@ -1392,7 +1393,7 @@ export function useUserDecrypt(config?: UseUserDecryptConfig): {
 };
 
 // @public
-export interface UseUserDecryptConfig extends UserDecryptCallbacks {
+export interface UseUserDecryptConfig extends UserDecryptOptions {
     handles?: DecryptHandle[];
 }
 
@@ -1482,7 +1483,7 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/index.d.ts:156:3 - (ae-forgotten-export) The symbol "MutateCallbackOptions" needs to be exported by the entry point index.d.ts
+// dist/index.d.ts:153:3 - (ae-forgotten-export) The symbol "MutateCallbackOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

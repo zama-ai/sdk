@@ -1262,19 +1262,20 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.UnwrapSubmitted;
 }
 
-// @public
-export interface UserDecryptCallbacks {
-    onCredentialsReady?: () => void;
-    onDecrypted?: (values: DecryptResult) => void;
-}
-
 // @public (undocumented)
-export function userDecryptMutationOptions(sdk: ZamaSDK, callbacks?: UserDecryptCallbacks): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, Record<Handle, ClearValueType>>;
+export function userDecryptMutationOptions(sdk: ZamaSDK, options?: UserDecryptOptions): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, DecryptResult>;
 
 // @public
 export interface UserDecryptMutationParams {
     // (undocumented)
     handles: DecryptHandle[];
+}
+
+// @public (undocumented)
+export interface UserDecryptOptions {
+    isHandleCached?: (handle: Handle) => boolean;
+    onCredentialsReady?: () => void;
+    onDecrypted?: (values: DecryptResult) => void;
 }
 
 // @public
