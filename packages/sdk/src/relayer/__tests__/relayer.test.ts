@@ -1,7 +1,7 @@
 import { vi } from "vitest";
-import { afterEach, describe, it, expect, beforeEach } from "../../test-fixtures";
-import { ConfigurationError, EncryptionFailedError } from "../../token/errors";
-import { MemoryStorage } from "../../token/memory-storage";
+import { ConfigurationError, EncryptionFailedError } from "../../errors";
+import { MemoryStorage } from "../../storage/memory-storage";
+import { afterEach, beforeEach, describe, expect, it } from "../../test-fixtures";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks (available inside vi.mock factories)
@@ -69,10 +69,10 @@ vi.mock("../../worker/worker.node-pool", () => ({
 // Imports under test (must come after vi.mock)
 // ---------------------------------------------------------------------------
 
-import { RelayerWeb } from "../relayer-web";
-import { RelayerNode } from "../relayer-node";
 import { RelayerWorkerClient } from "../../worker/worker.client";
 import { NodeWorkerPool } from "../../worker/worker.node-pool";
+import { RelayerNode } from "../relayer-node";
+import { RelayerWeb } from "../relayer-web";
 
 // ---------------------------------------------------------------------------
 // Shared fixtures

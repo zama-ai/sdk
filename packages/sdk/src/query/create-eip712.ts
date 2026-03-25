@@ -1,6 +1,6 @@
 import type { Address, Hex } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type { ZamaSDK } from "../token/zama-sdk";
+import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link createEIP712MutationOptions}. */

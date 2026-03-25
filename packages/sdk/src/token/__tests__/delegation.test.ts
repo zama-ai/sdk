@@ -1,7 +1,7 @@
 import { createMockRelayer, describe, expect, it, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { Token } from "../token";
-import { MemoryStorage } from "../memory-storage";
+import { MemoryStorage } from "../../storage/memory-storage";
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts/constants";
 

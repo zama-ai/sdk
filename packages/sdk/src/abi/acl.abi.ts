@@ -1,4 +1,4 @@
-export const ACL_ABI = [
+export const aclAbi = [
   {
     inputs: [
       { internalType: "address", name: "delegate", type: "address" },

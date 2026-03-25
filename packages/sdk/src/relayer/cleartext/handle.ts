@@ -1,7 +1,7 @@
 import { concat, encodePacked, keccak256, pad, toBytes, toHex, type Address, type Hex } from "viem";
 import { HANDLE_VERSION, PREHANDLE_MASK } from "./constants";
 import { encryptionBitsFromFheTypeId, type FheTypeId } from "./fhe-type";
-import { EncryptionFailedError } from "../../token/errors";
+import { EncryptionFailedError } from "../../errors";
 
 const RAW_CT_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_rct");
 const HANDLE_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_hdl");

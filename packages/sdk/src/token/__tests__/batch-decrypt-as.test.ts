@@ -1,7 +1,7 @@
 import { describe, expect, vi } from "vitest";
 import { test, createMockSigner } from "../../test-fixtures";
 import { ReadonlyToken } from "../readonly-token";
-import { MemoryStorage } from "../memory-storage";
+import { MemoryStorage } from "../../storage/memory-storage";
 import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
 import type { Handle } from "../../relayer/relayer-sdk.types";
