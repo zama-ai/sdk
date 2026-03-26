@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
-
+import { vi } from "vitest";
 // ---------------------------------------------------------------------------
 // Hoisted mocks — vi.mock factories are hoisted above imports, so any
 // variables they reference must be created via vi.hoisted().
@@ -28,11 +28,13 @@ const { MockNodeWorkerClass, nodeUuidFn } = vi.hoisted(() => {
   return { MockNodeWorkerClass, nodeUuidFn };
 });
 
+//@ts-expect-error: no overload matches this call
 vi.mock(import("node:worker_threads"), () => ({
   default: { Worker: MockNodeWorkerClass },
   Worker: MockNodeWorkerClass,
 }));
 
+//@ts-expect-error: no overload matches this call
 vi.mock(import("node:crypto"), () => ({
   default: { randomUUID: (...args: unknown[]) => nodeUuidFn(...args) },
   randomUUID: (...args: unknown[]) => nodeUuidFn(...args),
@@ -68,10 +70,12 @@ vi.stubGlobal("Worker", MockWorkerClass);
 
 let uuidCounter = 0;
 
-vi.stubGlobal("crypto", {
-  ...globalThis.crypto,
-  randomUUID: () => `uuid-${++uuidCounter}`,
-});
+vi.stubGlobal(
+  "crypto",
+  Object.create(globalThis.crypto, {
+    randomUUID: { value: () => `uuid-${++uuidCounter}` },
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // Mock: node:worker_threads helpers
@@ -129,7 +133,12 @@ function autoResolveWebWorker(worker: MockWorker): void {
     Promise.resolve().then(() => {
       worker.onmessage?.(
         new MessageEvent("message", {
-          data: { id: req.id, type: req.type, success: true, data: { initialized: true } },
+          data: {
+            id: req.id,
+            type: req.type,
+            success: true,
+            data: { initialized: true },
+          },
         }),
       );
     });
@@ -141,7 +150,12 @@ function autoResolveNodeWorker(worker: MockNodeWorker): void {
   worker.postMessage.mockImplementation((req: WorkerRequest) => {
     Promise.resolve().then(() => {
       const handler = worker.listeners["message"]?.[0];
-      handler?.({ id: req.id, type: req.type, success: true, data: { initialized: true } });
+      handler?.({
+        id: req.id,
+        type: req.type,
+        success: true,
+        data: { initialized: true },
+      });
     });
   });
 }
@@ -278,7 +292,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("getInitPayload() returns INIT type with full config as payload", async () => {
+  it("getInitPayload() returns INIT type with serializable config as payload", async () => {
     setupAutoResolvingWebWorker();
     const config = defaultWebConfig();
     const client = new RelayerWorkerClient(config);
@@ -287,6 +301,36 @@ describe("RelayerWorkerClient", () => {
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
     expect(req.payload).toEqual(config);
+
+    client.terminate();
+  });
+
+  it("getInitPayload() excludes logger from the payload sent to the worker", async () => {
+    setupAutoResolvingWebWorker();
+    const logger = {
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const config = {
+      ...defaultWebConfig(),
+      logger,
+      integrity: "sha384-abc",
+      thread: 4,
+    };
+    const client = new RelayerWorkerClient(config);
+    await client.initWorker();
+
+    const req = getFirstPostedRequest(lastMockWorker!);
+    expect(req.payload).not.toHaveProperty("logger");
+    expect(req.payload).toEqual({
+      cdnUrl: config.cdnUrl,
+      fhevmConfig: config.fhevmConfig,
+      csrfToken: config.csrfToken,
+      integrity: "sha384-abc",
+      thread: 4,
+    });
 
     client.terminate();
   });
@@ -378,7 +422,12 @@ describe("RelayerWorkerClient", () => {
       Promise.resolve().then(() => {
         worker.onmessage?.(
           new MessageEvent("message", {
-            data: { id: req.id, type: req.type, success: true, data: { updated: true } },
+            data: {
+              id: req.id,
+              type: req.type,
+              success: true,
+              data: { updated: true },
+            },
           }),
         );
       });

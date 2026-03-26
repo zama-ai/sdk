@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 
-import { ZamaSDK } from "../../token/zama-sdk";
+import { ZamaSDK } from "../../zama-sdk";
 import { allowMutationOptions } from "../allow";
 import { revokeMutationOptions } from "../revoke";
 import { revokeSessionMutationOptions } from "../revoke-session";

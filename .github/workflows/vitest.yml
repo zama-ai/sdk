@@ -34,14 +34,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - run: pnpm typecheck
+      - name: Build packages
+        run: pnpm build
 
       - run: pnpm lint
 
-      - run: pnpm format:check
+      - run: pnpm typecheck
 
-      - name: Build packages
-        run: pnpm build
+      - run: pnpm format:check
 
       - name: Check bundle size
         run: pnpm size

@@ -743,7 +743,7 @@ export interface UseActivityFeedConfig {
 }
 
 // @public
-export function useAllowTokens(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
@@ -935,7 +935,9 @@ export interface UseConfidentialBalanceConfig {
 }
 
 // @public
-export type UseConfidentialBalanceOptions = Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">;
+export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
+}
 
 // @public
 export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): {
@@ -1116,15 +1118,18 @@ export interface UseConfidentialBalancesConfig {
 }
 
 // @public
-export type UseConfidentialBalancesOptions = Omit<UseQueryOptions<ConfidentialBalancesData>, "queryKey" | "queryFn">;
+export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<ConfidentialBalancesData>, "queryKey" | "queryFn" | "enabled"> {
+    enabled?: boolean;
+}
 
 // @public
-export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<unknown, Error>;
+export function useConfidentialIsApproved(config: UseConfidentialIsApprovedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<boolean, Error>;
 
 // @public
-export interface UseConfidentialIsApprovedConfig extends UseZamaConfig {
+export interface UseConfidentialIsApprovedConfig {
     holder?: Address;
     spender: Address | undefined;
+    tokenAddress: Address | undefined;
 }
 
 // @public
@@ -1168,13 +1173,13 @@ export function useDelegateDecryption(config: UseZamaConfig, options?: UseMutati
 export function useDelegatedUserDecrypt(): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptParams, unknown>;
 
 // @public
-export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData, Error>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<DelegationStatusData, Error>;
+export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<DelegationStatusData, Error>;
 
 // @public (undocumented)
 export interface UseDelegationStatusConfig {
     delegateAddress?: Address;
     delegatorAddress?: Address;
-    tokenAddress: Address;
+    tokenAddress: Address | undefined;
 }
 
 // @public
@@ -1198,7 +1203,7 @@ export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOp
 export function useGenerateKeypair(): _tanstack_react_query0.UseMutationResult<_zama_fhe_sdk0.KeypairType<`0x${string}`>, Error, void, unknown>;
 
 // @public
-export function useIsAllowed(): _tanstack_react_query0.UseQueryResult<unknown, Error>;
+export function useIsAllowed(): _tanstack_react_query0.UseQueryResult<boolean, Error>;
 
 // @public
 export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<boolean, Error>;
@@ -1250,13 +1255,13 @@ export function useRequestZKProofVerification(): _tanstack_react_query0.UseMutat
 export function useResumeUnshield(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
 
 // @public
+export function useRevoke(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
+
+// @public
 export function useRevokeDelegation(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, RevokeDelegationParams>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, RevokeDelegationParams, unknown>;
 
 // @public
 export function useRevokeSession(options?: UseMutationOptions<void>): _tanstack_react_query0.UseMutationResult<void, Error, void, unknown>;
-
-// @public
-export function useRevokeTokens(options?: UseMutationOptions<void, Error, Address[]>): _tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useShield<TContext = unknown>(config: UseShieldConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldParams, TContext>;
@@ -1325,7 +1330,7 @@ export function useUserDecryptedValue(handle: Handle | undefined): _tanstack_rea
 // @public
 export function useUserDecryptedValues(handles: Handle[]): {
     data: Record<`0x${string}`, ClearValueType | undefined>;
-    results: (_tanstack_query_core0.QueryObserverRefetchErrorResult<unknown, unknown> | _tanstack_query_core0.QueryObserverSuccessResult<unknown, unknown> | _tanstack_query_core0.QueryObserverLoadingErrorResult<unknown, unknown> | _tanstack_query_core0.QueryObserverLoadingResult<unknown, unknown> | _tanstack_query_core0.QueryObserverPendingResult<unknown, unknown> | _tanstack_query_core0.QueryObserverPlaceholderResult<unknown, unknown> | _tanstack_query_core0.QueryObserverRefetchErrorResult<unknown, Error> | _tanstack_query_core0.QueryObserverSuccessResult<unknown, Error> | _tanstack_query_core0.QueryObserverLoadingErrorResult<unknown, Error> | _tanstack_query_core0.QueryObserverLoadingResult<unknown, Error> | _tanstack_query_core0.QueryObserverPendingResult<unknown, Error> | _tanstack_query_core0.QueryObserverPlaceholderResult<unknown, Error>)[];
+    results: _tanstack_react_query0.UseQueryResult<never, Error>[];
 };
 
 // @public
@@ -1334,7 +1339,7 @@ export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?:
 // @public
 export interface UseWrapperDiscoveryConfig {
     coordinatorAddress: Address | undefined;
-    tokenAddress: Address;
+    tokenAddress: Address | undefined;
 }
 
 // @public

@@ -50,11 +50,7 @@ import {
 } from "./fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
 import type { CleartextConfig } from "./types";
-import {
-  ConfigurationError,
-  DecryptionFailedError,
-  EncryptionFailedError,
-} from "../../token/errors";
+import { ConfigurationError, DecryptionFailedError, EncryptionFailedError } from "../../errors";
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",

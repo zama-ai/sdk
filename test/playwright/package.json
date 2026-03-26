@@ -1,0 +1,26 @@
+{
+  "name": "@zama-fhe/playwright",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "BSD-3-Clause-Clear",
+  "author": "Zama",
+  "scripts": {
+    "e2e:test": "playwright test",
+    "e2e:test:ui": "playwright test --ui",
+    "e2e:test:nextjs": "playwright test --config playwright.nextjs.config.ts",
+    "e2e:test:vite": "playwright test --config playwright.vite.config.ts",
+    "e2e:test:node": "playwright test --config playwright.node.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.58.2",
+    "@zama-fhe/sdk": "workspace:*",
+    "ethers": "^6.16.0",
+    "viem": "^2.47.6"
+  },
+  "devDependencies": {
+    "@fhevm/mock-utils": "0.4.2",
+    "@types/node": "^22.19.15"
+  }
+}

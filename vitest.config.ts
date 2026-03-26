@@ -77,6 +77,17 @@ export default defineConfig({
         resolve: sharedResolve,
       },
       {
+        test: {
+          name: "typecheck",
+          include: ["packages/sdk/**/*.test-d.ts"],
+          typecheck: {
+            enabled: true,
+            tsconfig: "./packages/sdk/tsconfig.json",
+          },
+        },
+        resolve: sharedResolve,
+      },
+      {
         plugins: [iifeStub()],
         test: {
           name: "react-sdk",

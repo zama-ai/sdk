@@ -1,4 +1,4 @@
-import type { ZamaSDK } from "../token/zama-sdk";
+import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 
@@ -7,6 +7,6 @@ export function revokeMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.revoke"], Address[], void> {
   return {
     mutationKey: ["zama.revoke"],
-    mutationFn: (tokenAddresses) => sdk.revoke(...tokenAddresses),
+    mutationFn: (contractAddresses) => sdk.revoke(...contractAddresses),
   };
 }

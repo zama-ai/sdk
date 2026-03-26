@@ -1,4 +1,4 @@
-export const TRANSFER_BATCHER_ABI = [
+export const transferBatcherAbi = [
   {
     inputs: [
       {
