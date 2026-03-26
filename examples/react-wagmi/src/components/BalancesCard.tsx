@@ -12,6 +12,10 @@ interface BalancesCardProps {
   mintDisabled: boolean;
   mintError?: string | null;
   mintTxHash?: string | null;
+  isAllowed: boolean;
+  onDecrypt: () => void;
+  isDecrypting: boolean;
+  decryptError?: string | null;
 }
 
 export function BalancesCard({
@@ -24,9 +28,11 @@ export function BalancesCard({
   mintDisabled,
   mintError,
   mintTxHash,
+  isAllowed,
+  onDecrypt,
+  isDecrypting,
+  decryptError,
 }: BalancesCardProps) {
-  const confidentialDisplay = isLoadingConfidential ? <i>Decrypting…</i> : formattedConfidential;
-
   return (
     <div className="card">
       <div className="card-title">Balances</div>
@@ -46,10 +52,22 @@ export function BalancesCard({
       </div>
       <div className="balance-row">
         <span className="balance-label">Confidential (private)</span>
-        <span className={`balance-value${isLoadingConfidential ? " loading" : ""}`}>
-          {confidentialDisplay}
-        </span>
+        {!isAllowed ? (
+          <button
+            type="button"
+            className="btn btn-sm btn-secondary"
+            onClick={onDecrypt}
+            disabled={isDecrypting}
+          >
+            {isDecrypting ? "Signing…" : "Decrypt Balance"}
+          </button>
+        ) : (
+          <span className={`balance-value${isLoadingConfidential ? " loading" : ""}`}>
+            {isLoadingConfidential ? <i>Decrypting…</i> : formattedConfidential}
+          </span>
+        )}
       </div>
+      {decryptError && <div className="alert alert-error card-status">{decryptError}</div>}
       {mintError && <div className="alert alert-error card-status">{mintError}</div>}
       {mintTxHash && (
         <div className="alert alert-success card-status">
