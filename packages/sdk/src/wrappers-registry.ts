@@ -2,6 +2,7 @@ import { type Address, getAddress } from "viem";
 import type { EnrichedTokenWrapperPair, PaginatedResult, TokenWrapperPair } from "./contracts";
 import {
   decimalsContract,
+  erc20TotalSupplyContract,
   getConfidentialTokenAddressContract,
   getTokenAddressContract,
   getTokenPairContract,
@@ -11,21 +12,19 @@ import {
   isConfidentialTokenValidContract,
   nameContract,
   symbolContract,
-  erc20TotalSupplyContract,
 } from "./contracts";
 import { ConfigurationError } from "./errors/relayer";
-import { DefaultConfigs } from "./relayer/relayer-utils";
+import { MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
 import type { GenericSigner } from "./types/signer";
 
 /**
  * Default wrappers registry addresses derived from {@link DefaultConfigs}.
  * Only includes chains where a registry is deployed (excludes Hardhat).
  */
-export const DefaultRegistryAddresses: Record<number, Address> = Object.fromEntries(
-  Object.values(DefaultConfigs)
-    .filter((c): c is typeof c & { registryAddress: Address } => c.registryAddress !== undefined)
-    .map((c) => [c.chainId, c.registryAddress]),
-);
+export const DefaultRegistryAddresses: Record<number, Address> = {
+  [MainnetConfig.chainId]: MainnetConfig.registryAddress,
+  [SepoliaConfig.chainId]: SepoliaConfig.registryAddress,
+};
 
 /** Default page size for {@link WrappersRegistry.listPairs}. */
 const DEFAULT_PAGE_SIZE = 100;
@@ -112,10 +111,7 @@ export class WrappersRegistry {
 
   constructor(config: WrappersRegistryConfig) {
     this.signer = config.signer;
-    this.#addresses = {
-      ...DefaultRegistryAddresses,
-      ...config.registryAddresses,
-    };
+    this.#addresses = Object.assign(DefaultRegistryAddresses, config.registryAddresses);
     this.#ttlMs = (config.registryTTL ?? DEFAULT_REGISTRY_TTL) * 1000;
   }
 
