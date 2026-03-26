@@ -113,7 +113,7 @@ export class WrappersRegistry {
 
   constructor(config: WrappersRegistryConfig) {
     this.signer = config.signer;
-    this.#addresses = Object.assign(DefaultRegistryAddresses, config.registryAddresses);
+    this.#addresses = Object.assign({}, DefaultRegistryAddresses, config.registryAddresses);
     this.#ttlMs = (config.registryTTL ?? DEFAULT_REGISTRY_TTL) * 1000;
   }
 

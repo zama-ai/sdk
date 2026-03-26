@@ -86,8 +86,11 @@ export function ZamaProvider({
 
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
   const onEventRef = useRef(onEvent);
+  const registryAddressesRef = useRef(registryAddresses);
+
   useEffect(() => {
     onEventRef.current = onEvent;
+    registryAddressesRef.current = registryAddresses;
   });
 
   const signerLifecycleCallbacks = useMemo(
@@ -111,7 +114,7 @@ export function ZamaProvider({
         sessionStorage,
         keypairTTL,
         sessionTTL,
-        registryAddresses,
+        registryAddresses: registryAddressesRef.current,
         registryTTL,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,
@@ -123,7 +126,6 @@ export function ZamaProvider({
       sessionStorage,
       keypairTTL,
       sessionTTL,
-      registryAddresses,
       registryTTL,
       signerLifecycleCallbacks,
     ],

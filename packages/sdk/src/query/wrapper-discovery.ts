@@ -7,8 +7,8 @@ import { filterQueryOptions } from "./utils";
 export interface WrapperDiscoveryQueryConfig {
   /**
    * Address of any confidential token you control.
-   * Used only to scope the query cache key — it does not affect
-   * which wrapper the registry returns.
+   * Used to scope the query cache key and to gate whether the query
+   * is enabled — it does not affect which wrapper the registry returns.
    */
   tokenAddress?: Address;
   /**
@@ -52,6 +52,8 @@ export function wrapperDiscoveryQueryOptions(
       return result ? result.confidentialTokenAddress : null;
     },
     staleTime: Infinity,
-    enabled: Boolean(config.tokenAddress && config.erc20Address) && config.query?.enabled !== false,
+    enabled:
+      Boolean(config.tokenAddress && config.erc20Address && config.registryAddress) &&
+      config.query?.enabled !== false,
   };
 }
