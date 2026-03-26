@@ -140,8 +140,8 @@ export default function Home() {
   // ERC-20 metadata interface — it works equally on plain ERC-20s and ERC-7984 wrappers.
   // erc20Metadata drives shield amounts and ERC-20 balance display.
   // cTokenMetadata drives transfer/unshield amounts and confidential balance display.
-  const cTokenMetadata = useMetadata(token.confidential);
-  const erc20Metadata = useMetadata(token.erc20);
+  const cTokenMetadata = useMetadata(token.confidential, { enabled: isSepolia });
+  const erc20Metadata = useMetadata(token.erc20, { enabled: isSepolia });
 
   const decimals = cTokenMetadata.data?.decimals ?? 0;
   const erc20Decimals = erc20Metadata.data?.decimals ?? 0;
@@ -178,7 +178,10 @@ export default function Home() {
     });
   };
 
-  const balance = useConfidentialBalance({ tokenAddress: token.confidential });
+  const balance = useConfidentialBalance(
+    { tokenAddress: token.confidential },
+    { enabled: !!address && isSepolia },
+  );
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
   const mint = useMutation({

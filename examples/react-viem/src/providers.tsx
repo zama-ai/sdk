@@ -115,9 +115,23 @@ export function Providers({ children }: { children: ReactNode }) {
         setWalletKey((k) => k + 1);
       }
     };
+    // Remount ZamaProvider on network change so the ViemSigner gets a fresh walletClient
+    // bound to the new chain. Also invalidate all cached queries — any data fetched on the
+    // previous network is stale (different contracts / balances). The ZamaProvider's internal
+    // signerLifecycleCallbacks.onChainChange already calls invalidateWalletLifecycleQueries,
+    // but that path can hang if the SDK's initial setup (getAddress via eth_requestAccounts)
+    // is still pending. The explicit invalidation here acts as a safety net.
+    const handleChainChanged = () => {
+      setWalletKey((k) => k + 1);
+      queryClient.invalidateQueries();
+    };
     ethereum.on("accountsChanged", handleAccountsChanged);
-    return () => ethereum.removeListener("accountsChanged", handleAccountsChanged);
-  }, []);
+    ethereum.on("chainChanged", handleChainChanged);
+    return () => {
+      ethereum.removeListener("accountsChanged", handleAccountsChanged);
+      ethereum.removeListener("chainChanged", handleChainChanged);
+    };
+  }, [queryClient]);
 
   // RelayerWeb routes through the local /api/relayer proxy so RELAYER_API_KEY stays
   // server-side. SepoliaConfig supplies the contract addresses and chain parameters;
