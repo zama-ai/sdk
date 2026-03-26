@@ -217,11 +217,11 @@ const sdk = createZamaSDK({
 
 A delegation between `(delegator, delegate, contract)` can be in one of four states:
 
-| State         | On-chain expiry          | How to detect                                                                                    |
-| ------------- | ------------------------ | ------------------------------------------------------------------------------------------------ |
-| **Never set** | `0n`                     | `getDelegationExpiry()` returns `0n`                                                             |
-| **Active**    | Future timestamp         | `isDelegated()` returns `true`                                                                   |
-| **Expired**   | Past non-zero timestamp  | `isDelegated()` returns `false`, `getDelegationExpiry()` returns a non-zero past value           |
+| State         | On-chain expiry          | How to detect                                                                                                           |
+| ------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| **Never set** | `0n`                     | `getDelegationExpiry()` returns `0n`                                                                                    |
+| **Active**    | Future timestamp         | `isDelegated()` returns `true`                                                                                          |
+| **Expired**   | Past non-zero timestamp  | `isDelegated()` returns `false`, `getDelegationExpiry()` returns a non-zero past value                                  |
 | **Revoked**   | `0n` (reset by contract) | Indistinguishable from **never set** via state reads — use `RevokedDelegationForUserDecryption` events to differentiate |
 
 Because the ACL contract resets the expiry to `0n` on revocation, `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](/reference/sdk/event-decoders#acl-delegation-events).
