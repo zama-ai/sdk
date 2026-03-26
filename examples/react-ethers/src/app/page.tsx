@@ -8,6 +8,7 @@ import {
   useIsAllowed,
   useAllow,
   useListPairs,
+  useWrappersRegistryAddress,
   useZamaSDK,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
@@ -106,11 +107,28 @@ export default function Home() {
   // isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending && isFetching,
   // so it is false when the query is disabled (enabled: false), causing a premature
   // "No tokens available" display before the chain ID has been resolved.
+  const registryAddress = useWrappersRegistryAddress();
   const {
     data: pairsData,
     isPending: isRegistryPending,
     isError: isRegistryError,
+    isFetching: isRegistryFetching,
+    status: registryStatus,
+    error: registryError,
   } = useListPairs({ metadata: true });
+
+  // DEBUG — remove before merge
+  useEffect(() => {
+    console.log("[Registry debug]", {
+      registryAddress,
+      status: registryStatus,
+      isPending: isRegistryPending,
+      isFetching: isRegistryFetching,
+      isError: isRegistryError,
+      error: registryError,
+      pairsDataRaw: pairsData,
+    });
+  });
 
   // Filter to valid pairs only and narrow the type to TokenWrapperPairWithMetadata.
   // useMemo gives a stable array reference so the auto-select effect below has
@@ -122,6 +140,18 @@ export default function Home() {
       ),
     [pairsData],
   );
+
+  // DEBUG — remove before merge
+  useEffect(() => {
+    console.log("[ValidPairs debug]", {
+      rawItems: pairsData?.items,
+      rawItemsLength: pairsData?.items?.length,
+      validPairsLength: validPairs.length,
+      firstRawItem: pairsData?.items?.[0],
+      hasUnderlying: pairsData?.items?.[0] ? "underlying" in pairsData.items[0] : "n/a",
+      isValid: pairsData?.items?.[0]?.isValid,
+    });
+  });
 
   // Auto-select the first valid pair once the registry resolves.
   useEffect(() => {
