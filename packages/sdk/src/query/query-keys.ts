@@ -99,14 +99,16 @@ export const zamaQueryKeys = {
 
   wrapperDiscovery: {
     all: ["zama.wrapperDiscovery"] as const,
-    token: (tokenAddress?: Address, erc20Address?: Address) => {
+    token: (tokenAddress?: Address, erc20Address?: Address, registryAddress?: Address) => {
       const t = normalizeAddress(tokenAddress);
       const e = normalizeAddress(erc20Address);
+      const r = normalizeAddress(registryAddress);
       return [
         "zama.wrapperDiscovery",
         {
           ...(t ? { tokenAddress: t } : {}),
           ...(e ? { erc20Address: e } : {}),
+          ...(r ? { registryAddress: r } : {}),
         },
       ] as const;
     },

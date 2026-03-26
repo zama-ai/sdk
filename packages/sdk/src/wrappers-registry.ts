@@ -14,13 +14,18 @@ import {
   erc20TotalSupplyContract,
 } from "./contracts";
 import { ConfigurationError } from "./errors/relayer";
+import { DefaultConfigs } from "./relayer/relayer-utils";
 import type { GenericSigner } from "./types/signer";
 
-/** Default wrappers registry addresses extracted from built-in network configs. */
-export const DefaultRegistryAddresses: Record<number, Address> = {
-  1: "0xeb5015ff021db115ace010f23f55c2591059bba0",
-  11155111: "0x2f0750bbb0a246059d80e94c454586a7f27a128e",
-} as const;
+/**
+ * Default wrappers registry addresses derived from {@link DefaultConfigs}.
+ * Only includes chains where a registry is deployed (excludes Hardhat).
+ */
+export const DefaultRegistryAddresses: Record<number, Address> = Object.fromEntries(
+  Object.values(DefaultConfigs)
+    .filter((c): c is typeof c & { registryAddress: Address } => c.registryAddress !== undefined)
+    .map((c) => [c.chainId, c.registryAddress]),
+);
 
 /** Default page size for {@link WrappersRegistry.listPairs}. */
 const DEFAULT_PAGE_SIZE = 100;

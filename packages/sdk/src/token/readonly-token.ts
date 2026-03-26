@@ -95,6 +95,8 @@ export interface ReadonlyTokenConfig {
   keypairTTL?: number;
   /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). `0` means every operation triggers a signing prompt. `"infinite"` means the session never expires. */
   sessionTTL?: number | "infinite";
+  /** Shared {@link WrappersRegistry} instance. When provided, `discoverWrapper()` reuses its cache. */
+  registry?: WrappersRegistry;
   /** Optional structured event listener for debugging and telemetry. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -112,6 +114,7 @@ export class ReadonlyToken {
   readonly address: Address;
   readonly storage: GenericStorage;
   readonly #onEvent: ZamaSDKEventListener | undefined;
+  readonly #registry: WrappersRegistry | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
     const credentialsConfig = {
@@ -130,6 +133,7 @@ export class ReadonlyToken {
     this.signer = config.signer;
     this.address = getAddress(config.address);
     this.storage = config.storage;
+    this.#registry = config.registry;
     this.#onEvent = config.onEvent;
   }
 
@@ -508,7 +512,7 @@ export class ReadonlyToken {
    * ```
    */
   async discoverWrapper(erc20Address: Address): Promise<Address | null> {
-    const registry = new WrappersRegistry({ signer: this.signer });
+    const registry = this.#registry ?? new WrappersRegistry({ signer: this.signer });
     const result = await registry.getConfidentialToken(getAddress(erc20Address));
     return result ? result.confidentialTokenAddress : null;
   }

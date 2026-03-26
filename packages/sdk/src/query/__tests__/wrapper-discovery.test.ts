@@ -5,14 +5,12 @@ import { wrapperDiscoveryQueryOptions } from "../wrapper-discovery";
 describe("wrapperDiscoveryQueryOptions", () => {
   test("is disabled when tokenAddress or erc20Address is missing", ({ signer }) => {
     const registry = new WrappersRegistry({ signer });
-    const missingToken = wrapperDiscoveryQueryOptions(registry, undefined, {
+    const missingToken = wrapperDiscoveryQueryOptions(registry, {
       erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
     });
-    const missingErc20 = wrapperDiscoveryQueryOptions(
-      registry,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {},
-    );
+    const missingErc20 = wrapperDiscoveryQueryOptions(registry, {
+      tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+    });
 
     expect(missingToken.enabled).toBe(false);
     expect(missingErc20.enabled).toBe(false);
@@ -20,23 +18,19 @@ describe("wrapperDiscoveryQueryOptions", () => {
 
   test("staleTime is Infinity — wrapper mappings are immutable", ({ signer }) => {
     const registry = new WrappersRegistry({ signer });
-    const options = wrapperDiscoveryQueryOptions(
-      registry,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      { erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" },
-    );
+    const options = wrapperDiscoveryQueryOptions(registry, {
+      tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+    });
     expect(options.staleTime).toBe(Infinity);
   });
 
   test("includes erc20Address in query key", ({ signer }) => {
     const registry = new WrappersRegistry({ signer });
-    const options = wrapperDiscoveryQueryOptions(
-      registry,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
+    const options = wrapperDiscoveryQueryOptions(registry, {
+      tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+    });
 
     expect(options.queryKey).toEqual([
       "zama.wrapperDiscovery",
@@ -56,13 +50,10 @@ describe("wrapperDiscoveryQueryOptions", () => {
     ]);
 
     const registry = new WrappersRegistry({ signer });
-    const options = wrapperDiscoveryQueryOptions(
-      registry,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
+    const options = wrapperDiscoveryQueryOptions(registry, {
+      tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+    });
 
     const wrapper = await options.queryFn(mockQueryContext(options.queryKey));
     expect(wrapper).toBeNull();
@@ -75,13 +66,10 @@ describe("wrapperDiscoveryQueryOptions", () => {
       .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
     const registry = new WrappersRegistry({ signer });
-    const options = wrapperDiscoveryQueryOptions(
-      registry,
-      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
-    );
+    const options = wrapperDiscoveryQueryOptions(registry, {
+      tokenAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      erc20Address: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
+    });
 
     const wrapper = await options.queryFn(mockQueryContext(options.queryKey));
     expect(wrapper).toBe("0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D");

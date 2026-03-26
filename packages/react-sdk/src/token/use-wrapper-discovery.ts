@@ -5,6 +5,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { wrapperDiscoveryQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useQuery, useSuspenseQuery } from "../utils/query";
+import { useWrappersRegistryAddress } from "../wrappers-registry/use-wrappers-registry-address";
 
 export { wrapperDiscoveryQueryOptions };
 
@@ -55,8 +56,11 @@ export function useWrapperDiscovery(
 ) {
   const { tokenAddress, erc20Address } = config;
   const sdk = useZamaSDK();
-  const baseOpts = wrapperDiscoveryQueryOptions(sdk.registry, tokenAddress, {
+  const registryAddress = useWrappersRegistryAddress();
+  const baseOpts = wrapperDiscoveryQueryOptions(sdk.registry, {
+    tokenAddress,
     erc20Address,
+    registryAddress,
   });
 
   return useQuery<Address | null>({
@@ -84,10 +88,13 @@ export function useWrapperDiscovery(
 export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseConfig) {
   const { tokenAddress, erc20Address } = config;
   const sdk = useZamaSDK();
+  const registryAddress = useWrappersRegistryAddress();
 
   return useSuspenseQuery<Address | null>({
-    ...wrapperDiscoveryQueryOptions(sdk.registry, tokenAddress, {
+    ...wrapperDiscoveryQueryOptions(sdk.registry, {
+      tokenAddress,
       erc20Address,
+      registryAddress,
     }),
   });
 }

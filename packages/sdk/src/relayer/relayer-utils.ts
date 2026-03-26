@@ -1,6 +1,6 @@
+import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address } from "viem";
 import type { EIP712TypedData } from "./relayer-sdk.types";
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
@@ -137,9 +137,9 @@ export const HardhatConfig = {
  * `WrappersRegistry` to resolve registry addresses.
  */
 export const DefaultConfigs: Record<number, ExtendedFhevmInstanceConfig> = {
-  [1]: MainnetConfig,
-  [11155111]: SepoliaConfig,
-  [31337]: HardhatConfig,
+  [MainnetConfig.chainId]: MainnetConfig,
+  [SepoliaConfig.chainId]: SepoliaConfig,
+  [HardhatConfig.chainId]: HardhatConfig,
 } as const;
 
 /** EIP-712 domain field → Solidity type. Order follows the EIP-712 spec. */

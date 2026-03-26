@@ -77,6 +77,7 @@ export class ZamaSDK {
    * ```
    */
   readonly registry: WrappersRegistry;
+  readonly #registryTTL: number | undefined;
   readonly #onEvent: ZamaSDKEventListener;
   #unsubscribeSigner?: () => void;
   // oxlint false positive: awaited in #revokeByTrackedIdentity() and revokeSession()
@@ -96,6 +97,7 @@ export class ZamaSDK {
       registryAddresses: config.registryAddresses,
       registryTTL: config.registryTTL,
     });
+    this.#registryTTL = config.registryTTL;
     const credentialsConfig = {
       relayer: this.relayer,
       signer: this.signer,
@@ -203,6 +205,7 @@ export class ZamaSDK {
       delegatedCredentials: this.delegatedCredentials,
       address: getAddress(address),
       onEvent: this.#onEvent,
+      registry: this.registry,
     });
   }
 
@@ -225,6 +228,7 @@ export class ZamaSDK {
       address: getAddress(address),
       wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,
+      registry: this.registry,
     });
   }
 
@@ -250,6 +254,7 @@ export class ZamaSDK {
     return new WrappersRegistry({
       signer: this.signer,
       registryAddresses,
+      registryTTL: this.#registryTTL,
     });
   }
 
