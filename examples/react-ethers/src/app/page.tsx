@@ -101,7 +101,16 @@ export default function Home() {
   // The hook gates itself internally: it only runs once the chain ID is known.
   // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair,
   // removing the need for separate useMetadata calls.
-  const { data: pairsData, isLoading: isRegistryLoading } = useListPairs({ metadata: true });
+  // isPending stays true until the first successful response — covers both the initial
+  // disabled state (registryAddress not yet resolved) and the active-fetching state.
+  // isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending && isFetching,
+  // so it is false when the query is disabled (enabled: false), causing a premature
+  // "No tokens available" display before the chain ID has been resolved.
+  const {
+    data: pairsData,
+    isPending: isRegistryPending,
+    isError: isRegistryError,
+  } = useListPairs({ metadata: true });
 
   // Filter to valid pairs only and narrow the type to TokenWrapperPairWithMetadata.
   // useMemo gives a stable array reference so the auto-select effect below has
@@ -388,11 +397,11 @@ export default function Home() {
             setSelectedTokenAddress(e.target.value as Address);
             mint.reset();
           }}
-          disabled={isRegistryLoading || validPairs.length === 0}
+          disabled={isRegistryPending || isRegistryError || validPairs.length === 0}
         >
-          {(isRegistryLoading || selectedTokenAddress === null) && (
+          {(isRegistryPending || selectedTokenAddress === null) && (
             <option value="" disabled>
-              {isRegistryLoading ? "Loading…" : "No tokens available"}
+              {isRegistryPending ? "Loading…" : "No tokens available"}
             </option>
           )}
           {validPairs.map((pair) => (
@@ -401,8 +410,11 @@ export default function Home() {
             </option>
           ))}
         </select>
-        {isRegistryLoading && <p className="token-meta">Loading tokens from registry…</p>}
-        {!isRegistryLoading && validPairs.length === 0 && (
+        {isRegistryPending && <p className="token-meta">Loading tokens from registry…</p>}
+        {!isRegistryPending && isRegistryError && (
+          <p className="token-meta">Failed to load tokens from registry.</p>
+        )}
+        {!isRegistryPending && !isRegistryError && validPairs.length === 0 && (
           <p className="token-meta">No tokens available.</p>
         )}
       </div>
