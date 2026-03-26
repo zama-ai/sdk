@@ -7,18 +7,18 @@ import {
   TOKEN,
   expectDefaultMutationState,
 } from "../../__tests__/mutation-test-helpers";
-import { useAllowTokens } from "../use-allow-tokens";
+import { useAllow } from "../use-allow";
 
-describe("useAllowTokens", () => {
+describe("useAllow", () => {
   test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useAllowTokens());
+    const { result } = renderWithProviders(() => useAllow());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
     expectDefaultMutationState(state);
   });
 
   test("cache: invalidates isAllowed query after allow", async ({ renderWithProviders }) => {
-    const { result, queryClient } = renderWithProviders(() => useAllowTokens());
+    const { result, queryClient } = renderWithProviders(() => useAllow());
     queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
 
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
@@ -34,7 +34,7 @@ describe("useAllowTokens", () => {
       expect(variables).toEqual([TOKEN, OTHER_TOKEN]);
     });
     const { result, queryClient } = renderWithProviders(() =>
-      useAllowTokens({
+      useAllow({
         onSuccess,
       }),
     );

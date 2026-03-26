@@ -5,7 +5,7 @@ description: Revoke the entire session for the connected wallet.
 
 # useRevokeSession
 
-Revoke the entire session for the connected wallet. Unlike [`useRevoke`](/reference/react/useRevoke) which targets specific tokens, this clears the session-level signature.
+Revoke the entire session for the connected wallet. Unlike [`useRevoke`](/reference/react/useRevoke) which targets specific contract addresses, this clears the session-level signature.
 
 ## Import
 
@@ -65,6 +65,6 @@ If you use [`WagmiSigner`](/reference/sdk/WagmiSigner), the SDK auto-revokes on 
 
 ## Related
 
-- [`useRevoke`](/reference/react/useRevoke) — revoke specific token addresses instead of the full session
-- [`useAllow`](/reference/react/useAllow) — pre-authorize tokens with a single wallet signature
+- [`useRevoke`](/reference/react/useRevoke) — revoke specific contract addresses instead of the full session
+- [`useAllow`](/reference/react/useAllow) — pre-authorize contracts with a single wallet signature
 - [`useIsAllowed`](/reference/react/useIsAllowed) — check whether a session signature is valid
