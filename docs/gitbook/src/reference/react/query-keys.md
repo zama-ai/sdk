@@ -120,18 +120,18 @@ Fee queries.
 
 On-chain wrappers registry queries.
 
-| Key                                                               | Scope                                      |
-| ----------------------------------------------------------------- | ------------------------------------------ |
-| `.all`                                                            | All registry queries                       |
-| `.chainId()`                                                      | Chain ID resolution                        |
-| `.tokenPairs(registryAddr)`                                       | All pairs for a registry                   |
-| `.tokenPairsLength(registryAddr)`                                 | Pair count                                 |
-| `.tokenPairsSlice(registryAddr, from, to)`                        | Index-based slice                          |
-| `.tokenPair(registryAddr, index)`                                 | Single pair by index                       |
-| `.confidentialTokenAddress(registryAddr, tokenAddr)`              | Forward lookup (plain &rarr; confidential) |
-| `.tokenAddress(registryAddr, confidentialAddr)`                   | Reverse lookup (confidential &rarr; plain) |
-| `.isConfidentialTokenValid(registryAddr, confidentialAddr)`       | Validity check                             |
-| `.listPairs(registryAddr, page, pageSize, metadata)`              | Paginated listing                          |
+| Key                                                         | Scope                                      |
+| ----------------------------------------------------------- | ------------------------------------------ |
+| `.all`                                                      | All registry queries                       |
+| `.chainId()`                                                | Chain ID resolution                        |
+| `.tokenPairs(registryAddr)`                                 | All pairs for a registry                   |
+| `.tokenPairsLength(registryAddr)`                           | Pair count                                 |
+| `.tokenPairsSlice(registryAddr, from, to)`                  | Index-based slice                          |
+| `.tokenPair(registryAddr, index)`                           | Single pair by index                       |
+| `.confidentialTokenAddress(registryAddr, tokenAddr)`        | Forward lookup (plain &rarr; confidential) |
+| `.tokenAddress(registryAddr, confidentialAddr)`             | Reverse lookup (confidential &rarr; plain) |
+| `.isConfidentialTokenValid(registryAddr, confidentialAddr)` | Validity check                             |
+| `.listPairs(registryAddr, page, pageSize, metadata)`        | Paginated listing                          |
 
 ### `decryptionKeys`
 

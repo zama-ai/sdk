@@ -92,8 +92,8 @@ for (const pair of enriched.items) {
 
 #### ListPairsOptions
 
-| Option     | Type      | Default | Description                                         |
-| ---------- | --------- | ------- | --------------------------------------------------- |
+| Option     | Type      | Default | Description                                          |
+| ---------- | --------- | ------- | ---------------------------------------------------- |
 | `page`     | `number`  | `1`     | Page number (1-indexed)                              |
 | `pageSize` | `number`  | `100`   | Items per page                                       |
 | `metadata` | `boolean` | `false` | Fetch on-chain metadata for both tokens in each pair |

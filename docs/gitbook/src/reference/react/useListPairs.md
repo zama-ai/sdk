@@ -36,7 +36,9 @@ function TokenPairList() {
 
   return (
     <div>
-      <p>{data.total} pairs total (page {data.page})</p>
+      <p>
+        {data.total} pairs total (page {data.page})
+      </p>
       <ul>
         {data.items.map((pair) => (
           <li key={pair.tokenAddress}>

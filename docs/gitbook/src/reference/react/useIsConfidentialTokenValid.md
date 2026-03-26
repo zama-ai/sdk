@@ -21,12 +21,12 @@ import { useIsConfidentialTokenValid } from "@zama-fhe/react-sdk";
 ```tsx
 import { useIsConfidentialTokenValid } from "@zama-fhe/react-sdk";
 
-function ValidityCheck({
-  confidentialTokenAddress,
-}: {
-  confidentialTokenAddress: `0x${string}`;
-}) {
-  const { data: isValid, isLoading, error } = useIsConfidentialTokenValid({
+function ValidityCheck({ confidentialTokenAddress }: { confidentialTokenAddress: `0x${string}` }) {
+  const {
+    data: isValid,
+    isLoading,
+    error,
+  } = useIsConfidentialTokenValid({
     confidentialTokenAddress,
   });
 
@@ -35,8 +35,7 @@ function ValidityCheck({
 
   return (
     <p>
-      {confidentialTokenAddress} is{" "}
-      {isValid ? "a valid registered wrapper" : "not a valid wrapper"}
+      {confidentialTokenAddress} is {isValid ? "a valid registered wrapper" : "not a valid wrapper"}
     </p>
   );
 }

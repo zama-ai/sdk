@@ -21,11 +21,7 @@ import { useTokenAddress } from "@zama-fhe/react-sdk";
 ```tsx
 import { useTokenAddress } from "@zama-fhe/react-sdk";
 
-function ReverseLookup({
-  confidentialTokenAddress,
-}: {
-  confidentialTokenAddress: `0x${string}`;
-}) {
+function ReverseLookup({ confidentialTokenAddress }: { confidentialTokenAddress: `0x${string}` }) {
   const { data, isLoading, error } = useTokenAddress({
     confidentialTokenAddress,
   });

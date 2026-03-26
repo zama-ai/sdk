@@ -22,7 +22,11 @@ import { useTokenPairsSlice } from "@zama-fhe/react-sdk";
 import { useTokenPairsSlice } from "@zama-fhe/react-sdk";
 
 function PairSlice() {
-  const { data: pairs, isLoading, error } = useTokenPairsSlice({
+  const {
+    data: pairs,
+    isLoading,
+    error,
+  } = useTokenPairsSlice({
     fromIndex: 0n,
     toIndex: 10n,
   });
