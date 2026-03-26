@@ -14,10 +14,10 @@ yarn add @zama-fhe/sdk
 
 ### Peer dependencies
 
-| Package  | Version | Required?                                         |
-| -------- | ------- | ------------------------------------------------- |
-| `viem`   | >= 2    | Optional — for the `@zama-fhe/sdk/viem` adapter   |
-| `ethers` | >= 6    | Optional — for the `@zama-fhe/sdk/ethers` adapter |
+| Package | Version | Required? |
+| --- | --- | --- |
+| `viem` | >= 2 | Optional — for the `@zama-fhe/sdk/viem` adapter |
+| `ethers` | >= 6 | Optional — for the `@zama-fhe/sdk/ethers` adapter |
 
 ## Module Systems (ESM & CJS)
 
@@ -39,14 +39,14 @@ const { EthersSigner } = require("@zama-fhe/sdk/ethers");
 
 ### Available subpath exports
 
-| Subpath                   | Description                          | CJS |
-| ------------------------- | ------------------------------------ | --- |
-| `@zama-fhe/sdk`           | Core SDK (ZamaSDK, RelayerWeb, etc.) | Yes |
-| `@zama-fhe/sdk/viem`      | Viem adapter (ViemSigner)            | Yes |
-| `@zama-fhe/sdk/ethers`    | Ethers adapter (EthersSigner)        | Yes |
-| `@zama-fhe/sdk/node`      | Node.js backend (RelayerNode)        | No  |
-| `@zama-fhe/sdk/query`     | TanStack Query integration           | Yes |
-| `@zama-fhe/sdk/cleartext` | Cleartext testing adapter            | Yes |
+| Subpath | Description | CJS |
+| --- | --- | --- |
+| `@zama-fhe/sdk` | Core SDK (ZamaSDK, RelayerWeb, etc.) | Yes |
+| `@zama-fhe/sdk/viem` | Viem adapter (ViemSigner) | Yes |
+| `@zama-fhe/sdk/ethers` | Ethers adapter (EthersSigner) | Yes |
+| `@zama-fhe/sdk/node` | Node.js backend (RelayerNode) | No |
+| `@zama-fhe/sdk/query` | TanStack Query integration | Yes |
+| `@zama-fhe/sdk/cleartext` | Cleartext testing adapter | Yes |
 
 > **Note:** The `@zama-fhe/sdk/node` subpath is ESM-only because it relies on `node:worker_threads` which is inherently ESM-oriented.
 
@@ -165,10 +165,10 @@ The `relayer`, `signer`, and `storage` properties are public and accessible afte
 
 The `RelayerSDK` interface defines the FHE operations contract. Two implementations are provided:
 
-| Backend       | Import               | Environment | How it works                               |
-| ------------- | -------------------- | ----------- | ------------------------------------------ |
-| `RelayerWeb`  | `@zama-fhe/sdk`      | Browser     | Runs WASM in a Web Worker via CDN          |
-| `RelayerNode` | `@zama-fhe/sdk/node` | Node.js     | Uses `@zama-fhe/relayer-sdk/node` directly |
+| Backend | Import | Environment | How it works |
+| --- | --- | --- | --- |
+| `RelayerWeb` | `@zama-fhe/sdk` | Browser | Runs WASM in a Web Worker via CDN |
+| `RelayerNode` | `@zama-fhe/sdk/node` | Node.js | Uses `@zama-fhe/relayer-sdk/node` directly |
 
 The `/node` sub-path also exports `NodeWorkerClient` and `NodeWorkerClientConfig` for running FHE operations in a Node.js worker thread.
 
@@ -178,25 +178,25 @@ You can also implement the `RelayerSDK` interface for custom backends.
 
 Full read/write interface for a single confidential ERC-20. Extends `ReadonlyToken`. The encrypted ERC-20 contract IS the wrapper, so `wrapper` defaults to the token `address`. Pass an explicit `wrapper` only if they differ.
 
-| Method                                                     | Description                                                                                                                                                                                                  |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `shield(amount, options?)`                                 | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
-| `shieldETH(amount, value?)`                                | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
-| `unshield(amount, callbacks?)`                             | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                                   |
-| `unshieldAll(callbacks?)`                                  | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                               |
-| `unwrap(amount)`                                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
-| `unwrapAll()`                                              | Request unwrap for the entire balance (low-level, requires manual finalization).                                                                                                                             |
-| `resumeUnshield(unwrapTxHash, callbacks?)`                 | Resume an interrupted unshield from an existing unwrap tx hash. Goes straight to wait receipt → finalize.                                                                                                    |
-| `finalizeUnwrap(burnAmountHandle)`                         | Complete unwrap with public decryption proof.                                                                                                                                                                |
-| `confidentialTransfer(to, amount)`                         | Encrypted transfer. Encrypts amount, then calls the contract.                                                                                                                                                |
-| `confidentialTransferFrom(from, to, amt)`                  | Operator encrypted transfer.                                                                                                                                                                                 |
-| `approve(spender, until?)`                                 | Set operator approval. `until` defaults to now + 1 hour.                                                                                                                                                     |
-| `isApproved(spender)`                                      | Check if a spender is an approved operator.                                                                                                                                                                  |
-| `approveUnderlying(amount?)`                               | Approve wrapper to spend underlying ERC-20. Default: max uint256.                                                                                                                                            |
-| `delegateDecryption({ delegateAddress, expirationDate? })` | Grant decryption rights to another address via the on-chain ACL. Default: permanent. ACL address resolved from relayer config.                                                                               |
-| `revokeDelegation({ delegateAddress })`                    | Revoke decryption delegation for this token. ACL address resolved from relayer config.                                                                                                                       |
-| `balanceOf(owner?)`                                        | Decrypt and return the plaintext balance.                                                                                                                                                                    |
-| `decryptHandles(handles, owner?)`                          | Batch-decrypt arbitrary encrypted handles.                                                                                                                                                                   |
+| Method | Description |
+| --- | --- |
+| `shield(amount, options?)` | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
+| `shieldETH(amount, value?)` | Shield (wrap) native ETH. `value` defaults to `amount`. Use when the underlying token is the zero address (native ETH). |
+| `unshield(amount, callbacks?)` | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking. |
+| `unshieldAll(callbacks?)` | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking. |
+| `unwrap(amount)` | Request unwrap for a specific amount (low-level, requires manual finalization). |
+| `unwrapAll()` | Request unwrap for the entire balance (low-level, requires manual finalization). |
+| `resumeUnshield(unwrapTxHash, callbacks?)` | Resume an interrupted unshield from an existing unwrap tx hash. Goes straight to wait receipt → finalize. |
+| `finalizeUnwrap(burnAmountHandle)` | Complete unwrap with public decryption proof. |
+| `confidentialTransfer(to, amount)` | Encrypted transfer. Encrypts amount, then calls the contract. |
+| `confidentialTransferFrom(from, to, amt)` | Operator encrypted transfer. |
+| `approve(spender, until?)` | Set operator approval. `until` defaults to now + 1 hour. |
+| `isApproved(spender)` | Check if a spender is an approved operator. |
+| `approveUnderlying(amount?)` | Approve wrapper to spend underlying ERC-20. Default: max uint256. |
+| `delegateDecryption({ delegateAddress, expirationDate? })` | Grant decryption rights to another address via the on-chain ACL. Default: permanent. ACL address resolved from relayer config. |
+| `revokeDelegation({ delegateAddress })` | Revoke decryption delegation for this token. ACL address resolved from relayer config. |
+| `balanceOf(owner?)` | Decrypt and return the plaintext balance. |
+| `decryptHandles(handles, owner?)` | Batch-decrypt arbitrary encrypted handles. |
 
 All write methods return a `TransactionResult` object:
 
@@ -211,31 +211,30 @@ interface TransactionResult {
 
 Read-only subset. No wrapper address needed.
 
-| Method                                                       | Description                                                                            |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| `balanceOf(owner?)`                                          | Decrypt and return the plaintext balance.                                              |
-| `confidentialBalanceOf(owner?)`                              | Return the raw encrypted balance handle (no decryption).                               |
-| `decryptBalance(handle, owner?)`                             | Decrypt a single encrypted handle.                                                     |
-| `decryptHandles(handles, owner?)`                            | Batch-decrypt handles in a single relayer call.                                        |
-| `allow()`                                                    | Ensure FHE decrypt credentials exist (generates/signs if needed).                      |
-| `allow(...tokens)` _(static)_                                | Pre-authorize multiple tokens with a single wallet signature.                          |
-| `isAllowed()`                                                | Whether a session signature is currently cached for this token.                        |
-| `revoke()`                                                   | Clear the session signature for the connected wallet.                                  |
-| `credentials.allow(...addresses)`                            | Pre-authorize and cache the session signature for specific token addresses.            |
-| `credentials.revoke(...addresses?)`                          | Clear the session signature for the connected wallet.                                  |
-| `credentials.isAllowed()`                                    | Whether a session signature is currently cached.                                       |
-| `credentials.isExpired(address?)`                            | Whether stored credentials are past their expiration time.                             |
-| `credentials.clear()`                                        | Delete stored credentials for the connected wallet.                                    |
-| `decryptBalanceAs({ delegatorAddress, owner? })`             | Decrypt a delegator's balance as a delegate. ACL address resolved from relayer config. |
-| `isDelegated({ delegatorAddress, delegateAddress })`         | Check if a delegation is active and unexpired.                                         |
-| `getDelegationExpiry({ delegatorAddress, delegateAddress })` | Raw expiry timestamp (`0n` = none, `2^64-1` = permanent).                              |
-| `isConfidential()`                                           | ERC-165 check for ERC-7984 support.                                                    |
-| `isWrapper()`                                                | ERC-165 check for wrapper interface.                                                   |
-| `discoverWrapper(coordinatorAddress)`                        | Look up a wrapper for this token via the deployment coordinator.                       |
-| `underlyingToken()`                                          | Read the underlying ERC-20 address from a wrapper.                                     |
-| `allowance(wrapper, owner?)`                                 | Read ERC-20 allowance of the underlying token.                                         |
-| `isZeroHandle(handle)`                                       | Returns `true` if the handle is the zero sentinel.                                     |
-| `name()` / `symbol()` / `decimals()`                         | Read token metadata.                                                                   |
+| Method | Description |
+| --- | --- |
+| `balanceOf(owner?)` | Decrypt and return the plaintext balance. |
+| `confidentialBalanceOf(owner?)` | Return the raw encrypted balance handle (no decryption). |
+| `decryptBalance(handle, owner?)` | Decrypt a single encrypted handle. |
+| `decryptHandles(handles, owner?)` | Batch-decrypt handles in a single relayer call. |
+| `allow()` | Ensure FHE decrypt credentials exist (generates/signs if needed). |
+| `allow(...tokens)` _(static)_ | Pre-authorize multiple tokens with a single wallet signature. |
+| `isAllowed()` | Whether a session signature is currently cached for this token. |
+| `revoke()` | Clear the session signature for the connected wallet. |
+| `credentials.allow(...addresses)` | Pre-authorize and cache the session signature for specific token addresses. |
+| `credentials.revoke(...addresses?)` | Clear the session signature for the connected wallet. |
+| `credentials.isAllowed()` | Whether a session signature is currently cached. |
+| `credentials.isExpired(address?)` | Whether stored credentials are past their expiration time. |
+| `credentials.clear()` | Delete stored credentials for the connected wallet. |
+| `decryptBalanceAs({ delegatorAddress, owner? })` | Decrypt a delegator's balance as a delegate. ACL address resolved from relayer config. |
+| `isDelegated({ delegatorAddress, delegateAddress })` | Check if a delegation is active and unexpired. |
+| `getDelegationExpiry({ delegatorAddress, delegateAddress })` | Raw expiry timestamp (`0n` = none, `2^64-1` = permanent). |
+| `isConfidential()` | ERC-165 check for ERC-7984 support. |
+| `isWrapper()` | ERC-165 check for wrapper interface. |
+| `underlyingToken()` | Read the underlying ERC-20 address from a wrapper. |
+| `allowance(wrapper, owner?)` | Read ERC-20 allowance of the underlying token. |
+| `isZeroHandle(handle)` | Returns `true` if the handle is the zero sentinel. |
+| `name()` / `symbol()` / `decimals()` | Read token metadata. |
 
 Static methods for multi-token operations:
 
@@ -291,20 +290,20 @@ FHE credentials (encrypted keypair + metadata) are persisted to `storage`. The w
 
 **Credential storage** (`storage`) — persists encrypted keypairs:
 
-| Storage             | Use case                                                 |
-| ------------------- | -------------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across page reloads and sessions |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                       |
-| `asyncLocalStorage` | Node.js servers — isolate credentials per request        |
-| Custom              | Implement the `GenericStorage` interface                 |
+| Storage | Use case |
+| --- | --- |
+| `indexedDBStorage` | Browser apps — persists across page reloads and sessions |
+| `memoryStorage` | Tests, scripts, throwaway sessions |
+| `asyncLocalStorage` | Node.js servers — isolate credentials per request |
+| Custom | Implement the `GenericStorage` interface |
 
 **Session storage** (`sessionStorage`) — holds wallet signatures for the current session:
 
-| Storage                | Use case                                                    |
-| ---------------------- | ----------------------------------------------------------- |
-| Default (in-memory)    | Standard web apps — signature lost on reload, user re-signs |
-| `chromeSessionStorage` | MV3 web extensions — survives service worker restarts       |
-| Custom                 | Implement the `GenericStorage` interface                    |
+| Storage | Use case |
+| --- | --- |
+| Default (in-memory) | Standard web apps — signature lost on reload, user re-signs |
+| `chromeSessionStorage` | MV3 web extensions — survives service worker restarts |
+| Custom | Implement the `GenericStorage` interface |
 
 ```ts
 interface GenericStorage<T = unknown> {
@@ -333,15 +332,15 @@ const sdk = new ZamaSDK({
 
 ### `ZamaSDKConfig`
 
-| Field            | Type                   | Description                                                                                                                            |
-| ---------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `relayer`        | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                               |
-| `signer`         | `GenericSigner`        | Wallet signer interface.                                                                                                               |
-| `storage`        | `GenericStorage`       | Credential storage backend.                                                                                                            |
-| `sessionStorage` | `GenericStorage`       | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
-| `keypairTTL`     | `number`               | Optional. Seconds the ML-KEM re-encryption keypair remains valid. Default: `86400` (1 day). Must be positive.                          |
-| `sessionTTL`     | `number`               | Optional. Seconds the session signature remains valid. Default: `2592000` (30 days). `0` = re-sign every operation.                    |
-| `onEvent`        | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                     |
+| Field | Type | Description |
+| --- | --- | --- |
+| `relayer` | `RelayerSDK` | Relayer backend (`RelayerWeb` or `RelayerNode` instance). |
+| `signer` | `GenericSigner` | Wallet signer interface. |
+| `storage` | `GenericStorage` | Credential storage backend. |
+| `sessionStorage` | `GenericStorage` | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
+| `keypairTTL` | `number` | Optional. Seconds the ML-KEM re-encryption keypair remains valid. Default: `86400` (1 day). Must be positive. |
+| `sessionTTL` | `number` | Optional. Seconds the session signature remains valid. Default: `2592000` (30 days). `0` = re-sign every operation. |
+| `onEvent` | `ZamaSDKEventListener` | Optional. Structured event listener for debugging. |
 
 #### Structured Event Listener
 
@@ -363,14 +362,14 @@ const sdk = new ZamaSDK({
 
 **Event types:**
 
-| Category               | Events                                                                                                                                                               | Key fields                                                       |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Credentials            | `credentials:loading`, `credentials:cached`, `credentials:expired`, `credentials:creating`, `credentials:created`, `credentials:revoked`, `credentials:allowed`      | `contractAddresses`                                              |
-| Encryption             | `encrypt:start`, `encrypt:end`, `encrypt:error`                                                                                                                      | `durationMs` (end/error), `error` (error)                        |
-| Decryption             | `decrypt:start`, `decrypt:end`, `decrypt:error`                                                                                                                      | `durationMs` (end/error), `error` (error)                        |
-| Transactions           | `transaction:error`                                                                                                                                                  | `operation` (`"transfer"`, `"wrap"`, `"approve"`, etc.), `error` |
-| Write confirmations    | `wrap:submitted`, `transfer:submitted`, `transferFrom:submitted`, `approve:submitted`, `approveUnderlying:submitted`, `unwrap:submitted`, `finalizeUnwrap:submitted` | `txHash`                                                         |
-| Unshield orchestration | `unshield:phase1_submitted`, `unshield:phase2_started`, `unshield:phase2_submitted`                                                                                  | `txHash`, `operationId`                                          |
+| Category | Events | Key fields |
+| --- | --- | --- |
+| Credentials | `credentials:loading`, `credentials:cached`, `credentials:expired`, `credentials:creating`, `credentials:created`, `credentials:revoked`, `credentials:allowed` | `contractAddresses` |
+| Encryption | `encrypt:start`, `encrypt:end`, `encrypt:error` | `durationMs` (end/error), `error` (error) |
+| Decryption | `decrypt:start`, `decrypt:end`, `decrypt:error` | `durationMs` (end/error), `error` (error) |
+| Transactions | `transaction:error` | `operation` (`"transfer"`, `"wrap"`, `"approve"`, etc.), `error` |
+| Write confirmations | `wrap:submitted`, `transfer:submitted`, `transferFrom:submitted`, `approve:submitted`, `approveUnderlying:submitted`, `unwrap:submitted`, `finalizeUnwrap:submitted` | `txHash` |
+| Unshield orchestration | `unshield:phase1_submitted`, `unshield:phase2_started`, `unshield:phase2_submitted` | `txHash`, `operationId` |
 
 All events carry `tokenAddress`, `timestamp`, and an optional `operationId` (set on unshield phase events to correlate multi-step operations).
 
@@ -409,39 +408,39 @@ const sdk = new ZamaSDK({
 
 ### `RelayerWebConfig` (browser)
 
-| Field        | Type                                  | Description                                                                                     |
-| ------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `getChainId` | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change.      |
-| `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses).    |
-| `security`   | `RelayerWebSecurityConfig`            | Optional. Security options (see below).                                                         |
-| `logger`     | `GenericLogger`                       | Optional. Logger for worker lifecycle and request timing.                                       |
-| `threads`    | `number`                              | Optional. WASM thread count for parallel FHE ops (4–8 recommended). Requires COOP/COEP headers. |
+| Field | Type | Description |
+| --- | --- | --- |
+| `getChainId` | `() => Promise<number>` | Resolve the current chain ID. Called lazily; the worker is re-initialized on chain change. |
+| `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, contract addresses). |
+| `security` | `RelayerWebSecurityConfig` | Optional. Security options (see below). |
+| `logger` | `GenericLogger` | Optional. Logger for worker lifecycle and request timing. |
+| `threads` | `number` | Optional. WASM thread count for parallel FHE ops (4–8 recommended). Requires COOP/COEP headers. |
 
 #### `RelayerWebSecurityConfig`
 
-| Field            | Type           | Description                                                                                      |
-| ---------------- | -------------- | ------------------------------------------------------------------------------------------------ |
-| `getCsrfToken`   | `() => string` | Optional. Resolve the CSRF token before each authenticated network request.                      |
-| `integrityCheck` | `boolean`      | Optional. Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set `false` for tests. |
+| Field | Type | Description |
+| --- | --- | --- |
+| `getCsrfToken` | `() => string` | Optional. Resolve the CSRF token before each authenticated network request. |
+| `integrityCheck` | `boolean` | Optional. Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set `false` for tests. |
 
 > **Security note:** `RelayerWeb` loads FHE WASM from a CDN at runtime. The `integrityCheck` option (enabled by default) verifies the SHA-384 hash of the bundle before execution, protecting against CDN compromise or MITM attacks. Only disable it in local development or testing.
 
 ### `RelayerNodeConfig` (Node.js)
 
-| Field        | Type                                  | Description                                                                                        |
-| ------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `getChainId` | `() => Promise<number>`               | Resolve the current chain ID. Called lazily; the pool is re-initialized on chain change.           |
+| Field | Type | Description |
+| --- | --- | --- |
+| `getChainId` | `() => Promise<number>` | Resolve the current chain ID. Called lazily; the pool is re-initialized on chain change. |
 | `transports` | `Record<number, FhevmInstanceConfig>` | Chain-specific configs keyed by chain ID (includes relayerUrl, network, auth, contract addresses). |
 
 ### Network Preset Configs
 
 Both the main entry (`@zama-fhe/sdk`) and the `/node` sub-path re-export preset configs so you don't need to import from `@zama-fhe/relayer-sdk` directly:
 
-| Config          | Chain ID | Description                         |
-| --------------- | -------- | ----------------------------------- |
+| Config | Chain ID | Description |
+| --- | --- | --- |
 | `SepoliaConfig` | 11155111 | Sepolia testnet contract addresses. |
-| `MainnetConfig` | 1        | Mainnet contract addresses.         |
-| `HardhatConfig` | 31337    | Local Hardhat node addresses.       |
+| `MainnetConfig` | 1 | Mainnet contract addresses. |
+| `HardhatConfig` | 31337 | Local Hardhat node addresses. |
 
 Each preset provides contract addresses and default relayer URL. Override `network` (RPC URL) for your environment. Browser apps should override `relayerUrl` with a proxy; server-side apps add `auth`:
 
@@ -519,68 +518,68 @@ interface ContractCallConfig {
 
 ### ERC-20
 
-| Function                                   | Description              |
-| ------------------------------------------ | ------------------------ |
-| `nameContract(token)`                      | Read token name.         |
-| `symbolContract(token)`                    | Read token symbol.       |
-| `decimalsContract(token)`                  | Read token decimals.     |
-| `balanceOfContract(token, owner)`          | Read ERC-20 balance.     |
-| `allowanceContract(token, owner, spender)` | Read ERC-20 allowance.   |
-| `approveContract(token, spender, value)`   | Approve ERC-20 spending. |
+| Function | Description |
+| --- | --- |
+| `nameContract(token)` | Read token name. |
+| `symbolContract(token)` | Read token symbol. |
+| `decimalsContract(token)` | Read token decimals. |
+| `balanceOfContract(token, owner)` | Read ERC-20 balance. |
+| `allowanceContract(token, owner, spender)` | Read ERC-20 allowance. |
+| `approveContract(token, spender, value)` | Approve ERC-20 spending. |
 
 ### Encryption (Confidential ERC-20)
 
-| Function                                                                | Description                               |
-| ----------------------------------------------------------------------- | ----------------------------------------- |
-| `confidentialBalanceOfContract(token, user)`                            | Read encrypted balance handle.            |
-| `confidentialTransferContract(token, to, handle, inputProof)`           | Encrypted transfer.                       |
-| `confidentialTransferFromContract(token, from, to, handle, inputProof)` | Operator encrypted transfer.              |
-| `isOperatorContract(token, holder, spender)`                            | Check operator approval.                  |
-| `setOperatorContract(token, spender, timestamp?)`                       | Set operator approval (default: +1 hour). |
-| `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply handle.       |
-| `totalSupplyContract(token)`                                            | Read plaintext total supply.              |
-| `rateContract(token)`                                                   | Read conversion rate.                     |
-| `deploymentCoordinatorContract(token)`                                  | Read deployment coordinator address.      |
-| `isFinalizeUnwrapOperatorContract(token, holder, operator)`             | Check finalize-unwrap operator status.    |
-| `setFinalizeUnwrapOperatorContract(token, operator, timestamp?)`        | Set finalize-unwrap operator.             |
+| Function | Description |
+| --- | --- |
+| `confidentialBalanceOfContract(token, user)` | Read encrypted balance handle. |
+| `confidentialTransferContract(token, to, handle, inputProof)` | Encrypted transfer. |
+| `confidentialTransferFromContract(token, from, to, handle, inputProof)` | Operator encrypted transfer. |
+| `isOperatorContract(token, holder, spender)` | Check operator approval. |
+| `setOperatorContract(token, spender, timestamp?)` | Set operator approval (default: +1 hour). |
+| `confidentialTotalSupplyContract(token)` | Read encrypted total supply handle. |
+| `totalSupplyContract(token)` | Read plaintext total supply. |
+| `rateContract(token)` | Read conversion rate. |
+| `deploymentCoordinatorContract(token)` | Read deployment coordinator address. |
+| `isFinalizeUnwrapOperatorContract(token, holder, operator)` | Check finalize-unwrap operator status. |
+| `setFinalizeUnwrapOperatorContract(token, operator, timestamp?)` | Set finalize-unwrap operator. |
 
 ### Wrapper
 
-| Function                                                         | Description                                   |
-| ---------------------------------------------------------------- | --------------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens.                           |
-| `wrapETHContract(wrapper, to, amount, value)`                    | Wrap native ETH.                              |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap with encrypted amount.         |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Request unwrap using on-chain balance handle. |
-| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap with decryption proof.        |
-| `underlyingContract(wrapper)`                                    | Read underlying ERC-20 address.               |
+| Function | Description |
+| --- | --- |
+| `wrapContract(wrapper, to, amount)` | Wrap ERC-20 tokens. |
+| `wrapETHContract(wrapper, to, amount, value)` | Wrap native ETH. |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)` | Request unwrap with encrypted amount. |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)` | Request unwrap using on-chain balance handle. |
+| `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap with decryption proof. |
+| `underlyingContract(wrapper)` | Read underlying ERC-20 address. |
 
 ### Deployment Coordinator
 
-| Function                                    | Description                  |
-| ------------------------------------------- | ---------------------------- |
-| `getWrapperContract(coordinator, token)`    | Look up wrapper for a token. |
-| `wrapperExistsContract(coordinator, token)` | Check if wrapper exists.     |
+| Function | Description |
+| --- | --- |
+| `getWrapperContract(coordinator, token)` | Look up wrapper for a token. |
+| `wrapperExistsContract(coordinator, token)` | Check if wrapper exists. |
 
 ### ERC-165
 
-| Function                                        | Description              |
-| ----------------------------------------------- | ------------------------ |
+| Function | Description |
+| --- | --- |
 | `supportsInterfaceContract(token, interfaceId)` | ERC-165 interface check. |
 
 ### Fee Manager
 
-| Function                                             | Description                |
-| ---------------------------------------------------- | -------------------------- |
-| `getWrapFeeContract(feeManager, amount, from, to)`   | Calculate wrap fee.        |
-| `getUnwrapFeeContract(feeManager, amount, from, to)` | Calculate unwrap fee.      |
-| `getBatchTransferFeeContract(feeManager)`            | Get batch transfer fee.    |
-| `getFeeRecipientContract(feeManager)`                | Get fee recipient address. |
+| Function | Description |
+| --- | --- |
+| `getWrapFeeContract(feeManager, amount, from, to)` | Calculate wrap fee. |
+| `getUnwrapFeeContract(feeManager, amount, from, to)` | Calculate unwrap fee. |
+| `getBatchTransferFeeContract(feeManager)` | Get batch transfer fee. |
+| `getFeeRecipientContract(feeManager)` | Get fee recipient address. |
 
 ### Transfer Batcher
 
-| Function                                                                   | Description                         |
-| -------------------------------------------------------------------------- | ----------------------------------- |
+| Function | Description |
+| --- | --- |
 | `confidentialBatchTransferContract(batcher, token, from, transfers, fees)` | Batch multiple encrypted transfers. |
 
 ## Library-Specific Contract Helpers
@@ -655,15 +654,15 @@ Individual topic hashes are accessible via the `Topics` object: `Topics.Confiden
 
 ### Decoders
 
-| Function                          | Returns                                                                                                                |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                            |
-| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ mintAmount, amountIn, feeAmount, to, mintTxId }`                                           |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                                       |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ burntAmountHandle, finalizeSuccess, burnAmount, unwrapAmount, feeAmount, ... }` |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }`            |
-| `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                            |
-| `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                               |
+| Function | Returns |
+| --- | --- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }` |
+| `decodeWrapped(log)` | `WrappedEvent \| null` — `{ mintAmount, amountIn, feeAmount, to, mintTxId }` |
+| `decodeUnwrapRequested(log)` | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }` |
+| `decodeUnwrappedFinalized(log)` | `UnwrappedFinalizedEvent \| null` — `{ burntAmountHandle, finalizeSuccess, burnAmount, unwrapAmount, feeAmount, ... }` |
+| `decodeUnwrappedStarted(log)` | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }` |
+| `decodeOnChainEvent(log)` | `OnChainEvent \| null` — tries all decoders |
+| `decodeOnChainEvents(logs)` | `OnChainEvent[]` — batch decode, skips unrecognized logs |
 
 ### Finder Helpers
 
@@ -765,16 +764,16 @@ try {
 
 ### Error Classes
 
-| Error Class                 | Code                     | Description                                                               |
-| --------------------------- | ------------------------ | ------------------------------------------------------------------------- |
-| `SigningRejectedError`      | `SIGNING_REJECTED`       | User rejected the wallet signature request.                               |
-| `SigningFailedError`        | `SIGNING_FAILED`         | Wallet signature failed for a non-rejection reason.                       |
-| `EncryptionFailedError`     | `ENCRYPTION_FAILED`      | FHE encryption operation failed.                                          |
-| `DecryptionFailedError`     | `DECRYPTION_FAILED`      | FHE decryption operation failed.                                          |
-| `ApprovalFailedError`       | `APPROVAL_FAILED`        | ERC-20 approval transaction failed.                                       |
-| `TransactionRevertedError`  | `TRANSACTION_REVERTED`   | On-chain transaction reverted.                                            |
-| `InvalidKeypairError`       | `INVALID_KEYPAIR`        | Relayer rejected FHE keypair (stale or expired).                          |
-| `NoCiphertextError`         | `NO_CIPHERTEXT`          | No FHE ciphertext exists for this account (e.g. never shielded).          |
+| Error Class | Code | Description |
+| --- | --- | --- |
+| `SigningRejectedError` | `SIGNING_REJECTED` | User rejected the wallet signature request. |
+| `SigningFailedError` | `SIGNING_FAILED` | Wallet signature failed for a non-rejection reason. |
+| `EncryptionFailedError` | `ENCRYPTION_FAILED` | FHE encryption operation failed. |
+| `DecryptionFailedError` | `DECRYPTION_FAILED` | FHE decryption operation failed. |
+| `ApprovalFailedError` | `APPROVAL_FAILED` | ERC-20 approval transaction failed. |
+| `TransactionRevertedError` | `TRANSACTION_REVERTED` | On-chain transaction reverted. |
+| `InvalidKeypairError` | `INVALID_KEYPAIR` | Relayer rejected FHE keypair (stale or expired). |
+| `NoCiphertextError` | `NO_CIPHERTEXT` | No FHE ciphertext exists for this account (e.g. never shielded). |
 | `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer HTTP error. Carries a `statusCode` property with the HTTP status. |
 
 ### `matchZamaError`
@@ -830,27 +829,27 @@ Callbacks are safe — a throwing callback will not interrupt the unshield flow.
 
 Low-level FHE operations are available on the relayer backend via `sdk.relayer`:
 
-| Method                                                                      | Description                                                                            |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `encrypt(params)`                                                           | Encrypt values for smart contract calls. Returns `{ handles, inputProof }`.            |
-| `userDecrypt(params)`                                                       | Decrypt ciphertext handles with the user's FHE private key.                            |
-| `publicDecrypt(handles)`                                                    | Public decryption (no private key needed). Returns `{ clearValues, decryptionProof }`. |
-| `generateKeypair()`                                                         | Generate an FHE keypair. Returns `{ publicKey, privateKey }`.                          |
-| `createEIP712(publicKey, contractAddresses, startTimestamp, durationDays?)` | Create EIP-712 typed data for decrypt authorization. Default duration: 7 days.         |
-| `createDelegatedUserDecryptEIP712(...)`                                     | Create EIP-712 for delegated decryption.                                               |
-| `delegatedUserDecrypt(params)`                                              | Decrypt via delegation.                                                                |
-| `requestZKProofVerification(zkProof)`                                       | Submit a ZK proof for on-chain verification.                                           |
-| `getPublicKey()`                                                            | Get the TFHE compact public key.                                                       |
-| `getPublicParams(bits)`                                                     | Get public parameters for encryption capacity.                                         |
-| `terminate()`                                                               | Terminate the backend and clean up resources.                                          |
+| Method | Description |
+| --- | --- |
+| `encrypt(params)` | Encrypt values for smart contract calls. Returns `{ handles, inputProof }`. |
+| `userDecrypt(params)` | Decrypt ciphertext handles with the user's FHE private key. |
+| `publicDecrypt(handles)` | Public decryption (no private key needed). Returns `{ clearValues, decryptionProof }`. |
+| `generateKeypair()` | Generate an FHE keypair. Returns `{ publicKey, privateKey }`. |
+| `createEIP712(publicKey, contractAddresses, startTimestamp, durationDays?)` | Create EIP-712 typed data for decrypt authorization. Default duration: 7 days. |
+| `createDelegatedUserDecryptEIP712(...)` | Create EIP-712 for delegated decryption. |
+| `delegatedUserDecrypt(params)` | Decrypt via delegation. |
+| `requestZKProofVerification(zkProof)` | Submit a ZK proof for on-chain verification. |
+| `getPublicKey()` | Get the TFHE compact public key. |
+| `getPublicParams(bits)` | Get public parameters for encryption capacity. |
+| `terminate()` | Terminate the backend and clean up resources. |
 
 ## Constants
 
-| Constant                       | Value                             | Description                                   |
-| ------------------------------ | --------------------------------- | --------------------------------------------- |
-| `ZERO_HANDLE`                  | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values.     |
-| `ERC7984_INTERFACE_ID`         | `"0x4958f2a4"`                    | ERC-165 interface ID for confidential tokens. |
-| `ERC7984_WRAPPER_INTERFACE_ID` | `"0xd04584ba"`                    | ERC-165 interface ID for wrapper contracts.   |
+| Constant | Value | Description |
+| --- | --- | --- |
+| `ZERO_HANDLE` | `"0x0000...0000"` (32 zero bytes) | Sentinel for empty/zero encrypted values. |
+| `ERC7984_INTERFACE_ID` | `"0x4958f2a4"` | ERC-165 interface ID for confidential tokens. |
+| `ERC7984_WRAPPER_INTERFACE_ID` | `"0xd04584ba"` | ERC-165 interface ID for wrapper contracts. |
 
 ## Exported ABIs
 

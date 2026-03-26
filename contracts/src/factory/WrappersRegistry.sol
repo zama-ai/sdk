@@ -20,6 +20,9 @@ contract WrappersRegistry {
     error NotOwner();
     error IndexOutOfBounds();
     error InvalidSliceRange();
+    error ZeroAddress();
+    error TokenAlreadyRegistered();
+    error ConfidentialTokenAlreadyRegistered();
 
     constructor() {
         _owner = msg.sender;
@@ -28,6 +31,10 @@ contract WrappersRegistry {
     /// @notice Register a token ↔ confidential-token pair.
     function registerPair(address tokenAddress, address confidentialTokenAddress) external {
         if (msg.sender != _owner) revert NotOwner();
+        if (tokenAddress == address(0)) revert ZeroAddress();
+        if (confidentialTokenAddress == address(0)) revert ZeroAddress();
+        if (_tokenToIndex[tokenAddress] != 0) revert TokenAlreadyRegistered();
+        if (_confidentialToIndex[confidentialTokenAddress] != 0) revert ConfidentialTokenAlreadyRegistered();
         _pairs.push(TokenWrapperPair(tokenAddress, confidentialTokenAddress, true));
         uint256 idx = _pairs.length; // 1-indexed
         _tokenToIndex[tokenAddress] = idx;

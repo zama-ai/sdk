@@ -142,9 +142,9 @@ const sdk = new ZamaSDK({
 
 ### sessionTTL
 
-`number | undefined`
+`number | "infinite" | undefined`
 
-Session signature lifetime in seconds. Default: `2592000` (30 days). Set to `0` to require a wallet signature on every operation.
+Session signature lifetime in seconds. Default: `2592000` (30 days). Set to `0` to require a wallet signature on every operation. Pass `"infinite"` for a session that never expires.
 
 ```ts
 const sdk = new ZamaSDK({

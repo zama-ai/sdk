@@ -2,7 +2,7 @@ import { describe, expect, test, vi, mockQueryContext } from "../../test-fixture
 import { getAddress, zeroAddress } from "viem";
 import type { Address } from "viem";
 
-import type { WrappersRegistry } from "../../token/wrappers-registry";
+import type { WrappersRegistry } from "../../wrappers-registry";
 import {
   tokenPairsQueryOptions,
   tokenPairsLengthQueryOptions,

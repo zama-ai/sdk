@@ -19,7 +19,7 @@ import { MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
 import type { GenericSigner } from "./types/signer";
 
 /**
- * Default wrappers registry addresses derived from {@link DefaultConfigs}.
+ * Default wrappers registry addresses for known chains.
  * Only includes chains where a registry is deployed (excludes Hardhat).
  */
 export const DefaultRegistryAddresses: Record<number, Address> = {
@@ -272,21 +272,26 @@ export class WrappersRegistry {
     let metadataItems = this.#getCached<TokenWrapperPairWithMetadata[]>(metadataCacheKey);
     if (metadataItems === undefined) {
       const settled = await Promise.allSettled(items.map((pair) => this.#pairWithMetadata(pair)));
+      const hasFailures = settled.some((r) => r.status === "rejected");
+      const enriched = settled.map((result, i) =>
+        result.status === "fulfilled"
+          ? result.value
+          : Object.assign({}, items[i], {
+              metadataFailed: true as const,
+              underlying: {
+                name: "Unknown",
+                symbol: "???",
+                decimals: 0,
+                totalSupply: 0n,
+              },
+              confidential: { name: "Unknown", symbol: "???", decimals: 0 },
+            }),
+      );
+      // Use negative cache TTL when any metadata fetch failed so retries happen sooner
       metadataItems = this.#setCached(
         metadataCacheKey,
-        settled.map((result, i) =>
-          result.status === "fulfilled"
-            ? result.value
-            : Object.assign({}, items[i], {
-                underlying: {
-                  name: "Unknown",
-                  symbol: "???",
-                  decimals: 0,
-                  totalSupply: 0n,
-                },
-                confidential: { name: "Unknown", symbol: "???", decimals: 0 },
-              }),
-        ),
+        enriched,
+        hasFailures ? NEGATIVE_CACHE_TTL_MS : undefined,
       );
     }
 
@@ -437,7 +442,7 @@ export class WrappersRegistry {
    * Fetch a range of token wrapper pairs (paginated by index).
    *
    * @param fromIndex - Start index (inclusive).
-   * @param toIndex - End index.
+   * @param toIndex - End index (exclusive).
    * @returns The slice of `TokenWrapperPair` entries.
    */
   async getTokenPairsSlice(

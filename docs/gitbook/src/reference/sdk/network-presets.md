@@ -129,7 +129,7 @@ The relayer selects the correct transport based on the chain ID returned by `get
 
 ## DefaultRegistryAddresses
 
-A convenience export that extracts valid registry addresses from the presets into a `Record<number, Address>` map. Used internally by the [WrappersRegistry](/reference/sdk/WrappersRegistry) class.
+A convenience export of built-in registry addresses for known chains (Mainnet, Sepolia, Hoodi) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](/reference/sdk/WrappersRegistry) class.
 
 ```ts
 import { DefaultRegistryAddresses } from "@zama-fhe/sdk";

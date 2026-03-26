@@ -46,7 +46,7 @@ export function wrapperDiscoveryQueryOptions(
     queryKey,
     queryFn: async () => {
       if (!config.erc20Address) {
-        return null;
+        throw new Error("erc20Address is required for wrapper discovery query");
       }
       const result = await registry.getConfidentialToken(config.erc20Address);
       return result ? result.confidentialTokenAddress : null;

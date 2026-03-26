@@ -183,7 +183,7 @@ const count = await registry.getTokenPairsLength();
 
 `(fromIndex: bigint, toIndex: bigint) => Promise<readonly TokenWrapperPair[]>`
 
-Fetch a range of pairs for pagination.
+Fetch a range of pairs for pagination. `fromIndex` is inclusive, `toIndex` is exclusive.
 
 ```ts
 const page = await registry.getTokenPairsSlice(0n, 10n);
@@ -238,7 +238,7 @@ if (await registry.isConfidentialTokenValid("0xcUSDC")) {
 
 `Record<number, Address>`
 
-Exported map of built-in registry addresses derived from `DefaultConfigs`. Includes Mainnet (`1`) and Sepolia (`11155111`). Addresses are EIP-55 checksummed.
+Exported map of built-in registry addresses for known chains. Includes Mainnet (`1`), Sepolia (`11155111`), and Hoodi (`560048`). Addresses are EIP-55 checksummed.
 
 ```ts
 import { DefaultRegistryAddresses } from "@zama-fhe/sdk";

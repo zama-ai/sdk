@@ -47,7 +47,7 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 `Address`
 
-Address of any confidential token you control. Used only to derive the signer context and to scope the query cache key — it does not affect which wrapper the registry returns.
+Address of any confidential token you control. Used to scope the query cache key and to gate whether the query is enabled — it does not affect which wrapper the registry returns.
 
 ### erc20Address
 
