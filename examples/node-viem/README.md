@@ -73,12 +73,12 @@ Delegation active after revoke: false
 Exact balance values depend on prior runs (they accumulate). The relative changes
 across sections are what matter:
 
-| Operation          | Account A cUSDT | Account A USDT |
-| ------------------ | --------------- | -------------- |
-| After mint         | unchanged        | +1 000         |
-| After shield       | +100             | −100           |
-| After transfer     | −10              | unchanged      |
-| After unshield     | −50              | +50            |
+| Operation      | Account A cUSDT | Account A USDT |
+| -------------- | --------------- | -------------- |
+| After mint     | unchanged       | +1 000         |
+| After shield   | +100            | −100           |
+| After transfer | −10             | unchanged      |
+| After unshield | −50             | +50            |
 
 Each on-chain operation prints its transaction hash **before** waiting for
 confirmation — paste any hash into
