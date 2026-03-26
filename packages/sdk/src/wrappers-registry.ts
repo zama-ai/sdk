@@ -186,7 +186,7 @@ export class WrappersRegistry {
       );
     }
 
-    return address;
+    return getAddress(address);
   }
 
   // ---------------------------------------------------------------------------
