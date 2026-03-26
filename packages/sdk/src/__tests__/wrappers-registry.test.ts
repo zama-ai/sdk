@@ -4,6 +4,7 @@ import { MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
 import { describe, expect, it, vi } from "../test-fixtures";
 import type { GenericSigner } from "../types";
 import { DefaultRegistryAddresses, WrappersRegistry } from "../wrappers-registry";
+import { ZamaSDK } from "../zama-sdk";
 
 const CUSTOM_REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -529,6 +530,12 @@ describe("WrappersRegistry", () => {
     it("shares the same signer", ({ sdk }) => {
       const registry = sdk.createWrappersRegistry();
       expect(registry.signer).toBe(sdk.signer);
+    });
+
+    it("forwards registryTTL from the SDK", ({ relayer, signer, storage }) => {
+      const sdk = new ZamaSDK({ relayer, signer, storage, registryTTL: 60 });
+      const registry = sdk.createWrappersRegistry();
+      expect(registry.ttlMs).toBe(60_000);
     });
   });
 });
