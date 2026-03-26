@@ -30,7 +30,6 @@
     <img src="https://img.shields.io/github/actions/workflow/status/zama-ai/sdk/playwright.yml?style=flat-square&label=e2e%20tests" alt="E2E tests"></a>
 </p>
 
-
 ## About
 
 ### What is Zama SDK?
@@ -38,10 +37,10 @@
 **Zama SDK** is a suite of TypeScript libraries for building privacy-preserving dApps on EVM-compatible blockchains powered by the *Zama Confidential Blockchain Protocol*. It provides everything you need to interact with confidential smart contracts using [Fully Homomorphic Encryption (FHE)](https://docs.zama.ai/protocol/protocol/overview) — from encrypting inputs and decrypting results to managing access control — all from familiar TypeScript and React environments.
 
 Zama SDK is designed for developers who want to integrate confidential operations into their applications without learning cryptography:
+
 - **End-to-end encryption:** Transaction data and on-chain state remain encrypted at all times.
 - **Framework-agnostic core:** Works with viem, ethers, or any EVM library.
 - **React-ready:** First-class React hooks powered by `@tanstack/react-query`.
-<br></br>
 
 ### Table of contents
 
@@ -50,14 +49,13 @@ Zama SDK is designed for developers who want to integrate confidential operation
   - [Table of contents](#table-of-contents)
   - [Packages](#packages)
   - [Main features](#main-features)
-- [Resources](#resources)
 - [Working with Zama SDK](#working-with-zama-sdk)
   - [Install](#install)
   - [Development](#development)
   - [Claude Code Setup](#claude-code-setup)
   - [Contributing](#contributing)
   - [License](#license)
-  - [FAQ](#faq)
+- [Resources](#resources)
 - [Support](#support)
 
 ### Packages
@@ -70,20 +68,11 @@ Zama SDK is designed for developers who want to integrate confidential operation
 ### Main features
 
 - **TypeScript-first:** Fully typed APIs with tree-shakeable ESM builds for minimal bundle size.
-- **Privacy by design:** Encrypt inputs, decrypt outputs, and manage access control for confidential smart contracts — no cryptography knowledge required.
+- **Privacy by design:** Encrypt inputs, decrypt outputs, and manage access control for confidential smart contracts.
 - **Multi-library support:** Adapters for both viem and ethers, so you can use whichever EVM library your project already depends on.
 - **React hooks:** Dedicated React package with hooks for encrypting, decrypting, reencrypting, and querying confidential state — all backed by `@tanstack/react-query` for caching and suspense.
 - **Node.js worker pool:** Offload heavy FHE operations to a worker pool in server-side environments for non-blocking performance.
 - **Wagmi integration:** Drop-in wagmi connector support for seamless wallet and provider management in React apps.
-
-<p align="right">
-  <a href="#about" > ↑ Back to top </a>
-</p>
-
-## Resources
-
-- [Documentation](https://docs.zama.ai/protocol) — Official documentation of the Zama Confidential Blockchain Protocol.
-- [Awesome Zama – FHEVM](https://github.com/zama-ai/awesome-zama?tab=readme-ov-file#fhevm) — Curated articles, talks, and ecosystem projects.
 
 <p align="right">
   <a href="#about" > ↑ Back to top </a>
@@ -102,7 +91,6 @@ pnpm add @zama-fhe/sdk
 pnpm add @zama-fhe/react-sdk @tanstack/react-query
 # or: npm install @zama-fhe/react-sdk @tanstack/react-query / yarn add @zama-fhe/react-sdk @tanstack/react-query
 ```
-<br></br>
 
 ### Development
 
@@ -128,7 +116,6 @@ pnpm e2e:test:ui            # Playwright UI mode
 ```
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contributor guide (branching, PRs, code style, architecture).
-<br></br>
 
 ### Claude Code Setup
 
@@ -141,7 +128,6 @@ This repository includes an opt-in [Claude Code](https://docs.anthropic.com/en/d
 - **Custom skills** — custom skills required for good development practices to contribute to this repo.
 
 To use it, install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and run `pnpm setup:claude`.
-<br></br>
 
 ### Contributing
 
@@ -151,31 +137,19 @@ There are two ways to contribute to Zama SDK:
 - Request to become an official contributor by emailing hello@zama.ai.
 
 Becoming an approved contributor involves signing our Contributor License Agreement (CLA). Only approved contributors can send pull requests, so please make sure to get in touch before you do!
-<br></br>
 
 ### License
 
 This software is distributed under the **BSD-3-Clause-Clear** license. Read [this](LICENSE) for more details.
 
-### FAQ
+## Resources
 
-**Is Zama's technology free to use?**
+- [Documentation](https://docs.zama.ai/protocol) — Official documentation of the Zama Confidential Blockchain Protocol.
+- [Awesome Zama – FHEVM](https://github.com/zama-ai/awesome-zama?tab=readme-ov-file#fhevm) — Curated articles, talks, and ecosystem projects.
 
-> Zama's libraries are free to use under the BSD 3-Clause Clear license only for development, research, prototyping, and experimentation purposes. However, for any commercial use of Zama's open source code, companies must purchase Zama's commercial patent license.
->
-> Everything we do is open source, and we are very transparent on what it means for our users, you can read more about how we monetize our open source products at Zama in [this blog post](https://www.zama.ai/post/open-source).
-
-**What do I need to do if I want to use Zama's technology for commercial purposes?**
-
-> To commercially use Zama's technology you need to be granted Zama's patent license. Please contact us at hello@zama.ai for more information.
-
-**Do you file IP on your technology?**
-
-> Yes, all Zama's technologies are patented.
-
-**Can you customize a solution for my specific use case?**
-
-> We are open to collaborating and advancing the FHE space with our partners. If you have specific needs, please email us at hello@zama.ai.
+<p align="right">
+  <a href="#about" > ↑ Back to top </a>
+</p>
 
 ## Support
 
