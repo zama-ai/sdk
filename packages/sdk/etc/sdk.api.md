@@ -18400,7 +18400,7 @@ export const SepoliaConfig: {
     readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
-    readonly registryAddress: "0xDEbdfa2568dEd84044e9807500ee523acDe9308b";
+    readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 };
 
 // @public (undocumented)
@@ -30505,6 +30505,7 @@ export function wrapperExistsContract(coordinator: Address, tokenAddress: Addres
 // @public
 export class WrappersRegistry {
     constructor(config: WrappersRegistryConfig);
+    getAddress(chainId: number): Address | undefined;
     getConfidentialToken(tokenAddress: Address): Promise<{
         confidentialTokenAddress: Address;
         isValid: boolean;
@@ -30596,7 +30597,7 @@ export class ZamaSDK {
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
     isAllowed(): Promise<boolean>;
-    get registry(): WrappersRegistry;
+    readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
     revoke(...contractAddresses: Address[]): Promise<void>;

@@ -1163,7 +1163,6 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
 // @public
 export function useConfidentialTokenAddress(input: {
     tokenAddress: Address | undefined;
-    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<readonly [boolean, `0x${string}`], Error>;
 
 // @public
@@ -1239,7 +1238,6 @@ export function useIsConfidentialSuspense(tokenAddress: Address): _tanstack_reac
 // @public
 export function useIsConfidentialTokenValid(input: {
     confidentialTokenAddress: Address | undefined;
-    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<boolean, Error>;
 
 // @public
@@ -1253,7 +1251,6 @@ export function useListPairs(input?: {
     page?: number;
     pageSize?: number;
     metadata?: boolean;
-    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, Error>;
 
 // @public
@@ -1327,30 +1324,23 @@ export function useToken(config: UseZamaConfig): _zama_fhe_sdk0.Token;
 // @public
 export function useTokenAddress(input: {
     confidentialTokenAddress: Address | undefined;
-    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<readonly [boolean, `0x${string}`], Error>;
 
 // @public
 export function useTokenPair(input: {
     index: bigint | undefined;
-    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<TokenWrapperPair, Error>;
 
 // @public
-export function useTokenPairsLength(input?: {
-    registryAddresses?: Record<number, Address>;
-}): _tanstack_react_query0.UseQueryResult<bigint, Error>;
+export function useTokenPairsLength(): _tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public
-export function useTokenPairsRegistry(input?: {
-    registryAddresses?: Record<number, Address>;
-}): _tanstack_react_query0.UseQueryResult<readonly TokenWrapperPair[], Error>;
+export function useTokenPairsRegistry(): _tanstack_react_query0.UseQueryResult<readonly TokenWrapperPair[], Error>;
 
 // @public
 export function useTokenPairsSlice(input: {
     fromIndex: bigint | undefined;
     toIndex: bigint | undefined;
-    registryAddresses?: Record<number, Address>;
 }): _tanstack_react_query0.UseQueryResult<readonly TokenWrapperPair[], Error>;
 
 // @public
@@ -1407,7 +1397,6 @@ export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?:
 // @public
 export interface UseWrapperDiscoveryConfig {
     erc20Address: Address | undefined;
-    registryAddresses?: Record<number, Address>;
     tokenAddress: Address;
 }
 
@@ -1421,7 +1410,7 @@ export interface UseWrapperDiscoverySuspenseConfig {
 }
 
 // @public
-export function useWrappersRegistryAddress(registryAddresses?: Record<number, Address>): Address | undefined;
+export function useWrappersRegistryAddress(): Address | undefined;
 
 // @public
 export interface UseZamaConfig {

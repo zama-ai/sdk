@@ -1386,12 +1386,10 @@ export interface WrapperDiscoveryQueryConfig {
     erc20Address?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
-    registry?: WrappersRegistry;
-    registryAddresses?: Record<number, Address>;
 }
 
 // @public (undocumented)
-export function wrapperDiscoveryQueryOptions(signer: GenericSigner, tokenAddress: Address | undefined, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<Address | null, Error, Address | null, ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>>;
+export function wrapperDiscoveryQueryOptions(registry: WrappersRegistry, tokenAddress: Address | undefined, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<Address | null, Error, Address | null, ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>>;
 
 // @public (undocumented)
 export interface WrappersRegistryQueryConfig {
@@ -1637,7 +1635,7 @@ export class ZamaSDK {
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
     isAllowed(): Promise<boolean>;
-    get registry(): WrappersRegistry;
+    readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
     revoke(...contractAddresses: Address[]): Promise<void>;
@@ -1712,7 +1710,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-dV8OS7ZX.d.ts:1760:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DRAE9ckd.d.ts:1765:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
