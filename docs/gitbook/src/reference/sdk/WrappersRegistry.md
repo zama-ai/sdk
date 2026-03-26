@@ -17,6 +17,15 @@ import { WrappersRegistry, DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
 ### From ZamaSDK
 
+The SDK exposes a shared registry instance via `sdk.registry`. This is the recommended way to access the registry — it shares the SDK's signer, `registryAddresses`, and `registryTTL`, and maintains a single in-memory cache.
+
+```ts
+const pairs = await sdk.registry.listPairs({ page: 1 });
+const result = await sdk.registry.getConfidentialToken(erc20Address);
+```
+
+You can also create a separate instance via `sdk.createWrappersRegistry()` (inherits `registryTTL` from the SDK):
+
 ```ts
 const registry = sdk.createWrappersRegistry();
 const pairs = await registry.getTokenPairs();
@@ -59,6 +68,19 @@ Wallet signer for read calls. Any signer implementation works (`ViemSigner`, `Et
 `Record<number, Address> | undefined`
 
 Per-chain registry address overrides, merged on top of `DefaultRegistryAddresses`. Mainnet and Sepolia are configured by default — pass this only for custom or local chains.
+
+### registryTTL
+
+`number | undefined`
+
+How long cached registry results remain valid, in seconds. Default: `86400` (24 hours).
+
+```ts
+const registry = new WrappersRegistry({
+  signer,
+  registryTTL: 3600, // 1 hour
+});
+```
 
 ## Methods
 
@@ -216,7 +238,7 @@ if (await registry.isConfidentialTokenValid("0xcUSDC")) {
 
 `Record<number, Address>`
 
-Exported map of built-in registry addresses extracted from network presets. Includes Mainnet (`1`) and Sepolia (`11155111`).
+Exported map of built-in registry addresses derived from `DefaultConfigs`. Includes Mainnet (`1`) and Sepolia (`11155111`). Addresses are EIP-55 checksummed.
 
 ```ts
 import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
@@ -226,7 +248,7 @@ console.log(DefaultRegistryAddresses[1]); // "0xeb5015fF021DB115aCe010f23F55C259
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — `createWrappersRegistry()` factory method
+- [ZamaSDK](/reference/sdk/ZamaSDK) — `sdk.registry` shared instance and `createWrappersRegistry()` factory
 - [useListPairs](/reference/react/useListPairs) — React hook for paginated pair listing
 - [useConfidentialTokenAddress](/reference/react/useConfidentialTokenAddress) — React hook for forward lookup
 - [useTokenAddress](/reference/react/useTokenAddress) — React hook for reverse lookup

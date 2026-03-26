@@ -18195,7 +18195,6 @@ export class ReadonlyToken {
     decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
     // (undocumented)
     protected readonly delegatedCredentials: DelegatedCredentialsManager;
-    discoverWrapper(erc20Address: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
     // (undocumented)
     protected getAclAddress(): Promise<Address>;

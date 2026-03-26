@@ -155,6 +155,36 @@ const sdk = new ZamaSDK({
 });
 ```
 
+### registryAddresses
+
+`Record<number, Address> | undefined`
+
+Per-chain wrappers registry address overrides, merged on top of built-in defaults. Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
+
+```ts
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage: indexedDBStorage,
+  registryAddresses: { [31337]: "0xYourHardhatRegistry" },
+});
+```
+
+### registryTTL
+
+`number | undefined`
+
+How long cached registry results remain valid, in seconds. Default: `86400` (24 hours). Consistent with `keypairTTL`.
+
+```ts
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage: indexedDBStorage,
+  registryTTL: 3600, // 1 hour
+});
+```
+
 ### onEvent
 
 `ZamaSDKEventListener | undefined`
@@ -170,6 +200,19 @@ const sdk = new ZamaSDK({
     console.debug(`[zama] ${type}`, rest);
   },
 });
+```
+
+## Properties
+
+### registry
+
+`WrappersRegistry` (readonly)
+
+Auto-configured wrappers registry instance. Shares the SDK's signer, `registryAddresses`, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
+
+```ts
+const pairs = await sdk.registry.listPairs({ page: 1 });
+const result = await sdk.registry.getConfidentialToken(erc20Address);
 ```
 
 ## Methods

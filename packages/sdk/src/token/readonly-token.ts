@@ -12,14 +12,6 @@ import {
   symbolContract,
   underlyingContract,
 } from "../contracts";
-import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import { WrappersRegistry } from "../wrappers-registry";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Handle } from "../relayer/relayer-sdk.types";
-import { toError } from "../utils";
-import { pLimit } from "./concurrency";
-import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { CredentialsManager } from "../credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "../credentials/delegated-credentials-manager";
 import {
@@ -32,7 +24,14 @@ import {
   SigningFailedError,
   SigningRejectedError,
 } from "../errors";
+import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
+import { toError } from "../utils";
+import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import { pLimit } from "./concurrency";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -95,8 +94,6 @@ export interface ReadonlyTokenConfig {
   keypairTTL?: number;
   /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). `0` means every operation triggers a signing prompt. `"infinite"` means the session never expires. */
   sessionTTL?: number | "infinite";
-  /** Shared {@link WrappersRegistry} instance. When provided, `discoverWrapper()` reuses its cache. */
-  registry?: WrappersRegistry;
   /** Optional structured event listener for debugging and telemetry. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -114,7 +111,6 @@ export class ReadonlyToken {
   readonly address: Address;
   readonly storage: GenericStorage;
   readonly #onEvent: ZamaSDKEventListener | undefined;
-  readonly #registry: WrappersRegistry | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
     const credentialsConfig = {
@@ -133,7 +129,6 @@ export class ReadonlyToken {
     this.signer = config.signer;
     this.address = getAddress(config.address);
     this.storage = config.storage;
-    this.#registry = config.registry;
     this.#onEvent = config.onEvent;
   }
 
@@ -492,29 +487,6 @@ export class ReadonlyToken {
     }
 
     return results;
-  }
-
-  /**
-   * Discover the confidential wrapper for a given ERC-20 token address.
-   *
-   * Resolves the wrappers registry from the chain config automatically.
-   * Returns `null` if no wrapper is registered for the given ERC-20.
-   *
-   * @param erc20Address - The plain ERC-20 token address to find a wrapper for.
-   * @returns The confidential wrapper address, or `null` if none exists.
-   *
-   * @example
-   * ```ts
-   * const wrapper = await token.discoverWrapper("0xUSDC");
-   * if (wrapper) {
-   *   const fullToken = sdk.createToken(wrapper);
-   * }
-   * ```
-   */
-  async discoverWrapper(erc20Address: Address): Promise<Address | null> {
-    const registry = this.#registry ?? new WrappersRegistry({ signer: this.signer });
-    const result = await registry.getConfidentialToken(getAddress(erc20Address));
-    return result ? result.confidentialTokenAddress : null;
   }
 
   /**

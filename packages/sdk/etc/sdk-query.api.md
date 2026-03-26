@@ -852,7 +852,6 @@ export class ReadonlyToken {
     //
     // (undocumented)
     protected readonly delegatedCredentials: DelegatedCredentialsManager;
-    discoverWrapper(erc20Address: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
     // (undocumented)
     protected getAclAddress(): Promise<Address>;
@@ -1386,10 +1385,12 @@ export interface WrapperDiscoveryQueryConfig {
     erc20Address?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
+    registryAddress?: Address;
+    tokenAddress?: Address;
 }
 
 // @public (undocumented)
-export function wrapperDiscoveryQueryOptions(registry: WrappersRegistry, tokenAddress: Address | undefined, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<Address | null, Error, Address | null, ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>>;
+export function wrapperDiscoveryQueryOptions(registry: WrappersRegistry, config: WrapperDiscoveryQueryConfig): QueryFactoryOptions<Address | null, Error, Address | null, ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>>;
 
 // @public (undocumented)
 export interface WrappersRegistryQueryConfig {
@@ -1466,7 +1467,8 @@ export const zamaQueryKeys: {
     };
     readonly wrapperDiscovery: {
         readonly all: readonly ["zama.wrapperDiscovery"];
-        readonly token: (tokenAddress?: Address, erc20Address?: Address) => readonly ["zama.wrapperDiscovery", {
+        readonly token: (tokenAddress?: Address, erc20Address?: Address, registryAddress?: Address) => readonly ["zama.wrapperDiscovery", {
+            readonly registryAddress?: `0x${string}` | undefined;
             readonly erc20Address?: `0x${string}` | undefined;
             readonly tokenAddress?: `0x${string}` | undefined;
         }];
@@ -1710,7 +1712,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-CUjM1UFV.d.ts:1764:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-owHOM10S.d.ts:1749:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

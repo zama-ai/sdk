@@ -1,15 +1,15 @@
 import { getAddress, type Address } from "viem";
+import { CredentialsManager } from "./credentials/credentials-manager";
+import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import type { ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
-import { toError } from "./utils";
-import { CredentialsManager } from "./credentials/credentials-manager";
-import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
-import { WrappersRegistry } from "./wrappers-registry";
 import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
+import { toError } from "./utils";
+import { WrappersRegistry } from "./wrappers-registry";
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -205,7 +205,6 @@ export class ZamaSDK {
       delegatedCredentials: this.delegatedCredentials,
       address: getAddress(address),
       onEvent: this.#onEvent,
-      registry: this.registry,
     });
   }
 
@@ -228,7 +227,6 @@ export class ZamaSDK {
       address: getAddress(address),
       wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,
-      registry: this.registry,
     });
   }
 
