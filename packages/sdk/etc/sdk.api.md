@@ -13225,7 +13225,7 @@ export function getWrapFeeContract(feeManagerAddress: Address, amount: bigint, w
 };
 
 // @public
-export function getWrapperContract(coordinator: Address, tokenAddress: Address): {
+export function getWrapperContract(registryAddress: Address, tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [{
@@ -30466,7 +30466,7 @@ export interface WrappedEvent {
 }
 
 // @public
-export function wrapperExistsContract(coordinator: Address, tokenAddress: Address): {
+export function wrapperExistsContract(registryAddress: Address, tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [{
