@@ -23,10 +23,13 @@ export class SigningFailedError extends ZamaError {
 export function wrapSigningError(error: unknown, context: string): never {
   const hasCode4001 =
     typeof error === "object" && error !== null && "code" in error && error.code === 4001;
-  const msg = error instanceof Error ? error.message.toLowerCase() : "";
-  const hasRejectionMessage = msg.includes("user rejected") || msg.includes("user denied");
+  const originalMsg = error instanceof Error ? error.message : String(error);
+  const hasRejectionMessage =
+    originalMsg.toLowerCase().includes("user rejected") ||
+    originalMsg.toLowerCase().includes("user denied");
+  const fullMessage = `${context}: ${originalMsg}`;
   if (hasCode4001 || hasRejectionMessage) {
-    throw new SigningRejectedError(context, { cause: error });
+    throw new SigningRejectedError(fullMessage, { cause: error });
   }
-  throw new SigningFailedError(context, { cause: error });
+  throw new SigningFailedError(fullMessage, { cause: error });
 }

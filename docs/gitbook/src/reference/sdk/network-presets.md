@@ -25,17 +25,18 @@ import { MainnetConfig, SepoliaConfig, HardhatConfig } from "@zama-fhe/sdk";
 
 Each preset provides the fields needed by a relayer transport:
 
-| Field                                       | Type      | Description                                       |
-| ------------------------------------------- | --------- | ------------------------------------------------- |
-| `chainId`                                   | `number`  | Chain identifier                                  |
-| `gatewayChainId`                            | `number`  | Chain ID of the gateway                           |
-| `relayerUrl`                                | `string`  | Default relayer endpoint for this network         |
-| `network`                                   | `string`  | Default RPC URL for this network                  |
-| `aclContractAddress`                        | `Address` | ACL contract address                              |
-| `kmsContractAddress`                        | `Address` | KMS contract address                              |
-| `inputVerifierContractAddress`              | `Address` | Input verifier contract address                   |
-| `verifyingContractAddressDecryption`        | `Address` | EIP-712 verifying contract for decrypt operations |
-| `verifyingContractAddressInputVerification` | `Address` | EIP-712 verifying contract for encrypt operations |
+| Field                                       | Type                  | Description                                                                                              |
+| ------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
+| `chainId`                                   | `number`              | Chain identifier                                                                                         |
+| `gatewayChainId`                            | `number`              | Chain ID of the gateway                                                                                  |
+| `relayerUrl`                                | `string`              | Default relayer endpoint for this network                                                                |
+| `network`                                   | `string`              | Default RPC URL for this network                                                                         |
+| `aclContractAddress`                        | `Address`             | ACL contract address                                                                                     |
+| `kmsContractAddress`                        | `Address`             | KMS contract address                                                                                     |
+| `inputVerifierContractAddress`              | `Address`             | Input verifier contract address                                                                          |
+| `verifyingContractAddressDecryption`        | `Address`             | EIP-712 verifying contract for decrypt operations                                                        |
+| `verifyingContractAddressInputVerification` | `Address`             | EIP-712 verifying contract for encrypt operations                                                        |
+| `registryAddress`                           | `string \| undefined` | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
 
 ## Usage
 
@@ -126,7 +127,23 @@ const relayer = new RelayerWeb({
 
 The relayer selects the correct transport based on the chain ID returned by `getChainId()`.
 
+## DefaultRegistryAddresses
+
+A convenience export of built-in registry addresses for known chains (Mainnet, Sepolia, Hoodi) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](/reference/sdk/WrappersRegistry) class.
+
+```ts
+import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
+
+// { 1: "0xeb5015fF...", 11155111: "0xDEbdfa25..." }
+console.log(DefaultRegistryAddresses);
+```
+
+{% hint style="info" %}
+`HardhatConfig` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry).
+{% endhint %}
+
 ## Related
 
+- [WrappersRegistry](/reference/sdk/WrappersRegistry) — high-level registry query API
 - [Configuration guide](/guides/configuration) — full relayer, signer, and storage setup
 - [ZamaSDK](/reference/sdk/ZamaSDK) — SDK constructor reference

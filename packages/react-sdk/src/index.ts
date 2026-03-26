@@ -40,6 +40,8 @@ export {
   ZamaSDK,
   Token,
   ReadonlyToken,
+  WrappersRegistry,
+  DefaultRegistryAddresses,
   MemoryStorage,
   memoryStorage,
   IndexedDBStorage,
@@ -77,10 +79,15 @@ export type {
   ZKProofLike,
   InputProofBytesType,
   BatchTransferData,
+  TokenWrapperPair,
+  TokenWrapperPairWithMetadata,
+  PaginatedResult,
   StoredCredentials,
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
+  WrappersRegistryConfig,
+  ListPairsOptions,
   DelegatedCredentialsManagerConfig,
   DelegatedStoredCredentials,
   BatchDecryptAsOptions,
@@ -239,6 +246,17 @@ export {
   type UseFeeConfig,
 } from "./token/use-fees";
 
+// Registry hooks (wagmi-based, read from on-chain ConfidentialTokenWrappersRegistry)
+export { useWrappersRegistryAddress } from "./wrappers-registry/use-wrappers-registry-address";
+export { useTokenPairsRegistry } from "./wrappers-registry/use-token-pairs-registry";
+export { useTokenPairsLength } from "./wrappers-registry/use-token-pairs-length";
+export { useTokenPairsSlice } from "./wrappers-registry/use-token-pairs-slice";
+export { useTokenPair } from "./wrappers-registry/use-token-pair";
+export { useConfidentialTokenAddress } from "./wrappers-registry/use-confidential-token-address";
+export { useTokenAddress } from "./wrappers-registry/use-token-address";
+export { useIsConfidentialTokenValid } from "./wrappers-registry/use-is-confidential-token-valid";
+export { useListPairs } from "./wrappers-registry/use-list-pairs";
+
 // Re-export query utilities and factories from core sdk/query
 export {
   zamaQueryKeys,
@@ -312,6 +330,8 @@ export {
   delegationStatusQueryOptions,
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
+  listPairsQueryOptions,
+  type ListPairsQueryConfig,
 } from "@zama-fhe/sdk/query";
 export type {
   OptimisticBalanceSnapshot,
@@ -388,5 +408,6 @@ export {
   InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  ConfigurationError,
   matchZamaError,
 } from "@zama-fhe/sdk";

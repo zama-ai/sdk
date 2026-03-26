@@ -11,8 +11,8 @@ export const ZamaSDKEvents = {
   CredentialsCreating: "credentials:creating",
   CredentialsCreated: "credentials:created",
   CredentialsRevoked: "credentials:revoked",
-  CredentialsAllowed: "credentials:allowed",
   CredentialsPersistFailed: "credentials:persist_failed",
+  CredentialsAllowed: "credentials:allowed",
   CredentialsCorrupted: "credentials:corrupted",
   SessionExpired: "session:expired",
   // FHE operations
@@ -89,16 +89,16 @@ export interface CredentialsRevokedEvent extends BaseEvent {
   contractAddresses?: Address[];
 }
 
+export interface CredentialsPersistFailedEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.CredentialsPersistFailed;
+  /** The error that caused the persist failure. */
+  error: Error;
+}
+
 export interface CredentialsAllowedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.CredentialsAllowed;
   /** Contract addresses covered by the authorized credentials. */
   contractAddresses?: Address[];
-}
-
-export interface CredentialsPersistFailedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsPersistFailed;
-  /** The error that caused persistence to fail. */
-  error: Error;
 }
 
 export interface CredentialsCorruptedEvent extends BaseEvent {
@@ -220,8 +220,8 @@ export type ZamaSDKEvent =
   | CredentialsCreatingEvent
   | CredentialsCreatedEvent
   | CredentialsRevokedEvent
-  | CredentialsAllowedEvent
   | CredentialsPersistFailedEvent
+  | CredentialsAllowedEvent
   | CredentialsCorruptedEvent
   | SessionExpiredEvent
   | EncryptStartEvent

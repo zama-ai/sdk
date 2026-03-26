@@ -18,16 +18,49 @@ import { WalletClient } from 'viem';
 export function readConfidentialBalanceOfContract(client: PublicClient, tokenAddress: Address, userAddress: Address): Promise<`0x${string}`>;
 
 // @public (undocumented)
+export function readConfidentialTokenAddressContract(client: PublicClient, registry: Address, tokenAddress: Address): Promise<readonly [boolean, `0x${string}`]>;
+
+// @public (undocumented)
+export function readIsConfidentialTokenValidContract(client: PublicClient, registry: Address, confidentialTokenAddress: Address): Promise<boolean>;
+
+// @public (undocumented)
 export function readSupportsInterfaceContract(client: PublicClient, tokenAddress: Address, interfaceId: Address): Promise<boolean>;
+
+// @public (undocumented)
+export function readTokenAddressContract(client: PublicClient, registry: Address, confidentialTokenAddress: Address): Promise<readonly [boolean, `0x${string}`]>;
+
+// @public (undocumented)
+export function readTokenPairContract(client: PublicClient, registry: Address, index: bigint): Promise<{
+    tokenAddress: `0x${string}`;
+    confidentialTokenAddress: `0x${string}`;
+    isValid: boolean;
+}>;
+
+// @public (undocumented)
+export function readTokenPairsContract(client: PublicClient, registry: Address): Promise<readonly {
+    tokenAddress: `0x${string}`;
+    confidentialTokenAddress: `0x${string}`;
+    isValid: boolean;
+}[]>;
+
+// @public (undocumented)
+export function readTokenPairsLengthContract(client: PublicClient, registry: Address): Promise<bigint>;
+
+// @public (undocumented)
+export function readTokenPairsSliceContract(client: PublicClient, registry: Address, fromIndex: bigint, toIndex: bigint): Promise<readonly {
+    tokenAddress: `0x${string}`;
+    confidentialTokenAddress: `0x${string}`;
+    isValid: boolean;
+}[]>;
 
 // @public (undocumented)
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function readWrapperExistsContract(client: PublicClient, coordinator: Address, tokenAddress: Address): Promise<boolean>;
+export function readWrapperExistsContract(client: PublicClient, registryAddress: Address, tokenAddress: Address): Promise<boolean>;
 
 // @public (undocumented)
-export function readWrapperForTokenContract(client: PublicClient, coordinator: Address, tokenAddress: Address): Promise<`0x${string}`>;
+export function readWrapperForTokenContract(client: PublicClient, registryAddress: Address, tokenAddress: Address): Promise<`0x${string}`>;
 
 // Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
 //
