@@ -56,27 +56,37 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
     );
   }
 
-  if (!pendingTxHash) return null;
+  // Keep the card mounted when resume.isSuccess so the "Unshielded!" alert is
+  // visible. React 18 batches setPendingTxHash(null) with the mutation's isSuccess
+  // state change — without this guard, the null check would unmount the card on
+  // the very same render that sets isSuccess, hiding the success message.
+  if (!pendingTxHash && !resume.isSuccess) return null;
 
   return (
     <div className="card">
       <div className="card-title">Pending Unshield — {label}</div>
-      <div className="balance-row">
-        <span className="balance-label">
-          Unwrap confirmed, finalization pending —{" "}
-          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${pendingTxHash}`} target="_blank" rel="noreferrer">
-            {pendingTxHash.slice(0, 10)}…
-          </a>
-        </span>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => resume.mutate({ unwrapTxHash: pendingTxHash })}
-          disabled={resume.isPending}
-        >
-          {resume.isPending ? "Finalizing…" : "Finalize"}
-        </button>
-      </div>
+      {pendingTxHash && (
+        <div className="balance-row">
+          <span className="balance-label">
+            Unwrap confirmed, finalization pending —{" "}
+            <a
+              href={`${SEPOLIA_EXPLORER_URL}/tx/${pendingTxHash}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {pendingTxHash.slice(0, 10)}…
+            </a>
+          </span>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => resume.mutate({ unwrapTxHash: pendingTxHash })}
+            disabled={resume.isPending}
+          >
+            {resume.isPending ? "Finalizing…" : "Finalize"}
+          </button>
+        </div>
+      )}
       {resume.isError && (
         <div className="alert alert-error card-status">{resume.error?.message}</div>
       )}

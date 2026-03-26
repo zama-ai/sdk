@@ -82,14 +82,22 @@ export function ShieldCard({
           // Standard tokens: estimateGas succeeds → one wallet confirmation.
           // USDT-style tokens: estimateGas reverts → fall back to reset path below.
           let needsReset = false;
+          let overwriteTxHash: `0x${string}` | undefined;
           try {
-            const txHash = await sdk.signer.writeContract(
+            // Only writeContract (which internally runs estimateGas) is inside the
+            // try block. If estimateGas reverts, writeContract throws before any tx
+            // is submitted → USDT-style token detected. waitForTransactionReceipt is
+            // intentionally outside: a receipt error (on-chain revert, timeout) should
+            // propagate as a real error, not silently trigger the USDT reset path.
+            overwriteTxHash = await sdk.signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, erc20Balance),
             );
-            await sdk.signer.waitForTransactionReceipt(txHash);
           } catch (err) {
             if (isError(err, "ACTION_REJECTED")) throw err; // user said no — stop here
             needsReset = true; // estimateGas reverted → USDT-style token
+          }
+          if (overwriteTxHash) {
+            await sdk.signer.waitForTransactionReceipt(overwriteTxHash);
           }
 
           if (needsReset) {
