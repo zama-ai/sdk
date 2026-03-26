@@ -293,13 +293,13 @@ export class WrappersRegistry {
 
   async #enrichPair(pair: TokenWrapperPair): Promise<EnrichedTokenWrapperPair> {
     const [uName, uSymbol, uDecimals, uTotalSupply, cName, cSymbol, cDecimals] = await Promise.all([
-      this.signer.readContract(nameContract(pair.tokenAddress)) as Promise<string>,
-      this.signer.readContract(symbolContract(pair.tokenAddress)) as Promise<string>,
-      this.signer.readContract(decimalsContract(pair.tokenAddress)) as Promise<number>,
-      this.signer.readContract(erc20TotalSupplyContract(pair.tokenAddress)) as Promise<bigint>,
-      this.signer.readContract(nameContract(pair.confidentialTokenAddress)) as Promise<string>,
-      this.signer.readContract(symbolContract(pair.confidentialTokenAddress)) as Promise<string>,
-      this.signer.readContract(decimalsContract(pair.confidentialTokenAddress)) as Promise<number>,
+      this.signer.readContract(nameContract(pair.tokenAddress)),
+      this.signer.readContract(symbolContract(pair.tokenAddress)),
+      this.signer.readContract(decimalsContract(pair.tokenAddress)),
+      this.signer.readContract(erc20TotalSupplyContract(pair.tokenAddress)),
+      this.signer.readContract(nameContract(pair.confidentialTokenAddress)),
+      this.signer.readContract(symbolContract(pair.confidentialTokenAddress)),
+      this.signer.readContract(decimalsContract(pair.confidentialTokenAddress)),
     ]);
 
     return {
