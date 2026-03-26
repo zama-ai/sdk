@@ -70,10 +70,12 @@ vi.stubGlobal("Worker", MockWorkerClass);
 
 let uuidCounter = 0;
 
-vi.stubGlobal("crypto", {
-  ...globalThis.crypto,
-  randomUUID: () => `uuid-${++uuidCounter}`,
-});
+vi.stubGlobal(
+  "crypto",
+  Object.create(globalThis.crypto, {
+    randomUUID: { value: () => `uuid-${++uuidCounter}` },
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // Mock: node:worker_threads helpers

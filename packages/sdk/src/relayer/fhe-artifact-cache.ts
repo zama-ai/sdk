@@ -169,7 +169,7 @@ export class FheArtifactCache {
     const key = pubkeyStorageKey(this.#chainId);
 
     try {
-      const raw = await this.#storage.get<unknown>(key);
+      const raw = await this.#storage.get(key);
       if (raw) {
         assertCachedPk(raw);
         const result: PublicKeyResult = {
@@ -248,7 +248,7 @@ export class FheArtifactCache {
     const key = paramsStorageKey(this.#chainId, bits);
 
     try {
-      const raw = await this.#storage.get<unknown>(key);
+      const raw = await this.#storage.get(key);
       if (raw) {
         assertCachedParams(raw);
         const result: PublicParamsResult = {
@@ -358,7 +358,7 @@ export class FheArtifactCache {
     try {
       // 1. Read PK cache entry and collect params entries in parallel
       const [pkRaw, entries] = await Promise.all([
-        this.#storage.get<unknown>(pkKey),
+        this.#storage.get(pkKey),
         this.#collectParamEntries(),
       ]);
 
@@ -630,7 +630,7 @@ export class FheArtifactCache {
         // Separate storage read from validation so we only delete on corruption
         let raw: unknown;
         try {
-          raw = await this.#storage.get<unknown>(pKey);
+          raw = await this.#storage.get(pKey);
         } catch (err) {
           this.#logger.warn("Failed to read cached params entry during revalidation", {
             chainId: this.#chainId,
