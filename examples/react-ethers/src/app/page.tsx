@@ -12,7 +12,7 @@ import {
   useZamaSDK,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import type { TokenWrapperPair, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query"; // query key builders for SDK-managed caches — /query subpath export
 import type { Address } from "@zama-fhe/react-sdk";
 import { BalancesCard } from "@/components/BalancesCard";
@@ -39,6 +39,26 @@ const MINT_ABI = ["function mint(address to, uint256 amount)"];
 // SDK hooks must not be called conditionally (React rules of hooks), so we pass this
 // address with enabled: false until a real token pair is available from the registry.
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
+
+// useListPairs with EthersSigner (ethers v6) returns objects where the SDK has spread
+// an ethers Result to attach metadata. Spreading a Result only copies its own enumerable
+// properties — the numeric indices 0, 1, 2. The named ABI fields (tokenAddress,
+// confidentialTokenAddress, isValid) are non-enumerable prototype getters on the
+// ethers Result class and are lost in the spread. This helper reads named fields first
+// (correct for viem) and falls back to numeric index access (required for ethers).
+function normalizePair(
+  raw: TokenWrapperPair | TokenWrapperPairWithMetadata,
+): TokenWrapperPairWithMetadata | null {
+  if (!("underlying" in raw)) return null;
+  const t = raw as unknown as readonly [Address, Address, boolean];
+  return {
+    tokenAddress: raw.tokenAddress ?? t[0],
+    confidentialTokenAddress: raw.confidentialTokenAddress ?? t[1],
+    isValid: raw.isValid ?? t[2],
+    underlying: (raw as TokenWrapperPairWithMetadata).underlying,
+    confidential: (raw as TokenWrapperPairWithMetadata).confidential,
+  };
+}
 
 // Routes ETH balance reads through the direct Sepolia RPC so polling is fast
 // and independent of the injected wallet's own RPC endpoint.
@@ -130,14 +150,13 @@ export default function Home() {
     });
   });
 
-  // Filter to valid pairs only and narrow the type to TokenWrapperPairWithMetadata.
-  // useMemo gives a stable array reference so the auto-select effect below has
-  // correct dependency tracking without running on every render.
+  // Normalize and filter pairs: normalizePair handles the EthersSigner/viem compat issue
+  // (see function definition above), then we keep only isValid pairs with metadata.
   const validPairs = useMemo(
     () =>
-      (pairsData?.items ?? []).filter(
-        (p): p is TokenWrapperPairWithMetadata => p.isValid && "underlying" in p,
-      ),
+      (pairsData?.items ?? [])
+        .map(normalizePair)
+        .filter((p): p is TokenWrapperPairWithMetadata => p !== null && p.isValid),
     [pairsData],
   );
 
