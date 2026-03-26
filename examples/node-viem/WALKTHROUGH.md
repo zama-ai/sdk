@@ -254,6 +254,25 @@ await tokenA.delegateDecryption({ delegateAddress: accountB.address });
 Writes a delegation record on-chain. Account B is now authorized to request
 re-encryption of Account A's balance handle.
 
+By default (no `expirationDate` passed), the delegation is permanent — the ACL
+contract stores a sentinel value (`2^64 − 1`) to represent "no expiry". Pass an
+`expirationDate: Date` to create a time-limited delegation.
+
+### `isDelegated` — verify delegation status
+
+```ts
+const isDelegated = await tokenA.isDelegated({
+  delegatorAddress: accountA.address as Address,
+  delegateAddress: accountB.address as Address,
+});
+console.log("Delegation active:", isDelegated); // true
+```
+
+`isDelegated` is a read-only on-chain check — no FHE credentials needed. It returns
+`true` if a valid (non-expired) delegation exists for this token between the two
+addresses. Called twice in the demo: once after `delegateDecryption` (expect `true`)
+and once after `revokeDelegation` (expect `false`).
+
 ### Decrypt as delegate
 
 ```ts
@@ -272,7 +291,8 @@ await tokenA.revokeDelegation({ delegateAddress: accountB.address });
 ```
 
 Removes the delegation record on-chain. Subsequent `decryptBalanceAs` calls from
-Account B will fail with an authorization error.
+Account B will fail with an authorization error. A follow-up `isDelegated` call
+(same parameters as above) confirms the revoke took effect — it should return `false`.
 
 ---
 

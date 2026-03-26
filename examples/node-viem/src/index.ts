@@ -119,8 +119,8 @@ async function main() {
       functionName: "mint",
       args: [accountA.address, MINT_AMOUNT],
     });
-    await publicClient.waitForTransactionReceipt({ hash: mintHash });
     console.log("  Mint tx:", mintHash);
+    await publicClient.waitForTransactionReceipt({ hash: mintHash });
 
     const erc20BalanceAfter = await publicClient.readContract({
       address: USDT_ADDRESS,
