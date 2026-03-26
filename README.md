@@ -1,5 +1,9 @@
 <p align="center">
-  <h1 align="center">Zama SDK</h1>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/zama-ai/fhevm/main/docs/.gitbook/assets/fhevm-header-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/zama-ai/fhevm/main/docs/.gitbook/assets/fhevm-header-light.png">
+  <img width=500 alt="Zama SDK">
+</picture>
 </p>
 
 <hr/>
