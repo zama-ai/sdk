@@ -43,7 +43,7 @@ describe("Topic constants match keccak256", () => {
   ];
 
   for (const [sig, expected] of cases) {
-    it(`${sig}`, () => {
+    it(sig, () => {
       expect(keccak256(toHex(toBytes(sig)))).toBe(expected);
     });
   }
@@ -331,7 +331,7 @@ describe("AclTopics constants match keccak256", () => {
   ];
 
   for (const [sig, expected] of cases) {
-    it(`${sig}`, () => {
+    it(sig, () => {
       expect(keccak256(toHex(toBytes(sig)))).toBe(expected);
     });
   }
