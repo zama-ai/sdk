@@ -144,8 +144,11 @@ await mintTx.wait();
 ```
 
 `getFunction()` is used instead of direct property access (`erc20.mint`) because
-ethers v6 dynamic contract proxies are not statically typed — TypeScript cannot
-infer the return type of named functions accessed via bracket notation.
+ethers v6 `Contract` objects use a JavaScript `Proxy` to dispatch calls dynamically.
+While `erc20.mint(...)` works at runtime, TypeScript types it as a generic
+`BaseContractMethod<any[], any, any>`, losing the specific signature inferred from
+the ABI. `getFunction("mint")` resolves the method by name and returns a properly
+typed `ContractMethod`, so the arguments and return type are checked against the ABI.
 
 This is standard ethers usage — no SDK involvement. The SDK only operates on the
 ERC-7984 wrapper (`CUSDT_ADDRESS`), not the ERC-20.
@@ -240,6 +243,25 @@ await tokenA.delegateDecryption({ delegateAddress: walletB.address });
 Writes a delegation record on-chain. Account B is now authorized to request
 re-encryption of Account A's balance handle.
 
+By default (no `expirationDate` passed), the delegation is permanent — the ACL
+contract stores a sentinel value (`2^64 − 1`) to represent "no expiry". Pass an
+`expirationDate: Date` to create a time-limited delegation.
+
+### `isDelegated` — verify delegation status
+
+```ts
+const isDelegated = await tokenA.isDelegated({
+  delegatorAddress: walletA.address as Address,
+  delegateAddress: walletB.address as Address,
+});
+console.log("Delegation active:", isDelegated); // true
+```
+
+`isDelegated` is a read-only on-chain check — no FHE credentials needed. It returns
+`true` if a valid (non-expired) delegation exists for this token between the two
+addresses. Called twice in the demo: once after `delegateDecryption` (expect `true`)
+and once after `revokeDelegation` (expect `false`).
+
 ### Decrypt as delegate
 
 ```ts
@@ -258,7 +280,8 @@ await tokenA.revokeDelegation({ delegateAddress: walletB.address });
 ```
 
 Removes the delegation record on-chain. Subsequent `decryptBalanceAs` calls from
-Account B will fail with an authorization error.
+Account B will fail with an authorization error. A follow-up `isDelegated` call
+(same parameters as above) confirms the revoke took effect — it should return `false`.
 
 ---
 

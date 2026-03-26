@@ -18,8 +18,27 @@ Targets the **Sepolia** testnet with the USDT mock token.
 ## Setup
 
 ```bash
+cd examples/node-ethers
 cp .env.example .env
-# Fill in PRIVATE_KEY, DELEGATE_PRIVATE_KEY, SEPOLIA_RPC_URL
+```
+
+Fill in `.env`:
+
+```env
+# Account A — main account (shield, transfer, unshield, delegate)
+PRIVATE_KEY=0x<your_private_key_A>
+
+# Account B — delegate account (Section 4 only)
+DELEGATE_PRIVATE_KEY=0x<your_private_key_B>
+
+# Sepolia RPC endpoint
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+
+# Optional — Sepolia testnet does not require authentication
+# RELAYER_API_KEY=your-api-key
+```
+
+```bash
 npm install
 ```
 
@@ -30,6 +49,38 @@ npm install
 ```bash
 npm start
 ```
+
+---
+
+## Verifying the run
+
+A successful run prints four section headers. The final lines look like:
+
+```
+cUSDT balance (A, final): 40.0 USDT
+USDT  balance (A, final): 950.0 USDT
+
+── 4b. Decrypt as delegate ──
+Account B reading Account A's cUSDT balance...
+cUSDT balance (A, seen by B): 40.0 USDT
+
+── 4c. Revoke delegation ──
+Delegation active after revoke: false
+```
+
+Exact balance values depend on prior runs (they accumulate). The relative changes
+across sections are what matter:
+
+| Operation          | Account A cUSDT | Account A USDT |
+| ------------------ | --------------- | -------------- |
+| After mint         | unchanged        | +1 000         |
+| After shield       | +100             | −100           |
+| After transfer     | −10              | unchanged      |
+| After unshield     | −50              | +50            |
+
+Each on-chain operation prints its transaction hash **before** waiting for
+confirmation — paste any hash into
+[Sepolia Etherscan](https://sepolia.etherscan.io) to track it in real time.
 
 ---
 
