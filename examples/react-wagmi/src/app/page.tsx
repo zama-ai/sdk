@@ -130,9 +130,13 @@ export default function Home() {
 
   // Clear stale mint state when the wallet account changes so the BalancesCard
   // does not show a pending/success/error badge belonging to the previous account.
+  // mint.reset is omitted from deps: useMutation returns a new object every render,
+  // so including it would re-run this effect on every render. The reset is idempotent
+  // so running it only on address changes is both correct and sufficient.
   useEffect(() => {
     mint.reset();
-  }, [address, mint.reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
 
   const formattedErc20 =
     erc20Balance !== undefined && erc20Metadata.data
