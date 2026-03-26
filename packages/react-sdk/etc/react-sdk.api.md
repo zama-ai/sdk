@@ -50,6 +50,7 @@ import { confidentialTransferFromMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { confidentialTransferMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
+import { ConfigurationError } from '@zama-fhe/sdk';
 import { ContractAbi } from '@zama-fhe/sdk';
 import { createDelegatedUserDecryptEIP712MutationOptions } from '@zama-fhe/sdk/query';
 import { CreateDelegatedUserDecryptEIP712Params } from '@zama-fhe/sdk/query';
@@ -362,6 +363,8 @@ export { ConfidentialTransferFromParams }
 export { confidentialTransferMutationOptions }
 
 export { ConfidentialTransferParams }
+
+export { ConfigurationError }
 
 export { ContractAbi }
 

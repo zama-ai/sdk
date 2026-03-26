@@ -7,11 +7,7 @@ import type { RelayerSDK } from "./relayer/relayer-sdk";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
-import type {
-  GenericSigner,
-  GenericStorage,
-  SignerLifecycleCallbacks,
-} from "./types";
+import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
 import { toError } from "./utils";
 import { WrappersRegistry } from "./wrappers-registry";
 
@@ -118,17 +114,12 @@ export class ZamaSDK {
       onEvent: this.#onEvent,
     };
     this.credentials = new CredentialsManager(credentialsConfig);
-    this.delegatedCredentials = new DelegatedCredentialsManager(
-      credentialsConfig,
-    );
+    this.delegatedCredentials = new DelegatedCredentialsManager(credentialsConfig);
     this.#identityReady = this.#initIdentity();
 
     if (this.signer.subscribe) {
       const lifecycleCallbacks = config.signerLifecycleCallbacks;
-      const runLifecycleEffect = (
-        operation: string,
-        effect: () => Promise<void>,
-      ) => {
+      const runLifecycleEffect = (operation: string, effect: () => Promise<void>) => {
         void effect().catch((error) => {
           this.#onEvent?.({
             type: ZamaSDKEvents.TransactionError,
@@ -193,10 +184,7 @@ export class ZamaSDK {
     if (this.#lastAddress === null || this.#lastChainId === null) {
       return;
     }
-    const storeKey = await CredentialsManager.computeStoreKey(
-      this.#lastAddress,
-      this.#lastChainId,
-    );
+    const storeKey = await CredentialsManager.computeStoreKey(this.#lastAddress, this.#lastChainId);
     await this.credentials.revokeByKey(storeKey);
   }
 
@@ -260,9 +248,7 @@ export class ZamaSDK {
    * const pairs = await registry.getTokenPairs();
    * ```
    */
-  createWrappersRegistry(
-    registryAddresses?: Record<number, Address>,
-  ): WrappersRegistry {
+  createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry {
     return new WrappersRegistry({
       signer: this.signer,
       registryAddresses,
