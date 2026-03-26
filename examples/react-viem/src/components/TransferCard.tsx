@@ -12,6 +12,7 @@ interface TransferCardProps {
   decimals: number;
   symbol: string;
   disabled: boolean;
+  balanceDecryptRequired: boolean;
   onSuccess?: () => void;
 }
 
@@ -20,6 +21,7 @@ export function TransferCard({
   decimals,
   symbol,
   disabled,
+  balanceDecryptRequired,
   onSuccess,
 }: TransferCardProps) {
   const [amount, setAmount] = useState("");
@@ -65,10 +67,19 @@ export function TransferCard({
         type="button"
         className="btn btn-primary btn-full"
         onClick={handleTransfer}
-        disabled={disabled || parsedAmount === 0n || !isAddress(recipient) || transfer.isPending}
+        disabled={
+          disabled ||
+          balanceDecryptRequired ||
+          parsedAmount === 0n ||
+          !isAddress(recipient) ||
+          transfer.isPending
+        }
       >
         {transfer.isPending ? pendingLabel : "Transfer"}
       </button>
+      {balanceDecryptRequired && !disabled && (
+        <p className="token-meta">Decrypt your balance first to enable transfers.</p>
+      )}
       {transfer.isError && (
         <div className="alert alert-error card-status">{transfer.error?.message}</div>
       )}

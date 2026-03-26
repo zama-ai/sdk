@@ -6,6 +6,8 @@ import { formatEther, formatUnits, parseUnits, parseAbi, createPublicClient, htt
 import { sepolia } from "viem/chains";
 import {
   useConfidentialBalance,
+  useIsAllowed,
+  useAllowTokens,
   useMetadata,
   useZamaSDK,
   balanceOfContract,
@@ -69,6 +71,18 @@ export default function Home() {
   // Used in handleAccountsChanged (inside the useEffect below) to invalidate balance caches.
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
+
+  // Check whether FHE decrypt credentials are already cached (no wallet prompt).
+  // Returns true if a valid session exists, undefined/false otherwise.
+  const { data: isAllowed } = useIsAllowed();
+
+  // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
+  // All confidential token addresses are passed at once — a single signature covers all
+  // tokens, so switching from USDC to USDT does not require a second prompt.
+  const allowTokens = useAllowTokens();
+  function handleDecrypt() {
+    allowTokens.mutate(Object.values(TOKENS).map((t) => t.confidential));
+  }
 
   // Detect existing connection on page load and listen for account/chain changes.
   // Note: providers.tsx has a second accountsChanged listener that manages the
@@ -178,9 +192,11 @@ export default function Home() {
     });
   };
 
+  // Only run once the user has explicitly authorized decrypt (isAllowed).
+  // Prevents the hook from firing an EIP-712 prompt on mount (blind-signing anti-pattern).
   const balance = useConfidentialBalance(
     { tokenAddress: token.confidential },
-    { enabled: !!address && isSepolia },
+    { enabled: !!address && isSepolia && !!isAllowed },
   );
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
@@ -198,13 +214,14 @@ export default function Home() {
     onSuccess: refreshBalances,
   });
 
-  // Clear stale mint state when the wallet account changes so the BalancesCard
+  // Clear stale mutation state when the wallet account changes so the BalancesCard
   // does not show a pending/success/error badge belonging to the previous account.
-  // mint.reset is omitted from deps: useMutation returns a new object every render,
-  // so including it would re-run this effect on every render. The reset is idempotent
-  // so running it only on address changes is both correct and sufficient.
+  // Both reset functions are omitted from deps: useMutation returns a new object every
+  // render, so including them would re-run this effect on every render. The resets are
+  // idempotent so running them only on address changes is both correct and sufficient.
   useEffect(() => {
     mint.reset();
+    allowTokens.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address]);
 
@@ -301,6 +318,10 @@ export default function Home() {
         mintDisabled={actionsDisabled}
         mintError={mint.isError ? (mint.error?.message ?? "Mint failed") : null}
         mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
+        isAllowed={!!isAllowed}
+        onDecrypt={handleDecrypt}
+        isDecrypting={allowTokens.isPending}
+        decryptError={allowTokens.isError ? (allowTokens.error?.message ?? "Signing failed") : null}
       />
 
       {/* Pending unshield resume — checked for every token, not just the selected one.
@@ -333,6 +354,7 @@ export default function Home() {
         decimals={decimals}
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
+        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 
@@ -342,6 +364,7 @@ export default function Home() {
         decimals={decimals}
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
+        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 

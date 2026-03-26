@@ -12,6 +12,7 @@ interface UnshieldCardProps {
   decimals: number;
   symbol: string;
   disabled: boolean;
+  balanceDecryptRequired: boolean;
   onSuccess?: () => void;
 }
 
@@ -20,6 +21,7 @@ export function UnshieldCard({
   decimals,
   symbol,
   disabled,
+  balanceDecryptRequired,
   onSuccess,
 }: UnshieldCardProps) {
   const [amount, setAmount] = useState("");
@@ -80,10 +82,13 @@ export function UnshieldCard({
         type="button"
         className="btn btn-primary btn-full"
         onClick={handleUnshield}
-        disabled={disabled || parsedAmount === 0n || unshield.isPending}
+        disabled={disabled || balanceDecryptRequired || parsedAmount === 0n || unshield.isPending}
       >
         {unshield.isPending ? pendingLabel : "Unshield"}
       </button>
+      {balanceDecryptRequired && !disabled && (
+        <p className="token-meta">Decrypt your balance first to enable unshielding.</p>
+      )}
       {unshield.isError && (
         <div className="alert alert-error card-status">{unshield.error?.message}</div>
       )}
