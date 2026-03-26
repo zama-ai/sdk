@@ -1456,6 +1456,8 @@ export function ZamaProvider(input: ZamaProviderProps): react_jsx_runtime0.JSX.E
 export interface ZamaProviderProps extends PropsWithChildren {
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
+    registryAddresses?: Record<number, Address>;
+    registryTTL?: number;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
     sessionTTL?: number;
