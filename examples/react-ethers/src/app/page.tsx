@@ -88,6 +88,7 @@ async function switchToSepolia(ethereum: NonNullable<ReturnType<typeof getEthere
 type TokenKey = keyof typeof TOKENS;
 
 export default function Home() {
+  const [isInitializing, setIsInitializing] = useState(true);
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -142,7 +143,10 @@ export default function Home() {
   // ZamaProvider lifecycle (signer remount). This listener handles UI-level state only.
   useEffect(() => {
     const ethereum = getEthereumProvider();
-    if (!ethereum) return;
+    if (!ethereum) {
+      setIsInitializing(false);
+      return;
+    }
 
     Promise.all([
       ethereum.request({ method: "eth_accounts" }) as Promise<string[]>,
@@ -152,7 +156,8 @@ export default function Home() {
         setAddress(accounts[0] ?? null);
         setChainId(currentChainId);
       })
-      .catch((err) => console.error("Failed to detect wallet state:", err));
+      .catch((err) => console.error("Failed to detect wallet state:", err))
+      .finally(() => setIsInitializing(false));
 
     const handleAccountsChanged = (accounts: unknown) => {
       setAddress((accounts as string[])[0] ?? null);
@@ -293,6 +298,18 @@ export default function Home() {
   // Actions are disabled until both metadata are loaded (decimals needed to parse amounts)
   // and until the wallet is on the Sepolia network.
   const actionsDisabled = !isSepolia || !cTokenMetadata.data || !erc20Metadata.data;
+
+  // ── Screen 0: Initializing ────────────────────────────────────────────────
+  // Shown while eth_accounts / eth_chainId are resolving — prevents a flash of the
+  // "Connect Wallet" screen during the brief re-initialization that follows a
+  // ZamaProvider remount (wallet switch or chain change).
+  if (isInitializing) {
+    return (
+      <div className="app-container connect-screen">
+        <h1>Sepolia Confidential Token Quickstart</h1>
+      </div>
+    );
+  }
 
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!address) {
