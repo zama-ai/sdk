@@ -42,7 +42,11 @@ await token.delegateDecryption({
 Both return `{ txHash, receipt }`.
 
 {% hint style="warning" %}
-The expiration date must be **at least 1 hour in the future**. The SDK validates this client-side before sending the transaction — passing a closer date throws a `ConfigurationError`. This mirrors the on-chain `ExpirationDateBeforeOneHour` revert in the ACL contract.
+The expiration date must be **at least 1 hour in the future**. The SDK validates this client-side before sending the transaction — passing a closer date throws a `DelegationExpirationTooSoonError`. This mirrors the on-chain `ExpirationDateBeforeOneHour` revert in the ACL contract.
+{% endhint %}
+
+{% hint style="warning" %}
+**Propagation delay:** After `delegateDecryption` confirms on-chain, the coprocessor needs approximately **10 blocks** (`delegation_block_delay`) to propagate the delegation to the Gateway's `MultichainACL`. Calling `decryptBalanceAs` before propagation completes will fail with a `UserDecryptionNotDelegated` error. Wait at least 10–15 blocks after the delegation transaction before attempting delegated decryption.
 {% endhint %}
 
 ### How expiration dates work
@@ -208,6 +212,19 @@ const sdk = createZamaSDK({
   },
 });
 ```
+
+## Delegation states
+
+A delegation between `(delegator, delegate, contract)` can be in one of four states:
+
+| State         | On-chain expiry          | How to detect                                                                                    |
+| ------------- | ------------------------ | ------------------------------------------------------------------------------------------------ |
+| **Never set** | `0n`                     | `getDelegationExpiry()` returns `0n`                                                             |
+| **Active**    | Future timestamp         | `isDelegated()` returns `true`                                                                   |
+| **Expired**   | Past non-zero timestamp  | `isDelegated()` returns `false`, `getDelegationExpiry()` returns a non-zero past value           |
+| **Revoked**   | `0n` (reset by contract) | Indistinguishable from **never set** via state reads — use `RevokedDelegationForUserDecryption` events to differentiate |
+
+Because the ACL contract resets the expiry to `0n` on revocation, `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](/reference/sdk/event-decoders#acl-delegation-events).
 
 ## Error handling
 

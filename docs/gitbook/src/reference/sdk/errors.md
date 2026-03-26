@@ -328,7 +328,7 @@ matchZamaError(error, {
 **How to handle:** Create a new delegation.
 
 {% hint style="info" %}
-The SDK does **not** auto-map ACL contract reverts to delegation errors. These error classes are exported so your dApp code can catch and re-throw them when parsing on-chain revert reasons (e.g. via viem's `decodeErrorResult`).
+The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses via `matchAclRevert()`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation error reference](/reference/sdk/delegation#on-chain-revert-errors) for the full mapping.
 {% endhint %}
 
 ## Common problems
