@@ -96,7 +96,7 @@ const registryAddr = await registry.getRegistryAddress();
 
 ### listPairs
 
-`(options?: ListPairsOptions) => Promise<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>>`
+`(options?: ListPairsOptions) => Promise<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>>`
 
 List token wrapper pairs with page-based pagination. Pass `metadata: true` to enrich each pair with on-chain name, symbol, decimals, and totalSupply.
 

@@ -80,7 +80,7 @@ export type {
   InputProofBytesType,
   BatchTransferData,
   TokenWrapperPair,
-  EnrichedTokenWrapperPair,
+  TokenWrapperPairWithMetadata,
   PaginatedResult,
   StoredCredentials,
   UnshieldCallbacks,

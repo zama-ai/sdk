@@ -736,10 +736,10 @@ export interface ListPairsQueryConfig {
 // Warning: (ae-forgotten-export) The symbol "WrappersRegistry" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "PaginatedResult" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "TokenWrapperPair" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "EnrichedTokenWrapperPair" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "TokenWrapperPairWithMetadata" needs to be exported by the entry point index.d.ts
 //
 // @public
-export function listPairsQueryOptions(registry: WrappersRegistry, config: ListPairsQueryConfig): QueryFactoryOptions<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, Error, PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>>;
+export function listPairsQueryOptions(registry: WrappersRegistry, config: ListPairsQueryConfig): QueryFactoryOptions<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, Error, PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>>;
 
 // @public (undocumented)
 export interface MutationFactoryOptions<TMutationKey extends readonly unknown[], TVariables, TData, TOnMutateResult = unknown> {
@@ -1712,7 +1712,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-D-bllkGR.d.ts:1749:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-D21GG9_T.d.ts:1749:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -125,7 +125,7 @@ export interface TokenWrapperPair {
 }
 
 /** Extended pair with on-chain metadata for both tokens. */
-export interface EnrichedTokenWrapperPair extends TokenWrapperPair {
+export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
   readonly underlying: {
     readonly name: string;
     readonly symbol: string;

@@ -90,7 +90,7 @@ useListPairs({ metadata: true });
 
 ## Return Type
 
-The `data` field resolves to `PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>`:
+The `data` field resolves to `PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>`:
 
 ```ts
 interface PaginatedResult<T> {
@@ -111,10 +111,10 @@ interface TokenWrapperPair {
 }
 ```
 
-When `metadata: true`, items are `EnrichedTokenWrapperPair`:
+When `metadata: true`, items are `TokenWrapperPairWithMetadata`:
 
 ```ts
-interface EnrichedTokenWrapperPair extends TokenWrapperPair {
+interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
   readonly underlying: {
     readonly name: string;
     readonly symbol: string;

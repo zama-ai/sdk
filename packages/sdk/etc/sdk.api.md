@@ -8639,23 +8639,6 @@ export interface EncryptStartEvent extends BaseEvent {
 }
 
 // @public
-export interface EnrichedTokenWrapperPair extends TokenWrapperPair {
-    // (undocumented)
-    readonly confidential: {
-        readonly name: string;
-        readonly symbol: string;
-        readonly decimals: number;
-    };
-    // (undocumented)
-    readonly underlying: {
-        readonly name: string;
-        readonly symbol: string;
-        readonly decimals: number;
-        readonly totalSupply: bigint;
-    };
-}
-
-// @public
 export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 
 // @public
@@ -21621,6 +21604,23 @@ export interface TokenWrapperPair {
 }
 
 // @public
+export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
+    // (undocumented)
+    readonly confidential: {
+        readonly name: string;
+        readonly symbol: string;
+        readonly decimals: number;
+    };
+    // (undocumented)
+    readonly underlying: {
+        readonly name: string;
+        readonly symbol: string;
+        readonly decimals: number;
+        readonly totalSupply: bigint;
+    };
+}
+
+// @public
 export const Topics: {
     readonly ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9"; /** `Wrapped(uint64 mintAmount, uint256 amountIn, uint256 feeAmount, address indexed to_, uint256 indexed mintTxId)` */
     readonly Wrapped: "0x1f7907f4d84043abe0fb7c74e8865ee5fe93fe4f691c54a7b8fa9d6fb17c7cba"; /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
@@ -30523,7 +30523,7 @@ export class WrappersRegistry {
     isConfidentialTokenValid(confidentialTokenAddress: Address): Promise<boolean>;
     listPairs(options: ListPairsOptions & {
         metadata: true;
-    }): Promise<PaginatedResult<EnrichedTokenWrapperPair>>;
+    }): Promise<PaginatedResult<TokenWrapperPairWithMetadata>>;
     // (undocumented)
     listPairs(options?: ListPairsOptions): Promise<PaginatedResult<TokenWrapperPair>>;
     refresh(): void;

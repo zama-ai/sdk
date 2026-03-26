@@ -66,7 +66,7 @@ export {
   getTokenAddressContract,
   isConfidentialTokenValidContract,
   type TokenWrapperPair,
-  type EnrichedTokenWrapperPair,
+  type TokenWrapperPairWithMetadata,
   type PaginatedResult,
 } from "./wrappers-registry";
 

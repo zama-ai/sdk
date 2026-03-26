@@ -10,7 +10,7 @@ import {
 } from "../contracts";
 import type {
   TokenWrapperPair,
-  EnrichedTokenWrapperPair,
+  TokenWrapperPairWithMetadata,
   PaginatedResult,
 } from "../contracts/wrappers-registry";
 import type { WrappersRegistry } from "../wrappers-registry";
@@ -276,9 +276,9 @@ export function listPairsQueryOptions(
   registry: WrappersRegistry,
   config: ListPairsQueryConfig,
 ): QueryFactoryOptions<
-  PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>,
+  PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>,
   Error,
-  PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>,
+  PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>,
   ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>
 > {
   const page = config.page ?? 1;

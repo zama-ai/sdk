@@ -1,6 +1,10 @@
 "use client";
 
-import type { TokenWrapperPair, EnrichedTokenWrapperPair, PaginatedResult } from "@zama-fhe/sdk";
+import type {
+  TokenWrapperPair,
+  TokenWrapperPairWithMetadata,
+  PaginatedResult,
+} from "@zama-fhe/sdk";
 import { listPairsQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useQuery } from "../utils/query";
@@ -33,7 +37,7 @@ export function useListPairs({
 
   // Pass sdk.registry (a lazy singleton) so the class-level TTL cache is shared
   // across all queryFn executions — rather than constructing a new instance each time.
-  return useQuery<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>>(
+  return useQuery<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>>(
     listPairsQueryOptions(sdk.registry, {
       registryAddress,
       page,

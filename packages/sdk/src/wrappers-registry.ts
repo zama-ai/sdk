@@ -1,5 +1,5 @@
 import { type Address, getAddress } from "viem";
-import type { EnrichedTokenWrapperPair, PaginatedResult, TokenWrapperPair } from "./contracts";
+import type { TokenWrapperPairWithMetadata, PaginatedResult, TokenWrapperPair } from "./contracts";
 import {
   decimalsContract,
   erc20TotalSupplyContract,
@@ -217,11 +217,11 @@ export class WrappersRegistry {
    */
   async listPairs(
     options: ListPairsOptions & { metadata: true },
-  ): Promise<PaginatedResult<EnrichedTokenWrapperPair>>;
+  ): Promise<PaginatedResult<TokenWrapperPairWithMetadata>>;
   async listPairs(options?: ListPairsOptions): Promise<PaginatedResult<TokenWrapperPair>>;
   async listPairs(
     options: ListPairsOptions = {},
-  ): Promise<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>> {
+  ): Promise<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>> {
     const page = options.page ?? 1;
     const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
     const metadata = options.metadata ?? false;
@@ -269,9 +269,9 @@ export class WrappersRegistry {
 
     // Enrich with on-chain metadata (resilient — individual failures don't break the batch)
     const metadataCacheKey = `metadata:${registry}:${fromIndex}:${clampedToIndex}`;
-    let metadataItems = this.#getCached<EnrichedTokenWrapperPair[]>(metadataCacheKey);
+    let metadataItems = this.#getCached<TokenWrapperPairWithMetadata[]>(metadataCacheKey);
     if (metadataItems === undefined) {
-      const settled = await Promise.allSettled(items.map((pair) => this.#enrichPair(pair)));
+      const settled = await Promise.allSettled(items.map((pair) => this.#pairWithMetadata(pair)));
       metadataItems = this.#setCached(
         metadataCacheKey,
         settled.map((result, i) =>
@@ -293,7 +293,7 @@ export class WrappersRegistry {
     return { items: metadataItems, total, page, pageSize };
   }
 
-  async #enrichPair(pair: TokenWrapperPair): Promise<EnrichedTokenWrapperPair> {
+  async #pairWithMetadata(pair: TokenWrapperPair): Promise<TokenWrapperPairWithMetadata> {
     const [uName, uSymbol, uDecimals, uTotalSupply, cName, cSymbol, cDecimals] = await Promise.all([
       this.signer.readContract(nameContract(pair.tokenAddress)),
       this.signer.readContract(symbolContract(pair.tokenAddress)),

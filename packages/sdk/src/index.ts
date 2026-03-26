@@ -238,6 +238,6 @@ export {
 export type {
   BatchTransferData,
   TokenWrapperPair,
-  EnrichedTokenWrapperPair,
+  TokenWrapperPairWithMetadata,
   PaginatedResult,
 } from "./contracts";

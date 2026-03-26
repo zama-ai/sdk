@@ -100,7 +100,6 @@ import { encryptMutationOptions } from '@zama-fhe/sdk/query';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { EncryptStartEvent } from '@zama-fhe/sdk';
-import { EnrichedTokenWrapperPair } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
 import { extractEncryptedHandles } from '@zama-fhe/sdk';
@@ -209,6 +208,7 @@ import { TokenConfig } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { tokenMetadataQueryOptions } from '@zama-fhe/sdk/query';
 import { TokenWrapperPair } from '@zama-fhe/sdk';
+import { TokenWrapperPairWithMetadata } from '@zama-fhe/sdk';
 import { Topics } from '@zama-fhe/sdk';
 import { totalSupplyContract } from '@zama-fhe/sdk';
 import { totalSupplyQueryOptions } from '@zama-fhe/sdk/query';
@@ -463,8 +463,6 @@ export { EncryptResult }
 
 export { EncryptStartEvent }
 
-export { EnrichedTokenWrapperPair }
-
 export { ERC7984_INTERFACE_ID }
 
 export { ERC7984_WRAPPER_INTERFACE_ID }
@@ -693,6 +691,8 @@ export { TokenMetadata }
 export { tokenMetadataQueryOptions }
 
 export { TokenWrapperPair }
+
+export { TokenWrapperPairWithMetadata }
 
 export { Topics }
 
@@ -1255,7 +1255,7 @@ export function useListPairs(input?: {
     page?: number;
     pageSize?: number;
     metadata?: boolean;
-}): _tanstack_react_query0.UseQueryResult<PaginatedResult<TokenWrapperPair | EnrichedTokenWrapperPair>, Error>;
+}): _tanstack_react_query0.UseQueryResult<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, Error>;
 
 // @public
 export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOptions<TokenMetadata>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<TokenMetadata, Error>;
