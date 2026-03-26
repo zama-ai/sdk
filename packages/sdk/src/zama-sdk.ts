@@ -68,8 +68,7 @@ export class ZamaSDK {
   readonly delegatedCredentials: DelegatedCredentialsManager;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.
-   * Lazily instantiated on first access. Uses default registry addresses
-   * and the SDK's `registryTTL` if configured.
+   * Uses default registry addresses and the SDK's `registryTTL` if configured.
    *
    * @example
    * ```ts
