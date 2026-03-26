@@ -57,10 +57,10 @@ export function readTokenPairsSliceContract(client: PublicClient, registry: Addr
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function readWrapperExistsContract(client: PublicClient, coordinator: Address, tokenAddress: Address): Promise<boolean>;
+export function readWrapperExistsContract(client: PublicClient, registryAddress: Address, tokenAddress: Address): Promise<boolean>;
 
 // @public (undocumented)
-export function readWrapperForTokenContract(client: PublicClient, coordinator: Address, tokenAddress: Address): Promise<`0x${string}`>;
+export function readWrapperForTokenContract(client: PublicClient, registryAddress: Address, tokenAddress: Address): Promise<`0x${string}`>;
 
 // Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
 //

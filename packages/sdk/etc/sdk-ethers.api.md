@@ -106,10 +106,10 @@ export function readTokenPairsSliceContract(provider: EthersCallProvider, regist
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address): Promise<unknown>;
 
 // @public (undocumented)
-export function readWrapperExistsContract(provider: EthersCallProvider, coordinator: Address, tokenAddress: Address): Promise<unknown>;
+export function readWrapperExistsContract(provider: EthersCallProvider, registryAddress: Address, tokenAddress: Address): Promise<unknown>;
 
 // @public (undocumented)
-export function readWrapperForTokenContract(provider: EthersCallProvider, coordinator: Address, tokenAddress: Address): Promise<unknown>;
+export function readWrapperForTokenContract(provider: EthersCallProvider, registryAddress: Address, tokenAddress: Address): Promise<unknown>;
 
 // Warning: (ae-forgotten-export) The symbol "EthersTransactionSigner" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts

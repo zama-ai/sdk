@@ -45,10 +45,10 @@ export function readConfidentialBalanceOfContract(
 
 export function readWrapperForTokenContract(
   client: PublicClient,
-  coordinator: Address,
+  registryAddress: Address,
   tokenAddress: Address,
 ) {
-  return client.readContract(getWrapperContract(coordinator, tokenAddress));
+  return client.readContract(getWrapperContract(registryAddress, tokenAddress));
 }
 
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address) {
@@ -57,10 +57,10 @@ export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress
 
 export function readWrapperExistsContract(
   client: PublicClient,
-  coordinator: Address,
+  registryAddress: Address,
   tokenAddress: Address,
 ) {
-  return client.readContract(wrapperExistsContract(coordinator, tokenAddress));
+  return client.readContract(wrapperExistsContract(registryAddress, tokenAddress));
 }
 
 export function readSupportsInterfaceContract(

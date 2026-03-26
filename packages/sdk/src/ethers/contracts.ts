@@ -112,10 +112,10 @@ export function readConfidentialBalanceOfContract(
 
 export function readWrapperForTokenContract(
   provider: EthersCallProvider,
-  coordinator: Address,
+  registryAddress: Address,
   tokenAddress: Address,
 ) {
-  return ethersRead(provider, getWrapperContract(coordinator, tokenAddress));
+  return ethersRead(provider, getWrapperContract(registryAddress, tokenAddress));
 }
 
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address) {
@@ -124,10 +124,10 @@ export function readUnderlyingTokenContract(provider: EthersCallProvider, wrappe
 
 export function readWrapperExistsContract(
   provider: EthersCallProvider,
-  coordinator: Address,
+  registryAddress: Address,
   tokenAddress: Address,
 ) {
-  return ethersRead(provider, wrapperExistsContract(coordinator, tokenAddress));
+  return ethersRead(provider, wrapperExistsContract(registryAddress, tokenAddress));
 }
 
 export function readSupportsInterfaceContract(
