@@ -1,5 +1,4 @@
 import { type Address, getAddress } from "viem";
-import { hoodi, mainnet, sepolia } from "viem/chains";
 import type { EnrichedTokenWrapperPair, PaginatedResult, TokenWrapperPair } from "./contracts";
 import {
   decimalsContract,
@@ -15,6 +14,7 @@ import {
   symbolContract,
 } from "./contracts";
 import { ConfigurationError } from "./errors/relayer";
+import { hoodiCleartextConfig } from "./relayer/cleartext";
 import { MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
 import type { GenericSigner } from "./types/signer";
 
@@ -23,9 +23,9 @@ import type { GenericSigner } from "./types/signer";
  * Only includes chains where a registry is deployed (excludes Hardhat).
  */
 export const DefaultRegistryAddresses: Record<number, Address> = {
-  [mainnet.id]: MainnetConfig.registryAddress,
-  [sepolia.id]: SepoliaConfig.registryAddress,
-  [hoodi.id]: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f",
+  [MainnetConfig.chainId]: MainnetConfig.registryAddress,
+  [SepoliaConfig.chainId]: SepoliaConfig.registryAddress,
+  [hoodiCleartextConfig.chainId]: hoodiCleartextConfig.registryAddress,
 };
 
 /** Default page size for {@link WrappersRegistry.listPairs}. */

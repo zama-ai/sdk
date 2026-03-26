@@ -23,5 +23,5 @@ export const hoodiCleartextConfig = {
   verifyingContractAddressDecryption: HardhatConfig.verifyingContractAddressDecryption,
   verifyingContractAddressInputVerification:
     HardhatConfig.verifyingContractAddressInputVerification,
-  registryAddress: undefined,
+  registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f",
 } satisfies CleartextConfig;
