@@ -165,12 +165,12 @@ const isWrapper = await readonlyToken.isWrapper();
 
 ### discoverWrapper
 
-`(coordinatorAddress: Address) => Promise<Address | null>`
+`(erc20Address: Address) => Promise<Address | null>`
 
-Finds the wrapper contract for a public token via the deployment coordinator. Returns `null` if no wrapper exists.
+Finds the confidential wrapper for a public ERC-20 token via the on-chain registry. Returns `null` if no wrapper exists.
 
 ```ts
-const wrapper = await readonlyToken.discoverWrapper("0xCoordinatorAddress");
+const wrapper = await readonlyToken.discoverWrapper("0xUSDC");
 ```
 
 ### underlyingToken

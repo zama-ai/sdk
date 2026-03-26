@@ -1,11 +1,11 @@
 ---
 title: useWrapperDiscovery
-description: Find the wrapper contract address for a token via the deployment coordinator.
+description: Find the confidential wrapper contract address for an ERC-20 token via the on-chain registry.
 ---
 
 # useWrapperDiscovery
 
-Find the wrapper contract address for a token via the deployment coordinator. The result is cached indefinitely since wrapper addresses never change.
+Find the confidential wrapper contract address for an ERC-20 token via the on-chain registry. The result is cached indefinitely since wrapper addresses never change.
 
 ## Import
 
@@ -28,7 +28,7 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
     error,
   } = useWrapperDiscovery({
     tokenAddress,
-    coordinatorAddress: "0xCoordinator",
+    erc20Address: "0xUSDC",
   });
 
   if (isLoading) return <p>Discovering wrapper...</p>;
@@ -47,31 +47,24 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 `Address`
 
-Address of the underlying ERC-20 token to look up.
+Address of any confidential token you control. Used only to derive the signer context and to scope the query cache key — it does not affect which wrapper the registry returns.
+
+### erc20Address
+
+`Address | undefined`
+
+Address of the ERC-20 token to discover the wrapper for. Pass `undefined` to disable the query.
 
 ```ts
 useWrapperDiscovery({
-  tokenAddress: "0xToken",
-  coordinatorAddress: "0xCoordinator",
-});
-```
-
-### coordinatorAddress
-
-`Address`
-
-Address of the deployment coordinator contract that maps tokens to wrappers.
-
-```ts
-useWrapperDiscovery({
-  tokenAddress: "0xToken",
-  coordinatorAddress: "0xCoordinator",
+  tokenAddress: "0xConfidentialToken",
+  erc20Address: "0xUSDC",
 });
 ```
 
 ## Return Type
 
-The `data` field resolves to `Address | undefined` -- the wrapper contract address for the given token.
+The `data` field resolves to `Address | null` -- the wrapper contract address for the given token, or `null` if no wrapper exists.
 
 {% include ".gitbook/includes/query-result.md" %}
 
@@ -89,7 +82,7 @@ import { useWrapperDiscoverySuspense } from "@zama-fhe/react-sdk";
 function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { data: wrapperAddress } = useWrapperDiscoverySuspense({
     tokenAddress,
-    coordinatorAddress: "0xCoordinator",
+    erc20Address: "0xUSDC",
   });
 
   return <p>Wrapper: {wrapperAddress}</p>;
