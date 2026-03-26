@@ -2,8 +2,6 @@
 
 ## [Unreleased]
 
-### ⚠ BREAKING CHANGES
-
 - **wrapper-discovery:** `coordinatorAddress` has been renamed to `erc20Address` in `wrapperDiscoveryQueryOptions`, `UseWrapperDiscoveryConfig`, and `UseWrapperDiscoverySuspenseConfig`. Update call sites accordingly.
 - **wrapper-discovery:** `tokenAddress` in `UseWrapperDiscoveryConfig` is now required (`Address`, not `Address | undefined`). To disable the query conditionally, pass `erc20Address: undefined` instead.
 
