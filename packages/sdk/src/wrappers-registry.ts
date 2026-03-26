@@ -16,6 +16,7 @@ import {
 import { ConfigurationError } from "./errors/relayer";
 import { MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
 import type { GenericSigner } from "./types/signer";
+import { hoodiCleartextConfig } from "./relayer/cleartext";
 
 /**
  * Default wrappers registry addresses derived from {@link DefaultConfigs}.
@@ -24,6 +25,7 @@ import type { GenericSigner } from "./types/signer";
 export const DefaultRegistryAddresses: Record<number, Address> = {
   [MainnetConfig.chainId]: MainnetConfig.registryAddress,
   [SepoliaConfig.chainId]: SepoliaConfig.registryAddress,
+  [hoodiCleartextConfig.chainId]: hoodiCleartextConfig.registryAddress,
 };
 
 /** Default page size for {@link WrappersRegistry.listPairs}. */
