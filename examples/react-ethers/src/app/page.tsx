@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import {
   useConfidentialBalance,
+  useIsAllowed,
+  useAllowTokens,
   useMetadata,
   useZamaSDK,
   balanceOfContract,
@@ -102,6 +104,18 @@ export default function Home() {
   // Used in handleAccountsChanged (inside the useEffect below) to invalidate balance caches.
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
+
+  // Check whether FHE decrypt credentials are already cached (no wallet prompt).
+  // Returns true if a valid session exists, undefined/false otherwise.
+  const { data: isAllowed } = useIsAllowed();
+
+  // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
+  // All confidential token addresses are passed at once — a single signature covers all
+  // tokens, so switching from USDC to USDT does not require a second prompt.
+  const allowTokens = useAllowTokens();
+  function handleDecrypt() {
+    allowTokens.mutate(Object.values(TOKENS).map((t) => t.confidential));
+  }
 
   // Attempt to switch to Sepolia and update chainId based on the actual result.
   // Safe to call concurrently — duplicate calls are harmless (last write wins).
@@ -232,9 +246,11 @@ export default function Home() {
     });
   };
 
+  // Only run once the user has explicitly authorized decrypt (isAllowed).
+  // Prevents the hook from firing an EIP-712 prompt on mount (blind-signing anti-pattern).
   const balance = useConfidentialBalance(
     { tokenAddress: token.confidential },
-    { enabled: !!address && isSepolia },
+    { enabled: !!address && isSepolia && !!isAllowed },
   );
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
@@ -364,6 +380,10 @@ export default function Home() {
         mintDisabled={actionsDisabled}
         mintError={mint.isError ? (mint.error?.message ?? null) : null}
         mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
+        isAllowed={!!isAllowed}
+        onDecrypt={handleDecrypt}
+        isDecrypting={allowTokens.isPending}
+        decryptError={allowTokens.isError ? (allowTokens.error?.message ?? "Signing failed") : null}
       />
 
       {/* Pending unshield resume — checked for every token, not just the selected one.
@@ -396,6 +416,7 @@ export default function Home() {
         decimals={decimals}
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
+        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 
@@ -405,6 +426,7 @@ export default function Home() {
         decimals={decimals}
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
+        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 
