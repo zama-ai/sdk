@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.1...v2.2.0-alpha.2) (2026-03-26)
+
+### Features
+
+- **sdk,react-sdk:** add WrappersRegistry class and on-chain registry hooks ([#116](https://github.com/zama-ai/sdk/issues/116)) ([06bc94b]()), closes [#registryTTL]() [#registryInstance]() [#registry]() [#enrichPair]() [#pairWithMetadata]()
+
 ## [Unreleased]
 
 - **wrapper-discovery:** `coordinatorAddress` has been renamed to `erc20Address` in `wrapperDiscoveryQueryOptions`, `UseWrapperDiscoveryConfig`, and `UseWrapperDiscoverySuspenseConfig`. Update call sites accordingly.
