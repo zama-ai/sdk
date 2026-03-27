@@ -128,6 +128,20 @@ describe("wrapSigningError", () => {
     );
   });
 
+  it("includes original message in SigningRejectedError message", () => {
+    const original = Object.assign(new Error("user denied"), { code: 4001 });
+    expect(() => wrapSigningError(original, "ctx")).toThrow("ctx: user denied");
+  });
+
+  it("includes original message in SigningFailedError message", () => {
+    const original = new Error("timeout");
+    expect(() => wrapSigningError(original, "ctx")).toThrow("ctx: timeout");
+  });
+
+  it("stringifies non-Error values in the message", () => {
+    expect(() => wrapSigningError("string error", "ctx")).toThrow("ctx: string error");
+  });
+
   it("preserves non-Error cause instead of dropping it", () => {
     const stringError = "string error value";
     expect(() => wrapSigningError(stringError, "test")).toThrow(

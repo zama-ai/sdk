@@ -7,13 +7,11 @@ import {
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
   getDelegationExpiryContract,
-  getWrapperContract,
   MAX_UINT64,
   nameContract,
   supportsInterfaceContract,
   symbolContract,
   underlyingContract,
-  wrapperExistsContract,
 } from "../contracts";
 import { CredentialsManager } from "../credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "../credentials/delegated-credentials-manager";
@@ -33,8 +31,8 @@ import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
 import { toError } from "../utils";
-import { pLimit } from "./concurrency";
 import { assertBigint } from "../utils/assertions";
+import { pLimit } from "./concurrency";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -470,30 +468,6 @@ export class ReadonlyToken {
     }
 
     return results;
-  }
-
-  /**
-   * Look up the wrapper contract for this token via the deployment coordinator.
-   * Returns `null` if no wrapper is deployed.
-   *
-   * @param coordinatorAddress - The deployment coordinator contract address.
-   * @returns The wrapper address, or `null` if no wrapper exists.
-   *
-   * @example
-   * ```ts
-   * const wrapper = await token.discoverWrapper("0xCoordinator");
-   * if (wrapper) {
-   *   const fullToken = sdk.createToken(token.address, wrapper);
-   * }
-   * ```
-   */
-  async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
-    const coordinator = getAddress(coordinatorAddress);
-    const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
-    if (!exists) {
-      return null;
-    }
-    return this.signer.readContract(getWrapperContract(coordinator, this.address));
   }
 
   /**

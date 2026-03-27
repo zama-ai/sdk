@@ -673,7 +673,7 @@ interface UseUnderlyingAllowanceConfig {
 
 #### `useWrapperDiscovery`
 
-Find the wrapper contract for a given token via the deployment coordinator. Enabled only when `coordinatorAddress` is defined. Results are cached indefinitely (`staleTime: Infinity`).
+Find the wrapper contract for a given token via the on-chain registry. Enabled only when `erc20Address` is defined. Results are cached indefinitely (`staleTime: Infinity`).
 
 ```ts
 function useWrapperDiscovery(
@@ -683,7 +683,7 @@ function useWrapperDiscovery(
 
 interface UseWrapperDiscoveryConfig {
   tokenAddress: Address;
-  coordinatorAddress: Address | undefined;
+  erc20Address: Address | undefined;
 }
 ```
 

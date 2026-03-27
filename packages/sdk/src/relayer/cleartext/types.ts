@@ -6,6 +6,7 @@ export interface CleartextConfig {
   gatewayChainId: number;
   aclContractAddress: Address;
   executorAddress: Address;
+  registryAddress?: Address;
   /** Address of the Decryption contract on the gateway chain. */
   verifyingContractAddressDecryption: Address;
   /** Address of the InputVerification contract on the gateway chain. */

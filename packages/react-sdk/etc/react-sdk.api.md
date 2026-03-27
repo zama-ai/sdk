@@ -50,6 +50,7 @@ import { confidentialTransferFromMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { confidentialTransferMutationOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
+import { ConfigurationError } from '@zama-fhe/sdk';
 import { ContractAbi } from '@zama-fhe/sdk';
 import { createDelegatedUserDecryptEIP712MutationOptions } from '@zama-fhe/sdk/query';
 import { CreateDelegatedUserDecryptEIP712Params } from '@zama-fhe/sdk/query';
@@ -80,6 +81,7 @@ import { DecryptHandle } from '@zama-fhe/sdk/query';
 import { DecryptionFailedError } from '@zama-fhe/sdk';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DecryptStartEvent } from '@zama-fhe/sdk';
+import { DefaultRegistryAddresses } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManager } from '@zama-fhe/sdk';
 import { DelegatedCredentialsManagerConfig } from '@zama-fhe/sdk';
 import { delegateDecryptionMutationOptions } from '@zama-fhe/sdk/query';
@@ -139,6 +141,9 @@ import { isWrapperQueryOptions } from '@zama-fhe/sdk/query';
 import { KeypairExpiredError } from '@zama-fhe/sdk';
 import { KeypairType } from '@zama-fhe/sdk';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/sdk';
+import { ListPairsOptions } from '@zama-fhe/sdk';
+import { ListPairsQueryConfig } from '@zama-fhe/sdk/query';
+import { listPairsQueryOptions } from '@zama-fhe/sdk/query';
 import { loadPendingUnshield } from '@zama-fhe/sdk';
 import { MainnetConfig } from '@zama-fhe/sdk';
 import { matchZamaError } from '@zama-fhe/sdk';
@@ -148,6 +153,7 @@ import { nameContract } from '@zama-fhe/sdk';
 import { NetworkType } from '@zama-fhe/sdk';
 import { NoCiphertextError } from '@zama-fhe/sdk';
 import { OnChainEvent } from '@zama-fhe/sdk';
+import { PaginatedResult } from '@zama-fhe/sdk';
 import { parseActivityFeed } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { publicDecryptMutationOptions } from '@zama-fhe/sdk/query';
@@ -203,6 +209,8 @@ import { TOKEN_TOPICS } from '@zama-fhe/sdk';
 import { TokenConfig } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { tokenMetadataQueryOptions } from '@zama-fhe/sdk/query';
+import { TokenWrapperPair } from '@zama-fhe/sdk';
+import { TokenWrapperPairWithMetadata } from '@zama-fhe/sdk';
 import { Topics } from '@zama-fhe/sdk';
 import { totalSupplyContract } from '@zama-fhe/sdk';
 import { totalSupplyQueryOptions } from '@zama-fhe/sdk/query';
@@ -245,6 +253,8 @@ import { wrapETHContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
 import { wrapperDiscoveryQueryOptions } from '@zama-fhe/sdk/query';
 import { wrapperExistsContract } from '@zama-fhe/sdk';
+import { WrappersRegistry } from '@zama-fhe/sdk';
+import { WrappersRegistryConfig } from '@zama-fhe/sdk';
 import { WriteContractArgs } from '@zama-fhe/sdk';
 import { WriteContractConfig } from '@zama-fhe/sdk';
 import { WriteFunctionName } from '@zama-fhe/sdk';
@@ -355,6 +365,8 @@ export { confidentialTransferMutationOptions }
 
 export { ConfidentialTransferParams }
 
+export { ConfigurationError }
+
 export { ContractAbi }
 
 export { createDelegatedUserDecryptEIP712MutationOptions }
@@ -414,6 +426,8 @@ export { DecryptionFailedError }
 export { DecryptResult }
 
 export { DecryptStartEvent }
+
+export { DefaultRegistryAddresses }
 
 export { DelegatedCredentialsManager }
 
@@ -533,6 +547,12 @@ export { KeypairType }
 
 export { KmsDelegatedUserDecryptEIP712Type }
 
+export { ListPairsOptions }
+
+export { ListPairsQueryConfig }
+
+export { listPairsQueryOptions }
+
 export { loadPendingUnshield }
 
 export { MainnetConfig }
@@ -561,6 +581,8 @@ export interface OptimisticMutateContext {
     // (undocumented)
     snapshot: OptimisticBalanceSnapshot;
 }
+
+export { PaginatedResult }
 
 export { parseActivityFeed }
 
@@ -673,6 +695,10 @@ export { TokenConfig }
 export { TokenMetadata }
 
 export { tokenMetadataQueryOptions }
+
+export { TokenWrapperPair }
+
+export { TokenWrapperPairWithMetadata }
 
 export { Topics }
 
@@ -1145,6 +1171,11 @@ export interface UseConfidentialIsApprovedSuspenseConfig extends UseZamaConfig {
 }
 
 // @public
+export function useConfidentialTokenAddress(input: {
+    tokenAddress: Address | undefined;
+}): _tanstack_react_query0.UseQueryResult<readonly [boolean, `0x${string}`], Error>;
+
+// @public
 export function useConfidentialTransfer<TContext = unknown>(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, TContext>): UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext>;
 
 // @public
@@ -1176,7 +1207,7 @@ export function useDelegateDecryption(config: UseZamaConfig, options?: UseMutati
 export function useDelegatedUserDecrypt(): _tanstack_react_query0.UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedUserDecryptParams, unknown>;
 
 // @public
-export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData, Error>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<DelegationStatusData, Error>;
+export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<DelegationStatusData, Error>;
 
 // @public (undocumented)
 export interface UseDelegationStatusConfig {
@@ -1215,10 +1246,22 @@ export function useIsConfidential(tokenAddress: Address, options?: Omit<UseQuery
 export function useIsConfidentialSuspense(tokenAddress: Address): _tanstack_react_query0.UseSuspenseQueryResult<boolean, Error>;
 
 // @public
+export function useIsConfidentialTokenValid(input: {
+    confidentialTokenAddress: Address | undefined;
+}): _tanstack_react_query0.UseQueryResult<boolean, Error>;
+
+// @public
 export function useIsWrapper(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<boolean, Error>;
 
 // @public
 export function useIsWrapperSuspense(tokenAddress: Address): _tanstack_react_query0.UseSuspenseQueryResult<boolean, Error>;
+
+// @public
+export function useListPairs(input?: {
+    page?: number;
+    pageSize?: number;
+    metadata?: boolean;
+}): _tanstack_react_query0.UseQueryResult<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, Error>;
 
 // @public
 export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOptions<TokenMetadata>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<TokenMetadata, Error>;
@@ -1287,6 +1330,28 @@ export function useShieldFee(config: UseFeeConfig, options?: Omit<UseQueryOption
 export function useToken(config: UseZamaConfig): _zama_fhe_sdk0.Token;
 
 // @public
+export function useTokenAddress(input: {
+    confidentialTokenAddress: Address | undefined;
+}): _tanstack_react_query0.UseQueryResult<readonly [boolean, `0x${string}`], Error>;
+
+// @public
+export function useTokenPair(input: {
+    index: bigint | undefined;
+}): _tanstack_react_query0.UseQueryResult<TokenWrapperPair, Error>;
+
+// @public
+export function useTokenPairsLength(): _tanstack_react_query0.UseQueryResult<bigint, Error>;
+
+// @public
+export function useTokenPairsRegistry(): _tanstack_react_query0.UseQueryResult<readonly TokenWrapperPair[], Error>;
+
+// @public
+export function useTokenPairsSlice(input: {
+    fromIndex: bigint | undefined;
+    toIndex: bigint | undefined;
+}): _tanstack_react_query0.UseQueryResult<readonly TokenWrapperPair[], Error>;
+
+// @public
 export function useTotalSupply(tokenAddress: Address, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): _tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public
@@ -1333,8 +1398,8 @@ export function useWrapperDiscovery(config: UseWrapperDiscoveryConfig, options?:
 
 // @public
 export interface UseWrapperDiscoveryConfig {
-    coordinatorAddress: Address | undefined;
-    tokenAddress: Address | undefined;
+    erc20Address: Address | undefined;
+    tokenAddress: Address;
 }
 
 // @public
@@ -1342,9 +1407,12 @@ export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseC
 
 // @public
 export interface UseWrapperDiscoverySuspenseConfig {
-    coordinatorAddress: Address;
+    erc20Address: Address;
     tokenAddress: Address;
 }
+
+// @public
+export function useWrappersRegistryAddress(): Address | undefined;
 
 // @public
 export interface UseZamaConfig {
@@ -1365,6 +1433,10 @@ export { wrapperDiscoveryQueryOptions }
 
 export { wrapperExistsContract }
 
+export { WrappersRegistry }
+
+export { WrappersRegistryConfig }
+
 export { WriteContractArgs }
 
 export { WriteContractConfig }
@@ -1382,6 +1454,8 @@ export function ZamaProvider(input: ZamaProviderProps): react_jsx_runtime0.JSX.E
 export interface ZamaProviderProps extends PropsWithChildren {
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
+    registryAddresses?: Record<number, Address>;
+    registryTTL?: number;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
     sessionTTL?: number;
