@@ -139,19 +139,72 @@ const walletClient = createWalletClient({
 
 ## 2. Wallet connect (`page.tsx`)
 
-Three screens, driven by `address` and `chainId` state:
+Four screens, driven by `isInitializing`, `address`, and `isSepolia` state:
 
-| Screen            | Condition               | What's shown                      |
-| ----------------- | ----------------------- | --------------------------------- |
-| 1 — No wallet     | `!address`              | "Connect Wallet" button           |
-| 2 — Wrong network | `address && !isSepolia` | Instructions to switch to Sepolia |
-| 3 — Main UI       | `address && isSepolia`  | All operation cards               |
+| Screen            | Condition               | What's shown                                             |
+| ----------------- | ----------------------- | -------------------------------------------------------- |
+| 0 — Initializing  | `isInitializing`        | Blank (prevents flash of Screen 1 on remount)            |
+| 1 — No wallet     | `!address`              | "Connect Wallet" button                                  |
+| 2 — Wrong network | `address && !isSepolia` | Passive message: "Switch to Sepolia in your wallet"      |
+| 3 — Main UI       | `address && isSepolia`  | Registry loading, token selector, all operation cards    |
 
-The app never calls `wallet_switchEthereumChain` programmatically. For built-in chains like Sepolia, MetaMask v11+ shows a multi-network permissions dialog for non-EVM Snaps that cannot be suppressed. The `chainChanged` event updates the UI automatically when the user switches in their wallet.
+Screen 0 covers the brief re-initialization that follows a `ZamaProvider` remount. Without
+it, the UI flashes "Connect Wallet" for one render cycle even though the wallet is connected.
+
+**Screen 2 is passive** — there is no "Switch to Sepolia" button calling
+`wallet_switchEthereumChain`. The `chainChanged` event listener updates `chainId` state
+automatically when the user switches in their wallet. Calling `wallet_switchEthereumChain`
+with a `wallet_addEthereumChain` fallback is not done here: it adds boilerplate without
+improving the testnet developer experience.
 
 ---
 
-## 3. Shield (`ShieldCard.tsx`)
+## 3. Token selection (`page.tsx`)
+
+Registered token pairs are fetched from the on-chain `WrappersRegistry` contract via
+`useListPairs`:
+
+```ts
+const {
+  data: pairsData,
+  isPending: isRegistryPending,
+  isError: isRegistryError,
+} = useListPairs({ metadata: true });
+```
+
+`metadata: true` fetches name, symbol, and decimals for both the underlying ERC-20 and the
+confidential wrapper in a single call — no separate `useMetadata` calls needed.
+
+The first valid pair is auto-selected:
+
+```ts
+useEffect(() => {
+  if (validPairs.length > 0 && selectedTokenAddress === null) {
+    setSelectedTokenAddress(validPairs[0].confidentialTokenAddress);
+  }
+}, [validPairs, selectedTokenAddress]);
+```
+
+With `ViemSigner` (viem-based), named fields (`tokenAddress`, `confidentialTokenAddress`,
+`isValid`) are directly accessible — no `normalizePair` workaround needed (unlike
+`EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
+index fallback).
+
+**`ZERO_ADDRESS` placeholder**: SDK hooks cannot be called conditionally (React rules of
+hooks). While no pair is selected, `ZERO_ADDRESS` is passed with `enabled: false`, so no
+actual RPC call is made.
+
+**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
+has resolved and a pair has been selected (metadata is implicitly available at that point).
+
+**`isPending` vs `isLoading`**: In TanStack Query v5, `isLoading = isPending && isFetching`,
+which is `false` when the query is disabled (`enabled: false`). `isPending` stays `true`
+until the first successful response, correctly covering the period before the chain ID is
+resolved internally (during which the query is still disabled).
+
+---
+
+## 4. Shield (`ShieldCard.tsx`)
 
 ```ts
 const token = sdk.createToken(tokenAddress); // ERC-7984 wrapper
@@ -177,7 +230,7 @@ Flow:
 
 ---
 
-## 4. Confidential Transfer (`TransferCard.tsx`)
+## 5. Confidential Transfer (`TransferCard.tsx`)
 
 ```ts
 const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
@@ -192,7 +245,7 @@ Two phases: encrypting the amount locally (step 1), then submitting the transact
 
 ---
 
-## 5. Unshield (`UnshieldCard.tsx`)
+## 6. Unshield (`UnshieldCard.tsx`)
 
 ```ts
 const unshield = useUnshield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
@@ -209,7 +262,7 @@ Unshield is a 2-phase on-chain operation:
 
 ---
 
-## 6. Pending unshield recovery (`PendingUnshieldCard.tsx`)
+## 7. Pending unshield recovery (`PendingUnshieldCard.tsx`)
 
 If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB. On next load:
 
@@ -229,7 +282,7 @@ providers.tsx onEvent: getActiveUnshieldToken() → savePendingUnshield(storage,
 
 ---
 
-## 7. Delegation
+## 8. Delegation
 
 Three cards cover the full delegation lifecycle.
 
@@ -276,15 +329,31 @@ Note: `useDecryptBalanceAs` takes a positional `tokenAddress` (unlike `useDelega
 
 ---
 
-## 8. Balance display (`page.tsx` + `BalancesCard.tsx`)
+## 9. Balance display and explicit decrypt (`page.tsx` + `BalancesCard.tsx`)
 
 Three balances are shown:
 
-| Balance      | Source                            | Hook / method                                                  |
-| ------------ | --------------------------------- | -------------------------------------------------------------- |
-| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`               |
-| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.signer.readContract(balanceOfContract(...))` |
-| Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress })`                     |
+| Balance      | Source                            | Hook / method                                                                           |
+| ------------ | --------------------------------- | --------------------------------------------------------------------------------------- |
+| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                        |
+| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.signer.readContract(balanceOfContract(token.tokenAddress, ...))`      |
+| Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
+
+**Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
+authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed()` checks whether
+credentials are already cached; if not, `BalancesCard` shows a "Decrypt Balance" button
+rather than a balance value. This avoids blind-signing prompts on mount.
+
+```ts
+const { data: isAllowed } = useIsAllowed();
+// All registry pairs are passed at once — one signature covers all tokens,
+// so switching tokens does not prompt the wallet again.
+const allowTokens = useAllow();
+function handleDecrypt() {
+  if (validPairs.length === 0) return;
+  allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
+}
+```
 
 `useConfidentialBalance` has two loading phases:
 
@@ -293,7 +362,8 @@ Three balances are shown:
 
 Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
 
-`actionsDisabled` is true until both token metadata objects are loaded (decimals are needed to parse amounts correctly).
+**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
+has resolved and a pair has been selected (decimals and symbol are implicitly available).
 
 ### Mint
 
@@ -301,7 +371,7 @@ The "Mint" button in `BalancesCard` calls a `useMutation` in `page.tsx` that sen
 
 ---
 
-## 9. Amounts
+## 10. Amounts
 
 All user inputs are parsed with:
 
@@ -321,7 +391,7 @@ Never use raw `BigInt(string)` for token amounts — it ignores decimal precisio
 
 ---
 
-## 10. viem-specific notes
+## 11. viem-specific notes
 
 ### `parseAbi()` is required for human-readable ABI strings
 
@@ -352,13 +422,25 @@ export const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || SEPOLI
 
 ---
 
-## 11. E2E tests
+## 12. E2E tests
 
-Tests use Playwright with a mock EIP-1193 provider injected via `page.addInitScript` (see `e2e/fixtures.ts`). No wallet extension or real network is needed.
+Tests use Playwright with a mock EIP-1193 provider injected via `page.addInitScript` (see
+`e2e/fixtures.ts`). No wallet extension or real network is needed.
 
-- `mockWallet` — fixture that injects `window.ethereum` with configurable `eth_accounts`, `eth_requestAccounts`, and `eth_chainId`; exposes `window.__emitChainChanged(chainId)` to simulate wallet network switches
-- `mockRpc` — fixture that intercepts Sepolia RPC calls, returns static responses; `eth_call → "0x"` so `useMetadata` fails gracefully and `actionsDisabled` stays true
-- `page` override — aborts all `/api/relayer/**` requests for every test; no real network calls to the Zama relayer in CI
+- `mockWallet` — injects `window.ethereum` with configurable `eth_accounts`,
+  `eth_requestAccounts`, and `eth_chainId`; exposes `window.__emitChainChanged(chainId)`
+  and `window.__emitAccountsChanged(accounts)` to simulate wallet events
+- `mockRpc` — intercepts Sepolia RPC HTTP calls; routes `eth_call` by contract address and
+  function selector to return ABI-encoded registry data (`useListPairs`) and token metadata;
+  accepts `{ emptyRegistry: true }` to simulate a registry with no valid pairs
+- `page` override — aborts all `/api/relayer/**` requests for every test; no real network
+  calls to the Zama relayer in CI
+
+**Why `mockRpc` intercepts `eth_call` (not `mockWallet`)**: `ViemSigner` routes all contract
+reads (registry, metadata, balances) through its `publicClient` HTTP transport — not through
+`window.ethereum`. Mocking registry data must be done in the HTTP route interceptor
+(`mockRpc`), not in `injectMockWallet`. This is the opposite of `EthersSigner`, where
+`BrowserProvider` routes reads through `window.ethereum`.
 
 ```bash
 npm run test:e2e   # starts dev server and runs all specs
