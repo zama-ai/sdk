@@ -264,10 +264,10 @@ export interface ConfidentialTransferFromParams {
 export function confidentialTransferMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransfer", Address], ConfidentialTransferParams, TransactionResult>;
 
 // @public
-export interface ConfidentialTransferParams {
+export interface ConfidentialTransferParams extends TransferCallbacks {
     // (undocumented)
     amount: bigint;
-    callbacks?: TransferCallbacks;
+    skipBalanceCheck?: boolean;
     // (undocumented)
     to: Address;
 }
@@ -1063,7 +1063,8 @@ export class Token extends ReadonlyToken {
         tokens: Token[];
         delegateAddress: Address;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    // Warning: (ae-forgotten-export) The symbol "TransferOptions" needs to be exported by the entry point index.d.ts
+    confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
         delegateAddress: Address;
@@ -1075,14 +1076,11 @@ export class Token extends ReadonlyToken {
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
-    shield(amount: bigint, options?: {
-        approvalStrategy?: "max" | "exact" | "skip";
-        fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
-        to?: Address; /** Progress callbacks for the multi-step shield flow. */
-        callbacks?: ShieldCallbacks;
-    }): Promise<TransactionResult>;
+    // Warning: (ae-forgotten-export) The symbol "ShieldOptions" needs to be exported by the entry point index.d.ts
+    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
-    unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    // Warning: (ae-forgotten-export) The symbol "UnshieldOptions" needs to be exported by the entry point index.d.ts
+    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
     unwrapAll(): Promise<TransactionResult>;
@@ -1249,11 +1247,10 @@ export function unshieldFeeQueryOptions(signer: GenericSigner, config: UnshieldF
 export function unshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult>;
 
 // @public
-export interface UnshieldParams {
+export interface UnshieldParams extends UnshieldCallbacks {
     // (undocumented)
     amount: bigint;
-    // (undocumented)
-    callbacks?: UnshieldCallbacks;
+    skipBalanceCheck?: boolean;
 }
 
 // @public (undocumented)
@@ -1712,7 +1709,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-BRrEPcPO.d.ts:1749:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-TlpPsiGw.d.ts:1767:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
