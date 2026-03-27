@@ -30,10 +30,13 @@ Three objects are required: a `signer`, a `relayer`, and a `storage`.
 // Signer — wraps an EIP-1193 window.ethereum provider.
 // Recreated on wallet switch (walletKey pattern) so EthersSigner is always bound to the
 // correct account. See §"Wallet reactivity" below.
-const signer = useMemo(
-  () => new EthersSigner({ ethereum: getEthereumProvider() as any }),
-  [walletKey],
-);
+// When no wallet is installed, a stub provider is used so hooks don't throw on mount —
+// all SDK operations are gated behind address/isSepolia guards in page.tsx.
+const signer = useMemo(() => {
+  const ethereum = getEthereumProvider();
+  const provider = ethereum ?? { request: async () => { throw new Error("No wallet"); }, on: () => {}, removeListener: () => {} };
+  return new EthersSigner({ ethereum: provider as any });
+}, [walletKey]);
 
 // Relayer — browser FHE worker loaded from CDN.
 // Routes through the local /api/relayer Next.js proxy so RELAYER_API_KEY stays server-side.
@@ -103,19 +106,46 @@ const [walletKey, setWalletKey] = useState(0);
 
 ## 2. Wallet connect (`page.tsx`)
 
-Three screens, driven by `address` and `chainId` state:
+Four screens, driven by `isInitializing`, `address`, and `chainId` state:
 
-| Screen            | Condition               | What's shown                                     |
-| ----------------- | ----------------------- | ------------------------------------------------ |
-| 1 — No wallet     | `!address`              | "Connect Wallet" button                          |
-| 2 — Wrong network | `address && !isSepolia` | "Switch to Sepolia" button (+ error if rejected) |
-| 3 — Main UI       | `address && isSepolia`  | All operation cards                              |
+| Screen             | Condition               | What's shown                                     |
+| ------------------ | ----------------------- | ------------------------------------------------ |
+| 0 — Initializing   | `isInitializing`        | Blank (prevents flash of Screen 1 on remount)    |
+| 1 — No wallet      | `!address`              | "Connect Wallet" button                          |
+| 2 — Wrong network  | `address && !isSepolia` | "Switch to Sepolia" button (+ error if rejected) |
+| 3 — Main UI        | `address && isSepolia`  | All operation cards                              |
+
+Screen 0 covers the brief re-initialization that follows a ZamaProvider remount (wallet switch or chain change). Without it, the UI flashes "Connect Wallet" for one render cycle even though the wallet is still connected.
 
 `wallet_switchEthereumChain` is called on two explicit user actions only: clicking "Switch to Sepolia" on Screen 2, or during the connect flow. There is no automatic switch on page load. If the wallet does not know Sepolia (error code 4902), `wallet_addEthereumChain` is called as a fallback. If the user rejects the switch, the screen stays on Screen 2 and shows a "Could not switch" message. The `chainChanged` event updates the UI automatically when the user switches in their wallet.
 
 ---
 
-## 3. Shield (`ShieldCard.tsx`)
+## 3. Token selection (`page.tsx`)
+
+Registered token pairs are fetched from the on-chain `WrappersRegistry` contract via `useListPairs`:
+
+```ts
+const { data: pairsData, isPending: isRegistryPending } = useListPairs({ metadata: true });
+```
+
+`metadata: true` fetches name, symbol, and decimals for both the underlying ERC-20 and the confidential wrapper in a single call — no separate `useMetadata` calls needed. The first valid pair is auto-selected:
+
+```ts
+useEffect(() => {
+  if (validPairs.length > 0 && selectedTokenAddress === null) {
+    setSelectedTokenAddress(validPairs[0].confidentialTokenAddress);
+  }
+}, [validPairs, selectedTokenAddress]);
+```
+
+**EthersSigner compat (`normalizePair`)**: `useListPairs` returns objects that may have spread an ethers `Result`. `Result` named fields (`tokenAddress`, `confidentialTokenAddress`, `isValid`) are non-enumerable prototype getters — they survive direct access but are lost after a spread. `normalizePair` reads named fields first and falls back to numeric index access (`t[0]`, `t[1]`, `t[2]`) for the ethers case. This is an ethers v6 interop quirk; viem does not require the fallback.
+
+**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry has resolved and a pair has been selected (so metadata is implicitly available).
+
+---
+
+## 4. Shield (`ShieldCard.tsx`)
 
 ```ts
 const token = sdk.createToken(tokenAddress); // ERC-7984 wrapper
@@ -141,7 +171,7 @@ Flow:
 
 ---
 
-## 4. Confidential Transfer (`TransferCard.tsx`)
+## 5. Confidential Transfer (`TransferCard.tsx`)
 
 ```ts
 const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
@@ -156,7 +186,7 @@ Two phases: encrypting the amount locally (step 1), then submitting the transact
 
 ---
 
-## 5. Unshield (`UnshieldCard.tsx`)
+## 6. Unshield (`UnshieldCard.tsx`)
 
 ```ts
 const unshield = useUnshield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
@@ -169,11 +199,11 @@ Unshield is a 2-phase on-chain operation:
 - **Phase 1**: Submit the unwrap transaction. `onFinalizing` fires when Phase 1 is mined and Phase 2 is about to start.
 - **Phase 2**: Finalization transaction.
 
-`ZamaSDKEvents.UnshieldPhase1Submitted` fires right after Phase 1 is submitted (before mining). The app uses `setActiveUnshieldToken` + `savePendingUnshield` to persist the pending state so it survives a tab close between phases. See §"Pending unshield" below.
+`ZamaSDKEvents.UnshieldPhase1Submitted` fires **after Phase 1 is mined** (the SDK awaits the receipt before emitting). The app uses `setActiveUnshieldToken` + `savePendingUnshield` to persist the pending state so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
 
 ---
 
-## 6. Pending unshield recovery (`PendingUnshieldCard.tsx`)
+## 7. Pending unshield recovery (`PendingUnshieldCard.tsx`)
 
 If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB. On next load:
 
@@ -193,7 +223,7 @@ providers.tsx onEvent: getActiveUnshieldToken() → savePendingUnshield(storage,
 
 ---
 
-## 7. Delegation
+## 8. Delegation
 
 Three cards cover the full delegation lifecycle.
 
@@ -240,7 +270,7 @@ Note: `useDecryptBalanceAs` takes a positional `tokenAddress` (unlike `useDelega
 
 ---
 
-## 8. Balance display (`page.tsx` + `BalancesCard.tsx`)
+## 9. Balance display (`page.tsx` + `BalancesCard.tsx`)
 
 Three balances are shown:
 
@@ -250,6 +280,14 @@ Three balances are shown:
 | ERC-20       | Direct RPC via SDK signer      | `useQuery` → `sdk.signer.readContract(balanceOfContract(...))` |
 | Confidential | Relayer decryption             | `useConfidentialBalance({ tokenAddress })`                     |
 
+**Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useIsAllowed()` → `useAllow()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
+
+```ts
+const { data: isAllowed } = useIsAllowed();
+// In BalancesCard: shows "Decrypt Balance" button when !isAllowed,
+// otherwise shows the balance (or "Decrypting…" while loading).
+```
+
 `useConfidentialBalance` has two loading phases:
 
 - `balance.handleQuery.isLoading` — fetching the encrypted handle from chain
@@ -257,11 +295,9 @@ Three balances are shown:
 
 Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
 
-`actionsDisabled` is true until both token metadata objects are loaded (decimals are needed to parse amounts correctly).
-
 ---
 
-## 9. Amounts
+## 10. Amounts
 
 All user inputs are parsed with:
 
@@ -281,7 +317,7 @@ Never use raw `BigInt(string)` for token amounts — it ignores decimal precisio
 
 ---
 
-## 10. Notes
+## 11. Notes
 
 ### `||` not `??` for `NEXT_PUBLIC_*` env vars
 
@@ -297,7 +333,7 @@ export const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || SEPOLI
 
 ---
 
-## 11. E2E tests
+## 12. E2E tests
 
 Tests use Playwright with a mock EIP-1193 provider injected via `page.addInitScript` (see `e2e/fixtures.ts`). No wallet extension or real network is needed.
 
