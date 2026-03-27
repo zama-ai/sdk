@@ -22,6 +22,36 @@ test.describe("wrong network screen", () => {
     await expect(page.getByText(/11155111/)).toBeVisible();
   });
 
+  test("shows Switch to Sepolia button on wrong network screen", async ({
+    page,
+    mockRpc,
+    mockWallet,
+  }) => {
+    await mockRpc();
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: WRONG_CHAIN_ID });
+    await page.goto("/");
+
+    await expect(
+      page.getByRole("button", { name: "Switch to Sepolia", exact: true }),
+    ).toBeVisible();
+  });
+
+  test("shows failure message when switch does not change the chain", async ({
+    page,
+    mockRpc,
+    mockWallet,
+  }) => {
+    await mockRpc();
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: WRONG_CHAIN_ID });
+    await page.goto("/");
+
+    // The mock wallet returns null for wallet_switchEthereumChain without updating chainId.
+    // handleSwitchToSepolia re-reads eth_chainId in the finally block — still WRONG_CHAIN_ID
+    // → setSwitchFailed(true) → failure message rendered.
+    await page.getByRole("button", { name: "Switch to Sepolia", exact: true }).click();
+    await expect(page.getByText("Could not switch to Sepolia")).toBeVisible();
+  });
+
   test("transitions to main screen when user switches to Sepolia in their wallet", async ({
     page,
     mockRpc,

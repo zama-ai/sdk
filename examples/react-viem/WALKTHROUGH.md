@@ -145,17 +145,19 @@ Four screens, driven by `isInitializing`, `address`, and `isSepolia` state:
 | ----------------- | ----------------------- | ----------------------------------------------------- |
 | 0 — Initializing  | `isInitializing`        | Blank (prevents flash of Screen 1 on remount)         |
 | 1 — No wallet     | `!address`              | "Connect Wallet" button                               |
-| 2 — Wrong network | `address && !isSepolia` | Passive message: "Switch to Sepolia in your wallet"   |
+| 2 — Wrong network | `address && !isSepolia` | "Switch to Sepolia" button (+ error if rejected)      |
 | 3 — Main UI       | `address && isSepolia`  | Registry loading, token selector, all operation cards |
 
 Screen 0 covers the brief re-initialization that follows a `ZamaProvider` remount. Without
 it, the UI flashes "Connect Wallet" for one render cycle even though the wallet is connected.
 
-**Screen 2 is passive** — there is no "Switch to Sepolia" button calling
-`wallet_switchEthereumChain`. The `chainChanged` event listener updates `chainId` state
-automatically when the user switches in their wallet. Calling `wallet_switchEthereumChain`
-with a `wallet_addEthereumChain` fallback is not done here: it adds boilerplate without
-improving the testnet developer experience.
+`wallet_switchEthereumChain` is called on one explicit user action only: clicking "Switch to
+Sepolia" on Screen 2. If the wallet does not know Sepolia (error code 4902),
+`wallet_addEthereumChain` is called as a fallback. Errors from `wallet_switchEthereumChain`
+(including 4001 user rejection) are intentionally swallowed — `eth_chainId` is re-read in a
+`finally` block to determine the actual outcome. If the chain is still wrong after the
+attempt, a "Could not switch" message is shown. The `chainChanged` event also updates the UI
+when the user switches in their wallet directly.
 
 ---
 
