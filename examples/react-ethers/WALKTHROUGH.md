@@ -34,7 +34,13 @@ Three objects are required: a `signer`, a `relayer`, and a `storage`.
 // all SDK operations are gated behind address/isSepolia guards in page.tsx.
 const signer = useMemo(() => {
   const ethereum = getEthereumProvider();
-  const provider = ethereum ?? { request: async () => { throw new Error("No wallet"); }, on: () => {}, removeListener: () => {} };
+  const provider = ethereum ?? {
+    request: async () => {
+      throw new Error("No wallet");
+    },
+    on: () => {},
+    removeListener: () => {},
+  };
   return new EthersSigner({ ethereum: provider as any });
 }, [walletKey]);
 
@@ -108,12 +114,12 @@ const [walletKey, setWalletKey] = useState(0);
 
 Four screens, driven by `isInitializing`, `address`, and `chainId` state:
 
-| Screen             | Condition               | What's shown                                     |
-| ------------------ | ----------------------- | ------------------------------------------------ |
-| 0 — Initializing   | `isInitializing`        | Blank (prevents flash of Screen 1 on remount)    |
-| 1 — No wallet      | `!address`              | "Connect Wallet" button                          |
-| 2 — Wrong network  | `address && !isSepolia` | "Switch to Sepolia" button (+ error if rejected) |
-| 3 — Main UI        | `address && isSepolia`  | All operation cards                              |
+| Screen            | Condition               | What's shown                                     |
+| ----------------- | ----------------------- | ------------------------------------------------ |
+| 0 — Initializing  | `isInitializing`        | Blank (prevents flash of Screen 1 on remount)    |
+| 1 — No wallet     | `!address`              | "Connect Wallet" button                          |
+| 2 — Wrong network | `address && !isSepolia` | "Switch to Sepolia" button (+ error if rejected) |
+| 3 — Main UI       | `address && isSepolia`  | All operation cards                              |
 
 Screen 0 covers the brief re-initialization that follows a ZamaProvider remount (wallet switch or chain change). Without it, the UI flashes "Connect Wallet" for one render cycle even though the wallet is still connected.
 

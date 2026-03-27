@@ -165,6 +165,10 @@ export function Providers({ children }: { children: ReactNode }) {
         storage={indexedDBStorage}
         sessionStorage={sessionDBStorage}
         signer={signer}
+        // Align keypairTTL with sessionTTL to avoid a mismatch where the session
+        // signature is still valid but the FHE keypair has expired, which causes
+        // decryption failures without prompting the user to re-sign.
+        keypairTTL={30 * 24 * 60 * 60}
         onEvent={(event) => {
           // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK awaits
           // the receipt before emitting). Saving here ensures the pending state survives a tab
