@@ -1323,7 +1323,7 @@ export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions
 // @public
 export function useUserDecrypt(config?: UseUserDecryptConfig): {
     mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
-    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
+    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values: Record<`0x${string}`, ClearValueType | undefined>;
     data: undefined;
     variables: undefined;
@@ -1341,7 +1341,7 @@ export function useUserDecrypt(config?: UseUserDecryptConfig): {
     submittedAt: number;
 } | {
     mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
-    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
+    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values: Record<`0x${string}`, ClearValueType | undefined>;
     data: undefined;
     variables: UserDecryptMutationParams;
@@ -1359,7 +1359,7 @@ export function useUserDecrypt(config?: UseUserDecryptConfig): {
     submittedAt: number;
 } | {
     mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
-    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
+    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values: Record<`0x${string}`, ClearValueType | undefined>;
     data: undefined;
     error: Error;
@@ -1377,7 +1377,7 @@ export function useUserDecrypt(config?: UseUserDecryptConfig): {
     submittedAt: number;
 } | {
     mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
-    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Reactive map of handle → decrypted cleartext (undefined if not yet decrypted). */
+    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Map of handle → decrypted cleartext (undefined if not yet decrypted). */
     values: Record<`0x${string}`, ClearValueType | undefined>;
     data: DecryptResult;
     error: null;

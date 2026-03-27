@@ -7,7 +7,7 @@ import type {
   ZamaSDKEventListener,
 } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
-import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
+import { clearDecryptCache, invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
@@ -77,13 +77,30 @@ export function ZamaProvider({
     onEventRef.current = onEvent;
   });
 
+  const sdkRef = useRef<ZamaSDK | null>(null);
+
   const signerLifecycleCallbacks = useMemo(
     () =>
       signer?.subscribe
         ? {
-            onDisconnect: () => invalidateWalletLifecycleQueries(queryClient),
-            onAccountChange: () => invalidateWalletLifecycleQueries(queryClient),
-            onChainChange: () => invalidateWalletLifecycleQueries(queryClient),
+            onDisconnect() {
+              if (sdkRef.current) {
+                clearDecryptCache(sdkRef.current);
+              }
+              invalidateWalletLifecycleQueries(queryClient);
+            },
+            onAccountChange() {
+              if (sdkRef.current) {
+                clearDecryptCache(sdkRef.current);
+              }
+              invalidateWalletLifecycleQueries(queryClient);
+            },
+            onChainChange() {
+              if (sdkRef.current) {
+                clearDecryptCache(sdkRef.current);
+              }
+              invalidateWalletLifecycleQueries(queryClient);
+            },
           }
         : undefined,
     [queryClient, signer],
@@ -103,6 +120,8 @@ export function ZamaProvider({
       }),
     [relayer, signer, storage, sessionStorage, keypairTTL, sessionTTL, signerLifecycleCallbacks],
   );
+
+  sdkRef.current = sdk;
 
   // Clean up signer subscriptions on unmount without terminating the
   // caller-owned relayer. dispose() only unsubscribes from wallet events

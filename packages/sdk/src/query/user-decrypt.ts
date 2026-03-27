@@ -2,6 +2,7 @@ import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
+import { getDecryptCache } from "./decrypt-cache";
 import type { MutationFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 
@@ -24,11 +25,6 @@ export interface UserDecryptOptions {
   onCredentialsReady?: () => void;
   /** Fired after decryption completes. */
   onDecrypted?: (values: DecryptResult) => void;
-  /**
-   * Returns `true` if the handle's decrypted value is already in the query cache.
-   * When provided, the mutation skips cached handles and only decrypts uncached ones.
-   */
-  isHandleCached?: (handle: Handle) => boolean;
 }
 
 export function userDecryptMutationOptions(
@@ -38,12 +34,9 @@ export function userDecryptMutationOptions(
   return {
     mutationKey: ["zama.userDecrypt"] as const,
     mutationFn: async ({ handles }) => {
-      const {
-        onCredentialsReady = () => {},
-        onDecrypted = () => {},
-        isHandleCached,
-      } = options ?? {};
-      const uncached = isHandleCached ? handles.filter((h) => !isHandleCached(h.handle)) : handles;
+      const { onCredentialsReady = () => {}, onDecrypted = () => {} } = options ?? {};
+      const cache = getDecryptCache(sdk);
+      const uncached = handles.filter((h) => !cache.has(h.handle));
 
       if (uncached.length === 0) {
         return {};
@@ -78,6 +71,11 @@ export function userDecryptMutationOptions(
           durationDays: creds.durationDays,
         });
         Object.assign(allResults, result);
+      }
+
+      // Populate the decrypt cache with freshly decrypted values.
+      for (const [handle, value] of Object.entries(allResults) as [Handle, ClearValueType][]) {
+        cache.set(handle, value);
       }
 
       try {

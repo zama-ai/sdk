@@ -142,6 +142,9 @@ export interface BatchDecryptOptions {
 export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress?: Address, config?: FeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>>;
 
 // @public (undocumented)
+export function clearDecryptCache(sdk: ZamaSDK): void;
+
+// @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
 
 // @public
@@ -651,6 +654,9 @@ export interface GenericStorage {
     get<T = unknown>(key: string): Promise<T | null>;
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
+
+// @public (undocumented)
+export function getDecryptCache(sdk: ZamaSDK): Map<Handle, ClearValueType>;
 
 // @public
 export function hashFn(queryKey: readonly unknown[]): string;
@@ -1273,7 +1279,6 @@ export interface UserDecryptMutationParams {
 
 // @public (undocumented)
 export interface UserDecryptOptions {
-    isHandleCached?: (handle: Handle) => boolean;
     onCredentialsReady?: () => void;
     onDecrypted?: (values: DecryptResult) => void;
 }
