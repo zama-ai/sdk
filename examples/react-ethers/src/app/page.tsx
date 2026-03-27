@@ -8,7 +8,6 @@ import {
   useIsAllowed,
   useAllow,
   useListPairs,
-  useWrappersRegistryAddress,
   useZamaSDK,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
@@ -123,32 +122,15 @@ export default function Home() {
   // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair,
   // removing the need for separate useMetadata calls.
   // isPending stays true until the first successful response — covers both the initial
-  // disabled state (registryAddress not yet resolved) and the active-fetching state.
+  // disabled state (registry address not yet resolved internally) and the active-fetching state.
   // isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending && isFetching,
   // so it is false when the query is disabled (enabled: false), causing a premature
   // "No tokens available" display before the chain ID has been resolved.
-  const registryAddress = useWrappersRegistryAddress();
   const {
     data: pairsData,
     isPending: isRegistryPending,
     isError: isRegistryError,
-    isFetching: isRegistryFetching,
-    status: registryStatus,
-    error: registryError,
   } = useListPairs({ metadata: true });
-
-  // DEBUG — remove before merge
-  useEffect(() => {
-    console.log("[Registry debug]", {
-      registryAddress,
-      status: registryStatus,
-      isPending: isRegistryPending,
-      isFetching: isRegistryFetching,
-      isError: isRegistryError,
-      error: registryError,
-      pairsDataRaw: pairsData,
-    });
-  });
 
   // Normalize and filter pairs: normalizePair handles the EthersSigner/viem compat issue
   // (see function definition above), then we keep only isValid pairs with metadata.
@@ -159,18 +141,6 @@ export default function Home() {
         .filter((p): p is TokenWrapperPairWithMetadata => p !== null && p.isValid),
     [pairsData],
   );
-
-  // DEBUG — remove before merge
-  useEffect(() => {
-    console.log("[ValidPairs debug]", {
-      rawItems: pairsData?.items,
-      rawItemsLength: pairsData?.items?.length,
-      validPairsLength: validPairs.length,
-      firstRawItem: pairsData?.items?.[0],
-      hasUnderlying: pairsData?.items?.[0] ? "underlying" in pairsData.items[0] : "n/a",
-      isValid: pairsData?.items?.[0]?.isValid,
-    });
-  });
 
   // Auto-select the first valid pair once the registry resolves.
   useEffect(() => {
@@ -450,7 +420,7 @@ export default function Home() {
         >
           {(isRegistryPending || selectedTokenAddress === null) && (
             <option value="" disabled>
-              {isRegistryPending ? "Loading…" : "No tokens available"}
+              {isRegistryPending || validPairs.length > 0 ? "Loading…" : "No tokens available"}
             </option>
           )}
           {validPairs.map((pair) => (
