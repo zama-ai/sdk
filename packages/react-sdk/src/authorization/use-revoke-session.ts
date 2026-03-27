@@ -1,12 +1,17 @@
 "use client";
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
-import { revokeSessionMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import {
+  removeDecryptionQueries,
+  revokeSessionMutationOptions,
+  zamaQueryKeys,
+} from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
  * Revoke the session signature for the connected wallet without
- * specifying contract addresses. Useful for wallet disconnect handlers.
+ * specifying contract addresses. Cached plaintext for the connected wallet is
+ * also cleared. Useful for wallet disconnect handlers.
  *
  * @example
  * ```tsx
@@ -22,6 +27,7 @@ export function useRevokeSession(options?: UseMutationOptions<void>) {
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
+      removeDecryptionQueries(context.client);
       void context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
     },
   });

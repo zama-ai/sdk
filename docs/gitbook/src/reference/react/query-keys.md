@@ -77,6 +77,16 @@ Multi-token batch handles.
 | `.all`                  | All batch handle queries                  |
 | `.tokens(addrs, owner)` | Batch query for specific tokens and owner |
 
+### `zamaQueryKeys.decryption`
+
+User decryption queries (used by `useUserDecrypt`).
+
+| Key                          | Scope                                        |
+| ---------------------------- | -------------------------------------------- |
+| `.all`                       | All decryption queries                       |
+| `.handle(handle, contract?)` | Single handle (used internally by the cache) |
+| `.batch(handles[], account)` | Batch decrypt for a specific requester       |
+
 ### `zamaQueryKeys.isAllowed`
 
 Session signature status.
@@ -133,18 +143,6 @@ On-chain wrappers registry queries.
 | `.isConfidentialTokenValid(registryAddr, confidentialAddr)` | Validity check                             |
 | `.listPairs(registryAddr, page, pageSize, metadata)`        | Paginated listing                          |
 
-### `decryptionKeys`
-
-Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt) and read by `useUserDecryptedValue`.
-
-```ts
-import { decryptionKeys } from "@zama-fhe/react-sdk";
-```
-
-| Key              | Scope                            |
-| ---------------- | -------------------------------- |
-| `.value(handle)` | Single decrypted value by handle |
-
 ## Common Patterns
 
 ### Invalidate after an external transaction
@@ -170,6 +168,7 @@ queryClient.prefetchQuery({
 ```tsx
 queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialHandle.all });
+queryClient.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
 ```
 
 ## Related

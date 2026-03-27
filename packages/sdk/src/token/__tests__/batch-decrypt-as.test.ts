@@ -1,5 +1,6 @@
 import { describe, expect, vi } from "vitest";
 import { test, createMockSigner } from "../../test-fixtures";
+import { saveCachedUserDecryption } from "../../decrypt-cache";
 import { ReadonlyToken } from "../readonly-token";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { MAX_UINT64 } from "../../contracts/constants";
@@ -114,10 +115,7 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
 
-    // Pre-populate cache with the internal key format
-    const handleLower = HANDLE_A.toLowerCase();
-    const cacheKey = `zama:balance:${TOKEN_A}:${DELEGATOR}:${handleLower}`;
-    await storage.set(cacheKey, "42");
+    await saveCachedUserDecryption(storage, DELEGATE, TOKEN_A, HANDLE_A, 42n);
 
     vi.mocked(signer.readContract).mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
 

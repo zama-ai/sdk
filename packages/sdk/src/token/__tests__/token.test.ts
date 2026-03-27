@@ -1,6 +1,7 @@
 import { Topics } from "../../events";
 import { Token } from "../token";
 import { getAddress, type Address } from "viem";
+import { saveCachedUserDecryption } from "../../decrypt-cache";
 import { ZamaError, ZamaErrorCode } from "../../errors";
 import { describe, expect, it, vi } from "../../test-fixtures";
 
@@ -1491,9 +1492,13 @@ describe("Token", () => {
       handle,
       storage,
     }) => {
-      // Seed the balance cache with a sufficient balance
-      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
-      await storage.set(cacheKey, "200");
+      await saveCachedUserDecryption(
+        storage,
+        await signer.getAddress(),
+        token.address,
+        handle,
+        200n,
+      );
 
       vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
 
@@ -1508,8 +1513,13 @@ describe("Token", () => {
       handle,
       storage,
     }) => {
-      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
-      await storage.set(cacheKey, "50");
+      await saveCachedUserDecryption(
+        storage,
+        await signer.getAddress(),
+        token.address,
+        handle,
+        50n,
+      );
 
       vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
 

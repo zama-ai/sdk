@@ -1,75 +1,47 @@
 import type { Address } from "viem";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
-import type { ZamaSDK } from "../zama-sdk";
-import type { MutationFactoryOptions } from "./factory-types";
+import type { DecryptHandle, ZamaSDK } from "../zama-sdk";
+import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
+import { filterQueryOptions } from "./utils";
 
-/** A handle to decrypt, paired with its originating contract address. */
-export interface DecryptHandle {
-  handle: Handle;
-  contractAddress: Address;
-}
+export type { DecryptHandle };
 
-/** Variables for {@link userDecryptMutationOptions}. */
-export interface UserDecryptMutationParams {
+/** Configuration for {@link userDecryptQueryOptions}. */
+export interface UserDecryptQueryConfig {
   handles: DecryptHandle[];
+  requesterAddress: Address;
+  query?: Record<string, unknown>;
 }
 
-/** Progress callbacks for the decrypt flow. */
-export interface UserDecryptCallbacks {
-  /** Fired after credentials are ready (either from cache or freshly generated). */
-  onCredentialsReady?: () => void;
-  /** Fired after decryption completes. */
-  onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
-}
-
-export function userDecryptMutationOptions(
+/**
+ * Query options factory for batch-decrypting FHE handles.
+ *
+ * This factory is requester-scoped and disables retries because decrypt may
+ * trigger wallet authorization.
+ */
+export function userDecryptQueryOptions(
   sdk: ZamaSDK,
-  callbacks?: UserDecryptCallbacks,
-): MutationFactoryOptions<
-  readonly ["zama.userDecrypt"],
-  UserDecryptMutationParams,
-  Record<Handle, ClearValueType>
+  config: UserDecryptQueryConfig,
+): QueryFactoryOptions<
+  Record<Handle, ClearValueType>,
+  Error,
+  Record<Handle, ClearValueType>,
+  ReturnType<typeof zamaQueryKeys.decryption.batch>
 > {
+  const { handles, requesterAddress } = config;
+  const queryEnabled = config.query?.enabled === true;
+  const queryKey = zamaQueryKeys.decryption.batch(handles, requesterAddress);
+
   return {
-    mutationKey: ["zama.userDecrypt"] as const,
-    mutationFn: async ({ handles }) => {
-      const contractAddresses = [...new Set(handles.map((h) => h.contractAddress))];
-      const creds = await sdk.credentials.allow(...contractAddresses);
-      callbacks?.onCredentialsReady?.();
-
-      const signerAddress = await sdk.signer.getAddress();
-      const allResults: Record<Handle, ClearValueType> = {};
-
-      const handlesByContract = new Map<Address, Handle[]>();
-      for (const h of handles) {
-        const list = handlesByContract.get(h.contractAddress) ?? [];
-        list.push(h.handle);
-        handlesByContract.set(h.contractAddress, list);
-      }
-
-      for (const [contractAddress, contractHandles] of handlesByContract) {
-        const result = await sdk.relayer.userDecrypt({
-          handles: contractHandles,
-          contractAddress,
-          signedContractAddresses: creds.contractAddresses,
-          privateKey: creds.privateKey,
-          publicKey: creds.publicKey,
-          signature: creds.signature,
-          signerAddress,
-          startTimestamp: creds.startTimestamp,
-          durationDays: creds.durationDays,
-        });
-        Object.assign(allResults, result);
-      }
-
-      callbacks?.onDecrypted?.(allResults);
-      return allResults;
+    ...filterQueryOptions(config.query ?? {}),
+    queryKey,
+    queryFn: async (context) => {
+      const [, { handles: keyHandles, account }] = context.queryKey;
+      return sdk.userDecrypt(keyHandles, account);
     },
-    onSuccess: (data, _variables, _onMutateResult, context) => {
-      for (const [handle, value] of Object.entries(data) as [Handle, ClearValueType][]) {
-        context.client.setQueryData(zamaQueryKeys.decryption.handle(handle), value);
-      }
-    },
+    enabled: handles.length > 0 && queryEnabled,
+    staleTime: Infinity,
+    retry: false,
   };
 }

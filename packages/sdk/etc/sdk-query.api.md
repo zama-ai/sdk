@@ -927,6 +927,9 @@ export interface RelayerSDK {
 }
 
 // @public (undocumented)
+export function removeDecryptionQueries(queryClient: QueryClientLike): void;
+
+// @public (undocumented)
 export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.requestZKProofVerification"], ZKProofLike, InputProofBytesType>;
 
 // @public (undocumented)
@@ -1343,21 +1346,6 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface UserDecryptCallbacks {
-    onCredentialsReady?: () => void;
-    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
-}
-
-// @public (undocumented)
-export function userDecryptMutationOptions(sdk: ZamaSDK, callbacks?: UserDecryptCallbacks): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, Record<Handle, ClearValueType>>;
-
-// @public
-export interface UserDecryptMutationParams {
-    // (undocumented)
-    handles: DecryptHandle[];
-}
-
-// @public
 export interface UserDecryptParams {
     // (undocumented)
     contractAddress: Address;
@@ -1378,6 +1366,19 @@ export interface UserDecryptParams {
     // (undocumented)
     startTimestamp: number;
 }
+
+// @public
+export interface UserDecryptQueryConfig {
+    // (undocumented)
+    handles: DecryptHandle[];
+    // (undocumented)
+    query?: Record<string, unknown>;
+    // (undocumented)
+    requesterAddress: Address;
+}
+
+// @public
+export function userDecryptQueryOptions(sdk: ZamaSDK, config: UserDecryptQueryConfig): QueryFactoryOptions<Record<Handle, ClearValueType>, Error, Record<Handle, ClearValueType>, ReturnType<typeof zamaQueryKeys.decryption.batch>>;
 
 // @public
 export interface WrappedEvent {
@@ -1583,6 +1584,16 @@ export const zamaQueryKeys: {
         readonly handle: (handle: string, contractAddress?: Address) => readonly ["zama.decryption", {
             readonly contractAddress?: `0x${string}` | undefined;
             readonly handle: string;
+        }]; /** Key for a batch decrypt query. Handles are sorted for deterministic hashing. */
+        readonly batch: (handles: readonly {
+            handle: Hex;
+            contractAddress: Address;
+        }[], account: Address) => readonly ["zama.decryption", {
+            readonly account: `0x${string}`;
+            readonly handles: {
+                handle: Hex;
+                contractAddress: `0x${string}`;
+            }[];
         }];
     };
     readonly wrappersRegistry: {
@@ -1660,6 +1671,7 @@ export class ZamaSDK {
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
+    userDecrypt(handles: readonly DecryptHandle[], requesterAddress?: Address): Promise<Record<Handle, ClearValueType>>;
 }
 
 // @public
@@ -1723,7 +1735,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DTBvolDB.d.ts:2034:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-0AjjsuhC.d.ts:2060:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

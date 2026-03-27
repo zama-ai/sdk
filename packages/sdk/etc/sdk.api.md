@@ -6965,6 +6965,14 @@ export interface DecryptErrorEvent extends BaseEvent {
 }
 
 // @public
+export interface DecryptHandle {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    handle: Handle;
+}
+
+// @public
 export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -30920,6 +30928,7 @@ export class ZamaSDK {
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
+    userDecrypt(handles: readonly DecryptHandle[], requesterAddress?: Address): Promise<Record<Handle, ClearValueType>>;
 }
 
 // @public

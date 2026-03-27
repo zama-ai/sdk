@@ -3,7 +3,7 @@ import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
 import { ZamaErrorCode, DecryptionFailedError } from "../../errors";
 import type { GenericSigner, GenericStorage } from "../../types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import { saveCachedBalance } from "../balance-cache";
+import { loadCachedUserDecryption, saveCachedUserDecryption } from "../../decrypt-cache";
 import { getAddress, type Address } from "viem";
 
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
@@ -484,23 +484,10 @@ describe("ReadonlyToken", () => {
         address: TOKEN2,
       });
 
-      const signerAddress = await signer.getAddress();
-
       // Pre-populate cache for both tokens
-      await saveCachedBalance({
-        storage,
-        tokenAddress,
-        owner: signerAddress,
-        handle: handle,
-        value: 1000n,
-      });
-      await saveCachedBalance({
-        storage,
-        tokenAddress: TOKEN2,
-        owner: signerAddress,
-        handle: VALID_HANDLE2,
-        value: 2000n,
-      });
+      const signerAddress = await signer.getAddress();
+      await saveCachedUserDecryption(storage, signerAddress, tokenAddress, handle, 1000n);
+      await saveCachedUserDecryption(storage, signerAddress, TOKEN2, VALID_HANDLE2, 2000n);
 
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
         handles: [handle, VALID_HANDLE2],
@@ -537,16 +524,9 @@ describe("ReadonlyToken", () => {
         address: TOKEN2,
       });
 
-      const signerAddress = await signer.getAddress();
-
       // Pre-populate cache only for token1
-      await saveCachedBalance({
-        storage,
-        tokenAddress,
-        owner: signerAddress,
-        handle: handle,
-        value: 1000n,
-      });
+      const signerAddress = await signer.getAddress();
+      await saveCachedUserDecryption(storage, signerAddress, tokenAddress, handle, 1000n);
 
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({
         [VALID_HANDLE2]: 2000n,
@@ -694,6 +674,37 @@ describe("ReadonlyToken", () => {
 
       await token.revoke();
       expect(await token.isAllowed()).toBe(false);
+    });
+
+    it("only clears cached plaintext for the revoked contract scope", async ({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      tokenAddress,
+      handle,
+    }) => {
+      const otherTokenAddress = "0x3333333333333333333333333333333333333333" as Address;
+      const token = createReadonlyToken({
+        relayer,
+        signer,
+        storage,
+        sessionStorage,
+        tokenAddress,
+        handle,
+      });
+      const requester = getAddress(await signer.getAddress());
+      const otherHandle = ("0x" + "ef".repeat(32)) as Address;
+
+      await saveCachedUserDecryption(storage, requester, tokenAddress, handle, 1000n);
+      await saveCachedUserDecryption(storage, requester, otherTokenAddress, otherHandle, 2000n);
+
+      await token.revoke(tokenAddress);
+
+      expect(await loadCachedUserDecryption(storage, requester, tokenAddress, handle)).toBeNull();
+      expect(
+        await loadCachedUserDecryption(storage, requester, otherTokenAddress, otherHandle),
+      ).toBe(2000n);
     });
   });
 });

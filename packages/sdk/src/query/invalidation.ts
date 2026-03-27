@@ -15,6 +15,10 @@ export interface QueryClientLike {
   removeQueries(filters: QueryFilterLike): void;
 }
 
+export function removeDecryptionQueries(queryClient: QueryClientLike): void {
+  queryClient.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
+}
+
 function invalidateUnderlyingAllowanceQueries(
   queryClient: QueryClientLike,
   tokenAddress: Address,
@@ -102,7 +106,7 @@ export function invalidateWagmiBalanceQueries(queryClient: QueryClientLike): voi
 
 export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): void {
   queryClient.removeQueries({ queryKey: zamaQueryKeys.signerAddress.all });
-  queryClient.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
+  removeDecryptionQueries(queryClient);
   void queryClient.invalidateQueries({ predicate: isZamaQuery });
   invalidateWagmiBalanceQueries(queryClient);
 }

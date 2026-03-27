@@ -1,13 +1,69 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { userDecryptMutationOptions } from "../user-decrypt";
+import { userDecryptQueryOptions } from "../user-decrypt";
 
-describe("userDecryptMutationOptions", () => {
-  test("returns correct mutation key", ({ sdk }) => {
-    const options = userDecryptMutationOptions(sdk);
-    expect(options.mutationKey).toEqual(["zama.userDecrypt"]);
+describe("userDecryptQueryOptions", () => {
+  test("returns a requester-scoped query key with sorted handles", ({ sdk }) => {
+    const handle1 = ("0x" + "02".repeat(32)) as `0x${string}`;
+    const handle2 = ("0x" + "01".repeat(32)) as `0x${string}`;
+    const contract = "0x1111111111111111111111111111111111111111" as `0x${string}`;
+    const requester = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as const;
+
+    const options = userDecryptQueryOptions(sdk, {
+      handles: [
+        { handle: handle1, contractAddress: contract },
+        { handle: handle2, contractAddress: contract },
+      ],
+      requesterAddress: requester,
+    });
+
+    expect(options.queryKey[0]).toBe("zama.decryption");
+    expect(options.queryKey[1].account).toBe(requester);
+    const keyHandles = options.queryKey[1].handles;
+    const serialized = keyHandles.map((h) => `${h.handle}:${h.contractAddress}`);
+    expect(serialized).toEqual([...serialized].toSorted((a, b) => a.localeCompare(b)));
   });
 
-  test("decrypts handles grouped by contract", async ({ sdk, relayer }) => {
+  test("enabled is false when handles array is empty", ({ sdk }) => {
+    const options = userDecryptQueryOptions(sdk, {
+      handles: [],
+      requesterAddress: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+    });
+    expect(options.enabled).toBe(false);
+  });
+
+  test("enabled is false by default until explicitly opted in", ({ sdk }) => {
+    const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
+    const contract = "0x1111111111111111111111111111111111111111" as `0x${string}`;
+    const options = userDecryptQueryOptions(sdk, {
+      handles: [{ handle, contractAddress: contract }],
+      requesterAddress: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+    });
+    expect(options.enabled).toBe(false);
+  });
+
+  test("enabled respects query.enabled override", ({ sdk }) => {
+    const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
+    const contract = "0x1111111111111111111111111111111111111111" as `0x${string}`;
+    const options = userDecryptQueryOptions(sdk, {
+      handles: [{ handle, contractAddress: contract }],
+      requesterAddress: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+      query: { enabled: true },
+    });
+    expect(options.enabled).toBe(true);
+  });
+
+  test("staleTime is Infinity and retry is disabled", ({ sdk }) => {
+    const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
+    const contract = "0x1111111111111111111111111111111111111111" as `0x${string}`;
+    const options = userDecryptQueryOptions(sdk, {
+      handles: [{ handle, contractAddress: contract }],
+      requesterAddress: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+    });
+    expect(options.staleTime).toBe(Infinity);
+    expect(options.retry).toBe(false);
+  });
+
+  test("queryFn delegates to sdk.userDecrypt", async ({ sdk, relayer }) => {
     const handle1 = ("0x" + "01".repeat(32)) as `0x${string}`;
     const handle2 = ("0x" + "02".repeat(32)) as `0x${string}`;
     const contract1 = "0x1111111111111111111111111111111111111111" as `0x${string}`;
@@ -17,42 +73,29 @@ describe("userDecryptMutationOptions", () => {
       .mockResolvedValueOnce({ [handle1]: 100n })
       .mockResolvedValueOnce({ [handle2]: 200n });
 
-    const options = userDecryptMutationOptions(sdk);
-    const result = await options.mutationFn({
-      handles: [
-        { handle: handle1, contractAddress: contract1 },
-        { handle: handle2, contractAddress: contract2 },
-      ],
+    const handles = [
+      { handle: handle1, contractAddress: contract1 },
+      { handle: handle2, contractAddress: contract2 },
+    ];
+    const options = userDecryptQueryOptions(sdk, {
+      handles,
+      requesterAddress: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
     });
+    const result = await options.queryFn({ queryKey: options.queryKey } as never);
 
-    expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     expect(result).toEqual({ [handle1]: 100n, [handle2]: 200n });
-  });
-
-  test("groups handles by contract address", async ({ sdk, relayer }) => {
-    const handle1 = ("0x" + "01".repeat(32)) as `0x${string}`;
-    const handle2 = ("0x" + "02".repeat(32)) as `0x${string}`;
-    const contract = "0x1111111111111111111111111111111111111111" as `0x${string}`;
-
-    vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({
-      [handle1]: 100n,
-      [handle2]: 200n,
-    });
-
-    const options = userDecryptMutationOptions(sdk);
-    await options.mutationFn({
-      handles: [
-        { handle: handle1, contractAddress: contract },
-        { handle: handle2, contractAddress: contract },
-      ],
-    });
-
-    // Both handles should be in a single call since same contract
-    expect(relayer.userDecrypt).toHaveBeenCalledTimes(1);
-    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+    expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
-        handles: [handle1, handle2],
-        contractAddress: contract,
+        contractAddress: contract1,
+        signerAddress: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+      }),
+    );
+    expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        contractAddress: contract2,
+        signerAddress: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
       }),
     );
   });

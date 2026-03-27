@@ -1,7 +1,7 @@
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheInvalidated } from "../../test-helpers";
+import { expectCacheInvalidated, expectCacheRemoved } from "../../test-helpers";
 import {
   OTHER_TOKEN,
   TOKEN,
@@ -24,6 +24,21 @@ describe("useRevoke", () => {
     await act(() => result.current.mutateAsync([TOKEN, OTHER_TOKEN]));
 
     expectCacheInvalidated(queryClient, zamaQueryKeys.isAllowed.all);
+  });
+
+  test("cache: removes decrypted plaintext queries after revoke", async ({
+    renderWithProviders,
+  }) => {
+    const { result, queryClient } = renderWithProviders(() => useRevoke());
+    const decryptionKey = zamaQueryKeys.decryption.batch(
+      [{ handle: "0xh1", contractAddress: TOKEN }],
+      "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
+    );
+    queryClient.setQueryData(decryptionKey, { "0xh1": 1n });
+
+    await act(() => result.current.mutateAsync([TOKEN]));
+
+    expectCacheRemoved(queryClient, decryptionKey);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {

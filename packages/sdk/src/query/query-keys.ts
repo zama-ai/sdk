@@ -1,9 +1,7 @@
 import { getAddress } from "viem";
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
-const normalizeAddresses = (addresses: Address[]): Address[] =>
-  addresses.map((address) => getAddress(address));
 const normalizeAddress = (address?: Address): Address | undefined =>
   address === undefined ? undefined : getAddress(address);
 
@@ -60,7 +58,7 @@ export const zamaQueryKeys = {
       [
         "zama.confidentialHandles",
         {
-          tokenAddresses: normalizeAddresses(tokenAddresses),
+          tokenAddresses: tokenAddresses.map((a) => getAddress(a)),
           ...(owner ? { owner: getAddress(owner) } : {}),
         },
       ] as const,
@@ -72,7 +70,7 @@ export const zamaQueryKeys = {
       [
         "zama.confidentialBalances",
         {
-          tokenAddresses: normalizeAddresses(tokenAddresses),
+          tokenAddresses: tokenAddresses.map((a) => getAddress(a)),
           ...(owner ? { owner: getAddress(owner) } : {}),
           ...(handles === undefined ? {} : { handles }),
         },
@@ -261,6 +259,18 @@ export const zamaQueryKeys = {
             : { contractAddress: getAddress(contractAddress) }),
         },
       ] as const,
+    /** Key for a batch decrypt query. Handles are sorted for deterministic hashing. */
+    batch: (handles: readonly { handle: Hex; contractAddress: Address }[], account: Address) => {
+      const sorted = [...handles]
+        .map((h) => ({
+          handle: h.handle.toLowerCase() as Hex,
+          contractAddress: getAddress(h.contractAddress),
+        }))
+        .toSorted((a, b) =>
+          `${a.handle}:${a.contractAddress}`.localeCompare(`${b.handle}:${b.contractAddress}`),
+        );
+      return ["zama.decryption", { account: getAddress(account), handles: sorted }] as const;
+    },
   },
 
   wrappersRegistry: {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, type Mock } from "../test-fixtures";
 import { ZamaSDK } from "../zama-sdk";
+import { loadCachedUserDecryption, saveCachedUserDecryption } from "../decrypt-cache";
 import { ReadonlyToken } from "../token/readonly-token";
 import { Token } from "../token/token";
 import { CredentialsManager } from "../credentials/credentials-manager";
@@ -29,6 +30,80 @@ describe("ZamaSDK", () => {
     const token = sdk.createToken(tokenAddress);
     expect(token).toBeInstanceOf(Token);
     expect(token.address).toBe(tokenAddress);
+  });
+
+  it("userDecrypt caches decrypted handles", async ({ relayer, signer, storage, tokenAddress }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const handle = ("0x" + "01".repeat(32)) as Address;
+
+    vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 42n });
+
+    const result = await sdk.userDecrypt([{ handle, contractAddress: tokenAddress }]);
+
+    expect(result).toEqual({ [handle]: 42n });
+    expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+    expect(
+      await loadCachedUserDecryption(storage, await signer.getAddress(), tokenAddress, handle),
+    ).toBe(42n);
+  });
+
+  it("userDecrypt keeps same-handle cache entries isolated by contract", async ({
+    relayer,
+    signer,
+    storage,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const handle = ("0x" + "02".repeat(32)) as Address;
+    const contractA = "0x1111111111111111111111111111111111111111" as Address;
+    const contractB = "0x2222222222222222222222222222222222222222" as Address;
+
+    vi.mocked(relayer.userDecrypt)
+      .mockResolvedValueOnce({ [handle]: 10n })
+      .mockResolvedValueOnce({ [handle]: 20n });
+
+    expect(await sdk.userDecrypt([{ handle, contractAddress: contractA }])).toEqual({
+      [handle]: 10n,
+    });
+    expect(await sdk.userDecrypt([{ handle, contractAddress: contractB }])).toEqual({
+      [handle]: 20n,
+    });
+
+    expect(
+      await loadCachedUserDecryption(storage, await signer.getAddress(), contractA, handle),
+    ).toBe(10n);
+    expect(
+      await loadCachedUserDecryption(storage, await signer.getAddress(), contractB, handle),
+    ).toBe(20n);
+    expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+  });
+
+  it("userDecrypt normalizes contract addresses before grouping", async ({
+    relayer,
+    storage,
+    createMockSigner,
+  }) => {
+    const signer = createMockSigner();
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const handleA = ("0x" + "03".repeat(32)) as Address;
+    const handleB = ("0x" + "04".repeat(32)) as Address;
+    const lower = "0x52908400098527886e0f7030069857d2e4169ee7" as Address;
+    const upper = "0x52908400098527886E0F7030069857D2E4169EE7" as Address;
+
+    vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handleA]: 10n, [handleB]: 20n });
+
+    const result = await sdk.userDecrypt([
+      { handle: handleA, contractAddress: lower },
+      { handle: handleB, contractAddress: upper },
+    ]);
+
+    expect(result).toEqual({ [handleA]: 10n, [handleB]: 20n });
+    expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contractAddress: "0x52908400098527886E0F7030069857D2E4169EE7",
+        handles: [handleA, handleB],
+      }),
+    );
   });
 
   for (const method of ["createToken", "createReadonlyToken"] as const) {
@@ -138,6 +213,33 @@ describe("ZamaSDK", () => {
     expect(await sessionStorage.get(storeKey)).toBeNull();
   });
 
+  it("revoke clears cached decryptions for the current requester", async ({
+    signer,
+    relayer,
+    storage,
+    tokenAddress,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const handle = ("0x" + "03".repeat(32)) as Address;
+    const otherHandle = ("0x" + "13".repeat(32)) as Address;
+    const requester = await signer.getAddress();
+    const otherTokenAddress = "0x3333333333333333333333333333333333333333" as Address;
+
+    await saveCachedUserDecryption(storage, requester, tokenAddress, handle, 99n);
+    await saveCachedUserDecryption(storage, requester, otherTokenAddress, otherHandle, 199n);
+    expect(await loadCachedUserDecryption(storage, requester, tokenAddress, handle)).toBe(99n);
+    expect(await loadCachedUserDecryption(storage, requester, otherTokenAddress, otherHandle)).toBe(
+      199n,
+    );
+
+    await sdk.revoke(tokenAddress);
+
+    expect(await loadCachedUserDecryption(storage, requester, tokenAddress, handle)).toBeNull();
+    expect(await loadCachedUserDecryption(storage, requester, otherTokenAddress, otherHandle)).toBe(
+      199n,
+    );
+  });
+
   it("revokeSession clears session storage", async ({
     signer,
     relayer,
@@ -156,6 +258,24 @@ describe("ZamaSDK", () => {
     await sdk.revokeSession();
 
     expect(await sessionStorage.get(storeKey)).toBeNull();
+  });
+
+  it("revokeSession clears cached decryptions for the tracked requester", async ({
+    signer,
+    relayer,
+    storage,
+    tokenAddress,
+  }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    const handle = ("0x" + "04".repeat(32)) as Address;
+    const requester = await signer.getAddress();
+
+    await saveCachedUserDecryption(storage, requester, tokenAddress, handle, 123n);
+    expect(await loadCachedUserDecryption(storage, requester, tokenAddress, handle)).toBe(123n);
+
+    await sdk.revokeSession();
+
+    expect(await loadCachedUserDecryption(storage, requester, tokenAddress, handle)).toBeNull();
   });
 
   it("revokeSession emits CredentialsRevoked event", async ({ relayer, signer, storage }) => {
@@ -433,6 +553,22 @@ describe("ZamaSDK", () => {
       // Seed account A's session
       const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
       await sessionStorage.set(keyA, "0xsigA");
+      const oldHandle = ("0x" + "21".repeat(32)) as Address;
+      const newHandle = ("0x" + "22".repeat(32)) as Address;
+      await saveCachedUserDecryption(
+        storage,
+        userAddress,
+        "0x1111111111111111111111111111111111111111",
+        oldHandle,
+        1n,
+      );
+      await saveCachedUserDecryption(
+        storage,
+        NEXT_USER_ADDRESS,
+        "0x2222222222222222222222222222222222222222",
+        newHandle,
+        2n,
+      );
 
       // Simulate account change: signer now reports account B
       (signer.getAddress as Mock).mockResolvedValue(NEXT_USER_ADDRESS);
@@ -444,10 +580,28 @@ describe("ZamaSDK", () => {
       await vi.waitFor(async () => {
         expect(await sessionStorage.get(keyA)).toBeNull();
       });
+      await vi.waitFor(async () => {
+        expect(
+          await loadCachedUserDecryption(
+            storage,
+            userAddress,
+            "0x1111111111111111111111111111111111111111",
+            oldHandle,
+          ),
+        ).toBeNull();
+      });
 
       // Account B's key should be untouched (it was never seeded)
       const keyB = await CredentialsManager.computeStoreKey(NEXT_USER_ADDRESS, 31337);
       expect(await sessionStorage.get(keyB)).toBeNull();
+      expect(
+        await loadCachedUserDecryption(
+          storage,
+          NEXT_USER_ADDRESS,
+          "0x2222222222222222222222222222222222222222",
+          newHandle,
+        ),
+      ).toBe(2n);
 
       sdk.terminate();
     });
@@ -530,6 +684,14 @@ describe("ZamaSDK", () => {
 
       const keyA = await CredentialsManager.computeStoreKey(userAddress, 31337);
       await sessionStorage.set(keyA, "0xsigA");
+      const handle = ("0x" + "23".repeat(32)) as Address;
+      await saveCachedUserDecryption(
+        storage,
+        userAddress,
+        "0x1111111111111111111111111111111111111111",
+        handle,
+        3n,
+      );
 
       // Signer may throw on getAddress after disconnect
       (signer.getAddress as Mock).mockRejectedValue(new Error("disconnected"));
@@ -537,6 +699,16 @@ describe("ZamaSDK", () => {
       subscribeCbs!.onDisconnect();
       await vi.waitFor(async () => {
         expect(await sessionStorage.get(keyA)).toBeNull();
+      });
+      await vi.waitFor(async () => {
+        expect(
+          await loadCachedUserDecryption(
+            storage,
+            userAddress,
+            "0x1111111111111111111111111111111111111111",
+            handle,
+          ),
+        ).toBeNull();
       });
 
       sdk.terminate();

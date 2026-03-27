@@ -13,6 +13,8 @@ const WRAPPER_UPPER = "0x27B1FDB04752BBC536007A920D24ACB045561C26";
 const SPENDER_LOWER = "0xdbf03b407c01e7cd3cbea99509d93f8dddc8c6fb";
 const ERC20_LOWER = "0xd1220a0cf47c7b9be7a2e6ba89f429762e7b9adb";
 const TOKEN_B_LOWER = "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359";
+const ACCOUNT_LOWER = "0x00000000000000000000000000000000000000aa";
+const ACCOUNT_UPPER = "0x00000000000000000000000000000000000000AA";
 const HANDLE_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa";
 const HANDLE_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb";
 
@@ -162,7 +164,7 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.fees.batchTransferFee(TOKEN_LOWER),
       zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER),
       zamaQueryKeys.publicParams.bits(2048),
-      zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
+      zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER, ACCOUNT_LOWER as Address),
     ];
 
     for (const key of parameterizedKeys) {
@@ -247,8 +249,8 @@ describe("zamaQueryKeys", () => {
       ],
       [zamaQueryKeys.fees.feeRecipient(TOKEN_LOWER), zamaQueryKeys.fees.feeRecipient(TOKEN_UPPER)],
       [
-        zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
-        zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_UPPER),
+        zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER, ACCOUNT_LOWER as Address),
+        zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_UPPER, ACCOUNT_UPPER as Address),
       ],
     ];
 
@@ -261,6 +263,27 @@ describe("zamaQueryKeys", () => {
     expect(zamaQueryKeys.isAllowed.scope(OWNER_LOWER)).toEqual([
       "zama.isAllowed",
       { account: getAddress(OWNER_LOWER) },
+    ]);
+  });
+
+  test("decryption batch key includes normalized requester identity", () => {
+    expect(
+      zamaQueryKeys.decryption.batch(
+        [
+          { handle: HANDLE_B, contractAddress: TOKEN_B_LOWER as Address },
+          { handle: HANDLE_A, contractAddress: TOKEN_LOWER as Address },
+        ],
+        ACCOUNT_LOWER as Address,
+      ),
+    ).toEqual([
+      "zama.decryption",
+      {
+        account: getAddress(ACCOUNT_LOWER),
+        handles: [
+          { handle: HANDLE_A.toLowerCase(), contractAddress: getAddress(TOKEN_LOWER) },
+          { handle: HANDLE_B.toLowerCase(), contractAddress: getAddress(TOKEN_B_LOWER) },
+        ],
+      },
     ]);
   });
 

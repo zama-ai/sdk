@@ -811,32 +811,31 @@ const { handles, inputProof } = await encrypt.mutateAsync({
 
 #### Decryption (`useUserDecrypt`)
 
-`useUserDecrypt` manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available, avoiding redundant wallet prompts:
+`useUserDecrypt` manages the full decrypt orchestration — keypair generation, EIP-712, wallet signature — and reuses cached credentials when available. Because decryption can prompt the wallet, the query is opt-in and defaults to `enabled: false`:
 
 ```tsx
-const decrypt = useUserDecrypt({
-  onCredentialsReady: () => setStep("decrypting"),
-  onDecrypted: (values) => setStep("done"),
-});
-
-const result = await decrypt.mutateAsync({
-  handles: [
-    { handle: "0xabc...", contractAddress: "0xTokenA" },
-    { handle: "0xdef...", contractAddress: "0xTokenB" },
-  ],
-});
-// result: { "0xabc...": 500n, "0xdef...": 1000n }
-// Results are automatically cached for useUserDecryptedValue
+const { data, isLoading } = useUserDecrypt(
+  {
+    handles: [
+      { handle: "0xabc...", contractAddress: "0xTokenA" },
+      { handle: "0xdef...", contractAddress: "0xTokenB" },
+    ],
+  },
+  {
+    enabled: shouldDecrypt,
+  },
+);
+// data: { "0xabc...": 500n, "0xdef...": 1000n }
 ```
 
 #### All Encryption & Decryption Hooks
 
-| Hook                        | Input                        | Output                   | Description                                                                  |
-| --------------------------- | ---------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
-| `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                                     |
-| `useUserDecrypt()`          | `DecryptParams`              | `Record<string, bigint>` | Full decrypt orchestration with progress callbacks. Populates cache.         |
-| `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption (no authorization needed). Populates the decryption cache. |
-| `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                                      |
+| Hook                        | Input                        | Output                   | Description                                                                                     |
+| --------------------------- | ---------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------- |
+| `useEncrypt()`              | `EncryptParams`              | `EncryptResult`          | Encrypt values for smart contract calls.                                                        |
+| `useUserDecrypt()`          | `{ handles }`                | `Record<string, bigint>` | Opt-in user decryption query. Defaults to disabled and reuses credentials and persistent cache. |
+| `usePublicDecrypt()`        | `string[]` (handles)         | `PublicDecryptResult`    | Public decryption (no authorization needed). Populates the decryption cache.                    |
+| `useDelegatedUserDecrypt()` | `DelegatedUserDecryptParams` | `Record<string, bigint>` | Decrypt via delegation.                                                                         |
 
 #### Key Management
 
@@ -854,51 +853,24 @@ const result = await decrypt.mutateAsync({
 | `usePublicKey()`    | `void`          | `{ publicKeyId, publicKey } \| null`       | Get the TFHE compact public key.      |
 | `usePublicParams()` | `number` (bits) | `{ publicParams, publicParamsId } \| null` | Get public parameters for encryption. |
 
-### Decryption Cache Hooks
-
-`useUserDecrypt` and `usePublicDecrypt` populate a shared React Query cache. These hooks read from that cache without triggering new decryption requests.
-
-```ts
-// Single handle
-function useUserDecryptedValue(handle: string | undefined): UseQueryResult<bigint>;
-
-// Multiple handles
-function useUserDecryptedValues(handles: string[]): {
-  data: Record<string, bigint | undefined>;
-  results: UseQueryResult<bigint>[];
-};
-```
-
-```tsx
-// First, trigger decryption (populates the cache)
-const decrypt = useUserDecrypt();
-await decrypt.mutateAsync({
-  handles: [{ handle: "0xHandleHash", contractAddress: "0xToken" }],
-});
-
-// Then read cached results anywhere in the tree — no new decryption
-const { data: value } = useUserDecryptedValue("0xHandleHash");
-```
-
 ## Query Keys
 
 Use `zamaQueryKeys` for manual cache management (invalidation, prefetching, removal).
 
 ```ts
-import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/react-sdk";
 ```
 
-| Factory                              | Keys                                                                                     | Description                         |
-| ------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------- |
-| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token decrypted balance.     |
-| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.         |
-| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.      |
-| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.          |
-| `zamaQueryKeys.isAllowed`            | `.all`                                                                                   | Session signature status.           |
-| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                             | Underlying ERC-20 allowance.        |
-| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)`              | Activity feed items.                |
-| `zamaQueryKeys.fees`                 | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
-| `decryptionKeys`                     | `.value(handle)`                                                                         | Individual decrypted handle values. |
+| Factory                              | Keys                                                                                     | Description                     |
+| ------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------- |
+| `zamaQueryKeys.confidentialBalance`  | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token decrypted balance. |
+| `zamaQueryKeys.confidentialBalances` | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch balances.     |
+| `zamaQueryKeys.confidentialHandle`   | `.all`, `.token(address)`, `.owner(address, owner)`                                      | Single-token encrypted handle.  |
+| `zamaQueryKeys.confidentialHandles`  | `.all`, `.tokens(addresses, owner)`                                                      | Multi-token batch handles.      |
+| `zamaQueryKeys.isAllowed`            | `.all`                                                                                   | Session signature status.       |
+| `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                             | Underlying ERC-20 allowance.    |
+| `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)`              | Activity feed items.            |
+| `zamaQueryKeys.fees`                 | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.            |
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
@@ -1075,7 +1047,7 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
-**Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
+**Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
 **Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidKeypairError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 

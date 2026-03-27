@@ -13,6 +13,7 @@ export {
   invalidateBalanceQueries,
   invalidateWagmiBalanceQueries,
   invalidateWalletLifecycleQueries,
+  removeDecryptionQueries,
 } from "./invalidation";
 export type { QueryClientLike, QueryFilterLike, QueryLike } from "./invalidation";
 
@@ -131,9 +132,8 @@ export {
   type DelegateDecryptionParams,
 } from "./delegate-decryption";
 export {
-  userDecryptMutationOptions,
-  type UserDecryptMutationParams,
-  type UserDecryptCallbacks,
+  userDecryptQueryOptions,
+  type UserDecryptQueryConfig,
   type DecryptHandle,
 } from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";

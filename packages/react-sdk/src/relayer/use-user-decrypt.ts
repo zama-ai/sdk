@@ -1,52 +1,72 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { skipToken, type UseQueryOptions } from "@tanstack/react-query";
 import type { ClearValueType, Handle } from "@zama-fhe/sdk";
-import type {
-  DecryptHandle,
-  UserDecryptCallbacks,
-  UserDecryptMutationParams,
+import type { DecryptHandle } from "@zama-fhe/sdk/query";
+import {
+  signerAddressQueryOptions,
+  userDecryptQueryOptions,
+  zamaQueryKeys,
 } from "@zama-fhe/sdk/query";
-import { userDecryptMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { useQuery } from "../utils/query";
 
-export type {
-  UserDecryptCallbacks as DecryptCallbacks,
-  DecryptHandle,
-  UserDecryptMutationParams as DecryptParams,
-};
+export type { DecryptHandle };
 
 /** Configuration for {@link useUserDecrypt}. */
-export type UseUserDecryptConfig = UserDecryptCallbacks;
+export interface UseUserDecryptConfig {
+  /** Handles to decrypt, each paired with its contract address. */
+  handles: DecryptHandle[];
+}
+
+/** Query options for {@link useUserDecrypt}. */
+export interface UseUserDecryptOptions extends Omit<
+  UseQueryOptions<Record<Handle, ClearValueType>>,
+  "queryKey" | "queryFn" | "enabled"
+> {
+  /**
+   * Whether to run the decrypt query.
+   * Default: `false`.
+   */
+  enabled?: boolean;
+}
 
 /**
- * High-level orchestration hook for user decryption.
+ * Declarative hook for batch user decryption.
  *
- * Reuses cached FHE credentials from `sdk.credentials` when available,
- * falling back to generating a fresh keypair + EIP-712 signature only when
- * no valid credentials exist. This avoids redundant wallet signature prompts.
- *
- * On success, populates the decryption cache so `useUserDecryptedValue` / `useUserDecryptedValues`
- * can read the results.
- *
- * @param config - Optional callbacks for step-by-step UX feedback.
- * @returns A mutation whose `mutate` accepts {@link UserDecryptMutationParams}.
+ * Decryption can trigger wallet authorization, so this query is opt-in and
+ * defaults to `enabled: false`. Once enabled, it can reuse cached plaintext
+ * and previously allowed credentials without prompting again.
  *
  * @example
  * ```tsx
- * const decrypt = useUserDecrypt({
- *   onCredentialsReady: () => setStep("decrypting"),
- *   onDecrypted: (values) => console.log(values),
- * });
- * decrypt.mutate({
- *   handles: [{ handle: "0xHandle", contractAddress: "0xContract" }],
- * });
+ * const { data, isLoading } = useUserDecrypt(
+ *   { handles: [{ handle: "0xH1", contractAddress: "0xC1" }] },
+ *   { enabled: isRevealed },
+ * );
+ * console.log(data?.["0xH1"]); // 100n
  * ```
  */
-export function useUserDecrypt(config?: UseUserDecryptConfig) {
+export function useUserDecrypt(config: UseUserDecryptConfig, options?: UseUserDecryptOptions) {
   const sdk = useZamaSDK();
+  const addressQuery = useQuery({
+    ...signerAddressQueryOptions(sdk.signer),
+  });
 
-  return useMutation<Record<Handle, ClearValueType>, Error, UserDecryptMutationParams>(
-    userDecryptMutationOptions(sdk, config),
-  );
+  const account = addressQuery.data;
+  const baseOpts = account
+    ? userDecryptQueryOptions(sdk, {
+        ...config,
+        requesterAddress: account,
+        query: { ...options, enabled: options?.enabled === true },
+      })
+    : ({
+        queryKey: zamaQueryKeys.decryption.all,
+        queryFn: skipToken,
+        enabled: false,
+      } as const);
+
+  return useQuery<Record<Handle, ClearValueType>>(baseOpts);
 }
+
+export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;

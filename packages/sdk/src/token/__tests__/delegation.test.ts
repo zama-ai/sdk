@@ -408,11 +408,8 @@ describe("decryptBalanceAs", () => {
       [handle]: 42n,
     });
 
-    // First call populates cache keyed by owner (userAddress), not delegator.
-    await readonlyToken.decryptBalanceAs({
-      delegatorAddress,
-      owner: userAddress,
-    });
+    // First call populates cache keyed by requester (connected delegate), not delegator.
+    await readonlyToken.decryptBalanceAs({ delegatorAddress, owner: userAddress });
     expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
 
     // Second call with same owner should hit cache — no second decrypt call.

@@ -21,7 +21,6 @@ import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
-import { loadCachedBalance } from "./balance-cache";
 import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
@@ -49,6 +48,7 @@ import type {
   UnshieldCallbacks,
   UnshieldOptions,
 } from "../types";
+import { loadCachedUserDecryption } from "../decrypt-cache";
 
 /**
  * ERC-20-like interface for a single confidential token.
@@ -1044,12 +1044,12 @@ export class Token extends ReadonlyToken {
 
     // Check the persistent plaintext cache first — if the balance was decrypted
     // in a previous session, we can validate without credentials or a new decrypt.
-    const cached = await loadCachedBalance({
-      storage: this.storage,
-      tokenAddress: this.address,
-      owner: userAddress,
+    const cached = (await loadCachedUserDecryption(
+      this.storage,
+      userAddress,
+      this.address,
       handle,
-    });
+    )) as bigint | null;
     if (cached !== null) {
       if (cached < amount) {
         throw new InsufficientConfidentialBalanceError(
