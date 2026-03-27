@@ -2,7 +2,7 @@ import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { mainnet, sepolia } from "viem/chains";
 import { MemoryStorage, ZamaSDK, type Address } from "@zama-fhe/sdk";
-import { ViemSigner, readWrapperForTokenContract } from "@zama-fhe/sdk/viem";
+import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
@@ -10,7 +10,6 @@ const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL!;
 const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL!;
 const RELAYER_API_KEY = process.env.RELAYER_API_KEY!;
 const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS as Address;
-const COORDINATOR_ADDRESS = process.env.COORDINATOR_ADDRESS as Address;
 const RECIPIENT = process.env.RECIPIENT as Address;
 
 async function main() {
@@ -38,15 +37,14 @@ async function main() {
   });
   const storage = new MemoryStorage();
 
-  // 3. Resolve wrapper address on-chain
-  const wrapperAddress = await readWrapperForTokenContract(
-    publicClient,
-    COORDINATOR_ADDRESS,
-    TOKEN_ADDRESS,
-  );
-
   const sdk = new ZamaSDK({ relayer, signer, storage });
-  const token = sdk.createToken(TOKEN_ADDRESS, wrapperAddress);
+
+  // 3. Resolve wrapper address via the on-chain registry
+  const result = await sdk.registry.getConfidentialToken(TOKEN_ADDRESS);
+  if (!result) {
+    throw new Error(`No confidential wrapper registered for ${TOKEN_ADDRESS}`);
+  }
+  const token = sdk.createToken(TOKEN_ADDRESS, result.confidentialTokenAddress);
 
   try {
     // 3. Check balance

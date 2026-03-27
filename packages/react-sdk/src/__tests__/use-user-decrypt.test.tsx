@@ -216,7 +216,9 @@ describe("useUserDecrypt", () => {
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    // CredentialsManager wraps the error with context
-    expect(result.current.error?.message).toBe("Failed to create decrypt credentials");
+    // CredentialsManager wraps the error with context + original message
+    expect(result.current.error?.message).toBe(
+      "Failed to create decrypt credentials: keygen failed",
+    );
   });
 });
