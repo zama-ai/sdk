@@ -220,43 +220,6 @@ describe("useUserDecrypt", () => {
     expect(result.current.error?.message).toBe("Failed to create decrypt credentials");
   });
 
-  it("returns cached values reactively via values map", async ({
-    relayer,
-    signer,
-    tokenAddress,
-    renderWithProviders,
-  }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({
-      "0xh1": 100n,
-      "0xh2": 200n,
-    });
-
-    const handles = [
-      { handle: "0xh1" as const, contractAddress: tokenAddress },
-      { handle: "0xh2" as const, contractAddress: tokenAddress },
-    ];
-
-    const { result } = renderWithProviders(() => useUserDecrypt({ handles }), {
-      relayer,
-      signer,
-    });
-
-    // Before decrypt, values are undefined
-    expect(result.current.values["0xh1"]).toBeUndefined();
-    expect(result.current.values["0xh2"]).toBeUndefined();
-
-    // Decrypt
-    result.current.mutate();
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    // After decrypt, values are populated from cache
-    await waitFor(() => {
-      expect(result.current.values["0xh1"]).toBe(100n);
-      expect(result.current.values["0xh2"]).toBe(200n);
-    });
-  });
-
   it("mutate() without args skips already-cached handles", async ({
     relayer,
     signer,

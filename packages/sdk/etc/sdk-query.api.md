@@ -1269,7 +1269,7 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export function userDecryptMutationOptions(sdk: ZamaSDK, options?: UserDecryptOptions): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, DecryptResult>;
+export function userDecryptMutationOptions(sdk: ZamaSDK, options?: UserDecryptOptions): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams | void, DecryptResult>;
 
 // @public
 export interface UserDecryptMutationParams {
@@ -1279,6 +1279,7 @@ export interface UserDecryptMutationParams {
 
 // @public (undocumented)
 export interface UserDecryptOptions {
+    handles?: DecryptHandle[];
     onCredentialsReady?: () => void;
     onDecrypted?: (values: DecryptResult) => void;
 }

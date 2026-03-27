@@ -233,7 +233,6 @@ import { UnwrappedFinalizedEvent } from '@zama-fhe/sdk';
 import { UnwrappedStartedEvent } from '@zama-fhe/sdk';
 import { UnwrapRequestedEvent } from '@zama-fhe/sdk';
 import { UnwrapSubmittedEvent } from '@zama-fhe/sdk';
-import { useMutation } from '@tanstack/react-query';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
@@ -1321,84 +1320,10 @@ export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<Tr
 export function useUnwrapAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, void, Address>): _tanstack_react_query0.UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config?: UseUserDecryptConfig): {
-    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
-    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Map of handle → decrypted cleartext (undefined if not yet decrypted). */
-    values: Record<`0x${string}`, ClearValueType | undefined>;
-    data: undefined;
-    variables: undefined;
-    error: null;
-    isError: false;
-    isIdle: true;
-    isPending: false;
-    isSuccess: false;
-    status: "idle";
-    reset: () => void;
-    context: unknown;
-    failureCount: number;
-    failureReason: Error | null;
-    isPaused: boolean;
-    submittedAt: number;
-} | {
-    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
-    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Map of handle → decrypted cleartext (undefined if not yet decrypted). */
-    values: Record<`0x${string}`, ClearValueType | undefined>;
-    data: undefined;
-    variables: UserDecryptMutationParams;
-    error: null;
-    isError: false;
-    isIdle: false;
-    isPending: true;
-    isSuccess: false;
-    status: "pending";
-    reset: () => void;
-    context: unknown;
-    failureCount: number;
-    failureReason: Error | null;
-    isPaused: boolean;
-    submittedAt: number;
-} | {
-    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
-    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Map of handle → decrypted cleartext (undefined if not yet decrypted). */
-    values: Record<`0x${string}`, ClearValueType | undefined>;
-    data: undefined;
-    error: Error;
-    variables: UserDecryptMutationParams;
-    isError: true;
-    isIdle: false;
-    isPending: false;
-    isSuccess: false;
-    status: "error";
-    reset: () => void;
-    context: unknown;
-    failureCount: number;
-    failureReason: Error | null;
-    isPaused: boolean;
-    submittedAt: number;
-} | {
-    mutate: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => void;
-    mutateAsync: (params?: UserDecryptMutationParams, options?: MutateCallbackOptions) => Promise<DecryptResult>; /** Map of handle → decrypted cleartext (undefined if not yet decrypted). */
-    values: Record<`0x${string}`, ClearValueType | undefined>;
-    data: DecryptResult;
-    error: null;
-    variables: UserDecryptMutationParams;
-    isError: false;
-    isIdle: false;
-    isPending: false;
-    isSuccess: true;
-    status: "success";
-    reset: () => void;
-    context: unknown;
-    failureCount: number;
-    failureReason: Error | null;
-    isPaused: boolean;
-    submittedAt: number;
-};
+export function useUserDecrypt(config?: UseUserDecryptConfig): _tanstack_react_query0.UseMutationResult<DecryptResult, Error, void | UserDecryptMutationParams, unknown>;
 
 // @public
-export interface UseUserDecryptConfig extends UserDecryptOptions {
-    handles?: DecryptHandle[];
-}
+export type UseUserDecryptConfig = UserDecryptOptions;
 
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
@@ -1483,10 +1408,6 @@ export { ZamaSDKEventType }
 export { ZERO_HANDLE }
 
 export { ZKProofLike }
-
-// Warnings were encountered during analysis:
-//
-// dist/index.d.ts:153:3 - (ae-forgotten-export) The symbol "MutateCallbackOptions" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

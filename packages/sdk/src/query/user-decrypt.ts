@@ -21,6 +21,8 @@ export interface UserDecryptMutationParams {
 }
 
 export interface UserDecryptOptions {
+  /** Default handles used when `mutate()` is called without arguments. */
+  handles?: DecryptHandle[];
   /** Fired after credentials are ready (either from cache or freshly generated). */
   onCredentialsReady?: () => void;
   /** Fired after decryption completes. */
@@ -30,11 +32,17 @@ export interface UserDecryptOptions {
 export function userDecryptMutationOptions(
   sdk: ZamaSDK,
   options?: UserDecryptOptions,
-): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, DecryptResult> {
+): MutationFactoryOptions<
+  readonly ["zama.userDecrypt"],
+  UserDecryptMutationParams | void,
+  DecryptResult
+> {
   return {
     mutationKey: ["zama.userDecrypt"] as const,
-    mutationFn: async ({ handles }) => {
+    mutationFn: async (params) => {
+      const handles = params?.handles ?? options?.handles ?? [];
       const { onCredentialsReady = () => {}, onDecrypted = () => {} } = options ?? {};
+
       const cache = getDecryptCache(sdk);
       const uncached = handles.filter((h) => !cache.has(h.handle));
 
