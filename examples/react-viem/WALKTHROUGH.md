@@ -141,12 +141,12 @@ const walletClient = createWalletClient({
 
 Four screens, driven by `isInitializing`, `address`, and `isSepolia` state:
 
-| Screen            | Condition               | What's shown                                             |
-| ----------------- | ----------------------- | -------------------------------------------------------- |
-| 0 — Initializing  | `isInitializing`        | Blank (prevents flash of Screen 1 on remount)            |
-| 1 — No wallet     | `!address`              | "Connect Wallet" button                                  |
-| 2 — Wrong network | `address && !isSepolia` | Passive message: "Switch to Sepolia in your wallet"      |
-| 3 — Main UI       | `address && isSepolia`  | Registry loading, token selector, all operation cards    |
+| Screen            | Condition               | What's shown                                          |
+| ----------------- | ----------------------- | ----------------------------------------------------- |
+| 0 — Initializing  | `isInitializing`        | Blank (prevents flash of Screen 1 on remount)         |
+| 1 — No wallet     | `!address`              | "Connect Wallet" button                               |
+| 2 — Wrong network | `address && !isSepolia` | Passive message: "Switch to Sepolia in your wallet"   |
+| 3 — Main UI       | `address && isSepolia`  | Registry loading, token selector, all operation cards |
 
 Screen 0 covers the brief re-initialization that follows a `ZamaProvider` remount. Without
 it, the UI flashes "Connect Wallet" for one render cycle even though the wallet is connected.
@@ -333,10 +333,10 @@ Note: `useDecryptBalanceAs` takes a positional `tokenAddress` (unlike `useDelega
 
 Three balances are shown:
 
-| Balance      | Source                            | Hook / method                                                                           |
-| ------------ | --------------------------------- | --------------------------------------------------------------------------------------- |
-| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                        |
-| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.signer.readContract(balanceOfContract(token.tokenAddress, ...))`      |
+| Balance      | Source                            | Hook / method                                                                               |
+| ------------ | --------------------------------- | ------------------------------------------------------------------------------------------- |
+| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                            |
+| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.signer.readContract(balanceOfContract(token.tokenAddress, ...))`          |
 | Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
