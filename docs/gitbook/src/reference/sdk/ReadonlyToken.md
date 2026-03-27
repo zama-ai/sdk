@@ -163,16 +163,6 @@ Checks whether the contract is a wrapper around a public ERC-20.
 const isWrapper = await readonlyToken.isWrapper();
 ```
 
-### discoverWrapper
-
-`(coordinatorAddress: Address) => Promise<Address | null>`
-
-Finds the wrapper contract for a public token via the deployment coordinator. Returns `null` if no wrapper exists.
-
-```ts
-const wrapper = await readonlyToken.discoverWrapper("0xCoordinatorAddress");
-```
-
 ### underlyingToken
 
 `() => Promise<Address>`

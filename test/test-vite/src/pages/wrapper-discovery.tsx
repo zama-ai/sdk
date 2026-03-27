@@ -4,20 +4,21 @@ import { WrapperDiscoveryPanel } from "@zama-fhe/test-components";
 
 export default function WrapperDiscoveryPage() {
   const [searchParams] = useSearchParams();
-  const token = (searchParams.get("token") as Address | undefined) ?? undefined;
-  const coordinator = (searchParams.get("coordinator") as Address | undefined) ?? undefined;
-  if (!token) {
+  const tokenAddress = (searchParams.get("tokenAddress") as Address | undefined) ?? undefined;
+  const erc20Address = (searchParams.get("erc20Address") as Address | undefined) ?? undefined;
+
+  if (!tokenAddress) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Wrapper Discovery</h1>
-        <p>Missing ?token= query param</p>
+        <p>Missing ?tokenAddress= query param</p>
       </div>
     );
   }
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Wrapper Discovery</h1>
-      <WrapperDiscoveryPanel tokenAddress={token} coordinatorAddress={coordinator} />
+      <WrapperDiscoveryPanel tokenAddress={tokenAddress} erc20Address={erc20Address} />
     </div>
   );
 }

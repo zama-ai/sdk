@@ -94,4 +94,14 @@ describe("pLimit", () => {
 
     await expect(pLimit(fns, 1)).rejects.toThrow("boom");
   });
+
+  it("throws for maxConcurrency of 0", async () => {
+    const fns = [() => Promise.resolve(1)];
+    await expect(pLimit(fns, 0)).rejects.toThrow("maxConcurrency must be a positive number");
+  });
+
+  it("throws for negative maxConcurrency", async () => {
+    const fns = [() => Promise.resolve(1)];
+    await expect(pLimit(fns, -1)).rejects.toThrow("maxConcurrency must be a positive number");
+  });
 });
