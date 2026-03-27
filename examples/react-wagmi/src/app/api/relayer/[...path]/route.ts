@@ -16,10 +16,16 @@ const HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
+// Allowlist of request headers to forward to the upstream relayer.
+// Using an allowlist (rather than stripping hop-by-hop headers) prevents accidentally
+// forwarding browser cookies, Authorization headers, or other sensitive credentials.
+// RelayerWeb only sends content-type, accept, and content-length — no other headers needed.
+const REQUEST_ALLOW = new Set(["content-type", "accept", "content-length"]);
+
 function forwardHeaders(incoming: Headers): Headers {
   const out = new Headers();
   for (const [key, value] of incoming) {
-    if (!HOP_BY_HOP.has(key.toLowerCase()) && key.toLowerCase() !== "host") {
+    if (REQUEST_ALLOW.has(key.toLowerCase())) {
       out.set(key, value);
     }
   }
@@ -56,13 +62,26 @@ async function proxy(req: NextRequest, path: string[]) {
   const url = new URL(path.join("/"), RELAYER_URL + "/");
   url.search = req.nextUrl.search;
 
-  const resp = await fetch(url.toString(), {
-    method: req.method,
-    headers: forwardHeaders(req.headers),
-    body: req.body,
-    // @ts-expect-error -- Node fetch supports duplex for streaming bodies
-    duplex: "half",
-  });
+  let resp: Response;
+  try {
+    resp = await fetch(url.toString(), {
+      method: req.method,
+      headers: forwardHeaders(req.headers),
+      body: req.body,
+      // Abort after 30 s so a hanging relayer doesn't block the Next.js server indefinitely.
+      signal: AbortSignal.timeout(30_000),
+      // @ts-expect-error -- Node fetch supports duplex for streaming bodies
+      duplex: "half",
+    });
+  } catch (err) {
+    // Network failure (unreachable host, DNS error, timeout) — return a JSON error so
+    // the RelayerWeb worker gets valid JSON instead of an HTML 500 page from Next.js.
+    console.error("[relayer-proxy]", url.toString(), err);
+    return new Response(JSON.stringify({ error: "Relayer unreachable" }), {
+      status: 503,
+      headers: { "content-type": "application/json" },
+    });
+  }
 
   const headers = new Headers();
   for (const [key, value] of resp.headers) {
