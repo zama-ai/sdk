@@ -34,6 +34,7 @@ import type { Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
 import { toError } from "../utils";
 import { pLimit } from "./concurrency";
+import { assertBigint } from "../utils/assertions";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -402,7 +403,8 @@ export class ReadonlyToken {
       }
       const cached = firstToken.cache.get(handle);
       if (cached !== undefined) {
-        results.set(token.address, cached as bigint);
+        assertBigint(cached, "batchDecryptCore: cached");
+        results.set(token.address, cached);
         continue;
       }
       uncached.push({ token, handle });
@@ -430,12 +432,13 @@ export class ReadonlyToken {
       decryptFns.push(() =>
         decrypt(creds, handle, token.address)
           .then(async (result) => {
-            const value = result[handle] as bigint | undefined;
+            const value = result[handle];
             if (value === undefined) {
               throw new DecryptionFailedError(
                 `${errorPrefix} returned no value for handle ${handle} on token ${token.address}`,
               );
             }
+            assertBigint(value, "batchDecryptCore: result[handle]");
             results.set(token.address, value);
             firstToken.cache.set(handle, value);
           })
@@ -756,7 +759,8 @@ export class ReadonlyToken {
 
     const cached = this.cache.get(handle);
     if (cached !== undefined) {
-      return cached as bigint;
+      assertBigint(cached, "decryptBalanceAs: cached");
+      return cached;
     }
 
     // Pre-flight delegation check — avoids wasting a wallet signature on an
@@ -787,13 +791,13 @@ export class ReadonlyToken {
         durationMs: Date.now() - t0,
       });
 
-      const value = result[handle] as bigint | undefined;
+      const value = result[handle];
       if (value === undefined) {
         throw new DecryptionFailedError(
           `Delegated decryption returned no value for handle ${handle}`,
         );
       }
-
+      assertBigint(value, "decryptBalanceAs: result[handle]");
       this.cache.set(handle, value);
       return value;
     } catch (error) {
@@ -830,7 +834,8 @@ export class ReadonlyToken {
 
     const cached = this.cache.get(handle);
     if (cached !== undefined) {
-      return cached as bigint;
+      assertBigint(cached, "decryptBalance: cached");
+      return cached;
     }
 
     const creds = await this.credentials.allow(this.address);
@@ -854,11 +859,12 @@ export class ReadonlyToken {
         durationMs: Date.now() - t0,
       });
 
-      const value = result[handle] as bigint | undefined;
+      const value = result[handle];
       if (value === undefined) {
         throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
       }
       this.cache.set(handle, value);
+      assertBigint(value, "decryptBalance: result[handle]");
       return value;
     } catch (error) {
       this.emit({
@@ -879,8 +885,8 @@ export class ReadonlyToken {
    * @returns A Map from handle to decrypted bigint value.
    * @throws {@link DecryptionFailedError} if FHE decryption fails.
    */
-  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>> {
-    const results = new Map<Handle, bigint>();
+  async decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>> {
+    const results = new Map<Handle, ClearValueType>();
     const nonZeroHandles: Handle[] = [];
 
     for (const handle of handles) {
@@ -917,7 +923,7 @@ export class ReadonlyToken {
       });
 
       for (const handle of nonZeroHandles) {
-        const value = decrypted[handle] as bigint | undefined;
+        const value = decrypted[handle];
         if (value === undefined) {
           throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
         }
@@ -949,11 +955,6 @@ export class ReadonlyToken {
   }
 }
 
-/**
- * Inspect a caught error for an HTTP status code and return the appropriate
- * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
- * other HTTP errors, or the generic DecryptionFailedError as fallback).
- */
 function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   if (
     error instanceof DecryptionFailedError ||

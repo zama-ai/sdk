@@ -172,6 +172,18 @@ const sdk = new ZamaSDK({
 });
 ```
 
+### cache
+
+`Map<Handle, ClearValueType>` (read-only reference)
+
+In-memory cache of decrypted handle values, shared with all tokens created by this SDK instance. Keyed by the ciphertext handle — when the on-chain handle changes (e.g. after a transfer), the old entry is automatically a miss.
+
+The cache is cleared automatically on wallet disconnect, account change, or chain change. You can also clear it manually:
+
+```ts
+sdk.cache.clear();
+```
+
 ## Methods
 
 ### createToken

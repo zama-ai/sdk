@@ -38,12 +38,10 @@ function DecryptHandle() {
   });
 
   async function handleDecrypt() {
-    // Decrypts only uncached handles; no-op if already cached
+    // Decrypts only uncached handles; returns cached values if already decrypted
     const result = await decrypt.mutateAsync();
     // result: { "0xhandle...": 1000n }
   }
-
-  const decryptedValue = decrypt.values["0xhandle..."];
 
   return (
     <section>
@@ -51,7 +49,7 @@ function DecryptHandle() {
         {decrypt.isPending ? "Decrypting..." : "Decrypt"}
       </button>
       {decrypt.error && <p role="alert">Error: {decrypt.error.message}</p>}
-      {decryptedValue !== undefined && <output>Value: {decryptedValue.toString()}</output>}
+      {decrypt.data && <output>Value: {Object.values(decrypt.data)[0]?.toString()}</output>}
     </section>
   );
 }
@@ -66,13 +64,13 @@ function DecryptHandle() {
 import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
 ```
 
-`UseUserDecryptConfig` extends `UserDecryptOptions` — options and tracked handles are passed directly as top-level properties.
+`UseUserDecryptConfig` is a type alias for `UserDecryptOptions`.
 
 ### handles
 
 `DecryptHandle[] | undefined`
 
-Encrypted handles to track. The hook reactively reads their decrypted values from the cache via the `values` map. When you call `mutate()` without arguments, only handles not yet in the cache are sent for decryption.
+Default handles to decrypt when `mutate()` is called without arguments. Only handles not yet in the SDK's in-memory cache are sent for decryption — cached handles are returned immediately.
 
 ### onCredentialsReady
 
@@ -129,14 +127,14 @@ function DecryptWithProgress() {
 Passed to `mutate` / `mutateAsync` at call time.
 
 ```ts
-import { type DecryptParams } from "@zama-fhe/react-sdk";
+import { type UserDecryptMutationParams } from "@zama-fhe/react-sdk";
 ```
 
 ### handles
 
 `DecryptHandle[]`
 
-Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it.
+Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it. When passed explicitly to `mutate()`, these override the default `handles` from config.
 
 ```ts
 import { type DecryptHandle } from "@zama-fhe/react-sdk";
@@ -164,11 +162,9 @@ const result = await decrypt.mutateAsync({
 
 ## Return Type
 
-`data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
+Returns a standard `useMutation` result. `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-`values` is a reactive map of all tracked handles to their cached decrypted values (`undefined` if not yet decrypted). It updates automatically when decryption succeeds.
-
-On success, results are written to the decryption cache so that the `values` map and any other `useUserDecrypt` instance tracking the same handles will update reactively.
+When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). On success, freshly decrypted results are written to the SDK's in-memory cache (`sdk.cache`) so that subsequent calls for the same handles return instantly.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

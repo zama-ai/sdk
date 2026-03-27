@@ -20,6 +20,8 @@ import {
 import type { Address, Hex } from "viem";
 import type { Handle } from "./relayer/relayer-sdk.types";
 import { ZERO_HANDLE } from "./token/readonly-token";
+import type { ClearValueType } from ".";
+import { assertBigint } from "./utils/assertions";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -256,7 +258,7 @@ export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[
  */
 export function applyDecryptedValues(
   items: readonly ActivityItem[],
-  decryptedMap: ReadonlyMap<Handle, bigint>,
+  decryptedMap: ReadonlyMap<Handle, ClearValueType>,
 ): ActivityItem[] {
   return items.map((item) => {
     if (item.amount.type !== "encrypted") {
@@ -267,6 +269,8 @@ export function applyDecryptedValues(
     if (value === undefined) {
       return item;
     }
+
+    assertBigint(value, "applyDecryptedValues: value");
 
     return {
       ...item,

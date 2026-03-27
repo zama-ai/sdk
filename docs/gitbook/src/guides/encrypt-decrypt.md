@@ -24,11 +24,7 @@ function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
   const [storedHandle, setStoredHandle] = useState<string>();
-
-  // Track the handle — `values` reactively reads from the decryption cache
-  const decrypt = useUserDecrypt({
-    handles: storedHandle ? [{ handle: storedHandle, contractAddress: "0xYourContract" }] : [],
-  });
+  const decrypt = useUserDecrypt();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -62,19 +58,20 @@ function ConfidentialRoundTrip() {
     setStoredHandle(handle);
 
     // 4. Decrypt
-    await decrypt.mutateAsync({
+    const result = await decrypt.mutateAsync({
       handles: [{ handle, contractAddress }],
     });
+    // result: { "0xhandle...": 42n }
   };
-
-  const decryptedValue = storedHandle ? decrypt.values[storedHandle] : undefined;
 
   return (
     <form onSubmit={handleSubmit}>
       <button type="submit" disabled={encrypt.isPending || decrypt.isPending}>
         Encrypt → Store → Decrypt
       </button>
-      {decryptedValue !== undefined && <output>Decrypted: {decryptedValue.toString()}</output>}
+      {decrypt.data && storedHandle && (
+        <output>Decrypted: {decrypt.data[storedHandle]?.toString()}</output>
+      )}
     </form>
   );
 }
@@ -272,11 +269,10 @@ function DecryptExample() {
   });
 
   const handleDecrypt = async () => {
-    // Decrypts only uncached handles; no-op if already cached
-    await decrypt.mutateAsync();
+    // Decrypts only uncached handles; returns cached values if already decrypted
+    const result = await decrypt.mutateAsync();
+    // result: { "0xabc123...": 1000n }
   };
-
-  const decryptedValue = decrypt.values["0xabc123..."];
 
   return (
     <section>
@@ -284,7 +280,7 @@ function DecryptExample() {
         {decrypt.isPending ? "Decrypting..." : "Decrypt"}
       </button>
       {decrypt.error && <p role="alert">Error: {decrypt.error.message}</p>}
-      {decryptedValue !== undefined && <output>Value: {decryptedValue.toString()}</output>}
+      {decrypt.data && <output>Value: {Object.values(decrypt.data)[0]?.toString()}</output>}
     </section>
   );
 }
@@ -309,43 +305,37 @@ const result = await decrypt.mutateAsync({
 // result: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
 ```
 
-#### Reading decrypted values from cache
+#### Reading decrypted values
 
-After decryption, values are stored in React Query's cache. Pass `handles` to `useUserDecrypt` and read from the reactive `values` map — no separate hooks needed:
+Decrypted values are returned in `data` and also stored in the SDK's in-memory cache (`sdk.cache`). Pass `handles` to config and call `mutate()` — cached handles are returned instantly without hitting the relayer:
 
 ```tsx
 import { useUserDecrypt } from "@zama-fhe/react-sdk";
 import type { DecryptHandle } from "@zama-fhe/react-sdk";
 
 function DecryptedBalances({ handles }: { handles: DecryptHandle[] }) {
-  const { values, mutate, isPending } = useUserDecrypt({ handles });
+  const { data, mutate, isPending } = useUserDecrypt({ handles });
 
   return (
     <section>
       <button onClick={() => mutate()} disabled={isPending}>
-        {isPending ? "Decrypting..." : "Decrypt uncached"}
+        {isPending ? "Decrypting..." : "Decrypt"}
       </button>
-      <ul>
-        {handles.map((h) => (
-          <li key={h.handle}>
-            <output>{values[h.handle]?.toString() ?? "pending"}</output>
-          </li>
-        ))}
-      </ul>
+      {data && (
+        <ul>
+          {handles.map((h) => (
+            <li key={h.handle}>
+              <output>{data[h.handle]?.toString() ?? "pending"}</output>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
 ```
 
-Calling `mutate()` without arguments decrypts only handles not already in the cache. If all handles are cached, it is a no-op.
-
-{% hint style="info" %}
-**Decrypted values are `undefined`?** Cache reads only return data after a decryption has populated the cache. Make sure:
-
-1. You have called `mutate()` or `mutateAsync()` at least once
-2. The handle you are reading matches exactly (it is case-sensitive, hex-encoded)
-3. The decryption completed successfully (check `decrypt.isSuccess`)
-   {% endhint %}
+Calling `mutate()` without arguments decrypts only handles not already in the SDK cache. If all handles are cached, the cached values are returned immediately without a relayer call.
 
 #### Showing progress during decryption
 
