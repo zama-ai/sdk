@@ -46,6 +46,11 @@ export class DelegationExpiredError extends ZamaError {
  * Calling `decryptBalanceAs` during this window will fail because the gateway's
  * `isHandleDelegatedForUserDecryption()` check reads from its own synced copy
  * of the ACL state, which hasn't been updated yet.
+ *
+ * **Note:** This error is raised as a best-effort heuristic — when a delegated
+ * decryption receives an HTTP 500 from the relayer, the most likely cause is a
+ * propagation delay. However, the same status code can occur if the gateway or
+ * relayer experiences an unrelated internal error.
  */
 export class DelegationNotPropagatedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {

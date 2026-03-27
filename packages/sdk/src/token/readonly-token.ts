@@ -1023,8 +1023,10 @@ function wrapDecryptError(error: unknown, fallbackMessage: string, isDelegated =
 
   if (isDelegated && statusCode === 500) {
     return new DelegationNotPropagatedError(
-      "Delegated decryption failed — the delegation may not have propagated to the gateway yet. " +
-        "After granting delegation, allow 1–2 minutes for cross-chain synchronization before decrypting.",
+      "Delegated decryption failed with a server error. " +
+        "This is most commonly caused by the delegation not having propagated to the gateway yet — " +
+        "after granting delegation, allow 1–2 minutes for cross-chain synchronization before retrying. " +
+        "If the error persists, the gateway or relayer may be experiencing an unrelated issue.",
       { cause: error },
     );
   }
