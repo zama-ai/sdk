@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.3...v2.2.0-alpha.4) (2026-03-27)
+
+### Features
+
+- **react-viem:** upgrade to SDK 2.1.0-alpha.2 + Sepolia + delegation flows (SDK-36) ([#150](https://github.com/zama-ai/sdk/issues/150)) ([fe7dfc0]()), closes [#1]() [#4]() [#6]() [#7]() [#9]() [#10]()
+
 ## [2.2.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.2...v2.2.0-alpha.3) (2026-03-27)
 
 ### Features
