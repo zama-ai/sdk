@@ -126,7 +126,6 @@ function createMockReadonlyToken(address: Address, signer: GenericSigner): Reado
     isConfidential: vi.fn().mockResolvedValue(true),
     isWrapper: vi.fn().mockResolvedValue(false),
     allowance: vi.fn().mockResolvedValue(0n),
-    discoverWrapper: vi.fn().mockResolvedValue(null),
     isApproved: vi.fn().mockResolvedValue(false),
   } as unknown as ReadonlyToken;
 }

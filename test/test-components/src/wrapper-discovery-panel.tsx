@@ -1,15 +1,12 @@
 "use client";
 
-import { useWrapperDiscovery, type Address } from "@zama-fhe/react-sdk";
+import { useWrapperDiscovery, type UseWrapperDiscoveryConfig } from "@zama-fhe/react-sdk";
 
-export function WrapperDiscoveryPanel({
-  tokenAddress,
-  coordinatorAddress,
-}: {
-  tokenAddress: Address;
-  coordinatorAddress?: Address;
-}) {
-  const wrapperDiscovery = useWrapperDiscovery({ tokenAddress, coordinatorAddress });
+export function WrapperDiscoveryPanel({ tokenAddress, erc20Address }: UseWrapperDiscoveryConfig) {
+  const wrapperDiscovery = useWrapperDiscovery({
+    tokenAddress,
+    erc20Address,
+  });
 
   return (
     <section className="space-y-2">

@@ -20,4 +20,11 @@ export {
   writeSetOperatorContract,
   writeWrapContract,
   writeWrapETHContract,
+  readTokenPairsContract,
+  readTokenPairsLengthContract,
+  readTokenPairsSliceContract,
+  readTokenPairContract,
+  readConfidentialTokenAddressContract,
+  readTokenAddressContract,
+  readIsConfidentialTokenValidContract,
 } from "./contracts";

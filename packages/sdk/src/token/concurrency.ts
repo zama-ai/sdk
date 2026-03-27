@@ -6,6 +6,9 @@ export async function pLimit<T>(
   fns: (() => Promise<T>)[],
   maxConcurrency = Infinity,
 ): Promise<T[]> {
+  if (Number.isFinite(maxConcurrency) && maxConcurrency <= 0) {
+    throw new Error("maxConcurrency must be a positive number");
+  }
   if (!Number.isFinite(maxConcurrency) || maxConcurrency >= fns.length) {
     return Promise.all(fns.map((f) => f()));
   }

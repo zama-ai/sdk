@@ -1,44 +1,52 @@
 "use client";
 
-import { useQuery, useSuspenseQuery } from "../utils/query";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { wrapperDiscoveryQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { useReadonlyToken } from "./use-readonly-token";
+import { useQuery, useSuspenseQuery } from "../utils/query";
+import { useWrappersRegistryAddress } from "../wrappers-registry/use-wrappers-registry-address";
 
 export { wrapperDiscoveryQueryOptions };
 
 /** Configuration for {@link useWrapperDiscovery}. */
 export interface UseWrapperDiscoveryConfig {
-  /** Address of the underlying ERC-20 token. Pass `undefined` to disable the query. */
-  tokenAddress: Address | undefined;
-  /** Address of the wrapper coordinator. Pass `undefined` to disable the query. */
-  coordinatorAddress: Address | undefined;
+  /**
+   * Address of any confidential token you control.
+   * Used only to derive the signer context and to scope the query cache key —
+   * it does not affect which wrapper the registry returns.
+   */
+  tokenAddress: Address;
+  /** ERC-20 address to discover the wrapper for. Pass `undefined` to disable the query. */
+  erc20Address: Address | undefined;
 }
 
 /** Configuration for {@link useWrapperDiscoverySuspense}. */
 export interface UseWrapperDiscoverySuspenseConfig {
-  /** Address of the underlying ERC-20 token. */
+  /**
+   * Address of any confidential token you control.
+   * Used only to derive the signer context and to scope the query cache key —
+   * it does not affect which wrapper the registry returns.
+   */
   tokenAddress: Address;
-  /** Address of the wrapper coordinator. */
-  coordinatorAddress: Address;
+  /** ERC-20 address to discover the wrapper for. */
+  erc20Address: Address;
 }
 
 /**
- * Discover the wrapper contract for an ERC-20 token.
+ * Discover the confidential wrapper for an ERC-20 token via the on-chain registry.
  * Returns the wrapper address if one exists, or `null` if not.
  * Cached indefinitely since wrapper mappings are immutable.
  *
- * @param config - Token and coordinator addresses.
+ * @param config - Token and ERC-20 addresses.
  * @param options - React Query options (forwarded to `useQuery`).
  * @returns Query result with `data: Address | null`.
  *
  * @example
  * ```tsx
  * const { data: wrapperAddress } = useWrapperDiscovery({
- *   tokenAddress: "0xUnderlying",
- *   coordinatorAddress: "0xCoordinator",
+ *   tokenAddress: "0xConfidentialToken",
+ *   erc20Address: "0xUSDC",
  * });
  * ```
  */
@@ -46,9 +54,14 @@ export function useWrapperDiscovery(
   config: UseWrapperDiscoveryConfig,
   options?: Omit<UseQueryOptions<Address | null>, "queryKey" | "queryFn">,
 ) {
-  const { tokenAddress, coordinatorAddress } = config;
+  const { tokenAddress, erc20Address } = config;
   const sdk = useZamaSDK();
-  const baseOpts = wrapperDiscoveryQueryOptions(sdk.signer, tokenAddress, { coordinatorAddress });
+  const registryAddress = useWrappersRegistryAddress();
+  const baseOpts = wrapperDiscoveryQueryOptions(sdk.registry, {
+    tokenAddress,
+    erc20Address,
+    registryAddress,
+  });
 
   return useQuery<Address | null>({
     ...baseOpts,
@@ -61,22 +74,27 @@ export function useWrapperDiscovery(
  * Suspense variant of {@link useWrapperDiscovery}.
  * Suspends rendering until the wrapper address is resolved.
  *
- * @param config - Token and coordinator addresses.
+ * @param config - Token and ERC-20 addresses.
  * @returns Suspense query result with `data: Address | null`.
  *
  * @example
  * ```tsx
  * const { data: wrapperAddress } = useWrapperDiscoverySuspense({
- *   tokenAddress: "0xUnderlying",
- *   coordinatorAddress: "0xCoordinator",
+ *   tokenAddress: "0xConfidentialToken",
+ *   erc20Address: "0xUSDC",
  * });
  * ```
  */
 export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseConfig) {
-  const { tokenAddress, coordinatorAddress } = config;
-  const token = useReadonlyToken(tokenAddress);
+  const { tokenAddress, erc20Address } = config;
+  const sdk = useZamaSDK();
+  const registryAddress = useWrappersRegistryAddress();
 
   return useSuspenseQuery<Address | null>({
-    ...wrapperDiscoveryQueryOptions(token.signer, tokenAddress, { coordinatorAddress }),
+    ...wrapperDiscoveryQueryOptions(sdk.registry, {
+      tokenAddress,
+      erc20Address,
+      registryAddress,
+    }),
   });
 }
