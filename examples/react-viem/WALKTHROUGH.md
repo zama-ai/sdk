@@ -260,7 +260,7 @@ Unshield is a 2-phase on-chain operation:
 - **Phase 1**: Submit the unwrap transaction. `onFinalizing` fires when Phase 1 is mined and Phase 2 is about to start.
 - **Phase 2**: Finalization transaction.
 
-`ZamaSDKEvents.UnshieldPhase1Submitted` fires right after Phase 1 is submitted (before mining). The app uses `setActiveUnshieldToken` + `savePendingUnshield` to persist the pending state so it survives a tab close between phases. See §"Pending unshield" below.
+`ZamaSDKEvents.UnshieldPhase1Submitted` fires after Phase 1 is mined (the SDK awaits the receipt before emitting). The app uses `setActiveUnshieldToken` + `savePendingUnshield` to persist the pending state so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
 
 ---
 
