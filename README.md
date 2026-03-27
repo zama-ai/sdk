@@ -75,7 +75,7 @@ Zama SDK is designed for developers who want to integrate confidential operation
 - **Privacy by design:** Encrypt inputs, decrypt outputs, and manage access control for confidential smart contracts.
 - **Multi-library support:** Adapters for both viem and ethers, so you can use whichever EVM library your project already depends on.
 - **React hooks:** Dedicated React package with hooks for encrypting, decrypting, reencrypting, and querying confidential state — all backed by `@tanstack/react-query` for caching and suspense.
-- **Workers:** Offload heavy FHE operations to a worker pool in Web and Node.js environments for non-blocking performance.
+- **Workers:** Offload heavy FHE operations to workers in Web and Node.js environments for non-blocking performance.
 - **Wagmi integration:** Drop-in wagmi connector support for seamless wallet and provider management in React apps.
 
 <p align="right">
