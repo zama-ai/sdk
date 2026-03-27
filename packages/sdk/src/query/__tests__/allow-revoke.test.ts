@@ -8,9 +8,13 @@ import { isAllowedQueryOptions } from "../is-allowed";
 import type { Address } from "viem";
 
 describe("allowMutationOptions", () => {
-  test("calls sdk.allow with provided addresses", async ({ signer, relayer, storage }) => {
+  test("calls sdk.credentials.allow with provided addresses", async ({
+    signer,
+    relayer,
+    storage,
+  }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
-    const allowSpy = vi.spyOn(sdk, "allow").mockResolvedValue(undefined);
+    const allowSpy = vi.spyOn(sdk.credentials, "allow").mockResolvedValue(undefined as never);
 
     const options = allowMutationOptions(sdk);
     expect(options.mutationKey).toEqual(["zama.allow"]);
@@ -26,9 +30,13 @@ describe("allowMutationOptions", () => {
 });
 
 describe("revokeMutationOptions", () => {
-  test("calls sdk.revoke with provided addresses", async ({ signer, relayer, storage }) => {
+  test("calls sdk.credentials.revoke with provided addresses", async ({
+    signer,
+    relayer,
+    storage,
+  }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
-    const revokeSpy = vi.spyOn(sdk, "revoke").mockResolvedValue(undefined);
+    const revokeSpy = vi.spyOn(sdk.credentials, "revoke").mockResolvedValue(undefined);
 
     const options = revokeMutationOptions(sdk);
     expect(options.mutationKey).toEqual(["zama.revoke"]);
@@ -55,9 +63,9 @@ describe("revokeSessionMutationOptions", () => {
 });
 
 describe("isAllowedQueryOptions", () => {
-  test("calls sdk.isAllowed", async ({ signer, relayer, storage }) => {
+  test("calls sdk.credentials.isAllowed", async ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
-    const isAllowedSpy = vi.spyOn(sdk, "isAllowed").mockResolvedValue(true);
+    const isAllowedSpy = vi.spyOn(sdk.credentials, "isAllowed").mockResolvedValue(true);
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
