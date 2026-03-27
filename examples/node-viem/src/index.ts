@@ -6,12 +6,6 @@ import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
 
-// ── Sepolia contract addresses ────────────────────────────────────────────────
-// USDT mock ERC-20 (mintable in this demo)
-const USDT_ADDRESS = "0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0" as Address;
-// Confidential USDT — ERC-7984 wrapper (the token the SDK operates on)
-const CUSDT_ADDRESS = "0x4E7B06D78965594eB5EF5414c357ca21E1554491" as Address;
-
 // ── Token amounts (USDT uses 6 decimals) ─────────────────────────────────────
 const DECIMALS = 6n;
 const MINT_AMOUNT = 1_000n * 10n ** DECIMALS; //  1 000 USDT — minted to Account A
@@ -45,10 +39,12 @@ async function main() {
   const DELEGATE_PRIVATE_KEY = process.env.DELEGATE_PRIVATE_KEY;
   const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL;
   const RELAYER_API_KEY = process.env.RELAYER_API_KEY;
+  const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS;
 
   if (!PRIVATE_KEY) throw new Error("Missing env: PRIVATE_KEY");
   if (!DELEGATE_PRIVATE_KEY) throw new Error("Missing env: DELEGATE_PRIVATE_KEY");
   if (!SEPOLIA_RPC_URL) throw new Error("Missing env: SEPOLIA_RPC_URL");
+  if (!TOKEN_ADDRESS) throw new Error("Missing env: TOKEN_ADDRESS");
 
   const accountA = privateKeyToAccount(PRIVATE_KEY as `0x${string}`);
   const accountB = privateKeyToAccount(DELEGATE_PRIVATE_KEY as `0x${string}`);
@@ -91,10 +87,19 @@ async function main() {
   const sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
   const sdkB = new ZamaSDK({ relayer, signer: signerB, storage: new MemoryStorage() });
 
-  // createToken() takes the confidential token (ERC-7984 wrapper) address.
-  // The underlying ERC-20 address is resolved on-chain when needed.
-  const tokenA = sdkA.createToken(CUSDT_ADDRESS);
-  const tokenB = sdkB.createToken(CUSDT_ADDRESS);
+  // Resolve the confidential wrapper address via the on-chain registry.
+  // getConfidentialToken() maps an ERC-20 address → its ERC-7984 wrapper.
+  const registryResult = await sdkA.registry.getConfidentialToken(TOKEN_ADDRESS as Address);
+  if (!registryResult) {
+    throw new Error(`No confidential wrapper registered for ${TOKEN_ADDRESS}`);
+  }
+  const { confidentialTokenAddress } = registryResult;
+  console.log("ERC-20 token:        ", TOKEN_ADDRESS);
+  console.log("Confidential wrapper:", confidentialTokenAddress);
+
+  // createToken() takes both addresses: the underlying ERC-20 and its wrapper.
+  const tokenA = sdkA.createToken(TOKEN_ADDRESS as Address, confidentialTokenAddress);
+  const tokenB = sdkB.createToken(TOKEN_ADDRESS as Address, confidentialTokenAddress);
 
   try {
     // ────────────────────────────────────────────────────────────────────────
@@ -105,7 +110,7 @@ async function main() {
     section("SECTION 2 — Mint");
 
     const erc20BalanceBefore = await publicClient.readContract({
-      address: USDT_ADDRESS,
+      address: TOKEN_ADDRESS as Address,
       abi: ERC20_ABI,
       functionName: "balanceOf",
       args: [accountA.address],
@@ -114,7 +119,7 @@ async function main() {
 
     console.log(`Minting ${fmt(MINT_AMOUNT)} to Account A...`);
     const mintHash = await walletClientA.writeContract({
-      address: USDT_ADDRESS,
+      address: TOKEN_ADDRESS as Address,
       abi: ERC20_ABI,
       functionName: "mint",
       args: [accountA.address, MINT_AMOUNT],
@@ -123,7 +128,7 @@ async function main() {
     await publicClient.waitForTransactionReceipt({ hash: mintHash });
 
     const erc20BalanceAfter = await publicClient.readContract({
-      address: USDT_ADDRESS,
+      address: TOKEN_ADDRESS as Address,
       abi: ERC20_ABI,
       functionName: "balanceOf",
       args: [accountA.address],
@@ -184,7 +189,7 @@ async function main() {
 
     const balanceA3 = await tokenA.balanceOf();
     const erc20BalanceFinal = await publicClient.readContract({
-      address: USDT_ADDRESS,
+      address: TOKEN_ADDRESS as Address,
       abi: ERC20_ABI,
       functionName: "balanceOf",
       args: [accountA.address],
