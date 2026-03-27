@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.4...v2.2.0-alpha.5) (2026-03-27)
+
+### Features
+
+- **example-react-wagmi:** upgrade to wagmi v3 with full ERC-7984 flows (SDK-37) ([#160](https://github.com/zama-ai/sdk/issues/160)) ([a6386f8]())
+
 ## [2.2.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.3...v2.2.0-alpha.4) (2026-03-27)
 
 ### Features
