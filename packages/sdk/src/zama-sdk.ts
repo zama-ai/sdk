@@ -1,14 +1,16 @@
+import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
 import { getAddress, type Address } from "viem";
+import { CredentialsManager } from "./credentials/credentials-manager";
+import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import type { ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
-import { toError } from "./utils";
-import { CredentialsManager } from "./credentials/credentials-manager";
-import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
+import type { Handle } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
+import { toError } from "./utils";
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -55,6 +57,8 @@ export class ZamaSDK {
   readonly sessionStorage: GenericStorage;
   readonly credentials: CredentialsManager;
   readonly delegatedCredentials: DelegatedCredentialsManager;
+  /** In-memory cache for decrypted handle values, shared with all tokens created by this SDK. */
+  readonly cache: Map<Handle, ClearValueType> = new Map();
   readonly #onEvent: ZamaSDKEventListener;
   #unsubscribeSigner?: () => void;
   // oxlint false positive: awaited in #revokeByTrackedIdentity() and revokeSession()
@@ -104,6 +108,7 @@ export class ZamaSDK {
         onDisconnect: () => {
           runLifecycleEffect("signerDisconnect", async () => {
             await this.#revokeByTrackedIdentity();
+            this.cache.clear();
             this.#lastAddress = null;
             this.#lastChainId = null;
             lifecycleCallbacks?.onDisconnect?.();
@@ -112,6 +117,7 @@ export class ZamaSDK {
         onAccountChange: (newAddress: Address) => {
           runLifecycleEffect("signerAccountChange", async () => {
             await this.#revokeByTrackedIdentity();
+            this.cache.clear();
             this.#lastAddress = getAddress(newAddress);
             try {
               this.#lastChainId = await this.signer.getChainId();
@@ -124,6 +130,7 @@ export class ZamaSDK {
         onChainChange: (newChainId: number) => {
           runLifecycleEffect("signerChainChange", async () => {
             await this.#revokeByTrackedIdentity();
+            this.cache.clear();
             this.#lastChainId = newChainId;
             try {
               this.#lastAddress = await this.signer.getAddress();
@@ -174,6 +181,7 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
       delegatedCredentials: this.delegatedCredentials,
+      cache: this.cache,
       address: getAddress(address),
       onEvent: this.#onEvent,
     });
@@ -195,6 +203,7 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
       delegatedCredentials: this.delegatedCredentials,
+      cache: this.cache,
       address: getAddress(address),
       wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,

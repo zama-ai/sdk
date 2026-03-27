@@ -119,7 +119,6 @@ export {
   type UserDecryptOptions,
   type DecryptHandle,
 } from "./user-decrypt";
-export { getDecryptCache, clearDecryptCache } from "./decrypt-cache";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
 export {
   batchDecryptBalancesAsMutationOptions,

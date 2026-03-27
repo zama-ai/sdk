@@ -282,8 +282,8 @@ describe("useUserDecrypt", () => {
     // Second mutate() should be a no-op — h1 is already cached.
     result.current.mutate();
 
-    // Give a tick for the mutation to resolve, then verify no extra call.
-    await waitFor(() => expect(result.current.data).toEqual({}));
+    // Second call returns cached values without hitting the relayer.
+    await waitFor(() => expect(result.current.data).toEqual({ "0xh1": 100n }));
     expect(relayer.userDecrypt).toHaveBeenCalledTimes(1);
   });
 
@@ -341,10 +341,10 @@ describe("useUserDecrypt", () => {
     // Decrypt h1 first to populate the cache.
     await result.current.mutateAsync();
 
-    // Second call — everything is cached, returns {}.
+    // Second call — returns cached values without hitting the relayer.
     const data = await result.current.mutateAsync();
 
-    expect(data).toEqual({});
+    expect(data).toEqual({ "0xh1": 100n });
     expect(relayer.userDecrypt).toHaveBeenCalledTimes(1);
   });
 
@@ -398,9 +398,9 @@ describe("useUserDecrypt", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(relayer.userDecrypt).toHaveBeenCalledTimes(1);
 
-    // mutate() should be a no-op — 0n is a valid cached value.
+    // mutate() should return cached 0n without hitting the relayer.
     result.current.mutate();
-    await waitFor(() => expect(result.current.data).toEqual({}));
+    await waitFor(() => expect(result.current.data).toEqual({ "0xh1": 0n }));
     expect(relayer.userDecrypt).toHaveBeenCalledTimes(1);
   });
 });

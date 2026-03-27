@@ -2,7 +2,6 @@ import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
-import { getDecryptCache } from "./decrypt-cache";
 import type { MutationFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 
@@ -43,11 +42,20 @@ export function userDecryptMutationOptions(
       const handles = params?.handles ?? options?.handles ?? [];
       const { onCredentialsReady = () => {}, onDecrypted = () => {} } = options ?? {};
 
-      const cache = getDecryptCache(sdk);
-      const uncached = handles.filter((h) => !cache.has(h.handle));
+      const uncached = handles.filter((h) => !sdk.cache.has(h.handle));
 
       if (uncached.length === 0) {
-        return {};
+        const cached: DecryptResult = {};
+        for (const h of handles) {
+          const val = sdk.cache.get(h.handle);
+          if (val !== undefined) {
+            cached[h.handle] = val;
+          }
+        }
+        try {
+          onDecrypted(cached);
+        } catch {}
+        return cached;
       }
 
       const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
@@ -83,7 +91,7 @@ export function userDecryptMutationOptions(
 
       // Populate the decrypt cache with freshly decrypted values.
       for (const [handle, value] of Object.entries(allResults) as [Handle, ClearValueType][]) {
-        cache.set(handle, value);
+        sdk.cache.set(handle, value);
       }
 
       try {

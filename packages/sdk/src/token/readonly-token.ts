@@ -1,26 +1,20 @@
+import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
 import { type Address, getAddress } from "viem";
 import {
-  ERC7984_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID,
-  MAX_UINT64,
   allowanceContract,
   confidentialBalanceOfContract,
   decimalsContract,
+  ERC7984_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID,
   getDelegationExpiryContract,
   getWrapperContract,
+  MAX_UINT64,
   nameContract,
   supportsInterfaceContract,
   symbolContract,
   underlyingContract,
   wrapperExistsContract,
 } from "../contracts";
-import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Handle } from "../relayer/relayer-sdk.types";
-import { toError } from "../utils";
-import { pLimit } from "./concurrency";
-import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { CredentialsManager } from "../credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "../credentials/delegated-credentials-manager";
 import {
@@ -33,7 +27,13 @@ import {
   SigningFailedError,
   SigningRejectedError,
 } from "../errors";
+import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
+import { toError } from "../utils";
+import { pLimit } from "./concurrency";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -78,6 +78,8 @@ export interface BatchDecryptAsOptions {
 
 /** Configuration for constructing a {@link ReadonlyToken}. */
 export interface ReadonlyTokenConfig {
+  /** Address of the confidential token contract. */
+  address: Address;
   /** FHE relayer backend. */
   relayer: RelayerSDK;
   /** Wallet signer for read calls and credential signing. */
@@ -86,12 +88,12 @@ export interface ReadonlyTokenConfig {
   storage: GenericStorage;
   /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
   sessionStorage: GenericStorage;
+  /** In-memory cache for decrypted handle values. When omitted, a private Map is created. */
+  cache?: Map<Handle, ClearValueType>;
   /** Shared CredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for credential creation. */
   credentials?: CredentialsManager;
   /** Shared DelegatedCredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for delegated credential creation. */
   delegatedCredentials?: DelegatedCredentialsManager;
-  /** Address of the confidential token contract. */
-  address: Address;
   /** How long the re-encryption keypair remains valid, in seconds. Default: `86400` (1 day). */
   keypairTTL?: number;
   /** Controls session signature lifetime in seconds. Default: `2592000` (30 days). `0` means every operation triggers a signing prompt. `"infinite"` means the session never expires. */
@@ -112,6 +114,7 @@ export class ReadonlyToken {
   readonly signer: GenericSigner;
   readonly address: Address;
   readonly storage: GenericStorage;
+  readonly cache: Map<Handle, ClearValueType>;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
@@ -131,6 +134,7 @@ export class ReadonlyToken {
     this.signer = config.signer;
     this.address = getAddress(config.address);
     this.storage = config.storage;
+    this.cache = config.cache ?? new Map<Handle, ClearValueType>();
     this.#onEvent = config.onEvent;
   }
 
@@ -386,36 +390,21 @@ export class ReadonlyToken {
       );
     }
 
-    const tokenStorage = firstToken.storage;
     const results = new Map<Address, bigint>();
 
-    // Parallel cache lookups — avoids sequential IDB round-trips.
     const uncached: { token: ReadonlyToken; handle: Address }[] = [];
-    const cachedValues = await Promise.all(
-      tokens.map((token, i) => {
-        const handle = resolvedHandles[i]!;
-        if (token.isZeroHandle(handle)) {
-          return 0n;
-        }
-        return loadCachedBalance({
-          storage: tokenStorage,
-          tokenAddress: token.address,
-          owner: ownerAddress,
-          handle,
-        });
-      }),
-    );
-
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i]!;
       const handle = resolvedHandles[i]!;
-      const cached = cachedValues[i];
-
-      if (cached !== null && cached !== undefined) {
-        results.set(token.address, cached);
+      if (token.isZeroHandle(handle)) {
+        results.set(token.address, 0n);
         continue;
       }
-
+      const cached = firstToken.cache.get(handle);
+      if (cached !== undefined) {
+        results.set(token.address, cached as bigint);
+        continue;
+      }
       uncached.push({ token, handle });
     }
 
@@ -448,17 +437,7 @@ export class ReadonlyToken {
               );
             }
             results.set(token.address, value);
-            try {
-              await saveCachedBalance({
-                storage: tokenStorage,
-                tokenAddress: token.address,
-                owner: ownerAddress,
-                handle,
-                value,
-              });
-            } catch {
-              // Cache write failure should not invalidate a successful decryption
-            }
+            firstToken.cache.set(handle, value);
           })
           .catch((error) => {
             const err = toError(error);
@@ -775,17 +754,9 @@ export class ReadonlyToken {
       return 0n;
     }
 
-    // Check persistent cache keyed by (token, owner, handle).
-    // When the on-chain balance changes the encrypted handle changes too,
-    // so stale entries are never served — no TTL needed.
-    const cached = await loadCachedBalance({
-      storage: this.storage,
-      tokenAddress: this.address,
-      owner: normalizedOwner,
-      handle,
-    });
-    if (cached !== null) {
-      return cached;
+    const cached = this.cache.get(handle);
+    if (cached !== undefined) {
+      return cached as bigint;
     }
 
     // Pre-flight delegation check — avoids wasting a wallet signature on an
@@ -823,18 +794,7 @@ export class ReadonlyToken {
         );
       }
 
-      try {
-        await saveCachedBalance({
-          storage: this.storage,
-          tokenAddress: this.address,
-          owner: normalizedOwner,
-          handle,
-          value,
-        });
-      } catch {
-        // Cache write failure should not invalidate a successful decryption
-      }
-
+      this.cache.set(handle, value);
       return value;
     } catch (error) {
       this.emit({
@@ -868,15 +828,9 @@ export class ReadonlyToken {
 
     const signerAddress = owner ?? (await this.signer.getAddress());
 
-    // Check persistent cache — avoids the 2–5 s decrypt spinner on reload.
-    const cached = await loadCachedBalance({
-      storage: this.storage,
-      tokenAddress: this.address,
-      owner: signerAddress,
-      handle,
-    });
-    if (cached !== null) {
-      return cached;
+    const cached = this.cache.get(handle);
+    if (cached !== undefined) {
+      return cached as bigint;
     }
 
     const creds = await this.credentials.allow(this.address);
@@ -904,17 +858,7 @@ export class ReadonlyToken {
       if (value === undefined) {
         throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
       }
-      try {
-        await saveCachedBalance({
-          storage: this.storage,
-          tokenAddress: this.address,
-          owner: signerAddress,
-          handle,
-          value,
-        });
-      } catch {
-        // Cache write failure should not invalidate a successful decryption
-      }
+      this.cache.set(handle, value);
       return value;
     } catch (error) {
       this.emit({
