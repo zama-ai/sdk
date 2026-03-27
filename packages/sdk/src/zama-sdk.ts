@@ -1,14 +1,15 @@
 import { getAddress, type Address } from "viem";
+import { CredentialsManager } from "./credentials/credentials-manager";
+import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import type { ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
-import { toError } from "./utils";
-import { CredentialsManager } from "./credentials/credentials-manager";
-import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
+import { toError } from "./utils";
+import { WrappersRegistry } from "./wrappers-registry";
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -40,6 +41,16 @@ export interface ZamaSDKConfig {
   sessionTTL?: number | "infinite";
   /** Optional structured event listener for debugging and telemetry. Never receives sensitive data. */
   onEvent?: ZamaSDKEventListener;
+  /**
+   * Per-chain wrappers registry address overrides, merged on top of built-in defaults.
+   * Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
+   */
+  registryAddresses?: Record<number, Address>;
+  /**
+   * How long cached registry results remain valid, in seconds.
+   * Default: `86400` (24 hours). Consistent with `keypairTTL`/`sessionTTL`.
+   */
+  registryTTL?: number;
   /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
   signerLifecycleCallbacks?: SignerLifecycleCallbacks;
 }
@@ -55,6 +66,18 @@ export class ZamaSDK {
   readonly sessionStorage: GenericStorage;
   readonly credentials: CredentialsManager;
   readonly delegatedCredentials: DelegatedCredentialsManager;
+  /**
+   * A {@link WrappersRegistry} instance auto-configured for the current chain.
+   * Uses built-in defaults merged with any `registryAddresses` overrides, and the SDK's `registryTTL` if configured.
+   *
+   * @example
+   * ```ts
+   * const pairs = await sdk.registry.listPairs({ page: 1 });
+   * const result = await sdk.registry.getConfidentialToken(erc20Address);
+   * ```
+   */
+  readonly registry: WrappersRegistry;
+  readonly #registryTTL: number | undefined;
   readonly #onEvent: ZamaSDKEventListener;
   #unsubscribeSigner?: () => void;
   // oxlint false positive: awaited in #revokeByTrackedIdentity() and revokeSession()
@@ -69,6 +92,12 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
     this.#onEvent = config.onEvent ?? function () {};
+    this.registry = new WrappersRegistry({
+      signer: this.signer,
+      registryAddresses: config.registryAddresses,
+      registryTTL: config.registryTTL,
+    });
+    this.#registryTTL = config.registryTTL;
     const credentialsConfig = {
       relayer: this.relayer,
       signer: this.signer,
@@ -198,6 +227,32 @@ export class ZamaSDK {
       address: getAddress(address),
       wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,
+    });
+  }
+
+  /**
+   * Create a {@link WrappersRegistry} instance bound to this SDK's signer.
+   * On Mainnet and Sepolia the registry address is resolved automatically.
+   *
+   * @param registryAddresses - Optional per-chain overrides (e.g. Hardhat).
+   * @returns A {@link WrappersRegistry} instance.
+   *
+   * @example
+   * ```ts
+   * // Mainnet / Sepolia — resolved automatically
+   * const registry = sdk.createWrappersRegistry();
+   *
+   * // Hardhat or custom chain — override per chain
+   * const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
+   *
+   * const pairs = await registry.getTokenPairs();
+   * ```
+   */
+  createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry {
+    return new WrappersRegistry({
+      signer: this.signer,
+      registryAddresses,
+      registryTTL: this.#registryTTL,
     });
   }
 

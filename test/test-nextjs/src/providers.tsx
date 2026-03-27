@@ -9,6 +9,8 @@ import { anvil } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
 import { HardhatConfig, RelayerWeb } from "@zama-fhe/sdk";
+import deployments from "../../../contracts/deployments.json" with { type: "json" };
+import { getAddress } from "viem";
 
 const anvilPort = process.env.NEXT_PUBLIC_ANVIL_PORT || "8545";
 const rpcUrl = `http://127.0.0.1:${anvilPort}`;
@@ -52,7 +54,14 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <ZamaProvider relayer={relayer} storage={storage} signer={signer}>
+        <ZamaProvider
+          relayer={relayer}
+          storage={storage}
+          signer={signer}
+          registryAddresses={{
+            [anvil.id]: getAddress(deployments.wrappersRegistry),
+          }}
+        >
           {children}
         </ZamaProvider>
       </WagmiProvider>

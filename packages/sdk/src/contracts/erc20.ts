@@ -52,6 +52,23 @@ export function decimalsContract(tokenAddress: Address) {
 }
 
 /**
+ * Returns the contract config to read an ERC-20 token's total supply.
+ *
+ * @example
+ * ```ts
+ * const supply = await signer.readContract(erc20TotalSupplyContract(tokenAddress));
+ * ```
+ */
+export function erc20TotalSupplyContract(tokenAddress: Address) {
+  return {
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "totalSupply",
+    args: [],
+  } as const;
+}
+
+/**
  * Returns the contract config to read an ERC-20 balance.
  *
  * @example
