@@ -79,7 +79,7 @@ export interface ActivityLogMetadata {
 export type ActivityType = "transfer" | "shield" | "unshield_requested" | "unshield_started" | "unshield_finalized";
 
 // @public (undocumented)
-export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
+export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], StoredCredentials>;
 
 // @public (undocumented)
 export interface ApproveSubmittedEvent extends BaseEvent {
@@ -1627,7 +1627,6 @@ export const zamaQueryKeys: {
 // @public
 export class ZamaSDK {
     constructor(config: ZamaSDKConfig);
-    allow(...contractAddresses: Address[]): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -1636,11 +1635,9 @@ export class ZamaSDK {
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
-    isAllowed(): Promise<boolean>;
     readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
-    revoke(...contractAddresses: Address[]): Promise<void>;
     revokeSession(): Promise<void>;
     // (undocumented)
     readonly sessionStorage: GenericStorage;
@@ -1712,7 +1709,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-BRrEPcPO.d.ts:1749:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-CI6d3QpE.d.ts:1717:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
