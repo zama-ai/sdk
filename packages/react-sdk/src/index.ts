@@ -1,5 +1,5 @@
 /**
- * React hooks for confidential token operations, built on React Query.
+ * React hooks for confidential contract operations, built on React Query.
  *
  * Requires {@link ZamaProvider} in the component tree. Re-exports all public
  * symbols from `@zama-fhe/sdk`.
@@ -40,6 +40,8 @@ export {
   ZamaSDK,
   Token,
   ReadonlyToken,
+  WrappersRegistry,
+  DefaultRegistryAddresses,
   MemoryStorage,
   memoryStorage,
   IndexedDBStorage,
@@ -77,10 +79,15 @@ export type {
   ZKProofLike,
   InputProofBytesType,
   BatchTransferData,
+  TokenWrapperPair,
+  TokenWrapperPairWithMetadata,
+  PaginatedResult,
   StoredCredentials,
   UnshieldCallbacks,
   ShieldCallbacks,
   TransferCallbacks,
+  WrappersRegistryConfig,
+  ListPairsOptions,
   DelegatedCredentialsManagerConfig,
   DelegatedStoredCredentials,
   BatchDecryptAsOptions,
@@ -166,7 +173,13 @@ export {
   getFeeRecipientContract,
 } from "@zama-fhe/sdk";
 
-// Token hooks
+// Authorization hooks (generic — any contract with encrypted state)
+export { useAllow } from "./token/use-allow";
+export { useIsAllowed } from "./token/use-is-allowed";
+export { useRevoke } from "./token/use-revoke";
+export { useRevokeSession } from "./token/use-revoke-session";
+
+// Token hooks (ERC-20 token operations)
 export { useToken, type UseZamaConfig } from "./token/use-token";
 export { useReadonlyToken } from "./token/use-readonly-token";
 export {
@@ -179,10 +192,6 @@ export {
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
 } from "./token/use-confidential-balances";
-export { useAllowTokens } from "./token/use-allow-tokens";
-export { useIsAllowed } from "./token/use-is-allowed";
-export { useRevokeTokens } from "./token/use-revoke-tokens";
-export { useRevokeSession } from "./token/use-revoke-session";
 export {
   useConfidentialTransfer,
   type UseConfidentialTransferConfig,
@@ -236,6 +245,17 @@ export {
   useFeeRecipient,
   type UseFeeConfig,
 } from "./token/use-fees";
+
+// Registry hooks (wagmi-based, read from on-chain ConfidentialTokenWrappersRegistry)
+export { useWrappersRegistryAddress } from "./wrappers-registry/use-wrappers-registry-address";
+export { useTokenPairsRegistry } from "./wrappers-registry/use-token-pairs-registry";
+export { useTokenPairsLength } from "./wrappers-registry/use-token-pairs-length";
+export { useTokenPairsSlice } from "./wrappers-registry/use-token-pairs-slice";
+export { useTokenPair } from "./wrappers-registry/use-token-pair";
+export { useConfidentialTokenAddress } from "./wrappers-registry/use-confidential-token-address";
+export { useTokenAddress } from "./wrappers-registry/use-token-address";
+export { useIsConfidentialTokenValid } from "./wrappers-registry/use-is-confidential-token-valid";
+export { useListPairs } from "./wrappers-registry/use-list-pairs";
 
 // Re-export query utilities and factories from core sdk/query
 export {
@@ -310,6 +330,8 @@ export {
   delegationStatusQueryOptions,
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
+  listPairsQueryOptions,
+  type ListPairsQueryConfig,
 } from "@zama-fhe/sdk/query";
 export type {
   OptimisticBalanceSnapshot,
@@ -356,7 +378,7 @@ export {
   sortByBlockNumber,
 } from "@zama-fhe/sdk";
 
-// Re-export token types from core SDK
+// Re-export core types from SDK
 export type {
   Address,
   Hex,
@@ -386,5 +408,6 @@ export {
   InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  ConfigurationError,
   matchZamaError,
 } from "@zama-fhe/sdk";

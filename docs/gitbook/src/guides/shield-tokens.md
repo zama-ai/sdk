@@ -15,7 +15,7 @@ Start from a configured SDK instance (see [Configuration](/guides/configuration)
 
 Some deployments use a **wrapper contract** that is separate from the token contract itself. If your setup has a separate wrapper address, pass it as the second argument to `createToken` or as `wrapperAddress` in hooks. If the token _is_ the wrapper (single-contract deployments), you can omit it.
 
-You can resolve the wrapper address on-chain using the `readWrapperForTokenContract` helper:
+You can resolve the wrapper address on-chain using the built-in registry:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -29,31 +29,15 @@ const tokenWithWrapper = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
 ```
 
 {% endtab %}
-{% tab title="Resolve wrapper on-chain (viem)" %}
+{% tab title="Resolve wrapper via registry" %}
 
 ```ts
-import { readWrapperForTokenContract } from "@zama-fhe/sdk/viem";
+// The registry resolves the confidential wrapper for any registered ERC-20.
+// On Mainnet, Sepolia, and Hoodi the registry address is built-in.
+const result = await sdk.registry.getConfidentialToken("0xTokenAddress");
+if (!result) throw new Error("No wrapper registered for this token");
 
-const wrapperAddress = await readWrapperForTokenContract(
-  publicClient,
-  "0xCoordinatorAddress",
-  "0xTokenAddress",
-);
-const token = sdk.createToken("0xTokenAddress", wrapperAddress);
-```
-
-{% endtab %}
-{% tab title="Resolve wrapper on-chain (ethers)" %}
-
-```ts
-import { readWrapperForTokenContract } from "@zama-fhe/sdk/ethers";
-
-const wrapperAddress = await readWrapperForTokenContract(
-  provider,
-  "0xCoordinatorAddress",
-  "0xTokenAddress",
-);
-const token = sdk.createToken("0xTokenAddress", wrapperAddress);
+const token = sdk.createToken("0xTokenAddress", result.confidentialTokenAddress);
 ```
 
 {% endtab %}

@@ -1,5 +1,5 @@
 import { isOperatorContract } from "../contracts";
-import type { GenericSigner } from "../token/token.types";
+import type { GenericSigner } from "../types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";

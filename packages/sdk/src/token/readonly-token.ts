@@ -7,21 +7,13 @@ import {
   confidentialBalanceOfContract,
   decimalsContract,
   getDelegationExpiryContract,
-  getWrapperContract,
   nameContract,
   supportsInterfaceContract,
   symbolContract,
   underlyingContract,
-  wrapperExistsContract,
 } from "../contracts";
-import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Handle } from "../relayer/relayer-sdk.types";
-import { pLimit, toError } from "../utils";
-import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
-import { CredentialsManager } from "./credentials-manager";
-import { DelegatedCredentialsManager } from "./delegated-credentials-manager";
+import { CredentialsManager } from "../credentials/credentials-manager";
+import { DelegatedCredentialsManager } from "../credentials/delegated-credentials-manager";
 import {
   ConfigurationError,
   DecryptionFailedError,
@@ -31,8 +23,15 @@ import {
   RelayerRequestFailedError,
   SigningFailedError,
   SigningRejectedError,
-} from "./errors";
-import type { GenericSigner, GenericStorage } from "./token.types";
+} from "../errors";
+import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { Handle } from "../relayer/relayer-sdk.types";
+import type { GenericSigner, GenericStorage } from "../types";
+import { toError } from "../utils";
+import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import { pLimit } from "./concurrency";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -455,8 +454,9 @@ export class ReadonlyToken {
                 handle,
                 value,
               });
-            } catch {
-              // Cache write failure should not invalidate a successful decryption
+            } catch (cacheError) {
+              // oxlint-disable-next-line no-console
+              console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
             }
           })
           .catch((error) => {
@@ -487,30 +487,6 @@ export class ReadonlyToken {
     }
 
     return results;
-  }
-
-  /**
-   * Look up the wrapper contract for this token via the deployment coordinator.
-   * Returns `null` if no wrapper is deployed.
-   *
-   * @param coordinatorAddress - The deployment coordinator contract address.
-   * @returns The wrapper address, or `null` if no wrapper exists.
-   *
-   * @example
-   * ```ts
-   * const wrapper = await token.discoverWrapper("0xCoordinator");
-   * if (wrapper) {
-   *   const fullToken = sdk.createToken(token.address, wrapper);
-   * }
-   * ```
-   */
-  async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
-    const coordinator = getAddress(coordinatorAddress);
-    const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
-    if (!exists) {
-      return null;
-    }
-    return this.signer.readContract(getWrapperContract(coordinator, this.address));
   }
 
   /**
@@ -830,8 +806,9 @@ export class ReadonlyToken {
           handle,
           value,
         });
-      } catch {
-        // Cache write failure should not invalidate a successful decryption
+      } catch (cacheError) {
+        // oxlint-disable-next-line no-console
+        console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
       }
 
       return value;
@@ -911,8 +888,9 @@ export class ReadonlyToken {
           handle,
           value,
         });
-      } catch {
-        // Cache write failure should not invalidate a successful decryption
+      } catch (cacheError) {
+        // oxlint-disable-next-line no-console
+        console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
       }
       return value;
     } catch (error) {

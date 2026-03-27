@@ -1,4 +1,4 @@
-import type { ZamaSDK } from "../token/zama-sdk";
+import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";

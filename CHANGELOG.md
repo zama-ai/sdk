@@ -1,5 +1,53 @@
 # Changelog
 
+## [2.2.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.3...v2.2.0-alpha.4) (2026-03-27)
+
+### Features
+
+- **react-viem:** upgrade to SDK 2.1.0-alpha.2 + Sepolia + delegation flows (SDK-36) ([#150](https://github.com/zama-ai/sdk/issues/150)) ([fe7dfc0]()), closes [#1]() [#4]() [#6]() [#7]() [#9]() [#10]()
+
+## [2.2.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.2...v2.2.0-alpha.3) (2026-03-27)
+
+### Features
+
+- **react-ethers:** upgrade to SDK 2.1.0-alpha.2 + Sepolia + delegation flows (SDK-35) ([#148](https://github.com/zama-ai/sdk/issues/148)) ([44ce6ee]())
+
+## [2.2.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.1...v2.2.0-alpha.2) (2026-03-26)
+
+- **wrapper-discovery:** `coordinatorAddress` has been renamed to `erc20Address` in `wrapperDiscoveryQueryOptions`, `UseWrapperDiscoveryConfig`, and `UseWrapperDiscoverySuspenseConfig`. Update call sites accordingly.
+- **wrapper-discovery:** `tokenAddress` in `UseWrapperDiscoveryConfig` is now required (`Address`, not `Address | undefined`). To disable the query conditionally, pass `erc20Address: undefined` instead.
+- **readonly-token:** `ReadonlyToken.discoverWrapper()` has been removed. Use `sdk.registry.getConfidentialToken(erc20Address)` or `sdk.registry.getUnderlyingToken(confidentialTokenAddress)` instead.
+
+### Features
+
+- **sdk,react-sdk:** add WrappersRegistry class and on-chain registry hooks ([#116](https://github.com/zama-ai/sdk/issues/116)) ([06bc94b]()), closes [#registryTTL]() [#registryInstance]() [#registry]() [#enrichPair]() [#pairWithMetadata]()
+
+## [2.2.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.1.1-alpha.2...v2.2.0-alpha.1) (2026-03-25)
+
+### Features
+
+- **react-sdk:** improve query wrappers types ([#168](https://github.com/zama-ai/sdk/issues/168)) ([db616c7]())
+
+## [2.1.1-alpha.2](https://github.com/zama-ai/sdk/compare/v2.1.1-alpha.1...v2.1.1-alpha.2) (2026-03-25)
+
+### Bug Fixes
+
+- rename useAllowTokens/useRevokeTokens back to useAllow/useRevoke ([#167](https://github.com/zama-ai/sdk/issues/167)) ([f9d6b1a]())
+
+## [2.1.1-alpha.1](https://github.com/zama-ai/sdk/compare/v2.1.0...v2.1.1-alpha.1) (2026-03-25)
+
+## [2.1.0](https://github.com/zama-ai/sdk/compare/v2.0.0...v2.1.0) (2026-03-24)
+
+### Features
+
+- **example-hoodi:** add on-chain ACL delegation flows (SDK-41) ([#126](https://github.com/zama-ai/sdk/issues/126)) ([2ea2349]())
+
+### Bug Fixes
+
+- exclude logger from web worker init payload ([#146](https://github.com/zama-ai/sdk/issues/146)) ([1b8d50f]()), closes [#145]()
+- gate queries on undefined tokenAddress ([#163](https://github.com/zama-ai/sdk/issues/163)) ([5803e78]())
+- **sdk:** colocate node worker with node entrypoint ([#138](https://github.com/zama-ai/sdk/issues/138)) ([294d76e]())
+
 ## [2.1.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.1.0-alpha.4...v2.1.0-alpha.5) (2026-03-24)
 
 ### Bug Fixes

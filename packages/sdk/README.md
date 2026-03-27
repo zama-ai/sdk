@@ -1,6 +1,6 @@
 # @zama-fhe/sdk
 
-A TypeScript SDK for building privacy-preserving token applications using Fully Homomorphic Encryption (FHE). It abstracts the complexity of encrypted ERC-20 operations — shielding, unshielding, confidential transfers, and balance decryption — behind a clean, high-level API. Works with any Web3 library (viem, ethers, or custom signers).
+A TypeScript SDK for building privacy-preserving applications on Zama's fhEVM using Fully Homomorphic Encryption (FHE). It abstracts the complexity of confidential contract operations — session management, encrypted state, shielding, unshielding, confidential transfers, and balance decryption — behind a clean, high-level API. Works with any Web3 library (viem, ethers, or custom signers).
 
 ## Installation
 
@@ -140,7 +140,7 @@ const balance = await token.balanceOf();
 
 ### ZamaSDK
 
-Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Acts as a factory for token instances.
+Entry point to the SDK. Composes a relayer backend with a signer and storage layer. Manages sessions, credentials, and acts as a factory for contract instances.
 
 ```ts
 const sdk = new ZamaSDK({
@@ -181,7 +181,7 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | Method                                                     | Description                                                                                                                                                                                                  |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `shield(amount, options?)`                                 | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
-| `shieldETH(amount, value?)`                                | Shield (wrap) native ETH. `value` defaults to `amount`. Use this when the underlying token is the zero address (native ETH).                                                                                 |
+| `shieldETH(amount, value?)`                                | Shield (wrap) native ETH. `value` defaults to `amount`. Use when the underlying token is the zero address (native ETH).                                                                                      |
 | `unshield(amount, callbacks?)`                             | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                                   |
 | `unshieldAll(callbacks?)`                                  | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                               |
 | `unwrap(amount)`                                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
@@ -231,7 +231,6 @@ Read-only subset. No wrapper address needed.
 | `getDelegationExpiry({ delegatorAddress, delegateAddress })` | Raw expiry timestamp (`0n` = none, `2^64-1` = permanent).                              |
 | `isConfidential()`                                           | ERC-165 check for ERC-7984 support.                                                    |
 | `isWrapper()`                                                | ERC-165 check for wrapper interface.                                                   |
-| `discoverWrapper(coordinatorAddress)`                        | Look up a wrapper for this token via the deployment coordinator.                       |
 | `underlyingToken()`                                          | Read the underlying ERC-20 address from a wrapper.                                     |
 | `allowance(wrapper, owner?)`                                 | Read ERC-20 allowance of the underlying token.                                         |
 | `isZeroHandle(handle)`                                       | Returns `true` if the handle is the zero sentinel.                                     |
@@ -335,7 +334,7 @@ const sdk = new ZamaSDK({
 
 | Field            | Type                   | Description                                                                                                                            |
 | ---------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `relayer`        | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance)                                                                               |
+| `relayer`        | `RelayerSDK`           | Relayer backend (`RelayerWeb` or `RelayerNode` instance).                                                                              |
 | `signer`         | `GenericSigner`        | Wallet signer interface.                                                                                                               |
 | `storage`        | `GenericStorage`       | Credential storage backend.                                                                                                            |
 | `sessionStorage` | `GenericStorage`       | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
@@ -610,7 +609,7 @@ const txHash = await writeConfidentialTransferContract(
 );
 ```
 
-**Read helpers:** `readConfidentialBalanceOfContract`, `readWrapperForTokenContract`, `readUnderlyingTokenContract`, `readWrapperExistsContract`, `readSupportsInterfaceContract`.
+**Read helpers:** `readConfidentialBalanceOfContract`, `readUnderlyingTokenContract`, `readWrapperExistsContract`, `readSupportsInterfaceContract`, `readWrapperForTokenContract` (legacy — prefer `sdk.registry.getConfidentialToken()`).
 
 **Write helpers:** `writeConfidentialTransferContract`, `writeConfidentialBatchTransferContract`, `writeUnwrapContract`, `writeUnwrapFromBalanceContract`, `writeFinalizeUnwrapContract`, `writeSetOperatorContract`, `writeWrapContract`, `writeWrapETHContract`.
 

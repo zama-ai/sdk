@@ -1,11 +1,11 @@
 ---
 title: ZamaSDK
-description: Entry point for all confidential token operations.
+description: Entry point for all confidential contract operations.
 ---
 
 # ZamaSDK
 
-Entry point for all confidential token operations — creates tokens, manages sessions, and coordinates the relayer and signer.
+Entry point for all confidential contract operations — creates tokens, manages sessions, and coordinates the relayer and signer.
 
 ## Import
 
@@ -142,9 +142,9 @@ const sdk = new ZamaSDK({
 
 ### sessionTTL
 
-`number | undefined`
+`number | "infinite" | undefined`
 
-Session signature lifetime in seconds. Default: `2592000` (30 days). Set to `0` to require a wallet signature on every operation.
+Session signature lifetime in seconds. Default: `2592000` (30 days). Set to `0` to require a wallet signature on every operation. Pass `"infinite"` for a session that never expires.
 
 ```ts
 const sdk = new ZamaSDK({
@@ -152,6 +152,36 @@ const sdk = new ZamaSDK({
   signer,
   storage: indexedDBStorage,
   sessionTTL: 3600, // 1 hour
+});
+```
+
+### registryAddresses
+
+`Record<number, Address> | undefined`
+
+Per-chain wrappers registry address overrides, merged on top of built-in defaults. Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
+
+```ts
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage: indexedDBStorage,
+  registryAddresses: { [31337]: "0xYourHardhatRegistry" },
+});
+```
+
+### registryTTL
+
+`number | undefined`
+
+How long cached registry results remain valid, in seconds. Default: `86400` (24 hours). Consistent with `keypairTTL`.
+
+```ts
+const sdk = new ZamaSDK({
+  relayer,
+  signer,
+  storage: indexedDBStorage,
+  registryTTL: 3600, // 1 hour
 });
 ```
 
@@ -170,6 +200,19 @@ const sdk = new ZamaSDK({
     console.debug(`[zama] ${type}`, rest);
   },
 });
+```
+
+## Properties
+
+### registry
+
+`WrappersRegistry` (readonly)
+
+Auto-configured wrappers registry instance. Shares the SDK's signer, `registryAddresses`, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
+
+```ts
+const pairs = await sdk.registry.listPairs({ page: 1 });
+const result = await sdk.registry.getConfidentialToken(erc20Address);
 ```
 
 ## Methods
@@ -195,6 +238,22 @@ Creates a read-only token instance for balance decryption and metadata queries.
 
 ```ts
 const readonlyToken = sdk.createReadonlyToken("0xEncryptedERC20");
+```
+
+### createWrappersRegistry
+
+`(registryAddresses?: Record<number, Address>) => WrappersRegistry`
+
+Creates a wrappers registry instance for querying on-chain token wrapper pairs. On Mainnet and Sepolia the registry address is resolved automatically.
+
+```ts
+// Mainnet / Sepolia — resolved automatically
+const registry = sdk.createWrappersRegistry();
+
+// Hardhat or custom chain — override per chain
+const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
+
+const pairs = await registry.getTokenPairs();
 ```
 
 ### allow
@@ -261,4 +320,5 @@ sdk.terminate();
 
 - [Token](/reference/sdk/Token) — read/write token operations
 - [ReadonlyToken](/reference/sdk/ReadonlyToken) — read-only token operations
+- [WrappersRegistry](/reference/sdk/WrappersRegistry) — on-chain token wrappers registry
 - [Configuration guide](/guides/configuration) — relayer, signer, and storage setup

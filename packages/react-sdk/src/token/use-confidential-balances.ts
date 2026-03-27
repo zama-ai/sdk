@@ -25,10 +25,13 @@ export interface UseConfidentialBalancesConfig {
 export type { ConfidentialBalancesData };
 
 /** Query options for the decrypt phase of {@link useConfidentialBalances}. */
-export type UseConfidentialBalancesOptions = Omit<
+export interface UseConfidentialBalancesOptions extends Omit<
   UseQueryOptions<ConfidentialBalancesData>,
-  "queryKey" | "queryFn"
->;
+  "queryKey" | "queryFn" | "enabled"
+> {
+  /** Whether the query is enabled. Callback form is not supported in composite hooks. */
+  enabled?: boolean;
+}
 
 /**
  * Declarative hook to read multiple confidential token balances in batch.
@@ -58,7 +61,7 @@ export function useConfidentialBalances(
   options?: UseConfidentialBalancesOptions,
 ) {
   const { tokenAddresses, handleRefetchInterval, maxConcurrency } = config;
-  const userEnabled = options?.enabled;
+  const { enabled = true } = options ?? {};
   const sdk = useZamaSDK();
 
   const addressQuery = useQuery<Address>({
@@ -79,7 +82,7 @@ export function useConfidentialBalances(
   });
   const handlesQuery = useQuery<Handle[]>({
     ...baseHandlesQueryOptions,
-    enabled: (baseHandlesQueryOptions.enabled ?? true) && (userEnabled ?? true),
+    enabled: baseHandlesQueryOptions.enabled && enabled,
   });
 
   // Phase 2: Batch decrypt only when any handle changes
@@ -96,7 +99,7 @@ export function useConfidentialBalances(
   const balancesQuery = useQuery<ConfidentialBalancesData>({
     ...baseBalancesQueryOptions,
     ...options,
-    enabled: factoryEnabled && handlesReady && (userEnabled ?? true),
+    enabled: factoryEnabled && handlesReady && enabled,
   });
 
   return { ...balancesQuery, handlesQuery };
