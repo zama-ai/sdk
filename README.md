@@ -151,10 +151,6 @@ This software is distributed under the **BSD-3-Clause-Clear** license. Read [thi
 - [Documentation](https://docs.zama.org/protocol) — Official documentation of the Zama Confidential Blockchain Protocol.
 - [Awesome Zama – FHEVM](https://github.com/zama-ai/awesome-zama?tab=readme-ov-file#fhevm) — Curated articles, talks, and ecosystem projects.
 
-<p align="right">
-  <a href="#about" > ↑ Back to top </a>
-</p>
-
 ## Support
 
 🌟 If you find this project helpful or interesting, please consider giving it a star on GitHub! Your support helps to grow the community and motivates further development.
