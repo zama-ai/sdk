@@ -95,11 +95,11 @@ whenever the account or chain changes.
 
 Three screens, driven by `isConnected` and `isSepolia`:
 
-| Screen           | Condition              | What's shown                                      |
-| ---------------- | ---------------------- | ------------------------------------------------- |
-| 1 — No wallet    | `!isConnected`         | "Connect Wallet" button                           |
-| 2 — Wrong network | `!isSepolia`          | "Switch to Sepolia" button (+ error if rejected)  |
-| 3 — Main UI      | `isConnected && isSepolia` | Registry loading, token selector, operation cards |
+| Screen            | Condition                  | What's shown                                      |
+| ----------------- | -------------------------- | ------------------------------------------------- |
+| 1 — No wallet     | `!isConnected`             | "Connect Wallet" button                           |
+| 2 — Wrong network | `!isSepolia`               | "Switch to Sepolia" button (+ error if rejected)  |
+| 3 — Main UI       | `isConnected && isSepolia` | Registry loading, token selector, operation cards |
 
 Because wagmi does not auto-connect without stored connector state, the connect flow is
 explicit:
@@ -215,11 +215,11 @@ const refreshBalances = () => {
 
 Three balances are shown:
 
-| Balance      | Source                              | Hook / method                                                          |
-| ------------ | ----------------------------------- | ---------------------------------------------------------------------- |
-| ETH          | wagmi `useBalance`                  | `refetchEth` from `useBalance({ address })`                            |
-| ERC-20       | wagmi `useReadContract`             | `useReadContract({ address: token?.tokenAddress, ... })`               |
-| Confidential | Relayer decryption                  | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
+| Balance      | Source                  | Hook / method                                                                               |
+| ------------ | ----------------------- | ------------------------------------------------------------------------------------------- |
+| ETH          | wagmi `useBalance`      | `refetchEth` from `useBalance({ address })`                                                 |
+| ERC-20       | wagmi `useReadContract` | `useReadContract({ address: token?.tokenAddress, ... })`                                    |
+| Confidential | Relayer decryption      | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
 authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed()` checks whether
