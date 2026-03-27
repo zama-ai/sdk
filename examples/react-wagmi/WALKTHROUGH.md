@@ -93,6 +93,14 @@ whenever the account or chain changes.
 
 ## 3. Wallet connect flow (`page.tsx`)
 
+Three screens, driven by `isConnected` and `isSepolia`:
+
+| Screen           | Condition              | What's shown                                      |
+| ---------------- | ---------------------- | ------------------------------------------------- |
+| 1 — No wallet    | `!isConnected`         | "Connect Wallet" button                           |
+| 2 — Wrong network | `!isSepolia`          | "Switch to Sepolia" button (+ error if rejected)  |
+| 3 — Main UI      | `isConnected && isSepolia` | Registry loading, token selector, operation cards |
+
 Because wagmi does not auto-connect without stored connector state, the connect flow is
 explicit:
 
@@ -111,9 +119,59 @@ switchChain({ chainId: sepolia.id });
 `wallet_addEthereumChain` fallback is needed for Sepolia (natively known to MetaMask and
 most wallets). Add an error fallback if testing with custom wallets that don't know Sepolia.
 
+**Screen 2 is passive**: there is no `isInitializing` guard (unlike the ethers/viem examples)
+because `useAccount()` is synchronous and never returns a transient loading state — wagmi's
+store tracks the connection state reactively.
+
 ---
 
-## 4. Balance reads
+## 4. Token selection (`page.tsx`)
+
+Registered token pairs are fetched from the on-chain `WrappersRegistry` contract via
+`useListPairs`:
+
+```ts
+const {
+  data: pairsData,
+  isPending: isRegistryPending,
+  isError: isRegistryError,
+} = useListPairs({ metadata: true });
+```
+
+`metadata: true` fetches name, symbol, and decimals for both the underlying ERC-20 and the
+confidential wrapper in a single call — no separate `useMetadata` calls needed.
+
+The first valid pair is auto-selected:
+
+```ts
+useEffect(() => {
+  if (validPairs.length > 0 && selectedTokenAddress === null) {
+    setSelectedTokenAddress(validPairs[0].confidentialTokenAddress);
+  }
+}, [validPairs, selectedTokenAddress]);
+```
+
+With `WagmiSigner` (viem-based), named fields (`tokenAddress`, `confidentialTokenAddress`,
+`isValid`) are directly accessible — no `normalizePair` workaround needed (unlike
+`EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
+index fallback).
+
+**`ZERO_ADDRESS` placeholder**: SDK hooks cannot be called conditionally (React rules of
+hooks). While no pair is selected, `ZERO_ADDRESS` is passed as a stable placeholder with
+`enabled: false`, so no actual RPC call is made.
+
+**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
+has resolved and a pair has been selected (metadata is implicitly available at that point).
+
+**`isPending` vs `isLoading`**: `isPending` is used rather than `isLoading` for the registry
+guard. In TanStack Query v5, `isLoading = isPending && isFetching`, which is `false` when the
+query is disabled (`enabled: false`). `isPending` stays `true` until the first successful
+response, correctly covering the brief period before the chain ID has been resolved
+internally (during which the query is still disabled).
+
+---
+
+## 5. Balance reads (`page.tsx`)
 
 ERC-20 and ETH balances use wagmi hooks backed by the `http(SEPOLIA_RPC_URL)` transport:
 
@@ -125,32 +183,70 @@ const { data: ethBalanceData, refetch: refetchEth } = useBalance({
 });
 
 // ERC-20 balance — raw bigint, formatted with formatUnits().
+// ZERO_ADDRESS + enabled: false prevents RPC calls before a token is selected.
 const { data: erc20Balance, refetch: refetchErc20 } = useReadContract({
-  address: token.erc20,
+  address: token?.tokenAddress ?? ZERO_ADDRESS,
   abi: BALANCE_ABI,
   functionName: "balanceOf",
   args: [address as Address],
-  query: { enabled: isConnected && isSepolia },
+  query: { enabled: isConnected && isSepolia && !!token },
 });
 ```
 
 After any operation that changes balances, call `refreshBalances()`:
 
 ```ts
-function refreshBalances() {
+const refreshBalances = () => {
   void refetchErc20();
   void refetchEth();
-  // SDK confidential handle is in a separate TanStack Query cache — must invalidate
-  // to trigger re-decryption after shield / unshield / transfer.
-  queryClient.invalidateQueries({
-    queryKey: zamaQueryKeys.confidentialHandle.token(token.confidential),
-  });
-}
+  // Invalidate the encrypted handle so useConfidentialBalance re-polls after
+  // any operation that changes the confidential balance.
+  if (token) {
+    queryClient.invalidateQueries({
+      queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+    });
+  }
+};
 ```
 
 ---
 
-## 5. RelayerWeb proxy
+## 6. Balance display and explicit decrypt (`page.tsx` + `BalancesCard.tsx`)
+
+Three balances are shown:
+
+| Balance      | Source                              | Hook / method                                                          |
+| ------------ | ----------------------------------- | ---------------------------------------------------------------------- |
+| ETH          | wagmi `useBalance`                  | `refetchEth` from `useBalance({ address })`                            |
+| ERC-20       | wagmi `useReadContract`             | `useReadContract({ address: token?.tokenAddress, ... })`               |
+| Confidential | Relayer decryption                  | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
+
+**Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
+authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed()` checks whether
+credentials are already cached; if not, `BalancesCard` shows a "Decrypt Balance" button
+rather than a balance value. This avoids blind-signing prompts on mount.
+
+```ts
+const { data: isAllowed } = useIsAllowed();
+// All registry pairs are passed at once to useAllow — one signature covers all tokens,
+// so switching tokens does not prompt the wallet again.
+const allowTokens = useAllow();
+function handleDecrypt() {
+  if (validPairs.length === 0) return;
+  allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
+}
+```
+
+`useConfidentialBalance` has two loading phases:
+
+- `balance.handleQuery.isLoading` — fetching the encrypted handle from chain
+- `balance.isLoading` — decrypting it via the relayer
+
+Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
+
+---
+
+## 7. RelayerWeb proxy
 
 The proxy route `src/app/api/relayer/[...path]/route.ts` keeps `RELAYER_API_KEY` server-side.
 Set `RELAYER_URL` in `.env.local` (defaults to the public Sepolia testnet relayer if unset).
@@ -159,7 +255,7 @@ limiting with a private node.
 
 ---
 
-## 6. Pending unshield recovery
+## 8. Pending unshield recovery
 
 Unshield is a two-phase operation: Phase 1 (unwrap tx) and Phase 2 (finalize tx).
 If the user closes the tab between phases, `PendingUnshieldCard` recovers the state:
@@ -176,7 +272,7 @@ The `savePendingUnshield` call in `onEvent` and the `storage` prop in `ZamaProvi
 
 ---
 
-## 7. Running locally
+## 9. Running locally
 
 ```bash
 cd examples/react-wagmi
