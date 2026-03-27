@@ -58,6 +58,7 @@ const rpcClient = createPublicClient({
 type TokenKey = keyof typeof TOKENS;
 
 export default function Home() {
+  const [isInitializing, setIsInitializing] = useState(true);
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -65,7 +66,8 @@ export default function Home() {
   const [connectError, setConnectError] = useState<string | null>(null);
 
   const token = TOKENS[selectedToken];
-  const isSepolia = chainId === SEPOLIA_CHAIN_ID_HEX;
+  // Case-insensitive: some wallets return uppercase hex (e.g. "0xAA36A7" instead of "0xaa36a7").
+  const isSepolia = chainId?.toLowerCase() === SEPOLIA_CHAIN_ID_HEX;
 
   // Stable reference from the QueryClientProvider in providers.tsx.
   // Used in handleAccountsChanged (inside the useEffect below) to invalidate balance caches.
@@ -89,7 +91,10 @@ export default function Home() {
   // ZamaProvider lifecycle (signer remount). This listener handles UI-level state only.
   useEffect(() => {
     const ethereum = getEthereumProvider();
-    if (!ethereum) return;
+    if (!ethereum) {
+      setIsInitializing(false);
+      return;
+    }
 
     Promise.all([
       ethereum.request({ method: "eth_accounts" }) as Promise<string[]>,
@@ -99,7 +104,8 @@ export default function Home() {
         setAddress(accounts[0] ?? null);
         setChainId(currentChainId);
       })
-      .catch((err) => console.error("Failed to detect wallet state:", err));
+      .catch((err) => console.error("Failed to detect wallet state:", err))
+      .finally(() => setIsInitializing(false));
 
     const handleAccountsChanged = (accounts: unknown) => {
       setAddress((accounts as string[])[0] ?? null);
@@ -240,6 +246,18 @@ export default function Home() {
   // and until the wallet is on the Sepolia network.
   const actionsDisabled = !isSepolia || !cTokenMetadata.data || !erc20Metadata.data;
 
+  // ── Screen 0: Initializing ────────────────────────────────────────────────
+  // Shown while eth_accounts / eth_chainId are resolving — prevents a flash of
+  // the "Connect Wallet" screen during the re-initialization that follows a
+  // ZamaProvider remount (wallet switch or chain change).
+  if (isInitializing) {
+    return (
+      <div className="app-container connect-screen">
+        <h1>Sepolia Confidential Token Quickstart</h1>
+      </div>
+    );
+  }
+
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!address) {
     return (
@@ -316,7 +334,7 @@ export default function Home() {
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}
         mintDisabled={actionsDisabled}
-        mintError={mint.isError ? (mint.error?.message ?? "Mint failed") : null}
+        mintError={mint.isError ? (mint.error?.message ?? null) : null}
         mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
         isAllowed={!!isAllowed}
         onDecrypt={handleDecrypt}
@@ -376,11 +394,13 @@ export default function Home() {
       <DelegateDecryptionCard
         key={`grant-delegation-${address}-${selectedToken}`}
         tokenAddress={token.confidential}
+        disabled={actionsDisabled}
       />
 
       <RevokeDelegationCard
         key={`revoke-delegation-${address}-${selectedToken}`}
         tokenAddress={token.confidential}
+        disabled={actionsDisabled}
       />
 
       {/* ── Delegation — delegate perspective ────────────────────────────────
