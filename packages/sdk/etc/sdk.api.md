@@ -200,7 +200,7 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
 };
 
 // @public
-export function applyDecryptedValues(items: readonly ActivityItem[], decryptedMap: ReadonlyMap<Handle, bigint>): ActivityItem[];
+export function applyDecryptedValues(items: readonly ActivityItem[], decryptedMap: ReadonlyMap<Handle, ClearValueType>): ActivityItem[];
 
 // @public
 export class ApprovalFailedError extends ZamaError {
@@ -18166,6 +18166,8 @@ export class ReadonlyToken {
     balanceOf(owner?: Address): Promise<bigint>;
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
+    // (undocumented)
+    readonly cache: Map<Handle, ClearValueType>;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
@@ -18175,7 +18177,7 @@ export class ReadonlyToken {
         delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
-    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
+    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>>;
     // (undocumented)
     protected readonly delegatedCredentials: DelegatedCredentialsManager;
     protected emit(partial: ZamaSDKEventInput): void;
@@ -18211,6 +18213,7 @@ export class ReadonlyToken {
 // @public
 export interface ReadonlyTokenConfig {
     address: Address;
+    cache?: Map<Handle, ClearValueType>;
     credentials?: CredentialsManager;
     delegatedCredentials?: DelegatedCredentialsManager;
     keypairTTL?: number;
@@ -30587,6 +30590,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 export class ZamaSDK {
     constructor(config: ZamaSDKConfig);
     allow(...contractAddresses: Address[]): Promise<void>;
+    readonly cache: Map<Handle, ClearValueType>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;

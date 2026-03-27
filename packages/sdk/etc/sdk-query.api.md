@@ -142,9 +142,6 @@ export interface BatchDecryptOptions {
 export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress?: Address, config?: FeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>>;
 
 // @public (undocumented)
-export function clearDecryptCache(sdk: ZamaSDK): void;
-
-// @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
 
 // @public
@@ -664,9 +661,6 @@ export interface GenericStorage {
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
-// @public (undocumented)
-export function getDecryptCache(sdk: ZamaSDK): Map<Handle, ClearValueType>;
-
 // @public
 export function hashFn(queryKey: readonly unknown[]): string;
 
@@ -847,6 +841,8 @@ export class ReadonlyToken {
     balanceOf(owner?: Address): Promise<bigint>;
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
+    // (undocumented)
+    readonly cache: Map<Handle, ClearValueType>;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
@@ -856,7 +852,7 @@ export class ReadonlyToken {
         delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
-    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
+    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>>;
     // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -896,6 +892,7 @@ export class ReadonlyToken {
 // @public
 export interface ReadonlyTokenConfig {
     address: Address;
+    cache?: Map<Handle, ClearValueType>;
     credentials?: CredentialsManager;
     delegatedCredentials?: DelegatedCredentialsManager;
     keypairTTL?: number;
@@ -1638,6 +1635,7 @@ export const zamaQueryKeys: {
 export class ZamaSDK {
     constructor(config: ZamaSDKConfig);
     allow(...contractAddresses: Address[]): Promise<void>;
+    readonly cache: Map<Handle, ClearValueType>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -1722,7 +1720,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-BRrEPcPO.d.ts:1749:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BPIoYGX-.d.ts:1994:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
