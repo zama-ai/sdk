@@ -16,7 +16,7 @@
   <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
     <img src="https://img.shields.io/npm/v/%40zama-fhe%2Fsdk?label=latest%20release&style=flat-square" alt="Latest release"></a>
   <a href="https://www.npmjs.com/package/@zama-fhe/sdk">
-    <img src="https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk?style=flat-square" alt="Latest release last updated"></a>
+    <img src="https://img.shields.io/npm/last-update/%40zama-fhe%2Fsdk/latest?style=flat-square" alt="Latest release last updated"></a>
   <a href="https://github.com/zama-ai/sdk/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-BSD--3--Clause--Clear-%23ffb243?style=flat-square" alt="License"></a>
   <a href="https://github.com/zama-ai/bounty-program">
