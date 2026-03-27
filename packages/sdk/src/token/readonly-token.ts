@@ -993,11 +993,7 @@ export class ReadonlyToken {
  * wrapped as {@link DelegationNotPropagatedError} because the most likely
  * cause is that the gateway hasn't synced the delegation from L1 yet.
  */
-function wrapDecryptError(
-  error: unknown,
-  fallbackMessage: string,
-  isDelegated = false,
-): Error {
+function wrapDecryptError(error: unknown, fallbackMessage: string, isDelegated = false): Error {
   if (
     error instanceof DecryptionFailedError ||
     error instanceof NoCiphertextError ||
