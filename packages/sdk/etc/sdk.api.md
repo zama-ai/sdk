@@ -6960,6 +6960,9 @@ export interface DecryptStartEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptStart;
 }
 
+// @public
+export const DefaultRegistryAddresses: Record<number, Address>;
+
 // Warning: (ae-forgotten-export) The symbol "EncryptedCredentials" needs to be exported by the entry point index.d.ts
 //
 // @public
@@ -10748,6 +10751,155 @@ export function getBatchTransferFeeContract(feeManagerAddress: Address): {
 };
 
 // @public
+export function getConfidentialTokenAddressContract(registry: Address, tokenAddress: Address): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairs";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairsLength";
+        readonly outputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "";
+            readonly type: "uint256";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "fromIndex";
+            readonly type: "uint256";
+        }, {
+            readonly internalType: "uint256";
+            readonly name: "toIndex";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPairsSlice";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "index";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPair";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair";
+            readonly name: "";
+            readonly type: "tuple";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getConfidentialTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "isConfidentialTokenValid";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }];
+    readonly functionName: "getConfidentialTokenAddress";
+    readonly args: readonly [`0x${string}`];
+};
+
+// @public
 export function getDelegationExpiryContract(aclAddress: Address, delegatorAddress: Address, delegateAddress: Address, contractAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -11370,6 +11522,751 @@ export function getFeeRecipientContract(feeManagerAddress: Address): {
     }];
     readonly functionName: "getFeeRecipient";
     readonly args: readonly [];
+};
+
+// @public
+export function getTokenAddressContract(registry: Address, confidentialTokenAddress: Address): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairs";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairsLength";
+        readonly outputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "";
+            readonly type: "uint256";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "fromIndex";
+            readonly type: "uint256";
+        }, {
+            readonly internalType: "uint256";
+            readonly name: "toIndex";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPairsSlice";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "index";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPair";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair";
+            readonly name: "";
+            readonly type: "tuple";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getConfidentialTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "isConfidentialTokenValid";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }];
+    readonly functionName: "getTokenAddress";
+    readonly args: readonly [`0x${string}`];
+};
+
+// @public
+export function getTokenPairContract(registry: Address, index: bigint): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairs";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairsLength";
+        readonly outputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "";
+            readonly type: "uint256";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "fromIndex";
+            readonly type: "uint256";
+        }, {
+            readonly internalType: "uint256";
+            readonly name: "toIndex";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPairsSlice";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "index";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPair";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair";
+            readonly name: "";
+            readonly type: "tuple";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getConfidentialTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "isConfidentialTokenValid";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }];
+    readonly functionName: "getTokenConfidentialTokenPair";
+    readonly args: readonly [bigint];
+};
+
+// @public
+export function getTokenPairsContract(registry: Address): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairs";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairsLength";
+        readonly outputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "";
+            readonly type: "uint256";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "fromIndex";
+            readonly type: "uint256";
+        }, {
+            readonly internalType: "uint256";
+            readonly name: "toIndex";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPairsSlice";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "index";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPair";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair";
+            readonly name: "";
+            readonly type: "tuple";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getConfidentialTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "isConfidentialTokenValid";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }];
+    readonly functionName: "getTokenConfidentialTokenPairs";
+    readonly args: readonly [];
+};
+
+// @public
+export function getTokenPairsLengthContract(registry: Address): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairs";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairsLength";
+        readonly outputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "";
+            readonly type: "uint256";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "fromIndex";
+            readonly type: "uint256";
+        }, {
+            readonly internalType: "uint256";
+            readonly name: "toIndex";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPairsSlice";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "index";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPair";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair";
+            readonly name: "";
+            readonly type: "tuple";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getConfidentialTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "isConfidentialTokenValid";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }];
+    readonly functionName: "getTokenConfidentialTokenPairsLength";
+    readonly args: readonly [];
+};
+
+// @public
+export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint, toIndex: bigint): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairs";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairsLength";
+        readonly outputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "";
+            readonly type: "uint256";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "fromIndex";
+            readonly type: "uint256";
+        }, {
+            readonly internalType: "uint256";
+            readonly name: "toIndex";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPairsSlice";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "index";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPair";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair";
+            readonly name: "";
+            readonly type: "tuple";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getConfidentialTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "isConfidentialTokenValid";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }];
+    readonly functionName: "getTokenConfidentialTokenPairsSlice";
+    readonly args: readonly [bigint, bigint];
 };
 
 // @public
@@ -12447,7 +13344,7 @@ export function getWrapFeeContract(feeManagerAddress: Address, amount: bigint, w
 };
 
 // @public
-export function getWrapperContract(coordinator: Address, tokenAddress: Address): {
+export function getWrapperContract(registryAddress: Address, tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [{
@@ -12496,6 +13393,7 @@ export const HardhatConfig: {
     readonly kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030";
     readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+    readonly registryAddress: undefined;
 };
 
 export { Hex }
@@ -12542,6 +13440,155 @@ export function isConfidentialTokenContract(tokenAddress: Address): {
         readonly type: "function";
     }];
     readonly functionName: "supportsInterface";
+    readonly args: readonly [`0x${string}`];
+};
+
+// @public
+export function isConfidentialTokenValidContract(registry: Address, confidentialTokenAddress: Address): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairs";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getTokenConfidentialTokenPairsLength";
+        readonly outputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "";
+            readonly type: "uint256";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "fromIndex";
+            readonly type: "uint256";
+        }, {
+            readonly internalType: "uint256";
+            readonly name: "toIndex";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPairsSlice";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]";
+            readonly name: "";
+            readonly type: "tuple[]";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "uint256";
+            readonly name: "index";
+            readonly type: "uint256";
+        }];
+        readonly name: "getTokenConfidentialTokenPair";
+        readonly outputs: readonly [{
+            readonly components: readonly [{
+                readonly internalType: "address";
+                readonly name: "tokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "address";
+                readonly name: "confidentialTokenAddress";
+                readonly type: "address";
+            }, {
+                readonly internalType: "bool";
+                readonly name: "isValid";
+                readonly type: "bool";
+            }];
+            readonly internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair";
+            readonly name: "";
+            readonly type: "tuple";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "tokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getConfidentialTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getTokenAddress";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "confidentialTokenAddress";
+            readonly type: "address";
+        }];
+        readonly name: "isConfidentialTokenValid";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }];
+    readonly functionName: "isConfidentialTokenValid";
     readonly args: readonly [`0x${string}`];
 };
 
@@ -15607,6 +16654,13 @@ export { KeypairType }
 export { KmsDelegatedUserDecryptEIP712Type }
 
 // @public
+export interface ListPairsOptions {
+    metadata?: boolean;
+    page?: number;
+    pageSize?: number;
+}
+
+// @public
 export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
 
 // @public
@@ -15620,6 +16674,7 @@ export const MainnetConfig: {
     readonly inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2";
     readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
+    readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
 };
 
 // @public
@@ -15795,6 +16850,18 @@ export class NoCiphertextError extends ZamaError {
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
+
+// @public
+export interface PaginatedResult<T> {
+    // (undocumented)
+    readonly items: readonly T[];
+    // (undocumented)
+    readonly page: number;
+    // (undocumented)
+    readonly pageSize: number;
+    // (undocumented)
+    readonly total: number;
+}
 
 // @public
 export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMetadata>)[], userAddress: Address): ActivityItem[];
@@ -17321,7 +18388,6 @@ export class ReadonlyToken {
     decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
     // (undocumented)
     protected readonly delegatedCredentials: DelegatedCredentialsManager;
-    discoverWrapper(coordinatorAddress: Address): Promise<Address | null>;
     protected emit(partial: ZamaSDKEventInput): void;
     // (undocumented)
     protected getAclAddress(): Promise<Address>;
@@ -17563,6 +18629,7 @@ export const SepoliaConfig: {
     readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+    readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 };
 
 // @public (undocumented)
@@ -20771,6 +21838,33 @@ export const TOKEN_TOPICS: readonly ["0x67500e8d0ed826d2194f514dd0d8124f35648ab6
 // @public
 export interface TokenConfig extends ReadonlyTokenConfig {
     wrapper?: Address;
+}
+
+// @public (undocumented)
+export interface TokenWrapperPair {
+    // (undocumented)
+    readonly confidentialTokenAddress: Address;
+    // (undocumented)
+    readonly isValid: boolean;
+    // (undocumented)
+    readonly tokenAddress: Address;
+}
+
+// @public
+export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
+    // (undocumented)
+    readonly confidential: {
+        readonly name: string;
+        readonly symbol: string;
+        readonly decimals: number;
+    };
+    // (undocumented)
+    readonly underlying: {
+        readonly name: string;
+        readonly symbol: string;
+        readonly decimals: number;
+        readonly totalSupply: bigint;
+    };
 }
 
 // @public
@@ -29619,7 +30713,7 @@ export interface WrappedEvent {
 }
 
 // @public
-export function wrapperExistsContract(coordinator: Address, tokenAddress: Address): {
+export function wrapperExistsContract(registryAddress: Address, tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [{
@@ -29653,6 +30747,44 @@ export function wrapperExistsContract(coordinator: Address, tokenAddress: Addres
     readonly functionName: "wrapperExists";
     readonly args: readonly [`0x${string}`];
 };
+
+// @public
+export class WrappersRegistry {
+    constructor(config: WrappersRegistryConfig);
+    getAddress(chainId: number): Address | undefined;
+    getConfidentialToken(tokenAddress: Address): Promise<{
+        confidentialTokenAddress: Address;
+        isValid: boolean;
+    } | null>;
+    getConfidentialTokenAddress(tokenAddress: Address): Promise<readonly [boolean, Address]>;
+    getRegistryAddress(): Promise<Address>;
+    getTokenAddress(confidentialTokenAddress: Address): Promise<readonly [boolean, Address]>;
+    getTokenPair(index: bigint): Promise<TokenWrapperPair>;
+    getTokenPairs(): Promise<readonly TokenWrapperPair[]>;
+    getTokenPairsLength(): Promise<bigint>;
+    getTokenPairsSlice(fromIndex: bigint, toIndex: bigint): Promise<readonly TokenWrapperPair[]>;
+    getUnderlyingToken(confidentialTokenAddress: Address): Promise<{
+        tokenAddress: Address;
+        isValid: boolean;
+    } | null>;
+    isConfidentialTokenValid(confidentialTokenAddress: Address): Promise<boolean>;
+    listPairs(options: ListPairsOptions & {
+        metadata: true;
+    }): Promise<PaginatedResult<TokenWrapperPairWithMetadata>>;
+    // (undocumented)
+    listPairs(options?: ListPairsOptions): Promise<PaginatedResult<TokenWrapperPair>>;
+    refresh(): void;
+    // (undocumented)
+    readonly signer: GenericSigner;
+    get ttlMs(): number;
+}
+
+// @public
+export interface WrappersRegistryConfig {
+    registryAddresses?: Record<number, Address>;
+    registryTTL?: number;
+    signer: GenericSigner;
+}
 
 // @public
 export type WriteContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>> = ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>;
@@ -29709,12 +30841,14 @@ export class ZamaSDK {
     allow(...contractAddresses: Address[]): Promise<void>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
+    createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
     readonly credentials: CredentialsManager;
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
     isAllowed(): Promise<boolean>;
+    readonly registry: WrappersRegistry;
     // (undocumented)
     readonly relayer: RelayerSDK;
     revoke(...contractAddresses: Address[]): Promise<void>;
@@ -29732,6 +30866,8 @@ export class ZamaSDK {
 export interface ZamaSDKConfig {
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
+    registryAddresses?: Record<number, Address>;
+    registryTTL?: number;
     relayer: RelayerSDK;
     sessionStorage?: GenericStorage;
     sessionTTL?: number | "infinite";
@@ -29741,7 +30877,7 @@ export interface ZamaSDKConfig {
 }
 
 // @public
-export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsAllowedEvent | CredentialsPersistFailedEvent | CredentialsCorruptedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsPersistFailedEvent | CredentialsAllowedEvent | CredentialsCorruptedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -29757,8 +30893,8 @@ export const ZamaSDKEvents: {
     readonly CredentialsCreating: "credentials:creating";
     readonly CredentialsCreated: "credentials:created";
     readonly CredentialsRevoked: "credentials:revoked";
-    readonly CredentialsAllowed: "credentials:allowed";
     readonly CredentialsPersistFailed: "credentials:persist_failed";
+    readonly CredentialsAllowed: "credentials:allowed";
     readonly CredentialsCorrupted: "credentials:corrupted";
     readonly SessionExpired: "session:expired";
     readonly EncryptStart: "encrypt:start";

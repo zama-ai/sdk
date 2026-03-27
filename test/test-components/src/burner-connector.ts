@@ -211,7 +211,7 @@ class BurnerWalletConnector {
     return [getAddress(account.address)];
   }
 
-  async onDisconnect(): Promise<void> {
+  onDisconnect(): void {
     this.config.emitter.emit("disconnect");
     this.connected = false;
   }

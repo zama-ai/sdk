@@ -1,18 +1,33 @@
 import type { Address } from "viem";
-import { getWrapperContract, wrapperExistsContract } from "../contracts";
-import type { GenericSigner } from "../types";
+import type { WrappersRegistry } from "../wrappers-registry";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
 export interface WrapperDiscoveryQueryConfig {
-  coordinatorAddress?: Address;
+  /**
+   * Address of any confidential token you control.
+   * Used to scope the query cache key and to gate whether the query
+   * is enabled — it does not affect which wrapper the registry returns.
+   */
+  tokenAddress?: Address;
+  /**
+   * The ERC-20 token address to discover the confidential wrapper for.
+   * The registry is resolved automatically from chain config.
+   */
+  erc20Address?: Address;
+  /**
+   * The resolved registry contract address for the current chain.
+   * Included in the query key so that switching chains invalidates
+   * stale cached results. Pass `undefined` when the chain ID is not
+   * yet known — the query will be disabled.
+   */
+  registryAddress?: Address;
   query?: Record<string, unknown>;
 }
 
 export function wrapperDiscoveryQueryOptions(
-  signer: GenericSigner,
-  tokenAddress: Address | undefined,
+  registry: WrappersRegistry,
   config: WrapperDiscoveryQueryConfig,
 ): QueryFactoryOptions<
   Address | null,
@@ -20,29 +35,25 @@ export function wrapperDiscoveryQueryOptions(
   Address | null,
   ReturnType<typeof zamaQueryKeys.wrapperDiscovery.token>
 > {
-  const queryKey = zamaQueryKeys.wrapperDiscovery.token(tokenAddress, config.coordinatorAddress);
+  const queryKey = zamaQueryKeys.wrapperDiscovery.token(
+    config.tokenAddress,
+    config.erc20Address,
+    config.registryAddress,
+  );
 
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey,
-    queryFn: async (context) => {
-      const [, { tokenAddress: keyTokenAddress, coordinatorAddress: keyCoordinatorAddress }] =
-        context.queryKey;
-      if (!keyTokenAddress) {
-        throw new Error("tokenAddress is required");
+    queryFn: async () => {
+      if (!config.erc20Address) {
+        throw new Error("erc20Address is required for wrapper discovery query");
       }
-      if (!keyCoordinatorAddress) {
-        throw new Error("coordinatorAddress is required");
-      }
-      const exists = await signer.readContract(
-        wrapperExistsContract(keyCoordinatorAddress, keyTokenAddress),
-      );
-      if (!exists) {
-        return null;
-      }
-      return signer.readContract(getWrapperContract(keyCoordinatorAddress, keyTokenAddress));
+      const result = await registry.getConfidentialToken(config.erc20Address);
+      return result ? result.confidentialTokenAddress : null;
     },
     staleTime: Infinity,
-    enabled: Boolean(tokenAddress && config.coordinatorAddress) && config.query?.enabled !== false,
+    enabled:
+      Boolean(config.tokenAddress && config.erc20Address && config.registryAddress) &&
+      config.query?.enabled !== false,
   };
 }

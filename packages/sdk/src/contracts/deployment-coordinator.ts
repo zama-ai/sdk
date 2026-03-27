@@ -7,13 +7,13 @@ import { deploymentCoordinatorAbi } from "../abi/deployment-coordinator.abi";
  * @example
  * ```ts
  * const wrapper = await signer.readContract(
- *   getWrapperContract(coordinatorAddress, tokenAddress),
+ *   getWrapperContract(registryAddress, tokenAddress),
  * );
  * ```
  */
-export function getWrapperContract(coordinator: Address, tokenAddress: Address) {
+export function getWrapperContract(registryAddress: Address, tokenAddress: Address) {
   return {
-    address: coordinator,
+    address: registryAddress,
     abi: deploymentCoordinatorAbi,
     functionName: "getWrapper",
     args: [tokenAddress],
@@ -26,13 +26,13 @@ export function getWrapperContract(coordinator: Address, tokenAddress: Address) 
  * @example
  * ```ts
  * const exists = await signer.readContract(
- *   wrapperExistsContract(coordinatorAddress, tokenAddress),
+ *   wrapperExistsContract(registryAddress, tokenAddress),
  * );
  * ```
  */
-export function wrapperExistsContract(coordinator: Address, tokenAddress: Address) {
+export function wrapperExistsContract(registryAddress: Address, tokenAddress: Address) {
   return {
-    address: coordinator,
+    address: registryAddress,
     abi: deploymentCoordinatorAbi,
     functionName: "wrapperExists",
     args: [tokenAddress],

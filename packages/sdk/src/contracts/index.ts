@@ -25,6 +25,7 @@ export {
   nameContract,
   symbolContract,
   decimalsContract,
+  erc20TotalSupplyContract,
   balanceOfContract,
   allowanceContract,
   approveContract,
@@ -55,5 +56,19 @@ export {
   getDelegationExpiryContract,
   isHandleDelegatedContract,
 } from "./acl";
+
+export {
+  wrappersRegistryAbi,
+  getTokenPairsContract,
+  getTokenPairsLengthContract,
+  getTokenPairsSliceContract,
+  getTokenPairContract,
+  getConfidentialTokenAddressContract,
+  getTokenAddressContract,
+  isConfidentialTokenValidContract,
+  type TokenWrapperPair,
+  type TokenWrapperPairWithMetadata,
+  type PaginatedResult,
+} from "./wrappers-registry";
 
 export { MAX_UINT64 } from "./constants";

@@ -66,6 +66,13 @@ import {
   revokeDelegationContract,
   getDelegationExpiryContract,
   isHandleDelegatedContract,
+  getTokenPairsContract,
+  getTokenPairsLengthContract,
+  getTokenPairsSliceContract,
+  getTokenPairContract,
+  getConfidentialTokenAddressContract,
+  getTokenAddressContract,
+  isConfidentialTokenValidContract,
 } from "@zama-fhe/sdk";
 ```
 
@@ -121,6 +128,22 @@ import {
 | `getBatchTransferFeeContract(feeManager)`                                  | Get batch transfer fee                |
 | `getFeeRecipientContract(feeManager)`                                      | Get fee recipient address             |
 | `confidentialBatchTransferContract(batcher, token, from, transfers, fees)` | Batch encrypted transfers             |
+
+## Registry
+
+| Builder                                                         | What it does                                           |
+| --------------------------------------------------------------- | ------------------------------------------------------ |
+| `getTokenPairsContract(registry)`                               | Fetch all token wrapper pairs                          |
+| `getTokenPairsLengthContract(registry)`                         | Get the number of pairs                                |
+| `getTokenPairsSliceContract(registry, fromIndex, toIndex)`      | Fetch a range of pairs (pagination)                    |
+| `getTokenPairContract(registry, index)`                         | Fetch a single pair by index                           |
+| `getConfidentialTokenAddressContract(registry, tokenAddress)`   | Look up confidential token for a plain ERC-20          |
+| `getTokenAddressContract(registry, confidentialTokenAddress)`   | Look up plain ERC-20 for a confidential token          |
+| `isConfidentialTokenValidContract(registry, confidentialToken)` | Check if a confidential token is valid in the registry |
+
+{% hint style="info" %}
+The [WrappersRegistry class](/reference/sdk/WrappersRegistry) wraps these builders with automatic address resolution. Use builders only when you need raw contract-level control.
+{% endhint %}
 
 ## Delegation
 

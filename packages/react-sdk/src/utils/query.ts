@@ -5,7 +5,9 @@ import {
   useQueries as tanstack_useQueries,
   useQuery as tanstack_useQuery,
   useSuspenseQuery as tanstack_useSuspenseQuery,
+  type UseQueryOptions,
   type UseQueryResult,
+  type UseSuspenseQueryOptions,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 import { hashFn } from "@zama-fhe/sdk/query";
@@ -14,35 +16,42 @@ import { hashFn } from "@zama-fhe/sdk/query";
  * Thin wrapper around TanStack's useQuery that injects our custom queryKeyHashFn.
  * Mirrors the wagmi pattern — the type safety boundary is at the factory and hook levels.
  *
- * The `options` parameter is typed as `any` because TanStack Query v5 has:
- * 1. Discriminated overloads around `initialData` (Defined vs Undefined)
- * 2. Function-typed fields (`staleTime`, `enabled`, `gcTime`) that are generic over `TQueryKey`
- *
- * Our factories produce options with specific tuple keys (e.g. `readonly ["zama.totalSupply", {...}]`)
- * whose function-typed fields are contravariant with `QueryKey` (`readonly unknown[]`).
- * Typing the parameter as `UseQueryOptions<TData, TError, TData, any>` still fails because
- * the query-key variance leaks through `staleTime`, `enabled`, etc.
- *
- * Hooks must pass explicit generics: `useQuery<DataType>({...})`.
+ * Callers typically specify only `<TData>` (e.g. `useQuery<PublicKeyData>(...)`) while
+ * factory options carry specific tuple keys (e.g. `readonly ["zama.publicKey"]`).
+ * We erase the QueryKey param via `AnyKeyQueryOptions` so callers don't need to
+ * spell out the key type — any QueryKey subtype is accepted.
  */
+type AnyKeyQueryOptions<TData, TError> = UseQueryOptions<
+  TData,
+  TError,
+  TData,
+  // oxlint-disable-next-line typescript/no-explicit-any
+  any
+>;
+type AnyKeySuspenseOptions<TData, TError> = UseSuspenseQueryOptions<
+  TData,
+  TError,
+  TData,
+  // oxlint-disable-next-line typescript/no-explicit-any
+  any
+>;
+
 export function useQuery<TData = unknown, TError = DefaultError>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  options: any,
+  options: AnyKeyQueryOptions<TData, TError>,
 ): UseQueryResult<TData, TError> {
   return tanstack_useQuery({
     ...options,
     queryKeyHashFn: hashFn,
-  }) as UseQueryResult<TData, TError>;
+  });
 }
 
 export function useSuspenseQuery<TData = unknown, TError = DefaultError>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  options: any,
+  options: AnyKeySuspenseOptions<TData, TError>,
 ): UseSuspenseQueryResult<TData, TError> {
   return tanstack_useSuspenseQuery({
     ...options,
     queryKeyHashFn: hashFn,
-  }) as UseSuspenseQueryResult<TData, TError>;
+  });
 }
 
 /**

@@ -34,7 +34,7 @@ export function useDelegateDecryption(
       try {
         options?.onSuccess?.(data, variables, onMutateResult, context);
       } finally {
-        context.client.invalidateQueries({ queryKey: zamaQueryKeys.delegationStatus.all });
+        void context.client.invalidateQueries({ queryKey: zamaQueryKeys.delegationStatus.all });
       }
     },
   });
