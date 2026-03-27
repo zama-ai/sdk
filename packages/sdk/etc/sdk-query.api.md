@@ -79,7 +79,7 @@ export interface ActivityLogMetadata {
 export type ActivityType = "transfer" | "shield" | "unshield_requested" | "unshield_started" | "unshield_finalized";
 
 // @public (undocumented)
-export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], StoredCredentials>;
+export function allowMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.allow"], Address[], void>;
 
 // @public (undocumented)
 export interface ApproveSubmittedEvent extends BaseEvent {
