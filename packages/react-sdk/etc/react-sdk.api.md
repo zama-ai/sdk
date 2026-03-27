@@ -100,6 +100,7 @@ import { delegateForUserDecryptionContract } from '@zama-fhe/sdk';
 import { DelegationContractIsSelfError } from '@zama-fhe/sdk';
 import { DelegationCooldownError } from '@zama-fhe/sdk';
 import { DelegationDelegateEqualsContractError } from '@zama-fhe/sdk';
+import { DelegationExpirationTooSoonError } from '@zama-fhe/sdk';
 import { DelegationExpiredError } from '@zama-fhe/sdk';
 import { DelegationExpiryUnchangedError } from '@zama-fhe/sdk';
 import { DelegationNotFoundError } from '@zama-fhe/sdk';
@@ -485,6 +486,8 @@ export { DelegationContractIsSelfError }
 export { DelegationCooldownError }
 
 export { DelegationDelegateEqualsContractError }
+
+export { DelegationExpirationTooSoonError }
 
 export { DelegationExpiredError }
 
