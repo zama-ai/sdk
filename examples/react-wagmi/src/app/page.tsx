@@ -68,7 +68,7 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { connect, isPending: isConnecting, error: connectError } = useConnect();
-  const { switchChain, isPending: isSwitching } = useSwitchChain();
+  const { switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
   const [selectedToken, setSelectedToken] = useState<TokenKey>("usdc");
 
@@ -225,6 +225,11 @@ export default function Home() {
         >
           {isSwitching ? "Switching…" : "Switch to Sepolia"}
         </button>
+        {switchError && (
+          <div className="alert alert-error card-status">
+            Could not switch to Sepolia. Please switch manually in your wallet.
+          </div>
+        )}
       </div>
     );
   }
@@ -336,11 +341,13 @@ export default function Home() {
       <DelegateDecryptionCard
         key={`grant-delegation-${address}-${selectedToken}`}
         tokenAddress={token.confidential}
+        disabled={actionsDisabled}
       />
 
       <RevokeDelegationCard
         key={`revoke-delegation-${address}-${selectedToken}`}
         tokenAddress={token.confidential}
+        disabled={actionsDisabled}
       />
 
       {/* ── Delegation — delegate perspective ────────────────────────────────
