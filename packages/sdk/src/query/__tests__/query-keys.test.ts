@@ -11,7 +11,7 @@ const OWNER_UPPER = "0xDE709F2102306220921060314715629080E2FB77";
 const WRAPPER_LOWER = "0x27b1fdb04752bbc536007a920d24acb045561c26";
 const WRAPPER_UPPER = "0x27B1FDB04752BBC536007A920D24ACB045561C26";
 const SPENDER_LOWER = "0xdbf03b407c01e7cd3cbea99509d93f8dddc8c6fb";
-const COORDINATOR_LOWER = "0xd1220a0cf47c7b9be7a2e6ba89f429762e7b9adb";
+const ERC20_LOWER = "0xd1220a0cf47c7b9be7a2e6ba89f429762e7b9adb";
 const TOKEN_B_LOWER = "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359";
 const HANDLE_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa";
 const HANDLE_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -149,7 +149,7 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.tokenMetadata.token(TOKEN_LOWER),
       zamaQueryKeys.isConfidential.token(TOKEN_LOWER),
       zamaQueryKeys.isWrapper.token(TOKEN_LOWER),
-      zamaQueryKeys.wrapperDiscovery.token(TOKEN_LOWER, COORDINATOR_LOWER),
+      zamaQueryKeys.wrapperDiscovery.token(TOKEN_LOWER, ERC20_LOWER),
       zamaQueryKeys.underlyingAllowance.token(TOKEN_LOWER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
       zamaQueryKeys.confidentialIsApproved.token(TOKEN_LOWER),
@@ -212,8 +212,8 @@ describe("zamaQueryKeys", () => {
       ],
       [zamaQueryKeys.isWrapper.token(TOKEN_LOWER), zamaQueryKeys.isWrapper.token(TOKEN_UPPER)],
       [
-        zamaQueryKeys.wrapperDiscovery.token(TOKEN_LOWER, COORDINATOR_LOWER),
-        zamaQueryKeys.wrapperDiscovery.token(TOKEN_UPPER, getAddress(COORDINATOR_LOWER)),
+        zamaQueryKeys.wrapperDiscovery.token(TOKEN_LOWER, ERC20_LOWER),
+        zamaQueryKeys.wrapperDiscovery.token(TOKEN_UPPER, getAddress(ERC20_LOWER)),
       ],
       [
         zamaQueryKeys.underlyingAllowance.token(TOKEN_LOWER),

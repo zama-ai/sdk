@@ -42,6 +42,7 @@ describe("ZamaSDKEvents constants", () => {
     expect(ZamaSDKEvents.UnshieldPhase1Submitted).toBe("unshield:phase1_submitted");
     expect(ZamaSDKEvents.UnshieldPhase2Started).toBe("unshield:phase2_started");
     expect(ZamaSDKEvents.UnshieldPhase2Submitted).toBe("unshield:phase2_submitted");
+    expect(ZamaSDKEvents.CredentialsPersistFailed).toBe("credentials:persist_failed");
     expect(ZamaSDKEvents.DelegationSubmitted).toBe("delegation:submitted");
     expect(ZamaSDKEvents.RevokeDelegationSubmitted).toBe("revokeDelegation:submitted");
   });

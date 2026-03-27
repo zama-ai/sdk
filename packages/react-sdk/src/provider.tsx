@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  Address,
   GenericSigner,
   GenericStorage,
   RelayerSDK,
@@ -43,6 +44,16 @@ export interface ZamaProviderProps extends PropsWithChildren {
    * - Positive number: seconds until the session signature expires and requires re-authentication.
    */
   sessionTTL?: number;
+  /**
+   * Per-chain wrappers registry address overrides, merged on top of built-in defaults.
+   * Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
+   */
+  registryAddresses?: Record<number, Address>;
+  /**
+   * How long cached registry results remain valid, in seconds.
+   * Default: `86400` (24 hours).
+   */
+  registryTTL?: number;
   /** Callback invoked on SDK lifecycle events. */
   onEvent?: ZamaSDKEventListener;
 }
@@ -67,14 +78,19 @@ export function ZamaProvider({
   sessionStorage,
   keypairTTL,
   sessionTTL,
+  registryAddresses,
+  registryTTL,
   onEvent,
 }: ZamaProviderProps) {
   const queryClient = useQueryClient();
 
   // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
   const onEventRef = useRef(onEvent);
+  const registryAddressesRef = useRef(registryAddresses);
+
   useEffect(() => {
     onEventRef.current = onEvent;
+    registryAddressesRef.current = registryAddresses;
   });
 
   const signerLifecycleCallbacks = useMemo(
@@ -98,10 +114,21 @@ export function ZamaProvider({
         sessionStorage,
         keypairTTL,
         sessionTTL,
+        registryAddresses: registryAddressesRef.current,
+        registryTTL,
         onEvent: onEventRef.current,
         signerLifecycleCallbacks,
       }),
-    [relayer, signer, storage, sessionStorage, keypairTTL, sessionTTL, signerLifecycleCallbacks],
+    [
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL,
+      sessionTTL,
+      registryTTL,
+      signerLifecycleCallbacks,
+    ],
   );
 
   // Clean up signer subscriptions on unmount without terminating the

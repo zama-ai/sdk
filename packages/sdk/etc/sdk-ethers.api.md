@@ -79,16 +79,37 @@ export { ProviderRpcError }
 export function readConfidentialBalanceOfContract(provider: EthersCallProvider, tokenAddress: Address, userAddress: Address): Promise<unknown>;
 
 // @public (undocumented)
+export function readConfidentialTokenAddressContract(provider: EthersCallProvider, registry: Address, tokenAddress: Address): Promise<unknown>;
+
+// @public (undocumented)
+export function readIsConfidentialTokenValidContract(provider: EthersCallProvider, registry: Address, confidentialTokenAddress: Address): Promise<unknown>;
+
+// @public (undocumented)
 export function readSupportsInterfaceContract(provider: EthersCallProvider, tokenAddress: Address, interfaceId: Address): Promise<unknown>;
+
+// @public (undocumented)
+export function readTokenAddressContract(provider: EthersCallProvider, registry: Address, confidentialTokenAddress: Address): Promise<unknown>;
+
+// @public (undocumented)
+export function readTokenPairContract(provider: EthersCallProvider, registry: Address, index: bigint): Promise<unknown>;
+
+// @public (undocumented)
+export function readTokenPairsContract(provider: EthersCallProvider, registry: Address): Promise<unknown>;
+
+// @public (undocumented)
+export function readTokenPairsLengthContract(provider: EthersCallProvider, registry: Address): Promise<unknown>;
+
+// @public (undocumented)
+export function readTokenPairsSliceContract(provider: EthersCallProvider, registry: Address, fromIndex: bigint, toIndex: bigint): Promise<unknown>;
 
 // @public (undocumented)
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address): Promise<unknown>;
 
 // @public (undocumented)
-export function readWrapperExistsContract(provider: EthersCallProvider, coordinator: Address, tokenAddress: Address): Promise<unknown>;
+export function readWrapperExistsContract(provider: EthersCallProvider, registryAddress: Address, tokenAddress: Address): Promise<unknown>;
 
 // @public (undocumented)
-export function readWrapperForTokenContract(provider: EthersCallProvider, coordinator: Address, tokenAddress: Address): Promise<unknown>;
+export function readWrapperForTokenContract(provider: EthersCallProvider, registryAddress: Address, tokenAddress: Address): Promise<unknown>;
 
 // Warning: (ae-forgotten-export) The symbol "EthersTransactionSigner" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts

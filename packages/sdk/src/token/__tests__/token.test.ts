@@ -310,36 +310,6 @@ describe("Token", () => {
     });
   });
 
-  describe("discoverWrapper", () => {
-    const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-    const WRAPPER_ADDR = "0xdiscoveredWrapper" as Address;
-
-    it("returns wrapper address when it exists", async ({ signer, token }) => {
-      vi.mocked(signer.readContract)
-        .mockResolvedValueOnce(true) // wrapperExists
-        .mockResolvedValueOnce(WRAPPER_ADDR); // getWrapper
-
-      const result = await token.discoverWrapper(COORDINATOR);
-
-      expect(result).toBe(WRAPPER_ADDR);
-      expect(signer.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "wrapperExists" }),
-      );
-      expect(signer.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "getWrapper" }),
-      );
-    });
-
-    it("returns null when wrapper does not exist", async ({ signer, token }) => {
-      vi.mocked(signer.readContract).mockResolvedValueOnce(false);
-
-      const result = await token.discoverWrapper(COORDINATOR);
-
-      expect(result).toBeNull();
-      expect(signer.readContract).toHaveBeenCalledOnce();
-    });
-  });
-
   describe("underlyingToken", () => {
     it("reads the underlying token address", async ({ signer, token }) => {
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
