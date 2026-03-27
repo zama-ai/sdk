@@ -8,10 +8,12 @@ import { createConfig, http, WagmiProvider } from "wagmi";
 import { anvil } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { burner } from "@zama-fhe/test-components";
-import { RelayerCleartext, hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { HardhatConfig, RelayerWeb } from "@zama-fhe/sdk";
 
 const anvilPort = process.env.NEXT_PUBLIC_ANVIL_PORT || "8545";
 const rpcUrl = `http://127.0.0.1:${anvilPort}`;
+const mockRelayerPort = process.env.NEXT_PUBLIC_MOCK_RELAYER_PORT || "4200";
+const mockRelayerUrl = `http://127.0.0.1:${mockRelayerPort}`;
 
 const wagmiConfig = createConfig({
   chains: [anvil],
@@ -30,7 +32,19 @@ const wagmiConfig = createConfig({
 
 const signer = new WagmiSigner({ config: wagmiConfig });
 const storage = new MemoryStorage();
-const relayer = new RelayerCleartext({ ...hardhatCleartextConfig, network: rpcUrl });
+const relayer = new RelayerWeb({
+  getChainId: async () => anvil.id,
+  transports: {
+    [anvil.id]: {
+      ...HardhatConfig,
+      relayerUrl: mockRelayerUrl,
+      network: rpcUrl,
+      chainId: anvil.id,
+    },
+  },
+  threads: 4,
+  security: { integrityCheck: false },
+});
 
 const queryClient = new QueryClient();
 

@@ -16,3 +16,6 @@ export const NODE_ANVIL_PORT = 8547;
 export const NEXTJS_PORT = 3100;
 
 export const VITE_PORT = 3200;
+
+/** Port for the mock relayer server (serves both CDN bundle and relayer API). */
+export const MOCK_RELAYER_PORT = 4200;
