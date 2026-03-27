@@ -44,6 +44,8 @@ export const ZamaErrorCode = {
   DelegationNotFound: "DELEGATION_NOT_FOUND",
   /** The delegation has expired. */
   DelegationExpired: "DELEGATION_EXPIRED",
+  /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
+  DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

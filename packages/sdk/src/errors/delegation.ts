@@ -35,3 +35,21 @@ export class DelegationExpiredError extends ZamaError {
     this.name = "DelegationExpiredError";
   }
 }
+
+/**
+ * Delegation exists on L1 but hasn't propagated to the gateway yet.
+ *
+ * After calling `delegateForUserDecryption()`, the delegation is recorded on-chain
+ * immediately. However, the gateway (deployed on Arbitrum) must sync this state
+ * via cross-chain event propagation, which typically takes 1–2 minutes.
+ *
+ * Calling `decryptBalanceAs` during this window will fail because the gateway's
+ * `isHandleDelegatedForUserDecryption()` check reads from its own synced copy
+ * of the ACL state, which hasn't been updated yet.
+ */
+export class DelegationNotPropagatedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.DelegationNotPropagated, message, options);
+    this.name = "DelegationNotPropagatedError";
+  }
+}
