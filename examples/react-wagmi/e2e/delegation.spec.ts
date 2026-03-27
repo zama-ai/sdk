@@ -30,12 +30,18 @@ test.describe("delegation section", () => {
   });
 
   test("Grant Access is enabled when a valid address is entered", async ({ page }) => {
+    // Wait for the registry to load and the first token to be auto-selected before
+    // filling the input. The delegation cards have keys that include selectedTokenAddress,
+    // so they remount when the registry resolves — filling before that clears the input.
+    await expect(page.getByRole("combobox")).not.toHaveValue("");
     const grantCard = page.locator(".card", { hasText: "Grant Decryption Access" });
     await grantCard.getByPlaceholder("Delegate address (0x…)").fill(VALID_DELEGATE);
     await expect(page.getByRole("button", { name: "Grant Access", exact: true })).toBeEnabled();
   });
 
   test("Revoke Access is enabled when a valid address is entered", async ({ page }) => {
+    // Same guard as Grant Access — wait for stable component state before filling.
+    await expect(page.getByRole("combobox")).not.toHaveValue("");
     const revokeCard = page.locator(".card", { hasText: "Revoke Decryption Access" });
     await revokeCard.getByPlaceholder("Delegate address (0x…)").fill(VALID_DELEGATE);
     await expect(page.getByRole("button", { name: "Revoke Access", exact: true })).toBeEnabled();
