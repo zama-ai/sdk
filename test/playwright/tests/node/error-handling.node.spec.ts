@@ -62,7 +62,9 @@ test("init failure resets so next call retries", async () => {
   using relayer = new RelayerNode({
     getChainId: async () => {
       callCount++;
-      if (callCount === 1) {throw new Error("transient failure");}
+      if (callCount === 1) {
+        throw new Error("transient failure");
+      }
       return HardhatConfig.chainId;
     },
     transports: {

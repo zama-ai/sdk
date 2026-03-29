@@ -151,7 +151,18 @@ jobs:
           path: |
             contracts/out
             contracts/cache
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml') }}
+            contracts/lib/forge-fhevm/out
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
+
+      - name: Install Soldeer dependencies
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+
+      - name: Build forge-fhevm contracts
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: cd contracts/lib/forge-fhevm && forge build
 
       - name: Build contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -164,7 +175,8 @@ jobs:
           path: |
             contracts/out
             contracts/cache
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml') }}
+            contracts/lib/forge-fhevm/out
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -238,7 +250,18 @@ jobs:
           path: |
             contracts/out
             contracts/cache
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml') }}
+            contracts/lib/forge-fhevm/out
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
+
+      - name: Install Soldeer dependencies
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+
+      - name: Build forge-fhevm contracts
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: cd contracts/lib/forge-fhevm && forge build
 
       - name: Build contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -251,7 +274,8 @@ jobs:
           path: |
             contracts/out
             contracts/cache
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml') }}
+            contracts/lib/forge-fhevm/out
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
