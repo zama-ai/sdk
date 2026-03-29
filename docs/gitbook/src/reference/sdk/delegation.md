@@ -41,6 +41,8 @@ await token.delegateDecryption({
 
 Both return `{ txHash, receipt }`.
 
+> **Gateway propagation delay:** After the delegation transaction is mined, allow **1–2 minutes** before calling `decryptBalanceAs`. The delegation is recorded on L1 immediately, but the gateway (deployed on Arbitrum) must sync the ACL state via cross-chain event propagation. Attempting delegated decryption before propagation completes will throw a `DelegationNotPropagatedError`.
+
 ### How expiration dates work
 
 The SDK accepts a standard JavaScript `Date` object and converts it to a **UTC Unix timestamp** (seconds since epoch) before sending it on-chain. Since `Date.getTime()` always returns UTC milliseconds regardless of the local timezone, you don't need to normalize manually — a `Date` constructed from any timezone produces the same on-chain value.
@@ -219,11 +221,13 @@ const sdk = createZamaSDK({
 | `DelegationCooldownError`       | Only one delegate/revoke per (delegator, delegate, contract) per block      |
 | `DelegationNotFoundError`       | No active delegation for this (delegator, delegate, contract)               |
 | `DelegationExpiredError`        | The delegation has expired                                                  |
+| `DelegationNotPropagatedError`  | Delegation exists on L1 but hasn't synced to the gateway yet (wait 1–2 min) |
 
 ```ts
 import {
   TransactionRevertedError,
   DecryptionFailedError,
+  DelegationNotPropagatedError,
   SigningRejectedError,
 } from "@zama-fhe/sdk";
 
@@ -242,6 +246,8 @@ try {
 } catch (error) {
   if (error instanceof SigningRejectedError) {
     // user cancelled the wallet prompt — do not retry automatically
+  } else if (error instanceof DelegationNotPropagatedError) {
+    // delegation hasn't synced to the gateway yet — retry after 1–2 minutes
   } else if (error instanceof DecryptionFailedError) {
     // delegated decryption failed
   }

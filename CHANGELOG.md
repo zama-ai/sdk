@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.5...v2.2.0-alpha.6) (2026-03-27)
+
+### Bug Fixes
+
+- **sdk:** add DelegationNotPropagatedError for gateway sync delay ([#177](https://github.com/zama-ai/sdk/issues/177)) ([f451fa2]())
+
 ## [2.2.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.4...v2.2.0-alpha.5) (2026-03-27)
 
 ### Features

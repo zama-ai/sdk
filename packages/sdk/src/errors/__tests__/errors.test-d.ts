@@ -15,6 +15,7 @@ import type {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  DelegationNotPropagatedError,
 } from "..";
 import { ZamaError, ZamaErrorCode, matchZamaError } from "..";
 
@@ -60,6 +61,7 @@ describe("error subclasses extend ZamaError", () => {
     expectTypeOf<DelegationCooldownError>().toExtend<ZamaError>();
     expectTypeOf<DelegationNotFoundError>().toExtend<ZamaError>();
     expectTypeOf<DelegationExpiredError>().toExtend<ZamaError>();
+    expectTypeOf<DelegationNotPropagatedError>().toExtend<ZamaError>();
   });
 });
 
