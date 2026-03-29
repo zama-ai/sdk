@@ -157,10 +157,15 @@ function parseBody(req) {
 // ── CORS ────────────────────────────────────────────────────
 
 function setCorsHeaders(res) {
-  // Use the origin stashed by the request handler, or fall back to "*".
-  const origin = res._corsOrigin || "*";
-  res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Credentials", "true");
+  // Reflect the request origin so credentials: "include" works.
+  // Never use "*" with Allow-Credentials: true (CORS spec violation).
+  const origin = res._corsOrigin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-csrf-token");
 }
@@ -441,7 +446,7 @@ const PORT = parseInt(process.argv[2] || "4200", 10);
 async function handleRequest(req, res) {
   // Stash the request origin for CORS headers (credentials: "include" requires
   // a specific origin, not "*").
-  res._corsOrigin = req.headers.origin || "*";
+  res._corsOrigin = req.headers.origin || "";
   setCorsHeaders(res);
 
   if (req.method === "OPTIONS") {
