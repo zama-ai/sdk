@@ -21,6 +21,8 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
+const PORT = parseInt(process.argv[2] || "4200", 10);
+
 // ── Constants (mirrored from SDK cleartext module) ──────────
 
 const MOCK_INPUT_SIGNER_PK = "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901";
@@ -156,11 +158,16 @@ function parseBody(req) {
 
 // ── CORS ────────────────────────────────────────────────────
 
+// Only allow credentialed CORS for a fixed set of trusted origins.
+// This prevents attackers from choosing an arbitrary origin to receive
+// responses that include credentials.
+const ALLOWED_CORS_ORIGINS = new Set([`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
+
 function setCorsHeaders(res) {
   // Reflect the request origin so credentials: "include" works.
   // Never use "*" with Allow-Credentials: true (CORS spec violation).
   const origin = res._corsOrigin;
-  if (origin) {
+  if (ALLOWED_CORS_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
   } else {
@@ -436,8 +443,6 @@ function handleKeyurl(_req, res) {
 }
 
 // ── Server ──────────────────────────────────────────────────
-
-const PORT = parseInt(process.argv[2] || "4200", 10);
 
 /**
  * @param {import("node:http").IncomingMessage} req
