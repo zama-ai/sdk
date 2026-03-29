@@ -147,6 +147,7 @@ export {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  DelegationNotPropagatedError,
   matchZamaError,
 } from "./errors";
 

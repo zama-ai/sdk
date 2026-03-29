@@ -20,6 +20,7 @@ import {
   DecryptionFailedError,
   DelegationExpiredError,
   DelegationNotFoundError,
+  DelegationNotPropagatedError,
   NoCiphertextError,
   RelayerRequestFailedError,
   SigningFailedError,
@@ -703,6 +704,7 @@ export class ReadonlyToken {
    * @returns The decrypted plaintext balance as a bigint.
    * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
    * @throws {@link DelegationExpiredError} if the delegation has expired.
+   * @throws {@link DelegationNotPropagatedError} if the delegation exists on L1 but hasn't propagated to the gateway yet (typically 1–2 min after granting).
    * @throws {@link DecryptionFailedError} if delegated decryption fails or the relayer returns no value.
    * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
    * @throws {@link SigningFailedError} if the signing operation fails.
@@ -780,7 +782,7 @@ export class ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      throw wrapDecryptError(error, "Failed to decrypt delegated balance");
+      throw wrapDecryptError(error, "Failed to decrypt delegated balance", true);
     }
   }
 
@@ -929,11 +931,21 @@ export class ReadonlyToken {
   }
 }
 
-function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
+/**
+ * Inspect a caught error for an HTTP status code and return the appropriate
+ * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
+ * other HTTP errors, or the generic DecryptionFailedError as fallback).
+ *
+ * When `isDelegated` is true and the relayer returns a 500, the error is
+ * wrapped as {@link DelegationNotPropagatedError} because the most likely
+ * cause is that the gateway hasn't synced the delegation from L1 yet.
+ */
+function wrapDecryptError(error: unknown, fallbackMessage: string, isDelegated = false): Error {
   if (
     error instanceof DecryptionFailedError ||
     error instanceof NoCiphertextError ||
     error instanceof RelayerRequestFailedError ||
+    error instanceof DelegationNotPropagatedError ||
     error instanceof SigningRejectedError ||
     error instanceof SigningFailedError
   ) {
@@ -952,6 +964,16 @@ function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   if (statusCode === 400) {
     return new NoCiphertextError(
       error instanceof Error ? error.message : "No ciphertext for this account",
+      { cause: error },
+    );
+  }
+
+  if (isDelegated && statusCode === 500) {
+    return new DelegationNotPropagatedError(
+      "Delegated decryption failed with a server error. " +
+        "This is most commonly caused by the delegation not having propagated to the gateway yet — " +
+        "after granting delegation, allow 1–2 minutes for cross-chain synchronization before retrying. " +
+        "If the error persists, the gateway or relayer may be experiencing an unrelated issue.",
       { cause: error },
     );
   }

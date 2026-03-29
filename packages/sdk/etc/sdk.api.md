@@ -7072,6 +7072,11 @@ export class DelegationNotFoundError extends ZamaError {
 }
 
 // @public
+export class DelegationNotPropagatedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class DelegationSelfNotAllowedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -30580,7 +30585,8 @@ export const ZamaErrorCode: {
     readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED"; /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
     readonly DelegationCooldown: "DELEGATION_COOLDOWN"; /** No active delegation found for this (delegator, delegate, contract) tuple. */
     readonly DelegationNotFound: "DELEGATION_NOT_FOUND"; /** The delegation has expired. */
-    readonly DelegationExpired: "DELEGATION_EXPIRED";
+    readonly DelegationExpired: "DELEGATION_EXPIRED"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
+    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
 };
 
 // @public
