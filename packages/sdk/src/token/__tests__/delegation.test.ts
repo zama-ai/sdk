@@ -466,6 +466,44 @@ describe("decryptBalanceAs", () => {
       expect((err as { code: string }).code).toBe("RELAYER_REQUEST_FAILED");
     }
   });
+
+  it("throws DelegationNotPropagatedError when relayer returns 500 in delegated context", async ({
+    signer,
+    relayer,
+    readonlyToken,
+    handle,
+    tokenAddress,
+    delegatorAddress,
+  }) => {
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce(handle) // confidentialBalanceOf
+      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
+      domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: "0xkms" },
+      types: { DelegatedUserDecryptRequestVerification: [] },
+      message: {
+        publicKey: "0xpub",
+        contractAddresses: [tokenAddress],
+        delegatorAddress,
+        startTimestamp: "1000",
+        durationDays: "1",
+        extraData: "0x",
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    const serverError = new Error("Internal server error") as Error & { statusCode?: number };
+    serverError.statusCode = 500;
+    vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValueOnce(serverError);
+
+    try {
+      await readonlyToken.decryptBalanceAs({ delegatorAddress });
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect((err as { code: string }).code).toBe("DELEGATION_NOT_PROPAGATED");
+      expect((err as { cause: unknown }).cause).toBe(serverError);
+      expect((err as { message: string }).message).toContain("most commonly caused");
+    }
+  });
 });
 
 describe("batch delegation", () => {

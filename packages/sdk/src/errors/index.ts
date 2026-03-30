@@ -9,4 +9,5 @@ export {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  DelegationNotPropagatedError,
 } from "./delegation";

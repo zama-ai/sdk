@@ -12,6 +12,7 @@ import {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  DelegationNotPropagatedError,
 } from "..";
 import { wrapSigningError } from "../signing";
 
@@ -253,5 +254,20 @@ describe("DelegationExpiredError", () => {
     expect(err.code).toBe(ZamaErrorCode.DelegationExpired);
     expect(err.name).toBe("DelegationExpiredError");
     expect(err.message).toBe("expired");
+  });
+});
+
+describe("DelegationNotPropagatedError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationNotPropagatedError("not synced");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationNotPropagatedError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationNotPropagatedError("not synced");
+    expect(err.code).toBe(ZamaErrorCode.DelegationNotPropagated);
+    expect(err.name).toBe("DelegationNotPropagatedError");
+    expect(err.message).toBe("not synced");
   });
 });
