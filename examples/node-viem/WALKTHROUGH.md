@@ -123,11 +123,18 @@ thread. A single instance is shared across `sdkA` and `sdkB`.
 
 ```ts
 const sdkA = new ZamaSDK({ relayer, signer: signerA, storage: new MemoryStorage() });
-const tokenA = sdkA.createToken(CUSDT_ADDRESS);
+
+// Resolve the confidential wrapper address via the on-chain registry.
+const registryResult = await sdkA.registry.getConfidentialToken(TOKEN_ADDRESS as Address);
+if (!registryResult) throw new Error(`No confidential wrapper registered for ${TOKEN_ADDRESS}`);
+const { confidentialTokenAddress } = registryResult;
+
+const tokenA = sdkA.createToken(TOKEN_ADDRESS as Address, confidentialTokenAddress);
 ```
 
-`createToken(address)` takes the ERC-7984 wrapper address (the confidential token).
-The underlying ERC-20 address is resolved on-chain when needed (e.g. during `shield`).
+`createToken(erc20Address, wrapperAddress)` takes both the underlying ERC-20 address and
+the ERC-7984 wrapper address. The wrapper address is resolved at runtime via
+`sdk.registry.getConfidentialToken()` — no hardcoded wrapper address is needed.
 
 `MemoryStorage` stores FHE keypairs and EIP-712 session credentials in memory.
 Credentials are lost when the process exits — see [Storage](#storage) below.
@@ -302,8 +309,10 @@ Account B will fail with an authorization error. A follow-up `isDelegated` call
 | --------- | -------------------------------------------- | -------------------------------------------- |
 | USDT Mock | `0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0` | `0x4E7B06D78965594eB5EF5414c357ca21E1554491` |
 
-Both addresses are defined as constants in `src/index.ts`. If they change
-(redeployment), update them there.
+The ERC-20 address is pre-configured in `.env.example`. The confidential wrapper
+address is resolved at runtime via `sdk.registry.getConfidentialToken()` — no
+hardcoded wrapper address is required. If the USDT mock is redeployed, update
+`TOKEN_ADDRESS` in your `.env`.
 
 ---
 
