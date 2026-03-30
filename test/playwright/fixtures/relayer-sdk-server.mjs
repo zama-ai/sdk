@@ -20,8 +20,7 @@ import {
   toHex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-
-const PORT = parseInt(process.argv[2] || "4200", 10);
+import { NEXTJS_PORT, VITE_PORT } from "./constants";
 
 // ── Constants (mirrored from SDK cleartext module) ──────────
 
@@ -159,12 +158,11 @@ function parseBody(req) {
 // ── CORS ────────────────────────────────────────────────────
 
 // Only allow credentialed CORS for trusted localhost origins.
-// The browser origin is the *app* server (3100/3200), not the relayer port.
 const ALLOWED_CORS_ORIGINS = new Set([
-  "http://localhost:3100",
-  "http://127.0.0.1:3100",
-  "http://localhost:3200",
-  "http://127.0.0.1:3200",
+  `http://localhost:${NEXTJS_PORT}`,
+  `http://127.0.0.1:${NEXTJS_PORT}`,
+  `http://localhost:${VITE_PORT}`,
+  `http://127.0.0.1:${VITE_PORT}`,
 ]);
 
 function setCorsHeaders(res) {
@@ -447,6 +445,8 @@ function handleKeyurl(_req, res) {
 }
 
 // ── Server ──────────────────────────────────────────────────
+
+const PORT = parseInt(process.argv[2] || "4200", 10);
 
 /**
  * @param {import("node:http").IncomingMessage} req
