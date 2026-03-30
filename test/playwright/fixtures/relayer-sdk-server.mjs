@@ -20,7 +20,10 @@ import {
   toHex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { NEXTJS_PORT, VITE_PORT } from "./constants";
+
+// Inline port constants — this .mjs file runs as plain ESM and cannot import .ts modules.
+const NEXTJS_PORT = 3100;
+const VITE_PORT = 3200;
 
 // ── Constants (mirrored from SDK cleartext module) ──────────
 
