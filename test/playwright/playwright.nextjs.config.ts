@@ -33,11 +33,6 @@ export default defineConfig<{}, WorkerFixtures>({
   ],
   webServer: [
     {
-      command: `node fixtures/relayer-sdk-server.mjs ${MOCK_RELAYER_PORT}`,
-      port: MOCK_RELAYER_PORT,
-      reuseExistingServer: !CI,
-    },
-    {
       command: `./start-anvil.sh ${NEXTJS_ANVIL_PORT}`,
       name: "anvil-nextjs",
       wait: {
