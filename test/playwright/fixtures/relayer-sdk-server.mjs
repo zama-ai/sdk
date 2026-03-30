@@ -27,15 +27,25 @@ const VITE_PORT = 3200;
 
 // ── Constants (mirrored from SDK cleartext module) ──────────
 
+/** @type {`0x${string}`} Private key for the mock input-verification signer. */
 const MOCK_INPUT_SIGNER_PK = "0x7ec8ada6642fc4ccfb7729bc29c17cf8d21b61abd5642d1db992c0b8672ab901";
+/** @type {`0x${string}`} Private key for the mock KMS decryption signer. */
 const MOCK_KMS_SIGNER_PK = "0x388b7680e4e1afa06efbfd45cdd1fe39f3c6af381df6555a19661f283b97de91";
 
+/** Version byte appended to every mock handle. */
 const HANDLE_VERSION = 0;
+/** Bitmask that isolates the pre-handle portion (clears index, chain, type, version). */
 const PREHANDLE_MASK = 0xffffffffffffffffffffffffffffffffffffffffff0000000000000000000000n;
 
+/** Domain separator prepended when hashing raw ciphertexts. */
 const RAW_CT_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_rct");
+/** Domain separator prepended when hashing handles. */
 const HANDLE_HASH_DOMAIN_SEPARATOR = toBytes("ZK-w_hdl");
 
+/**
+ * Maps FHE type names (`ebool`, `euint8`, …) to their on-chain type IDs.
+ * @type {Record<string, number>}
+ */
 const FHE_TYPE_NAME_TO_ID = {
   ebool: 0,
   euint8: 2,
@@ -47,6 +57,10 @@ const FHE_TYPE_NAME_TO_ID = {
   euint256: 8,
 };
 
+/**
+ * Maps FHE type IDs to their bit-width (used for byte-length padding).
+ * @type {Record<number, number>}
+ */
 const FHE_TYPE_ID_TO_BITS = {
   0: 2,
   2: 8,
@@ -74,16 +88,36 @@ const HARDHAT_EXECUTOR = "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
 
 // ── Helpers ─────────────────────────────────────────────────
 
+/**
+ * Creates a viem public client connected to the given JSON-RPC URL.
+ * @param {string} networkUrl - The JSON-RPC endpoint (e.g. anvil).
+ * @returns {import("viem").PublicClient}
+ */
 function getClient(networkUrl) {
   return createPublicClient({ transport: http(networkUrl) });
 }
 
+/**
+ * Converts a cleartext value into a zero-padded byte array whose length
+ * matches the FHE type's bit-width.
+ * @param {bigint} cleartext
+ * @param {number} fheTypeId
+ * @returns {Uint8Array}
+ */
 function cleartextToBytes(cleartext, fheTypeId) {
   const bits = FHE_TYPE_ID_TO_BITS[fheTypeId];
   const byteLength = Math.ceil(bits / 8);
   return toBytes(pad(toHex(cleartext), { size: byteLength }));
 }
 
+/**
+ * Produces a deterministic mock ciphertext hash from a type, cleartext, and
+ * random nonce — mirrors the SDK's cleartext-mode logic.
+ * @param {number} fheTypeId
+ * @param {bigint} cleartext
+ * @param {Uint8Array} random32 - 32-byte random nonce.
+ * @returns {`0x${string}`} The keccak256 mock ciphertext hash.
+ */
 function computeMockCiphertext(fheTypeId, cleartext, random32) {
   const clearBytes = cleartextToBytes(cleartext, fheTypeId);
   const inner = keccak256(
@@ -92,6 +126,17 @@ function computeMockCiphertext(fheTypeId, cleartext, random32) {
   return keccak256(concat([toHex(RAW_CT_HASH_DOMAIN_SEPARATOR), inner]));
 }
 
+/**
+ * Derives a 32-byte input handle from a ciphertext blob hash, slot index, FHE
+ * type, ACL address, and chain ID.  The handle encodes all of these fields in
+ * fixed bit-ranges so they can be extracted on-chain.
+ * @param {`0x${string}`} mockCiphertext - Hash of the ciphertext blob.
+ * @param {number} index - Zero-based slot index within the input list.
+ * @param {number} fheTypeId
+ * @param {`0x${string}`} aclAddress
+ * @param {bigint} chainId
+ * @returns {`0x${string}`} A 32-byte hex handle.
+ */
 function computeInputHandle(mockCiphertext, index, fheTypeId, aclAddress, chainId) {
   const blobHash = keccak256(concat([toHex(RAW_CT_HASH_DOMAIN_SEPARATOR), mockCiphertext]));
   const handleHash = keccak256(
@@ -112,6 +157,16 @@ function computeInputHandle(mockCiphertext, index, fheTypeId, aclAddress, chainI
   return toHex(handle, { size: 32 });
 }
 
+/**
+ * Decodes a raw `uint256` plaintext into its JS-native representation based on
+ * the FHE type byte embedded in the handle.
+ *  - `ebool` (type 0) → `boolean`
+ *  - `eaddress` (type 7) → checksummed hex address
+ *  - everything else → `bigint`
+ * @param {`0x${string}`} handle - The 32-byte handle whose type byte is inspected.
+ * @param {bigint} rawValue - The raw plaintext read from the executor.
+ * @returns {boolean | `0x${string}` | bigint}
+ */
 function decodeClearValueType(handle, rawValue) {
   const typeByte = Number((BigInt(handle) >> 8n) & 0xffn);
   if (typeByte === 0) {
@@ -123,6 +178,12 @@ function decodeClearValueType(handle, rawValue) {
   return rawValue;
 }
 
+/**
+ * Converts a user-supplied `{ type, value }` entry into a `{ fheTypeId, value }`
+ * pair suitable for the mock encryption pipeline.
+ * @param {{ type: string; value: string }} entry
+ * @returns {{ fheTypeId: number; value: bigint }}
+ */
 function normalizeValue(entry) {
   const fheTypeId = FHE_TYPE_NAME_TO_ID[entry.type];
   if (fheTypeId === undefined) {
@@ -143,6 +204,11 @@ function normalizeValue(entry) {
 
 // ── JSON body helper with BigInt revival ────────────────────
 
+/**
+ * Buffers and JSON-parses the request body.
+ * @param {import("node:http").IncomingMessage} req
+ * @returns {Promise<unknown>}
+ */
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let data = "";
@@ -160,7 +226,11 @@ function parseBody(req) {
 
 // ── CORS ────────────────────────────────────────────────────
 
-// Only allow credentialed CORS for trusted localhost origins.
+/**
+ * Only allow credentialed CORS for trusted localhost origins (the app
+ * dev-servers, not the relayer itself).
+ * @type {Set<string>}
+ */
 const ALLOWED_CORS_ORIGINS = new Set([
   `http://localhost:${NEXTJS_PORT}`,
   `http://127.0.0.1:${NEXTJS_PORT}`,
@@ -168,9 +238,13 @@ const ALLOWED_CORS_ORIGINS = new Set([
   `http://127.0.0.1:${VITE_PORT}`,
 ]);
 
+/**
+ * Sets CORS response headers.  If the request origin is in the allowlist the
+ * origin is reflected with `Access-Control-Allow-Credentials: true`; otherwise
+ * a wildcard `*` is used (no credentials).
+ * @param {import("node:http").ServerResponse} res
+ */
 function setCorsHeaders(res) {
-  // Reflect the request origin so credentials: "include" works.
-  // Never use "*" with Allow-Credentials: true (CORS spec violation).
   const origin = res._corsOrigin;
   if (ALLOWED_CORS_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
@@ -182,6 +256,12 @@ function setCorsHeaders(res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-csrf-token");
 }
 
+/**
+ * Sends a JSON response, serialising `bigint` values as strings.
+ * @param {import("node:http").ServerResponse} res
+ * @param {unknown} data
+ * @param {number} [status=200]
+ */
 function sendJson(res, data, status = 200) {
   setCorsHeaders(res);
   res.writeHead(status, { "Content-Type": "application/json" });
@@ -190,6 +270,12 @@ function sendJson(res, data, status = 200) {
   );
 }
 
+/**
+ * Sends a JSON error response.
+ * @param {import("node:http").ServerResponse} res
+ * @param {string} message
+ * @param {number} [status=500]
+ */
 function sendError(res, message, status = 500) {
   setCorsHeaders(res);
   res.writeHead(status, { "Content-Type": "application/json" });
@@ -198,6 +284,15 @@ function sendError(res, message, status = 500) {
 
 // ── Route: POST /encrypt ────────────────────────────────────
 
+/**
+ * Encrypts a list of FHE values, producing mock handles and a signed input
+ * proof that the on-chain `InputVerification` contract will accept.
+ *
+ * Expected body: `{ values, contractAddress, userAddress, chainId,
+ *   aclContractAddress, gatewayChainId, verifyingContractAddressInputVerification }`
+ * @param {import("node:http").IncomingMessage} req
+ * @param {import("node:http").ServerResponse} res
+ */
 async function handleEncrypt(req, res) {
   const body = await parseBody(req);
   const {
@@ -270,6 +365,16 @@ async function handleEncrypt(req, res) {
 
 // ── Route: POST /user-decrypt ───────────────────────────────
 
+/**
+ * Decrypts one or more handles on behalf of an authorised user.
+ * Verifies that both the requesting user and the originating contract are
+ * allowed by the ACL before returning the cleartext values.
+ *
+ * Expected body: `{ handles: [{ handle, contractAddress }], signerAddress,
+ *   network, aclContractAddress, executorAddress? }`
+ * @param {import("node:http").IncomingMessage} req
+ * @param {import("node:http").ServerResponse} res
+ */
 async function handleUserDecrypt(req, res) {
   const body = await parseBody(req);
   const { handles, network, aclContractAddress, executorAddress } = body;
@@ -320,6 +425,16 @@ async function handleUserDecrypt(req, res) {
 
 // ── Route: POST /public-decrypt ─────────────────────────────
 
+/**
+ * Publicly decrypts handles that have been marked as allowed-for-decryption in
+ * the ACL.  Returns cleartext values together with an ABI-encoded blob and a
+ * KMS-signed decryption proof consumable by the on-chain `Decryption` verifier.
+ *
+ * Expected body: `{ handles, network, aclContractAddress,
+ *   verifyingContractAddressDecryption, gatewayChainId, executorAddress? }`
+ * @param {import("node:http").IncomingMessage} req
+ * @param {import("node:http").ServerResponse} res
+ */
 async function handlePublicDecrypt(req, res) {
   const body = await parseBody(req);
   const {
@@ -392,6 +507,16 @@ async function handlePublicDecrypt(req, res) {
 
 // ── Route: POST /delegated-user-decrypt ─────────────────────
 
+/**
+ * Decrypts handles on behalf of a delegate who has been granted permission by
+ * the original delegator.  Checks `isHandleDelegatedForUserDecryption` on the
+ * ACL for every handle before reading plaintexts.
+ *
+ * Expected body: `{ handles: [{ handle, contractAddress }], delegatorAddress,
+ *   delegateAddress, network, aclContractAddress, executorAddress? }`
+ * @param {import("node:http").IncomingMessage} req
+ * @param {import("node:http").ServerResponse} res
+ */
 async function handleDelegatedUserDecrypt(req, res) {
   const body = await parseBody(req);
   const {
@@ -437,6 +562,12 @@ async function handleDelegatedUserDecrypt(req, res) {
 
 // ── Route: GET /keyurl ──────────────────────────────────────
 
+/**
+ * Returns a stub FHE public-key descriptor.  The E2E tests don't perform real
+ * FHE operations, so the payload is intentionally minimal.
+ * @param {import("node:http").IncomingMessage} _req
+ * @param {import("node:http").ServerResponse} res
+ */
 function handleKeyurl(_req, res) {
   sendJson(res, {
     fhePublicKey: {
@@ -449,9 +580,12 @@ function handleKeyurl(_req, res) {
 
 // ── Server ──────────────────────────────────────────────────
 
+/** Listening port — overridable via CLI argument (`node server.mjs <port>`). */
 const PORT = parseInt(process.argv[2] || "4200", 10);
 
 /**
+ * Top-level request dispatcher.  Stashes the `Origin` header for CORS, handles
+ * preflight `OPTIONS`, then routes to the appropriate handler by method + path.
  * @param {import("node:http").IncomingMessage} req
  * @param {import("node:http").ServerResponse} res
  */
