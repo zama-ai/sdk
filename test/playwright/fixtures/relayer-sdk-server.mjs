@@ -158,10 +158,14 @@ function parseBody(req) {
 
 // ── CORS ────────────────────────────────────────────────────
 
-// Only allow credentialed CORS for a fixed set of trusted origins.
-// This prevents attackers from choosing an arbitrary origin to receive
-// responses that include credentials.
-const ALLOWED_CORS_ORIGINS = new Set([`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
+// Only allow credentialed CORS for trusted localhost origins.
+// The browser origin is the *app* server (3100/3200), not the relayer port.
+const ALLOWED_CORS_ORIGINS = new Set([
+  "http://localhost:3100",
+  "http://127.0.0.1:3100",
+  "http://localhost:3200",
+  "http://127.0.0.1:3200",
+]);
 
 function setCorsHeaders(res) {
   // Reflect the request origin so credentials: "include" works.
