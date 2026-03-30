@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { signerAddressQueryOptions } from "@zama-fhe/sdk/query";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { useQuery } from "../../utils/query";
 import { useConfidentialBalances } from "../use-confidential-balances";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -11,12 +11,12 @@ const OWNER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const HANDLE_A = `0x${"aa".repeat(32)}` as Address;
 const HANDLE_B = `0x${"bb".repeat(32)}` as Address;
 
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual("@tanstack/react-query");
+vi.mock("../../utils/query", async () => {
+  const actual = await vi.importActual("../../utils/query");
   return { ...actual, useQuery: vi.fn() };
 });
 
-vi.mock("../provider", () => ({
+vi.mock("../../provider", () => ({
   useZamaSDK: vi.fn(() => ({
     signer: { getAddress: vi.fn().mockResolvedValue(OWNER) },
     createReadonlyToken: vi.fn((address: Address) => ({ address })),
