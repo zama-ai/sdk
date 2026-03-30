@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.2.0-alpha.9](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.8...v2.2.0-alpha.9) (2026-03-30)
+
+## [2.2.0-alpha.8](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.7...v2.2.0-alpha.8) (2026-03-30)
+
+### Features
+
+- **example-hoodi:** upgrade to SDK 2.2.0-alpha.4 + registry + ERC-7984 flows ([#179](https://github.com/zama-ai/sdk/issues/179)) ([6819c13]())
+
+## [2.2.0-alpha.7](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.6...v2.2.0-alpha.7) (2026-03-30)
+
+## [2.2.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.5...v2.2.0-alpha.6) (2026-03-27)
+
+### Bug Fixes
+
+- **sdk:** add DelegationNotPropagatedError for gateway sync delay ([#177](https://github.com/zama-ai/sdk/issues/177)) ([f451fa2]())
+
+## [2.2.0-alpha.5](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.4...v2.2.0-alpha.5) (2026-03-27)
+
+### Features
+
+- **example-react-wagmi:** upgrade to wagmi v3 with full ERC-7984 flows (SDK-37) ([#160](https://github.com/zama-ai/sdk/issues/160)) ([a6386f8]())
+
+## [2.2.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.3...v2.2.0-alpha.4) (2026-03-27)
+
+### Features
+
+- **react-viem:** upgrade to SDK 2.1.0-alpha.2 + Sepolia + delegation flows (SDK-36) ([#150](https://github.com/zama-ai/sdk/issues/150)) ([fe7dfc0]()), closes [#1]() [#4]() [#6]() [#7]() [#9]() [#10]()
+
 ## [2.2.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.2...v2.2.0-alpha.3) (2026-03-27)
 
 ### Features

@@ -153,6 +153,7 @@ export {
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
   BalanceCheckUnavailableError,
+  DelegationNotPropagatedError,
   matchZamaError,
 } from "./errors";
 

@@ -1,15 +1,18 @@
 import type { ReactNode } from "react";
-import { Providers } from "../providers";
+import { ClientProviders } from "./client-providers";
+import "./globals.css";
 
 export const metadata = {
-  title: "Confidential Token Demo",
+  title: "Sepolia Confidential Token Quickstart",
+  description:
+    "Quickstart demo for ERC-7984 confidential tokens on Sepolia testnet using the Zama FHE SDK.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

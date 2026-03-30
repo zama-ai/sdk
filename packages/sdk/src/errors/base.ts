@@ -50,6 +50,8 @@ export const ZamaErrorCode = {
   InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE",
   /** Balance validation could not be performed (no cached credentials and decryption not possible). */
   BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE",
+  /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
+  DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

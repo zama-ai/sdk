@@ -767,6 +767,13 @@ export class Token extends ReadonlyToken {
    * Delegate decryption rights for this token to another address.
    * Calls `ACL.delegateForUserDecryption()` on-chain.
    *
+   * **Important:** After the transaction is mined, allow **1–2 minutes** before
+   * calling {@link ReadonlyToken.decryptBalanceAs | decryptBalanceAs}. The delegation
+   * is recorded on L1 immediately, but the gateway (on Arbitrum) must sync the
+   * ACL state via cross-chain event propagation. Attempting delegated decryption
+   * before propagation completes will throw a
+   * {@link DelegationNotPropagatedError}.
+   *
    * @param delegateAddress - Address to delegate decryption rights to.
    * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
    * @returns The transaction hash and mined receipt.

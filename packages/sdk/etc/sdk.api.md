@@ -7077,6 +7077,11 @@ export class DelegationNotFoundError extends ZamaError {
 }
 
 // @public
+export class DelegationNotPropagatedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class DelegationSelfNotAllowedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -30622,7 +30627,8 @@ export const ZamaErrorCode: {
     readonly DelegationExpired: "DELEGATION_EXPIRED"; /** Confidential (cToken) balance is insufficient for the requested operation. */
     readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE"; /** ERC-20 balance is insufficient for the requested shield amount. */
     readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE"; /** Balance validation could not be performed (no cached credentials and decryption not possible). */
-    readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE";
+    readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
+    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
 };
 
 // @public
