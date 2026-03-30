@@ -369,13 +369,13 @@ last SDK instance to avoid dangling worker threads.
 
 ## Environment variables
 
-| Variable               | Required | Description                                                         |
-| ---------------------- | -------- | ------------------------------------------------------------------- |
-| `PRIVATE_KEY`          | Yes      | Private key for Account A (hex, `0x`-prefixed)                      |
-| `DELEGATE_PRIVATE_KEY` | Yes      | Private key for Account B (hex, `0x`-prefixed)                      |
-| `SEPOLIA_RPC_URL`      | Yes      | Sepolia RPC endpoint                                                |
-| `TOKEN_ADDRESS`        | Yes      | ERC-20 token address (pre-set to USDT mock in `.env.example`)       |
-| `RELAYER_API_KEY`      | No       | API key for the Zama relayer (Mainnet only)                         |
+| Variable               | Required | Description                                                   |
+| ---------------------- | -------- | ------------------------------------------------------------- |
+| `PRIVATE_KEY`          | Yes      | Private key for Account A (hex, `0x`-prefixed)                |
+| `DELEGATE_PRIVATE_KEY` | Yes      | Private key for Account B (hex, `0x`-prefixed)                |
+| `SEPOLIA_RPC_URL`      | Yes      | Sepolia RPC endpoint                                          |
+| `TOKEN_ADDRESS`        | Yes      | ERC-20 token address (pre-set to USDT mock in `.env.example`) |
+| `RELAYER_API_KEY`      | No       | API key for the Zama relayer (Mainnet only)                   |
 
 ---
 
