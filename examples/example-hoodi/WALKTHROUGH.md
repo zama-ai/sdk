@@ -25,7 +25,7 @@ This example uses the **cleartext stack** (`RelayerCleartext`), which is Zama's 
 Specifically:
 
 1. A user connects any injected EIP-1193 wallet.
-2. They can select between two tokens (USDT Mock / Test Token).
+2. They can select between two tokens (USDC Mock / USDT Mock).
 3. All ERC-7984 protocol operations work end-to-end: shield, transfer, unshield, balance decryption, and on-chain ACL delegation (grant, revoke, decrypt-as).
 
 ---
@@ -141,7 +141,7 @@ Recommended faucets:
 
 ### 3. Test tokens
 
-Both `USDTMock` and `Test Token` have a permissionless `mint(address to, uint256 amount)` function. See [Minting test tokens](#minting-test-tokens) below.
+Both `USDC Mock` and `USDT Mock` have a permissionless `mint(address to, uint256 amount)` function. See [Minting test tokens](#minting-test-tokens) below.
 
 ---
 
@@ -149,8 +149,8 @@ Both `USDTMock` and `Test Token` have a permissionless `mint(address to, uint256
 
 | Token      | ERC-20 address                               | ERC-7984 address (cToken / wrapper)          |
 | ---------- | -------------------------------------------- | -------------------------------------------- |
-| USDT Mock  | `0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b` | `0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75` |
-| Test Token | `0x7740F913dC24D4F9e1A72531372c3170452B2F87` | `0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1` |
+| USDC Mock  | `0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b` | `0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75` |
+| USDT Mock  | `0x7740F913dC24D4F9e1A72531372c3170452B2F87` | `0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1` |
 
 Registry (DeploymentCoordinator): `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
 
@@ -168,10 +168,10 @@ Click the **Mint** button next to the ERC-20 balance. This mints 10 whole tokens
 
 ### Via Etherscan
 
-1. Go to the ERC-20 contract on [hoodi.etherscan.io](https://hoodi.etherscan.io) (e.g., `0x51a63b...` for USDT Mock).
+1. Go to the ERC-20 contract on [hoodi.etherscan.io](https://hoodi.etherscan.io) (e.g., `0x51a63b...` for USDC Mock).
 2. Click the **Contract** tab → **Write Contract**.
 3. Click **Connect to Web3** and connect your wallet.
-4. Find the `mint` function, enter your wallet address and the desired amount in raw units (e.g., `10000000` for 10 USDT Mock, which has 6 decimals).
+4. Find the `mint` function, enter your wallet address and the desired amount in raw units (e.g., `10000000` for 10 USDC Mock, which has 6 decimals).
 5. Click **Write** and confirm in your wallet.
 
 ### Via code
@@ -184,14 +184,14 @@ const provider = new BrowserProvider(window.ethereum);
 const signer = await provider.getSigner();
 
 // Amounts are raw integers: use parseUnits to convert from human-readable values.
-// USDT Mock has 6 decimals — 10 USDT = parseUnits("10", 6) = 10_000_000n
-const usdtMock = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
-await usdtMock.mint(await signer.getAddress(), parseUnits("10", 6));
+// USDC Mock has 6 decimals — 10 USDC = parseUnits("10", 6) = 10_000_000n
+const usdcMock = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
+await usdcMock.mint(await signer.getAddress(), parseUnits("10", 6));
 
-// Test Token — verify its decimals on Etherscan or via useListPairs() before minting.
-const testTokenDecimals = 18; // replace with the actual value from pair.underlying.decimals
-const testToken = new Contract("0x7740F913dC24D4F9e1A72531372c3170452B2F87", MINT_ABI, signer);
-await testToken.mint(await signer.getAddress(), parseUnits("10", testTokenDecimals));
+// USDT Mock — verify its decimals on Etherscan or via useListPairs() before minting.
+const usdtMockDecimals = 18; // replace with the actual value from pair.underlying.decimals
+const usdtMock = new Contract("0x7740F913dC24D4F9e1A72531372c3170452B2F87", MINT_ABI, signer);
+await usdtMock.mint(await signer.getAddress(), parseUnits("10", usdtMockDecimals));
 ```
 
 ---
@@ -585,7 +585,7 @@ npx playwright test --ui
 npx playwright test e2e/connect.spec.ts
 ```
 
-Covered flows: connect screen (no wallet, install error, page title, auto-detect, click-to-connect), wrong-network screen (display, chain ID, switch button), main UI (all cards rendered, connected address, ETH balance, token selector, buttons disabled before metadata loads, balance display, loading hint, token switching, pending unshield absence, mint button state), delegation section (section labels, buttons disabled before address entry, Grant Access and Revoke Access enabled after valid address entry).
+Covered flows: connect screen (no wallet, install error, page title, auto-detect, click-to-connect), wrong-network screen (display, chain ID, back-to-Hoodi transition), main UI (all cards rendered, connected address, ETH balance, token selector, registry empty state, balance display, token switching, pending unshield absence, mint button state), delegation section (section labels, buttons disabled before address entry, Grant Access and Revoke Access enabled after valid address entry).
 
 Tests run automatically on CI for every pull request that touches `examples/example-hoodi/`.
 

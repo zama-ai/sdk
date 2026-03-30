@@ -180,11 +180,16 @@ export default function Home() {
     } catch (err) {
       console.error("Failed to switch to Hoodi:", err);
     } finally {
-      const current = (await ethereum.request({ method: "eth_chainId" })) as string;
-      setChainId(current);
-      setIsSwitching(false);
-      // If we're still on the wrong network after the attempt, tell the user.
-      setSwitchFailed(current.toLowerCase() !== HOODI_CHAIN_ID_HEX);
+      try {
+        const current = (await ethereum.request({ method: "eth_chainId" })) as string;
+        setChainId(current);
+        setSwitchFailed(current.toLowerCase() !== HOODI_CHAIN_ID_HEX);
+      } catch {
+        // If the chainId read fails (wallet disconnected, extension crashed),
+        // still clear the switching state so the UI doesn't freeze.
+      } finally {
+        setIsSwitching(false);
+      }
     }
   }
 
@@ -210,7 +215,7 @@ export default function Home() {
 
         // Already connected but on the wrong network — trigger switch automatically
         // so the user is prompted to add/switch Hoodi without having to click anything.
-        if (detectedAddress && currentChainId !== HOODI_CHAIN_ID_HEX) {
+        if (detectedAddress && currentChainId.toLowerCase() !== HOODI_CHAIN_ID_HEX) {
           handleSwitchToHoodi();
         }
       })
