@@ -25,7 +25,12 @@ export function isConfidentialQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
-      return signer.readContract(isConfidentialTokenContract(keyTokenAddress));
+      try {
+        return await signer.readContract(isConfidentialTokenContract(keyTokenAddress));
+      } catch {
+        // Contract doesn't implement ERC-165 — not a confidential token.
+        return false;
+      }
     },
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,
@@ -43,7 +48,12 @@ export function isWrapperQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
-      return signer.readContract(isConfidentialWrapperContract(keyTokenAddress));
+      try {
+        return await signer.readContract(isConfidentialWrapperContract(keyTokenAddress));
+      } catch {
+        // Contract doesn't implement ERC-165 — not a wrapper token.
+        return false;
+      }
     },
     staleTime: Infinity,
     enabled: config?.query?.enabled !== false,

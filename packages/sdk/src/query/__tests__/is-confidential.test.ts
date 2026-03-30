@@ -14,6 +14,17 @@ describe("isConfidentialQueryOptions", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
+  test("returns false when contract reverts (no ERC-165 support)", async ({ signer }) => {
+    vi.mocked(signer.readContract).mockRejectedValue(new Error("execution reverted"));
+    const options = isConfidentialQueryOptions(
+      signer,
+      "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+    );
+
+    const value = await options.queryFn(mockQueryContext(options.queryKey));
+    expect(value).toBe(false);
+  });
+
   test("queries wrapper interface check", async ({ signer }) => {
     vi.mocked(signer.readContract).mockResolvedValue(false);
     const options = isWrapperQueryOptions(signer, "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a");
