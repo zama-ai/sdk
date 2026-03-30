@@ -28,7 +28,7 @@
     "format:check": "oxfmt --check",
     "release:ci": "pnpm exec semantic-release",
     "release:dry-run": "pnpm exec semantic-release --dry-run --no-ci --debug",
-    "postinstall": "git submodule update --init --recursive && pnpm forge-fhevm:install && pnpm contracts:install",
+    "postinstall": "test -n \"$CI\" || (git submodule update --init --recursive && pnpm forge-fhevm:install && pnpm contracts:install)",
     "forge-fhevm:install": "cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install",
     "contracts:install": "cd contracts && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install",
     "prepare": "husky",
@@ -105,6 +105,9 @@
     "*.{ts,tsx,js,mjs,cjs,json,yaml,yml}": "oxfmt"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "@ast-grep/cli"
+    ],
     "overrides": {
       "minimatch": "10.2.4",
       "@walletconnect/ethereum-provider": "^2.23.7"
