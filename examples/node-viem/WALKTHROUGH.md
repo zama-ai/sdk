@@ -129,12 +129,12 @@ const registryResult = await sdkA.registry.getConfidentialToken(TOKEN_ADDRESS as
 if (!registryResult) throw new Error(`No confidential wrapper registered for ${TOKEN_ADDRESS}`);
 const { confidentialTokenAddress } = registryResult;
 
-const tokenA = sdkA.createToken(TOKEN_ADDRESS as Address, confidentialTokenAddress);
+const tokenA = sdkA.createToken(confidentialTokenAddress);
 ```
 
-`createToken(erc20Address, wrapperAddress)` takes both the underlying ERC-20 address and
-the ERC-7984 wrapper address. The wrapper address is resolved at runtime via
-`sdk.registry.getConfidentialToken()` — no hardcoded wrapper address is needed.
+`createToken(address)` takes the confidential token contract address. In ERC-7984 the
+confidential token IS the wrapper, so only one address is needed. The underlying ERC-20
+is resolved automatically from the on-chain wrapper contract — no need to pass it.
 
 `MemoryStorage` stores FHE keypairs and EIP-712 session credentials in memory.
 Credentials are lost when the process exits — see [Storage](#storage) below.
@@ -149,7 +149,7 @@ Real production tokens would not have this; fund via faucet or transfer instead.
 ```ts
 // Read (publicClient)
 const balanceBefore = await publicClient.readContract({
-  address: USDT_ADDRESS,
+  address: TOKEN_ADDRESS as Address,
   abi: ERC20_ABI,
   functionName: "balanceOf",
   args: [accountA.address],
@@ -157,7 +157,7 @@ const balanceBefore = await publicClient.readContract({
 
 // Write (walletClientA) — returns the tx hash immediately
 const mintHash = await walletClientA.writeContract({
-  address: USDT_ADDRESS,
+  address: TOKEN_ADDRESS as Address,
   abi: ERC20_ABI,
   functionName: "mint",
   args: [accountA.address, MINT_AMOUNT],
