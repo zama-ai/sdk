@@ -91,7 +91,8 @@ const signerA = new EthersSigner({ signer: walletA });
 
 `EthersSigner` implements `GenericSigner`, the SDK's internal signer interface. It wraps
 an ethers `Wallet` and exposes `readContract`, `writeContract`, `signTypedData`,
-`getAddress`, `getChainId`, and `getBalance` in a library-agnostic way.
+`getAddress`, `getChainId`, `getBlockTimestamp`, and `waitForTransactionReceipt` in a
+library-agnostic way.
 
 ### RelayerNode
 
