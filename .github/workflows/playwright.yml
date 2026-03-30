@@ -33,7 +33,9 @@ jobs:
           path: |
             contracts/out
             contracts/cache
+            contracts/dependencies
             contracts/lib/forge-fhevm/out
+            contracts/lib/forge-fhevm/dependencies
           key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
 
       - name: Install Soldeer dependencies
@@ -57,7 +59,9 @@ jobs:
           path: |
             contracts/out
             contracts/cache
+            contracts/dependencies
             contracts/lib/forge-fhevm/out
+            contracts/lib/forge-fhevm/dependencies
           key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
 
       - name: Setup pnpm
