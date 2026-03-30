@@ -102,8 +102,10 @@ test.describe("registry empty state", () => {
     await expect(page.getByRole("button", { name: "Transfer", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Unshield", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: /Mint/ })).toBeDisabled();
-    // "Decrypt Balance" is disabled when no pairs are available — decryptDisabled prop.
-    // Clicking it would be a no-op (handleDecrypt early-returns on empty validPairs).
-    await expect(page.getByRole("button", { name: "Decrypt Balance" })).toBeDisabled();
+    // "Decrypt Balance" in the Balances card is disabled when no pairs are available
+    // (decryptDisabled prop). DecryptAsCard also has a "Decrypt Balance" button, so we
+    // scope to the Balances card to avoid Playwright's strict-mode ambiguity error.
+    const balancesCard = page.locator(".card", { hasText: "Balances" }).first();
+    await expect(balancesCard.getByRole("button", { name: "Decrypt Balance" })).toBeDisabled();
   });
 });
