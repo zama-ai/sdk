@@ -50,7 +50,7 @@ export default defineConfig<{}, WorkerFixtures>({
       wait: {
         stdout: /Anvil ready on port (\d+)/,
       },
-      timeout: 60_000,
+      timeout: 120_000,
     },
     {
       command: `./start-anvil.sh ${VITE_ANVIL_PORT}`,
@@ -58,7 +58,7 @@ export default defineConfig<{}, WorkerFixtures>({
       wait: {
         stdout: /Anvil ready on port (\d+)/,
       },
-      timeout: 60_000,
+      timeout: 120_000,
     },
     {
       command: CI
