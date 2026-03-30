@@ -1,7 +1,7 @@
 import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
+import { DelegationNotPropagatedError, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { RelayerNode } from "@zama-fhe/sdk/node";
 import type { Address } from "@zama-fhe/sdk";
@@ -216,12 +216,25 @@ async function main() {
     console.log("Delegation active:", isDelegated);
 
     // 4b. Decrypt as delegate: B reads A's balance without A's private key
+    // Note: the ACL grant must propagate from L1 to the Arbitrum gateway before
+    // the relayer can verify it. This typically takes 1–2 minutes. If decryptBalanceAs
+    // throws DelegationNotPropagatedError, wait and retry.
     console.log("\n── 4b. Decrypt as delegate ──");
     console.log("Account B reading Account A's cUSDT balance...");
-    const balanceOfAasB = await tokenB.decryptBalanceAs({
-      delegatorAddress: accountA.address as Address,
-    });
-    console.log("cUSDT balance (A, seen by B):", fmt(balanceOfAasB));
+    try {
+      const balanceOfAasB = await tokenB.decryptBalanceAs({
+        delegatorAddress: accountA.address as Address,
+      });
+      console.log("cUSDT balance (A, seen by B):", fmt(balanceOfAasB));
+    } catch (err) {
+      if (err instanceof DelegationNotPropagatedError) {
+        console.warn(
+          "  ⚠ ACL grant not yet propagated to the gateway — wait 1–2 minutes and retry.",
+        );
+      } else {
+        throw err;
+      }
+    }
 
     // 4c. Revoke: A removes B's decrypt rights
     console.log("\n── 4c. Revoke delegation ──");
