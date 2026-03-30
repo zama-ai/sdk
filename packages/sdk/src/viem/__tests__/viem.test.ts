@@ -24,7 +24,7 @@ import { ViemSigner } from "../viem-signer";
 
 const ACCOUNT_ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
-const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
+const REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
 const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 const TX_HASH = "0xtxhash" as Hex;
 const MOCK_CHAIN = { id: 1, name: "mainnet" } as WalletClient["chain"];
@@ -324,10 +324,10 @@ describe("Viem read contract helpers", () => {
   vit(
     "readWrapperForTokenContract calls readContract with correct config",
     ({ tokenAddress, publicClient }) => {
-      readWrapperForTokenContract(publicClient, COORDINATOR, tokenAddress);
+      readWrapperForTokenContract(publicClient, REGISTRY, tokenAddress);
       expect(publicClient.readContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: COORDINATOR,
+          address: REGISTRY,
           functionName: "getWrapper",
           args: [tokenAddress],
         }),
@@ -351,10 +351,10 @@ describe("Viem read contract helpers", () => {
   vit(
     "readWrapperExistsContract calls readContract with correct config",
     ({ tokenAddress, publicClient }) => {
-      readWrapperExistsContract(publicClient, COORDINATOR, tokenAddress);
+      readWrapperExistsContract(publicClient, REGISTRY, tokenAddress);
       expect(publicClient.readContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: COORDINATOR,
+          address: REGISTRY,
           functionName: "wrapperExists",
           args: [tokenAddress],
         }),

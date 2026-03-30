@@ -12,6 +12,7 @@ import {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  DelegationNotPropagatedError,
 } from "..";
 import { wrapSigningError } from "../signing";
 
@@ -128,6 +129,20 @@ describe("wrapSigningError", () => {
     );
   });
 
+  it("includes original message in SigningRejectedError message", () => {
+    const original = Object.assign(new Error("user denied"), { code: 4001 });
+    expect(() => wrapSigningError(original, "ctx")).toThrow("ctx: user denied");
+  });
+
+  it("includes original message in SigningFailedError message", () => {
+    const original = new Error("timeout");
+    expect(() => wrapSigningError(original, "ctx")).toThrow("ctx: timeout");
+  });
+
+  it("stringifies non-Error values in the message", () => {
+    expect(() => wrapSigningError("string error", "ctx")).toThrow("ctx: string error");
+  });
+
   it("preserves non-Error cause instead of dropping it", () => {
     const stringError = "string error value";
     expect(() => wrapSigningError(stringError, "test")).toThrow(
@@ -239,5 +254,20 @@ describe("DelegationExpiredError", () => {
     expect(err.code).toBe(ZamaErrorCode.DelegationExpired);
     expect(err.name).toBe("DelegationExpiredError");
     expect(err.message).toBe("expired");
+  });
+});
+
+describe("DelegationNotPropagatedError", () => {
+  it("is instanceof ZamaError", () => {
+    const err = new DelegationNotPropagatedError("not synced");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(DelegationNotPropagatedError);
+  });
+
+  it("has correct code and name", () => {
+    const err = new DelegationNotPropagatedError("not synced");
+    expect(err.code).toBe(ZamaErrorCode.DelegationNotPropagated);
+    expect(err.name).toBe("DelegationNotPropagatedError");
+    expect(err.message).toBe("not synced");
   });
 });

@@ -76,6 +76,24 @@ export {
   type ActivityFeedQueryConfig,
 } from "./activity-feed";
 
+export {
+  tokenPairsQueryOptions,
+  tokenPairsLengthQueryOptions,
+  tokenPairsSliceQueryOptions,
+  tokenPairQueryOptions,
+  confidentialTokenAddressQueryOptions,
+  tokenAddressQueryOptions,
+  isConfidentialTokenValidQueryOptions,
+  type WrappersRegistryQueryConfig,
+  type ConfidentialTokenAddressQueryConfig,
+  type TokenAddressQueryConfig,
+  type TokenPairsSliceQueryConfig,
+  type TokenPairQueryConfig,
+  type IsConfidentialTokenValidQueryConfig,
+  listPairsQueryOptions,
+  type ListPairsQueryConfig,
+} from "./wrappers-registry";
+
 export { shieldMutationOptions, type ShieldParams } from "./shield";
 export { shieldETHMutationOptions, type ShieldETHParams } from "./shield-eth";
 export { confidentialTransferMutationOptions, type ConfidentialTransferParams } from "./transfer";

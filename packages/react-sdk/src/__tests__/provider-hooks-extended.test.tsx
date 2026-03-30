@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
-import { useUnderlyingAllowance } from "../token/use-underlying-allowance";
-import { useUnshield } from "../token/use-unshield";
-import { useUnshieldAll } from "../token/use-unshield-all";
+import { useUnderlyingAllowance } from "../shield/use-underlying-allowance";
+import { useUnshield } from "../unshield/use-unshield";
+import { useUnshieldAll } from "../unshield/use-unshield-all";
 import { useMetadataSuspense } from "../token/use-metadata";
 import { useTotalSupplySuspense } from "../token/use-total-supply";
 import { useWrapperDiscoverySuspense } from "../token/use-wrapper-discovery";
@@ -87,15 +87,17 @@ describe("useWrapperDiscoverySuspense", () => {
     tokenAddress,
     renderWithProviders,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(
-      "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address,
-    );
+    const wrapperAddr = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
+    vi.mocked(signer.getChainId).mockResolvedValue(1);
+    vi.mocked(signer.readContract)
+      .mockResolvedValueOnce([true, wrapperAddr])
+      .mockResolvedValueOnce(true);
 
     const { result } = renderWithProviders(
       () =>
         useWrapperDiscoverySuspense({
           tokenAddress,
-          coordinatorAddress: "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address,
+          erc20Address: "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address,
         }),
       { signer },
     );

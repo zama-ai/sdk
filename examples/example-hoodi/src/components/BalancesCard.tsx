@@ -1,5 +1,7 @@
 "use client";
 
+import { HOODI_EXPLORER_URL } from "@/lib/config";
+
 interface BalancesCardProps {
   formattedErc20: string;
   formattedConfidential: string;
@@ -8,6 +10,14 @@ interface BalancesCardProps {
   onMint: () => void;
   isMinting: boolean;
   mintDisabled: boolean;
+  mintError?: string | null;
+  mintTxHash?: string | null;
+  isAllowed: boolean;
+  onDecrypt: () => void;
+  isDecrypting: boolean;
+  /** True when there are no registered token pairs to authorize (registry loading or empty). */
+  decryptDisabled: boolean;
+  decryptError?: string | null;
 }
 
 export function BalancesCard({
@@ -18,9 +28,14 @@ export function BalancesCard({
   onMint,
   isMinting,
   mintDisabled,
+  mintError,
+  mintTxHash,
+  isAllowed,
+  onDecrypt,
+  isDecrypting,
+  decryptDisabled,
+  decryptError,
 }: BalancesCardProps) {
-  const confidentialDisplay = isLoadingConfidential ? <i>Decrypting…</i> : formattedConfidential;
-
   return (
     <div className="card">
       <div className="card-title">Balances</div>
@@ -28,6 +43,7 @@ export function BalancesCard({
         <span className="balance-label-group">
           <span className="balance-label">ERC-20 (public)</span>
           <button
+            type="button"
             className="btn btn-sm btn-secondary"
             onClick={onMint}
             disabled={mintDisabled || isMinting}
@@ -39,10 +55,31 @@ export function BalancesCard({
       </div>
       <div className="balance-row">
         <span className="balance-label">Confidential (private)</span>
-        <span className={`balance-value${isLoadingConfidential ? " loading" : ""}`}>
-          {confidentialDisplay}
-        </span>
+        {!isAllowed ? (
+          <button
+            type="button"
+            className="btn btn-sm btn-secondary"
+            onClick={onDecrypt}
+            disabled={isDecrypting || decryptDisabled}
+          >
+            {isDecrypting ? "Signing…" : "Decrypt Balance"}
+          </button>
+        ) : (
+          <span className={`balance-value${isLoadingConfidential ? " loading" : ""}`}>
+            {isLoadingConfidential ? <i>Decrypting…</i> : formattedConfidential}
+          </span>
+        )}
       </div>
+      {decryptError && <div className="alert alert-error card-status">{decryptError}</div>}
+      {mintError && <div className="alert alert-error card-status">{mintError}</div>}
+      {mintTxHash && (
+        <div className="alert alert-success card-status">
+          Minted!{" "}
+          <a href={`${HOODI_EXPLORER_URL}/tx/${mintTxHash}`} target="_blank" rel="noreferrer">
+            {mintTxHash.slice(0, 10)}…
+          </a>
+        </div>
+      )}
     </div>
   );
 }

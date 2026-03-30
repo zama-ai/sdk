@@ -11,6 +11,7 @@ import {DeploymentCoordinator} from "../src/factory/DeploymentCoordinator.sol";
 import {ERC7984TransferBatcher} from "../src/batcher/ERC7984TransferBatcher.sol";
 import {ConfidentialWrapper} from "../src/wrapper/ERC7984ERC20WrapperUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {WrappersRegistry} from "../src/factory/WrappersRegistry.sol";
 
 contract Deploy is Script {
     function run() external {
@@ -68,16 +69,23 @@ contract Deploy is Script {
         IERC20(address(usdt)).approve(address(cUSDT), wrapAmount);
         cUSDT.wrap(msg.sender, wrapAmount);
 
+        // 11. Deploy WrappersRegistry and register token pairs
+        WrappersRegistry registry = new WrappersRegistry();
+        registry.registerPair(address(usdc), address(cUSDC));
+        registry.registerPair(address(usdt), address(cUSDT));
+        console.log("WrappersRegistry:", address(registry));
+
         vm.stopBroadcast();
 
-        // 11. Write deployments.json
+        // 12. Write deployments.json
         string memory json = "deployments";
         vm.serializeAddress(json, "erc20", address(usdc));
         vm.serializeAddress(json, "cToken", address(cUSDC));
         vm.serializeAddress(json, "USDT", address(usdt));
         vm.serializeAddress(json, "cUSDT", address(cUSDT));
         vm.serializeAddress(json, "transferBatcher", address(batcher));
-        string memory finalJson = vm.serializeAddress(json, "feeManager", address(feeManager));
+        vm.serializeAddress(json, "feeManager", address(feeManager));
+        string memory finalJson = vm.serializeAddress(json, "wrappersRegistry", address(registry));
 
         string memory path = string.concat(vm.projectRoot(), "/deployments.json");
         vm.writeJson(finalJson, path);

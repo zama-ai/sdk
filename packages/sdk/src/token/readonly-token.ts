@@ -7,20 +7,11 @@ import {
   confidentialBalanceOfContract,
   decimalsContract,
   getDelegationExpiryContract,
-  getWrapperContract,
   nameContract,
   supportsInterfaceContract,
   symbolContract,
   underlyingContract,
-  wrapperExistsContract,
 } from "../contracts";
-import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { Handle } from "../relayer/relayer-sdk.types";
-import { toError } from "../utils";
-import { pLimit } from "./concurrency";
-import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
 import { CredentialsManager } from "../credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "../credentials/delegated-credentials-manager";
 import {
@@ -28,12 +19,20 @@ import {
   DecryptionFailedError,
   DelegationExpiredError,
   DelegationNotFoundError,
+  DelegationNotPropagatedError,
   NoCiphertextError,
   RelayerRequestFailedError,
   SigningFailedError,
   SigningRejectedError,
 } from "../errors";
+import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner, GenericStorage } from "../types";
+import { toError } from "../utils";
+import { loadCachedBalance, saveCachedBalance } from "./balance-cache";
+import { pLimit } from "./concurrency";
 
 /** 32-byte zero handle, used to detect uninitialized encrypted balances. */
 export const ZERO_HANDLE =
@@ -456,8 +455,9 @@ export class ReadonlyToken {
                 handle,
                 value,
               });
-            } catch {
-              // Cache write failure should not invalidate a successful decryption
+            } catch (cacheError) {
+              // oxlint-disable-next-line no-console
+              console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
             }
           })
           .catch((error) => {
@@ -488,30 +488,6 @@ export class ReadonlyToken {
     }
 
     return results;
-  }
-
-  /**
-   * Look up the wrapper contract for this token via the deployment coordinator.
-   * Returns `null` if no wrapper is deployed.
-   *
-   * @param coordinatorAddress - The deployment coordinator contract address.
-   * @returns The wrapper address, or `null` if no wrapper exists.
-   *
-   * @example
-   * ```ts
-   * const wrapper = await token.discoverWrapper("0xCoordinator");
-   * if (wrapper) {
-   *   const fullToken = sdk.createToken(token.address, wrapper);
-   * }
-   * ```
-   */
-  async discoverWrapper(coordinatorAddress: Address): Promise<Address | null> {
-    const coordinator = getAddress(coordinatorAddress);
-    const exists = await this.signer.readContract(wrapperExistsContract(coordinator, this.address));
-    if (!exists) {
-      return null;
-    }
-    return this.signer.readContract(getWrapperContract(coordinator, this.address));
   }
 
   /**
@@ -747,6 +723,7 @@ export class ReadonlyToken {
    * @returns The decrypted plaintext balance as a bigint.
    * @throws {@link DelegationNotFoundError} if no active delegation exists from the delegator to the connected signer.
    * @throws {@link DelegationExpiredError} if the delegation has expired.
+   * @throws {@link DelegationNotPropagatedError} if the delegation exists on L1 but hasn't propagated to the gateway yet (typically 1–2 min after granting).
    * @throws {@link DecryptionFailedError} if delegated decryption fails or the relayer returns no value.
    * @throws {@link SigningRejectedError} if the user rejects the wallet signature prompt.
    * @throws {@link SigningFailedError} if the signing operation fails.
@@ -831,8 +808,9 @@ export class ReadonlyToken {
           handle,
           value,
         });
-      } catch {
-        // Cache write failure should not invalidate a successful decryption
+      } catch (cacheError) {
+        // oxlint-disable-next-line no-console
+        console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
       }
 
       return value;
@@ -842,7 +820,7 @@ export class ReadonlyToken {
         error: toError(error),
         durationMs: Date.now() - t0,
       });
-      throw wrapDecryptError(error, "Failed to decrypt delegated balance");
+      throw wrapDecryptError(error, "Failed to decrypt delegated balance", true);
     }
   }
 
@@ -912,8 +890,9 @@ export class ReadonlyToken {
           handle,
           value,
         });
-      } catch {
-        // Cache write failure should not invalidate a successful decryption
+      } catch (cacheError) {
+        // oxlint-disable-next-line no-console
+        console.warn("[zama-sdk] Cache write failed (non-blocking):", cacheError);
       }
       return value;
     } catch (error) {
@@ -1009,12 +988,17 @@ export class ReadonlyToken {
  * Inspect a caught error for an HTTP status code and return the appropriate
  * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
  * other HTTP errors, or the generic DecryptionFailedError as fallback).
+ *
+ * When `isDelegated` is true and the relayer returns a 500, the error is
+ * wrapped as {@link DelegationNotPropagatedError} because the most likely
+ * cause is that the gateway hasn't synced the delegation from L1 yet.
  */
-function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
+function wrapDecryptError(error: unknown, fallbackMessage: string, isDelegated = false): Error {
   if (
     error instanceof DecryptionFailedError ||
     error instanceof NoCiphertextError ||
     error instanceof RelayerRequestFailedError ||
+    error instanceof DelegationNotPropagatedError ||
     error instanceof SigningRejectedError ||
     error instanceof SigningFailedError
   ) {
@@ -1033,6 +1017,16 @@ function wrapDecryptError(error: unknown, fallbackMessage: string): Error {
   if (statusCode === 400) {
     return new NoCiphertextError(
       error instanceof Error ? error.message : "No ciphertext for this account",
+      { cause: error },
+    );
+  }
+
+  if (isDelegated && statusCode === 500) {
+    return new DelegationNotPropagatedError(
+      "Delegated decryption failed with a server error. " +
+        "This is most commonly caused by the delegation not having propagated to the gateway yet — " +
+        "after granting delegation, allow 1–2 minutes for cross-chain synchronization before retrying. " +
+        "If the error persists, the gateway or relayer may be experiencing an unrelated issue.",
       { cause: error },
     );
   }
