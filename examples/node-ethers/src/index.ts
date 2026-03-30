@@ -87,9 +87,10 @@ async function main() {
   console.log("ERC-20 token:        ", TOKEN_ADDRESS);
   console.log("Confidential wrapper:", confidentialTokenAddress);
 
-  // createToken() takes both addresses: the underlying ERC-20 and its wrapper.
-  const tokenA = sdkA.createToken(TOKEN_ADDRESS as Address, confidentialTokenAddress);
-  const tokenB = sdkB.createToken(TOKEN_ADDRESS as Address, confidentialTokenAddress);
+  // createToken() takes the confidential token address. The SDK resolves the
+  // underlying ERC-20 automatically via underlyingContract(this.wrapper).
+  const tokenA = sdkA.createToken(confidentialTokenAddress);
+  const tokenB = sdkB.createToken(confidentialTokenAddress);
 
   try {
     // ────────────────────────────────────────────────────────────────────────
