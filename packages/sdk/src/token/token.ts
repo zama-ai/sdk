@@ -868,14 +868,17 @@ export class Token extends ReadonlyToken {
     for (let i = 0; i < tokens.length; i++) {
       try {
         results.set(tokens[i]!.address, await op(tokens[i]!));
-      } catch (reason) {
-        const err =
-          reason instanceof ZamaError
-            ? reason
-            : new TransactionRevertedError(errorMessage, {
-                cause: reason instanceof Error ? reason : undefined,
-              });
-        results.set(tokens[i]!.address, err);
+      } catch (error) {
+        if (error instanceof ZamaError) {
+          results.set(tokens[i]!.address, error);
+        } else {
+          results.set(
+            tokens[i]!.address,
+            new TransactionRevertedError(errorMessage, {
+              cause: error,
+            }),
+          );
+        }
       }
     }
     return results;
