@@ -499,10 +499,15 @@ export interface DelegationStatusQueryConfig {
     delegatorAddress?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
+    // (undocumented)
+    tokenAddress: Address | undefined;
 }
 
 // @public (undocumented)
-export function delegationStatusQueryOptions(signer: GenericSigner, relayer: RelayerSDK, tokenAddress: Address | undefined, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
+export function delegationStatusQueryOptions(sdk: {
+    signer: GenericSigner;
+    relayer: RelayerSDK;
+}, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
 
 // @public (undocumented)
 export interface DelegationSubmittedEvent extends BaseEvent {

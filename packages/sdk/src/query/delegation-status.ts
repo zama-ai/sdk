@@ -6,6 +6,7 @@ import type { GenericSigner } from "../types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
+import { assertNonNullable } from "../utils";
 
 export interface DelegationStatusData {
   isDelegated: boolean;
@@ -13,15 +14,14 @@ export interface DelegationStatusData {
 }
 
 export interface DelegationStatusQueryConfig {
+  tokenAddress: Address | undefined;
   delegatorAddress?: Address;
   delegateAddress?: Address;
   query?: Record<string, unknown>;
 }
 
 export function delegationStatusQueryOptions(
-  signer: GenericSigner,
-  relayer: RelayerSDK,
-  tokenAddress: Address | undefined,
+  sdk: { signer: GenericSigner; relayer: RelayerSDK },
   config: DelegationStatusQueryConfig,
 ): QueryFactoryOptions<
   DelegationStatusData,
@@ -32,25 +32,18 @@ export function delegationStatusQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey: zamaQueryKeys.delegationStatus.scope(
-      tokenAddress,
+      config.tokenAddress,
       config.delegatorAddress,
       config.delegateAddress,
     ),
     queryFn: async (context) => {
-      const [, { tokenAddress: keyTokenAddress, delegatorAddress, delegateAddress }] =
-        context.queryKey;
-      if (!keyTokenAddress) {
-        throw new Error("tokenAddress is required");
-      }
-      if (!delegatorAddress) {
-        throw new Error("delegatorAddress is required");
-      }
-      if (!delegateAddress) {
-        throw new Error("delegateAddress is required");
-      }
-      const acl = await relayer.getAclAddress();
-      const expiryTimestamp = await signer.readContract(
-        getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, keyTokenAddress),
+      const [, { tokenAddress, delegatorAddress, delegateAddress }] = context.queryKey;
+      assertNonNullable(tokenAddress, "delegationStatusQueryOptions: tokenAddress");
+      assertNonNullable(delegatorAddress, "delegationStatusQueryOptions: delegatorAddress");
+      assertNonNullable(delegateAddress, "delegationStatusQueryOptions: delegateAddress");
+      const acl = await sdk.relayer.getAclAddress();
+      const expiryTimestamp = await sdk.signer.readContract(
+        getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, tokenAddress),
       );
       // Derive isDelegated from expiry + chain time to stay consistent
       // with ReadonlyToken.isDelegated() (avoids client-clock skew).
@@ -60,13 +53,13 @@ export function delegationStatusQueryOptions(
       } else if (expiryTimestamp === MAX_UINT64) {
         isDelegated = true;
       } else {
-        const now = await signer.getBlockTimestamp();
+        const now = await sdk.signer.getBlockTimestamp();
         isDelegated = expiryTimestamp > now;
       }
       return { isDelegated, expiryTimestamp };
     },
     enabled:
-      Boolean(tokenAddress && config.delegatorAddress && config.delegateAddress) &&
+      Boolean(config.tokenAddress && config.delegatorAddress && config.delegateAddress) &&
       config.query?.enabled !== false,
   } as const;
 }
