@@ -150,7 +150,7 @@ describe("delegationStatusQueryOptions", () => {
     const options = delegationStatusQueryOptions({ signer, relayer }, { tokenAddress: undefined });
 
     await expect(options.queryFn!(mockQueryContext(options.queryKey))).rejects.toThrow(
-      "tokenAddress is required",
+      "delegationStatusQueryOptions: tokenAddress must not be null or undefined",
     );
   });
 });

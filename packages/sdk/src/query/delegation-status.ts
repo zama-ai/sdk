@@ -6,6 +6,7 @@ import type { GenericSigner } from "../types";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
+import { assertNonNullable } from "../utils";
 
 export interface DelegationStatusData {
   isDelegated: boolean;
@@ -37,15 +38,9 @@ export function delegationStatusQueryOptions(
     ),
     queryFn: async (context) => {
       const [, { tokenAddress, delegatorAddress, delegateAddress }] = context.queryKey;
-      if (!tokenAddress) {
-        throw new Error("tokenAddress is required");
-      }
-      if (!delegatorAddress) {
-        throw new Error("delegatorAddress is required");
-      }
-      if (!delegateAddress) {
-        throw new Error("delegateAddress is required");
-      }
+      assertNonNullable(tokenAddress, "delegationStatusQueryOptions: tokenAddress");
+      assertNonNullable(delegatorAddress, "delegationStatusQueryOptions: delegatorAddress");
+      assertNonNullable(delegateAddress, "delegationStatusQueryOptions: delegateAddress");
       const acl = await sdk.relayer.getAclAddress();
       const expiryTimestamp = await sdk.signer.readContract(
         getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, tokenAddress),
