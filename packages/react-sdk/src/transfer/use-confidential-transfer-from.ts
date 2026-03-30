@@ -8,7 +8,7 @@ import {
   invalidateAfterTransfer,
   type ConfidentialTransferFromParams,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "../token/use-token";
 
 /**
  * Operator transfer on behalf of another address. Caller must be an approved operator.

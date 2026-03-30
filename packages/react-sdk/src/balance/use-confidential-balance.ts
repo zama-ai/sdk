@@ -8,7 +8,7 @@ import {
   confidentialHandleQueryOptions,
   signerAddressQueryOptions,
 } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "./use-readonly-token";
+import { useReadonlyToken } from "../token/use-readonly-token";
 
 /** Configuration for {@link useConfidentialBalance}. */
 export interface UseConfidentialBalanceConfig {

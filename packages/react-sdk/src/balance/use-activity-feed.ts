@@ -3,7 +3,7 @@
 import { useQuery } from "../utils/query";
 import type { Address, RawLog, ActivityLogMetadata, ActivityItem } from "@zama-fhe/sdk";
 import { activityFeedQueryOptions, deriveActivityFeedLogsKey } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "./use-readonly-token";
+import { useReadonlyToken } from "../token/use-readonly-token";
 
 /** Configuration for {@link useActivityFeed}. */
 export interface UseActivityFeedConfig {

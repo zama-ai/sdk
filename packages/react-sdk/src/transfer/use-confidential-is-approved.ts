@@ -5,7 +5,7 @@ import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { confidentialIsApprovedQueryOptions, signerAddressQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
-import { useToken, type UseZamaConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "../token/use-token";
 
 export { confidentialIsApprovedQueryOptions };
 

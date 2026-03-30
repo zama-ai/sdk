@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
 import { signerAddressQueryOptions } from "@zama-fhe/sdk/query";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { useConfidentialBalances } from "../token/use-confidential-balances";
+import { useConfidentialBalances } from "../use-confidential-balances";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const TOKEN_B = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;

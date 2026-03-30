@@ -16,8 +16,8 @@ import {
   applyOptimisticBalanceDelta,
   rollbackOptimisticBalanceDelta,
   unwrapOptimisticCallerContext,
-} from "./optimistic-balance-update";
-import { useToken, type UseZamaConfig } from "./use-token";
+} from "../balance/optimistic-balance-update";
+import { useToken, type UseZamaConfig } from "../token/use-token";
 
 /** Configuration for {@link useConfidentialTransfer}. */
 export interface UseConfidentialTransferConfig extends UseZamaConfig {

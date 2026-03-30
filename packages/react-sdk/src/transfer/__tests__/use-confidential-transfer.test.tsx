@@ -5,7 +5,7 @@ import { EncryptionFailedError, SigningRejectedError } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { expectCacheUntouched } from "../../test-helpers";
-import { useConfidentialBalance } from "../use-confidential-balance";
+import { useConfidentialBalance } from "../../balance/use-confidential-balance";
 import { useConfidentialTransfer } from "../use-confidential-transfer";
 import {
   HANDLE,

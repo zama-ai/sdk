@@ -3,21 +3,16 @@
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
-import {
-  invalidateAfterUnwrap,
-  type UnwrapParams,
-  unwrapMutationOptions,
-} from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "./use-token";
+import { invalidateAfterUnwrap, unwrapAllMutationOptions } from "@zama-fhe/sdk/query";
+import { useToken, type UseZamaConfig } from "../token/use-token";
 
 /**
- * Request an unwrap for a specific amount. Encrypts the amount first.
- * Call {@link useFinalizeUnwrap} after the request is processed on-chain,
- * or use {@link useUnshield} for a single-call orchestration.
+ * Request an unwrap for the entire confidential balance.
+ * Uses the on-chain balance handle directly (no encryption needed).
+ * Call {@link useFinalizeUnwrap} after processing, or use {@link useUnshieldAll} for single-call orchestration.
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
- * - {@link EncryptionFailedError} — FHE encryption of the unwrap amount failed
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
  * @param config - Token address (and optional wrapper) identifying the token.
@@ -25,18 +20,18 @@ import { useToken, type UseZamaConfig } from "./use-token";
  *
  * @example
  * ```tsx
- * const unwrap = useUnwrap({ tokenAddress: "0x..." });
- * unwrap.mutate({ amount: 500n });
+ * const unwrapAll = useUnwrapAll({ tokenAddress: "0x..." });
+ * unwrapAll.mutate();
  * ```
  */
-export function useUnwrap(
+export function useUnwrapAll(
   config: UseZamaConfig,
-  options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, void, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<TransactionResult, Error, UnwrapParams, Address>({
-    ...unwrapMutationOptions(token),
+  return useMutation<TransactionResult, Error, void, Address>({
+    ...unwrapAllMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);

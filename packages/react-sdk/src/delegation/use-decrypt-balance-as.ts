@@ -3,7 +3,7 @@
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
 import { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "@zama-fhe/sdk/query";
-import { useReadonlyToken } from "./use-readonly-token";
+import { useReadonlyToken } from "../token/use-readonly-token";
 
 /**
  * Decrypt another user's confidential balance as a delegate.

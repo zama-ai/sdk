@@ -8,7 +8,7 @@ import {
   invalidateAfterUnshield,
   type FinalizeUnwrapParams,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "../token/use-token";
 
 /**
  * Complete an unwrap by providing the public decryption proof.

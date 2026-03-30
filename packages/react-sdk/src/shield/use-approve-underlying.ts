@@ -8,7 +8,7 @@ import {
   invalidateAfterApproveUnderlying,
   type ApproveUnderlyingParams,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "../token/use-token";
 
 /**
  * Approve the wrapper contract to spend the underlying ERC-20.

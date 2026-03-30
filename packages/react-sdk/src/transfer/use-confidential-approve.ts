@@ -3,13 +3,15 @@
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
-import { invalidateAfterUnwrap, unwrapAllMutationOptions } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "./use-token";
+import {
+  confidentialApproveMutationOptions,
+  invalidateAfterApprove,
+  type ConfidentialApproveParams,
+} from "@zama-fhe/sdk/query";
+import { useToken, type UseZamaConfig } from "../token/use-token";
 
 /**
- * Request an unwrap for the entire confidential balance.
- * Uses the on-chain balance handle directly (no encryption needed).
- * Call {@link useFinalizeUnwrap} after processing, or use {@link useUnshieldAll} for single-call orchestration.
+ * Set operator approval for a confidential token. Defaults to 1 hour.
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
@@ -20,22 +22,22 @@ import { useToken, type UseZamaConfig } from "./use-token";
  *
  * @example
  * ```tsx
- * const unwrapAll = useUnwrapAll({ tokenAddress: "0x..." });
- * unwrapAll.mutate();
+ * const approve = useConfidentialApprove({ tokenAddress: "0x..." });
+ * approve.mutate({ spender: "0xOperator" });
  * ```
  */
-export function useUnwrapAll(
+export function useConfidentialApprove(
   config: UseZamaConfig,
-  options?: UseMutationOptions<TransactionResult, Error, void, Address>,
+  options?: UseMutationOptions<TransactionResult, Error, ConfidentialApproveParams, Address>,
 ) {
   const token = useToken(config);
 
-  return useMutation<TransactionResult, Error, void, Address>({
-    ...unwrapAllMutationOptions(token),
+  return useMutation<TransactionResult, Error, ConfidentialApproveParams, Address>({
+    ...confidentialApproveMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterUnwrap(context.client, config.tokenAddress);
+      invalidateAfterApprove(context.client, config.tokenAddress);
     },
   });
 }

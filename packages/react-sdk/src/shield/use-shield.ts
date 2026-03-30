@@ -8,8 +8,8 @@ import {
 } from "@tanstack/react-query";
 import type { TransactionResult } from "@zama-fhe/sdk";
 import { shieldMutationOptions, type ShieldParams } from "@zama-fhe/sdk/query";
-import { optimisticBalanceCallbacks } from "./optimistic-balance-update";
-import { useToken, type UseZamaConfig } from "./use-token";
+import { optimisticBalanceCallbacks } from "../balance/optimistic-balance-update";
+import { useToken, type UseZamaConfig } from "../token/use-token";
 
 /** Configuration for {@link useShield}. */
 export interface UseShieldConfig extends UseZamaConfig {

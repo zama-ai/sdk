@@ -8,7 +8,7 @@ import {
   type UnshieldAllParams,
   unshieldAllMutationOptions,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "./use-token";
+import { useToken, type UseZamaConfig } from "../token/use-token";
 
 /**
  * Unshield the entire balance and finalize in one call.
