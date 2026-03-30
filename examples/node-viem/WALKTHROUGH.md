@@ -169,7 +169,7 @@ await publicClient.waitForTransactionReceipt({ hash: mintHash });
 ```
 
 This is standard viem usage — no SDK involvement. The SDK only operates on the
-ERC-7984 wrapper (`CUSDT_ADDRESS`), not the ERC-20.
+ERC-7984 wrapper (`confidentialTokenAddress`), not the ERC-20.
 
 ---
 
