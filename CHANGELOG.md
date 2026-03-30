@@ -1,5 +1,7 @@
 # Changelog
 
+## [2.2.0-alpha.7](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.6...v2.2.0-alpha.7) (2026-03-30)
+
 ## [2.2.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.5...v2.2.0-alpha.6) (2026-03-27)
 
 ### Bug Fixes
