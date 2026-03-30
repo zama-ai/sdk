@@ -33,8 +33,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Setup ast-grep binary
-        run: pnpm rebuild @ast-grep/cli
+      - name: Setup ast-grep
+        uses: ast-grep/action@cf62e780f0c88301228978d593a7784427a097a6 # v1.5.0
 
       - name: Build packages
         run: pnpm build
