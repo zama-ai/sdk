@@ -95,7 +95,7 @@ const signerA = new ViemSigner({ walletClient: walletClientA, publicClient });
 
 `ViemSigner` implements `GenericSigner`, the SDK's internal signer interface. It routes:
 
-- **Reads** (`readContract`, `getChainId`, `getAddress`, `getBalance`) → `publicClient`
+- **Reads** (`readContract`, `getChainId`, `getAddress`, `getBlockTimestamp`, `waitForTransactionReceipt`) → `publicClient`
 - **Writes** (`writeContract`, `signTypedData`) → `walletClient`
 
 ### RelayerNode
