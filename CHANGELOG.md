@@ -1,5 +1,7 @@
 # Changelog
 
+## [2.2.0-alpha.10](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.9...v2.2.0-alpha.10) (2026-03-30)
+
 ## [2.2.0-alpha.9](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.8...v2.2.0-alpha.9) (2026-03-30)
 
 ## [2.2.0-alpha.8](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.7...v2.2.0-alpha.8) (2026-03-30)
