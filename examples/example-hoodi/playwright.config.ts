@@ -12,6 +12,9 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Force the RPC URL to empty so that .env.local overrides cannot bypass the
+    // interceptRpc route mock — tests must always go through the Playwright interceptor.
+    env: { NEXT_PUBLIC_HOODI_RPC_URL: "" },
   },
   projects: [
     {
