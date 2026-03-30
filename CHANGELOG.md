@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.0-alpha.8](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.7...v2.2.0-alpha.8) (2026-03-30)
+
+### Features
+
+- **example-hoodi:** upgrade to SDK 2.2.0-alpha.4 + registry + ERC-7984 flows ([#179](https://github.com/zama-ai/sdk/issues/179)) ([6819c13]())
+
 ## [2.2.0-alpha.7](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.6...v2.2.0-alpha.7) (2026-03-30)
 
 ## [2.2.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.5...v2.2.0-alpha.6) (2026-03-27)
