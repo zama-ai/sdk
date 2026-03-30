@@ -139,6 +139,7 @@ export function ShieldCard({
         <span className="input-unit">{symbol}</span>
       </div>
       <button
+        type="button"
         className="btn btn-primary btn-full"
         onClick={handleShield}
         disabled={disabled || parsedAmount === 0n || shield.isPending}
