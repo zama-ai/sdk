@@ -230,7 +230,8 @@ async function main() {
     } catch (err) {
       if (err instanceof DelegationNotPropagatedError) {
         console.warn(
-          "  ⚠ ACL grant not yet propagated to the gateway — wait 1–2 minutes and retry.",
+          "  ⚠ ACL grant not yet propagated to the gateway — skipping delegate decrypt.\n" +
+            "  In production, implement retry with backoff. Wait 1–2 minutes and re-run to verify.",
         );
       } else {
         throw err;
