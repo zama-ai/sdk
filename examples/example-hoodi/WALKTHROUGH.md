@@ -147,10 +147,10 @@ Both `USDC Mock` and `USDT Mock` have a permissionless `mint(address to, uint256
 
 ## Hoodi contract addresses
 
-| Token      | ERC-20 address                               | ERC-7984 address (cToken / wrapper)          |
-| ---------- | -------------------------------------------- | -------------------------------------------- |
-| USDC Mock  | `0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b` | `0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75` |
-| USDT Mock  | `0x7740F913dC24D4F9e1A72531372c3170452B2F87` | `0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1` |
+| Token     | ERC-20 address                               | ERC-7984 address (cToken / wrapper)          |
+| --------- | -------------------------------------------- | -------------------------------------------- |
+| USDC Mock | `0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b` | `0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75` |
+| USDT Mock | `0x7740F913dC24D4F9e1A72531372c3170452B2F87` | `0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1` |
 
 Registry (DeploymentCoordinator): `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
 
