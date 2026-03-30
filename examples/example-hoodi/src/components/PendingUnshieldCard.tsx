@@ -31,7 +31,9 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
     { tokenAddress, wrapperAddress: tokenAddress },
     {
       onSuccess: () => {
-        clearPendingUnshield(storage, tokenAddress);
+        clearPendingUnshield(storage, tokenAddress).catch((err) =>
+          console.error("[PendingUnshieldCard] Failed to clear pending unshield:", err),
+        );
         setPendingTxHash(null);
         onSuccess?.();
       },
@@ -51,6 +53,7 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
           </a>
         </span>
         <button
+          type="button"
           className="btn btn-primary"
           onClick={() => resume.mutate({ unwrapTxHash: pendingTxHash })}
           disabled={resume.isPending}

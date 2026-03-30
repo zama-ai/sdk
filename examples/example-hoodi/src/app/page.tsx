@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import {
   useConfidentialBalance,
-  useMetadata,
+  useIsAllowed,
+  useAllow,
+  useListPairs,
   useZamaSDK,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import type { TokenWrapperPair, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query"; // query key builders for SDK-managed caches — /query subpath export
 import type { Address } from "@zama-fhe/react-sdk";
 import { BalancesCard } from "@/components/BalancesCard";
 import { ShieldCard } from "@/components/ShieldCard";
@@ -27,33 +30,38 @@ import {
 } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 
-// ─── CONFIGURATION ────────────────────────────────────────────────────────────
-// Add your ERC-7984 token pairs here.
-// - erc20: the underlying ERC-20 token (source of funds for shield, mint target)
-// - confidential: the ERC-7984 wrapper contract (used for all SDK hooks)
-// For ERC-7984 tokens, the SDK hooks (useUnshield, useConfidentialTransfer) and the
-// Token API (sdk.createToken().shield()) all use tokenAddress === token.confidential.
-const TOKENS = {
-  usdt: {
-    label: "USDT Mock",
-    erc20: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b" as Address,
-    confidential: "0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75" as Address,
-  },
-  test: {
-    label: "Test Token",
-    erc20: "0x7740F913dC24D4F9e1A72531372c3170452B2F87" as Address,
-    confidential: "0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1" as Address,
-  },
-} as const;
-
-// Standard ERC-20 mint ABI — both test tokens expose mint(address, uint256).
+// mint(address, uint256) is not part of the ERC-20 standard — it is a convenience
+// function added to both test tokens for easy balance top-ups during development.
 const MINT_ABI = ["function mint(address to, uint256 amount)"];
+
+// Stable zero address used as a hook placeholder when no token is selected yet.
+// SDK hooks must not be called conditionally (React rules of hooks), so we pass this
+// address with enabled: false until a real token pair is available from the registry.
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
+
+// useListPairs with EthersSigner (ethers v6) returns objects where the SDK has spread
+// an ethers Result to attach metadata. Spreading a Result only copies its own enumerable
+// properties — the numeric indices 0, 1, 2. The named ABI fields (tokenAddress,
+// confidentialTokenAddress, isValid) are non-enumerable prototype getters on the
+// ethers Result class and are lost in the spread. This helper reads named fields first
+// (correct for viem) and falls back to numeric index access (required for ethers).
+function normalizePair(
+  raw: TokenWrapperPair | TokenWrapperPairWithMetadata,
+): TokenWrapperPairWithMetadata | null {
+  if (!("underlying" in raw)) return null;
+  const t = raw as unknown as readonly [Address, Address, boolean];
+  return {
+    tokenAddress: raw.tokenAddress ?? t[0],
+    confidentialTokenAddress: raw.confidentialTokenAddress ?? t[1],
+    isValid: raw.isValid ?? t[2],
+    underlying: (raw as TokenWrapperPairWithMetadata).underlying,
+    confidential: (raw as TokenWrapperPairWithMetadata).confidential,
+  };
+}
 
 // Routes ETH balance reads through the direct Hoodi RPC so polling is fast
 // and independent of the injected wallet's own RPC endpoint.
 const rpcProvider = new JsonRpcProvider(HOODI_RPC_URL);
-
-type TokenKey = keyof typeof TOKENS;
 
 // Attempt to switch to Hoodi. If the network is unknown to the wallet (error 4902),
 // prompt to add it. Errors from wallet_switchEthereumChain (including 4001 user rejection)
@@ -86,20 +94,79 @@ async function switchToHoodi(ethereum: NonNullable<ReturnType<typeof getEthereum
 }
 
 export default function Home() {
+  const [isInitializing, setIsInitializing] = useState(true);
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
-  const [selectedToken, setSelectedToken] = useState<TokenKey>("usdt");
+  const [switchFailed, setSwitchFailed] = useState(false);
+  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
 
-  const token = TOKENS[selectedToken];
-  const isHoodi = chainId === HOODI_CHAIN_ID_HEX;
+  // Case-insensitive: some wallets return uppercase hex (e.g. "0x88BB0" instead of "0x88bb0").
+  const isHoodi = chainId?.toLowerCase() === HOODI_CHAIN_ID_HEX;
 
   // Stable reference from the QueryClientProvider in providers.tsx.
   // Used in handleAccountsChanged (inside the useEffect below) to invalidate balance caches.
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
+
+  // Check whether FHE decrypt credentials are already cached (no wallet prompt).
+  // Returns true if a valid session exists, undefined/false otherwise.
+  const { data: isAllowed } = useIsAllowed();
+
+  // Fetch all valid token pairs from the on-chain WrappersRegistry.
+  // Registry address is resolved automatically from the connected chain via DefaultRegistryAddresses
+  // (Hoodi: 0x1807aE2f693F8530DFB126D0eF98F2F2518F292f) — no configuration required.
+  // The hook gates itself internally: it only runs once the chain ID is known.
+  // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair,
+  // removing the need for separate useMetadata calls.
+  // isPending stays true until the first successful response — covers both the initial
+  // disabled state (registry address not yet resolved internally) and the active-fetching state.
+  // isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending && isFetching,
+  // so it is false when the query is disabled (enabled: false), causing a premature
+  // "No tokens available" display before the chain ID has been resolved.
+  const {
+    data: pairsData,
+    isPending: isRegistryPending,
+    isError: isRegistryError,
+  } = useListPairs({ metadata: true });
+
+  // Normalize and filter pairs: normalizePair handles the EthersSigner/viem compat issue
+  // (see function definition above), then we keep only isValid pairs with metadata.
+  const validPairs = useMemo(
+    () =>
+      (pairsData?.items ?? [])
+        .map(normalizePair)
+        .filter((p): p is TokenWrapperPairWithMetadata => p !== null && p.isValid),
+    [pairsData],
+  );
+
+  // Auto-select the first valid pair once the registry resolves.
+  useEffect(() => {
+    if (validPairs.length > 0 && selectedTokenAddress === null) {
+      setSelectedTokenAddress(validPairs[0].confidentialTokenAddress);
+    }
+  }, [validPairs, selectedTokenAddress]);
+
+  // Currently selected token pair, or undefined while the registry is loading.
+  const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
+
+  // Metadata for the selected token pair — sourced directly from the registry response
+  // (useListPairs with metadata: true). Defaults to safe zero values until the pair loads.
+  const decimals = token?.confidential.decimals ?? 0;
+  const erc20Decimals = token?.underlying.decimals ?? 0;
+  const confidentialSymbol = token?.confidential.symbol ?? "";
+  const erc20Symbol = token?.underlying.symbol ?? "";
+
+  // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
+  // All registry pairs are passed at once — a single signature covers all tokens,
+  // so switching tokens does not require a second wallet prompt.
+  const allowTokens = useAllow();
+  function handleDecrypt() {
+    if (validPairs.length === 0) return;
+    allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
+  }
 
   // Attempt to switch to Hoodi and update chainId based on the actual result.
   // Safe to call concurrently — duplicate calls are harmless (last write wins).
@@ -107,6 +174,7 @@ export default function Home() {
     const ethereum = getEthereumProvider();
     if (!ethereum) return;
     setIsSwitching(true);
+    setSwitchFailed(false);
     try {
       await switchToHoodi(ethereum);
     } catch (err) {
@@ -115,6 +183,8 @@ export default function Home() {
       const current = (await ethereum.request({ method: "eth_chainId" })) as string;
       setChainId(current);
       setIsSwitching(false);
+      // If we're still on the wrong network after the attempt, tell the user.
+      setSwitchFailed(current.toLowerCase() !== HOODI_CHAIN_ID_HEX);
     }
   }
 
@@ -123,7 +193,10 @@ export default function Home() {
   // ZamaProvider lifecycle (signer remount). This listener handles UI-level state only.
   useEffect(() => {
     const ethereum = getEthereumProvider();
-    if (!ethereum) return;
+    if (!ethereum) {
+      setIsInitializing(false);
+      return;
+    }
 
     // Read both accounts and chainId in parallel, then auto-switch if needed.
     Promise.all([
@@ -141,11 +214,12 @@ export default function Home() {
           handleSwitchToHoodi();
         }
       })
-      .catch((err) => console.error("Failed to detect wallet state:", err));
+      .catch((err) => console.error("Failed to detect wallet state:", err))
+      .finally(() => setIsInitializing(false));
 
     const handleAccountsChanged = (accounts: unknown) => {
       setAddress((accounts as string[])[0] ?? null);
-      // Invalidate only balance queries — metadata (name/symbol/decimals) is address-independent.
+      // Invalidate only balance queries — registry/metadata is address-independent.
       queryClient.invalidateQueries({ queryKey: ["eth-balance"] });
       queryClient.invalidateQueries({ queryKey: ["erc20-balance"] });
     };
@@ -157,7 +231,7 @@ export default function Home() {
       ethereum.removeListener("accountsChanged", handleAccountsChanged);
       ethereum.removeListener("chainChanged", handleChainChanged);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function connect() {
     const ethereum = getEthereumProvider();
@@ -188,18 +262,6 @@ export default function Home() {
     }
   }
 
-  // useMetadata reads name/symbol/decimals from any contract that exposes the standard
-  // ERC-20 metadata interface — it works equally on plain ERC-20s and ERC-7984 wrappers.
-  // erc20Metadata drives shield amounts and ERC-20 balance display.
-  // cTokenMetadata drives transfer/unshield amounts and confidential balance display.
-  const cTokenMetadata = useMetadata(token.confidential);
-  const erc20Metadata = useMetadata(token.erc20);
-
-  const decimals = cTokenMetadata.data?.decimals ?? 0;
-  const erc20Decimals = erc20Metadata.data?.decimals ?? 0;
-  const confidentialSymbol = cTokenMetadata.data?.symbol ?? "";
-  const erc20Symbol = erc20Metadata.data?.symbol ?? "";
-
   const ethBalanceKey = ["eth-balance", address];
   const { data: ethBalance } = useQuery({
     queryKey: ethBalanceKey,
@@ -208,15 +270,15 @@ export default function Home() {
     enabled: !!address && isHoodi,
   });
 
-  // Use the ERC-20 address from config directly — no on-chain underlyingContract() lookup needed.
-  const erc20BalanceKey = ["erc20-balance", token.erc20, address];
+  // ERC-20 balance for the selected token. Disabled until a token pair is selected.
+  const erc20BalanceKey = ["erc20-balance", token?.tokenAddress, address];
   const { data: erc20Balance } = useQuery({
     queryKey: erc20BalanceKey,
     queryFn: async () =>
       sdk.signer.readContract(
-        balanceOfContract(token.erc20, address as Address),
+        balanceOfContract(token!.tokenAddress, address as Address),
       ) as Promise<bigint>,
-    enabled: !!address && isHoodi,
+    enabled: !!address && isHoodi && !!token,
   });
 
   const refreshBalances = () => {
@@ -224,48 +286,74 @@ export default function Home() {
     queryClient.invalidateQueries({ queryKey: ethBalanceKey });
     // Invalidate the encrypted handle so useConfidentialBalance re-polls after
     // any operation that changes the confidential balance (shield, unshield, transfer).
-    queryClient.invalidateQueries({
-      queryKey: zamaQueryKeys.confidentialHandle.token(token.confidential),
-    });
+    if (token) {
+      queryClient.invalidateQueries({
+        queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+      });
+    }
   };
 
-  const balance = useConfidentialBalance({ tokenAddress: token.confidential });
+  // Only run once the user has explicitly authorized decrypt (isAllowed).
+  // Prevents the hook from firing an EIP-712 prompt on mount (blind-signing anti-pattern).
+  // ZERO_ADDRESS is used as a stable placeholder while no token pair is selected —
+  // the query is disabled (enabled: false) so no actual RPC call is made.
+  const balance = useConfidentialBalance(
+    { tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS },
+    { enabled: !!address && isHoodi && !!isAllowed && !!token },
+  );
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
   const mint = useMutation({
     mutationFn: async () => {
       const txHash = await sdk.signer.writeContract({
-        address: token.erc20,
+        address: token!.tokenAddress,
         abi: MINT_ABI,
         functionName: "mint",
         args: [address as Address, parseUnits("10", erc20Decimals)],
       });
       await sdk.signer.waitForTransactionReceipt(txHash);
+      return txHash;
     },
     onSuccess: refreshBalances,
   });
 
-  // Clear stale mint state when the wallet account changes so the BalancesCard
+  // Clear stale mutation state when the wallet account changes so the BalancesCard
   // does not show a pending/success/error badge belonging to the previous account.
-  // mint.reset is stable across renders (TanStack Query guarantee).
+  // Both reset functions are omitted from deps: useMutation returns a new object every
+  // render, so including them would re-run this effect on every render. The resets are
+  // idempotent so running them only on address changes is both correct and sufficient.
   useEffect(() => {
     mint.reset();
-  }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
+    allowTokens.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
 
-  // Guard on metadata too: if balance resolves before metadata, decimals defaults to 0
+  // Guard on token too: if balance resolves before the registry, decimals defaults to 0
   // and symbol to "" — the raw integer would be displayed without unit or decimal conversion.
   const formattedErc20 =
-    erc20Balance !== undefined && erc20Metadata.data
+    erc20Balance !== undefined && token
       ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}`
       : "—";
   const formattedConfidential =
-    balance.data !== undefined && cTokenMetadata.data
+    balance.data !== undefined && token
       ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
       : "—";
 
-  // Actions are disabled until both metadata are loaded (decimals needed to parse amounts)
+  // Actions are disabled until the registry has loaded a valid token pair
   // and until the wallet is on the Hoodi network.
-  const actionsDisabled = !isHoodi || !cTokenMetadata.data || !erc20Metadata.data;
+  const actionsDisabled = !isHoodi || !token;
+
+  // ── Screen 0: Initializing ────────────────────────────────────────────────
+  // Shown while eth_accounts / eth_chainId are resolving — prevents a flash of the
+  // "Connect Wallet" screen during the brief re-initialization that follows a
+  // ZamaProvider remount (wallet switch or chain change).
+  if (isInitializing) {
+    return (
+      <div className="app-container connect-screen">
+        <h1>Hoodi Confidential Token Quickstart</h1>
+      </div>
+    );
+  }
 
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!address) {
@@ -275,7 +363,7 @@ export default function Home() {
         <p className="subtitle">
           Connect your wallet to interact with ERC-7984 tokens on Hoodi testnet.
         </p>
-        <button className="btn btn-primary" onClick={connect} disabled={isConnecting}>
+        <button type="button" className="btn btn-primary" onClick={connect} disabled={isConnecting}>
           {isConnecting ? "Connecting…" : "Connect Wallet"}
         </button>
         {connectError && <div className="alert alert-error card-status">{connectError}</div>}
@@ -293,9 +381,19 @@ export default function Home() {
           to continue — Hoodi will be added to your wallet automatically if it is not already
           configured.
         </p>
-        <button className="btn btn-primary" onClick={handleSwitchToHoodi} disabled={isSwitching}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleSwitchToHoodi}
+          disabled={isSwitching}
+        >
           {isSwitching ? "Switching…" : "Switch to Hoodi"}
         </button>
+        {switchFailed && (
+          <div className="alert alert-error card-status">
+            Could not switch to Hoodi. Please switch manually in your wallet.
+          </div>
+        )}
       </div>
     );
   }
@@ -312,25 +410,35 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Token selector */}
+      {/* Token selector — populated from the on-chain WrappersRegistry */}
       <div className="card">
         <div className="card-title">Token</div>
         <select
           className="select"
-          value={selectedToken}
+          value={selectedTokenAddress ?? ""}
           onChange={(e) => {
-            setSelectedToken(e.target.value as TokenKey);
+            setSelectedTokenAddress(e.target.value as Address);
             mint.reset();
           }}
+          disabled={isRegistryPending || isRegistryError || validPairs.length === 0}
         >
-          {(Object.keys(TOKENS) as TokenKey[]).map((key) => (
-            <option key={key} value={key}>
-              {TOKENS[key].label}
+          {(isRegistryPending || selectedTokenAddress === null) && (
+            <option value="" disabled>
+              {isRegistryPending || validPairs.length > 0 ? "Loading…" : "No tokens available"}
+            </option>
+          )}
+          {validPairs.map((pair) => (
+            <option key={pair.confidentialTokenAddress} value={pair.confidentialTokenAddress}>
+              {pair.underlying.symbol}
             </option>
           ))}
         </select>
-        {(!cTokenMetadata.data || !erc20Metadata.data) && (
-          <p className="token-meta">Loading token metadata…</p>
+        {isRegistryPending && <p className="token-meta">Loading tokens from registry…</p>}
+        {!isRegistryPending && isRegistryError && (
+          <p className="token-meta">Failed to load tokens from registry.</p>
+        )}
+        {!isRegistryPending && !isRegistryError && validPairs.length === 0 && (
+          <p className="token-meta">No tokens available.</p>
         )}
       </div>
 
@@ -344,26 +452,33 @@ export default function Home() {
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}
         mintDisabled={actionsDisabled}
+        mintError={mint.isError ? (mint.error?.message ?? null) : null}
+        mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
+        isAllowed={!!isAllowed}
+        onDecrypt={handleDecrypt}
+        isDecrypting={allowTokens.isPending}
+        decryptDisabled={validPairs.length === 0}
+        decryptError={allowTokens.isError ? (allowTokens.error?.message ?? "Signing failed") : null}
       />
 
-      {/* Pending unshield resume — checked for every token, not just the selected one.
+      {/* Pending unshield resume — checked for every registered token, not just the selected one.
           key includes address so the component remounts (re-checks IndexedDB) on wallet change. */}
-      {(Object.entries(TOKENS) as [TokenKey, (typeof TOKENS)[TokenKey]][]).map(([key, t]) => (
+      {validPairs.map((pair) => (
         <PendingUnshieldCard
-          key={`${key}-${address}`}
-          tokenAddress={t.confidential}
-          label={t.label}
+          key={`${pair.confidentialTokenAddress}-${address}`}
+          tokenAddress={pair.confidentialTokenAddress}
+          label={pair.underlying.symbol}
           onSuccess={refreshBalances}
         />
       ))}
 
       <div className="section-label">Operations</div>
 
-      {/* key includes address and selectedToken so cards remount (inputs + state reset) on wallet or token change */}
+      {/* key includes address and selectedTokenAddress so cards remount (inputs + state reset) on wallet or token change */}
       <ShieldCard
-        key={`shield-${address}-${selectedToken}`}
-        tokenAddress={token.confidential}
-        underlyingAddress={token.erc20}
+        key={`shield-${address}-${selectedTokenAddress}`}
+        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
+        underlyingAddress={token?.tokenAddress ?? ZERO_ADDRESS}
         decimals={erc20Decimals}
         symbol={erc20Symbol}
         disabled={actionsDisabled}
@@ -371,20 +486,22 @@ export default function Home() {
       />
 
       <TransferCard
-        key={`transfer-${address}-${selectedToken}`}
-        tokenAddress={token.confidential}
+        key={`transfer-${address}-${selectedTokenAddress}`}
+        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
         decimals={decimals}
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
+        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 
       <UnshieldCard
-        key={`unshield-${address}-${selectedToken}`}
-        tokenAddress={token.confidential}
+        key={`unshield-${address}-${selectedTokenAddress}`}
+        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
         decimals={decimals}
         symbol={confidentialSymbol}
         disabled={actionsDisabled}
+        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 
@@ -394,15 +511,15 @@ export default function Home() {
       <div className="section-label">Delegation — as owner</div>
 
       <DelegateDecryptionCard
-        key={`grant-delegation-${address}-${selectedToken}`}
-        tokenAddress={token.confidential}
-        disabled={!isHoodi}
+        key={`grant-delegation-${address}-${selectedTokenAddress}`}
+        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
+        disabled={actionsDisabled}
       />
 
       <RevokeDelegationCard
-        key={`revoke-delegation-${address}-${selectedToken}`}
-        tokenAddress={token.confidential}
-        disabled={!isHoodi}
+        key={`revoke-delegation-${address}-${selectedTokenAddress}`}
+        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
+        disabled={actionsDisabled}
       />
 
       {/* ── Delegation — delegate perspective ────────────────────────────────
@@ -411,11 +528,11 @@ export default function Home() {
       <div className="section-label">Delegation — as delegate</div>
 
       <DecryptAsCard
-        key={`decrypt-as-${address}-${selectedToken}`}
-        tokenAddress={token.confidential}
+        key={`decrypt-as-${address}-${selectedTokenAddress}`}
+        tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
         decimals={decimals}
         symbol={confidentialSymbol}
-        disabled={!isHoodi || !cTokenMetadata.data}
+        disabled={actionsDisabled}
         connectedAddress={address as Address}
       />
     </div>

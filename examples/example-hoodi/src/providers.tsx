@@ -247,9 +247,14 @@ export function Providers({ children }: { children: ReactNode }) {
         storage={indexedDBStorage}
         sessionStorage={sessionDBStorage}
         signer={signer}
+        // Align keypairTTL with sessionTTL (both 30 days) to prevent a mismatch
+        // where a valid session prompts the SDK to decrypt, but the keypair has expired
+        // and must be regenerated mid-operation (causing an unexpected wallet prompt).
+        keypairTTL={30 * 24 * 60 * 60}
         onEvent={(event) => {
-          // ZamaSDKEvents.UnshieldPhase1Submitted fires right after the Phase 1 tx is submitted
-          // (before it is mined). Saving here ensures the pending state survives a tab close.
+          // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
+          // awaits the receipt before emitting). Saving here ensures the pending state
+          // survives a tab close between Phase 1 and Phase 2.
           // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
           if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
             const wrapperAddress = getActiveUnshieldToken();

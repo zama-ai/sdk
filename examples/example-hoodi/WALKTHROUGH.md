@@ -32,15 +32,15 @@ Specifically:
 
 ## Supported operations
 
-| Operation                    | SDK API                                       | Source file                                 | Transactions          |
-| ---------------------------- | --------------------------------------------- | ------------------------------------------- | --------------------- |
-| Decrypt confidential balance | `useConfidentialBalance`                      | `src/app/page.tsx`                          | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                  | `src/components/ShieldCard.tsx`             | 1–3 (wrap, ± approve) |
-| Confidential transfer        | `useConfidentialTransfer`                     | `src/components/TransferCard.tsx`           | 1                     |
-| Unshield (cToken → ERC-20)   | `useUnshield`                                 | `src/components/UnshieldCard.tsx`           | 2 (unwrap + finalize) |
-| Grant decryption access      | `useDelegateDecryption`                       | `src/components/DelegateDecryptionCard.tsx` | 1                     |
-| Revoke decryption access     | `useRevokeDelegation`                         | `src/components/RevokeDelegationCard.tsx`   | 1                     |
-| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` | `src/components/DecryptAsCard.tsx`          | 0 (read)              |
+| Operation                    | SDK API                                                | Source file                                            | Transactions          |
+| ---------------------------- | ------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
+| Decrypt confidential balance | `useIsAllowed` + `useAllow` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
+| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                           | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
+| Confidential transfer        | `useConfidentialTransfer`                              | `src/components/TransferCard.tsx`                      | 1                     |
+| Unshield (cToken → ERC-20)   | `useUnshield`                                          | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
+| Grant decryption access      | `useDelegateDecryption`                                | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
+| Revoke decryption access     | `useRevokeDelegation`                                  | `src/components/RevokeDelegationCard.tsx`              | 1                     |
+| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus`          | `src/components/DecryptAsCard.tsx`                     | 0 (read)              |
 
 ---
 
@@ -156,7 +156,7 @@ Registry (DeploymentCoordinator): `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
 
 All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
 
-> These addresses are also defined in `src/lib/config.ts` and `src/app/page.tsx` (`TOKENS` constant). If contracts are redeployed, update all three locations.
+> Token pairs are loaded dynamically from the on-chain WrappersRegistry (`0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`) at runtime — `src/app/page.tsx` no longer contains a hardcoded `TOKENS` constant. If contracts are redeployed, the registry should be updated; the app will pick up the new addresses automatically.
 
 ---
 
@@ -188,8 +188,8 @@ const signer = await provider.getSigner();
 const usdtMock = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
 await usdtMock.mint(await signer.getAddress(), parseUnits("10", 6));
 
-// Test Token — verify its decimals on Etherscan or via useMetadata() before minting.
-const testTokenDecimals = 18; // replace with the actual value from useMetadata()
+// Test Token — verify its decimals on Etherscan or via useListPairs() before minting.
+const testTokenDecimals = 18; // replace with the actual value from pair.underlying.decimals
 const testToken = new Contract("0x7740F913dC24D4F9e1A72531372c3170452B2F87", MINT_ABI, signer);
 await testToken.mint(await signer.getAddress(), parseUnits("10", testTokenDecimals));
 ```
@@ -210,7 +210,7 @@ If you switch to a different network after connecting, the app shows a full-page
 
 ### Step 2 — Select a token
 
-Use the **Token** dropdown to select between **USDT Mock** and **Test Token**. The token name, symbol, and decimal precision are loaded from the chain via `useMetadata` (called once for the ERC-7984 wrapper and once for the underlying ERC-20).
+Use the **Token** dropdown to select between available tokens. Token pairs are loaded from the on-chain **WrappersRegistry** via `useListPairs({ metadata: true })` — no hardcoded addresses needed. The registry address for Hoodi (`0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`) is resolved automatically from the connected chain ID. Name, symbol, and decimal precision are included in the registry response.
 
 ### Step 3 — Mint tokens (if needed)
 
@@ -220,12 +220,14 @@ If your ERC-20 balance shows `0`, click **Mint** next to the ERC-20 balance, or 
 
 Two balances are displayed:
 
-- **ERC-20 balance** — your public on-chain balance of the underlying token (e.g., USDTMock). Read via a standard `balanceOf` call.
+- **ERC-20 balance** — your public on-chain balance of the underlying token. Read via a standard `balanceOf` call.
 - **Confidential balance** — your confidential cToken balance, read via `useConfidentialBalance`. The SDK reads the encrypted handle on-chain (Phase 1), then decrypts it via `RelayerCleartext` (Phase 2).
 
-If you have never shielded any tokens, the confidential balance shows **—** — this is expected, as there is no encrypted balance to read yet.
+**Explicit decrypt pattern:** the confidential balance is not queried until you explicitly authorize FHE decryption. The Balances card shows a **Decrypt Balance** button instead of a balance value until you sign. This avoids blind EIP-712 prompts on mount.
 
-On **first use** (or after clearing browser data), your wallet will request a one-time **EIP-712 session signature** to authorise the SDK to decrypt your balance. This credential is cached in IndexedDB (30-day TTL by default) and reused for all subsequent decryptions — you will not be prompted again until the session expires or you clear your browser storage.
+Click **Decrypt Balance** and approve the EIP-712 signature in your wallet. A single signature covers all registered tokens — switching tokens will not prompt again. The credential is cached in IndexedDB (30-day TTL) and reused for all subsequent decryptions.
+
+If you have never shielded any tokens, the confidential balance shows **—** after decryption — this is expected, as there is no encrypted balance to read yet.
 
 ### Step 5 — Shield (ERC-20 → cToken)
 
@@ -350,32 +352,50 @@ const sessionDBStorage = new IndexedDBStorage("SessionStore");
 import { parseUnits, isError } from "ethers";
 import {
   useZamaSDK,
+  useListPairs,
+  useIsAllowed,
+  useAllow,
   useConfidentialTransfer,
   useUnshield,
   useConfidentialBalance,
-  useMetadata,
   allowanceContract,
   approveContract,
   balanceOfContract,
 } from "@zama-fhe/react-sdk";
 
-// For ERC-7984 tokens: tokenAddress === wrapperAddress (same contract).
-// The ERC-20 underlying address is a known config value — no on-chain lookup needed.
-const cTokenAddress = "0x..."; // ERC-7984 wrapper contract address
-const erc20Address = "0x..."; // Underlying ERC-20 contract address (from your config)
+// Fetch all valid token pairs from the on-chain WrappersRegistry.
+// Registry address is resolved automatically from the chain via DefaultRegistryAddresses.
+// metadata: true fetches name/symbol/decimals for both tokens in each pair.
+const { data: pairsData } = useListPairs({ metadata: true });
+const pair = pairsData?.items?.[0]; // or find by confidentialTokenAddress
 
-// useMetadata reads name/symbol/decimals from any contract exposing the ERC-20
-// metadata interface — works on both plain ERC-20s and ERC-7984 wrappers.
-// Use erc20Decimals for shield (amounts are in ERC-20 units).
-// Use cTokenDecimals for transfer and unshield (amounts are in cToken units).
-const { data: cTokenMetadata } = useMetadata(cTokenAddress);
-const { data: erc20Metadata } = useMetadata(erc20Address);
-const cTokenDecimals = cTokenMetadata?.decimals ?? 0;
-const erc20Decimals = erc20Metadata?.decimals ?? 0;
+// Addresses and metadata from the registry response — no hardcoded values needed.
+const cTokenAddress = pair?.confidentialTokenAddress;
+const erc20Address = pair?.tokenAddress;
+const cTokenDecimals = pair?.confidential.decimals ?? 0;
+const erc20Decimals = pair?.underlying.decimals ?? 0;
+
+// Explicit decrypt pattern: check credentials before enabling the balance display.
+// useIsAllowed returns true if a valid session is cached; false/undefined otherwise.
+const { data: isAllowed } = useIsAllowed();
+
+// useAllow triggers the EIP-712 wallet signature that authorizes decryption.
+// Pass all confidential token addresses at once — a single signature covers all tokens.
+const allowTokens = useAllow();
+function handleDecrypt() {
+  const addresses = pairsData?.items?.map((p) => p.confidentialTokenAddress) ?? [];
+  if (addresses.length > 0) allowTokens.mutate(addresses);
+}
 
 const transfer = useConfidentialTransfer({ tokenAddress: cTokenAddress });
 const unshield = useUnshield({ tokenAddress: cTokenAddress, wrapperAddress: cTokenAddress });
-const balance = useConfidentialBalance({ tokenAddress: cTokenAddress });
+
+// Pass enabled: false until the user has authorized decrypt (isAllowed).
+// This prevents the hook from firing an EIP-712 prompt on mount.
+const balance = useConfidentialBalance(
+  { tokenAddress: cTokenAddress ?? "0x0000000000000000000000000000000000000000" },
+  { enabled: !!isAllowed && !!cTokenAddress },
+);
 
 // Shield: manual approval + wrap.
 // Spend cap strategy: approve for the user's full ERC-20 balance (not the exact shield amount).
@@ -534,12 +554,12 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 | Shield fails immediately after approving spend cap        | Approval transaction not yet confirmed on Hoodi when wrap was attempted                                                                                  | Wait for the approval confirmation and retry — the app detects this and shows a hint                                                                                                                                                                                                                                                                             |
 | Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                               | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                         |
 | Shield stuck on "Shielding… (1/2)"                        | Ran out of Hoodi ETH after the approval transaction                                                                                                      | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                                                  |
-| Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); call `useMetadata` on both contracts                                                                                                                                                                                                                                     |
+| Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); decimals are available as `pair.underlying.decimals` and `pair.confidential.decimals` from `useListPairs`                                                                                                                                                                |
 | "nonce too low: next nonce X, tx nonce Y"                 | The Hoodi public RPC returned a stale nonce; ethers built the tx with an outdated value                                                                  | This is fixed by routing `eth_getTransactionCount` through the wallet in the hybrid provider. If you see this in your own integration, ensure `eth_getTransactionCount` is NOT routed to a load-balanced RPC — it must go through the same node that will receive your `eth_sendTransaction`                                                                     |
 | "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                                                                                             | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                                                                                                                                                                                                                                              |
 | Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow; the app polls receipt via the wallet's node for consistency                                                                                                                                                                                                                                                        |
 | Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                                                         |
-| Amounts displayed as very large or very small numbers     | Raw units displayed without decimal conversion                                                                                                           | Always use `formatUnits(balance, decimals)` for display and `parseUnits(input, decimals)` for input; fetch decimals via `useMetadata`                                                                                                                                                                                                                            |
+| Amounts displayed as very large or very small numbers     | Raw units displayed without decimal conversion                                                                                                           | Always use `formatUnits(balance, decimals)` for display and `parseUnits(input, decimals)` for input; decimals are available from `pair.underlying.decimals` / `pair.confidential.decimals` via `useListPairs`                                                                                                                                                    |
 | Delegate can still decrypt after revocation               | Expected behavior — decrypted values are cached in IndexedDB keyed by `(token, owner, handle)`; the cache is served without re-checking the on-chain ACL | This is by design: the SDK uses the on-chain encrypted handle as the cache key (no TTL). Revocation takes effect for the delegate as soon as the owner's balance changes (via shield, transfer, or unshield), which produces a new handle and automatically invalidates the cache entry. Until then, the previously decrypted value is still accessible locally. |
 | Grant Access reverts with `ExpirationDateBeforeOneHour`   | Expiration date is less than 1 hour in the future (ACL contract requirement)                                                                             | Set the expiry to at least 1 hour from now. The contract compares against `block.timestamp` (UTC), not your local clock — account for any clock skew. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                     |
 | Grant Access reverts with `SenderCannotBeDelegate`        | Attempted to delegate decryption access to your own address                                                                                              | Enter a different wallet address. The ACL contract does not allow self-delegation. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                                                        |
@@ -573,7 +593,7 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 ## Going further
 
-- **Additional tokens** — add entries to the `TOKENS` constant in `src/app/page.tsx` with the ERC-20 address and the ERC-7984 wrapper address. Both can be found in the registry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`.
+- **Additional tokens** — register new ERC-7984 pairs in the on-chain WrappersRegistry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`. The app picks them up automatically via `useListPairs` on the next load — no code change required.
 - **Production use** — replace `RelayerCleartext` with `RelayerWeb` (browser) or `RelayerNode` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
 - **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances in a single relayer call.
 - **Optimistic balance updates** — for `useConfidentialTransfer`, pass `optimistic: true` to immediately update the cached confidential balance while the transaction confirms, then roll back automatically on error. Improves perceived responsiveness in production UIs.
@@ -582,11 +602,11 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 ## Tech stack
 
-| Package                 | Version            | Role                                                                                                                                                                                          |
-| ----------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                              |
-| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useMetadata`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                          |
-| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                        |
-| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                  |
-| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                |
+| Package                 | Version            | Role                                                                                                                                                                                                                       |
+| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                                                           |
+| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useIsAllowed`, `useAllow`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
+| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                                                       |
+| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                     |
+| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                               |
+| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                             |
