@@ -50,7 +50,7 @@ export default defineConfig<{}, WorkerFixtures>({
       wait: {
         stdout: /Anvil ready on port (\d+)/,
       },
-      timeout: 60_000,
+      timeout: 120_000,
     },
     {
       command: `./start-anvil.sh ${VITE_ANVIL_PORT}`,
@@ -58,13 +58,14 @@ export default defineConfig<{}, WorkerFixtures>({
       wait: {
         stdout: /Anvil ready on port (\d+)/,
       },
-      timeout: 60_000,
+      timeout: 120_000,
     },
     {
       command: CI
         ? `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} pnpm --filter @zama-fhe/test-nextjs start`
         : `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} pnpm --filter @zama-fhe/test-nextjs dev`,
       port: NEXTJS_PORT,
+      timeout: 120_000,
       reuseExistingServer: !CI,
     },
     {
@@ -72,6 +73,7 @@ export default defineConfig<{}, WorkerFixtures>({
         ? `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} pnpm --filter @zama-fhe/test-vite preview`
         : `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} pnpm --filter @zama-fhe/test-vite dev`,
       port: VITE_PORT,
+      timeout: 120_000,
       reuseExistingServer: !CI,
     },
   ],

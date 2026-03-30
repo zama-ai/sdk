@@ -169,10 +169,10 @@ export {
 } from "@zama-fhe/sdk";
 
 // Authorization hooks (generic — any contract with encrypted state)
-export { useAllow } from "./token/use-allow";
-export { useIsAllowed } from "./token/use-is-allowed";
-export { useRevoke } from "./token/use-revoke";
-export { useRevokeSession } from "./token/use-revoke-session";
+export { useAllow } from "./authorization/use-allow";
+export { useIsAllowed } from "./authorization/use-is-allowed";
+export { useRevoke } from "./authorization/use-revoke";
+export { useRevokeSession } from "./authorization/use-revoke-session";
 
 // Token hooks (ERC-20 token operations)
 export { useToken, type UseZamaConfig } from "./token/use-token";
@@ -181,37 +181,37 @@ export {
   useConfidentialBalance,
   type UseConfidentialBalanceConfig,
   type UseConfidentialBalanceOptions,
-} from "./token/use-confidential-balance";
+} from "./balance/use-confidential-balance";
 export {
   useConfidentialBalances,
   type UseConfidentialBalancesConfig,
   type UseConfidentialBalancesOptions,
-} from "./token/use-confidential-balances";
+} from "./balance/use-confidential-balances";
 export {
   useConfidentialTransfer,
   type UseConfidentialTransferConfig,
-} from "./token/use-confidential-transfer";
-export { useConfidentialTransferFrom } from "./token/use-confidential-transfer-from";
-export { useConfidentialApprove } from "./token/use-confidential-approve";
+} from "./transfer/use-confidential-transfer";
+export { useConfidentialTransferFrom } from "./transfer/use-confidential-transfer-from";
+export { useConfidentialApprove } from "./transfer/use-confidential-approve";
 export {
   useConfidentialIsApproved,
   useConfidentialIsApprovedSuspense,
   type UseConfidentialIsApprovedConfig,
   type UseConfidentialIsApprovedSuspenseConfig,
-} from "./token/use-confidential-is-approved";
-export { useShield, type UseShieldConfig } from "./token/use-shield";
-export { useShieldETH, type UseShieldETHConfig } from "./token/use-shield-eth";
-export { useUnwrap } from "./token/use-unwrap";
-export { useUnwrapAll } from "./token/use-unwrap-all";
-export { useFinalizeUnwrap } from "./token/use-finalize-unwrap";
-export { useUnshield } from "./token/use-unshield";
-export { useUnshieldAll } from "./token/use-unshield-all";
-export { useResumeUnshield } from "./token/use-resume-unshield";
+} from "./transfer/use-confidential-is-approved";
+export { useShield, type UseShieldConfig } from "./shield/use-shield";
+export { useShieldETH, type UseShieldETHConfig } from "./shield/use-shield-eth";
+export { useUnwrap } from "./unwrap/use-unwrap";
+export { useUnwrapAll } from "./unwrap/use-unwrap-all";
+export { useFinalizeUnwrap } from "./unwrap/use-finalize-unwrap";
+export { useUnshield } from "./unshield/use-unshield";
+export { useUnshieldAll } from "./unshield/use-unshield-all";
+export { useResumeUnshield } from "./unshield/use-resume-unshield";
 export {
   useUnderlyingAllowance,
   useUnderlyingAllowanceSuspense,
   type UseUnderlyingAllowanceConfig,
-} from "./token/use-underlying-allowance";
+} from "./shield/use-underlying-allowance";
 export {
   useWrapperDiscovery,
   useWrapperDiscoverySuspense,
@@ -219,13 +219,16 @@ export {
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
 export { useMetadata, useMetadataSuspense, type TokenMetadata } from "./token/use-metadata";
-export { useActivityFeed, type UseActivityFeedConfig } from "./token/use-activity-feed";
-export { useDelegateDecryption } from "./token/use-delegate-decryption";
-export { useRevokeDelegation } from "./token/use-revoke-delegation";
-export { useDelegationStatus, type UseDelegationStatusConfig } from "./token/use-delegation-status";
-export { useDecryptBalanceAs } from "./token/use-decrypt-balance-as";
-export { useBatchDecryptBalancesAs } from "./token/use-batch-decrypt-balances-as";
-export { useApproveUnderlying } from "./token/use-approve-underlying";
+export { useActivityFeed, type UseActivityFeedConfig } from "./balance/use-activity-feed";
+export { useDelegateDecryption } from "./delegation/use-delegate-decryption";
+export { useRevokeDelegation } from "./delegation/use-revoke-delegation";
+export {
+  useDelegationStatus,
+  type UseDelegationStatusConfig,
+} from "./delegation/use-delegation-status";
+export { useDecryptBalanceAs } from "./delegation/use-decrypt-balance-as";
+export { useBatchDecryptBalancesAs } from "./delegation/use-batch-decrypt-balances-as";
+export { useApproveUnderlying } from "./shield/use-approve-underlying";
 export {
   useIsConfidential,
   useIsConfidentialSuspense,
@@ -333,7 +336,7 @@ export {
 export type {
   OptimisticBalanceSnapshot,
   OptimisticMutateContext,
-} from "./token/optimistic-balance-update";
+} from "./balance/optimistic-balance-update";
 
 // Re-export event decoders, types, and constants from core SDK
 export { ZERO_HANDLE } from "@zama-fhe/sdk";
