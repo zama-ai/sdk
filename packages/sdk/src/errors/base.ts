@@ -54,6 +54,8 @@ export const ZamaErrorCode = {
   AclPaused: "ACL_PAUSED",
   /** Expiration date is too soon (must be at least 1 hour in the future). */
   DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON",
+  /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
+  DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

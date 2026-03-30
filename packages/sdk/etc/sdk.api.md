@@ -7159,6 +7159,11 @@ export class DelegationNotFoundError extends ZamaError {
 }
 
 // @public
+export class DelegationNotPropagatedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class DelegationSelfNotAllowedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -30829,7 +30834,8 @@ export const ZamaErrorCode: {
     readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT"; /** Contract address cannot be the sender address. */
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */
     readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
-    readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON";
+    readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
+    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
 };
 
 // @public

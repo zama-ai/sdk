@@ -152,6 +152,7 @@ export {
   AclPausedError,
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
+  DelegationNotPropagatedError,
   matchZamaError,
   matchAclRevert,
 } from "./errors";

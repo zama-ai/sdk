@@ -45,9 +45,7 @@ Both return `{ txHash, receipt }`.
 The expiration date must be **at least 1 hour in the future**. The SDK validates this client-side before sending the transaction — passing a closer date throws a `DelegationExpirationTooSoonError`. This mirrors the on-chain `ExpirationDateBeforeOneHour` revert in the ACL contract.
 {% endhint %}
 
-{% hint style="warning" %}
-**Propagation delay:** After `delegateDecryption` confirms on-chain, the coprocessor needs approximately **10 blocks** (`delegation_block_delay`) to propagate the delegation to the Gateway's `MultichainACL`. Calling `decryptBalanceAs` before propagation completes will fail with a `UserDecryptionNotDelegated` error. Wait at least 10–15 blocks after the delegation transaction before attempting delegated decryption.
-{% endhint %}
+> **Gateway propagation delay:** After the delegation transaction is mined, allow **1–2 minutes** before calling `decryptBalanceAs`. The delegation is recorded on L1 immediately, but the gateway (deployed on Arbitrum) must sync the ACL state via cross-chain event propagation. Attempting delegated decryption before propagation completes will throw a `DelegationNotPropagatedError`.
 
 ### How expiration dates work
 
@@ -253,19 +251,21 @@ These are caught from Solidity reverts and re-thrown as typed errors:
 
 ### Other errors
 
-| Error                       | When                                                                        |
-| --------------------------- | --------------------------------------------------------------------------- |
-| `DecryptionFailedError`     | Delegated decryption fails or relayer returns no value for a handle         |
-| `SigningRejectedError`      | User rejects the wallet signature prompt (e.g. clicks "Reject" in MetaMask) |
-| `SigningFailedError`        | Signing operation fails for any other reason                                |
-| `NoCiphertextError`         | Relayer returns HTTP 400 — no ciphertext exists for this account            |
-| `RelayerRequestFailedError` | Relayer returns a non-400 HTTP error                                        |
-| `DelegationExpiredError`    | The delegation has expired                                                  |
+| Error                          | When                                                                        |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `DecryptionFailedError`        | Delegated decryption fails or relayer returns no value for a handle         |
+| `SigningRejectedError`         | User rejects the wallet signature prompt (e.g. clicks "Reject" in MetaMask) |
+| `SigningFailedError`           | Signing operation fails for any other reason                                |
+| `NoCiphertextError`            | Relayer returns HTTP 400 — no ciphertext exists for this account            |
+| `RelayerRequestFailedError`    | Relayer returns a non-400 HTTP error                                        |
+| `DelegationExpiredError`       | The delegation has expired                                                  |
+| `DelegationNotPropagatedError` | Delegation exists on L1 but hasn't synced to the gateway yet (wait 1–2 min) |
 
 ```ts
 import {
   TransactionRevertedError,
   DecryptionFailedError,
+  DelegationNotPropagatedError,
   SigningRejectedError,
 } from "@zama-fhe/sdk";
 
@@ -284,6 +284,8 @@ try {
 } catch (error) {
   if (error instanceof SigningRejectedError) {
     // user cancelled the wallet prompt — do not retry automatically
+  } else if (error instanceof DelegationNotPropagatedError) {
+    // delegation hasn't synced to the gateway yet — retry after 1–2 minutes
   } else if (error instanceof DecryptionFailedError) {
     // delegated decryption failed
   }

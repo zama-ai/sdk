@@ -1,38 +1,50 @@
-# React + viem Example
+# Sepolia Confidential Token Quickstart — react-viem
 
-Next.js 15 app using `@zama-fhe/react-sdk` with viem directly (no wagmi).
+Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with
+[viem v2](https://viem.sh/) on Sepolia testnet.
+
+Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery.
+
+## Stack
+
+- **Next.js 16** (App Router, Webpack — Turbopack not yet supported with WASM)
+- **React 19** + **viem v2** (`isAddress`, `parseAbi`, `parseUnits`, `formatUnits`, `createPublicClient`, `createWalletClient`)
+- **TanStack Query v5** for async state
+- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
+- **ViemSigner** — wraps viem `walletClient` + `publicClient` for all SDK operations
+- **RelayerWeb** — browser FHE worker, routes through a local Next.js proxy (`/api/relayer`)
 
 ## Setup
 
 ```bash
 cp .env.example .env.local
-# Fill in your values
+# No changes needed for Sepolia testnet — defaults are pre-configured.
+# Set RELAYER_URL + RELAYER_API_KEY in .env.local only if using a private relayer.
 
 npm install
-```
-
-## Run
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and connect your wallet (MetaMask or any injected wallet).
+Open [http://localhost:3000](http://localhost:3000) and connect MetaMask (or any EIP-1193 wallet) on **Sepolia**.
 
-## Stack
+If your wallet is on the wrong network, the app shows a message — switch to Sepolia manually in your wallet.
 
-- **Next.js 15** (App Router)
-- **React 18** + viem
-- **@tanstack/react-query** for async state
-- **ZamaProvider** + **ViemSigner** — takes `walletClient` + `publicClient` directly
+## Environment variables
 
-## How it differs from react-wagmi
+| Variable                      | Required | Description                                                                                 |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
+| `RELAYER_URL`                 | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`. |
+| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
 
-Instead of wagmi, this example manages wallet connection manually via `window.ethereum` and viem's `createWalletClient`/`createPublicClient`. A custom `WalletContext` provides `connect`/`disconnect`/`address`/`isConnected` so the page component remains identical.
+## Running e2e tests
 
-## Authentication
+```bash
+npm run test:e2e        # runs Playwright (starts the dev server automatically)
+```
 
-The relayer may require authentication. You can either:
+Tests mock `window.ethereum` and the Sepolia RPC — no wallet or real network required.
 
-- **Proxy approach**: Run a proxy server that injects auth headers before forwarding to the relayer
-- **Direct auth**: Pass an `auth` transport option in the relayer config (see SDK docs)
+## Architecture at a glance
+
+See [WALKTHROUGH.md](WALKTHROUGH.md) for a full developer walkthrough.
