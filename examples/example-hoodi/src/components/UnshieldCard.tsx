@@ -12,6 +12,7 @@ interface UnshieldCardProps {
   decimals: number;
   symbol: string;
   disabled: boolean;
+  balanceDecryptRequired: boolean;
   onSuccess?: () => void;
 }
 
@@ -20,6 +21,7 @@ export function UnshieldCard({
   decimals,
   symbol,
   disabled,
+  balanceDecryptRequired,
   onSuccess,
 }: UnshieldCardProps) {
   const [amount, setAmount] = useState("");
@@ -32,7 +34,9 @@ export function UnshieldCard({
     { tokenAddress, wrapperAddress: tokenAddress },
     {
       onSuccess: () => {
-        clearPendingUnshield(storage, tokenAddress);
+        clearPendingUnshield(storage, tokenAddress).catch((err) =>
+          console.error("[UnshieldCard] Failed to clear pending unshield:", err),
+        );
         onSuccess?.();
       },
       // Clear the active token ref on failure so a stale address is never used by the
@@ -48,8 +52,8 @@ export function UnshieldCard({
     setStep(1);
     // Register the active token before mutate() so the onEvent handler in ZamaProvider
     // can associate the txHash (from ZamaSDKEvents.UnshieldPhase1Submitted) with this wrapperAddress.
-    // savePendingUnshield is called there — before Phase 1 is mined — so closing the tab
-    // during mining still leaves recoverable state for PendingUnshieldCard.
+    // savePendingUnshield is called there — after Phase 1 is mined (the SDK awaits the
+    // receipt before emitting) — so closing the tab between phases leaves recoverable state.
     setActiveUnshieldToken(tokenAddress);
     unshield.mutate({
       amount: parsedAmount,
@@ -75,12 +79,16 @@ export function UnshieldCard({
         <span className="input-unit">{symbol}</span>
       </div>
       <button
+        type="button"
         className="btn btn-primary btn-full"
         onClick={handleUnshield}
-        disabled={disabled || parsedAmount === 0n || unshield.isPending}
+        disabled={disabled || balanceDecryptRequired || parsedAmount === 0n || unshield.isPending}
       >
         {unshield.isPending ? pendingLabel : "Unshield"}
       </button>
+      {balanceDecryptRequired && !disabled && (
+        <p className="token-meta">Decrypt your balance first to enable unshielding.</p>
+      )}
       {unshield.isError && (
         <div className="alert alert-error card-status">{unshield.error?.message}</div>
       )}

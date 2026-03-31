@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.2.0](https://github.com/zama-ai/sdk/compare/v2.1.0...v2.2.0) (2026-03-30)
+
+### Features
+
+- **example-hoodi:** upgrade to SDK 2.2.0-alpha.4 + registry + ERC-7984 flows ([#179](https://github.com/zama-ai/sdk/issues/179)) ([6819c13]())
+- **example-react-wagmi:** upgrade to wagmi v3 with full ERC-7984 flows (SDK-37) ([#160](https://github.com/zama-ai/sdk/issues/160)) ([a6386f8]())
+- **react-ethers:** upgrade to SDK 2.1.0-alpha.2 + Sepolia + delegation flows (SDK-35) ([#148](https://github.com/zama-ai/sdk/issues/148)) ([44ce6ee]())
+- **react-sdk:** improve query wrappers types ([#168](https://github.com/zama-ai/sdk/issues/168)) ([db616c7]())
+- **react-viem:** upgrade to SDK 2.1.0-alpha.2 + Sepolia + delegation flows (SDK-36) ([#150](https://github.com/zama-ai/sdk/issues/150)) ([fe7dfc0]()), closes [#1]() [#4]() [#6]() [#7]() [#9]() [#10]()
+- **sdk,react-sdk:** add WrappersRegistry class and on-chain registry hooks ([#116](https://github.com/zama-ai/sdk/issues/116)) ([06bc94b]()), closes [#registryTTL]() [#registryInstance]() [#registry]() [#enrichPair]() [#pairWithMetadata]()
+
+### Bug Fixes
+
+- rename useAllowTokens/useRevokeTokens back to useAllow/useRevoke ([#167](https://github.com/zama-ai/sdk/issues/167)) ([f9d6b1a]())
+- **sdk:** add DelegationNotPropagatedError for gateway sync delay ([#177](https://github.com/zama-ai/sdk/issues/177)) ([f451fa2]())
+
+## [2.2.0-alpha.10](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.9...v2.2.0-alpha.10) (2026-03-30)
+
+## [2.2.0-alpha.9](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.8...v2.2.0-alpha.9) (2026-03-30)
+
+## [2.2.0-alpha.8](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.7...v2.2.0-alpha.8) (2026-03-30)
+
+### Features
+
+- **example-hoodi:** upgrade to SDK 2.2.0-alpha.4 + registry + ERC-7984 flows ([#179](https://github.com/zama-ai/sdk/issues/179)) ([6819c13]())
+
+## [2.2.0-alpha.7](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.6...v2.2.0-alpha.7) (2026-03-30)
+
 ## [2.2.0-alpha.6](https://github.com/zama-ai/sdk/compare/v2.2.0-alpha.5...v2.2.0-alpha.6) (2026-03-27)
 
 ### Bug Fixes

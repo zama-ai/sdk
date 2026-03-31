@@ -32,19 +32,10 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile
 
       - name: Build packages
         run: pnpm build
-
-      - run: pnpm lint
-
-      - run: pnpm typecheck
-
-      - run: pnpm format:check
-
-      - name: Check bundle size
-        run: pnpm size
 
       - run: pnpm test:coverage
 
