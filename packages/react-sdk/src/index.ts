@@ -434,6 +434,7 @@ export {
   AclPausedError,
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
+  DelegationNotPropagatedError,
   ConfigurationError,
   matchZamaError,
 } from "@zama-fhe/sdk";

@@ -104,6 +104,7 @@ import { DelegationExpirationTooSoonError } from '@zama-fhe/sdk';
 import { DelegationExpiredError } from '@zama-fhe/sdk';
 import { DelegationExpiryUnchangedError } from '@zama-fhe/sdk';
 import { DelegationNotFoundError } from '@zama-fhe/sdk';
+import { DelegationNotPropagatedError } from '@zama-fhe/sdk';
 import { DelegationSelfNotAllowedError } from '@zama-fhe/sdk';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { DelegationStatusQueryConfig } from '@zama-fhe/sdk/query';
@@ -494,6 +495,8 @@ export { DelegationExpiredError }
 export { DelegationExpiryUnchangedError }
 
 export { DelegationNotFoundError }
+
+export { DelegationNotPropagatedError }
 
 export { DelegationSelfNotAllowedError }
 

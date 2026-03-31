@@ -31,6 +31,8 @@ import {
   DelegationExpiredError,
   DelegationCooldownError,
   DelegationContractIsSelfError,
+  DelegationExpirationTooSoonError,
+  DelegationNotPropagatedError,
   AclPausedError,
 } from "@zama-fhe/sdk";
 ```
@@ -80,6 +82,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | Delegation has expired                                       |
 | `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Same-block delegate/revoke not allowed                       |
 | `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                               |
+| `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future               |
+| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to gateway yet     |
 | `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                       |
 
 ## Error details
@@ -326,6 +330,95 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Create a new delegation.
+
+### DelegationExpirationTooSoonError
+
+**Code:** `DELEGATION_EXPIRATION_TOO_SOON`
+
+Thrown client-side before submitting a `delegateDecryption` transaction when the expiration date is less than 1 hour in the future. This mirrors the on-chain `ExpirationDateBeforeOneHour` revert in the ACL contract.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_EXPIRATION_TOO_SOON: () =>
+    showError("Expiration must be at least 1 hour in the future"),
+});
+```
+
+**How to handle:** Choose a later expiration date (at least 1 hour from now) or omit it for a permanent delegation.
+
+### DelegationDelegateEqualsContractError
+
+**Code:** `DELEGATION_DELEGATE_EQUALS_CONTRACT`
+
+Thrown client-side before submitting a `delegateDecryption` transaction when the delegate address equals the token contract address.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_DELEGATE_EQUALS_CONTRACT: () =>
+    showError("Cannot delegate to the contract itself"),
+});
+```
+
+**How to handle:** Use a different delegate address.
+
+### DelegationExpiryUnchangedError
+
+**Code:** `DELEGATION_EXPIRY_UNCHANGED`
+
+Thrown client-side (after an RPC read) when the new expiration date matches the current on-chain value. Saves gas by skipping a no-op transaction.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_EXPIRY_UNCHANGED: () =>
+    showInfo("Delegation already has this expiration date"),
+});
+```
+
+**How to handle:** No action needed — the delegation is already configured as requested.
+
+### DelegationContractIsSelfError
+
+**Code:** `DELEGATION_CONTRACT_IS_SELF`
+
+Caught from the on-chain `SenderCannotBeContractAddress` revert. The contract address passed to the delegation call equals the caller address.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_CONTRACT_IS_SELF: () =>
+    showError("Contract address cannot be the caller address"),
+});
+```
+
+**How to handle:** Verify the contract address parameter is the token contract, not the caller's address.
+
+### DelegationNotPropagatedError
+
+**Code:** `DELEGATION_NOT_PROPAGATED`
+
+Thrown when `decryptBalanceAs` fails with an HTTP 500 in a delegated context. The most likely cause is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet — cross-chain sync typically takes 1–2 minutes.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_NOT_PROPAGATED: () =>
+    showInfo("Delegation is still syncing — retry in 1–2 minutes"),
+});
+```
+
+**How to handle:** Wait 1–2 minutes after the delegation transaction is mined, then retry. If the error persists, the gateway or relayer may be experiencing an unrelated issue.
+
+### AclPausedError
+
+**Code:** `ACL_PAUSED`
+
+Caught from the on-chain `EnforcedPause` revert. The ACL contract is paused, temporarily disabling all delegation operations.
+
+```ts
+matchZamaError(error, {
+  ACL_PAUSED: () => showError("Delegation is temporarily disabled"),
+});
+```
+
+**How to handle:** Wait for the ACL contract to be unpaused. This is an operator-level action — contact the protocol team if this persists.
 
 {% hint style="info" %}
 The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses via `matchAclRevert()`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation error reference](/reference/sdk/delegation#on-chain-revert-errors) for the full mapping.
