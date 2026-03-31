@@ -1,0 +1,25 @@
+{
+  "name": "react-ledger",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ledgerhq/ledger-wallet-provider": "^1.1.1",
+    "@tanstack/react-query": "^5.90.0",
+    "@zama-fhe/react-sdk": "2.2.0-alpha.4",
+    "@zama-fhe/sdk": "2.2.0-alpha.4",
+    "ethers": "^6.13.0",
+    "next": "^16.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "typescript": "^5.8.0"
+  }
+}
