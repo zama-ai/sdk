@@ -44,6 +44,16 @@ export const ZamaErrorCode = {
   DelegationNotFound: "DELEGATION_NOT_FOUND",
   /** The delegation has expired. */
   DelegationExpired: "DELEGATION_EXPIRED",
+  /** The new expiration date equals the current one — no on-chain change needed. */
+  DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED",
+  /** Delegate address cannot be the contract address. */
+  DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT",
+  /** Contract address cannot be the sender address. */
+  DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF",
+  /** The ACL contract is paused. */
+  AclPaused: "ACL_PAUSED",
+  /** Expiration date is too soon (must be at least 1 hour in the future). */
+  DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON",
   /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
 } as const;

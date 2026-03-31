@@ -2,7 +2,7 @@
   {
     "name": "@zama-fhe/sdk (ESM)",
     "path": "packages/sdk/dist/esm/**/*.js",
-    "limit": "46 KB"
+    "limit": "47 KB"
   },
   {
     "name": "@zama-fhe/sdk (CJS)",

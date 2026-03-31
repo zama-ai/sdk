@@ -21,11 +21,16 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import {
   ApprovalFailedError,
-  ConfigurationError,
   DecryptionFailedError,
+  DelegationDelegateEqualsContractError,
+  DelegationExpirationTooSoonError,
+  DelegationExpiryUnchangedError,
+  DelegationNotFoundError,
+  DelegationSelfNotAllowedError,
   EncryptionFailedError,
   TransactionRevertedError,
   ZamaError,
+  matchAclRevert,
 } from "../errors";
 import { ReadonlyToken, type ReadonlyTokenConfig } from "./readonly-token";
 import type {
@@ -738,8 +743,27 @@ export class Token extends ReadonlyToken {
     delegateAddress: Address;
     expirationDate?: Date;
   }): Promise<TransactionResult> {
-    if (expirationDate && expirationDate.getTime() <= Date.now()) {
-      throw new ConfigurationError("Expiration date must be in the future");
+    if (expirationDate && expirationDate.getTime() < Date.now() + 3600_000) {
+      throw new DelegationExpirationTooSoonError(
+        "Expiration date must be at least 1 hour in the future",
+      );
+    }
+
+    const normalizedDelegate = getAddress(delegateAddress);
+
+    // Pre-flight: delegate cannot be the connected wallet (SenderCannotBeDelegate)
+    const signerAddress = await this.signer.getAddress();
+    if (normalizedDelegate === getAddress(signerAddress)) {
+      throw new DelegationSelfNotAllowedError(
+        "Cannot delegate to yourself (delegate === msg.sender).",
+      );
+    }
+
+    // Pre-flight: delegate cannot be the contract address (DelegateCannotBeContractAddress)
+    if (normalizedDelegate === this.address) {
+      throw new DelegationDelegateEqualsContractError(
+        `Delegate address cannot be the same as the contract address (${this.address}).`,
+      );
     }
 
     const acl = await this.getAclAddress();
@@ -748,9 +772,20 @@ export class Token extends ReadonlyToken {
       ? BigInt(Math.floor(expirationDate.getTime() / 1000))
       : MAX_UINT64;
 
+    // Pre-flight with RPC: new expiry must differ from current (ExpirationDateAlreadySetToSameValue)
+    const currentExpiry = await this.getDelegationExpiry({
+      delegatorAddress: signerAddress,
+      delegateAddress: normalizedDelegate,
+    });
+    if (currentExpiry === expDate) {
+      throw new DelegationExpiryUnchangedError(
+        `The new expiration date (${expDate}) is the same as the current one. No on-chain change needed.`,
+      );
+    }
+
     try {
       const txHash = await this.signer.writeContract(
-        delegateForUserDecryptionContract(acl, getAddress(delegateAddress), this.address, expDate),
+        delegateForUserDecryptionContract(acl, normalizedDelegate, this.address, expDate),
       );
       this.emit({ type: ZamaSDKEvents.DelegationSubmitted, txHash });
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
@@ -763,6 +798,10 @@ export class Token extends ReadonlyToken {
       });
       if (error instanceof ZamaError) {
         throw error;
+      }
+      const mapped = matchAclRevert(error);
+      if (mapped) {
+        throw mapped;
       }
       throw new TransactionRevertedError("Delegation transaction failed", {
         cause: error,
@@ -783,11 +822,26 @@ export class Token extends ReadonlyToken {
   }: {
     delegateAddress: Address;
   }): Promise<TransactionResult> {
+    const normalizedDelegate = getAddress(delegateAddress);
+    const signerAddress = await this.signer.getAddress();
     const acl = await this.getAclAddress();
+
+    // Pre-flight: reject if never delegated (expiry === 0).
+    // Expired delegations (non-zero expiry in the past) are allowed through —
+    // the ACL contract accepts revocation of expired delegations.
+    const currentExpiry = await this.getDelegationExpiry({
+      delegatorAddress: signerAddress,
+      delegateAddress: normalizedDelegate,
+    });
+    if (currentExpiry === 0n) {
+      throw new DelegationNotFoundError(
+        `No active delegation found for delegate ${normalizedDelegate} on contract ${this.address}.`,
+      );
+    }
 
     try {
       const txHash = await this.signer.writeContract(
-        revokeDelegationContract(acl, getAddress(delegateAddress), this.address),
+        revokeDelegationContract(acl, normalizedDelegate, this.address),
       );
       this.emit({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash });
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
@@ -800,6 +854,10 @@ export class Token extends ReadonlyToken {
       });
       if (error instanceof ZamaError) {
         throw error;
+      }
+      const mapped = matchAclRevert(error);
+      if (mapped) {
+        throw mapped;
       }
       throw new TransactionRevertedError("Revoke delegation transaction failed", {
         cause: error,
