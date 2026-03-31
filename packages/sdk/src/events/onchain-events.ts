@@ -369,3 +369,176 @@ export const TOKEN_TOPICS = [
   Topics.UnwrappedFinalized,
   Topics.UnwrappedStarted,
 ] as const;
+
+// ---------------------------------------------------------------------------
+// ACL delegation event topic0 constants
+// ---------------------------------------------------------------------------
+
+/**
+ * ACL delegation event topic0 constants (keccak256 of the canonical Solidity signature).
+ * These are ACL events, NOT token events — they are emitted by the ACL contract.
+ */
+export const AclTopics = {
+  /** `DelegatedForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate, uint64 newExpirationDate)` */
+  DelegatedForUserDecryption: "0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce8ac5b2fe1d3be8cfda5bfc",
+  /** `RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)` */
+  RevokedDelegationForUserDecryption:
+    "0x7aca80b6b7928b9038f186e3d9922a0fc5d52c398fbf144725c142c52a5277e4",
+} as const;
+
+// ---------------------------------------------------------------------------
+// ACL delegation event interfaces
+// ---------------------------------------------------------------------------
+
+/** Decoded `DelegatedForUserDecryption` event — a delegation was created or renewed. */
+export interface DelegatedForUserDecryptionEvent {
+  readonly eventName: "DelegatedForUserDecryption";
+  /** Address of the delegator (the account granting access). */
+  readonly delegator: Address;
+  /** Address of the delegate (the account receiving access). */
+  readonly delegate: Address;
+  /** Contract address the delegation applies to. */
+  readonly contractAddress: Address;
+  /** Monotonic delegation counter. */
+  readonly delegationCounter: bigint;
+  /** Previous expiration timestamp (0 if first delegation). */
+  readonly oldExpirationDate: bigint;
+  /** New expiration timestamp. */
+  readonly newExpirationDate: bigint;
+}
+
+/** Decoded `RevokedDelegationForUserDecryption` event — a delegation was revoked. */
+export interface RevokedDelegationForUserDecryptionEvent {
+  readonly eventName: "RevokedDelegationForUserDecryption";
+  /** Address of the delegator. */
+  readonly delegator: Address;
+  /** Address of the delegate. */
+  readonly delegate: Address;
+  /** Contract address the revocation applies to. */
+  readonly contractAddress: Address;
+  /** Monotonic delegation counter. */
+  readonly delegationCounter: bigint;
+  /** Expiration date that was active before revocation. */
+  readonly oldExpirationDate: bigint;
+}
+
+/** Union of all decoded ACL delegation event types. */
+export type AclEvent = DelegatedForUserDecryptionEvent | RevokedDelegationForUserDecryptionEvent;
+
+// ---------------------------------------------------------------------------
+// ACL delegation event decoders
+// ---------------------------------------------------------------------------
+
+/**
+ * DelegatedForUserDecryption(address indexed delegator, address indexed delegate,
+ *   address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate, uint64 newExpirationDate)
+ * Indexed: delegator (topics[1]), delegate (topics[2])
+ * Data: contractAddress, delegationCounter, oldExpirationDate, newExpirationDate
+ */
+export function decodeDelegatedForUserDecryption(
+  log: RawLog,
+): DelegatedForUserDecryptionEvent | null {
+  if (log.topics[0] !== AclTopics.DelegatedForUserDecryption) {
+    return null;
+  }
+  if (log.topics.length < 3) {
+    return null;
+  }
+
+  return {
+    eventName: "DelegatedForUserDecryption",
+    delegator: topicToAddress(log.topics[1]!),
+    delegate: topicToAddress(log.topics[2]!),
+    contractAddress: wordToAddress(log.data, 0),
+    delegationCounter: wordToBigInt(log.data, 1),
+    oldExpirationDate: wordToBigInt(log.data, 2),
+    newExpirationDate: wordToBigInt(log.data, 3),
+  };
+}
+
+/**
+ * RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate,
+ *   address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)
+ * Indexed: delegator (topics[1]), delegate (topics[2])
+ * Data: contractAddress, delegationCounter, oldExpirationDate
+ */
+export function decodeRevokedDelegationForUserDecryption(
+  log: RawLog,
+): RevokedDelegationForUserDecryptionEvent | null {
+  if (log.topics[0] !== AclTopics.RevokedDelegationForUserDecryption) {
+    return null;
+  }
+  if (log.topics.length < 3) {
+    return null;
+  }
+
+  return {
+    eventName: "RevokedDelegationForUserDecryption",
+    delegator: topicToAddress(log.topics[1]!),
+    delegate: topicToAddress(log.topics[2]!),
+    contractAddress: wordToAddress(log.data, 0),
+    delegationCounter: wordToBigInt(log.data, 1),
+    oldExpirationDate: wordToBigInt(log.data, 2),
+  };
+}
+
+/**
+ * Try all ACL delegation decoders on a single log and return the first match, or `null`.
+ */
+export function decodeAclEvent(log: RawLog): AclEvent | null {
+  return decodeDelegatedForUserDecryption(log) ?? decodeRevokedDelegationForUserDecryption(log);
+}
+
+/**
+ * Batch-decode an array of logs for ACL delegation events, skipping unrecognized entries.
+ */
+export function decodeAclEvents(logs: readonly RawLog[]): AclEvent[] {
+  const events: AclEvent[] = [];
+  for (const log of logs) {
+    const event = decodeAclEvent(log);
+    if (event) {
+      events.push(event);
+    }
+  }
+  return events;
+}
+
+/**
+ * Find the first {@link DelegatedForUserDecryptionEvent} in a logs array.
+ */
+export function findDelegatedForUserDecryption(
+  logs: readonly RawLog[],
+): DelegatedForUserDecryptionEvent | null {
+  for (const log of logs) {
+    const event = decodeDelegatedForUserDecryption(log);
+    if (event) {
+      return event;
+    }
+  }
+  return null;
+}
+
+/**
+ * Find the first {@link RevokedDelegationForUserDecryptionEvent} in a logs array.
+ */
+export function findRevokedDelegationForUserDecryption(
+  logs: readonly RawLog[],
+): RevokedDelegationForUserDecryptionEvent | null {
+  for (const log of logs) {
+    const event = decodeRevokedDelegationForUserDecryption(log);
+    if (event) {
+      return event;
+    }
+  }
+  return null;
+}
+
+/**
+ * Both ACL delegation event topic0 hashes.
+ * Pass to `getLogs({ topics: [ACL_TOPICS] })` to fetch
+ * all delegation events in a single RPC call.
+ */
+export const ACL_TOPICS = [
+  AclTopics.DelegatedForUserDecryption,
+  AclTopics.RevokedDelegationForUserDecryption,
+] as const;

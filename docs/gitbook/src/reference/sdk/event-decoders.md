@@ -20,6 +20,15 @@ import {
   decodeUnwrappedStarted,
   findWrapped,
   findUnwrapRequested,
+  // ACL delegation events
+  ACL_TOPICS,
+  decodeDelegatedForUserDecryption,
+  decodeRevokedDelegationForUserDecryption,
+  decodeAclEvent,
+  decodeAclEvents,
+  findDelegatedForUserDecryption,
+  findRevokedDelegationForUserDecryption,
+  // Activity feed
   parseActivityFeed,
   extractEncryptedHandles,
   applyDecryptedValues,
@@ -135,6 +144,88 @@ if (unwrapEvent) {
 }
 ```
 
+## ACL delegation events
+
+The ACL contract emits events when delegations are created or revoked. These are separate from token events — they use their own topic hashes and decoders.
+
+### Import
+
+```ts
+import {
+  ACL_TOPICS,
+  AclTopics,
+  decodeDelegatedForUserDecryption,
+  decodeRevokedDelegationForUserDecryption,
+  decodeAclEvent,
+  decodeAclEvents,
+  findDelegatedForUserDecryption,
+  findRevokedDelegationForUserDecryption,
+} from "@zama-fhe/sdk";
+```
+
+### ACL_TOPICS
+
+`Hex[]`
+
+Array of topic hashes for both ACL delegation events. Pass this to `eth_getLogs` to fetch delegation events from the ACL contract.
+
+```ts
+const logs = await publicClient.getLogs({
+  address: aclAddress,
+  topics: [ACL_TOPICS],
+  fromBlock: startBlock,
+  toBlock: "latest",
+});
+```
+
+### Individual decoders
+
+| Decoder                                         | Event type                           | Description                   |
+| ----------------------------------------------- | ------------------------------------ | ----------------------------- |
+| `decodeDelegatedForUserDecryption(log)`         | `DelegatedForUserDecryption`         | Delegation created or renewed |
+| `decodeRevokedDelegationForUserDecryption(log)` | `RevokedDelegationForUserDecryption` | Delegation revoked            |
+
+### DelegatedForUserDecryptionEvent
+
+| Field               | Type      | Description                                 |
+| ------------------- | --------- | ------------------------------------------- |
+| `eventName`         | `string`  | `"DelegatedForUserDecryption"`              |
+| `delegator`         | `Address` | Account granting access                     |
+| `delegate`          | `Address` | Account receiving access                    |
+| `contractAddress`   | `Address` | Contract the delegation applies to          |
+| `delegationCounter` | `bigint`  | Monotonic delegation counter                |
+| `oldExpirationDate` | `bigint`  | Previous expiration (0 if first delegation) |
+| `newExpirationDate` | `bigint`  | New expiration timestamp                    |
+
+### RevokedDelegationForUserDecryptionEvent
+
+| Field               | Type      | Description                            |
+| ------------------- | --------- | -------------------------------------- |
+| `eventName`         | `string`  | `"RevokedDelegationForUserDecryption"` |
+| `delegator`         | `Address` | Account that granted access            |
+| `delegate`          | `Address` | Account that had access                |
+| `contractAddress`   | `Address` | Contract the revocation applies to     |
+| `delegationCounter` | `bigint`  | Monotonic delegation counter           |
+| `oldExpirationDate` | `bigint`  | Expiration date before revocation      |
+
+### Convenience finders
+
+| Finder                                         | Returns                                                 |
+| ---------------------------------------------- | ------------------------------------------------------- |
+| `findDelegatedForUserDecryption(logs)`         | First `DelegatedForUserDecryptionEvent` or null         |
+| `findRevokedDelegationForUserDecryption(logs)` | First `RevokedDelegationForUserDecryptionEvent` or null |
+
+### Batch decoders
+
+| Decoder                 | Description                                                  |
+| ----------------------- | ------------------------------------------------------------ |
+| `decodeAclEvent(log)`   | Try both ACL decoders on a single log, return first match    |
+| `decodeAclEvents(logs)` | Batch-decode an array of logs, skipping unrecognized entries |
+
+{% hint style="info" %}
+ACL delegation events are **not** included in `TOKEN_TOPICS` or `decodeOnChainEvents`. They are emitted by the ACL contract, not by token contracts. Use `ACL_TOPICS` and `decodeAclEvents` separately.
+{% endhint %}
+
 ## Activity feed utilities
 
 Build a complete activity feed from raw logs with encrypted amount decryption.
@@ -229,4 +320,5 @@ const feed = sortByBlockNumber(enrichedItems);
 ## Related
 
 - [Activity Feeds guide](/guides/activity-feeds) — activity feed usage in context
+- [Delegated Decryption](/reference/sdk/delegation) — delegation API with on-chain event examples
 - [Token](/reference/sdk/Token) — high-level API for token operations
