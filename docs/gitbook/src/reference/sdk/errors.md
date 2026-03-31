@@ -354,8 +354,7 @@ Thrown client-side before submitting a `delegateDecryption` transaction when the
 
 ```ts
 matchZamaError(error, {
-  DELEGATION_DELEGATE_EQUALS_CONTRACT: () =>
-    showError("Cannot delegate to the contract itself"),
+  DELEGATION_DELEGATE_EQUALS_CONTRACT: () => showError("Cannot delegate to the contract itself"),
 });
 ```
 
@@ -369,8 +368,7 @@ Thrown client-side (after an RPC read) when the new expiration date matches the 
 
 ```ts
 matchZamaError(error, {
-  DELEGATION_EXPIRY_UNCHANGED: () =>
-    showInfo("Delegation already has this expiration date"),
+  DELEGATION_EXPIRY_UNCHANGED: () => showInfo("Delegation already has this expiration date"),
 });
 ```
 
@@ -384,8 +382,7 @@ Caught from the on-chain `SenderCannotBeContractAddress` revert. The contract ad
 
 ```ts
 matchZamaError(error, {
-  DELEGATION_CONTRACT_IS_SELF: () =>
-    showError("Contract address cannot be the caller address"),
+  DELEGATION_CONTRACT_IS_SELF: () => showError("Contract address cannot be the caller address"),
 });
 ```
 
@@ -399,8 +396,7 @@ Thrown when `decryptBalanceAs` fails with an HTTP 500 in a delegated context. Th
 
 ```ts
 matchZamaError(error, {
-  DELEGATION_NOT_PROPAGATED: () =>
-    showInfo("Delegation is still syncing — retry in 1–2 minutes"),
+  DELEGATION_NOT_PROPAGATED: () => showInfo("Delegation is still syncing — retry in 1–2 minutes"),
 });
 ```
 
