@@ -139,8 +139,22 @@ export function Providers({ children }: { children: ReactNode }) {
   // so the next EthersSigner sees the correct accounts immediately.
   const liveAccountsRef = useRef<readonly string[]>([]);
   const refSeededRef = useRef(false);
+  // Guards against React Strict Mode double-invocation: initializeLedgerProvider
+  // logs "Ledger button app already exists" if called twice. We only initialize once.
+  const ledgerInitRef = useRef(false);
 
   useEffect(() => {
+    // Guard: React Strict Mode runs effects twice in dev. initializeLedgerProvider
+    // is not idempotent — calling it a second time logs "Ledger button app already exists".
+    // We skip the second invocation; the EIP-6963 listener set up in the first run
+    // is still active and will fire when eip6963:requestProvider is dispatched below.
+    if (ledgerInitRef.current) {
+      // Still request provider re-announcement so listeners from the second mount fire.
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+      return;
+    }
+    ledgerInitRef.current = true;
+
     // ── Dynamic import ────────────────────────────────────────────────────────
     // @ledgerhq/ledger-wallet-provider accesses window/document at import time.
     // This must run client-side only (inside useEffect).
@@ -152,7 +166,14 @@ export function Providers({ children }: { children: ReactNode }) {
         const cleanup = initializeLedgerProvider({
           dAppIdentifier: "react-ledger",
           floatingButtonPosition: "bottom-right",
-          // devConfig: { stub: { device: true, account: true } }  // ← uncomment to test without hardware
+          devConfig: {
+            stub: {
+              // The hardcoded fallback token is rejected by Ledger's backend (HTTP 400).
+              // Stub the config call so we don't depend on a partner API key during dev.
+              // Remove this once a real key is obtained via https://tally.so/r/wzaAVa
+              dAppConfig: true,
+            },
+          },
         });
 
         // ── EIP-6963 provider discovery ───────────────────────────────────────
@@ -225,10 +246,17 @@ export function Providers({ children }: { children: ReactNode }) {
   }, [ledgerProvider, walletKey]);
 
   // ZamaProvider waits until the Ledger Button provider has been discovered.
-  // During that window (typically < 1 s), children render without SDK context.
-  // page.tsx shows its own loading screen while address === null.
+  // Do NOT render children before signer is available — SDK hooks (useZamaSDK,
+  // useConfidentialBalance, etc.) throw if called outside a <ZamaProvider>.
   if (!signer) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={queryClient}>
+        <div className="app-container connect-screen">
+          <h1>Hoodi Confidential Tokens — Ledger</h1>
+          <p className="subtitle">Initializing Ledger Button…</p>
+        </div>
+      </QueryClientProvider>
+    );
   }
 
   return (
