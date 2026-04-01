@@ -9,5 +9,11 @@ export {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  DelegationExpiryUnchangedError,
+  DelegationDelegateEqualsContractError,
+  DelegationContractIsSelfError,
+  AclPausedError,
+  DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
 } from "./delegation";
+export { matchAclRevert } from "./acl-revert";

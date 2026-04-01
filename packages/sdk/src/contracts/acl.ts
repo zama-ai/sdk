@@ -71,3 +71,28 @@ export function getDelegationExpiryContract(
     args: [delegatorAddress, delegateAddress, contractAddress],
   } as const;
 }
+
+/**
+ * Returns the contract config to check if a specific handle is delegated.
+ *
+ * @example
+ * ```ts
+ * const isDelegated = await signer.readContract(
+ *   isHandleDelegatedContract(aclAddress, delegatorAddress, delegateAddress, contractAddress, handle),
+ * );
+ * ```
+ */
+export function isHandleDelegatedContract(
+  aclAddress: Address,
+  delegatorAddress: Address,
+  delegateAddress: Address,
+  contractAddress: Address,
+  handle: `0x${string}`,
+) {
+  return {
+    address: aclAddress,
+    abi: aclAbi,
+    functionName: "isHandleDelegatedForUserDecryption",
+    args: [delegatorAddress, delegateAddress, contractAddress, handle],
+  } as const;
+}
