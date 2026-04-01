@@ -113,17 +113,17 @@ import {
 
 ## Discovery and detection
 
-| Builder                                                                 | What it does                          |
-| ----------------------------------------------------------------------- | ------------------------------------- |
-| `getWrapperContract(coordinator, token)`                                | Look up wrapper for a token           |
-| `wrapperExistsContract(coordinator, token)`                             | Check if wrapper exists               |
-| `deploymentCoordinatorContract(token)`                                  | Read the deployment coordinator       |
-| `supportsInterfaceContract(token, interfaceId)`                         | ERC-165 interface check               |
-| `isConfidentialTokenContract(token)`                                    | Check if token is ERC-7984 compliant  |
-| `isConfidentialWrapperContract(token)`                                  | Check if token is an ERC-7984 wrapper |
-| `isFinalizeUnwrapOperatorContract(token, holder, operator)`             | Check finalize-unwrap operator status |
-| `setFinalizeUnwrapOperatorContract(token, operator, timestamp?)`        | Set finalize-unwrap operator approval |
-| `confidentialBatchTransferContract(batcher, token, from, transfers)`   | Batch encrypted transfers             |
+| Builder                                                              | What it does                          |
+| -------------------------------------------------------------------- | ------------------------------------- |
+| `getWrapperContract(coordinator, token)`                             | Look up wrapper for a token           |
+| `wrapperExistsContract(coordinator, token)`                          | Check if wrapper exists               |
+| `deploymentCoordinatorContract(token)`                               | Read the deployment coordinator       |
+| `supportsInterfaceContract(token, interfaceId)`                      | ERC-165 interface check               |
+| `isConfidentialTokenContract(token)`                                 | Check if token is ERC-7984 compliant  |
+| `isConfidentialWrapperContract(token)`                               | Check if token is an ERC-7984 wrapper |
+| `isFinalizeUnwrapOperatorContract(token, holder, operator)`          | Check finalize-unwrap operator status |
+| `setFinalizeUnwrapOperatorContract(token, operator, timestamp?)`     | Set finalize-unwrap operator approval |
+| `confidentialBatchTransferContract(batcher, token, from, transfers)` | Batch encrypted transfers             |
 
 ## Registry
 
