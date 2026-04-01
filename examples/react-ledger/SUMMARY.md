@@ -170,7 +170,7 @@ The workaround is `{ calServiceURL: null }` in `hw-app-eth`'s `LoadConfig`, whic
 
 ### 5.7 Cleartext stack is not encrypted
 
-As noted in section 4, values are plaintext on-chain. Moving to a Zama-supported network (Sepolia or Mainnet) requires switching to `RelayerWeb` and pointing to a network with a live FHE co-processor. The WebHID signing layer is network-agnostic; only the relayer configuration changes.
+As noted in section 4, values are plaintext on-chain. The WebHID signing layer itself is network-agnostic — switching to a Zama-supported network with real FHE encryption would require updating the relayer configuration (`RelayerWeb`, correct chain ID and RPC URL), verifying that the target network has a live FHE co-processor and deployed contracts, and ensuring a relayer instance is reachable. The infrastructure status of specific testnets (including Hoodi) evolves quickly and should be confirmed with the protocol team before any migration.
 
 ### 5.8 No session persistence across page reloads
 
@@ -250,7 +250,7 @@ The Tier 2 fallback is functional but degrades the security UX below acceptable 
 | Transaction signing without blind signing               | ❌ Blocked              | Firmware blocks unregistered contracts; CAL registration required to resolve     |
 | Browser support                                         | ⚠️ Chromium only        | Hard WebHID constraint; Firefox and Safari unsupported                           |
 | Mobile support                                          | ❌ Not available        | WebHID unavailable on mobile; would require BLE transport                        |
-| Production FHE encryption                               | ❌ Cleartext only       | Hoodi not supported by FHE co-processor; network-agnostic once co-processor available |
+| Production FHE encryption                               | ❌ Cleartext only       | Cleartext stack only at time of writing; WebHID signing layer is network-agnostic — verify current infrastructure status with protocol team before migrating |
 | EthersSigner type compatibility                         | ⚠️ `as any` workaround  | SDK should define and export a minimal EIP-1193 interface                        |
 | E2E test coverage                                       | ✅ Full suite           | No physical device required; provider mocked via `window.__ledgerProvider`       |
 | CAL registration (clear-signing metadata)               | ❌ Not registered       | Required to remove blind signing requirement; ERC-7730 JSON to be submitted      |
