@@ -16672,7 +16672,7 @@ export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Add
 export const MainnetConfig: {
     readonly chainId: 1;
     readonly gatewayChainId: 261131;
-    readonly relayerUrl: "https://relayer.mainnet.zama.org/v2";
+    readonly relayerUrl: "https://relayer.mainnet.zama.org";
     readonly network: "https://ethereum-rpc.publicnode.com";
     readonly aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6";
     readonly kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03";
@@ -18627,7 +18627,7 @@ export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Add
 export const SepoliaConfig: {
     readonly chainId: 11155111;
     readonly gatewayChainId: 10901;
-    readonly relayerUrl: "https://relayer.testnet.zama.org/v2";
+    readonly relayerUrl: "https://relayer.testnet.zama.org";
     readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
     readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
     readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";

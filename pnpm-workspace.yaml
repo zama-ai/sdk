@@ -8,4 +8,4 @@ packages:
 # https://pnpm.io/settings#minimumreleaseage
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
-  - "@zama-fhe/relayer-sdk"
+  - "@fhevm/sdk"

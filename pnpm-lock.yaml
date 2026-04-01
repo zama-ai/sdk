@@ -75,9 +75,6 @@ importers:
       '@vitest/ui':
         specifier: ^4.1.2
         version: 4.1.2(vitest@4.1.2)
-      '@zama-fhe/relayer-sdk':
-        specifier: 0.4.2
-        version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       conventional-changelog-conventionalcommits:
         specifier: ^9.3.0
         version: 9.3.0

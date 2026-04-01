@@ -7,7 +7,7 @@
 import { Address } from 'viem';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ClearValueType as ClearValueType_2 } from '@zama-fhe/relayer-sdk/node';
-import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
+import { CreateKmsDelegatedUserDecryptEIP712ReturnType as CreateDelegatedEIP712ResponseData } from '@fhevm/sdk/actions/chain';
 import { FhevmInstanceConfig as FhevmInstanceConfig_2 } from '@zama-fhe/relayer-sdk/node';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
@@ -86,8 +86,10 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     //
     // (undocumented)
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData>;
+    // Warning: (ae-forgotten-export) The symbol "ZKProofLike$1" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
+    requestZKProofVerification(zkProof: ZKProofLike$1): Promise<RequestZKProofVerificationResponseData>;
     // (undocumented)
     protected sendRequest<T>(type: WorkerRequestType, payload: WorkerRequest["payload"], timeoutMs?: number): Promise<T>;
     // (undocumented)
@@ -117,8 +119,7 @@ export interface CreateDelegatedEIP712Request extends BaseRequest {
     type: "CREATE_DELEGATED_EIP712";
 }
 
-// @public (undocumented)
-export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
+export { CreateDelegatedEIP712ResponseData }
 
 // @public (undocumented)
 export type CreateEIP712Payload = CreateEIP712Request["payload"];
@@ -210,8 +211,10 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
 
 // @public (undocumented)
 export interface DelegatedUserDecryptResponseData {
+    // Warning: (ae-forgotten-export) The symbol "ClearValueType$1" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    clearValues: Record<Handle, ClearValueType>;
+    clearValues: Record<Handle, ClearValueType$1>;
 }
 
 // @public
@@ -388,7 +391,7 @@ export interface InitRequest extends BaseRequest {
 export const MainnetConfig: {
     readonly chainId: 1;
     readonly gatewayChainId: 261131;
-    readonly relayerUrl: "https://relayer.mainnet.zama.org/v2";
+    readonly relayerUrl: "https://relayer.mainnet.zama.org";
     readonly network: "https://ethereum-rpc.publicnode.com";
     readonly aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6";
     readonly kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03";
@@ -461,7 +464,7 @@ export class NodeWorkerPool {
     // (undocumented)
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResponseData>;
     // (undocumented)
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<RequestZKProofVerificationResponseData>;
+    requestZKProofVerification(zkProof: ZKProofLike$1): Promise<RequestZKProofVerificationResponseData>;
     // (undocumented)
     terminate(): void;
     // (undocumented)
@@ -489,7 +492,7 @@ export interface PublicDecryptResponseData {
     // (undocumented)
     abiEncodedClearValues: Hex;
     // (undocumented)
-    clearValues: Readonly<Record<Handle, ClearValueType>>;
+    clearValues: Readonly<Record<Handle, ClearValueType$1>>;
     // (undocumented)
     decryptionProof: Hex;
 }
@@ -572,20 +575,25 @@ export interface RelayerSDK {
 export interface RequestZKProofVerificationRequest extends BaseRequest {
     // (undocumented)
     payload: {
-        zkProof: ZKProofLike;
+        zkProof: ZKProofLike$1;
     };
     // (undocumented)
     type: "REQUEST_ZK_PROOF_VERIFICATION";
 }
 
 // @public (undocumented)
-export type RequestZKProofVerificationResponseData = InputProofBytesType;
+export interface RequestZKProofVerificationResponseData {
+    // (undocumented)
+    handles: Uint8Array[];
+    // (undocumented)
+    inputProof: Uint8Array;
+}
 
 // @public
 export const SepoliaConfig: {
     readonly chainId: 11155111;
     readonly gatewayChainId: 10901;
-    readonly relayerUrl: "https://relayer.testnet.zama.org/v2";
+    readonly relayerUrl: "https://relayer.testnet.zama.org";
     readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
     readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
     readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
@@ -659,7 +667,7 @@ export interface UserDecryptRequest extends BaseRequest {
 // @public (undocumented)
 export interface UserDecryptResponseData {
     // (undocumented)
-    clearValues: Record<Handle, ClearValueType>;
+    clearValues: Record<Handle, ClearValueType$1>;
 }
 
 // @public (undocumented)
@@ -670,6 +678,10 @@ export type WorkerRequestType = "INIT" | "NODE_INIT" | "UPDATE_CSRF" | "ENCRYPT"
 
 // @public (undocumented)
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
+
+// Warnings were encountered during analysis:
+//
+// dist/esm/relayer-sdk.types-T96snegA.d.ts:49:5 - (ae-forgotten-export) The symbol "FhevmInstanceConfig" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

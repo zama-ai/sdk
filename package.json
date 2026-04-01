@@ -75,7 +75,6 @@
     "@types/react-dom": "19.2.3",
     "@vitest/coverage-v8": "^4.1.2",
     "@vitest/ui": "^4.1.2",
-    "@zama-fhe/relayer-sdk": "0.4.2",
     "conventional-changelog-conventionalcommits": "^9.3.0",
     "ethers": "^6.16.0",
     "fake-indexeddb": "^6.2.5",
