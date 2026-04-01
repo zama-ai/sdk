@@ -2,12 +2,13 @@
  * Node.js worker thread for RelayerSDK FHE operations.
  * Uses @fhevm/sdk for encryption/decryption off the main thread via node:worker_threads.
  */
-
-/* oxlint-disable typescript-eslint/no-explicit-any -- adapter between incompatible type systems */
-
 import type { Address, Hex } from "viem";
 import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/ethers";
 import type { DecryptParameters } from "@fhevm/sdk/actions/decrypt";
+import {
+  createKmsUserDecryptEIP712,
+  createKmsDelegatedUserDecryptEIP712,
+} from "@fhevm/sdk/actions/chain";
 import { parentPort, type Transferable } from "node:worker_threads";
 import type {
   FhevmInstanceConfig,
@@ -127,7 +128,9 @@ async function handleNodeInit(request: NodeInitRequest): Promise<void> {
   const { fhevmConfig } = payload;
 
   try {
-    setFhevmRuntimeConfig({});
+    setFhevmRuntimeConfig({
+      logger: console,
+    });
 
     const chain = configToChain(fhevmConfig);
     const network =
@@ -305,9 +308,6 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
 
   try {
     assertClient(client);
-    const { createKmsUserDecryptEIP712 } = await import(
-      /* @vite-ignore */ "@fhevm/sdk/actions/chain"
-    );
 
     const eip712 = createKmsUserDecryptEIP712(client, {
       publicKey: payload.publicKey,
@@ -352,9 +352,6 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
 
   try {
     assertClient(client);
-    const { createKmsDelegatedUserDecryptEIP712 } = await import(
-      /* @vite-ignore */ "@fhevm/sdk/actions/chain"
-    );
 
     const result = createKmsDelegatedUserDecryptEIP712(client, {
       publicKey: payload.publicKey,
