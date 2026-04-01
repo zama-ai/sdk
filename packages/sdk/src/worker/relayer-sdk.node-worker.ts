@@ -127,7 +127,9 @@ async function handleNodeInit(request: NodeInitRequest): Promise<void> {
     const { createFhevmClient, setFhevmRuntimeConfig } = await import("@fhevm/sdk/ethers");
     const { ethers } = await import("ethers");
 
-    setFhevmRuntimeConfig({});
+    setFhevmRuntimeConfig({
+      singleThread: true,
+    });
 
     const chain = configToChain(fhevmConfig);
     const network =
