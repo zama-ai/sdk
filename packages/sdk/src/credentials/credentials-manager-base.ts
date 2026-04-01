@@ -24,7 +24,7 @@ export interface CredentialsConfig {
   storage: GenericStorage;
   /** Storage for session signatures (shorter-lived than credentials). */
   sessionStorage: GenericStorage;
-  /** FHE keypair lifetime in seconds. Defaults to `86400` (1 day). */
+  /** FHE keypair lifetime in seconds. Defaults to `2592000` (30 days). */
   keypairTTL?: number;
   /** Session signature lifetime. `0` = always re-sign, `"infinite"` = never expire. Defaults to `2592000` (30 days). */
   sessionTTL?: number | "infinite";
@@ -97,7 +97,7 @@ export abstract class BaseCredentialsManager<
     this.storage = config.storage;
     this.sessionSignatures = new SessionSignatures(config.sessionStorage);
     this.crypto = new CredentialCrypto();
-    this.keypairTTL = config.keypairTTL ?? 86400;
+    this.keypairTTL = config.keypairTTL ?? 2592000;
     this.sessionTTL = config.sessionTTL ?? 2592000;
     this.#onEvent = config.onEvent ?? (() => {});
 

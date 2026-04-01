@@ -132,7 +132,7 @@ describe("useUserDecrypt", () => {
       "0xpub",
       [tokenAddress], // single address, not duplicated
       expect.any(Number),
-      1, // default durationDays
+      30, // default durationDays (keypairTTL = 2592000s = 30 days)
     );
   });
 
@@ -155,12 +155,12 @@ describe("useUserDecrypt", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // durationDays is derived from keypairTTL (default 86400s = 1 day)
+    // durationDays is derived from keypairTTL (default 2592000s = 30 days)
     expect(relayer.createEIP712).toHaveBeenCalledWith(
       "0xpub",
       [tokenAddress],
       expect.any(Number),
-      1,
+      30,
     );
   });
 

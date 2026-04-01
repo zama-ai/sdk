@@ -76,7 +76,7 @@ The SDK has two separate time-to-live settings that control different aspects of
 
 ### `keypairTTL` — keypair regeneration
 
-Controls how long the FHE keypair remains valid. Default: 86,400 seconds (1 day).
+Controls how long the FHE keypair remains valid. Default: 2,592,000 seconds (30 days).
 
 When the keypair expires:
 
