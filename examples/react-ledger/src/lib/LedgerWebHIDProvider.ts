@@ -238,6 +238,29 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
 
         const app = await this._app();
 
+        // ── Build EIP712Domain type entries from the domain object ───────────
+        // ethers v6 strips EIP712Domain from `types` when serialising typed data
+        // for eth_signTypedData_v4, but hw-app-eth requires it to be present in
+        // the types map. Reconstruct it from whichever domain fields are set.
+        const eip712DomainType: { name: string; type: string }[] =
+          types["EIP712Domain"] ??
+          [
+            domain.name != null ? { name: "name", type: "string" } : null,
+            domain.version != null ? { name: "version", type: "string" } : null,
+            domain.chainId != null ? { name: "chainId", type: "uint256" } : null,
+            domain.verifyingContract != null
+              ? { name: "verifyingContract", type: "address" }
+              : null,
+            domain.salt != null ? { name: "salt", type: "bytes32" } : null,
+          ].filter((e): e is { name: string; type: string } => e !== null);
+
+        const typesWithDomain = {
+          EIP712Domain: eip712DomainType,
+          ...types,
+        } as Record<string, { name: string; type: string }[]> & {
+          EIP712Domain: { name: string; type: string }[];
+        };
+
         // ── Tier 1: full typed-data display (Nano X / S Plus / Stax / Flex) ───
         try {
           const { v, r, s } = await app.signEIP712Message(this._path, {
@@ -252,16 +275,33 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
               salt:
                 domain.salt !== undefined && domain.salt !== null ? String(domain.salt) : undefined,
             },
-            types: types as Record<string, { name: string; type: string }[]> & {
-              EIP712Domain: { name: string; type: string }[];
-            },
+            types: typesWithDomain,
             message,
             primaryType,
           });
           return `0x${r}${s}${this._normalizeV(v)}`;
-        } catch {
-          // Device does not support signEIP712Message (e.g. Nano S) — fall through
-          // to the pre-hashed fallback below.
+        } catch (err) {
+          // 0x6D00 = INS_NOT_SUPPORTED: device firmware does not implement this
+          // APDU command (Nano S). Fall through to the pre-hashed fallback below.
+          //
+          // Any other status code (0x6985 = user rejection, 0x6B00 = wrong param,
+          // transport errors, etc.) must be re-thrown — silently falling through
+          // would request a second signature from the user for the wrong operation.
+          const statusCode = (err as { statusCode?: number }).statusCode;
+          if (statusCode !== 0x6d00) {
+            if (process.env.NODE_ENV !== "production") {
+              console.warn(
+                `[LedgerProvider] signEIP712Message failed (status 0x${(statusCode ?? 0).toString(16)}) — not falling through:`,
+                err,
+              );
+            }
+            throw err;
+          }
+          if (process.env.NODE_ENV !== "production") {
+            console.info(
+              "[LedgerProvider] signEIP712Message not supported on this device (0x6D00) — using pre-hashed fallback",
+            );
+          }
         }
 
         // ── Tier 2: pre-hashed fallback (Nano S) ─────────────────────────────
