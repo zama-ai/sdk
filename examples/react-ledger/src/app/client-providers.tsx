@@ -3,9 +3,10 @@
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 
-// Providers accesses window.ethereum which is unavailable server-side.
-// next/dynamic with ssr:false must be declared inside a "use client" component,
-// which is why this thin wrapper exists — layout.tsx is a Server Component.
+// Providers uses browser-only APIs (TransportWebHID, IndexedDB) that are
+// unavailable server-side. next/dynamic with ssr:false must be declared inside
+// a "use client" component — this thin wrapper exists because layout.tsx is a
+// Server Component and cannot use next/dynamic directly.
 const Providers = dynamic(() => import("../providers").then((m) => ({ default: m.Providers })), {
   ssr: false,
 });

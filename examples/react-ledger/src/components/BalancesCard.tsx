@@ -70,6 +70,7 @@ export function BalancesCard({
           </span>
         )}
       </div>
+      {isDecrypting && <p className="token-meta">→ Confirm on your Ledger device</p>}
       {decryptError && <div className="alert alert-error card-status">{decryptError}</div>}
       {mintError && <div className="alert alert-error card-status">{mintError}</div>}
       {mintTxHash && (

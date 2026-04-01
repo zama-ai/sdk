@@ -116,7 +116,11 @@ export function ShieldCard({
       // approvalStrategy: 'skip' — allowance is confirmed above (or was already sufficient).
       return token.shield(amount, { approvalStrategy: "skip" });
     },
-    onSuccess,
+    onSuccess: () => {
+      setAmount("");
+      setPhase("wrap");
+      onSuccess?.();
+    },
   });
 
   function handleShield() {
@@ -146,6 +150,7 @@ export function ShieldCard({
       >
         {shield.isPending ? pendingLabel : "Shield"}
       </button>
+      {shield.isPending && <p className="token-meta">→ Confirm on your Ledger device</p>}
       {shield.isError && (
         <div className="alert alert-error card-status">{shield.error?.message}</div>
       )}

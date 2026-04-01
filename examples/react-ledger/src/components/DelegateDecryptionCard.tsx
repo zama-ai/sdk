@@ -75,12 +75,14 @@ export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecry
         <p className="token-meta token-meta-error card-gap">Date must be in the future.</p>
       )}
       <button
+        type="button"
         className="btn btn-primary btn-full"
         onClick={handleGrant}
         disabled={disabled || !canSubmit || delegate.isPending}
       >
         {delegate.isPending ? "Granting…" : "Grant Access"}
       </button>
+      {delegate.isPending && <p className="token-meta">→ Confirm on your Ledger device</p>}
       {delegate.isError && (
         <div className="alert alert-error card-status">{delegate.error?.message}</div>
       )}

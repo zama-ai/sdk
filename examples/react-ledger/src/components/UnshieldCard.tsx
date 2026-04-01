@@ -37,6 +37,8 @@ export function UnshieldCard({
         clearPendingUnshield(storage, tokenAddress).catch((err) =>
           console.error("[UnshieldCard] Failed to clear pending unshield:", err),
         );
+        setAmount("");
+        setStep(1);
         onSuccess?.();
       },
       // Clear the active token ref on failure so a stale address is never used by the
@@ -86,6 +88,7 @@ export function UnshieldCard({
       >
         {unshield.isPending ? pendingLabel : "Unshield"}
       </button>
+      {unshield.isPending && <p className="token-meta">→ Confirm on your Ledger device</p>}
       {balanceDecryptRequired && !disabled && (
         <p className="token-meta">Decrypt your balance first to enable unshielding.</p>
       )}

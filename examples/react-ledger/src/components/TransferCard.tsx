@@ -28,7 +28,17 @@ export function TransferCard({
   const [recipient, setRecipient] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
 
-  const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
+  const transfer = useConfidentialTransfer(
+    { tokenAddress },
+    {
+      onSuccess: () => {
+        setAmount("");
+        setRecipient("");
+        setStep(1);
+        onSuccess?.();
+      },
+    },
+  );
 
   const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";
@@ -77,6 +87,10 @@ export function TransferCard({
       >
         {transfer.isPending ? pendingLabel : "Transfer"}
       </button>
+      {/* Step 1 is pure FHE encryption (no device needed). Step 2 sends the tx. */}
+      {transfer.isPending && step === 2 && (
+        <p className="token-meta">→ Confirm on your Ledger device</p>
+      )}
       {balanceDecryptRequired && !disabled && (
         <p className="token-meta">Decrypt your balance first to enable transfers.</p>
       )}

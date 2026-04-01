@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata = {
   title: "Hoodi Confidential Tokens — Ledger",
   description:
-    "POC demo for ERC-7984 confidential tokens on Hoodi testnet using a Ledger hardware wallet directly via the Ledger Button (no MetaMask).",
+    "POC demo for ERC-7984 confidential tokens on Hoodi testnet using a Ledger hardware wallet directly via WebHID (no MetaMask, no browser extension).",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

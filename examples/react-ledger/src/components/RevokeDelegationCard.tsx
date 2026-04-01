@@ -36,12 +36,14 @@ export function RevokeDelegationCard({ tokenAddress, disabled }: RevokeDelegatio
         placeholder="Delegate address (0x…)"
       />
       <button
+        type="button"
         className="btn btn-primary btn-full"
         onClick={handleRevoke}
         disabled={disabled || !isAddress(delegateAddress) || revoke.isPending}
       >
         {revoke.isPending ? "Revoking…" : "Revoke Access"}
       </button>
+      {revoke.isPending && <p className="token-meta">→ Confirm on your Ledger device</p>}
       {revoke.isError && (
         <div className="alert alert-error card-status">{revoke.error?.message}</div>
       )}
