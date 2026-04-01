@@ -101,6 +101,10 @@ When the session expires:
 For high-security contexts, set `sessionTTL: 0` to require a wallet signature on every operation. This provides maximum security at the cost of frequent wallet popups.
 {% endhint %}
 
+{% hint style="info" %}
+**`sessionTTL` is clamped to `keypairTTL`.** If you set `sessionTTL` greater than `keypairTTL`, the SDK automatically reduces it to match `keypairTTL` and emits a console warning. This prevents a state where `isAllowed()` returns `true` (session still valid) but the FHE keypair has expired, which would cause unexpected wallet prompts.
+{% endhint %}
+
 Each session entry records its TTL at creation time. If you change the `sessionTTL` configuration between sessions, existing sessions use their original TTL, not the new value.
 
 ## The allow / revoke flow

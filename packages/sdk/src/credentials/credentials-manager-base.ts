@@ -107,6 +107,15 @@ export abstract class BaseCredentialsManager<
     if (typeof this.sessionTTL === "number" && this.sessionTTL < 0) {
       throw new Error("sessionTTL must be >= 0");
     }
+    if (typeof this.sessionTTL === "number" && this.sessionTTL > this.keypairTTL) {
+      this.sessionTTL = this.keypairTTL;
+      // oxlint-disable-next-line no-console
+      console.warn(
+        `[zama-sdk] sessionTTL was clamped to keypairTTL (${this.keypairTTL}s). ` +
+          "A session that outlives the keypair causes isAllowed() to return true " +
+          "after the keypair expires, leading to unexpected wallet prompts.",
+      );
+    }
   }
 
   /** Emit a credential lifecycle event, stamped with the current time. */
