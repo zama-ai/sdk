@@ -1,11 +1,16 @@
 /**
  * Node.js worker thread for RelayerSDK FHE operations.
- * Handles CPU-intensive WASM operations off the main thread using node:worker_threads.
+ * Uses @fhevm/sdk for encryption/decryption off the main thread via node:worker_threads.
  */
 
-import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/node";
+/* oxlint-disable typescript-eslint/no-explicit-any -- adapter between incompatible type systems */
+
+import type { Address, Hex } from "viem";
+import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/ethers";
+import type { DecryptParameters } from "@fhevm/sdk/actions/decrypt";
 import { parentPort, type Transferable } from "node:worker_threads";
 import type {
+  FhevmInstanceConfig,
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,
   CreateEIP712Request,
@@ -31,7 +36,7 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
-import { prefixHex, unprefixHex } from "../utils";
+import { ethers } from "ethers";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -39,7 +44,8 @@ if (!parentPort) {
 
 const port = parentPort;
 
-let sdkInstance: FhevmInstance | null = null;
+type FhevmClient = ReturnType<typeof createFhevmClient>;
+let client: FhevmClient | null = null;
 
 function sendSuccess<T>(
   id: string,
@@ -56,19 +62,81 @@ function sendError(id: string, type: WorkerRequest["type"], error: string): void
   port.postMessage(response);
 }
 
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+  const bytes = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+function fheTypeToSolidityType(fheType: string): string {
+  if (fheType === "ebool") {
+    return "bool";
+  }
+  if (fheType === "eaddress") {
+    return "address";
+  }
+  return fheType.slice(1);
+}
+
+function ensureClient(): FhevmClient {
+  if (!client) {
+    throw new Error("SDK not initialized. Call NODE_INIT first.");
+  }
+  return client;
+}
+
+function configToChain(config: FhevmInstanceConfig) {
+  return {
+    id: config.chainId,
+    fhevm: {
+      contracts: {
+        acl: { address: config.aclContractAddress as Address },
+        inputVerifier: {
+          address: config.inputVerifierContractAddress as Address,
+        },
+        kmsVerifier: { address: config.kmsContractAddress as Address },
+      },
+      relayerUrl: config.relayerUrl,
+      gateway: {
+        id: config.gatewayChainId,
+        contracts: {
+          decryption: {
+            address: config.verifyingContractAddressDecryption as Address,
+          },
+          inputVerification: {
+            address: config.verifyingContractAddressInputVerification as Address,
+          },
+        },
+      },
+    },
+  };
+}
+
+// ============================================================================
+// Handlers
+// ============================================================================
+
 async function handleNodeInit(request: NodeInitRequest): Promise<void> {
   const { id, type, payload } = request;
   const { fhevmConfig } = payload;
 
   try {
-    const nodeSdk = await import("@zama-fhe/relayer-sdk/node");
+    setFhevmRuntimeConfig({});
 
-    const config: FhevmInstanceConfig = {
-      ...fhevmConfig,
-      batchRpcCalls: false,
-    };
+    const chain = configToChain(fhevmConfig);
+    const network =
+      typeof fhevmConfig.network === "string" ? fhevmConfig.network : "http://127.0.0.1:8545";
+    const provider = new ethers.JsonRpcProvider(network);
 
-    sdkInstance = await nodeSdk.createInstance(config);
+    client = createFhevmClient({ chain, provider });
+    await client.ready;
 
     sendSuccess<InitResponseData>(id, type, { initialized: true });
   } catch (error) {
@@ -78,68 +146,44 @@ async function handleNodeInit(request: NodeInitRequest): Promise<void> {
   }
 }
 
-/** Coerce a boolean to bigint for numeric FHE types. */
-function toBigInt(value: bigint | boolean): bigint {
-  return typeof value === "boolean" ? (value ? 1n : 0n) : value;
-}
-
-function unreachableFheType(_: never): never {
-  throw new Error("Unsupported FHE type");
-}
-
 async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { id, type, payload } = request;
   const { values, contractAddress, userAddress } = payload;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
-    }
+    const c = ensureClient();
 
-    const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
+    const typedValues = values.map((v) => ({
+      type: fheTypeToSolidityType(v.type),
+      value:
+        v.type === "ebool"
+          ? typeof v.value === "boolean"
+            ? v.value
+            : (v.value as bigint) !== 0n
+          : v.value,
+    }));
 
-    for (const entry of values) {
-      const { value, type: fheType } = entry;
-      switch (fheType) {
-        case "ebool":
-          input.addBool(typeof value === "boolean" ? value : value !== 0n);
-          break;
-        case "euint8":
-          input.add8(toBigInt(value));
-          break;
-        case "euint16":
-          input.add16(toBigInt(value));
-          break;
-        case "euint32":
-          input.add32(toBigInt(value));
-          break;
-        case "euint64":
-          input.add64(toBigInt(value));
-          break;
-        case "euint128":
-          input.add128(toBigInt(value));
-          break;
-        case "euint256":
-          input.add256(toBigInt(value));
-          break;
-        case "eaddress":
-          input.addAddress(String(value));
-          break;
-        default:
-          unreachableFheType(fheType);
-      }
-    }
+    const result = await c.encrypt({
+      contractAddress: contractAddress as `0x${string}`,
+      userAddress: userAddress as `0x${string}`,
+      values: typedValues as unknown as Parameters<typeof c.encrypt>[0]["values"],
+    });
 
-    const encrypted = await input.encrypt();
+    const evs =
+      "externalEncryptedValues" in result
+        ? result.externalEncryptedValues
+        : [(result as { externalEncryptedValue: unknown }).externalEncryptedValue];
 
-    const response: EncryptResponseData = {
-      handles: encrypted.handles,
-      inputProof: encrypted.inputProof,
-    };
+    const handles = (evs as unknown[]).map((ev: unknown) => {
+      const obj = ev as { bytes32Hex?: string };
+      return hexToBytes(obj.bytes32Hex ?? String(ev));
+    });
+    const inputProof = hexToBytes(String(result.inputProof));
 
+    const response: EncryptResponseData = { handles, inputProof };
     const transferList: Transferable[] = [
-      encrypted.inputProof.buffer as ArrayBuffer,
-      ...encrypted.handles.map((h) => h.buffer as ArrayBuffer),
+      inputProof.buffer as ArrayBuffer,
+      ...handles.map((h) => h.buffer as ArrayBuffer),
     ];
 
     sendSuccess(id, type, response, transferList);
@@ -154,29 +198,50 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
-    }
+    const c = ensureClient();
 
-    const handleContractPairs = payload.handles.map((handle) => ({
-      handle,
+    const keypair = await c.parseE2eTransportKeypair({
+      serialized: JSON.stringify({
+        publicKey: payload.publicKey,
+        privateKey: payload.privateKey,
+      }),
+    });
+
+    const permit = await c.parseSignedDecryptionPermit({
+      serialized: JSON.stringify({
+        publicKey: payload.publicKey,
+        contractAddresses: payload.signedContractAddresses,
+        signerAddress: payload.signerAddress,
+        startTimestamp: payload.startTimestamp,
+        durationDays: payload.durationDays,
+        signature: payload.signature,
+      }),
+      e2eTransportKeypair: keypair,
+    });
+
+    const encryptedValues = payload.handles.map((handle) => ({
+      encryptedValue: handle,
       contractAddress: payload.contractAddress,
     }));
 
-    const result = await sdkInstance.userDecrypt(
-      handleContractPairs,
-      unprefixHex(payload.privateKey),
-      unprefixHex(payload.publicKey),
-      payload.signature,
-      payload.signedContractAddresses,
-      payload.signerAddress,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
+    const clearValues = await c.decrypt({
+      e2eTransportKeypair: keypair,
+      encryptedValues,
+      signedPermit: permit,
+    } as unknown as DecryptParameters);
 
-    const response: UserDecryptResponseData = { clearValues: result };
+    const result: Record<string, unknown> = {};
+    for (let i = 0; i < payload.handles.length; i++) {
+      const handle = payload.handles[i];
+      const cv = (clearValues as unknown[])[i] as { value: unknown } | undefined;
+      if (handle !== undefined && cv !== undefined) {
+        result[handle] = cv.value;
+      }
+    }
 
-    sendSuccess(id, type, response);
+    sendSuccess<UserDecryptResponseData>(id, type, {
+      clearValues: result as UserDecryptResponseData["clearValues"],
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] UserDecrypt error:", message);
@@ -188,15 +253,24 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
+    const c = ensureClient();
+
+    const result = await c.publicDecrypt({ encryptedValues: payload.handles });
+
+    const clearValues: Record<string, unknown> = {};
+    for (let i = 0; i < payload.handles.length; i++) {
+      const handle = payload.handles[i];
+      const cv = (result.orderedClearValues as unknown[])[i] as { value: unknown } | undefined;
+      if (handle !== undefined && cv !== undefined) {
+        clearValues[handle] = cv.value;
+      }
     }
 
-    const result = await sdkInstance.publicDecrypt(payload.handles);
-
-    const response: PublicDecryptResponseData = { ...result };
-
-    sendSuccess(id, type, response);
+    sendSuccess<PublicDecryptResponseData>(id, type, {
+      clearValues: clearValues as PublicDecryptResponseData["clearValues"],
+      abiEncodedClearValues: result.orderedAbiEncodedClearValues as Hex,
+      decryptionProof: result.decryptionProof as Hex,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] PublicDecrypt error:", message);
@@ -204,22 +278,20 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   }
 }
 
-function handleGenerateKeypair(request: GenerateKeypairRequest): void {
+async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<void> {
   const { id, type } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
-    }
+    const c = ensureClient();
+    const keypair = await c.generateE2eTransportKeypair();
+    const serialized = c.serializeE2eTransportKeypair({
+      e2eTransportKeypair: keypair,
+    });
 
-    const keypair = sdkInstance.generateKeypair();
-
-    const response: GenerateKeypairResponseData = {
-      publicKey: prefixHex(keypair.publicKey),
-      privateKey: prefixHex(keypair.privateKey),
-    };
-
-    sendSuccess(id, type, response);
+    sendSuccess<GenerateKeypairResponseData>(id, type, {
+      publicKey: serialized.publicKey as Hex,
+      privateKey: serialized.privateKey as Hex,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] GenerateKeypair error:", message);
@@ -227,46 +299,46 @@ function handleGenerateKeypair(request: GenerateKeypairRequest): void {
   }
 }
 
-function handleCreateEIP712(request: CreateEIP712Request): void {
+async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
-    }
-
-    const eip712 = sdkInstance.createEIP712(
-      unprefixHex(payload.publicKey),
-      payload.contractAddresses,
-      payload.startTimestamp,
-      payload.durationDays,
+    const c = ensureClient();
+    const { createKmsUserDecryptEIP712 } = await import(
+      /* @vite-ignore */ "@fhevm/sdk/actions/chain"
     );
 
-    const response: CreateEIP712ResponseData = {
+    const eip712 = createKmsUserDecryptEIP712(c, {
+      publicKey: payload.publicKey,
+      contractAddresses: payload.contractAddresses,
+      startTimestamp: payload.startTimestamp,
+      durationDays: payload.durationDays,
+      extraData: "0x00",
+    });
+
+    sendSuccess<CreateEIP712ResponseData>(id, type, {
       domain: {
-        name: eip712.domain.name,
-        version: eip712.domain.version,
+        name: String(eip712.domain.name),
+        version: String(eip712.domain.version),
         chainId: Number(eip712.domain.chainId),
-        verifyingContract: eip712.domain.verifyingContract,
+        verifyingContract: String(eip712.domain.verifyingContract) as Address,
       },
       types: {
         UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification.map(
-          (field) => ({
+          (field: { name: string; type: string }) => ({
             name: field.name,
             type: field.type,
           }),
         ),
       },
       message: {
-        publicKey: prefixHex(eip712.message.publicKey),
-        contractAddresses: [...eip712.message.contractAddresses],
-        startTimestamp: BigInt(eip712.message.startTimestamp),
-        durationDays: BigInt(eip712.message.durationDays),
-        extraData: prefixHex(eip712.message.extraData),
+        publicKey: payload.publicKey,
+        contractAddresses: payload.contractAddresses as Address[],
+        startTimestamp: BigInt(payload.startTimestamp),
+        durationDays: BigInt(payload.durationDays),
+        extraData: "0x00" as Hex,
       },
-    };
-
-    sendSuccess(id, type, response);
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] CreateEIP712 error:", message);
@@ -274,21 +346,23 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
   }
 }
 
-function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): void {
+async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
-    }
-
-    const result = sdkInstance.createDelegatedUserDecryptEIP712(
-      unprefixHex(payload.publicKey),
-      payload.contractAddresses,
-      payload.delegatorAddress,
-      payload.startTimestamp,
-      payload.durationDays,
+    const c = ensureClient();
+    const { createKmsDelegatedUserDecryptEIP712 } = await import(
+      /* @vite-ignore */ "@fhevm/sdk/actions/chain"
     );
+
+    const result = createKmsDelegatedUserDecryptEIP712(c, {
+      publicKey: payload.publicKey,
+      contractAddresses: payload.contractAddresses,
+      delegatorAddress: payload.delegatorAddress,
+      startTimestamp: payload.startTimestamp,
+      durationDays: payload.durationDays,
+      extraData: "0x00",
+    });
 
     sendSuccess<CreateDelegatedEIP712ResponseData>(id, type, result);
   } catch (error) {
@@ -302,30 +376,51 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
-    }
+    const c = ensureClient();
 
-    const handleContractPairs = payload.handles.map((handle) => ({
-      handle,
+    const keypair = await c.parseE2eTransportKeypair({
+      serialized: JSON.stringify({
+        publicKey: payload.publicKey,
+        privateKey: payload.privateKey,
+      }),
+    });
+
+    const permit = await c.parseSignedDecryptionPermit({
+      serialized: JSON.stringify({
+        publicKey: payload.publicKey,
+        contractAddresses: payload.signedContractAddresses,
+        delegatorAddress: payload.delegatorAddress,
+        delegateAddress: payload.delegateAddress,
+        startTimestamp: payload.startTimestamp,
+        durationDays: payload.durationDays,
+        signature: payload.signature,
+      }),
+      e2eTransportKeypair: keypair,
+    });
+
+    const encryptedValues = payload.handles.map((handle) => ({
+      encryptedValue: handle,
       contractAddress: payload.contractAddress,
     }));
 
-    const result = await sdkInstance.delegatedUserDecrypt(
-      handleContractPairs,
-      unprefixHex(payload.privateKey),
-      unprefixHex(payload.publicKey),
-      payload.signature,
-      payload.signedContractAddresses,
-      payload.delegatorAddress,
-      payload.delegateAddress,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
+    const clearValues = await c.decrypt({
+      e2eTransportKeypair: keypair,
+      encryptedValues,
+      signedPermit: permit,
+    } as unknown as DecryptParameters);
 
-    const response: DelegatedUserDecryptResponseData = { clearValues: result };
+    const result: Record<string, unknown> = {};
+    for (let i = 0; i < payload.handles.length; i++) {
+      const handle = payload.handles[i];
+      const cv = (clearValues as unknown[])[i] as { value: unknown } | undefined;
+      if (handle !== undefined && cv !== undefined) {
+        result[handle] = cv.value;
+      }
+    }
 
-    sendSuccess(id, type, response);
+    sendSuccess<DelegatedUserDecryptResponseData>(id, type, {
+      clearValues: result as DelegatedUserDecryptResponseData["clearValues"],
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] DelegatedUserDecrypt error:", message);
@@ -336,41 +431,25 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
 async function handleRequestZKProofVerification(
   request: RequestZKProofVerificationRequest,
 ): Promise<void> {
-  const { id, type, payload } = request;
-
-  try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
-    }
-
-    const result = await sdkInstance.requestZKProofVerification(payload.zkProof);
-
-    const transferList: Transferable[] = [
-      result.inputProof.buffer as ArrayBuffer,
-      ...result.handles.map((h) => h.buffer as ArrayBuffer),
-    ];
-
-    sendSuccess(id, type, result, transferList);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] RequestZKProofVerification error:", message);
-    sendError(id, type, message);
-  }
+  const { id, type } = request;
+  sendError(id, type, "ZK proof verification is built into encrypt() in @fhevm/sdk");
 }
 
-function handleGetPublicKey(request: GetPublicKeyRequest): void {
+async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
   const { id, type } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
-    }
+    const c = ensureClient();
+    const key = await c.fetchFheEncryptionKeyBytes?.({});
 
-    const result = sdkInstance.getPublicKey();
-
-    const response: GetPublicKeyResponseData = { result };
-
-    sendSuccess(id, type, response);
+    sendSuccess<GetPublicKeyResponseData>(id, type, {
+      result: key
+        ? {
+            publicKeyId: "fhe-encryption-key",
+            publicKey: new Uint8Array(key.publicKeyBytes.bytes),
+          }
+        : null,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[NodeWorker] GetPublicKey error:", message);
@@ -379,27 +458,13 @@ function handleGetPublicKey(request: GetPublicKeyRequest): void {
 }
 
 function handleGetPublicParams(request: GetPublicParamsRequest): void {
-  const { id, type, payload } = request;
-
-  try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call NODE_INIT first.");
-    }
-
-    const result = sdkInstance.getPublicParams(
-      // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically
-      payload.bits as keyof import("@zama-fhe/relayer-sdk/node").PublicParams<Uint8Array>,
-    );
-
-    const response: GetPublicParamsResponseData = { result };
-
-    sendSuccess(id, type, response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] GetPublicParams error:", message);
-    sendError(id, type, message);
-  }
+  const { id, type } = request;
+  sendSuccess<GetPublicParamsResponseData>(id, type, { result: null });
 }
+
+// ============================================================================
+// Message router
+// ============================================================================
 
 async function handleMessage(request: WorkerRequest): Promise<void> {
   try {
@@ -417,13 +482,13 @@ async function handleMessage(request: WorkerRequest): Promise<void> {
         await handlePublicDecrypt(request);
         break;
       case "GENERATE_KEYPAIR":
-        handleGenerateKeypair(request);
+        await handleGenerateKeypair(request);
         break;
       case "CREATE_EIP712":
-        handleCreateEIP712(request);
+        await handleCreateEIP712(request);
         break;
       case "CREATE_DELEGATED_EIP712":
-        handleCreateDelegatedEIP712(request);
+        await handleCreateDelegatedEIP712(request);
         break;
       case "DELEGATED_USER_DECRYPT":
         await handleDelegatedUserDecrypt(request);
@@ -432,7 +497,7 @@ async function handleMessage(request: WorkerRequest): Promise<void> {
         await handleRequestZKProofVerification(request);
         break;
       case "GET_PUBLIC_KEY":
-        handleGetPublicKey(request);
+        await handleGetPublicKey(request);
         break;
       case "GET_PUBLIC_PARAMS":
         handleGetPublicParams(request);

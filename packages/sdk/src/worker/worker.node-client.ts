@@ -1,7 +1,7 @@
 import { Worker } from "node:worker_threads";
 import { randomUUID } from "node:crypto";
-import type { FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import type {
+  FhevmInstanceConfig,
   GenericLogger,
   WorkerRequest,
   WorkerRequestType,

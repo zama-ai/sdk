@@ -1,6 +1,6 @@
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
 import type {
+  ZKProofLike,
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
   CreateEIP712Payload,

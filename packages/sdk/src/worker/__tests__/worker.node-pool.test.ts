@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from "../../test-fixtures";
+import { vi } from "vitest";
+import { beforeEach, describe, expect, it } from "../../test-fixtures";
 import type { NodeWorkerPoolConfig } from "../worker.node-pool";
 import { NodeWorkerPool } from "../worker.node-pool";
-import type { ZKProofLike } from "@zama-fhe/relayer-sdk/bundle";
+import type { ZKProofLike } from "../worker.types";
 
 const HANDLE = ("0x" + "11".repeat(32)) as `0x${string}`;
 
@@ -14,9 +15,11 @@ vi.mock(import("../worker.node-client"), () => {
       createEIP712: vi.fn().mockResolvedValue({}),
       encrypt: vi.fn().mockResolvedValue({ handles: [], inputProof: "0x" }),
       userDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
-      publicDecrypt: vi
-        .fn()
-        .mockResolvedValue({ clearValues: {}, abiEncodedClearValues: "0x", decryptionProof: "0x" }),
+      publicDecrypt: vi.fn().mockResolvedValue({
+        clearValues: {},
+        abiEncodedClearValues: "0x",
+        decryptionProof: "0x",
+      }),
       createDelegatedUserDecryptEIP712: vi.fn().mockResolvedValue({}),
       delegatedUserDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
       requestZKProofVerification: vi.fn().mockResolvedValue("0x"),

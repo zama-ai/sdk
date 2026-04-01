@@ -128,6 +128,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fhevm/sdk": "github:zama-ai/relayer-sdk#devex",
     "@zama-fhe/relayer-sdk": "~0.4.2",
     "viem": "^2.47.6"
   },

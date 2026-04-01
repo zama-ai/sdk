@@ -21,6 +21,9 @@ importers:
       '@microsoft/api-extractor':
         specifier: ^7.57.7
         version: 7.57.7(@types/node@22.19.15)
+      '@noble/hashes':
+        specifier: ^2.0.1
+        version: 2.0.1
       '@semantic-release/changelog':
         specifier: ^6.0.3
         version: 6.0.3(semantic-release@25.0.3(typescript@6.0.2))
@@ -137,7 +140,7 @@ importers:
         version: 5.1.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.2(@types/node@22.19.15)(@vitest/ui@4.1.2)(happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@28.1.0(@noble/hashes@1.8.0))(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3))
+        version: 4.1.2(@types/node@22.19.15)(@vitest/ui@4.1.2)(happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@28.1.0(@noble/hashes@2.0.1))(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3))
 
   packages/react-sdk:
     dependencies:
@@ -166,6 +169,9 @@ importers:
 
   packages/sdk:
     dependencies:
+      '@fhevm/sdk':
+        specifier: github:zama-ai/relayer-sdk#devex
+        version: https://codeload.github.com/zama-ai/relayer-sdk/tar.gz/bfddad6cd394db17d672a045d0f57efac4decbfa
       '@zama-fhe/relayer-sdk':
         specifier: ~0.4.2
         version: 0.4.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -704,6 +710,11 @@ packages:
     resolution: {integrity: sha512-sDBWI3yLy8EcDzgobvJTWq1MJYzAkQdpjXuPukga9wXonhpMRvd1Izuo2Qgwey2OiEoRIBr35RMU9HJRoOHzpw==}
     engines: {node: ^20.19.0 || ^22.13.0 || ^23.5.0 || >=24.0.0, npm: '>=10'}
 
+  '@fhevm/sdk@https://codeload.github.com/zama-ai/relayer-sdk/tar.gz/bfddad6cd394db17d672a045d0f57efac4decbfa':
+    resolution: {tarball: https://codeload.github.com/zama-ai/relayer-sdk/tar.gz/bfddad6cd394db17d672a045d0f57efac4decbfa}
+    version: 0.0.0
+    engines: {node: '>=22.0'}
+
   '@gerrit0/mini-shiki@3.23.0':
     resolution: {integrity: sha512-bEMORlG0cqdjVyCEuU0cDQbORWX+kYCeo0kV1lbxF5bt4r7SID2l9bqsxJEM0zndaxpOUT7riCyIVEuqq/Ynxg==}
 
@@ -973,6 +984,10 @@ packages:
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
     engines: {node: ^14.21.3 || >=16}
+
+  '@noble/hashes@2.0.1':
+    resolution: {integrity: sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==}
+    engines: {node: '>= 20.19.0'}
 
   '@octokit/auth-token@6.0.0':
     resolution: {integrity: sha512-P4YJBPdPSpWTQ1NU4XYdvHvXJJDxM6YwpS0FZHRgP7YFkdVxsWcpWGy/NVqlAA7PcPCnMacXlRm1y2PFZRWL/w==}
@@ -4838,12 +4853,14 @@ snapshots:
   '@esbuild/win32-x64@0.27.4':
     optional: true
 
-  '@exodus/bytes@1.15.0(@noble/hashes@1.8.0)':
+  '@exodus/bytes@1.15.0(@noble/hashes@2.0.1)':
     optionalDependencies:
-      '@noble/hashes': 1.8.0
+      '@noble/hashes': 2.0.1
     optional: true
 
   '@faker-js/faker@10.4.0': {}
+
+  '@fhevm/sdk@https://codeload.github.com/zama-ai/relayer-sdk/tar.gz/bfddad6cd394db17d672a045d0f57efac4decbfa': {}
 
   '@gerrit0/mini-shiki@3.23.0':
     dependencies:
@@ -5059,6 +5076,8 @@ snapshots:
     optional: true
 
   '@noble/hashes@1.8.0': {}
+
+  '@noble/hashes@2.0.1': {}
 
   '@octokit/auth-token@6.0.0': {}
 
@@ -5905,7 +5924,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.2(@types/node@22.19.15)(@vitest/ui@4.1.2)(happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@28.1.0(@noble/hashes@1.8.0))(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3))
+      vitest: 4.1.2(@types/node@22.19.15)(@vitest/ui@4.1.2)(happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@28.1.0(@noble/hashes@2.0.1))(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.2':
     dependencies:
@@ -5951,7 +5970,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vitest: 4.1.2(@types/node@22.19.15)(@vitest/ui@4.1.2)(happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@28.1.0(@noble/hashes@1.8.0))(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3))
+      vitest: 4.1.2(@types/node@22.19.15)(@vitest/ui@4.1.2)(happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@28.1.0(@noble/hashes@2.0.1))(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3))
 
   '@vitest/utils@4.1.2':
     dependencies:
@@ -6283,10 +6302,10 @@ snapshots:
 
   csstype@3.2.3: {}
 
-  data-urls@7.0.0(@noble/hashes@1.8.0):
+  data-urls@7.0.0(@noble/hashes@2.0.1):
     dependencies:
       whatwg-mimetype: 5.0.0
-      whatwg-url: 16.0.1(@noble/hashes@1.8.0)
+      whatwg-url: 16.0.1(@noble/hashes@2.0.1)
     transitivePeerDependencies:
       - '@noble/hashes'
     optional: true
@@ -6595,9 +6614,9 @@ snapshots:
     dependencies:
       lru-cache: 11.2.7
 
-  html-encoding-sniffer@6.0.0(@noble/hashes@1.8.0):
+  html-encoding-sniffer@6.0.0(@noble/hashes@2.0.1):
     dependencies:
-      '@exodus/bytes': 1.15.0(@noble/hashes@1.8.0)
+      '@exodus/bytes': 1.15.0(@noble/hashes@2.0.1)
     transitivePeerDependencies:
       - '@noble/hashes'
     optional: true
@@ -6735,16 +6754,16 @@ snapshots:
     dependencies:
       argparse: 2.0.1
 
-  jsdom@28.1.0(@noble/hashes@1.8.0):
+  jsdom@28.1.0(@noble/hashes@2.0.1):
     dependencies:
       '@acemir/cssom': 0.9.31
       '@asamuzakjp/dom-selector': 6.8.1
       '@bramus/specificity': 2.4.2
-      '@exodus/bytes': 1.15.0(@noble/hashes@1.8.0)
+      '@exodus/bytes': 1.15.0(@noble/hashes@2.0.1)
       cssstyle: 6.2.0
-      data-urls: 7.0.0(@noble/hashes@1.8.0)
+      data-urls: 7.0.0(@noble/hashes@2.0.1)
       decimal.js: 10.6.0
-      html-encoding-sniffer: 6.0.0(@noble/hashes@1.8.0)
+      html-encoding-sniffer: 6.0.0(@noble/hashes@2.0.1)
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       is-potential-custom-element-name: 1.0.1
@@ -6756,7 +6775,7 @@ snapshots:
       w3c-xmlserializer: 5.0.0
       webidl-conversions: 8.0.1
       whatwg-mimetype: 5.0.0
-      whatwg-url: 16.0.1(@noble/hashes@1.8.0)
+      whatwg-url: 16.0.1(@noble/hashes@2.0.1)
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - '@noble/hashes'
@@ -8034,7 +8053,7 @@ snapshots:
       lightningcss: 1.32.0
       yaml: 2.8.3
 
-  vitest@4.1.2(@types/node@22.19.15)(@vitest/ui@4.1.2)(happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@28.1.0(@noble/hashes@1.8.0))(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3)):
+  vitest@4.1.2(@types/node@22.19.15)(@vitest/ui@4.1.2)(happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@28.1.0(@noble/hashes@2.0.1))(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.2
       '@vitest/mocker': 4.1.2(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.3))
@@ -8060,7 +8079,7 @@ snapshots:
       '@types/node': 22.19.15
       '@vitest/ui': 4.1.2(vitest@4.1.2)
       happy-dom: 20.8.9(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-      jsdom: 28.1.0(@noble/hashes@1.8.0)
+      jsdom: 28.1.0(@noble/hashes@2.0.1)
     transitivePeerDependencies:
       - msw
 
@@ -8115,9 +8134,9 @@ snapshots:
   whatwg-mimetype@5.0.0:
     optional: true
 
-  whatwg-url@16.0.1(@noble/hashes@1.8.0):
+  whatwg-url@16.0.1(@noble/hashes@2.0.1):
     dependencies:
-      '@exodus/bytes': 1.15.0(@noble/hashes@1.8.0)
+      '@exodus/bytes': 1.15.0(@noble/hashes@2.0.1)
       tr46: 6.0.0
       webidl-conversions: 8.0.1
     transitivePeerDependencies:

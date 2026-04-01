@@ -1,13 +1,21 @@
 /**
- * Web Worker for RelayerSDK FHE operations.
- * Handles CPU-intensive WASM operations off the main thread.
+ * Web Worker for FHE operations.
+ * Uses @fhevm/sdk for encryption/decryption off the main thread.
+ *
+ * This worker is bundled by the host app's bundler (Vite, webpack, etc.) which
+ * resolves the @fhevm/sdk imports at build time.
  */
 
-import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
-import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
-import { prefixHex, unprefixHex } from "../utils";
-import { getBrowserExtensionRuntime } from "./browser-extension";
+import type { Address, Hex } from "viem";
+import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/ethers";
+import {
+  createKmsUserDecryptEIP712,
+  createKmsDelegatedUserDecryptEIP712,
+} from "@fhevm/sdk/actions/chain";
+import type { EncryptMultipleReturnType } from "@fhevm/sdk/actions/encrypt";
+import type { DecryptParameters } from "@fhevm/sdk/actions/decrypt";
 import type {
+  FhevmInstanceConfig,
   CreateDelegatedEIP712Request,
   CreateDelegatedEIP712ResponseData,
   CreateEIP712Request,
@@ -36,13 +44,17 @@ import type {
   WorkerRequest,
 } from "./worker.types";
 
-// Global SDK instance and config
-let sdkInstance: FhevmInstance | null = null;
-let sdkGlobal: RelayerSDKGlobal | null = null;
+declare const self: {
+  postMessage(message: unknown, transfer?: Transferable[]): void;
+  onmessage: ((event: MessageEvent) => void) | null;
+};
 
-function unreachableFheType(_: never): never {
-  throw new Error("Unsupported FHE type");
-}
+// ============================================================================
+// Client state
+// ============================================================================
+
+type FhevmClient = ReturnType<typeof createFhevmClient>;
+let client: FhevmClient | null = null;
 
 // Store relayer URL and CSRF token for fetch interception.
 // These globals are per-worker-instance. Do NOT convert to SharedWorker
@@ -56,347 +68,90 @@ const CSRF_HEADER_NAME = "x-csrf-token";
 // Mutating HTTP methods that require CSRF token (js-set-map-lookups)
 const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 
-// Web Worker global scope with SDK
-interface WorkerGlobalScopeWithSDK extends Worker {
-  relayerSDK?: RelayerSDKGlobal;
-  importScripts: (...urls: string[]) => void;
-}
+// ============================================================================
+// Messaging
+// ============================================================================
 
-declare const self: WorkerGlobalScopeWithSDK;
-
-/**
- * Send a success response back to the main thread.
- * Optionally transfers ArrayBuffers for zero-copy performance.
- */
 function sendSuccess<T>(
   id: string,
   type: WorkerRequest["type"],
   data: T,
   transfer?: Transferable[],
 ): void {
-  const response: SuccessResponse<T> = {
-    id,
-    type,
-    success: true,
-    data,
-  };
-  return transfer ? self.postMessage(response, transfer) : self.postMessage(response);
+  const response: SuccessResponse<T> = { id, type, success: true, data };
+  return self.postMessage(response, transfer);
 }
 
-/**
- * Send an error response back to the main thread.
- */
 function sendError(
   id: string,
   type: WorkerRequest["type"],
   error: string,
   statusCode?: number,
 ): void {
-  const response: ErrorResponse = {
-    id,
-    type,
-    success: false,
-    error,
-  };
+  const response: ErrorResponse = { id, type, success: false, error };
   if (statusCode !== undefined) {
     response.statusCode = statusCode;
   }
   self.postMessage(response);
 }
 
-// Store original fetch for use in SDK loading
-const originalFetch = fetch;
+// ============================================================================
+// Helpers
+// ============================================================================
 
-// ── CDN URL validation ───────────────────────────────────────
-
-/** Allowed CDN hostnames for loading the relayer SDK script. */
-const ALLOWED_CDN_HOSTS = new Set<string>(["cdn.zama.org"]);
-
-/**
- * Validate the CDN URL supplied by the caller.
- * Ensures only HTTPS URLs from approved hosts are used when loading
- * SDK code into the worker.
- */
-function validateCdnUrl(rawUrl: string): string {
-  let url: URL;
-  try {
-    url = new URL(rawUrl);
-  } catch {
-    throw new Error("Invalid CDN URL");
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+  const bytes = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
   }
-
-  if (url.protocol !== "https:") {
-    throw new Error("CDN URL must use https");
-  }
-
-  if (!ALLOWED_CDN_HOSTS.has(url.hostname)) {
-    throw new Error(`CDN URL host is not allowed: ${url.hostname}`);
-  }
-
-  return url.toString();
+  return bytes;
 }
 
-/**
- * Set up fetch interceptor to add credentials and CSRF token for relayer requests.
- * Workers don't automatically include cookies, so we intercept fetch calls
- * targeting our relayer proxy to inject credentials and CSRF headers.
- */
-function setupFetchInterceptor(): void {
-  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const method = init?.method?.toUpperCase() ?? "GET";
+function fheTypeToSolidityType(fheType: string): string {
+  if (fheType === "ebool") {
+    return "bool";
+  }
+  if (fheType === "eaddress") {
+    return "address";
+  }
+  return fheType.slice(1);
+}
 
-    // Only intercept requests to our relayer proxy
-    if (relayerUrlBase && url.startsWith(relayerUrlBase)) {
-      const headers = new Headers(init?.headers);
+function ensureClient(): FhevmClient {
+  if (!client) {
+    throw new Error("SDK not initialized. Call INIT first.");
+  }
+  return client;
+}
 
-      // Add CSRF token for mutating requests
-      if (MUTATING_METHODS.has(method) && csrfTokenBase) {
-        headers.set(CSRF_HEADER_NAME, csrfTokenBase);
-      }
-
-      return originalFetch(input, {
-        ...init,
-        headers,
-        credentials: "include",
-      });
-    }
-
-    // Pass through other requests unchanged
-    return originalFetch(input, init);
+function configToChain(config: FhevmInstanceConfig) {
+  return {
+    id: config.chainId,
+    fhevm: {
+      contracts: {
+        acl: { address: config.aclContractAddress as Address },
+        inputVerifier: {
+          address: config.inputVerifierContractAddress as Address,
+        },
+        kmsVerifier: { address: config.kmsContractAddress as Address },
+      },
+      relayerUrl: config.relayerUrl,
+      gateway: {
+        id: config.gatewayChainId,
+        contracts: {
+          decryption: {
+            address: config.verifyingContractAddressDecryption as Address,
+          },
+          inputVerification: {
+            address: config.verifyingContractAddressInputVerification as Address,
+          },
+        },
+      },
+    },
   };
 }
 
-/**
- * Verify a fetched script's SHA-384 hash matches the expected integrity value.
- */
-async function verifyIntegrity(content: string, expectedHash: string): Promise<void> {
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest("SHA-384", encoder.encode(content));
-  const hashHex = [...new Uint8Array(hashBuffer)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  if (hashHex !== expectedHash) {
-    throw new Error(`CDN integrity check failed: expected SHA-384 ${expectedHash}, got ${hashHex}`);
-  }
-}
-
-/**
- * Load SDK script from CDN.
- * Uses two strategies depending on the environment:
- * - **Web apps (default):** fetch + blob URL + importScripts. Avoids MIME-type
- *   rejections (some CDNs serve .cjs as `application/node`) and CSP
- *   `unsafe-eval` violations.
- * - **Browser extensions (Chrome/Firefox/Safari):** importScripts directly.
- *   Blob URLs are blocked by extension CSP, but the CDN must be allowed
- *   in the extension's manifest CSP.
- *
- * Integrity is always verified when a hash is provided, regardless of strategy.
- */
-async function fetchScript(cdnUrl: string): Promise<string> {
-  const response = await originalFetch(cdnUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch SDK: ${response.status} ${response.statusText}`);
-  }
-  return response.text();
-}
-
-async function loadSdkScript(cdnUrl: string, integrity?: string): Promise<void> {
-  // Validate CDN URL immediately before any script loading (defense-in-depth).
-  const validatedUrl = validateCdnUrl(cdnUrl);
-
-  if (getBrowserExtensionRuntime()) {
-    // Extensions: blob: URLs are forbidden. Use importScripts directly —
-    // the CDN origin must be allowed in the extension's CSP manifest.
-    if (integrity) {
-      await verifyIntegrity(await fetchScript(validatedUrl), integrity);
-    }
-    return self.importScripts(validatedUrl);
-  }
-
-  // Web apps: fetch + blob URL avoids MIME-type and eval CSP issues.
-  const scriptContent = await fetchScript(validatedUrl);
-
-  if (integrity) {
-    await verifyIntegrity(scriptContent, integrity);
-  }
-
-  const blob = new Blob([scriptContent], { type: "application/javascript" });
-  const blobUrl = URL.createObjectURL(blob);
-  try {
-    self.importScripts(blobUrl);
-  } finally {
-    URL.revokeObjectURL(blobUrl);
-  }
-}
-
-/**
- * Handle INIT request - load SDK and initialize WASM.
- */
-async function handleInit(request: InitRequest): Promise<void> {
-  const { id, type, payload } = request;
-  const { cdnUrl, fhevmConfig, csrfToken, integrity, thread } = payload;
-
-  try {
-    // Extract relayerUrl from config for fetch interception
-    relayerUrlBase = fhevmConfig.relayerUrl ?? "";
-    csrfTokenBase = csrfToken;
-
-    // Set up fetch interceptor before loading SDK
-    setupFetchInterceptor();
-
-    // Load SDK via fetch + eval (avoids MIME-type issues with importScripts)
-    await loadSdkScript(cdnUrl, integrity);
-
-    if (!self.relayerSDK) {
-      throw new Error("Failed to load relayerSDK from CDN");
-    }
-
-    sdkGlobal = self.relayerSDK;
-
-    // Initialize WASM (optionally with a rayon thread pool for parallel FHE ops)
-    await sdkGlobal.initSDK(thread !== null && thread !== undefined ? { thread } : undefined);
-
-    // Create SDK instance with caller-provided config
-    const config: FhevmInstanceConfig = {
-      ...fhevmConfig,
-      batchRpcCalls: false,
-    };
-
-    sdkInstance = await sdkGlobal.createInstance(config);
-
-    sendSuccess<InitResponseData>(id, type, { initialized: true });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] Init error:", message);
-    sendError(id, type, message);
-  }
-}
-
-/** Coerce a boolean to bigint for numeric FHE types. */
-function toBigInt(value: bigint | boolean): bigint {
-  return typeof value === "boolean" ? (value ? 1n : 0n) : value;
-}
-
-/**
- * Add a single typed value to the encrypted input builder.
- */
-function addTypedValue(
-  input: ReturnType<FhevmInstance["createEncryptedInput"]>,
-  entry: EncryptInput,
-): void {
-  const { value, type: fheType } = entry;
-  switch (fheType) {
-    case "ebool":
-      input.addBool(typeof value === "boolean" ? value : value !== 0n);
-      break;
-    case "euint8":
-      input.add8(toBigInt(value));
-      break;
-    case "euint16":
-      input.add16(toBigInt(value));
-      break;
-    case "euint32":
-      input.add32(toBigInt(value));
-      break;
-    case "euint64":
-      input.add64(toBigInt(value));
-      break;
-    case "euint128":
-      input.add128(toBigInt(value));
-      break;
-    case "euint256":
-      input.add256(toBigInt(value));
-      break;
-    case "eaddress":
-      input.addAddress(String(value));
-      break;
-    default:
-      unreachableFheType(fheType);
-  }
-}
-
-/**
- * Handle ENCRYPT request.
- */
-async function handleEncrypt(request: EncryptRequest): Promise<void> {
-  const { id, type, payload } = request;
-  const { values, contractAddress, userAddress } = payload;
-
-  try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
-
-    const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
-
-    for (const entry of values) {
-      addTypedValue(input, entry);
-    }
-
-    const encrypted = await input.encrypt();
-
-    const response: EncryptResponseData = {
-      handles: encrypted.handles,
-      inputProof: encrypted.inputProof,
-    };
-
-    // Transfer ArrayBuffers for zero-copy performance
-    const transferList: Transferable[] = [
-      encrypted.inputProof.buffer,
-      ...encrypted.handles.map((h) => h.buffer),
-    ];
-
-    sendSuccess(id, type, response, transferList);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] Encrypt error:", message);
-    sendError(id, type, message);
-  }
-}
-
-/**
- * Handle USER_DECRYPT request.
- */
-async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
-  const { id, type, payload } = request;
-
-  try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
-
-    const handleContractPairs = payload.handles.map((handle) => ({
-      handle,
-      contractAddress: payload.contractAddress,
-    }));
-
-    const result = await sdkInstance.userDecrypt(
-      handleContractPairs,
-      unprefixHex(payload.privateKey),
-      unprefixHex(payload.publicKey),
-      payload.signature,
-      payload.signedContractAddresses,
-      payload.signerAddress,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
-
-    const response: UserDecryptResponseData = { clearValues: result };
-
-    sendSuccess(id, type, response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    console.error("[Worker] UserDecrypt error:", message);
-    sendError(id, type, message, statusCode);
-  }
-}
-
-/**
- * Extract an HTTP status code from an error, if present.
- * Relayer SDK errors may carry a `status` or `statusCode` property.
- */
 function extractHttpStatus(error: unknown): number | undefined {
   if (error === null || error === undefined || typeof error !== "object") {
     return undefined;
@@ -408,7 +163,6 @@ function extractHttpStatus(error: unknown): number | undefined {
   if (typeof e.status === "number") {
     return e.status;
   }
-  // Check nested cause
   if (e.cause !== null && e.cause !== undefined && typeof e.cause === "object") {
     const cause = e.cause as Record<string, unknown>;
     if (typeof cause.statusCode === "number") {
@@ -421,22 +175,194 @@ function extractHttpStatus(error: unknown): number | undefined {
   return undefined;
 }
 
-/**
- * Handle PUBLIC_DECRYPT request.
- */
+// ============================================================================
+// Fetch interceptor (CSRF)
+// ============================================================================
+
+const originalFetch = fetch;
+
+function setupFetchInterceptor(): void {
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const method = init?.method?.toUpperCase() ?? "GET";
+
+    if (relayerUrlBase && url.startsWith(relayerUrlBase)) {
+      const headers = new Headers(init?.headers);
+
+      if (MUTATING_METHODS.has(method) && csrfTokenBase) {
+        headers.set(CSRF_HEADER_NAME, csrfTokenBase);
+      }
+
+      return originalFetch(input, {
+        ...init,
+        headers,
+        credentials: "include",
+      });
+    }
+
+    return originalFetch(input, init);
+  };
+}
+
+// ============================================================================
+// Handlers
+// ============================================================================
+
+async function handleInit(request: InitRequest): Promise<void> {
+  const { id, type, payload } = request;
+  const { fhevmConfig, csrfToken, thread } = payload;
+
+  try {
+    relayerUrlBase = fhevmConfig.relayerUrl ?? "";
+    csrfTokenBase = csrfToken;
+
+    setupFetchInterceptor();
+
+    setFhevmRuntimeConfig({
+      numberOfThreads: thread,
+    });
+
+    const chain = configToChain(fhevmConfig);
+    const network =
+      typeof fhevmConfig.network === "string" ? fhevmConfig.network : "http://127.0.0.1:8545";
+
+    const { ethers } = await import("ethers");
+    const provider = new ethers.JsonRpcProvider(network);
+
+    client = createFhevmClient({ chain, provider });
+    await client.ready;
+
+    sendSuccess<InitResponseData>(id, type, { initialized: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[Worker] Init error:", message);
+    sendError(id, type, message);
+  }
+}
+
+async function handleEncrypt(request: EncryptRequest): Promise<void> {
+  const { id, type, payload } = request;
+  const { values, contractAddress, userAddress } = payload;
+
+  try {
+    const c = ensureClient();
+
+    const typedValues = values.map((v) => ({
+      type: fheTypeToSolidityType(v.type),
+      value:
+        v.type === "ebool"
+          ? typeof v.value === "boolean"
+            ? v.value
+            : (v.value as bigint) !== 0n
+          : v.value,
+    }));
+
+    const result = (await c.encrypt({
+      contractAddress: contractAddress as `0x${string}`,
+      userAddress: userAddress as `0x${string}`,
+      values: typedValues as unknown as Parameters<typeof c.encrypt>[0]["values"],
+    })) as EncryptMultipleReturnType;
+
+    const evs = result.externalEncryptedValues;
+
+    const handles = (evs as unknown[]).map((ev: unknown) => {
+      const obj = ev as { bytes32Hex?: string };
+      return hexToBytes(obj.bytes32Hex ?? String(ev));
+    });
+    const inputProof = hexToBytes(String(result.inputProof));
+
+    const response: EncryptResponseData = { handles, inputProof };
+    const transferList: Transferable[] = [
+      inputProof.buffer as ArrayBuffer,
+      ...handles.map((h) => h.buffer as ArrayBuffer),
+    ];
+
+    sendSuccess(id, type, response, transferList);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[Worker] Encrypt error:", message);
+    sendError(id, type, message);
+  }
+}
+
+async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
+  const { id, type, payload } = request;
+
+  try {
+    const c = ensureClient();
+
+    const keypair = await c.parseE2eTransportKeypair({
+      serialized: JSON.stringify({
+        publicKey: payload.publicKey,
+        privateKey: payload.privateKey,
+      }),
+    });
+
+    const permit = await c.parseSignedDecryptionPermit({
+      serialized: JSON.stringify({
+        publicKey: payload.publicKey,
+        contractAddresses: payload.signedContractAddresses,
+        signerAddress: payload.signerAddress,
+        startTimestamp: payload.startTimestamp,
+        durationDays: payload.durationDays,
+        signature: payload.signature,
+      }),
+      e2eTransportKeypair: keypair,
+    });
+
+    const encryptedValues = payload.handles.map((handle) => ({
+      encryptedValue: handle,
+      contractAddress: payload.contractAddress,
+    }));
+
+    const clearValues = await c.decrypt({
+      e2eTransportKeypair: keypair,
+      encryptedValues,
+      signedPermit: permit,
+    } as unknown as DecryptParameters);
+
+    const result: Record<string, unknown> = {};
+    for (let i = 0; i < payload.handles.length; i++) {
+      const handle = payload.handles[i];
+      const cv = (clearValues as unknown[])[i] as { value: unknown } | undefined;
+      if (handle !== undefined && cv !== undefined) {
+        result[handle] = cv.value;
+      }
+    }
+
+    sendSuccess<UserDecryptResponseData>(id, type, {
+      clearValues: result as UserDecryptResponseData["clearValues"],
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
+    console.error("[Worker] UserDecrypt error:", message);
+    sendError(id, type, message, statusCode);
+  }
+}
+
 async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
+    const c = ensureClient();
+
+    const result = await c.publicDecrypt({ encryptedValues: payload.handles });
+
+    const clearValues: Record<string, unknown> = {};
+    for (let i = 0; i < payload.handles.length; i++) {
+      const handle = payload.handles[i];
+      const cv = (result.orderedClearValues as unknown[])[i] as { value: unknown } | undefined;
+      if (handle !== undefined && cv !== undefined) {
+        clearValues[handle] = cv.value;
+      }
     }
 
-    const result = await sdkInstance.publicDecrypt(payload.handles);
-
-    const response: PublicDecryptResponseData = { ...result };
-
-    sendSuccess(id, type, response);
+    sendSuccess<PublicDecryptResponseData>(id, type, {
+      clearValues: clearValues as PublicDecryptResponseData["clearValues"],
+      abiEncodedClearValues: result.orderedAbiEncodedClearValues as Hex,
+      decryptionProof: result.decryptionProof as Hex,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] PublicDecrypt error:", message);
@@ -444,25 +370,20 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   }
 }
 
-/**
- * Handle GENERATE_KEYPAIR request.
- */
-function handleGenerateKeypair(request: GenerateKeypairRequest): void {
+async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<void> {
   const { id, type } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    const c = ensureClient();
+    const keypair = await c.generateE2eTransportKeypair();
+    const serialized = c.serializeE2eTransportKeypair({
+      e2eTransportKeypair: keypair,
+    });
 
-    const keypair = sdkInstance.generateKeypair();
-
-    const response: GenerateKeypairResponseData = {
-      publicKey: prefixHex(keypair.publicKey),
-      privateKey: prefixHex(keypair.privateKey),
-    };
-
-    sendSuccess(id, type, response);
+    sendSuccess<GenerateKeypairResponseData>(id, type, {
+      publicKey: serialized.publicKey as Hex,
+      privateKey: serialized.privateKey as Hex,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] GenerateKeypair error:", message);
@@ -470,49 +391,43 @@ function handleGenerateKeypair(request: GenerateKeypairRequest): void {
   }
 }
 
-/**
- * Handle CREATE_EIP712 request.
- */
-function handleCreateEIP712(request: CreateEIP712Request): void {
+async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    const c = ensureClient();
 
-    const eip712 = sdkInstance.createEIP712(
-      unprefixHex(payload.publicKey),
-      payload.contractAddresses,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
+    const eip712 = createKmsUserDecryptEIP712(c, {
+      publicKey: payload.publicKey,
+      contractAddresses: payload.contractAddresses,
+      startTimestamp: payload.startTimestamp,
+      durationDays: payload.durationDays,
+      extraData: "0x00",
+    });
 
-    const response: CreateEIP712ResponseData = {
+    sendSuccess<CreateEIP712ResponseData>(id, type, {
       domain: {
-        name: eip712.domain.name,
-        version: eip712.domain.version,
+        name: String(eip712.domain.name),
+        version: String(eip712.domain.version),
         chainId: Number(eip712.domain.chainId),
-        verifyingContract: eip712.domain.verifyingContract,
+        verifyingContract: String(eip712.domain.verifyingContract) as Address,
       },
       types: {
         UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification.map(
-          (field) => ({
+          (field: { name: string; type: string }) => ({
             name: field.name,
             type: field.type,
           }),
         ),
       },
       message: {
-        publicKey: prefixHex(eip712.message.publicKey),
-        contractAddresses: [...eip712.message.contractAddresses],
-        startTimestamp: BigInt(eip712.message.startTimestamp),
-        durationDays: BigInt(eip712.message.durationDays),
-        extraData: prefixHex(eip712.message.extraData),
+        publicKey: payload.publicKey,
+        contractAddresses: payload.contractAddresses as Address[],
+        startTimestamp: BigInt(payload.startTimestamp),
+        durationDays: BigInt(payload.durationDays),
+        extraData: "0x00" as Hex,
       },
-    };
-
-    sendSuccess(id, type, response);
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] CreateEIP712 error:", message);
@@ -520,24 +435,20 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
   }
 }
 
-/**
- * Handle CREATE_DELEGATED_EIP712 request.
- */
-function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): void {
+async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    const c = ensureClient();
 
-    const result = sdkInstance.createDelegatedUserDecryptEIP712(
-      unprefixHex(payload.publicKey),
-      payload.contractAddresses,
-      payload.delegatorAddress,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
+    const result = createKmsDelegatedUserDecryptEIP712(c, {
+      publicKey: payload.publicKey,
+      contractAddresses: payload.contractAddresses,
+      delegatorAddress: payload.delegatorAddress,
+      startTimestamp: payload.startTimestamp,
+      durationDays: payload.durationDays,
+      extraData: "0x00",
+    });
 
     sendSuccess<CreateDelegatedEIP712ResponseData>(id, type, result);
   } catch (error) {
@@ -547,37 +458,55 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
   }
 }
 
-/**
- * Handle DELEGATED_USER_DECRYPT request.
- */
 async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    const c = ensureClient();
 
-    const handleContractPairs = payload.handles.map((handle) => ({
-      handle,
+    const keypair = await c.parseE2eTransportKeypair({
+      serialized: JSON.stringify({
+        publicKey: payload.publicKey,
+        privateKey: payload.privateKey,
+      }),
+    });
+
+    const permit = await c.parseSignedDecryptionPermit({
+      serialized: JSON.stringify({
+        publicKey: payload.publicKey,
+        contractAddresses: payload.signedContractAddresses,
+        delegatorAddress: payload.delegatorAddress,
+        delegateAddress: payload.delegateAddress,
+        startTimestamp: payload.startTimestamp,
+        durationDays: payload.durationDays,
+        signature: payload.signature,
+      }),
+      e2eTransportKeypair: keypair,
+    });
+
+    const encryptedValues = payload.handles.map((handle) => ({
+      encryptedValue: handle,
       contractAddress: payload.contractAddress,
     }));
 
-    const result = await sdkInstance.delegatedUserDecrypt(
-      handleContractPairs,
-      unprefixHex(payload.privateKey),
-      unprefixHex(payload.publicKey),
-      payload.signature,
-      payload.signedContractAddresses,
-      payload.delegatorAddress,
-      payload.delegateAddress,
-      payload.startTimestamp,
-      payload.durationDays,
-    );
+    const clearValues = await c.decrypt({
+      e2eTransportKeypair: keypair,
+      encryptedValues,
+      signedPermit: permit,
+    } as unknown as DecryptParameters);
 
-    const response: DelegatedUserDecryptResponseData = { clearValues: result };
+    const result: Record<string, unknown> = {};
+    for (let i = 0; i < payload.handles.length; i++) {
+      const handle = payload.handles[i];
+      const cv = (clearValues as unknown[])[i] as { value: unknown } | undefined;
+      if (handle !== undefined && cv !== undefined) {
+        result[handle] = cv.value;
+      }
+    }
 
-    sendSuccess(id, type, response);
+    sendSuccess<DelegatedUserDecryptResponseData>(id, type, {
+      clearValues: result as DelegatedUserDecryptResponseData["clearValues"],
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
@@ -586,51 +515,28 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   }
 }
 
-/**
- * Handle REQUEST_ZK_PROOF_VERIFICATION request.
- */
 async function handleRequestZKProofVerification(
   request: RequestZKProofVerificationRequest,
 ): Promise<void> {
-  const { id, type, payload } = request;
-
-  try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
-
-    const result = await sdkInstance.requestZKProofVerification(payload.zkProof);
-
-    // Transfer ArrayBuffers for zero-copy performance
-    const transferList: Transferable[] = [
-      result.inputProof.buffer,
-      ...result.handles.map((h) => h.buffer),
-    ];
-
-    sendSuccess(id, type, result, transferList);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] RequestZKProofVerification error:", message);
-    sendError(id, type, message);
-  }
+  const { id, type } = request;
+  sendError(id, type, "ZK proof verification is built into encrypt() in @fhevm/sdk");
 }
 
-/**
- * Handle GET_PUBLIC_KEY request.
- */
-function handleGetPublicKey(request: GetPublicKeyRequest): void {
+async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
   const { id, type } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    const c = ensureClient();
+    const key = await c.fetchFheEncryptionKeyBytes?.({});
 
-    const result = sdkInstance.getPublicKey();
-
-    const response: GetPublicKeyResponseData = { result };
-
-    sendSuccess(id, type, response);
+    sendSuccess<GetPublicKeyResponseData>(id, type, {
+      result: key
+        ? {
+            publicKeyId: "fhe-encryption-key",
+            publicKey: new Uint8Array(key.publicKeyBytes.bytes),
+          }
+        : null,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Worker] GetPublicKey error:", message);
@@ -638,47 +544,22 @@ function handleGetPublicKey(request: GetPublicKeyRequest): void {
   }
 }
 
-/**
- * Handle GET_PUBLIC_PARAMS request.
- */
 function handleGetPublicParams(request: GetPublicParamsRequest): void {
-  const { id, type, payload } = request;
-
-  try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
-
-    const result = sdkInstance.getPublicParams(
-      // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically via CDN
-      payload.bits as keyof import("@zama-fhe/relayer-sdk/bundle").PublicParams<Uint8Array>,
-    );
-
-    const response: GetPublicParamsResponseData = { result };
-
-    sendSuccess(id, type, response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] GetPublicParams error:", message);
-    sendError(id, type, message);
-  }
+  const { id, type } = request;
+  sendSuccess<GetPublicParamsResponseData>(id, type, { result: null });
 }
 
-/**
- * Handle UPDATE_CSRF request - update the stored CSRF token.
- */
 function handleUpdateCsrf(request: UpdateCsrfRequest): void {
   const { id, type, payload } = request;
   csrfTokenBase = payload.csrfToken;
   sendSuccess<UpdateCsrfResponseData>(id, type, { updated: true });
 }
 
-/**
- * Main message handler.
- */
-self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-  const request = event.data;
+// ============================================================================
+// Message router
+// ============================================================================
 
+async function handleMessage(request: WorkerRequest): Promise<void> {
   try {
     switch (request.type) {
       case "INIT":
@@ -697,13 +578,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         await handlePublicDecrypt(request);
         break;
       case "GENERATE_KEYPAIR":
-        handleGenerateKeypair(request);
+        await handleGenerateKeypair(request);
         break;
       case "CREATE_EIP712":
-        handleCreateEIP712(request);
+        await handleCreateEIP712(request);
         break;
       case "CREATE_DELEGATED_EIP712":
-        handleCreateDelegatedEIP712(request);
+        await handleCreateDelegatedEIP712(request);
         break;
       case "DELEGATED_USER_DECRYPT":
         await handleDelegatedUserDecrypt(request);
@@ -712,7 +593,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         await handleRequestZKProofVerification(request);
         break;
       case "GET_PUBLIC_KEY":
-        handleGetPublicKey(request);
+        await handleGetPublicKey(request);
         break;
       case "GET_PUBLIC_PARAMS":
         handleGetPublicParams(request);
@@ -722,10 +603,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(
-      request?.id ?? "unknown",
-      request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),
-      message,
-    );
+    sendError(request.id, request.type, message);
   }
+}
+
+self.onmessage = (event: MessageEvent<WorkerRequest>) => {
+  void handleMessage(event.data);
 };

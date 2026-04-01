@@ -1,12 +1,35 @@
-import type {
-  ClearValueType,
-  FhevmInstanceConfig,
-  InputProofBytesType,
-  KmsDelegatedUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/bundle";
 import type { EncryptInput, Handle } from "../relayer/relayer-sdk.types";
 import type { Address, Hex } from "viem";
+
+// ============================================================================
+// Locally-defined types (previously imported from @zama-fhe/relayer-sdk/bundle)
+// ============================================================================
+
+/** Clear-text value returned after decryption. */
+export type ClearValueType = bigint | boolean | `0x${string}`;
+
+/** FHEVM chain configuration passed through the worker init payload. */
+export interface FhevmInstanceConfig {
+  verifyingContractAddressDecryption: string;
+  verifyingContractAddressInputVerification: string;
+  kmsContractAddress: string;
+  inputVerifierContractAddress: string;
+  aclContractAddress: string;
+  gatewayChainId: number;
+  relayerUrl: string;
+  network: unknown;
+  chainId: number;
+}
+
+/** Loose ZK proof input for the legacy REQUEST_ZK_PROOF_VERIFICATION message. */
+export interface ZKProofLike {
+  readonly chainId: bigint | number;
+  readonly aclContractAddress: string;
+  readonly contractAddress: string;
+  readonly userAddress: string;
+  readonly ciphertextWithZKProof: Uint8Array | string;
+  readonly encryptionBits?: readonly number[];
+}
 
 // ============================================================================
 // Logger
@@ -269,13 +292,16 @@ export interface CreateEIP712ResponseData {
   };
 }
 
-export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
+export type { CreateKmsDelegatedUserDecryptEIP712ReturnType as CreateDelegatedEIP712ResponseData } from "@fhevm/sdk/actions/chain";
 
 export interface DelegatedUserDecryptResponseData {
   clearValues: Record<Handle, ClearValueType>;
 }
 
-export type RequestZKProofVerificationResponseData = InputProofBytesType;
+export interface RequestZKProofVerificationResponseData {
+  handles: Uint8Array[];
+  inputProof: Uint8Array;
+}
 
 export interface GetPublicKeyResponseData {
   result: { publicKeyId: string; publicKey: Uint8Array } | null;
