@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.2.0...v2.3.0-alpha.1) (2026-03-31)
+
+### Features
+
+- **sdk:** align delegation API with Delegated User Decryption spec ([#135](https://github.com/zama-ai/sdk/issues/135)) ([a80ad1f]())
+
 ## [2.2.0](https://github.com/zama-ai/sdk/compare/v2.1.0...v2.2.0) (2026-03-30)
 
 ### Features
