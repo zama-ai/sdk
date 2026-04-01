@@ -3,12 +3,6 @@
  * Uses @fhevm/sdk for encryption/decryption off the main thread via node:worker_threads.
  */
 import type { Address, Hex } from "viem";
-import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/ethers";
-import type { DecryptParameters } from "@fhevm/sdk/actions/decrypt";
-import {
-  createKmsUserDecryptEIP712,
-  createKmsDelegatedUserDecryptEIP712,
-} from "@fhevm/sdk/actions/chain";
 import { parentPort, type Transferable } from "node:worker_threads";
 import type {
   FhevmInstanceConfig,
@@ -37,7 +31,6 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
-import { ethers } from "ethers";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -45,7 +38,10 @@ if (!parentPort) {
 
 const port = parentPort;
 
-type FhevmClient = ReturnType<typeof createFhevmClient>;
+// oxlint-disable-next-line typescript-eslint/consistent-type-imports -- dynamic import type extraction
+type FhevmSdk = typeof import("@fhevm/sdk/ethers");
+type FhevmClient = ReturnType<FhevmSdk["createFhevmClient"]>;
+type DecryptParameters = Parameters<FhevmClient["decrypt"]>[0];
 let client: FhevmClient | null = null;
 
 function sendSuccess<T>(
@@ -128,9 +124,10 @@ async function handleNodeInit(request: NodeInitRequest): Promise<void> {
   const { fhevmConfig } = payload;
 
   try {
-    setFhevmRuntimeConfig({
-      logger: console,
-    });
+    const { createFhevmClient, setFhevmRuntimeConfig } = await import("@fhevm/sdk/ethers");
+    const { ethers } = await import("ethers");
+
+    setFhevmRuntimeConfig({});
 
     const chain = configToChain(fhevmConfig);
     const network =
@@ -308,6 +305,7 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
 
   try {
     assertClient(client);
+    const { createKmsUserDecryptEIP712 } = await import("@fhevm/sdk/actions/chain");
 
     const eip712 = createKmsUserDecryptEIP712(client, {
       publicKey: payload.publicKey,
@@ -352,6 +350,7 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
 
   try {
     assertClient(client);
+    const { createKmsDelegatedUserDecryptEIP712 } = await import("@fhevm/sdk/actions/chain");
 
     const result = createKmsDelegatedUserDecryptEIP712(client, {
       publicKey: payload.publicKey,

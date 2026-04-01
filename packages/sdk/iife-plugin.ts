@@ -33,6 +33,7 @@ export function iife({ tsconfig }: { tsconfig: string }): Plugin {
         resolve: { tsconfigFilename: tsconfig },
         platform: "browser",
         treeshake: true,
+        logLevel: "silent",
       });
       const code = result.output[0].code;
 

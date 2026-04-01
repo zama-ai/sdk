@@ -3,7 +3,14 @@ import { dts } from "rolldown-plugin-dts";
 import { iife } from "./iife-plugin";
 
 const shared = {
-  external: [/^viem/, /^ethers/, /^@zama-fhe\/relayer-sdk/, /^@tanstack\/query-core/, /^node:/],
+  external: [
+    /^viem/,
+    /^ethers/,
+    /^@fhevm\/sdk/,
+    /^@zama-fhe\/relayer-sdk/,
+    /^@tanstack\/query-core/,
+    /^node:/,
+  ],
   resolve: {
     tsconfigFilename: "tsconfig.build.json",
   },
