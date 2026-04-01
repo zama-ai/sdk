@@ -47,13 +47,13 @@ Specifically:
 
 ## Device compatibility
 
-| Device              | Supported | Signing method                                     | Notes                                                                 |
-| ------------------- | --------- | -------------------------------------------------- | --------------------------------------------------------------------- |
-| Ledger Nano S       | Yes       | `signEIP712HashedMessage` (pre-hashed, blind sign) | Device shows generic "Sign typed data?" screen — no field details     |
-| Ledger Nano S Plus  | Yes       | `signEIP712Message` (full field display)           | Device shows each field name and value                                |
-| Ledger Nano X       | Yes       | `signEIP712Message` (full field display)           | Device shows each field name and value                                |
-| Ledger Stax         | Yes       | `signEIP712Message` (full field display)           | Device shows each field name and value                                |
-| Ledger Flex         | Yes       | `signEIP712Message` (full field display)           | Device shows each field name and value                                |
+| Device             | Supported | Signing method                                     | Notes                                                             |
+| ------------------ | --------- | -------------------------------------------------- | ----------------------------------------------------------------- |
+| Ledger Nano S      | Yes       | `signEIP712HashedMessage` (pre-hashed, blind sign) | Device shows generic "Sign typed data?" screen — no field details |
+| Ledger Nano S Plus | Yes       | `signEIP712Message` (full field display)           | Device shows each field name and value                            |
+| Ledger Nano X      | Yes       | `signEIP712Message` (full field display)           | Device shows each field name and value                            |
+| Ledger Stax        | Yes       | `signEIP712Message` (full field display)           | Device shows each field name and value                            |
+| Ledger Flex        | Yes       | `signEIP712Message` (full field display)           | Device shows each field name and value                            |
 
 The app auto-detects the device tier at runtime (see [Two-tier EIP-712 signing](#two-tier-eip-712-signing) below). No manual configuration is required.
 
@@ -235,7 +235,7 @@ await token.mint("0xYOUR_LEDGER_ADDRESS", parseUnits("10", 6)); // 6 decimals
 
 Ensure the Ledger is unlocked with the **Ethereum app open** ("Application is ready"), then open the app at [http://localhost:3000](http://localhost:3000).
 
-**Account selection:** before connecting, use the **Account (BIP-44 index)** dropdown to choose which derived address to use. Index *n* maps to BIP-44 path `m/44'/60'/0'/0/n`; the dropdown offers accounts #0 through #4. The default is account #0.
+**Account selection:** before connecting, use the **Account (BIP-44 index)** dropdown to choose which derived address to use. Index _n_ maps to BIP-44 path `m/44'/60'/0'/0/n`; the dropdown offers accounts #0 through #4. The default is account #0.
 
 Click **Connect Ledger**. The browser opens a **WebHID device picker** listing all compatible HID devices. Select your Ledger device. The app then:
 
@@ -381,7 +381,11 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
   async connect(accountIndex = 0): Promise<string> {
     // Close any existing transport before opening a new one.
     if (this.transport) {
-      try { await this.transport.close(); } catch { /* ignore */ }
+      try {
+        await this.transport.close();
+      } catch {
+        /* ignore */
+      }
       this.transport = null;
     }
     this._path = `44'/60'/0'/0/${accountIndex}`;
@@ -397,7 +401,11 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
   // disconnect (accountsChanged([]) + disconnect code 4900).
   async disconnect(): Promise<void> {
     if (this.transport) {
-      try { await this.transport.close(); } catch { /* ignore */ }
+      try {
+        await this.transport.close();
+      } catch {
+        /* ignore */
+      }
     }
     this._onDisconnect();
   }
@@ -437,9 +445,9 @@ const sessionDBStorage = new IndexedDBStorage("SessionStore");
 <ZamaProvider
   relayer={relayer}
   signer={signer}
-  storage={indexedDBStorage}        // "CredentialStore" DB — encrypted FHE keypair
+  storage={indexedDBStorage} // "CredentialStore" DB — encrypted FHE keypair
   sessionStorage={sessionDBStorage} // "SessionStore" DB — EIP-712 session signatures
-  keypairTTL={30 * 24 * 60 * 60}    // 30 days — same as sessionTTL default
+  keypairTTL={30 * 24 * 60 * 60} // 30 days — same as sessionTTL default
 >
   ...
 </ZamaProvider>;
@@ -539,8 +547,12 @@ const { data: status } = useDelegationStatus({
 const decryptAs = useDecryptBalanceAs(cTokenAddress);
 decryptAs.mutate({ delegatorAddress: "0xOwner" });
 
-if (decryptAs.error instanceof DelegationNotFoundError) { /* no delegation */ }
-if (decryptAs.error instanceof DelegationExpiredError) { /* expired */ }
+if (decryptAs.error instanceof DelegationNotFoundError) {
+  /* no delegation */
+}
+if (decryptAs.error instanceof DelegationExpiredError) {
+  /* expired */
+}
 ```
 
 ---
@@ -557,26 +569,26 @@ Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_HOODI_RPC_URL` to a pri
 
 ## Troubleshooting
 
-| Symptom                                                       | Likely cause                                                                                                                                             | Fix                                                                                                                                                                                                                                                              |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "Failed to connect Ledger device" on connect                  | Device locked, Ethereum app not open, or USB permission denied                                                                                           | Unlock the device, open the Ethereum app ("Application is ready"), and retry. If the WebHID picker shows the device but connecting fails, replug the USB cable.                                                                                                  |
-| WebHID device picker is empty                                 | Ledger not connected via USB, or browser lacks permission                                                                                                | Connect the Ledger via USB before clicking **Connect Ledger**. Bluetooth is not supported by `hw-transport-webhid`.                                                                                                                                              |
-| "WebHID is not supported in this browser"                     | Using Firefox or Safari                                                                                                                                  | Switch to Chrome, Edge, or Brave (Chromium 89+).                                                                                                                                                                                                                 |
-| Device shows "Sign typed data? ⚠️" for all EIP-712 requests  | Using a Nano S — this is expected (Tier 2 pre-hashed signing)                                                                                            | Normal behavior. Approve as usual. To see individual field names and values, use a Nano S Plus, Nano X, Stax, or Flex.                                                                                                                                           |
-| EIP-712 signature fails with "Blind signing not enabled"      | Nano S requires blind signing to be enabled for `signEIP712HashedMessage`                                                                                | On the Ledger device: Ethereum app → Settings → Blind signing → Enable.                                                                                                                                                                                         |
-| ERC-20 balance shows `0`                                      | Tokens not yet minted                                                                                                                                    | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens).                                                                                                                                                              |
-| Confidential balance shows `—` immediately after connect      | No shielded balance yet — no encrypted handle to read                                                                                                    | Shield some tokens first; the balance will display once there is something to decrypt.                                                                                                                                                                           |
-| "Decrypting…" stays indefinitely                              | Missed the EIP-712 confirmation prompt on the device                                                                                                     | Check the device screen and approve (or reject) the pending signature request.                                                                                                                                                                                   |
-| Transaction confirmation times out on the device              | Ledger screen-lock activates mid-flow                                                                                                                    | Keep the device active during multi-step operations. If a confirmation times out, retry the operation — nonces and gas estimates will be refreshed.                                                                                                              |
-| "nonce too low" error on transaction submission               | A previous transaction is still pending in the mempool                                                                                                   | Wait for all pending transactions to confirm, then retry. The provider queries the `pending` nonce count to account for un-mined transactions.                                                                                                                   |
-| Asked to sign again after each balance decrypt                | Session not yet cached (first use — expected)                                                                                                            | Approve once — subsequent decryptions reuse the IndexedDB-persisted session credential (30-day TTL). If the prompt recurs every time, check that `storage` and `sessionStorage` in `ZamaProvider` point to **different** `IndexedDBStorage` instances.           |
-| Shield fails with "Transaction reverted"                      | Insufficient token balance, or spend cap approved but wrap reverted                                                                                      | Verify you have sufficient ERC-20 balance and Hoodi ETH. Retry — the app re-estimates gas and re-queries the nonce on each attempt.                                                                                                                              |
-| Unshield shows "Unshielding… (2/2)" for longer than usual     | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow. The receipt is polled every ~4 s via the high-water mark on `eth_blockNumber`.                                                                                                                                     |
-| Pending unshield card appears on reload                       | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens.                                                                                                                                                        |
-| Delegate can still decrypt after revocation                   | Expected behavior — decrypted values are cached in IndexedDB keyed by `(token, owner, handle)`; the cache is served without re-checking the on-chain ACL | By design: the SDK uses the on-chain encrypted handle as the cache key (no TTL). Revocation takes full effect as soon as the owner's balance changes (shield, transfer, or unshield), producing a new handle and invalidating the cache entry.                   |
-| Grant Access reverts with `ExpirationDateBeforeOneHour`       | Expiration date is less than 1 hour in the future                                                                                                        | Set the expiry to at least 1 hour from now. The ACL contract compares against `block.timestamp` (UTC).                                                                                                                                                          |
-| Grant Access reverts with `SenderCannotBeDelegate`            | Attempted to delegate to your own address                                                                                                                | Enter a different address. The ACL contract does not allow self-delegation.                                                                                                                                                                                      |
-| Revoke Access reverts with `NotDelegatedYet`                  | No active delegation exists for the entered address and token                                                                                            | Verify the delegate address is correct and that a grant was previously confirmed on-chain for the selected token.                                                                                                                                                |
+| Symptom                                                     | Likely cause                                                                                                                                             | Fix                                                                                                                                                                                                                                                    |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| "Failed to connect Ledger device" on connect                | Device locked, Ethereum app not open, or USB permission denied                                                                                           | Unlock the device, open the Ethereum app ("Application is ready"), and retry. If the WebHID picker shows the device but connecting fails, replug the USB cable.                                                                                        |
+| WebHID device picker is empty                               | Ledger not connected via USB, or browser lacks permission                                                                                                | Connect the Ledger via USB before clicking **Connect Ledger**. Bluetooth is not supported by `hw-transport-webhid`.                                                                                                                                    |
+| "WebHID is not supported in this browser"                   | Using Firefox or Safari                                                                                                                                  | Switch to Chrome, Edge, or Brave (Chromium 89+).                                                                                                                                                                                                       |
+| Device shows "Sign typed data? ⚠️" for all EIP-712 requests | Using a Nano S — this is expected (Tier 2 pre-hashed signing)                                                                                            | Normal behavior. Approve as usual. To see individual field names and values, use a Nano S Plus, Nano X, Stax, or Flex.                                                                                                                                 |
+| EIP-712 signature fails with "Blind signing not enabled"    | Nano S requires blind signing to be enabled for `signEIP712HashedMessage`                                                                                | On the Ledger device: Ethereum app → Settings → Blind signing → Enable.                                                                                                                                                                                |
+| ERC-20 balance shows `0`                                    | Tokens not yet minted                                                                                                                                    | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens).                                                                                                                                                    |
+| Confidential balance shows `—` immediately after connect    | No shielded balance yet — no encrypted handle to read                                                                                                    | Shield some tokens first; the balance will display once there is something to decrypt.                                                                                                                                                                 |
+| "Decrypting…" stays indefinitely                            | Missed the EIP-712 confirmation prompt on the device                                                                                                     | Check the device screen and approve (or reject) the pending signature request.                                                                                                                                                                         |
+| Transaction confirmation times out on the device            | Ledger screen-lock activates mid-flow                                                                                                                    | Keep the device active during multi-step operations. If a confirmation times out, retry the operation — nonces and gas estimates will be refreshed.                                                                                                    |
+| "nonce too low" error on transaction submission             | A previous transaction is still pending in the mempool                                                                                                   | Wait for all pending transactions to confirm, then retry. The provider queries the `pending` nonce count to account for un-mined transactions.                                                                                                         |
+| Asked to sign again after each balance decrypt              | Session not yet cached (first use — expected)                                                                                                            | Approve once — subsequent decryptions reuse the IndexedDB-persisted session credential (30-day TTL). If the prompt recurs every time, check that `storage` and `sessionStorage` in `ZamaProvider` point to **different** `IndexedDBStorage` instances. |
+| Shield fails with "Transaction reverted"                    | Insufficient token balance, or spend cap approved but wrap reverted                                                                                      | Verify you have sufficient ERC-20 balance and Hoodi ETH. Retry — the app re-estimates gas and re-queries the nonce on each attempt.                                                                                                                    |
+| Unshield shows "Unshielding… (2/2)" for longer than usual   | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow. The receipt is polled every ~4 s via the high-water mark on `eth_blockNumber`.                                                                                                                           |
+| Pending unshield card appears on reload                     | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens.                                                                                                                                              |
+| Delegate can still decrypt after revocation                 | Expected behavior — decrypted values are cached in IndexedDB keyed by `(token, owner, handle)`; the cache is served without re-checking the on-chain ACL | By design: the SDK uses the on-chain encrypted handle as the cache key (no TTL). Revocation takes full effect as soon as the owner's balance changes (shield, transfer, or unshield), producing a new handle and invalidating the cache entry.         |
+| Grant Access reverts with `ExpirationDateBeforeOneHour`     | Expiration date is less than 1 hour in the future                                                                                                        | Set the expiry to at least 1 hour from now. The ACL contract compares against `block.timestamp` (UTC).                                                                                                                                                 |
+| Grant Access reverts with `SenderCannotBeDelegate`          | Attempted to delegate to your own address                                                                                                                | Enter a different address. The ACL contract does not allow self-delegation.                                                                                                                                                                            |
+| Revoke Access reverts with `NotDelegatedYet`                | No active delegation exists for the entered address and token                                                                                            | Verify the delegate address is correct and that a grant was previously confirmed on-chain for the selected token.                                                                                                                                      |
 
 ---
 
@@ -597,12 +609,12 @@ npm run test:e2e
 
 ### Test suites
 
-| File                       | Coverage                                                                                 |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `e2e/connect.spec.ts`      | Connect screen UI, account selector, successful connect, error on missing device         |
-| `e2e/main.spec.ts`         | All operation cards, header elements, token selector, registry empty state               |
-| `e2e/disconnect.spec.ts`   | Device unplug → connect screen, title after disconnect, reconnect flow, Disconnect button |
-| `e2e/delegation.spec.ts`   | Delegation section labels, button enable/disable states, Decrypt Balance card visibility |
+| File                     | Coverage                                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| `e2e/connect.spec.ts`    | Connect screen UI, account selector, successful connect, error on missing device          |
+| `e2e/main.spec.ts`       | All operation cards, header elements, token selector, registry empty state                |
+| `e2e/disconnect.spec.ts` | Device unplug → connect screen, title after disconnect, reconnect flow, Disconnect button |
+| `e2e/delegation.spec.ts` | Delegation section labels, button enable/disable states, Decrypt Balance card visibility  |
 
 ### How tests mock the Ledger
 

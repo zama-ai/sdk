@@ -21,13 +21,13 @@ To provide support for yet-unsupported testnets such as Hoodi, this example uses
 
 ## Device compatibility
 
-| Device             | Supported | EIP-712 signing                |
-| ------------------ | --------- | ------------------------------ |
-| Ledger Nano S      | Yes       | Pre-hashed (blind signing)     |
-| Ledger Nano S Plus | Yes       | Full field display             |
-| Ledger Nano X      | Yes       | Full field display             |
-| Ledger Stax        | Yes       | Full field display             |
-| Ledger Flex        | Yes       | Full field display             |
+| Device             | Supported | EIP-712 signing            |
+| ------------------ | --------- | -------------------------- |
+| Ledger Nano S      | Yes       | Pre-hashed (blind signing) |
+| Ledger Nano S Plus | Yes       | Full field display         |
+| Ledger Nano X      | Yes       | Full field display         |
+| Ledger Stax        | Yes       | Full field display         |
+| Ledger Flex        | Yes       | Full field display         |
 
 **Browser requirement:** WebHID is Chromium-only — use Chrome, Edge, or Brave. Firefox and Safari are not supported.
 
@@ -60,14 +60,14 @@ To provide support for yet-unsupported testnets such as Hoodi, this example uses
 
 ## How it differs from `example-hoodi`
 
-|                  | `example-hoodi`                         | `react-ledger`                                    |
-| ---------------- | --------------------------------------- | ------------------------------------------------- |
-| Wallet           | Any EIP-1193 browser extension          | Ledger hardware device (WebHID)                   |
-| Relayer          | `RelayerCleartext` (no proxy needed)    | `RelayerCleartext` (no proxy needed)              |
-| Network          | Hoodi (chainId 560048)                  | Hoodi (chainId 560048)                            |
-| Signing          | Injected wallet (extension)             | hw-app-eth (on-device)                            |
-| Chain switching  | `wallet_switchEthereumChain`            | Not applicable — chain hardcoded in provider      |
-| Browser support  | Any modern browser                      | Chromium only (WebHID)                            |
+|                 | `example-hoodi`                      | `react-ledger`                               |
+| --------------- | ------------------------------------ | -------------------------------------------- |
+| Wallet          | Any EIP-1193 browser extension       | Ledger hardware device (WebHID)              |
+| Relayer         | `RelayerCleartext` (no proxy needed) | `RelayerCleartext` (no proxy needed)         |
+| Network         | Hoodi (chainId 560048)               | Hoodi (chainId 560048)                       |
+| Signing         | Injected wallet (extension)          | hw-app-eth (on-device)                       |
+| Chain switching | `wallet_switchEthereumChain`         | Not applicable — chain hardcoded in provider |
+| Browser support | Any modern browser                   | Chromium only (WebHID)                       |
 
 ## Setup
 
@@ -93,8 +93,8 @@ Open [http://localhost:3000](http://localhost:3000) in a Chromium-based browser,
 
 ## Environment variables
 
-| Variable                    | Required | Default                            | Description                                                                                                      |
-| --------------------------- | -------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Variable                    | Required | Default                            | Description                                                                                                     |
+| --------------------------- | -------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_HOODI_RPC_URL` | No       | `https://rpc.hoodi.ethpandaops.io` | Override the default Hoodi RPC. Example: `https://hoodi.infura.io/v3/YOUR_KEY`. Leaving empty uses the default. |
 
 ## Hoodi contract addresses
