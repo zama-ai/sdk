@@ -160,14 +160,14 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
         v.type === "ebool"
           ? typeof v.value === "boolean"
             ? v.value
-            : (v.value as bigint) !== 0n
+            : BigInt(v.value) !== 0n
           : v.value,
-    }));
+    })) as unknown as Parameters<typeof client.encrypt>[0]["values"];
 
     const result = await client.encrypt({
-      contractAddress: contractAddress as `0x${string}`,
-      userAddress: userAddress as `0x${string}`,
-      values: typedValues as unknown as Parameters<typeof client.encrypt>[0]["values"],
+      contractAddress: contractAddress,
+      userAddress: userAddress,
+      values: typedValues,
     });
 
     const evs =
@@ -286,6 +286,7 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
 
   try {
     assertClient(client);
+
     const keypair = await client.generateE2eTransportKeypair();
     const serialized = client.serializeE2eTransportKeypair({
       e2eTransportKeypair: keypair,
@@ -307,6 +308,7 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
 
   try {
     assertClient(client);
+
     const { createKmsUserDecryptEIP712 } = await import("@fhevm/sdk/actions/chain");
 
     const eip712 = createKmsUserDecryptEIP712(client, {
@@ -352,6 +354,7 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
 
   try {
     assertClient(client);
+
     const { createKmsDelegatedUserDecryptEIP712 } = await import("@fhevm/sdk/actions/chain");
 
     const result = createKmsDelegatedUserDecryptEIP712(client, {
@@ -439,6 +442,7 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
 
   try {
     assertClient(client);
+
     const key = await client.fetchFheEncryptionKeyBytes?.({});
 
     sendSuccess<GetPublicKeyResponseData>(id, type, {
