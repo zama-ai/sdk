@@ -141,11 +141,6 @@ export const encryptedAbi = [
   },
   {
     inputs: [],
-    name: "EthFeeTransferFailed",
-    type: "error",
-  },
-  {
-    inputs: [],
     name: "FailedCall",
     type: "error",
   },
@@ -809,19 +804,6 @@ export const encryptedAbi = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "adminProvider",
-    outputs: [
-      {
-        internalType: "contract AdminProvider",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
     inputs: [
       {
         internalType: "address",
@@ -1201,62 +1183,6 @@ export const encryptedAbi = [
     name: "finalizeUnwrap",
     outputs: [],
     stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "euint64",
-        name: "burntAmount",
-        type: "bytes32",
-      },
-    ],
-    name: "getReceiverEntry",
-    outputs: [
-      {
-        components: [
-          {
-            internalType: "address",
-            name: "to",
-            type: "address",
-          },
-          {
-            internalType: "address",
-            name: "refund",
-            type: "address",
-          },
-          {
-            internalType: "bytes",
-            name: "callbackData",
-            type: "bytes",
-          },
-          {
-            internalType: "euint64",
-            name: "expectedBurnAmount",
-            type: "bytes32",
-          },
-          {
-            internalType: "euint64",
-            name: "actualBurnAmount",
-            type: "bytes32",
-          },
-          {
-            internalType: "uint64",
-            name: "committedFeeBasisPoints",
-            type: "uint64",
-          },
-          {
-            internalType: "address",
-            name: "from",
-            type: "address",
-          },
-        ],
-        internalType: "struct RegulatedERC7984ERC20WrapperWithFeesUpgradeable.ReceiverEntry",
-        name: "",
-        type: "tuple",
-      },
-    ],
-    stateMutability: "view",
     type: "function",
   },
   {

@@ -141,11 +141,6 @@ export const wrapperAbi = [
   },
   {
     inputs: [],
-    name: "EthFeeTransferFailed",
-    type: "error",
-  },
-  {
-    inputs: [],
     name: "FailedCall",
     type: "error",
   },
@@ -801,19 +796,6 @@ export const wrapperAbi = [
     name: "acceptOwnership",
     outputs: [],
     stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "adminProvider",
-    outputs: [
-      {
-        internalType: "contract AdminProvider",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
     type: "function",
   },
   {
