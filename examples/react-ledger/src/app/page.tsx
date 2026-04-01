@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import {
@@ -23,7 +23,7 @@ import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
 import { HOODI_CHAIN_ID, HOODI_CHAIN_ID_HEX, HOODI_RPC_URL } from "@/lib/config";
-import { onProviderDiscovered, type EIP1193Provider } from "@/lib/ledgerProvider";
+import { ledgerProvider } from "@/lib/LedgerWebHIDProvider";
 
 const MINT_ABI = ["function mint(address to, uint256 amount)"];
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
@@ -43,18 +43,23 @@ function normalizePair(
   };
 }
 
-// Direct Hoodi RPC for ETH balance reads — independent of the Ledger Button.
+// Direct Hoodi RPC for ETH balance reads — independent of the Ledger device.
 const rpcProvider = new JsonRpcProvider(HOODI_RPC_URL);
 
+// Verify-address button states.
+type VerifyStatus = "idle" | "verifying" | "done" | "error";
+
 export default function Home() {
-  const [isInitializing, setIsInitializing] = useState(true);
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  // Ref to the raw Ledger Button EIP-1193 provider (arrives via EIP-6963).
-  const [ethProvider, setEthProvider] = useState<EIP1193Provider | null>(null);
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
+  // BIP-44 account index — passed to ledgerProvider.connect(index).
+  const [accountIndex, setAccountIndex] = useState(0);
+  // Address verification status (on-device display).
+  const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>("idle");
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const isHoodi = chainId?.toLowerCase() === HOODI_CHAIN_ID_HEX;
 
@@ -95,83 +100,90 @@ export default function Home() {
     allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
   }
 
-  // ── Ledger Button provider discovery & connection detection ──────────────────
-  //
-  // Unlike MetaMask (which injects window.ethereum synchronously), the Ledger
-  // Button provider arrives asynchronously via EIP-6963. providers.tsx calls
-  // initializeLedgerProvider() and publishes the provider via notifyProviderDiscovered.
-  // Here we subscribe via onProviderDiscovered and seed initial state.
-  //
-  // There is NO wallet_switchEthereumChain call here — the Ledger Button does not
-  // support Hoodi (chainId 560048). The user must configure their device manually.
-  // Screen 2 explains this requirement clearly.
+  // ── Ledger device event listeners ────────────────────────────────────────────
+
   useEffect(() => {
-    const unsub = onProviderDiscovered((provider: EIP1193Provider) => {
-      setEthProvider(provider);
-
-      // Detect existing connection (already-connected wallet, page refresh).
-      Promise.all([
-        provider.request({ method: "eth_accounts" }) as Promise<string[]>,
-        provider.request({ method: "eth_chainId" }) as Promise<string>,
-      ])
-        .then(([accounts, currentChainId]) => {
-          setAddress(accounts[0] ?? null);
-          setChainId(currentChainId);
-        })
-        .catch((err) => console.error("[page] Failed to detect initial wallet state:", err))
-        .finally(() => setIsInitializing(false));
-
-      // React to runtime account / chain changes.
-      const handleAccountsChanged = (accounts: unknown) => {
-        setAddress((accounts as string[])[0] ?? null);
-        queryClient.invalidateQueries({ queryKey: ["eth-balance"] });
-        queryClient.invalidateQueries({ queryKey: ["erc20-balance"] });
-      };
-      const handleChainChanged = (newChainId: unknown) => setChainId(newChainId as string);
-
-      provider.on("accountsChanged", handleAccountsChanged);
-      provider.on("chainChanged", handleChainChanged);
-
-      // No cleanup for provider.removeListener — the provider is module-level
-      // and the listeners should remain active for the lifetime of the page.
-    });
-
-    // Safety fallback: if no Ledger Button appears within 8 s (e.g. script blocked,
-    // browser extension conflict), stop showing the initializing screen.
-    const timeout = setTimeout(() => setIsInitializing(false), 8000);
-
-    return () => {
-      unsub();
-      clearTimeout(timeout);
+    const handleAccountsChanged = () => {
+      queryClient.invalidateQueries({ queryKey: ["eth-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["erc20-balance"] });
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    ledgerProvider.on("accountsChanged", handleAccountsChanged);
+    return () => ledgerProvider.removeListener("accountsChanged", handleAccountsChanged);
+  }, [queryClient]);
 
-  async function connect() {
-    if (!ethProvider) {
-      setConnectError("Ledger Button not yet ready. Please wait a moment and try again.");
-      return;
-    }
+  // Disconnect recovery: device unplugged mid-session → return to connect screen.
+  useEffect(() => {
+    const handleDisconnect = () => {
+      setAddress(null);
+      setChainId(null);
+      setSelectedTokenAddress(null);
+    };
+    ledgerProvider.on("disconnect", handleDisconnect);
+    return () => ledgerProvider.removeListener("disconnect", handleDisconnect);
+  }, []);
+
+  // ── Connect ──────────────────────────────────────────────────────────────────
+
+  async function connectWithIndex(index: number) {
+    setAccountIndex(index);
     setConnectError(null);
     setIsConnecting(true);
     try {
-      // eth_requestAccounts triggers the Ledger Button connect UI (account selector).
-      const accounts = (await ethProvider.request({
-        method: "eth_requestAccounts",
-      })) as string[];
-      const currentChainId = (await ethProvider.request({
-        method: "eth_chainId",
-      })) as string;
+      // Opens the WebHID device picker (or auto-selects a previously granted device),
+      // reads the Ethereum address at the given BIP-44 path.
+      const addr = await ledgerProvider.connect(index);
+      const currentChainId = (await ledgerProvider.request({ method: "eth_chainId" })) as string;
       setChainId(currentChainId);
-      setAddress(accounts[0] ?? null);
+      setAddress(addr);
     } catch (err) {
-      console.error("[page] Failed to connect Ledger:", err);
-      setConnectError(err instanceof Error ? err.message : "Failed to connect Ledger device");
+      const message = err instanceof Error ? err.message : "Failed to connect Ledger device";
+      console.warn("[page] Failed to connect Ledger:", message);
+      setConnectError(message);
     } finally {
       setIsConnecting(false);
     }
   }
 
+  // Called from the connect screen button — uses the currently selected accountIndex.
+  function connect() {
+    void connectWithIndex(accountIndex);
+  }
+
+  // ── Address verification ──────────────────────────────────────────────────────
+  // Calls getAddress(path, display:true) — the Ledger device shows the address on
+  // screen so the user can compare it with what the browser displays.
+
+  const verifyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function handleVerifyAddress() {
+    if (verifyTimerRef.current !== null) {
+      clearTimeout(verifyTimerRef.current);
+      verifyTimerRef.current = null;
+    }
+    setVerifyStatus("verifying");
+    setVerifyError(null);
+    try {
+      await ledgerProvider.verifyAddress();
+      setVerifyStatus("done");
+      // Auto-reset the "Verified" label after 4 s.
+      verifyTimerRef.current = setTimeout(() => {
+        verifyTimerRef.current = null;
+        setVerifyStatus("idle");
+      }, 4000);
+    } catch (err) {
+      setVerifyStatus("error");
+      setVerifyError(err instanceof Error ? err.message : "Verification failed");
+    }
+  }
+
+  // Reset verify state and mutation state when the connected address changes.
   useEffect(() => {
+    if (verifyTimerRef.current !== null) {
+      clearTimeout(verifyTimerRef.current);
+      verifyTimerRef.current = null;
+    }
+    setVerifyStatus("idle");
+    setVerifyError(null);
     allowTokens.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address]);
@@ -238,27 +250,44 @@ export default function Home() {
 
   const actionsDisabled = !isHoodi || !token;
 
-  // ── Screen 0: Initializing ─────────────────────────────────────────────────
-  if (isInitializing) {
-    return (
-      <div className="app-container connect-screen">
-        <h1>Hoodi Confidential Tokens — Ledger</h1>
-        <p className="subtitle">Initializing Ledger Button…</p>
-      </div>
-    );
-  }
-
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!address) {
     return (
       <div className="app-container connect-screen">
         <h1>Hoodi Confidential Tokens — Ledger</h1>
         <p className="subtitle">
-          Connect your Ledger device to interact with ERC-7984 tokens on Hoodi testnet.
+          Connect your Ledger device (Nano S, Nano S Plus, Nano X, Stax, Flex) to interact with
+          ERC-7984 tokens on Hoodi testnet.
         </p>
         <p className="subtitle" style={{ fontSize: "0.85em", opacity: 0.7 }}>
-          Click the Ledger icon in the bottom-right corner, or use the button below.
+          Make sure the Ethereum app is open on your device, then select an account and click the
+          button below.
         </p>
+
+        {/* BIP-44 account index selector */}
+        <div style={{ margin: "0 auto 20px", maxWidth: "260px", textAlign: "left" }}>
+          <label
+            htmlFor="account-index"
+            style={{ display: "block", fontSize: "13px", color: "#64748b", marginBottom: "6px" }}
+          >
+            Account (BIP-44 index)
+          </label>
+          <select
+            id="account-index"
+            className="select"
+            value={accountIndex}
+            onChange={(e) => setAccountIndex(Number(e.target.value))}
+            style={{ width: "100%" }}
+            disabled={isConnecting}
+          >
+            {[0, 1, 2, 3, 4].map((i) => (
+              <option key={i} value={i}>
+                Account #{i}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button type="button" className="btn btn-primary" onClick={connect} disabled={isConnecting}>
           {isConnecting ? "Connecting…" : "Connect Ledger"}
         </button>
@@ -267,32 +296,21 @@ export default function Home() {
     );
   }
 
-  // ── Screen 2: Wrong network ────────────────────────────────────────────────
-  // The Ledger Button does not support wallet_switchEthereumChain for Hoodi
-  // (chainId 560048 — not in its hard-coded chain list). The user must configure
-  // their Ledger device manually.
+  // ── Screen 2: Wrong network (safety guard — unreachable in normal operation) ──
+  // LedgerWebHIDProvider.eth_chainId always returns the Hoodi chain ID (560048).
+  // This screen exists in case config.ts is changed to point at a different network.
   if (!isHoodi) {
     return (
       <div className="app-container connect-screen">
         <h1>Hoodi Network Required</h1>
         <p className="subtitle">
-          Your Ledger is currently on chain ID{" "}
-          <strong>{chainId ? parseInt(chainId, 16) : "unknown"}</strong>. This app requires the
-          Hoodi testnet (chain ID <strong>{HOODI_CHAIN_ID}</strong>).
+          This app targets Hoodi testnet (chain ID <strong>{HOODI_CHAIN_ID}</strong>). Detected
+          chain ID: <strong>{chainId ? parseInt(chainId, 16) : "unknown"}</strong>.
         </p>
-        <div className="alert alert-error card-status" style={{ textAlign: "left" }}>
-          <strong>How to switch to Hoodi on Ledger:</strong>
-          <ol style={{ margin: "0.5em 0 0 1.2em", padding: 0 }}>
-            <li>Open Ledger Live and go to Settings → Developer mode (enable if needed).</li>
-            <li>
-              In Ledger Live, add a Hoodi account: My Ledger → search "Ethereum Hoodi" or add a
-              custom EVM network with RPC{" "}
-              <code style={{ fontSize: "0.85em" }}>https://rpc.hoodi.ethpandaops.io</code> and chain
-              ID <code>560048</code>.
-            </li>
-            <li>Sync your Ledger Live account, then reconnect here.</li>
-          </ol>
-        </div>
+        <p className="subtitle" style={{ fontSize: "0.85em", opacity: 0.7 }}>
+          Check that <code>HOODI_CHAIN_ID</code> in <code>src/lib/config.ts</code> is set to 560048
+          and reconnect.
+        </p>
         <button type="button" className="btn btn-primary" onClick={connect}>
           Reconnect
         </button>
@@ -306,9 +324,64 @@ export default function Home() {
       <div className="app-header">
         <h1>Hoodi Confidential Tokens — Ledger</h1>
         <div className="connected-address">Connected: {address}</div>
-        <div className="connected-address">
-          ETH: {ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}
+        <div
+          className="connected-address"
+          style={{ display: "flex", alignItems: "center", gap: "8px" }}
+        >
+          <span style={{ flexShrink: 0 }}>
+            ETH: {ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}
+          </span>
+
+          {/* Account switcher — selects the BIP-44 index and reconnects on change. */}
+          <select
+            className="select"
+            value={accountIndex}
+            onChange={(e) => {
+              void connectWithIndex(Number(e.target.value));
+            }}
+            disabled={isConnecting}
+            style={{ flex: "1 1 auto", minWidth: 0 }}
+          >
+            {[0, 1, 2, 3, 4].map((i) => (
+              <option key={i} value={i}>
+                Account #{i}
+              </option>
+            ))}
+          </select>
+
+          {/* Verify address — calls getAddress(path, display:true) on device. */}
+          <button
+            type="button"
+            className="btn btn-sm btn-secondary"
+            onClick={handleVerifyAddress}
+            disabled={isConnecting || verifyStatus === "verifying"}
+            style={{ flexShrink: 0 }}
+          >
+            {verifyStatus === "verifying"
+              ? "Check Ledger…"
+              : verifyStatus === "done"
+                ? "✓ Verified"
+                : "Verify address"}
+          </button>
+
+          {/* Disconnect — closes the transport and returns to the connect screen. */}
+          <button
+            type="button"
+            className="btn btn-sm btn-secondary"
+            onClick={() => {
+              void ledgerProvider.disconnect();
+            }}
+            disabled={isConnecting}
+            style={{ flexShrink: 0 }}
+          >
+            Disconnect
+          </button>
         </div>
+        {verifyStatus === "error" && verifyError && (
+          <div className="alert alert-error" style={{ marginTop: "8px", fontSize: "12px" }}>
+            {verifyError}
+          </div>
+        )}
       </div>
 
       <div className="card">

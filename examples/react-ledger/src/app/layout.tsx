@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { ClientProviders } from "./client-providers";
 import "./globals.css";
-import "@ledgerhq/ledger-wallet-provider/styles.css";
 
 export const metadata = {
   title: "Hoodi Confidential Tokens — Ledger",

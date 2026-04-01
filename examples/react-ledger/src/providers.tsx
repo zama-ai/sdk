@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   ZamaProvider,
@@ -11,258 +11,90 @@ import {
 } from "@zama-fhe/react-sdk";
 import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
-import { JsonRpcProvider } from "ethers";
 import { HOODI_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
-import { notifyProviderDiscovered, type EIP1193Provider } from "@/lib/ledgerProvider";
+import { ledgerProvider } from "@/lib/LedgerWebHIDProvider";
 
 // ── What this file does ────────────────────────────────────────────────────────
 //
-// This file wires together the three SDK primitives every integration needs:
+// Wires the three SDK primitives:
 //
-//   const signer  = new EthersSigner({ ethereum: hybridProvider });
-//   const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL });
-//   <ZamaProvider relayer={relayer} signer={signer}
-//     storage={indexedDBStorage} sessionStorage={sessionDBStorage}>
+//   const signer  = new EthersSigner({ ethereum: ledgerProvider });
+//   const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network });
+//   <ZamaProvider relayer signer storage sessionStorage>
 //
-// Ledger Button specifics handled here:
+// ledgerProvider is a module-level singleton (LedgerWebHIDProvider.ts) that:
+//   - implements EIP-1193 via hw-transport-webhid + hw-app-eth
+//   - routes signing to the physical Ledger device
+//   - routes reads to the Hoodi JsonRpcProvider
+//   - returns [] for eth_accounts until connect() is called (page.tsx owns the
+//     connect UI; ZamaProvider mounts immediately on all code paths)
 //
-// 1. Dynamic import of @ledgerhq/ledger-wallet-provider — the library accesses
-//    window/document at import time, so it must never be imported at module level
-//    in a Next.js app (SSR would crash). It is loaded inside a useEffect.
-//
-// 2. EIP-6963 discovery — the Ledger Button does NOT inject window.ethereum.
-//    Instead it announces itself via eip6963:announceProvider. We listen for
-//    that event and filter by rdns = "com.ledger".
-//
-// 3. Hybrid provider — the Ledger Button only forwards 5 read-only methods to
-//    its own node (which doesn't serve Hoodi). All other reads (nonce, receipts,
-//    block polling, logs) are routed to our direct Hoodi JsonRpcProvider. Only
-//    signing and account methods go to the Ledger Button.
-//
-// 4. notifyProviderDiscovered — stores the raw Ledger Button provider in a
-//    module-level singleton (ledgerProvider.ts) so page.tsx can access it for
-//    the connect / chain-check UI without a React context.
+// walletKey is incremented on accountsChanged to remount ZamaProvider with a
+// fresh EthersSigner bound to the new account.
 // ──────────────────────────────────────────────────────────────────────────────
 
-// Separate IndexedDB store for session signatures — same reason as example-hoodi:
-// both credentials and session use the same internal key; separate DBs prevent
-// the session entry from overwriting the encrypted ML-KEM keypair.
+// Separate IndexedDB store for session signatures — prevents the session entry
+// from overwriting the encrypted ML-KEM keypair (both use the same internal key).
 const sessionDBStorage = new IndexedDBStorage("SessionStore");
-
-/**
- * RPC methods that must be handled by the Ledger Button provider (device signing,
- * account management, chain ID). Everything else — reads, nonce, receipt polling,
- * block number, gas estimates — goes to our direct Hoodi JsonRpcProvider.
- *
- * Note: wallet_* methods are also routed to the Ledger Button, but
- * wallet_switchEthereumChain will always fail for Hoodi (not in its chain list).
- * page.tsx removes the chain-switch UI so this never gets called in practice.
- */
-const LEDGER_METHODS = new Set([
-  "eth_accounts",
-  "eth_requestAccounts",
-  "eth_chainId",
-  "eth_sign",
-  "personal_sign",
-  "eth_signTypedData",
-  "eth_signTypedData_v4",
-  "eth_sendTransaction",
-  "eth_signTransaction",
-  "eth_signRawTransaction",
-  "eth_sendRawTransaction",
-]);
-
-/**
- * Hybrid EIP-1193 provider:
- * - Signing / account methods → Ledger Button
- * - Everything else (eth_call, eth_estimateGas, eth_getTransactionCount,
- *   eth_getTransactionReceipt, eth_blockNumber, eth_getLogs, …) → direct Hoodi RPC
- *
- * eth_blockNumber is served by our RPC and adjusted with a high-water mark so
- * the value is always strictly increasing — ethers' PollingBlockSubscriber only
- * triggers receipt checks on new blocks, so without this receipts would only be
- * checked once per ~12 s block time instead of every poll interval.
- */
-function createHybridProvider(
-  ledger: EIP1193Provider,
-  liveAccountsRef: { readonly current: readonly string[] },
-) {
-  const rpcProvider = new JsonRpcProvider(HOODI_RPC_URL);
-  let highWaterBlock = 0n;
-
-  return {
-    request({ method, params }: { method: string; params?: unknown[] }) {
-      // Account queries: serve from cache so EthersSigner resolves without a
-      // round-trip and avoids triggering an unexpected Ledger Button popup.
-      if (method === "eth_requestAccounts" || method === "eth_accounts") {
-        if (liveAccountsRef.current.length > 0) {
-          return Promise.resolve([...liveAccountsRef.current]);
-        }
-        return ledger.request({ method: "eth_accounts", params: [] });
-      }
-
-      if (LEDGER_METHODS.has(method) || method.startsWith("wallet_")) {
-        return ledger.request({ method, params });
-      }
-
-      // eth_blockNumber: always via our RPC, but monotonically increasing.
-      if (method === "eth_blockNumber") {
-        return rpcProvider.send(method, params ?? []).then((block: unknown) => {
-          const actual = BigInt(block as string);
-          if (actual > highWaterBlock) highWaterBlock = actual;
-          else highWaterBlock += 1n;
-          return `0x${highWaterBlock.toString(16)}`;
-        });
-      }
-
-      return rpcProvider.send(method, params ?? []);
-    },
-    on: (event: string, handler: (...args: unknown[]) => void) => ledger.on(event, handler),
-    removeListener: (event: string, handler: (...args: unknown[]) => void) =>
-      ledger.removeListener(event, handler),
-  };
-}
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
 
-  // Set to the Ledger Button EIP-1193 provider once EIP-6963 announces it.
-  // ZamaProvider is not rendered until this is non-null.
-  const [ledgerProvider, setLedgerProvider] = useState<EIP1193Provider | null>(null);
-
-  // Incremented when the user switches accounts — remounts ZamaProvider with
-  // a fresh EthersSigner bound to the new account.
+  // Incremented on accountsChanged → forces EthersSigner useMemo to recreate
+  // with the new account. ZamaProvider receives the new signer as a prop without
+  // a full subtree remount (key= intentionally not used on ZamaProvider).
   const [walletKey, setWalletKey] = useState(0);
 
-  // Updated synchronously in accountsChanged before setWalletKey re-renders,
-  // so the next EthersSigner sees the correct accounts immediately.
-  const liveAccountsRef = useRef<readonly string[]>([]);
-  const refSeededRef = useRef(false);
-  // Guards against React Strict Mode double-invocation: initializeLedgerProvider
-  // logs "Ledger button app already exists" if called twice. We only initialize once.
-  const ledgerInitRef = useRef(false);
-
   useEffect(() => {
-    // Guard: React Strict Mode runs effects twice in dev. initializeLedgerProvider
-    // is not idempotent — calling it a second time logs "Ledger button app already exists".
-    // We skip the second invocation; the EIP-6963 listener set up in the first run
-    // is still active and will fire when eip6963:requestProvider is dispatched below.
-    if (ledgerInitRef.current) {
-      // Still request provider re-announcement so listeners from the second mount fire.
-      window.dispatchEvent(new Event("eip6963:requestProvider"));
-      return;
-    }
-    ledgerInitRef.current = true;
-
-    // ── Dynamic import ────────────────────────────────────────────────────────
-    // @ledgerhq/ledger-wallet-provider accesses window/document at import time.
-    // This must run client-side only (inside useEffect).
-    import("@ledgerhq/ledger-wallet-provider")
-      .then(({ initializeLedgerProvider }) => {
-        // Mount the Ledger Button floating widget and register the EIP-6963 provider.
-        // No apiKey: the library uses its own hardcoded development fallback token.
-        // For production, enrol at https://tally.so/r/wzaAVa to obtain a real key.
-        const cleanup = initializeLedgerProvider({
-          dAppIdentifier: "react-ledger",
-          floatingButtonPosition: "bottom-right",
-          devConfig: {
-            stub: {
-              // The hardcoded fallback token is rejected by Ledger's backend (HTTP 400).
-              // Stub the config call so we don't depend on a partner API key during dev.
-              // Remove this once a real key is obtained via https://tally.so/r/wzaAVa
-              dAppConfig: true,
-            },
-          },
-        });
-
-        // ── EIP-6963 provider discovery ───────────────────────────────────────
-        const handleAnnounce = (event: Event) => {
-          const detail = (event as CustomEvent).detail as {
-            provider: EIP1193Provider;
-            info: { rdns: string; name: string };
-          };
-          // Filter: only accept the Ledger Button (rdns = "com.ledger").
-          // Other injected wallets (MetaMask, etc.) are ignored.
-          if (detail.info.rdns !== "com.ledger") return;
-
-          const provider = detail.provider;
-
-          // Seed the accounts cache for already-connected wallets on page load.
-          (provider.request({ method: "eth_accounts" }) as Promise<string[]>)
-            .then((accounts) => {
-              liveAccountsRef.current = accounts;
-              refSeededRef.current = true;
-            })
-            .catch(() => {
-              refSeededRef.current = true;
-            });
-
-          // Watch for account changes.
-          const handleAccountsChanged = (accounts: unknown) => {
-            const newAccounts = accounts as string[];
-            const prevAddress = liveAccountsRef.current[0];
-            liveAccountsRef.current = newAccounts;
-            if (!refSeededRef.current) return;
-            if (newAccounts[0] !== prevAddress) {
-              setWalletKey((k) => k + 1);
-            }
-          };
-          provider.on("accountsChanged", handleAccountsChanged);
-
-          // Publish to the module singleton so page.tsx can access the provider
-          // without going through React context.
-          notifyProviderDiscovered(provider);
-
-          // Trigger ZamaProvider mount.
-          setLedgerProvider(provider);
-        };
-
-        window.addEventListener("eip6963:announceProvider", handleAnnounce);
-        // Ask all registered providers (including our newly mounted Ledger Button)
-        // to re-announce themselves.
-        window.dispatchEvent(new Event("eip6963:requestProvider"));
-
-        return () => {
-          window.removeEventListener("eip6963:announceProvider", handleAnnounce);
-          cleanup?.();
-        };
-      })
-      .catch((err) => console.error("[Providers] Failed to load Ledger Button:", err));
+    const handleAccountsChanged = () => {
+      setWalletKey((k) => k + 1);
+    };
+    ledgerProvider.on("accountsChanged", handleAccountsChanged);
+    return () => ledgerProvider.removeListener("accountsChanged", handleAccountsChanged);
   }, []);
 
-  // hoodiCleartextConfig + HOODI_RPC_URL are build-time constants — relayer never changes.
+  // EthersSigner calls BrowserProvider.getSigner() during initialisation. Before the
+  // Ledger connects, eth_requestAccounts returns [] and getSigner() rejects with
+  // "no such account". This is expected — EthersSigner re-resolves the account on the
+  // next walletKey bump (accountsChanged after connect()). Suppress this specific
+  // rejection so the console stays clean before the first connection.
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if ((event.reason as Error | undefined)?.message === "no such account") {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    return () => window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+  }, []);
+
   const relayer = useMemo(
     () => new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL }),
     [],
   );
 
-  // Recreated when the Ledger provider first arrives and on each wallet switch.
-  const signer = useMemo(() => {
-    if (!ledgerProvider) return null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hybrid = createHybridProvider(ledgerProvider, liveAccountsRef) as any;
-    return new EthersSigner({ ethereum: hybrid });
-  }, [ledgerProvider, walletKey]);
-
-  // ZamaProvider waits until the Ledger Button provider has been discovered.
-  // Do NOT render children before signer is available — SDK hooks (useZamaSDK,
-  // useConfidentialBalance, etc.) throw if called outside a <ZamaProvider>.
-  if (!signer) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <div className="app-container connect-screen">
-          <h1>Hoodi Confidential Tokens — Ledger</h1>
-          <p className="subtitle">Initializing Ledger Button…</p>
-        </div>
-      </QueryClientProvider>
-    );
-  }
+  // EthersSigner is recreated on each walletKey bump so ZamaSDK re-resolves the
+  // active account from the provider instead of caching the previous one.
+  // NOTE: walletKey is intentionally NOT used as key= on ZamaProvider. Using key=
+  // would unmount the entire subtree (including page.tsx) on first connect, resetting
+  // address state before connectWithIndex() can set it. Passing a new signer prop is
+  // sufficient for ZamaProvider to pick up the new account without a full remount.
+  const signer = useMemo(
+    () =>
+      new EthersSigner({
+        // LedgerWebHIDProvider is EIP-1193 compatible but its type is narrower than
+        // the Eip1193Provider union that EthersSigner expects (wagmi types vs. ours).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ethereum: ledgerProvider as any,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [walletKey],
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
       <ZamaProvider
-        key={walletKey}
         relayer={relayer}
         storage={indexedDBStorage}
         sessionStorage={sessionDBStorage}

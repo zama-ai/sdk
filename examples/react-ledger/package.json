@@ -5,10 +5,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ledgerhq/ledger-wallet-provider": "^1.1.1",
+    "@ledgerhq/hw-app-eth": "^7.6.1",
+    "@ledgerhq/hw-transport-webhid": "^6.34.0",
     "@tanstack/react-query": "^5.90.0",
     "@zama-fhe/react-sdk": "2.2.0-alpha.4",
     "@zama-fhe/sdk": "2.2.0-alpha.4",
@@ -18,6 +20,7 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "typescript": "^5.8.0"
