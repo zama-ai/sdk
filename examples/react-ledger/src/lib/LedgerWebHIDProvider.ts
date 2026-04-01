@@ -120,7 +120,22 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
     });
 
     const app = new Eth(this.transport, undefined, ETH_LOAD_CONFIG);
-    const { address } = await app.getAddress(this._path, /* display= */ false);
+
+    // If getAddress() fails (wrong app open, device locked, etc.) close the
+    // transport so it is not left dangling until the next connect() attempt.
+    let address: string;
+    try {
+      ({ address } = await app.getAddress(this._path, /* display= */ false));
+    } catch (err) {
+      try {
+        await this.transport.close();
+      } catch {
+        // ignore — transport may already be dead
+      }
+      this.transport = null;
+      throw err;
+    }
+
     const prev = this._address;
     this._address = address;
     if (prev !== address) this._fire("accountsChanged", [[address]]);

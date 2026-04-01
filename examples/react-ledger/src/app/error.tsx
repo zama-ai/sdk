@@ -14,7 +14,7 @@ export default function Error({
     <div className="app-container connect-screen">
       <h1>Something went wrong</h1>
       <p className="subtitle">{error.message || "An unexpected error occurred."}</p>
-      <button className="btn btn-primary" onClick={reset}>
+      <button type="button" className="btn btn-primary" onClick={reset}>
         Try again
       </button>
     </div>

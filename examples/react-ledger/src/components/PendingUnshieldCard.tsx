@@ -61,6 +61,7 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
           {resume.isPending ? "Finalizing…" : "Finalize"}
         </button>
       </div>
+      {resume.isPending && <p className="token-meta">→ Confirm on your Ledger device</p>}
       {resume.isError && (
         <div className="alert alert-error card-status">{resume.error?.message}</div>
       )}

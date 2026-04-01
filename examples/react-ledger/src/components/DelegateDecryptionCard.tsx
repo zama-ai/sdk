@@ -28,7 +28,10 @@ export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecry
     },
   );
 
-  const isExpiryValid = noExpiry || (!!expirationInput && new Date(expirationInput) > new Date());
+  // ACL contract requires the expiry to be at least 1 hour in the future.
+  const oneHourFromNow = new Date(Date.now() + 3_600_000);
+  const isExpiryValid =
+    noExpiry || (!!expirationInput && new Date(expirationInput) > oneHourFromNow);
   const canSubmit = isAddress(delegateAddress) && isExpiryValid;
 
   function handleGrant() {
@@ -72,7 +75,9 @@ export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecry
         </p>
       )}
       {!noExpiry && expirationInput && !isExpiryValid && (
-        <p className="token-meta token-meta-error card-gap">Date must be in the future.</p>
+        <p className="token-meta token-meta-error card-gap">
+          Date must be at least 1 hour from now.
+        </p>
       )}
       <button
         type="button"

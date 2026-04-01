@@ -46,14 +46,22 @@ test.describe("main screen", () => {
   });
 
   test("shows token selector populated from the registry", async ({ page }) => {
-    const select = page.getByRole("combobox");
+    // Scope to the Token card — the header also contains a <select> (account switcher)
+    // and getByRole("combobox") would match both, causing a strict-mode violation.
+    const tokenCard = page.locator(".card").filter({
+      has: page.locator(".card-title", { hasText: "Token" }),
+    });
+    const select = tokenCard.getByRole("combobox");
     await expect(select).toBeVisible();
     await expect(select.locator("option", { hasText: "USDC Mock" })).toHaveCount(1);
     await expect(select.locator("option", { hasText: "USDT Mock" })).toHaveCount(1);
   });
 
   test("switching token updates the selector value", async ({ page }) => {
-    const select = page.getByRole("combobox");
+    const tokenCard = page.locator(".card").filter({
+      has: page.locator(".card-title", { hasText: "Token" }),
+    });
+    const select = tokenCard.getByRole("combobox");
     await expect(select).toHaveValue(MOCK_CTOKEN1_ADDRESS);
     await select.selectOption(MOCK_CTOKEN2_ADDRESS);
     await expect(select).toHaveValue(MOCK_CTOKEN2_ADDRESS);
