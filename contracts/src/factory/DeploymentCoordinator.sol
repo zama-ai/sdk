@@ -3,38 +3,26 @@
 pragma solidity 0.8.27;
 
 import {ConfidentialWrapper} from "../wrapper/ERC7984ERC20WrapperUpgradeable.sol";
-import {RegulatedERC7984Upgradeable} from "../token/RegulatedERC7984Upgradeable.sol";
-import {AdminProvider} from "../admin/AdminProvider.sol";
-import {FeeManager} from "../admin/FeeManager.sol";
-import {IDeploymentCoordinator} from "../interfaces/IDeploymentCoordinator.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-/// @notice Coordinator that orchestrates deployment using specialized factories
-/// @custom:security-contact contact@zaiffer.org
+/// @notice Coordinator that orchestrates deployment of confidential wrapper pairs
 contract DeploymentCoordinator is Ownable2Step {
-    AdminProvider public adminProvider;
-
     /// @notice Canonical implementation address for all WrapperUpgradeable proxies
     address public wrapperImplementation;
 
     /// @notice Whether new wrapper deployments are allowed
     bool public canDeploy;
 
-    /// @notice Mapping from original token address to deployed wrapper address (for compatibility)
+    /// @notice Mapping from original token address to deployed wrapper address
     mapping(address originalToken => ConfidentialWrapper wrapper) public deployedWrappers;
 
-    error ZeroAddressAdminProvider();
-    error ZeroAddressWrapperFactory();
-    error ZeroAddressConfidentialTokenFactory();
-    error ZeroAddressImplementation();
-    error IncorrectDeployFee();
-    error WrapperAlreadyExists();
-    error FeeTransferFailed();
+    error ZeroAddressWrapperImplementation();
     error ImplementationNotSet();
+    error WrapperAlreadyExists();
     error TokenMustExist();
     error DeploymentDisabled();
     error ZeroAddressWrapper();
@@ -46,35 +34,21 @@ contract DeploymentCoordinator is Ownable2Step {
         string originalSymbol,
         uint8 originalDecimals,
         address deployer
-   );
+    );
 
-    event AdminProviderUpdated(address indexed oldAdminProvider, address indexed newAdminProvider);
-    event WrapperFactoryUpdated(address indexed oldWrapperFactory, address indexed newWrapperFactory);
     event WrapperImplementationUpdated(address indexed oldImplementation, address indexed newImplementation);
     event CanDeployUpdated(bool canDeploy);
     event DeployedWrapperSet(address indexed originalToken, address indexed wrapper);
 
-    constructor(
-        AdminProvider adminProvider_,
-        address wrapperImplementation_
-    ) Ownable(msg.sender) {
-        require(address(adminProvider_) != address(0), ZeroAddressAdminProvider());
-        require(address(wrapperImplementation_) != address(0), ZeroAddressImplementation());
-
-        adminProvider = adminProvider_;
+    constructor(address wrapperImplementation_) Ownable(msg.sender) {
+        require(address(wrapperImplementation_) != address(0), ZeroAddressWrapperImplementation());
         wrapperImplementation = wrapperImplementation_;
         canDeploy = true;
     }
 
-    /// @notice Deploy a wrapper/cToken pair for a given token (maintains original interface)
-    function deploy(address originalToken_)
-        external
-        payable
-        returns (ConfidentialWrapper wrapper)
-    {
+    /// @notice Deploy a confidential wrapper for a given ERC-20 token
+    function deploy(address originalToken_) external returns (ConfidentialWrapper wrapper) {
         require(canDeploy, DeploymentDisabled());
-        uint64 requiredFee = _getDeployFee();
-        require(msg.value == requiredFee, IncorrectDeployFee());
         require(address(deployedWrappers[originalToken_]) == address(0), WrapperAlreadyExists());
         require(originalToken_ == address(0) || originalToken_.code.length > 0, TokenMustExist());
         require(wrapperImplementation != address(0), ImplementationNotSet());
@@ -82,20 +56,9 @@ contract DeploymentCoordinator is Ownable2Step {
         string memory originalName;
         string memory originalSymbol;
         uint8 originalDecimals;
-        (
-            wrapper,
-            originalName,
-            originalSymbol,
-            originalDecimals
-        ) = _deployWrapper(originalToken_);
+        (wrapper, originalName, originalSymbol, originalDecimals) = _deployWrapper(originalToken_);
 
         deployedWrappers[originalToken_] = wrapper;
-
-        if (msg.value > 0) {
-            address feeRecipient = _getFeeRecipient();
-            (bool success, ) = feeRecipient.call{value: msg.value}("");
-            require(success, FeeTransferFailed());
-        }
 
         emit WrapperDeployed(
             originalToken_,
@@ -131,32 +94,23 @@ contract DeploymentCoordinator is Ownable2Step {
 
         string memory confidentialName = string.concat("Confidential ", originalName);
         string memory confidentialSymbol = string.concat("c", originalSymbol);
-        string memory description = string.concat(
-            "Confidential wrapper of ",
-            originalSymbol,
-            " shielding it into a confidential token"
-        );
-
         string memory contractURI = string.concat(
             "data:application/json;utf8,",
             '{"name":"',
             confidentialName,
             '","symbol":"',
             confidentialSymbol,
-            '","description":"',
-            description,
             '"}'
         );
 
         bytes memory data = abi.encodeCall(
             ConfidentialWrapper.initialize,
             (
-                string.concat("Confidential ", originalName),
-                string.concat("c", originalSymbol),
+                confidentialName,
+                confidentialSymbol,
                 contractURI,
                 IERC20(originalToken_),
-                adminProvider.owner(),
-                IDeploymentCoordinator(address(this))
+                msg.sender
             )
         );
 
@@ -164,25 +118,29 @@ contract DeploymentCoordinator is Ownable2Step {
         wrapper = ConfidentialWrapper(payable(address(proxy)));
     }
 
-    function _getDeployFee() private view returns (uint64) {
-        FeeManager feeManager = adminProvider.feeManager();
-        return feeManager.getDeployFee(msg.sender);
+    function setWrapperImplementation(address implementation_) external onlyOwner {
+        require(implementation_ != address(0), ZeroAddressWrapperImplementation());
+        address oldImplementation = wrapperImplementation;
+        wrapperImplementation = implementation_;
+        emit WrapperImplementationUpdated(oldImplementation, implementation_);
     }
 
-    function _getFeeRecipient() private view returns (address) {
-        FeeManager feeManager = adminProvider.feeManager();
-        return feeManager.getFeeRecipient();
+    function setCanDeploy(bool canDeploy_) external onlyOwner {
+        canDeploy = canDeploy_;
+        emit CanDeployUpdated(canDeploy_);
+    }
+
+    function setDeployedWrapper(address originalToken_, ConfidentialWrapper wrapper_) external onlyOwner {
+        require(address(wrapper_) != address(0), ZeroAddressWrapper());
+        deployedWrappers[originalToken_] = wrapper_;
+        emit DeployedWrapperSet(originalToken_, address(wrapper_));
     }
 
     function _fallbackUnderlyingDecimals() private pure returns (uint8) {
         return 18;
     }
 
-    function _maxDecimals() private pure returns (uint8) {
-        return 6;
-    }
-
-    function _tryGetAssetDecimals(IERC20Metadata asset_) private view returns (uint8 assetDecimals) {
+    function _tryGetAssetDecimals(IERC20Metadata asset_) private view returns (uint8) {
         (bool success, bytes memory encodedDecimals) = address(asset_).staticcall(
             abi.encodeCall(IERC20Metadata.decimals, ())
         );
@@ -254,30 +212,5 @@ contract DeploymentCoordinator is Ownable2Step {
             result[i - startIndex] = strBytes[i];
         }
         return string(result);
-    }
-
-    function setWrapperImplementation(address implementation_) external onlyOwner {
-        require(implementation_ != address(0), ZeroAddressImplementation());
-        address oldImplementation = wrapperImplementation;
-        wrapperImplementation = implementation_;
-        emit WrapperImplementationUpdated(oldImplementation, implementation_);
-    }
-
-    function setAdminProvider(AdminProvider adminProvider_) external onlyOwner {
-        require(address(adminProvider_) != address(0), ZeroAddressAdminProvider());
-        address oldAdminProvider = address(adminProvider);
-        adminProvider = adminProvider_;
-        emit AdminProviderUpdated(oldAdminProvider, address(adminProvider_));
-    }
-
-    function setCanDeploy(bool canDeploy_) external onlyOwner {
-        canDeploy = canDeploy_;
-        emit CanDeployUpdated(canDeploy_);
-    }
-
-    function setDeployedWrapper(address originalToken_, ConfidentialWrapper wrapper_) external onlyOwner {
-        require(address(wrapper_) != address(0), ZeroAddressWrapper());
-        deployedWrappers[originalToken_] = wrapper_;
-        emit DeployedWrapperSet(originalToken_, address(wrapper_));
     }
 }

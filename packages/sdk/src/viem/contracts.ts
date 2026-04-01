@@ -93,7 +93,6 @@ export function writeConfidentialBatchTransferContract(
   tokenAddress: Address,
   fromAddress: Address,
   batchTransferData: BatchTransferData[],
-  fees: bigint,
 ) {
   return client.writeContract({
     chain: client.chain,
@@ -103,7 +102,6 @@ export function writeConfidentialBatchTransferContract(
       tokenAddress,
       fromAddress,
       batchTransferData,
-      fees,
     ),
   });
 }

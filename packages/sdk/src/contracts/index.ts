@@ -41,13 +41,6 @@ export {
   isConfidentialWrapperContract,
 } from "./erc165";
 
-export {
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
-} from "./fee-manager";
-
 export { confidentialBatchTransferContract, type BatchTransferData } from "./transfer-batcher";
 
 export {

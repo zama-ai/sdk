@@ -167,10 +167,6 @@ export {
   deploymentCoordinatorContract,
   isFinalizeUnwrapOperatorContract,
   setFinalizeUnwrapOperatorContract,
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
@@ -245,14 +241,6 @@ export {
   useIsWrapperSuspense,
 } from "./token/use-is-confidential";
 export { useTotalSupply, useTotalSupplySuspense } from "./token/use-total-supply";
-export {
-  useShieldFee,
-  useUnshieldFee,
-  useBatchTransferFee,
-  useFeeRecipient,
-  type UseFeeConfig,
-} from "./token/use-fees";
-
 // Registry hooks (wagmi-based, read from on-chain ConfidentialTokenWrappersRegistry)
 export { useWrappersRegistryAddress } from "./wrappers-registry/use-wrappers-registry-address";
 export { useTokenPairsRegistry } from "./wrappers-registry/use-token-pairs-registry";
@@ -277,10 +265,6 @@ export {
   wrapperDiscoveryQueryOptions,
   underlyingAllowanceQueryOptions,
   confidentialIsApprovedQueryOptions,
-  shieldFeeQueryOptions,
-  unshieldFeeQueryOptions,
-  batchTransferFeeQueryOptions,
-  feeRecipientQueryOptions,
   publicKeyQueryOptions,
   publicParamsQueryOptions,
   confidentialHandleQueryOptions,

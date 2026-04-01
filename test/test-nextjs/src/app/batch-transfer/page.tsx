@@ -10,16 +10,11 @@ export default async function BatchTransferPage({
   const params = await searchParams;
   const token = (params.token as Address) ?? CONTRACTS.cUSDT;
   const batcher = (params.batcher as Address) ?? CONTRACTS.transferBatcher;
-  const feeManager = (params.feeManager as Address) ?? CONTRACTS.feeManager;
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Batch Transfer</h1>
-      <BatchTransferForm
-        tokenAddress={token}
-        batcherAddress={batcher}
-        feeManagerAddress={feeManager}
-      />
+      <BatchTransferForm tokenAddress={token} batcherAddress={batcher} />
     </div>
   );
 }

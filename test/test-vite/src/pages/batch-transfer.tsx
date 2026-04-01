@@ -7,15 +7,10 @@ export default function BatchTransferPage() {
   const [searchParams] = useSearchParams();
   const token = (searchParams.get("token") as Address) ?? DEFAULTS.confidentialToken;
   const batcher = (searchParams.get("batcher") as Address) ?? TRANSFER_BATCHER_ADDRESS;
-  const feeManager = (searchParams.get("feeManager") as Address) ?? DEFAULTS.feeManager;
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Batch Transfer</h1>
-      <BatchTransferForm
-        tokenAddress={token}
-        batcherAddress={batcher}
-        feeManagerAddress={feeManager}
-      />
+      <BatchTransferForm tokenAddress={token} batcherAddress={batcher} />
     </div>
   );
 }

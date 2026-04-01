@@ -4,7 +4,6 @@ import {
   useEncrypt,
   useConfidentialBalance,
   useMetadata,
-  useBatchTransferFee,
   confidentialBatchTransferContract,
   type Address,
   type BatchTransferData,
@@ -15,23 +14,20 @@ import { bytesToHex } from "viem";
 export function BatchTransferForm({
   tokenAddress,
   batcherAddress,
-  feeManagerAddress,
 }: {
   tokenAddress: Address;
   batcherAddress: Address;
-  feeManagerAddress: Address;
 }) {
   const { address: userAddress } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ tokenAddress });
-  const { data: batchFee } = useBatchTransferFee(feeManagerAddress);
   const encrypt = useEncrypt();
   const batchTransfer = useWriteContract();
 
   return (
     <form
       action={async (formData) => {
-        if (!userAddress || batchFee === undefined) {
+        if (!userAddress) {
           return;
         }
 
@@ -65,13 +61,7 @@ export function BatchTransferForm({
         ];
 
         batchTransfer.mutate(
-          confidentialBatchTransferContract(
-            batcherAddress,
-            tokenAddress,
-            userAddress,
-            transfers,
-            batchFee,
-          ),
+          confidentialBatchTransferContract(batcherAddress, tokenAddress, userAddress, transfers),
         );
       }}
       className="space-y-4"
@@ -84,12 +74,6 @@ export function BatchTransferForm({
       {balance !== undefined && (
         <p className="text-sm text-zama-gray" data-testid="current-balance">
           Balance: {balance.toString()}
-        </p>
-      )}
-
-      {batchFee !== undefined && (
-        <p className="text-sm text-zama-gray" data-testid="batch-fee">
-          Batch fee: {batchFee.toString()}
         </p>
       )}
 

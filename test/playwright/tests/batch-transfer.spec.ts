@@ -26,12 +26,7 @@ test("should shield USDT then batch transfer to two recipients", async ({
   });
 
   // Navigate to batch transfer page
-  await page.goto(
-    `/batch-transfer?token=${contracts.cUSDT}&batcher=${contracts.transferBatcher}&feeManager=${contracts.feeManager}`,
-  );
-
-  // Wait for fee to load
-  await expect(page.getByTestId("batch-fee")).toBeVisible();
+  await page.goto(`/batch-transfer?token=${contracts.cUSDT}&batcher=${contracts.transferBatcher}`);
 
   // Fill in two transfers
   await page.getByTestId("recipient1-input").fill(recipient);

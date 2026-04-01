@@ -6,7 +6,6 @@ export const CONTRACTS = {
   cUSDT: deployments.cUSDT as Address,
   USDC: deployments.erc20 as Address,
   cUSDC: deployments.cToken as Address,
-  feeManager: deployments.feeManager as Address,
   transferBatcher: deployments.transferBatcher as Address,
 } as const;
 

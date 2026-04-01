@@ -21,7 +21,6 @@ export const DEFAULTS = {
   token: deployments.USDT as Address, // USDT (ERC-20)
   wrapper: deployments.cUSDT as Address, // cUSDT
   confidentialToken: deployments.cUSDT as Address, // cUSDT
-  feeManager: deployments.feeManager as Address,
 };
 
 export const TRANSFER_BATCHER_ADDRESS = deployments.transferBatcher as Address;

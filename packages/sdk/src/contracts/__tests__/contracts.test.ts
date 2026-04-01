@@ -47,20 +47,11 @@ import {
 // Deployment coordinator
 import { getWrapperContract, wrapperExistsContract } from "../deployment-coordinator";
 
-// Fee manager
-import {
-  getWrapFeeContract,
-  getUnwrapFeeContract,
-  getBatchTransferFeeContract,
-  getFeeRecipientContract,
-} from "../fee-manager";
-
 // Transfer batcher
 import { confidentialBatchTransferContract } from "../transfer-batcher";
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-const FEE_MANAGER = "0x6f6F6f6f6f6f6f6f6f6F6f6F6F6F6F6f6F6F6f6F" as Address;
 const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 
 describe("ERC-20 contract builders", () => {
@@ -282,33 +273,6 @@ describe("Deployment coordinator contract builders", () => {
   });
 });
 
-describe("Fee manager contract builders", () => {
-  it("getWrapFeeContract", ({ userAddress }) => {
-    const config = getWrapFeeContract(FEE_MANAGER, 100n, userAddress, SPENDER);
-    expect(config.address).toBe(FEE_MANAGER);
-    expect(config.functionName).toBe("getWrapFee");
-    expect(config.args).toEqual([100n, userAddress, SPENDER]);
-  });
-
-  it("getUnwrapFeeContract", ({ userAddress }) => {
-    const config = getUnwrapFeeContract(FEE_MANAGER, 200n, userAddress, SPENDER);
-    expect(config.functionName).toBe("getUnwrapFee");
-    expect(config.args).toEqual([200n, userAddress, SPENDER]);
-  });
-
-  it("getBatchTransferFeeContract", () => {
-    const config = getBatchTransferFeeContract(FEE_MANAGER);
-    expect(config.functionName).toBe("getBatchTransferFee");
-    expect(config.args).toEqual([]);
-  });
-
-  it("getFeeRecipientContract", () => {
-    const config = getFeeRecipientContract(FEE_MANAGER);
-    expect(config.functionName).toBe("getFeeRecipient");
-    expect(config.args).toEqual([]);
-  });
-});
-
 describe("Transfer batcher contract builders", () => {
   it("confidentialBatchTransferContract", ({ tokenAddress, userAddress }) => {
     const data = [
@@ -319,10 +283,9 @@ describe("Transfer batcher contract builders", () => {
         retryFor: 0n,
       },
     ];
-    const config = confidentialBatchTransferContract(BATCHER, tokenAddress, userAddress, data, 10n);
+    const config = confidentialBatchTransferContract(BATCHER, tokenAddress, userAddress, data);
     expect(config.address).toBe(BATCHER);
     expect(config.functionName).toBe("confidentialBatchTransfer");
     expect(config.args).toEqual([tokenAddress, userAddress, data]);
-    expect(config.value).toBe(10n);
   });
 });

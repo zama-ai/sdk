@@ -5,7 +5,6 @@ declare module "*/hardhat/deployments.json" {
     erc20: string;
     cToken: string;
     transferBatcher: string;
-    feeManager: string;
     fhevm: {
       acl: string;
     };

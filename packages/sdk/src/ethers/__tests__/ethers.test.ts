@@ -589,7 +589,6 @@ describe("ethers write contract helpers", () => {
       tokenAddress,
       userAddress,
       batchData,
-      10n,
     );
     expect(hash).toBe(TX_HASH);
   });

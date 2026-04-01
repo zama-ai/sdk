@@ -107,7 +107,7 @@ export interface ViemSignerConfig {
 // Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export function writeConfidentialBatchTransferContract(client: WalletClient, batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[], fees: bigint): Promise<`0x${string}`>;
+export function writeConfidentialBatchTransferContract(client: WalletClient, batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[]): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;

@@ -156,17 +156,10 @@ export function writeConfidentialBatchTransferContract(
   tokenAddress: Address,
   fromAddress: Address,
   batchTransferData: BatchTransferData[],
-  fees: bigint,
 ) {
   return ethersWrite(
     signer,
-    confidentialBatchTransferContract(
-      batcherAddress,
-      tokenAddress,
-      fromAddress,
-      batchTransferData,
-      fees,
-    ),
+    confidentialBatchTransferContract(batcherAddress, tokenAddress, fromAddress, batchTransferData),
   );
 }
 

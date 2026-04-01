@@ -16,7 +16,7 @@ export interface BatchTransferData {
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   confidentialBatchTransferContract(batcherAddress, tokenAddress, fromAddress, data, fees),
+ *   confidentialBatchTransferContract(batcherAddress, tokenAddress, fromAddress, data),
  * );
  * ```
  */
@@ -25,13 +25,11 @@ export function confidentialBatchTransferContract(
   tokenAddress: Address,
   fromAddress: Address,
   batchTransferData: BatchTransferData[],
-  fees: bigint,
 ) {
   return {
     address: batcherAddress,
     abi: transferBatcherAbi,
     functionName: "confidentialBatchTransfer",
     args: [tokenAddress, fromAddress, batchTransferData],
-    value: fees,
   } as const;
 }

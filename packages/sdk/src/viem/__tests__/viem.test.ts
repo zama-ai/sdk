@@ -434,7 +434,6 @@ describe("Viem write contract helpers", () => {
         tokenAddress,
         userAddress,
         batchData,
-        10n,
       );
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -443,7 +442,6 @@ describe("Viem write contract helpers", () => {
           address: BATCHER,
           functionName: "confidentialBatchTransfer",
           args: [tokenAddress, userAddress, batchData],
-          value: 10n,
         }),
       );
     },
@@ -583,7 +581,6 @@ describe("Viem write contract helpers", () => {
             tokenAddress,
             userAddress,
             [],
-            0n,
           ),
         ).toThrow("WalletClient has no account");
       },
