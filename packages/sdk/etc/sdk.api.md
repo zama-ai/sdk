@@ -20,6 +20,23 @@ import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
+export const ACL_TOPICS: readonly ["0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce8ac5b2fe1d3be8cfda5bfc", "0x7aca80b6b7928b9038f186e3d9922a0fc5d52c398fbf144725c142c52a5277e4"];
+
+// @public
+export type AclEvent = DelegatedForUserDecryptionEvent | RevokedDelegationForUserDecryptionEvent;
+
+// @public
+export class AclPausedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export const AclTopics: {
+    readonly DelegatedForUserDecryption: "0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce8ac5b2fe1d3be8cfda5bfc"; /** `RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)` */
+    readonly RevokedDelegationForUserDecryption: "0x7aca80b6b7928b9038f186e3d9922a0fc5d52c398fbf144725c142c52a5277e4";
+};
+
+// @public
 export type ActivityAmount = {
     readonly type: "clear";
     readonly value: bigint;
@@ -6888,13 +6905,25 @@ export function decimalsContract(tokenAddress: Address): {
 };
 
 // @public
+export function decodeAclEvent(log: RawLog): AclEvent | null;
+
+// @public
+export function decodeAclEvents(logs: readonly RawLog[]): AclEvent[];
+
+// @public
 export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEvent | null;
+
+// @public
+export function decodeDelegatedForUserDecryption(log: RawLog): DelegatedForUserDecryptionEvent | null;
 
 // @public
 export function decodeOnChainEvent(log: RawLog): OnChainEvent | null;
 
 // @public
 export function decodeOnChainEvents(logs: readonly RawLog[]): OnChainEvent[];
+
+// @public
+export function decodeRevokedDelegationForUserDecryption(log: RawLog): RevokedDelegationForUserDecryptionEvent | null;
 
 // @public
 export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null;
@@ -6967,6 +6996,18 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<Delegate
 // @public
 export interface DelegatedCredentialsManagerConfig extends CredentialsConfig {
     relayer: RelayerSDK;
+}
+
+// @public
+export interface DelegatedForUserDecryptionEvent {
+    readonly contractAddress: Address;
+    readonly delegate: Address;
+    readonly delegationCounter: bigint;
+    readonly delegator: Address;
+    // (undocumented)
+    readonly eventName: "DelegatedForUserDecryption";
+    readonly newExpirationDate: bigint;
+    readonly oldExpirationDate: bigint;
 }
 
 // @public
@@ -7056,10 +7097,41 @@ export function delegateForUserDecryptionContract(aclAddress: Address, delegateA
         }];
         readonly stateMutability: "view";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "delegator";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "delegate";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "contractAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "bytes32";
+            readonly name: "handle";
+            readonly type: "bytes32";
+        }];
+        readonly name: "isHandleDelegatedForUserDecryption";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
     }];
     readonly functionName: "delegateForUserDecryption";
     readonly args: readonly [`0x${string}`, `0x${string}`, bigint];
 };
+
+// @public
+export class DelegationContractIsSelfError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
 
 // @public
 export class DelegationCooldownError extends ZamaError {
@@ -7067,7 +7139,22 @@ export class DelegationCooldownError extends ZamaError {
 }
 
 // @public
+export class DelegationDelegateEqualsContractError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class DelegationExpirationTooSoonError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export class DelegationExpiredError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class DelegationExpiryUnchangedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
@@ -10094,6 +10181,12 @@ export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
 }
 
 // @public
+export function findDelegatedForUserDecryption(logs: readonly RawLog[]): DelegatedForUserDecryptionEvent | null;
+
+// @public
+export function findRevokedDelegationForUserDecryption(logs: readonly RawLog[]): RevokedDelegationForUserDecryptionEvent | null;
+
+// @public
 export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEvent | null;
 
 // @public
@@ -10870,6 +10963,32 @@ export function getDelegationExpiryContract(aclAddress: Address, delegatorAddres
             readonly internalType: "uint64";
             readonly name: "";
             readonly type: "uint64";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "delegator";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "delegate";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "contractAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "bytes32";
+            readonly name: "handle";
+            readonly type: "bytes32";
+        }];
+        readonly name: "isHandleDelegatedForUserDecryption";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
         }];
         readonly stateMutability: "view";
         readonly type: "function";
@@ -15001,6 +15120,94 @@ export function isFinalizeUnwrapOperatorContract(tokenAddress: Address, holder: 
 };
 
 // @public
+export function isHandleDelegatedContract(aclAddress: Address, delegatorAddress: Address, delegateAddress: Address, contractAddress: Address, handle: `0x${string}`): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "delegate";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "contractAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "uint64";
+            readonly name: "expirationDate";
+            readonly type: "uint64";
+        }];
+        readonly name: "delegateForUserDecryption";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "delegate";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "contractAddress";
+            readonly type: "address";
+        }];
+        readonly name: "revokeDelegationForUserDecryption";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "delegator";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "delegate";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "contractAddress";
+            readonly type: "address";
+        }];
+        readonly name: "getUserDecryptionDelegationExpirationDate";
+        readonly outputs: readonly [{
+            readonly internalType: "uint64";
+            readonly name: "";
+            readonly type: "uint64";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "delegator";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "delegate";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "contractAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "bytes32";
+            readonly name: "handle";
+            readonly type: "bytes32";
+        }];
+        readonly name: "isHandleDelegatedForUserDecryption";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }];
+    readonly functionName: "isHandleDelegatedForUserDecryption";
+    readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+};
+
+// @public
 export function isOperatorContract(tokenAddress: Address, holder: Address, spender: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -16503,6 +16710,9 @@ export const MainnetConfig: {
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
 };
+
+// @public
+export function matchAclRevert(error: unknown): ZamaError | null;
 
 // @public
 export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
@@ -18333,6 +18543,17 @@ export interface RelayerWebSecurityConfig {
 }
 
 // @public
+export interface RevokedDelegationForUserDecryptionEvent {
+    readonly contractAddress: Address;
+    readonly delegate: Address;
+    readonly delegationCounter: bigint;
+    readonly delegator: Address;
+    // (undocumented)
+    readonly eventName: "RevokedDelegationForUserDecryption";
+    readonly oldExpirationDate: bigint;
+}
+
+// @public
 export function revokeDelegationContract(aclAddress: Address, delegateAddress: Address, contractAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -18386,6 +18607,32 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
             readonly internalType: "uint64";
             readonly name: "";
             readonly type: "uint64";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "delegator";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "delegate";
+            readonly type: "address";
+        }, {
+            readonly internalType: "address";
+            readonly name: "contractAddress";
+            readonly type: "address";
+        }, {
+            readonly internalType: "bytes32";
+            readonly name: "handle";
+            readonly type: "bytes32";
+        }];
+        readonly name: "isHandleDelegatedForUserDecryption";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
         }];
         readonly stateMutability: "view";
         readonly type: "function";
@@ -30627,7 +30874,12 @@ export const ZamaErrorCode: {
     readonly DelegationExpired: "DELEGATION_EXPIRED"; /** Confidential (cToken) balance is insufficient for the requested operation. */
     readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE"; /** ERC-20 balance is insufficient for the requested shield amount. */
     readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE"; /** Balance validation could not be performed (no cached credentials and decryption not possible). */
-    readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
+    readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE"; /** The new expiration date equals the current one — no on-chain change needed. */
+    readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED"; /** Delegate address cannot be the contract address. */
+    readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT"; /** Contract address cannot be the sender address. */
+    readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */
+    readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
+    readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
 };
 

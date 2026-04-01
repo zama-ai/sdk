@@ -9,6 +9,11 @@ export {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  DelegationExpiryUnchangedError,
+  DelegationDelegateEqualsContractError,
+  DelegationContractIsSelfError,
+  AclPausedError,
+  DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
 } from "./delegation";
 export {
@@ -16,3 +21,4 @@ export {
   InsufficientERC20BalanceError,
   BalanceCheckUnavailableError,
 } from "./balance";
+export { matchAclRevert } from "./acl-revert";

@@ -5,6 +5,7 @@ import {
   delegateForUserDecryptionContract,
   revokeDelegationContract,
   getDelegationExpiryContract,
+  isHandleDelegatedContract,
 } from "../acl";
 
 const ACL = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
@@ -30,5 +31,14 @@ describe("ACL contract builders", () => {
     expect(config.address).toBe(ACL);
     expect(config.functionName).toBe("getUserDecryptionDelegationExpirationDate");
     expect(config.args).toEqual([userAddress, DELEGATE, tokenAddress]);
+  });
+
+  it("isHandleDelegatedContract", ({ tokenAddress, userAddress }) => {
+    const handle =
+      "0x0000000000000000000000000000000000000000000000000000000000000001" as `0x${string}`;
+    const config = isHandleDelegatedContract(ACL, userAddress, DELEGATE, tokenAddress, handle);
+    expect(config.address).toBe(ACL);
+    expect(config.functionName).toBe("isHandleDelegatedForUserDecryption");
+    expect(config.args).toEqual([userAddress, DELEGATE, tokenAddress, handle]);
   });
 });
