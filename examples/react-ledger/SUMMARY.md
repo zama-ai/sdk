@@ -38,11 +38,11 @@ The first attempt used `@ledgerhq/ledger-wallet-provider` (the "Ledger Button"),
 
 The second approach replaces the Ledger Button with a hand-written EIP-1193 provider (`LedgerWebHIDProvider`) built directly on the low-level Ledger libraries:
 
-| Library | Role |
-|---|---|
-| `@ledgerhq/hw-transport-webhid` | Opens/manages the WebHID USB channel to the device |
-| `@ledgerhq/hw-app-eth` | Speaks the Ethereum app protocol: get address, sign message, sign typed data, sign transaction |
-| `ethers v6` | EIP-1559 transaction building, `TypedDataEncoder` for Nano S fallback hashing, `JsonRpcProvider` for reads |
+| Library                         | Role                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `@ledgerhq/hw-transport-webhid` | Opens/manages the WebHID USB channel to the device                                                         |
+| `@ledgerhq/hw-app-eth`          | Speaks the Ethereum app protocol: get address, sign message, sign typed data, sign transaction             |
+| `ethers v6`                     | EIP-1559 transaction building, `TypedDataEncoder` for Nano S fallback hashing, `JsonRpcProvider` for reads |
 
 This provider handles the full EIP-1193 `request()` surface expected by ZamaSDK (`eth_accounts`, `personal_sign`, `eth_signTypedData_v4`, `eth_sendTransaction`, `eth_chainId`, `eth_blockNumber`, and all read-only methods forwarded to a direct Hoodi JSON-RPC endpoint). It also exposes three additional methods — `connect(accountIndex?)`, `verifyAddress()`, and `disconnect()` — consumed by the UI layer.
 
@@ -54,15 +54,15 @@ This provider handles the full EIP-1193 `request()` surface expected by ZamaSDK 
 
 All ERC-7984 SDK operations are functional end-to-end on Hoodi testnet via a physical Ledger device:
 
-| Operation | SDK API | Device action |
-|---|---|---|
+| Operation                    | SDK API                               | Device action                    |
+| ---------------------------- | ------------------------------------- | -------------------------------- |
 | Decrypt confidential balance | `useConfidentialBalance` + `useAllow` | Signs EIP-712 credential request |
-| Shield (ERC-20 → cToken) | `sdk.createToken().shield()` | Signs ERC-20 approve + shield tx |
-| Confidential transfer | `useConfidentialTransfer` | Signs EIP-712 + sends tx |
-| Unshield (cToken → ERC-20) | `useUnshield` | Signs EIP-712 + sends tx |
-| Grant decryption delegation | `useDelegateDecryption` | Signs tx |
-| Revoke delegation | `useRevokeDelegation` | Signs tx |
-| Decrypt balance as delegate | `useDecryptBalanceAs` | Signs EIP-712 |
+| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`          | Signs ERC-20 approve + shield tx |
+| Confidential transfer        | `useConfidentialTransfer`             | Signs EIP-712 + sends tx         |
+| Unshield (cToken → ERC-20)   | `useUnshield`                         | Signs EIP-712 + sends tx         |
+| Grant decryption delegation  | `useDelegateDecryption`               | Signs tx                         |
+| Revoke delegation            | `useRevokeDelegation`                 | Signs tx                         |
+| Decrypt balance as delegate  | `useDecryptBalanceAs`                 | Signs EIP-712                    |
 
 ### UX features
 
@@ -75,12 +75,12 @@ All ERC-7984 SDK operations are functional end-to-end on Hoodi testnet via a phy
 
 A full Playwright E2E suite runs without a physical device:
 
-| File | Coverage |
-|---|---|
-| `e2e/connect.spec.ts` | Connect screen UI, account selector, successful connect, error handling |
-| `e2e/main.spec.ts` | Operation cards, header elements, token selector, empty registry state |
-| `e2e/disconnect.spec.ts` | Device unplug, heading after disconnect, reconnect, Disconnect button |
-| `e2e/delegation.spec.ts` | Delegation section labels, button states |
+| File                     | Coverage                                                                |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `e2e/connect.spec.ts`    | Connect screen UI, account selector, successful connect, error handling |
+| `e2e/main.spec.ts`       | Operation cards, header elements, token selector, empty registry state  |
+| `e2e/disconnect.spec.ts` | Device unplug, heading after disconnect, reconnect, Disconnect button   |
+| `e2e/delegation.spec.ts` | Delegation section labels, button states                                |
 
 The test strategy uses `window.__ledgerProvider` (exposed by the provider in non-production builds) to replace `connect()` and `_onDisconnect()` with stubs via `page.evaluate()`. The Hoodi RPC is intercepted at the network layer with ABI-encoded static responses, so tests are entirely self-contained with no external dependencies.
 
@@ -95,6 +95,7 @@ RelayerCleartext + hoodiCleartextConfig
 ```
 
 This replaces the relayer and the on-chain FHE execution with a local mock:
+
 - "Encrypted" values are stored as plaintexts on-chain (`CleartextFHEVMExecutor`).
 - KMS signatures are produced locally, without any external call.
 - No relayer server is required.
@@ -118,7 +119,7 @@ WebHID is not available on mobile browsers. Reaching mobile users would require 
 `EthersSigner` (and `ViemSigner`) expect an `Eip1193Provider` from wagmi's type definitions, which is a union broader than what `LedgerWebHIDProvider` declares. Bridging requires `as any` at the call site in `providers.tsx`:
 
 ```typescript
-new EthersSigner({ ethereum: ledgerProvider as any })
+new EthersSigner({ ethereum: ledgerProvider as any });
 ```
 
 This is a type-only issue (the runtime behaviour is correct), but it is a symptom of the SDK not defining or exporting its own minimal EIP-1193 interface that custom providers can implement against.
@@ -129,17 +130,39 @@ This is a type-only issue (the runtime behaviour is correct), but it is a sympto
 
 The workaround — a global `unhandledRejection` handler that suppresses this specific message — is functional but inelegant. The root cause is that the SDK assumes a wallet is available at provider initialisation time, which is not true for hardware wallets (or for any wallet that requires an explicit user gesture before connecting).
 
-### 5.5 No clear-signing metadata for Zama contracts
+### 5.5 Transaction signing requires "Blind signing" to be enabled on the device
 
-`hw-app-eth` by default fetches EIP-712 clear-signing metadata from `crypto-assets-service.api.ledger.com`. Hoodi testnet and Zama contracts are not registered in Ledger's Clear-signing Asset Library (CAL), so every call to `signEIP712Message` on a registered device produces a 403 + CORS error in the background.
+This is the most significant practical limitation of this POC and must be understood clearly.
 
-The workaround is `{ calServiceURL: null }` in `hw-app-eth`'s `LoadConfig`, which entirely skips the HTTP call. The signing behaviour is identical (the device asks the user to sign), but field-level EIP-712 display on Nano X / S Plus / Stax / Flex relies on metadata from the CAL — without it, those devices fall back to a generic display (similar to Nano S, see section 6).
+Ledger's Ethereum app enforces two distinct signing paths:
 
-### 5.6 Cleartext stack is Hoodi-only and not encrypted
+- **EIP-712 signing** (`signEIP712Message`): shows structured field names and values on-screen. Does **not** require blind signing to be enabled. After fixing the `EIP712Domain` injection bug (see commit history), this works correctly on Nano S Plus, Nano X, Stax, and Flex.
+- **Transaction signing** (`signTransaction`): when the target contract is not registered in Ledger's CAL, the device firmware blocks the operation entirely and displays "Blind signing must be enabled in Settings". This is a firmware-level enforcement — there is no workaround at the library or SDK level.
+
+**Impact by operation:**
+
+| Operation                              | Signing method      | Blind signing required?            |
+| -------------------------------------- | ------------------- | ---------------------------------- |
+| Balance decrypt / delegate credentials | `signEIP712Message` | ❌ No                              |
+| Shield (ERC-20 approve + wrap tx)      | `signTransaction`   | ✅ Yes (Zama contracts not in CAL) |
+| Confidential transfer                  | `signTransaction`   | ✅ Yes                             |
+| Unshield                               | `signTransaction`   | ✅ Yes                             |
+| Delegation grant / revoke              | `signTransaction`   | ✅ Yes                             |
+| Mint                                   | `signTransaction`   | ✅ Yes                             |
+
+In practice, this means blind signing must be enabled in the Ethereum app settings (Settings → Enable blind signing → ON) to use any operation that involves an on-chain transaction. Disabling it only affects the EIP-712 credential signing step, which now shows proper field display on capable devices. For a full UX without blind signing, Zama contracts must be registered in Ledger's CAL.
+
+### 5.6 No human-readable field labels for Zama contracts
+
+`hw-app-eth` by default fetches EIP-712 clear-signing metadata from `crypto-assets-service.api.ledger.com`. Hoodi testnet and Zama contracts are not registered in Ledger's Clear-signing Asset Library (CAL), so every call to `signEIP712Message` produces a 403 + CORS error in the background.
+
+The workaround is `{ calServiceURL: null }` in `hw-app-eth`'s `LoadConfig`, which skips the HTTP call entirely. Field names and values from the typed-data structure are still displayed on-screen (driven by the types map, not CAL metadata), so the user sees the actual field data — but without human-readable contract-specific descriptions that CAL registration would add.
+
+### 5.7 Cleartext stack is Hoodi-only and not encrypted
 
 As noted in section 4, values are plaintext on-chain. Moving to a Zama-supported network (Sepolia, Mainnet) would require switching to `RelayerWeb` (browser) or `RelayerNode` (server), and ensuring the network is registered with a live FHE co-processor. The WebHID signing layer is network-agnostic; only the relayer configuration changes.
 
-### 5.7 No session persistence across page reloads
+### 5.8 No session persistence across page reloads
 
 After a page reload, the user must re-connect the device. This is inherent to WebHID (no persisted connection state) and expected for hardware wallets, but worth noting for UX design.
 
@@ -211,15 +234,16 @@ The blind-signing fallback for Nano S is functional but degrades the security UX
 
 ## 8. Summary Table
 
-| Dimension | Status | Notes |
-|---|---|---|
-| Full ERC-7984 operation set | ✅ Working | All flows functional on Hoodi with cleartext stack |
-| Physical Ledger device | ✅ Working | All listed device models tested |
-| EIP-712 field display (Nano X / S+ / Stax / Flex) | ⚠️ Partial | Generic display without CAL registration; full display requires ERC-7730 metadata |
-| EIP-712 on Nano S | ⚠️ Blind signing | Inherent device limitation; acceptable for testing, not for production |
-| Browser support | ⚠️ Chromium only | WebHID constraint |
-| Mobile support | ❌ None | WebHID unavailable on mobile |
-| Production encryption | ❌ Cleartext only | Hoodi not supported by FHE co-processor |
-| EthersSigner type compatibility | ⚠️ `as any` workaround | SDK should define and export its own EIP-1193 subset |
-| E2E test coverage | ✅ Full suite | No physical device required; mocked via `window.__ledgerProvider` |
-| Clear-signing metadata | ❌ Not registered | Requires CAL submission with ERC-7730 JSON |
+| Dimension                                              | Status                 | Notes                                                                        |
+| ------------------------------------------------------ | ---------------------- | ---------------------------------------------------------------------------- |
+| Full ERC-7984 operation set                            | ✅ Working             | All flows functional on Hoodi with cleartext stack (blind signing ON)        |
+| Physical Ledger device                                 | ✅ Working             | All listed device models tested                                              |
+| EIP-712 field display (Nano S+ / Nano X / Stax / Flex) | ✅ Working             | Field names + values shown on device; no CAL metadata needed for raw fields  |
+| EIP-712 on Nano S                                      | ⚠️ Blind signing       | Inherent device limitation; pre-hashed fallback; not suitable for production |
+| Transaction signing without blind signing              | ❌ Blocked             | Firmware blocks unregistered contracts; requires CAL registration to resolve |
+| Browser support                                        | ⚠️ Chromium only       | WebHID constraint                                                            |
+| Mobile support                                         | ❌ None                | WebHID unavailable on mobile                                                 |
+| Production encryption                                  | ❌ Cleartext only      | Hoodi not supported by FHE co-processor                                      |
+| EthersSigner type compatibility                        | ⚠️ `as any` workaround | SDK should define and export its own EIP-1193 subset                         |
+| E2E test coverage                                      | ✅ Full suite          | No physical device required; mocked via `window.__ledgerProvider`            |
+| CAL registration (clear-signing metadata)              | ❌ Not registered      | Required to enable blind signing OFF for transactions; ERC-7730 JSON needed  |
