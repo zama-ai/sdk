@@ -205,7 +205,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Prompt the user to re-sign. Adjust `keypairTTL` in the SDK constructor if the default TTL is too short.
+**How to handle:** Prompt the user to re-sign. Adjust `keypairTTL` in the SDK constructor if the default TTL of 30 days is not appropriate.
 
 ### NoCiphertextError
 
