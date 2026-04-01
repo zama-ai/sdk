@@ -118,11 +118,10 @@ function fheTypeToSolidityType(fheType: string): string {
   return fheType.slice(1);
 }
 
-function ensureClient(): FhevmClient {
-  if (!client) {
+function assertClient(c: FhevmClient | null): asserts c is FhevmClient {
+  if (!c) {
     throw new Error("SDK not initialized. Call INIT first.");
   }
-  return client;
 }
 
 function configToChain(config: FhevmInstanceConfig) {
@@ -245,7 +244,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { values, contractAddress, userAddress } = payload;
 
   try {
-    const c = ensureClient();
+    assertClient(client);
 
     const typedValues = values.map((v) => ({
       type: fheTypeToSolidityType(v.type),
@@ -257,10 +256,10 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
           : v.value,
     }));
 
-    const result = (await c.encrypt({
+    const result = (await client.encrypt({
       contractAddress: contractAddress as `0x${string}`,
       userAddress: userAddress as `0x${string}`,
-      values: typedValues as unknown as Parameters<typeof c.encrypt>[0]["values"],
+      values: typedValues as unknown as Parameters<typeof client.encrypt>[0]["values"],
     })) as EncryptMultipleReturnType;
 
     const evs = result.externalEncryptedValues;
@@ -289,16 +288,16 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    const c = ensureClient();
+    assertClient(client);
 
-    const keypair = await c.parseE2eTransportKeypair({
+    const keypair = await client.parseE2eTransportKeypair({
       serialized: JSON.stringify({
         publicKey: payload.publicKey,
         privateKey: payload.privateKey,
       }),
     });
 
-    const permit = await c.parseSignedDecryptionPermit({
+    const permit = await client.parseSignedDecryptionPermit({
       serialized: JSON.stringify({
         publicKey: payload.publicKey,
         contractAddresses: payload.signedContractAddresses,
@@ -315,7 +314,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
       contractAddress: payload.contractAddress,
     }));
 
-    const clearValues = await c.decrypt({
+    const clearValues = await client.decrypt({
       e2eTransportKeypair: keypair,
       encryptedValues,
       signedPermit: permit,
@@ -345,9 +344,9 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   const { id, type, payload } = request;
 
   try {
-    const c = ensureClient();
+    assertClient(client);
 
-    const result = await c.publicDecrypt({ encryptedValues: payload.handles });
+    const result = await client.publicDecrypt({ encryptedValues: payload.handles });
 
     const clearValues: Record<string, unknown> = {};
     for (let i = 0; i < payload.handles.length; i++) {
@@ -374,9 +373,9 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
   const { id, type } = request;
 
   try {
-    const c = ensureClient();
-    const keypair = await c.generateE2eTransportKeypair();
-    const serialized = c.serializeE2eTransportKeypair({
+    assertClient(client);
+    const keypair = await client.generateE2eTransportKeypair();
+    const serialized = client.serializeE2eTransportKeypair({
       e2eTransportKeypair: keypair,
     });
 
@@ -395,9 +394,9 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    const c = ensureClient();
+    assertClient(client);
 
-    const eip712 = createKmsUserDecryptEIP712(c, {
+    const eip712 = createKmsUserDecryptEIP712(client, {
       publicKey: payload.publicKey,
       contractAddresses: payload.contractAddresses,
       startTimestamp: payload.startTimestamp,
@@ -439,9 +438,9 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
   const { id, type, payload } = request;
 
   try {
-    const c = ensureClient();
+    assertClient(client);
 
-    const result = createKmsDelegatedUserDecryptEIP712(c, {
+    const result = createKmsDelegatedUserDecryptEIP712(client, {
       publicKey: payload.publicKey,
       contractAddresses: payload.contractAddresses,
       delegatorAddress: payload.delegatorAddress,
@@ -462,16 +461,16 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   const { id, type, payload } = request;
 
   try {
-    const c = ensureClient();
+    assertClient(client);
 
-    const keypair = await c.parseE2eTransportKeypair({
+    const keypair = await client.parseE2eTransportKeypair({
       serialized: JSON.stringify({
         publicKey: payload.publicKey,
         privateKey: payload.privateKey,
       }),
     });
 
-    const permit = await c.parseSignedDecryptionPermit({
+    const permit = await client.parseSignedDecryptionPermit({
       serialized: JSON.stringify({
         publicKey: payload.publicKey,
         contractAddresses: payload.signedContractAddresses,
@@ -489,7 +488,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
       contractAddress: payload.contractAddress,
     }));
 
-    const clearValues = await c.decrypt({
+    const clearValues = await client.decrypt({
       e2eTransportKeypair: keypair,
       encryptedValues,
       signedPermit: permit,
@@ -526,8 +525,8 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
   const { id, type } = request;
 
   try {
-    const c = ensureClient();
-    const key = await c.fetchFheEncryptionKeyBytes?.({});
+    assertClient(client);
+    const key = await client.fetchFheEncryptionKeyBytes?.({});
 
     sendSuccess<GetPublicKeyResponseData>(id, type, {
       result: key
