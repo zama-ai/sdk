@@ -41,7 +41,7 @@ The following areas are in scope for security reports:
 
 - Vulnerabilities in third-party dependencies (viem, ethers, wagmi) — report these upstream
 - Vulnerabilities in the underlying fhEVM smart contracts — report to the [fhEVM repository](https://github.com/zama-ai/fhevm)
-- Vulnerabilities in `@zama-fhe/relayer-sdk` — report separately to Zama
+- Vulnerabilities in `@fhevm/sdk` — report separately to Zama
 
 ## Security Considerations for SDK Users
 

@@ -22,7 +22,7 @@
   "skipErrorChecking": true,
   "categorizeByGroup": true,
   "externalSymbolLinkMappings": {
-    "@zama-fhe/relayer-sdk": {
+    "@fhevm/sdk": {
       "ZKProofLike": "https://docs.zama.org/protocol/protocol/overview"
     }
   }
