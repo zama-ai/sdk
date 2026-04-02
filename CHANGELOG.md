@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.3.0-alpha.2...v2.3.0-alpha.3) (2026-04-02)
+
+### Bug Fixes
+
+- improve error handling and code quality ([#193](https://github.com/zama-ai/sdk/issues/193)) ([87e09d6]())
+
 ## [2.3.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.3.0-alpha.1...v2.3.0-alpha.2) (2026-04-01)
 
 ### Bug Fixes
