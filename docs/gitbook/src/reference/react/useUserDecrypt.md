@@ -168,7 +168,7 @@ On success, results are written to the decryption cache so that [`useUserDecrypt
 
 - **First call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The credentials are then cached.
 - **Subsequent calls** — reuses the cached credentials if they are still valid (not expired).
-- **Expiry** — credentials expire after `keypairTTL` seconds (default: 86400 = 1 day, configurable via SDK config). Once expired, the next call generates fresh credentials.
+- **Expiry** — credentials expire after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Once expired, the next call generates fresh credentials.
 
 This means users only see a wallet signature prompt once per session (or per TTL window), even if they decrypt multiple times.
 

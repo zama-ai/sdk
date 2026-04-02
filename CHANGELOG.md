@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.0-alpha.2](https://github.com/zama-ai/sdk/compare/v2.3.0-alpha.1...v2.3.0-alpha.2) (2026-04-01)
+
+### Bug Fixes
+
+- align keypairTTL default with sessionTTL (30 days) ([#190](https://github.com/zama-ai/sdk/issues/190)) ([9c9791a]())
+
 ## [2.3.0-alpha.1](https://github.com/zama-ai/sdk/compare/v2.2.0...v2.3.0-alpha.1) (2026-03-31)
 
 ### Features

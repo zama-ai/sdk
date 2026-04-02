@@ -129,7 +129,7 @@ const sdk = new ZamaSDK({
 
 `number | undefined`
 
-FHE keypair validity duration in seconds. Default: `86400` (1 day). After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
+FHE keypair validity duration in seconds. Default: `2592000` (30 days). After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
 
 ```ts
 const sdk = new ZamaSDK({
@@ -174,7 +174,7 @@ const sdk = new ZamaSDK({
 
 `number | undefined`
 
-How long cached registry results remain valid, in seconds. Default: `86400` (24 hours). Consistent with `keypairTTL`.
+How long cached registry results remain valid, in seconds. Default: `86400` (24 hours).
 
 ```ts
 const sdk = new ZamaSDK({
