@@ -37,9 +37,16 @@ import type {
 } from "./worker.types";
 
 // Global SDK instance and config
-// oxlint-disable-next-line typescript/no-redundant-type-constituents -- FhevmInstance resolves to any from external .d.ts
-let sdkInstance: FhevmInstance | null = null;
+let sdkInstance: FhevmInstance = null;
 let sdkGlobal: RelayerSDKGlobal | null = null;
+
+function assertSdkInitialized(
+  instance: FhevmInstance,
+): asserts instance is NonNullable<FhevmInstance> {
+  if (!instance) {
+    throw new Error("SDK not initialized. Call INIT first.");
+  }
+}
 
 function unreachableFheType(_: never): never {
   throw new Error("Unsupported FHE type");
@@ -325,9 +332,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { values, contractAddress, userAddress } = payload;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
 
@@ -363,9 +368,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const handleContractPairs = payload.handles.map((handle) => ({
       handle,
@@ -429,9 +432,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const result = await sdkInstance.publicDecrypt(payload.handles);
 
@@ -452,9 +453,7 @@ function handleGenerateKeypair(request: GenerateKeypairRequest): void {
   const { id, type } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const keypair = sdkInstance.generateKeypair();
 
@@ -478,9 +477,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const eip712 = sdkInstance.createEIP712(
       unprefixHex(payload.publicKey),
@@ -528,9 +525,7 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const result = sdkInstance.createDelegatedUserDecryptEIP712(
       unprefixHex(payload.publicKey),
@@ -555,9 +550,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const handleContractPairs = payload.handles.map((handle) => ({
       handle,
@@ -596,9 +589,7 @@ async function handleRequestZKProofVerification(
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const result = await sdkInstance.requestZKProofVerification(payload.zkProof);
 
@@ -623,9 +614,7 @@ function handleGetPublicKey(request: GetPublicKeyRequest): void {
   const { id, type } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const result = sdkInstance.getPublicKey();
 
@@ -646,9 +635,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
   const { id, type, payload } = request;
 
   try {
-    if (!sdkInstance) {
-      throw new Error("SDK not initialized. Call INIT first.");
-    }
+    assertSdkInitialized(sdkInstance);
 
     const result = sdkInstance.getPublicParams(
       // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically via CDN
