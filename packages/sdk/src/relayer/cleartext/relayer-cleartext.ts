@@ -17,7 +17,6 @@ import {
 } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 import type {
-  ClearValueType,
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
@@ -27,6 +26,7 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { RelayerSDK } from "../relayer-sdk";
 import type {
+  ClearValueType,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
