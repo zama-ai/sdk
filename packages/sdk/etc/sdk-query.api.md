@@ -499,10 +499,15 @@ export interface DelegationStatusQueryConfig {
     delegatorAddress?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
+    // (undocumented)
+    tokenAddress: Address | undefined;
 }
 
 // @public (undocumented)
-export function delegationStatusQueryOptions(signer: GenericSigner, relayer: RelayerSDK, tokenAddress: Address | undefined, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
+export function delegationStatusQueryOptions(sdk: {
+    signer: GenericSigner;
+    relayer: RelayerSDK;
+}, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
 
 // @public (undocumented)
 export interface DelegationSubmittedEvent extends BaseEvent {
@@ -1713,7 +1718,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-BBxgx3oS.d.ts:1773:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-BeqE1jb7.d.ts:1839:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

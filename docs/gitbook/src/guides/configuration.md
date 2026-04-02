@@ -256,7 +256,7 @@ const sdk = new ZamaSDK({
   relayer,
   signer,
   storage,
-  keypairTTL: 604800, // 7 days (default: 86400 = 1 day)
+  keypairTTL: 604800, // 7 days (default: 2592000 = 30 days)
   sessionTTL: 3600, // 1 hour (default: 2592000 = 30 days)
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);

@@ -6,4 +6,5 @@ export {
   assertArray,
   assertStringProp,
   assertCondition,
+  assertNonNullable,
 } from "./assertions";
