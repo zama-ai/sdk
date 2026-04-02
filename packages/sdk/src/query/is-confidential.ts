@@ -31,7 +31,9 @@ export function isConfidentialQueryOptions(
       } catch (err) {
         // Only suppress contract execution reverts (non-ERC-165 contracts).
         // Re-throw network/transport errors so TanStack Query's retry logic applies.
-        if (isContractCallError(err)) {return false;}
+        if (isContractCallError(err)) {
+          return false;
+        }
         throw err;
       }
     },
@@ -56,7 +58,9 @@ export function isWrapperQueryOptions(
       } catch (err) {
         // Only suppress contract execution reverts (non-ERC-165 contracts).
         // Re-throw network/transport errors so TanStack Query's retry logic applies.
-        if (isContractCallError(err)) {return false;}
+        if (isContractCallError(err)) {
+          return false;
+        }
         throw err;
       }
     },

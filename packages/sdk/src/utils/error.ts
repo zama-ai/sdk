@@ -15,7 +15,9 @@ export function toError(error: unknown): Error {
  * and ethers' CALL_EXCEPTION.
  */
 export function isContractCallError(error: unknown): boolean {
-  if (!(error instanceof Error)) {return false;}
+  if (!(error instanceof Error)) {
+    return false;
+  }
   // viem: ContractFunctionExecutionError, ContractFunctionRevertedError
   if (
     error.name === "ContractFunctionExecutionError" ||
