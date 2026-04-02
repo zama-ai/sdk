@@ -1,12 +1,14 @@
 import { getAddress, isAddress, type Address, type Hex } from "viem";
 import { assertArray, assertCondition, assertObject, assertString } from "../utils";
 import type { EncryptedData } from "./credential-crypto";
+import type { StoredEIP712 } from "../types/credentials";
 
 /** Encrypted credential shape stored in persistent storage (shared base fields). */
 export interface BaseEncryptedCredentials {
   publicKey: Hex;
   contractAddresses: Address[];
   encryptedPrivateKey: EncryptedData;
+  eip712: StoredEIP712;
   startTimestamp: number;
   durationDays: number;
 }
@@ -30,6 +32,7 @@ export function assertBaseEncryptedCredentials(
   assertObject(data.encryptedPrivateKey, "credentials.encryptedPrivateKey");
   assertString(data.encryptedPrivateKey.iv, "encryptedPrivateKey.iv");
   assertString(data.encryptedPrivateKey.ciphertext, "encryptedPrivateKey.ciphertext");
+  assertObject(data.eip712, "credentials.eip712");
   assertCondition(
     typeof data.startTimestamp === "number",
     "Expected credentials.startTimestamp to be a number",

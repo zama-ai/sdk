@@ -58,6 +58,7 @@ export function userDecryptMutationOptions(
           publicKey: creds.publicKey,
           signature: creds.signature,
           signerAddress,
+          eip712: creds.eip712,
           startTimestamp: creds.startTimestamp,
           durationDays: creds.durationDays,
         });

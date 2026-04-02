@@ -1,6 +1,6 @@
 import { getAddress, type Address, type Hex } from "viem";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { DelegatedStoredCredentials } from "../types";
+import type { DelegatedStoredCredentials, StoredEIP712 } from "../types";
 import {
   BaseCredentialsManager,
   type CredentialsConfig,
@@ -122,13 +122,14 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
           durationDays,
           delegatorAddress,
         };
-        const signature = await this.#signDelegated(meta, contractAddresses);
+        const { signature, eip712 } = await this.#signDelegated(meta, contractAddresses);
 
         return {
           publicKey: keypair.publicKey,
           privateKey: keypair.privateKey,
           signature,
           contractAddresses,
+          eip712,
           startTimestamp,
           durationDays,
           delegatorAddress,
@@ -149,7 +150,8 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     meta: DelegatedSigningMeta,
     contractAddresses: Address[],
   ): Promise<Hex> {
-    return this.#signDelegated(meta, contractAddresses);
+    const { signature } = await this.#signDelegated(meta, contractAddresses);
+    return signature;
   }
 
   protected async encryptCredentials(
@@ -200,7 +202,10 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
     return key;
   }
 
-  async #signDelegated(meta: DelegatedSigningMeta, contractAddresses: Address[]): Promise<Hex> {
+  async #signDelegated(
+    meta: DelegatedSigningMeta,
+    contractAddresses: Address[],
+  ): Promise<{ signature: Hex; eip712: StoredEIP712 }> {
     const delegatedEIP712 = await this.#relayer.createDelegatedUserDecryptEIP712(
       meta.publicKey,
       contractAddresses,
@@ -208,7 +213,7 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
       meta.startTimestamp,
       meta.durationDays,
     );
-    return this.signer.signTypedData({
+    const signable = {
       domain: {
         ...delegatedEIP712.domain,
         chainId: Number(delegatedEIP712.domain.chainId),
@@ -219,6 +224,21 @@ export class DelegatedCredentialsManager extends BaseCredentialsManager<
         startTimestamp: BigInt(delegatedEIP712.message.startTimestamp),
         durationDays: BigInt(delegatedEIP712.message.durationDays),
       },
-    });
+    };
+    const signature = await this.signer.signTypedData(signable);
+    const storedEip712: StoredEIP712 = {
+      domain: signable.domain,
+      types: Object.fromEntries(
+        Object.entries(signable.types).map(([k, v]) => [k, v.map((f) => ({ ...f }))]),
+      ),
+      message: {
+        publicKey: meta.publicKey,
+        contractAddresses: [...contractAddresses],
+        startTimestamp: meta.startTimestamp,
+        durationDays: meta.durationDays,
+        extraData: "0x00" as Hex,
+      },
+    };
+    return { signature, eip712: storedEip712 };
   }
 }

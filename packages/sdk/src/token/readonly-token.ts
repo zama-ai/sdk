@@ -279,6 +279,7 @@ export class ReadonlyToken {
           signerAddress,
           startTimestamp: creds.startTimestamp,
           durationDays: creds.durationDays,
+          eip712: creds.eip712,
         }),
       errorPrefix: "Batch decryption",
     });
@@ -344,6 +345,7 @@ export class ReadonlyToken {
           delegateAddress: creds.delegateAddress,
           startTimestamp: creds.startTimestamp,
           durationDays: creds.durationDays,
+          eip712: creds.eip712,
         }),
       errorPrefix: "Batch delegated decryption",
     });
@@ -786,6 +788,7 @@ export class ReadonlyToken {
         delegateAddress: creds.delegateAddress,
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
+        eip712: creds.eip712,
       });
 
       this.emit({
@@ -870,6 +873,7 @@ export class ReadonlyToken {
         publicKey: creds.publicKey,
         signature: creds.signature,
         signerAddress,
+        eip712: creds.eip712,
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });
@@ -943,6 +947,7 @@ export class ReadonlyToken {
         publicKey: creds.publicKey,
         signature: creds.signature,
         signerAddress: owner ?? (await this.signer.getAddress()),
+        eip712: creds.eip712,
         startTimestamp: creds.startTimestamp,
         durationDays: creds.durationDays,
       });

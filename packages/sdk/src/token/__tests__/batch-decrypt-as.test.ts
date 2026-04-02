@@ -19,6 +19,17 @@ function mockCredsResult(contractAddresses: Address[]) {
     privateKey: "0xpriv",
     signature: "0xsig",
     contractAddresses,
+    eip712: {
+      domain: { name: "test", version: "1", chainId: 31337, verifyingContract: "0xkms" as Address },
+      types: { DelegatedUserDecryptRequestVerification: [] },
+      message: {
+        publicKey: "0xpub",
+        contractAddresses,
+        startTimestamp: Math.floor(Date.now() / 1000),
+        durationDays: 1,
+        extraData: "0x00",
+      },
+    },
     startTimestamp: Math.floor(Date.now() / 1000),
     durationDays: 1,
     delegatorAddress: DELEGATOR,

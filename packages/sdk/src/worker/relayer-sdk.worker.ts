@@ -54,6 +54,7 @@ declare const self: {
 // ============================================================================
 
 type FhevmClient = ReturnType<typeof createFhevmClient>;
+// oxlint-disable-next-line typescript-eslint/no-redundant-type-constituents -- FhevmClient resolves to `any` when @fhevm/sdk is not installed locally
 let client: FhevmClient | null = null;
 
 // Store relayer URL and CSRF token for fetch interception.
@@ -118,6 +119,7 @@ function fheTypeToSolidityType(fheType: string): string {
   return fheType.slice(1);
 }
 
+// oxlint-disable-next-line typescript-eslint/no-redundant-type-constituents -- FhevmClient resolves to `any` when @fhevm/sdk is not installed locally
 function assertClient(c: FhevmClient | null): asserts c is FhevmClient {
   if (!c) {
     throw new Error("SDK not initialized. Call INIT first.");
@@ -305,6 +307,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
         startTimestamp: payload.startTimestamp,
         durationDays: payload.durationDays,
         signature: payload.signature,
+        eip712: payload.eip712,
       }),
       e2eTransportKeypair: keypair,
     });
@@ -479,6 +482,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
         startTimestamp: payload.startTimestamp,
         durationDays: payload.durationDays,
         signature: payload.signature,
+        eip712: payload.eip712,
       }),
       e2eTransportKeypair: keypair,
     });

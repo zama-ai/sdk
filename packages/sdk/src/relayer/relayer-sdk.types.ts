@@ -2,6 +2,7 @@ import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
+import type { StoredEIP712 } from "../types/credentials";
 
 // ============================================================================
 // Application Types
@@ -109,6 +110,8 @@ export interface UserDecryptParams {
   signerAddress: Address;
   startTimestamp: number;
   durationDays: number;
+  /** EIP-712 typed data used for the permit (required by @fhevm/sdk parseSignedDecryptionPermit). */
+  eip712: StoredEIP712;
 }
 
 /** Result from public decryption */
@@ -153,6 +156,8 @@ export interface DelegatedUserDecryptParams {
   delegateAddress: Address;
   startTimestamp: number;
   durationDays: number;
+  /** EIP-712 typed data used for the permit (required by @fhevm/sdk parseSignedDecryptionPermit). */
+  eip712: StoredEIP712;
 }
 
 /** SDK status */

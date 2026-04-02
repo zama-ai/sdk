@@ -144,6 +144,18 @@ export class CredentialsManager extends BaseCredentialsManager<
           privateKey: keypair.privateKey,
           signature,
           contractAddresses: normalized,
+          eip712: {
+            ...eip712,
+            types: Object.fromEntries(
+              Object.entries(eip712.types).map(([k, v]) => [k, v.map((f) => ({ ...f }))]),
+            ),
+            message: {
+              ...eip712.message,
+              contractAddresses: [...eip712.message.contractAddresses],
+              startTimestamp: Number(eip712.message.startTimestamp),
+              durationDays: Number(eip712.message.durationDays),
+            },
+          },
           startTimestamp,
           durationDays,
         };

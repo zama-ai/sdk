@@ -1,4 +1,5 @@
 import type { EncryptInput, Handle } from "../relayer/relayer-sdk.types";
+import type { StoredEIP712 } from "../types/credentials";
 import type { Address, Hex } from "viem";
 
 // ============================================================================
@@ -119,6 +120,7 @@ export interface UserDecryptRequest extends BaseRequest {
     signerAddress: Address;
     startTimestamp: number;
     durationDays: number;
+    eip712: StoredEIP712;
   };
 }
 
@@ -168,6 +170,7 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
     delegateAddress: Address;
     startTimestamp: number;
     durationDays: number;
+    eip712: StoredEIP712;
   };
 }
 

@@ -1,5 +1,28 @@
 import type { Address, Hex } from "viem";
 
+/**
+ * Serializable EIP-712 typed data stored alongside credentials.
+ * Uses `number` instead of `bigint` so the object survives JSON round-trips
+ * and structured-clone across worker boundaries.
+ */
+export interface StoredEIP712 {
+  domain: {
+    name: string;
+    version: string;
+    chainId: number;
+    verifyingContract: Address;
+  };
+  types: Record<string, { name: string; type: string }[]>;
+  primaryType?: string;
+  message: {
+    publicKey: Hex;
+    contractAddresses: Address[];
+    startTimestamp: number;
+    durationDays: number;
+    extraData: Hex;
+  };
+}
+
 /** Stored FHE credential data (serialized as JSON in the credential store). */
 export interface StoredCredentials {
   /** FHE public key (hex-encoded). */
@@ -10,6 +33,8 @@ export interface StoredCredentials {
   signature: Hex;
   /** Contract addresses this credential is authorized for. */
   contractAddresses: Address[];
+  /** EIP-712 typed data used to produce the signature (needed by the decryption worker to reconstruct the permit). */
+  eip712: StoredEIP712;
   /** Unix timestamp (seconds) when the credential became valid. */
   startTimestamp: number;
   /** Number of days the credential remains valid. */
