@@ -1,4 +1,4 @@
-export { toError } from "./error";
+export { toError, isContractCallError } from "./error";
 export { prefixHex, unprefixHex } from "./hex";
 export {
   assertObject,

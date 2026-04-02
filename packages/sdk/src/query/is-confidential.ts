@@ -1,5 +1,6 @@
 import { isConfidentialTokenContract, isConfidentialWrapperContract } from "../contracts";
 import type { GenericSigner } from "../types";
+import { isContractCallError } from "../utils";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
@@ -27,9 +28,11 @@ export function isConfidentialQueryOptions(
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       try {
         return await signer.readContract(isConfidentialTokenContract(keyTokenAddress));
-      } catch {
-        // Contract doesn't implement ERC-165 — not a confidential token.
-        return false;
+      } catch (err) {
+        // Only suppress contract execution reverts (non-ERC-165 contracts).
+        // Re-throw network/transport errors so TanStack Query's retry logic applies.
+        if (isContractCallError(err)) {return false;}
+        throw err;
       }
     },
     staleTime: Infinity,
@@ -50,9 +53,11 @@ export function isWrapperQueryOptions(
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       try {
         return await signer.readContract(isConfidentialWrapperContract(keyTokenAddress));
-      } catch {
-        // Contract doesn't implement ERC-165 — not a wrapper token.
-        return false;
+      } catch (err) {
+        // Only suppress contract execution reverts (non-ERC-165 contracts).
+        // Re-throw network/transport errors so TanStack Query's retry logic applies.
+        if (isContractCallError(err)) {return false;}
+        throw err;
       }
     },
     staleTime: Infinity,
