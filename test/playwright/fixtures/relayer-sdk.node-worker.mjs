@@ -16,7 +16,6 @@ if (!parentPort) {
 
 const port = parentPort;
 
-/** @type {MockFhevmInstance | null} */
 let instance = null;
 
 function send(id, type, data) {
