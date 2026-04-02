@@ -155,8 +155,10 @@ jobs:
           path: |
             contracts/out
             contracts/cache
+            contracts/dependencies
             contracts/lib/forge-fhevm/out
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
 
       - name: Install Soldeer dependencies
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -179,8 +181,10 @@ jobs:
           path: |
             contracts/out
             contracts/cache
+            contracts/dependencies
             contracts/lib/forge-fhevm/out
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -254,8 +258,10 @@ jobs:
           path: |
             contracts/out
             contracts/cache
+            contracts/dependencies
             contracts/lib/forge-fhevm/out
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
 
       - name: Install Soldeer dependencies
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -278,8 +284,10 @@ jobs:
           path: |
             contracts/out
             contracts/cache
+            contracts/dependencies
             contracts/lib/forge-fhevm/out
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol') }}
+            contracts/lib/forge-fhevm/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0

@@ -69,6 +69,15 @@ describe("isContractCallError", () => {
     expect(isContractCallError(new Error("Please revert your changes"))).toBe(false);
   });
 
+  it("returns false for non-CALL_EXCEPTION ethers error codes", () => {
+    expect(
+      isContractCallError(Object.assign(new Error("server error"), { code: "SERVER_ERROR" })),
+    ).toBe(false);
+    expect(
+      isContractCallError(Object.assign(new Error("network error"), { code: "NETWORK_ERROR" })),
+    ).toBe(false);
+  });
+
   it("returns false for network errors", () => {
     expect(isContractCallError(new Error("fetch failed"))).toBe(false);
     expect(isContractCallError(new Error("connection refused"))).toBe(false);
