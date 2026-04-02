@@ -64,8 +64,8 @@ Zama SDK is designed for developers who want to integrate confidential operation
 
 ### Packages
 
-| Package                                        | Description                                                                                                                 |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Package                                        | Description                                                                                                                |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Web Worker support |
 | [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                                         |
 
