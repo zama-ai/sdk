@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.0-alpha.4](https://github.com/zama-ai/sdk/compare/v2.3.0-alpha.3...v2.3.0-alpha.4) (2026-04-02)
+
+### Features
+
+- Node+Web SDK E2E test infrastructure ([#178](https://github.com/zama-ai/sdk/issues/178)) ([09bf2f7]())
+
 ## [2.3.0-alpha.3](https://github.com/zama-ai/sdk/compare/v2.3.0-alpha.2...v2.3.0-alpha.3) (2026-04-02)
 
 ### Bug Fixes
