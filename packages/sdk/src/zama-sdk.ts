@@ -333,4 +333,22 @@ export class ZamaSDK {
     this.dispose();
     this.relayer.terminate();
   }
+
+  /**
+   * Implements the TC39 Explicit Resource Management protocol.
+   * Calls {@link terminate} when the `using` binding goes out of scope,
+   * unsubscribing signer events and shutting down the relayer.
+   *
+   * @example
+   * ```ts
+   * {
+   *   using sdk = new ZamaSDK({ relayer, signer, storage });
+   *   await sdk.allow(cUSDT);
+   *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf();
+   * } // sdk.terminate() called automatically here
+   * ```
+   */
+  [Symbol.dispose](): void {
+    this.terminate();
+  }
 }

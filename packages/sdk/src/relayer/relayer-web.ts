@@ -60,7 +60,7 @@ const CDN_INTEGRITY =
  * is cleared, and a fresh worker is created for the new chain — all within
  * the `#ensureLock` critical section.
  */
-export class RelayerWeb implements RelayerSDK {
+export class RelayerWeb implements RelayerSDK, Disposable {
   #workerClient: RelayerWorkerClient | null = null;
   #initPromise: Promise<RelayerWorkerClient> | null = null;
   #ensureLock: Promise<RelayerWorkerClient> | null = null;
@@ -245,6 +245,11 @@ export class RelayerWeb implements RelayerSDK {
     }
     this.#initPromise = null;
     this.#ensureLock = null;
+  }
+
+  /** Calls {@link terminate}, shutting down the Web Worker. */
+  [Symbol.dispose](): void {
+    this.terminate();
   }
 
   /**
