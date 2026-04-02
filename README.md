@@ -66,17 +66,17 @@ Zama SDK is designed for developers who want to integrate confidential operation
 
 | Package                                        | Description                                                                                                                 |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Node.js worker pool |
-| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with viem/ethers/wagmi sub-paths                             |
+| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Web Worker support |
+| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                                         |
 
 ### Main features
 
 - **TypeScript-first:** Fully typed APIs with tree-shakeable ESM builds for minimal bundle size.
 - **Privacy by design:** Encrypt inputs, decrypt outputs, and manage access control for confidential smart contracts.
 - **Multi-library support:** Adapters for both viem and ethers, so you can use whichever EVM library your project already depends on.
-- **React hooks:** Dedicated React package with hooks for encrypting, decrypting, reencrypting, and querying confidential state — all backed by `@tanstack/react-query` for caching and suspense.
-- **Workers:** Offload heavy FHE operations to workers in Web and Node.js environments for non-blocking performance.
-- **Wagmi integration:** Drop-in wagmi connector support for seamless wallet and provider management in React apps.
+- **React hooks:** Dedicated React package with hooks for shielding, unshielding, transferring, decrypting, and querying confidential state — all backed by `@tanstack/react-query` for caching.
+- **Workers:** Offload heavy FHE operations to Web Workers for non-blocking browser performance.
+- **Wagmi integration:** Wagmi sub-path export (`@zama-fhe/react-sdk/wagmi`) for seamless wallet and provider management in React apps.
 
 <p align="right">
   <a href="#about" > ↑ Back to top </a>
@@ -113,11 +113,11 @@ pnpm format:check           # Formatting check
 **E2E tests:**
 
 ```bash
-pnpm submodule:init         # Initialize hardhat submodule (first time)
-pnpm hardhat:install        # Install hardhat dependencies
-pnpm e2e:test               # Run E2E tests (auto-starts hardhat + next dev)
+pnpm e2e:test               # Run Playwright E2E tests
 pnpm e2e:test:ui            # Playwright UI mode
 ```
+
+> **Note:** The `forge-fhevm` submodule and its soldeer dependencies are installed automatically by `pnpm install`.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contributor guide (branching, PRs, code style, architecture).
 
