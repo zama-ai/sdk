@@ -1,0 +1,22 @@
+{
+  "name": "zama-compatibility-harness",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Validate whether your signing system is compatible with Ethereum EOA, EIP-712, and the Zama SDK.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --reporter=verbose",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@zama-fhe/sdk": "2.3.0-alpha.2",
+    "dotenv": "^16.4.0",
+    "viem": "^2.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  }
+}
