@@ -1,3 +1,5 @@
+import { assertFunctionProp, assertObject, assertStringProp } from "../utils/assertions";
+
 /**
  * Subset of the WebExtensions `runtime` API used by the SDK.
  * @see https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime
@@ -9,15 +11,15 @@ export interface BrowserExtensionRuntime {
   getURL: (path: string) => string;
 }
 
-function isValidRuntime(obj: unknown): obj is BrowserExtensionRuntime {
-  return (
-    typeof obj === "object" &&
-    obj !== null &&
-    "id" in obj &&
-    typeof (obj as Record<string, unknown>).id === "string" &&
-    "getURL" in obj &&
-    typeof (obj as Record<string, unknown>).getURL === "function"
-  );
+function isValidRuntime(runtime: unknown): runtime is BrowserExtensionRuntime {
+  try {
+    assertObject(runtime, "runtime");
+    assertStringProp(runtime, "id", "runtime.id");
+    assertFunctionProp<"getURL", (path: string) => string>(runtime, "getURL", "runtime.getURL");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -29,9 +31,14 @@ function isValidRuntime(obj: unknown): obj is BrowserExtensionRuntime {
 export function getBrowserExtensionRuntime(): BrowserExtensionRuntime | undefined {
   const g = globalThis as unknown as Record<string, unknown>;
   for (const ns of [g.chrome, g.browser]) {
-    if (typeof ns !== "object" || ns === null || !("runtime" in ns)) {continue;}
-    const { runtime } = ns as Record<string, unknown>;
-    if (isValidRuntime(runtime)) {return runtime;}
+    try {
+      assertObject(ns, "ns");
+      if (isValidRuntime(ns.runtime)) {
+        return ns.runtime;
+      }
+    } catch {
+      continue;
+    }
   }
   return undefined;
 }
