@@ -54,7 +54,7 @@ export interface WrappersRegistryConfig {
   registryAddresses?: Record<number, Address>;
   /**
    * How long cached registry results remain valid, in seconds.
-   * Default: `2592000` (30 days). Consistent with `keypairTTL`/`sessionTTL`.
+   * Default: `86400` (24 hours).
    */
   registryTTL?: number;
 }

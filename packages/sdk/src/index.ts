@@ -17,6 +17,7 @@ export type {
   EncryptParams,
   EncryptInput,
   Handle,
+  ClearValueType,
   UserDecryptParams,
   PublicDecryptResult,
   EIP712TypedData,
@@ -24,7 +25,6 @@ export type {
   NetworkType,
 } from "./relayer/relayer-sdk.types";
 export type {
-  ClearValueType,
   FheTypeName,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
