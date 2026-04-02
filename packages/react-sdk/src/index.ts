@@ -166,6 +166,10 @@ export {
   getUnwrapFeeContract,
   getBatchTransferFeeContract,
   getFeeRecipientContract,
+  delegateForUserDecryptionContract,
+  revokeDelegationContract,
+  getDelegationExpiryContract,
+  isHandleDelegatedContract,
 } from "@zama-fhe/sdk";
 
 // Authorization hooks (generic — any contract with encrypted state)
@@ -348,10 +352,20 @@ export type {
   UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
+  DelegatedForUserDecryptionEvent,
+  RevokedDelegationForUserDecryptionEvent,
+  AclEvent,
 } from "@zama-fhe/sdk";
 export {
   Topics,
   TOKEN_TOPICS,
+  ACL_TOPICS,
+  decodeDelegatedForUserDecryption,
+  decodeRevokedDelegationForUserDecryption,
+  decodeAclEvent,
+  decodeAclEvents,
+  findDelegatedForUserDecryption,
+  findRevokedDelegationForUserDecryption,
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
@@ -408,6 +422,16 @@ export {
   InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  DelegationSelfNotAllowedError,
+  DelegationCooldownError,
+  DelegationNotFoundError,
+  DelegationExpiredError,
+  DelegationDelegateEqualsContractError,
+  DelegationExpiryUnchangedError,
+  AclPausedError,
+  DelegationContractIsSelfError,
+  DelegationExpirationTooSoonError,
+  DelegationNotPropagatedError,
   ConfigurationError,
   matchZamaError,
 } from "@zama-fhe/sdk";

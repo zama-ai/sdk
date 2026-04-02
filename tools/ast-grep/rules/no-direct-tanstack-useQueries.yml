@@ -1,0 +1,19 @@
+id: no-direct-tanstack-useQueries
+language: TypeScript
+severity: error
+message: >-
+  Do not import useQueries directly from @tanstack/react-query.
+  Use the wrapper from packages/react-sdk/src/utils/query.ts which injects the custom queryKeyHashFn.
+note: >-
+  The wrapper in packages/react-sdk/src/utils/query.ts ensures every query
+  uses our custom hashFn. Bypassing it causes cache-key mismatches.
+files:
+  - packages/react-sdk/src/**/*.ts
+  - packages/react-sdk/src/**/*.tsx
+ignores:
+  - packages/react-sdk/src/utils/query.ts
+rule:
+  pattern: import { $$$IMPORTS } from "@tanstack/react-query"
+  has:
+    pattern: useQueries
+    stopBy: end

@@ -338,7 +338,7 @@ const sdk = new ZamaSDK({
 | `signer`         | `GenericSigner`        | Wallet signer interface.                                                                                                               |
 | `storage`        | `GenericStorage`       | Credential storage backend.                                                                                                            |
 | `sessionStorage` | `GenericStorage`       | Optional. Session storage for wallet signatures. Default: in-memory (lost on reload). Use `chrome.storage.session` for web extensions. |
-| `keypairTTL`     | `number`               | Optional. Seconds the ML-KEM re-encryption keypair remains valid. Default: `86400` (1 day). Must be positive.                          |
+| `keypairTTL`     | `number`               | Optional. Seconds the ML-KEM re-encryption keypair remains valid. Default: `2592000` (30 days). Must be positive.                      |
 | `sessionTTL`     | `number`               | Optional. Seconds the session signature remains valid. Default: `2592000` (30 days). `0` = re-sign every operation.                    |
 | `onEvent`        | `ZamaSDKEventListener` | Optional. Structured event listener for debugging.                                                                                     |
 

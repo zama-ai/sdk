@@ -252,7 +252,7 @@ export const test = base.extend<SdkFixtures>({
         signer: config.signer,
         storage: config.storage,
         sessionStorage: config.sessionStorage,
-        keypairTTL: config.keypairTTL ?? 86400,
+        keypairTTL: config.keypairTTL ?? 2592000,
         sessionTTL: config.sessionTTL ?? 2592000,
         onEvent: config.onEvent,
       });
@@ -266,7 +266,7 @@ export const test = base.extend<SdkFixtures>({
         signer: config.signer,
         storage: config.storage,
         sessionStorage: config.sessionStorage,
-        keypairTTL: config.keypairTTL ?? 86400,
+        keypairTTL: config.keypairTTL ?? 2592000,
         sessionTTL: config.sessionTTL ?? 2592000,
         onEvent: config.onEvent,
       });

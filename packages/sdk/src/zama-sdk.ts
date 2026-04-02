@@ -29,7 +29,7 @@ export interface ZamaSDKConfig {
   sessionStorage?: GenericStorage;
   /**
    * How long the ML-KEM re-encryption keypair remains valid, in seconds.
-   * Default: `86400` (1 day). Must be a positive number — `0` is rejected
+   * Default: `2592000` (30 days). Must be a positive number — `0` is rejected
    * because the keypair is required to establish the relayer connection.
    */
   keypairTTL?: number;
@@ -50,7 +50,7 @@ export interface ZamaSDKConfig {
   registryAddresses?: Record<number, Address>;
   /**
    * How long cached registry results remain valid, in seconds.
-   * Default: `86400` (24 hours). Consistent with `keypairTTL`/`sessionTTL`.
+   * Default: `2592000` (30 days). Consistent with `keypairTTL`/`sessionTTL`.
    */
   registryTTL?: number;
   /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
@@ -108,7 +108,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       keypairTTL: (() => {
-        const ttl = config.keypairTTL ?? 86400;
+        const ttl = config.keypairTTL ?? 2592000;
         if (ttl <= 0) {
           throw new Error("keypairTTL must be a positive number (seconds)");
         }

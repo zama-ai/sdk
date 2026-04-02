@@ -154,7 +154,7 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
   signer={signer} // GenericSigner (WagmiSigner, ViemSigner, EthersSigner, or custom)
   storage={storage} // GenericStorage
   sessionStorage={sessionStorage} // Optional. Session storage for wallet signatures. Default: in-memory (lost on reload).
-  keypairTTL={86400} // Optional. Seconds the ML-KEM keypair remains valid. Default: 86400 (1 day).
+  keypairTTL={2592000} // Optional. Seconds the ML-KEM keypair remains valid. Default: 2592000 (30 days).
   sessionTTL={2592000} // Optional. Seconds the session signature remains valid. Default: 2592000 (30 days). 0 = re-sign every operation.
   onEvent={(event) => console.debug(event)} // Optional. Structured event listener for debugging.
 >
@@ -979,7 +979,7 @@ FHE decrypt credentials are generated once per wallet + contract set and cached 
 1. **First decrypt** — SDK generates an FHE keypair, creates EIP-712 typed data, and prompts the wallet to sign. The encrypted credential is stored; the signature is cached in memory.
 2. **Same session** — Cached credentials and session signature are reused silently (no wallet prompt).
 3. **Page reload** — Encrypted credentials are loaded from storage; the wallet is prompted once to re-sign for the session.
-4. **Expiry** — Credentials expire based on `keypairTTL` (default: 86400s = 1 day). After expiry, the next decrypt regenerates and re-prompts.
+4. **Expiry** — Credentials expire based on `keypairTTL` (default: 2592000s = 30 days). After expiry, the next decrypt regenerates and re-prompts.
 5. **Pre-authorization** — Call `useAllow(contractAddresses)` early to batch-authorize all contracts in one wallet prompt, avoiding repeated popups.
 6. **Check status** — Use `useIsAllowed()` to conditionally enable UI elements (e.g. disable "Reveal" until allowed).
 7. **Disconnect** — Call `useRevoke(contractAddresses)` or `await credentials.revoke()` to clear the session signature from memory.

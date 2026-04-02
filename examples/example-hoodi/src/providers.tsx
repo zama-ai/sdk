@@ -247,10 +247,6 @@ export function Providers({ children }: { children: ReactNode }) {
         storage={indexedDBStorage}
         sessionStorage={sessionDBStorage}
         signer={signer}
-        // Align keypairTTL with sessionTTL (both 30 days) to prevent a mismatch
-        // where a valid session prompts the SDK to decrypt, but the keypair has expired
-        // and must be regenerated mid-operation (causing an unexpected wallet prompt).
-        keypairTTL={30 * 24 * 60 * 60}
         onEvent={(event) => {
           // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
           // awaits the receipt before emitting). Saving here ensures the pending state

@@ -378,7 +378,7 @@ function DecryptWithProgress() {
 {% endcode %}
 
 {% hint style="info" %}
-**Decryption fails with "invalid keypair" or "expired credentials"?** The FHE keypair has a TTL (default: 1 day). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. `useUserDecrypt` and `useConfidentialBalance` handle re-generation automatically.
+**Decryption fails with "invalid keypair" or "expired credentials"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. `useUserDecrypt` and `useConfidentialBalance` handle re-generation automatically.
 {% endhint %}
 
 ### 4. Decrypt with usePublicDecrypt (advanced)
