@@ -1,14 +1,12 @@
 import type { Token } from "../token/token";
-import type { TransferCallbacks, TransactionResult } from "../types";
+import type { TransactionResult, TransferOptions } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 
 /** Variables for {@link confidentialTransferMutationOptions}. */
-export interface ConfidentialTransferParams extends TransferCallbacks {
+export interface ConfidentialTransferParams extends TransferOptions {
   to: Address;
   amount: bigint;
-  /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */
-  skipBalanceCheck?: boolean;
 }
 
 export function confidentialTransferMutationOptions(

@@ -1,4 +1,12 @@
+import type { Address } from "viem";
 import { ZamaError, ZamaErrorCode } from "./base";
+
+/** Structured details shared by balance-related errors. */
+export interface BalanceErrorDetails {
+  readonly requested: bigint;
+  readonly available: bigint;
+  readonly token: Address;
+}
 
 /** Confidential (cToken) balance is insufficient for the requested operation. */
 export class InsufficientConfidentialBalanceError extends ZamaError {
@@ -7,13 +15,9 @@ export class InsufficientConfidentialBalanceError extends ZamaError {
   /** The available balance at the time of the check. */
   readonly available: bigint;
   /** The token contract address. */
-  readonly token: string;
+  readonly token: Address;
 
-  constructor(
-    message: string,
-    details: { requested: bigint; available: bigint; token: string },
-    options?: ErrorOptions,
-  ) {
+  constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions) {
     super(ZamaErrorCode.InsufficientConfidentialBalance, message, options);
     this.name = "InsufficientConfidentialBalanceError";
     this.requested = details.requested;
@@ -29,13 +33,9 @@ export class InsufficientERC20BalanceError extends ZamaError {
   /** The available balance at the time of the check. */
   readonly available: bigint;
   /** The ERC-20 token contract address. */
-  readonly token: string;
+  readonly token: Address;
 
-  constructor(
-    message: string,
-    details: { requested: bigint; available: bigint; token: string },
-    options?: ErrorOptions,
-  ) {
+  constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions) {
     super(ZamaErrorCode.InsufficientERC20Balance, message, options);
     this.name = "InsufficientERC20BalanceError";
     this.requested = details.requested;

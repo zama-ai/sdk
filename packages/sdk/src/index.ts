@@ -153,6 +153,7 @@ export {
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
   BalanceCheckUnavailableError,
+  type BalanceErrorDetails,
   DelegationDelegateEqualsContractError,
   DelegationExpiryUnchangedError,
   AclPausedError,

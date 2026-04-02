@@ -264,10 +264,9 @@ export interface ConfidentialTransferFromParams {
 export function confidentialTransferMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransfer", Address], ConfidentialTransferParams, TransactionResult>;
 
 // @public
-export interface ConfidentialTransferParams extends TransferCallbacks {
+export interface ConfidentialTransferParams extends TransferOptions {
     // (undocumented)
     amount: bigint;
-    skipBalanceCheck?: boolean;
     // (undocumented)
     to: Address;
 }
@@ -1068,7 +1067,6 @@ export class Token extends ReadonlyToken {
         tokens: Token[];
         delegateAddress: Address;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    // Warning: (ae-forgotten-export) The symbol "TransferOptions" needs to be exported by the entry point index.d.ts
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
@@ -1084,7 +1082,6 @@ export class Token extends ReadonlyToken {
     // Warning: (ae-forgotten-export) The symbol "ShieldOptions" needs to be exported by the entry point index.d.ts
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
-    // Warning: (ae-forgotten-export) The symbol "UnshieldOptions" needs to be exported by the entry point index.d.ts
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
@@ -1196,6 +1193,11 @@ export interface TransferFromSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransferFromSubmitted;
 }
 
+// @public
+export interface TransferOptions extends TransferCallbacks {
+    skipBalanceCheck?: boolean;
+}
+
 // @public (undocumented)
 export interface TransferSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -1252,10 +1254,14 @@ export function unshieldFeeQueryOptions(signer: GenericSigner, config: UnshieldF
 export function unshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult>;
 
 // @public
-export interface UnshieldParams extends UnshieldCallbacks {
+export interface UnshieldOptions extends UnshieldCallbacks {
+    skipBalanceCheck?: boolean;
+}
+
+// @public
+export interface UnshieldParams extends UnshieldOptions {
     // (undocumented)
     amount: bigint;
-    skipBalanceCheck?: boolean;
 }
 
 // @public (undocumented)
@@ -1714,7 +1720,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-D4uQ7vfn.d.ts:1857:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-CyIuDlHb.d.ts:2012:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

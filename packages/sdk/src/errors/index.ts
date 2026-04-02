@@ -20,5 +20,6 @@ export {
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
   BalanceCheckUnavailableError,
+  type BalanceErrorDetails,
 } from "./balance";
 export { matchAclRevert } from "./acl-revert";

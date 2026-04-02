@@ -388,6 +388,16 @@ export class BalanceCheckUnavailableError extends ZamaError {
 }
 
 // @public
+export interface BalanceErrorDetails {
+    // (undocumented)
+    readonly available: bigint;
+    // (undocumented)
+    readonly requested: bigint;
+    // (undocumented)
+    readonly token: Address;
+}
+
+// @public
 export function balanceOfContract(tokenAddress: Address, account: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -13428,26 +13438,18 @@ export { InputProofBytesType }
 
 // @public
 export class InsufficientConfidentialBalanceError extends ZamaError {
-    constructor(message: string, details: {
-        requested: bigint;
-        available: bigint;
-        token: string;
-    }, options?: ErrorOptions);
+    constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions);
     readonly available: bigint;
     readonly requested: bigint;
-    readonly token: string;
+    readonly token: Address;
 }
 
 // @public
 export class InsufficientERC20BalanceError extends ZamaError {
-    constructor(message: string, details: {
-        requested: bigint;
-        available: bigint;
-        token: string;
-    }, options?: ErrorOptions);
+    constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions);
     readonly available: bigint;
     readonly requested: bigint;
-    readonly token: string;
+    readonly token: Address;
 }
 
 // @public

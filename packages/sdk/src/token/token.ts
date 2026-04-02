@@ -367,8 +367,19 @@ export class Token extends ReadonlyToken {
     }
 
     // ERC-20 balance check always runs (public read, no signing needed, works for all wallet types)
-    const userAddress = await this.signer.getAddress();
-    const erc20Balance = await this.signer.readContract(balanceOfContract(underlying, userAddress));
+    let erc20Balance: bigint;
+    try {
+      const userAddress = await this.signer.getAddress();
+      erc20Balance = await this.signer.readContract(balanceOfContract(underlying, userAddress));
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new BalanceCheckUnavailableError(
+        `Could not read ERC-20 balance for shield validation (token: ${underlying})`,
+        { cause: toError(error) },
+      );
+    }
     if (erc20Balance < amount) {
       throw new InsufficientERC20BalanceError(
         `Insufficient ERC-20 balance: requested ${amount}, available ${erc20Balance} (token: ${underlying})`,
@@ -995,8 +1006,19 @@ export class Token extends ReadonlyToken {
    * a surprise EIP-712 popup.
    */
   async #assertConfidentialBalance(amount: bigint): Promise<void> {
-    const userAddress = await this.signer.getAddress();
-    const handle = await this.readConfidentialBalanceOf(userAddress);
+    let handle: Handle;
+    try {
+      const userAddress = await this.signer.getAddress();
+      handle = await this.readConfidentialBalanceOf(userAddress);
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new BalanceCheckUnavailableError(
+        `Could not read confidential balance handle (token: ${this.address})`,
+        { cause: toError(error) },
+      );
+    }
 
     if (this.isZeroHandle(handle)) {
       if (amount === 0n) {
@@ -1018,7 +1040,18 @@ export class Token extends ReadonlyToken {
     // contract addresses, resolveCredentials may extend the credential set via
     // #extendContracts — which re-signs with the existing key (no new EIP-712
     // popup) as long as the underlying credential is time-valid.
-    const hasCredentials = await this.isAllowed();
+    let hasCredentials: boolean;
+    try {
+      hasCredentials = await this.isAllowed();
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new BalanceCheckUnavailableError(
+        `Could not check credential status for balance validation (token: ${this.address})`,
+        { cause: toError(error) },
+      );
+    }
     if (!hasCredentials) {
       throw new BalanceCheckUnavailableError(
         `Cannot validate confidential balance: no cached credentials. ` +
@@ -1026,6 +1059,7 @@ export class Token extends ReadonlyToken {
       );
     }
 
+    const userAddress = await this.signer.getAddress();
     let balance: bigint;
     try {
       balance = await this.decryptBalance(handle, userAddress);
@@ -1035,7 +1069,7 @@ export class Token extends ReadonlyToken {
       }
       throw new BalanceCheckUnavailableError(
         `Balance validation failed: could not decrypt confidential balance (token: ${this.address})`,
-        { cause: error instanceof Error ? error : undefined },
+        { cause: toError(error) },
       );
     }
 

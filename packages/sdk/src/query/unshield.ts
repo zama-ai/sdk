@@ -1,13 +1,11 @@
 import type { Token } from "../token/token";
-import type { TransactionResult, UnshieldCallbacks } from "../types";
+import type { TransactionResult, UnshieldOptions } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 
 /** Variables for {@link unshieldMutationOptions}. */
-export interface UnshieldParams extends UnshieldCallbacks {
+export interface UnshieldParams extends UnshieldOptions {
   amount: bigint;
-  /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */
-  skipBalanceCheck?: boolean;
 }
 
 export function unshieldMutationOptions(
