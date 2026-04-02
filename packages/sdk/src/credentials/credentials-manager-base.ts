@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
-import { SigningFailedError, SigningRejectedError, wrapSigningError } from "../errors/signing";
+import { ZamaError } from "../errors/base";
+import { wrapSigningError } from "../errors/signing";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "../types";
@@ -230,9 +231,7 @@ export abstract class BaseCredentialsManager<
         });
       }
     } catch (error) {
-      if (error instanceof SigningRejectedError || error instanceof SigningFailedError) {
-        throw error;
-      }
+      if (error instanceof ZamaError) {throw error;}
       // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] Credential resolution failed, recreating:", error);
       this.emit({
@@ -337,6 +336,7 @@ export abstract class BaseCredentialsManager<
       this.emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
     } catch (error) {
+      if (error instanceof ZamaError) {throw error;}
       wrapSigningError(error, errorContext);
     }
   }
