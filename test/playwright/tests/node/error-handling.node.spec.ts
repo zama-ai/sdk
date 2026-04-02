@@ -85,6 +85,30 @@ test("init failure resets so next call retries", async () => {
   await expect(relayer.generateKeypair()).rejects.toThrow();
 });
 
+test("isConfidential on non-ERC-165 contract reverts with a ContractFunction error", async ({
+  sdk,
+  contracts,
+}) => {
+  // The ACL contract does not implement ERC-165 supportsInterface.
+  // This verifies that viem produces an error whose .name matches
+  // what isContractCallError checks, ensuring the query-layer catch gate
+  // would correctly identify it as a contract revert (not a network error).
+  const nonErc165Token = sdk.createReadonlyToken(contracts.acl);
+  try {
+    await nonErc165Token.isConfidential();
+    // If this somehow returns without throwing, fail the test
+    expect(true, "Expected isConfidential to throw on a non-ERC-165 contract").toBe(false);
+  } catch (err) {
+    expect(err).toBeInstanceOf(Error);
+    const error = err as Error;
+    // viem wraps reverts as ContractFunctionExecutionError or ContractFunctionRevertedError
+    expect(
+      error.name === "ContractFunctionExecutionError" ||
+        error.name === "ContractFunctionRevertedError",
+    ).toBe(true);
+  }
+});
+
 test("terminate during pool init rejects cleanly", async ({ transport }) => {
   const relayer = new RelayerNode({
     getChainId: async () => HardhatConfig.chainId,
