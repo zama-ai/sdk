@@ -456,8 +456,10 @@ export interface DelegateDecryptionParams {
     expirationDate?: Date;
 }
 
+// Warning: (ae-forgotten-export) The symbol "ClearValueType$1" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export function delegatedUserDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedUserDecrypt"], DelegatedUserDecryptParams, Readonly<Record<Handle, ClearValueType>>>;
+export function delegatedUserDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedUserDecrypt"], DelegatedUserDecryptParams, Readonly<Record<Handle, ClearValueType$1>>>;
 
 // @public
 export interface DelegatedUserDecryptParams {
@@ -764,7 +766,7 @@ export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptio
 
 // @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, SDK.ClearValueType>>;
+    clearValues: Readonly<Record<Handle, ClearValueType$1>>;
 };
 
 // @public (undocumented)
@@ -1340,11 +1342,11 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 // @public
 export interface UserDecryptCallbacks {
     onCredentialsReady?: () => void;
-    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
+    onDecrypted?: (values: Record<Handle, ClearValueType$1>) => void;
 }
 
 // @public (undocumented)
-export function userDecryptMutationOptions(sdk: ZamaSDK, callbacks?: UserDecryptCallbacks): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, Record<Handle, ClearValueType>>;
+export function userDecryptMutationOptions(sdk: ZamaSDK, callbacks?: UserDecryptCallbacks): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, Record<Handle, ClearValueType$1>>;
 
 // @public
 export interface UserDecryptMutationParams {
@@ -1717,7 +1719,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-BmaH2P2f.d.ts:1839:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-Co7GdzOP.d.ts:1839:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

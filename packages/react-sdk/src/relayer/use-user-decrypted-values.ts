@@ -17,9 +17,9 @@ export function useUserDecryptedValues(handles: Handle[]) {
     })),
   });
 
-  const data: Record<Handle, ClearValueType> = {};
+  const data: Record<Handle, ClearValueType | undefined> = {};
   for (let i = 0; i < handles.length; i++) {
-    data[handles[i]!] = results[i]!.data as ClearValueType;
+    data[handles[i]!] = results[i]!.data as ClearValueType | undefined;
   }
 
   return {

@@ -6,7 +6,7 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType as ClearValueType_2 } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -578,7 +578,8 @@ export const chromeSessionStorage: ChromeSessionStorage;
 // @public
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
-export { ClearValueType }
+// @public
+export type ClearValueType = bigint | boolean | `0x${string}`;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -16873,7 +16874,7 @@ export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMe
 
 // @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, SDK.ClearValueType>>;
+    clearValues: Readonly<Record<Handle, ClearValueType>>;
 };
 
 // @public
@@ -18447,7 +18448,7 @@ export class RelayerRequestFailedError extends ZamaError {
 export interface RelayerSDK {
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType_2>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
     getAclAddress(): Promise<Address>;
@@ -18462,7 +18463,7 @@ export interface RelayerSDK {
     publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType_2>>>;
 }
 
 // @public
@@ -18473,7 +18474,7 @@ export class RelayerWeb implements RelayerSDK {
     constructor(config: RelayerWebConfig);
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType_2>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
     // (undocumented)
@@ -18491,7 +18492,7 @@ export class RelayerWeb implements RelayerSDK {
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     get status(): RelayerSDKStatus;
     terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType_2>>>;
 }
 
 // @public

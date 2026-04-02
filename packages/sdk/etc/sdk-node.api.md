@@ -210,8 +210,10 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
 
 // @public (undocumented)
 export interface DelegatedUserDecryptResponseData {
+    // Warning: (ae-forgotten-export) The symbol "ClearValueType$1" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    clearValues: Record<Handle, ClearValueType>;
+    clearValues: Record<Handle, ClearValueType$1>;
 }
 
 // @public
@@ -489,14 +491,14 @@ export interface PublicDecryptResponseData {
     // (undocumented)
     abiEncodedClearValues: Hex;
     // (undocumented)
-    clearValues: Readonly<Record<Handle, ClearValueType>>;
+    clearValues: Readonly<Record<Handle, ClearValueType$1>>;
     // (undocumented)
     decryptionProof: Hex;
 }
 
 // @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, SDK.ClearValueType>>;
+    clearValues: Readonly<Record<Handle, ClearValueType$1>>;
 };
 
 // @public
@@ -659,7 +661,7 @@ export interface UserDecryptRequest extends BaseRequest {
 // @public (undocumented)
 export interface UserDecryptResponseData {
     // (undocumented)
-    clearValues: Record<Handle, ClearValueType>;
+    clearValues: Record<Handle, ClearValueType$1>;
 }
 
 // @public (undocumented)
