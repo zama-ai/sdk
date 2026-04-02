@@ -37,6 +37,7 @@ import type {
 } from "./worker.types";
 
 // Global SDK instance and config
+// oxlint-disable-next-line typescript/no-redundant-type-constituents -- FhevmInstance resolves to any from external .d.ts
 let sdkInstance: FhevmInstance | null = null;
 let sdkGlobal: RelayerSDKGlobal | null = null;
 

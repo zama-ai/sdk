@@ -17,8 +17,10 @@ export function useUserDecryptedValues(handles: Handle[]) {
     })),
   });
 
+  // oxlint-disable-next-line typescript/no-redundant-type-constituents -- ClearValueType resolves to any from external .d.ts
   const data: Record<Handle, ClearValueType | undefined> = {};
   for (let i = 0; i < handles.length; i++) {
+    // oxlint-disable-next-line typescript/no-redundant-type-constituents
     data[handles[i]!] = results[i]!.data as ClearValueType | undefined;
   }
 
