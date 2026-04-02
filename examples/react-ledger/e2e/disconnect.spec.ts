@@ -22,7 +22,7 @@ test.describe("disconnect recovery", () => {
   test("shows connect screen title after disconnect", async ({ page, simulateDisconnect }) => {
     await simulateDisconnect();
     await expect(
-      page.getByRole("heading", { name: "Hoodi Confidential Tokens — Ledger" }),
+      page.getByRole("heading", { name: "Sepolia Confidential Tokens — Ledger" }),
     ).toBeVisible();
   });
 

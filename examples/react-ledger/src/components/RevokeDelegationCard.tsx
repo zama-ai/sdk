@@ -4,7 +4,7 @@ import { useState } from "react";
 import { isAddress } from "ethers";
 import { useRevokeDelegation } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
-import { HOODI_EXPLORER_URL } from "@/lib/config";
+import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface RevokeDelegationCardProps {
   tokenAddress: Address;
@@ -51,7 +51,7 @@ export function RevokeDelegationCard({ tokenAddress, disabled }: RevokeDelegatio
         <div className="alert alert-success card-status">
           Access revoked!{" "}
           <a
-            href={`${HOODI_EXPLORER_URL}/tx/${revoke.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${revoke.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >

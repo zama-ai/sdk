@@ -8,7 +8,7 @@ import {
   clearPendingUnshield,
 } from "@zama-fhe/react-sdk";
 import type { Address, Hex } from "@zama-fhe/react-sdk";
-import { HOODI_EXPLORER_URL } from "@/lib/config";
+import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface PendingUnshieldCardProps {
   tokenAddress: Address;
@@ -48,7 +48,7 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
       <div className="balance-row">
         <span className="balance-label">
           Unwrap confirmed, finalization pending —{" "}
-          <a href={`${HOODI_EXPLORER_URL}/tx/${pendingTxHash}`} target="_blank" rel="noreferrer">
+          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${pendingTxHash}`} target="_blank" rel="noreferrer">
             {pendingTxHash.slice(0, 10)}…
           </a>
         </span>
@@ -69,7 +69,7 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
         <div className="alert alert-success card-status">
           Unshielded!{" "}
           <a
-            href={`${HOODI_EXPLORER_URL}/tx/${resume.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${resume.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >

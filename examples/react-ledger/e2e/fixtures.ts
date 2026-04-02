@@ -1,13 +1,13 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
-export const HOODI_CHAIN_ID_HEX = "0x88bb0"; // 560048 in hex — Hoodi chain ID
+export const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7"; // 11155111 in hex — Sepolia chain ID
 export const TEST_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 
 // A second address used for delegation tests (different from TEST_ADDRESS).
 export const DELEGATE_ADDRESS = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
 
-// On-chain WrappersRegistry address for Hoodi (DefaultRegistryAddresses).
-export const REGISTRY_ADDRESS = "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f";
+// On-chain WrappersRegistry address for Sepolia (DefaultRegistryAddresses).
+export const REGISTRY_ADDRESS = "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 
 // Mock token pair addresses returned by the registry mock.
 // All-digit addresses avoid EIP-55 checksum ambiguity.
@@ -85,18 +85,18 @@ async function triggerLedgerDisconnect(page: Page) {
 }
 
 /**
- * Intercepts HTTP requests to the Hoodi RPC endpoint and returns minimal valid
+ * Intercepts HTTP requests to the Sepolia RPC endpoint and returns minimal valid
  * JSON-RPC responses.
  *
  * In react-ledger, all read-only calls (eth_call, eth_estimateGas) are routed
- * directly to the Hoodi HTTP RPC by LedgerWebHIDProvider and by the direct
+ * directly to the Sepolia HTTP RPC by LedgerWebHIDProvider and by the direct
  * rpcProvider in page.tsx. This interceptor handles both paths.
  *
  * The WrappersRegistry reads (getTokenConfidentialTokenPairsLength / Slice) are
  * ABI-encoded here so useListPairs resolves in tests and the token selector renders.
  */
 async function interceptRpc(page: Page, options: RpcOptions = {}) {
-  await page.route("**/rpc.hoodi.ethpandaops.io**", async (route) => {
+  await page.route("**/ethereum-sepolia-rpc.publicnode.com**", async (route) => {
     const body = route.request().postDataJSON() as
       | { id?: number; method?: string; params?: unknown[] }
       | { id?: number; method?: string; params?: unknown[] }[]
@@ -127,12 +127,12 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
     };
 
     const staticResults: Record<string, unknown> = {
-      eth_chainId: HOODI_CHAIN_ID_HEX,
+      eth_chainId: SEPOLIA_CHAIN_ID_HEX,
       eth_blockNumber: "0x1",
       eth_getBalance: "0x0",
       eth_getTransactionCount: "0x0",
       eth_estimateGas: "0x5208",
-      net_version: "560048",
+      net_version: "11155111",
     };
 
     function resolveEthCall(req: { to?: string; data?: string }): string {
@@ -203,11 +203,17 @@ interface TestFixtures {
    * Triggers _onDisconnect(), which resets state and emits disconnect + accountsChanged.
    */
   simulateDisconnect: () => Promise<void>;
-  /** Intercept Hoodi RPC requests with static ABI-encoded responses. */
+  /** Intercept Sepolia RPC requests with static ABI-encoded responses. */
   mockRpc: (options?: RpcOptions) => Promise<void>;
 }
 
 export const test = base.extend<TestFixtures>({
+  // Intercept relayer API calls — RelayerWeb sends requests to /api/relayer/** during
+  // ZamaSDK initialisation. Aborting them keeps tests offline and deterministic.
+  page: async ({ page }, use) => {
+    await page.route("**/api/relayer/**", (route) => route.abort());
+    await use(page);
+  },
   mockLedger: async ({ page }, use) => {
     await use((config: LedgerConfig) => overrideLedgerConnect(page, config));
   },

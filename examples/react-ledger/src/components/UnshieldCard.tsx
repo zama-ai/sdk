@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useUnshield, useZamaSDK, clearPendingUnshield } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 import { parseAmount } from "@/lib/parseAmount";
-import { HOODI_EXPLORER_URL } from "@/lib/config";
+import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 import { setActiveUnshieldToken } from "@/lib/activeUnshield";
 
 interface UnshieldCardProps {
@@ -99,7 +99,7 @@ export function UnshieldCard({
         <div className="alert alert-success card-status">
           Unshielded!{" "}
           <a
-            href={`${HOODI_EXPLORER_URL}/tx/${unshield.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${unshield.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >

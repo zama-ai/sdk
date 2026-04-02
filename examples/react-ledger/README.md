@@ -1,23 +1,15 @@
-# Hoodi Confidential Tokens — Ledger
+# Sepolia Confidential Tokens — Ledger
 
-Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet using a **Ledger hardware wallet directly via WebHID** — no MetaMask, no browser extension wallet required.
-
-## Cleartext Zama Protocol
-
-[Zama Protocol](https://docs.zama.org/protocol) is currently supported officially on Ethereum mainnet and Sepolia testnet. This setup uses a co-processor model to offload FHE computation from the host chain to a decentralised network.
-
-To provide support for yet-unsupported testnets such as Hoodi, this example uses the **cleartext stack**. It uses mocked FHE contracts to provide an API-compatible surface without needing an actual co-processor or relayer — "encrypted" values are stored as plaintexts on Hoodi testnet.
-
-**WARNING**: Support for testnets such as Hoodi via this cleartext method is only intended for **testing** purposes. Values are **not** actually encrypted on Hoodi testnet.
+Next.js app demonstrating ERC-7984 confidential token operations on **Sepolia** testnet using a **Ledger hardware wallet directly via WebHID** — no MetaMask, no browser extension wallet required.
 
 ## Stack
 
 - **Next.js** (App Router)
 - **ethers v6** — via `EthersSigner` from `@zama-fhe/sdk/ethers`
 - **`LedgerWebHIDProvider`** — custom EIP-1193 provider built on `@ledgerhq/hw-transport-webhid` + `@ledgerhq/hw-app-eth`
-- **RelayerCleartext** — cleartext FHE backend (no external relayer service required)
+- **RelayerWeb** — browser FHE worker, routes through a local Next.js proxy (`/api/relayer`)
 - **@tanstack/react-query** — async state management
-- **Chain:** Hoodi testnet (chainId 560048)
+- **Chain:** Sepolia testnet (chainId 11155111)
 
 ## Device compatibility
 
@@ -56,29 +48,32 @@ To provide support for yet-unsupported testnets such as Hoodi, this example uses
 
 > **Separate IndexedDB instances** for `storage` and `sessionStorage` in `ZamaProvider`: both use the same key internally, so sharing a single `IndexedDBStorage` instance causes the session entry to overwrite the encrypted keypair, forcing a re-sign on every balance decryption.
 
-> **High-water mark on `eth_blockNumber`:** monotonically increasing counter that keeps ethers' `PollingBlockSubscriber` firing every poll interval (~4 s) rather than once per block (~12 s on Hoodi), ensuring fast receipt detection after each transaction.
+> **High-water mark on `eth_blockNumber`:** monotonically increasing counter that keeps ethers' `PollingBlockSubscriber` firing every poll interval (~4 s) rather than once per block (~12 s on Sepolia), ensuring fast receipt detection after each transaction.
 
-## How it differs from `example-hoodi`
+## How it differs from `react-ethers`
 
-|                 | `example-hoodi`                      | `react-ledger`                               |
-| --------------- | ------------------------------------ | -------------------------------------------- |
-| Wallet          | Any EIP-1193 browser extension       | Ledger hardware device (WebHID)              |
-| Relayer         | `RelayerCleartext` (no proxy needed) | `RelayerCleartext` (no proxy needed)         |
-| Network         | Hoodi (chainId 560048)               | Hoodi (chainId 560048)                       |
-| Signing         | Injected wallet (extension)          | hw-app-eth (on-device)                       |
-| Chain switching | `wallet_switchEthereumChain`         | Not applicable — chain hardcoded in provider |
-| Browser support | Any modern browser                   | Chromium only (WebHID)                       |
+|                 | `react-ethers`                          | `react-ledger`                               |
+| --------------- | --------------------------------------- | -------------------------------------------- |
+| Wallet          | Any EIP-1193 browser extension          | Ledger hardware device (WebHID)              |
+| Relayer         | `RelayerWeb` (via `/api/relayer` proxy) | `RelayerWeb` (via `/api/relayer` proxy)      |
+| Network         | Sepolia (chainId 11155111)              | Sepolia (chainId 11155111)                   |
+| Signing         | Injected wallet (extension)             | hw-app-eth (on-device)                       |
+| Chain switching | `wallet_switchEthereumChain`            | Not applicable — chain hardcoded in provider |
+| Browser support | Any modern browser                      | Chromium only (WebHID)                       |
 
 ## Setup
 
-> **Network:** Hoodi testnet — chainId `560048`, default RPC `https://rpc.hoodi.ethpandaops.io`.
+> **Network:** Sepolia testnet — chainId `11155111`, default RPC `https://ethereum-sepolia-rpc.publicnode.com`.
 
-> **Gas:** Operations require Hoodi ETH. Get some at [hoodi-faucet.pk910.de](https://hoodi-faucet.pk910.de) (proof-of-work, no account required).
+> **Relayer:** defaults to the public Zama testnet relayer (`https://relayer.testnet.zama.org/v2`) via a local Next.js proxy. No API key required for Sepolia testnet.
+
+> **Gas:** operations require Sepolia ETH. Get some at [sepoliafaucet.com](https://sepoliafaucet.com) or [faucet.alchemy.com/faucets/ethereum-sepolia](https://faucet.alchemy.com/faucets/ethereum-sepolia).
 
 ```bash
 cp .env.example .env.local
-# Optional: set NEXT_PUBLIC_HOODI_RPC_URL to a private endpoint (Infura, Alchemy, etc.)
-# Leave empty to use the default public Hoodi RPC.
+# No changes needed for Sepolia testnet — defaults are pre-configured.
+# Set RELAYER_URL + RELAYER_API_KEY in .env.local only if using a private relayer.
+# Set NEXT_PUBLIC_SEPOLIA_RPC_URL if you want to use a private RPC endpoint.
 
 npm install
 ```
@@ -93,28 +88,25 @@ Open [http://localhost:3000](http://localhost:3000) in a Chromium-based browser,
 
 ## Environment variables
 
-| Variable                    | Required | Default                            | Description                                                                                                     |
-| --------------------------- | -------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_HOODI_RPC_URL` | No       | `https://rpc.hoodi.ethpandaops.io` | Override the default Hoodi RPC. Example: `https://hoodi.infura.io/v3/YOUR_KEY`. Leaving empty uses the default. |
+| Variable                      | Required | Default                                       | Description                                                                          |
+| ----------------------------- | -------- | --------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `RELAYER_URL`                 | No       | `https://relayer.testnet.zama.org/v2`         | Relayer base URL (server-side only). Not required for Sepolia testnet.               |
+| `RELAYER_API_KEY`             | No       | —                                             | API key forwarded as `x-api-key` by the proxy. Not required for testnet.             |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | `https://ethereum-sepolia-rpc.publicnode.com` | Override the default Sepolia RPC. Example: `https://sepolia.infura.io/v3/YOUR_KEY`. |
 
-## Hoodi contract addresses
+## Sepolia contract addresses
 
-| Token      | ERC-20                                       | ERC-7984 (cToken / wrapper)                  |
-| ---------- | -------------------------------------------- | -------------------------------------------- |
-| USDT Mock  | `0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b` | `0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75` |
-| Test Token | `0x7740F913dC24D4F9e1A72531372c3170452B2F87` | `0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1` |
+Token pairs are loaded dynamically from the on-chain `WrappersRegistry` at runtime — no hardcoded token addresses needed. Registry address: `0x2f0750Bbb0A246059d80e94c454586a7F27a128e`.
 
-Registry: `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
-
-All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
+All contracts verified on [sepolia.etherscan.io](https://sepolia.etherscan.io).
 
 ## Getting test tokens
 
-Both tokens have a permissionless `mint(address to, uint256 amount)` function.
+Available tokens have a permissionless `mint(address to, uint256 amount)` function.
 
 **Via the app:** click the **Mint** button next to the ERC-20 balance — mints 10 tokens and requires a transaction confirmation on the Ledger device.
 
-**Via Etherscan:** navigate to the contract on [hoodi.etherscan.io](https://hoodi.etherscan.io) → Write Contract → Connect Wallet → call `mint(yourLedgerAddress, amount)`.
+**Via Etherscan:** navigate to the ERC-20 contract on [sepolia.etherscan.io](https://sepolia.etherscan.io) → Write Contract → Connect Wallet → call `mint(yourLedgerAddress, amount)`.
 
 ## Tests
 
@@ -122,8 +114,7 @@ End-to-end tests (Playwright, no physical device required):
 
 ```bash
 npx playwright install chromium  # first time only
-npm run dev                       # start the app
-npm run test:e2e                  # run all tests
+npm run test:e2e                  # starts the dev server and runs all tests
 ```
 
 See [WALKTHROUGH.md — Running tests](./WALKTHROUGH.md#running-tests) for full details on the test suites and how the Ledger device is mocked.

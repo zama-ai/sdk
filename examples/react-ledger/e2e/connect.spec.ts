@@ -8,7 +8,7 @@ test.describe("connect screen", () => {
 
   test("shows connect screen title", async ({ page }) => {
     await expect(
-      page.getByRole("heading", { name: "Hoodi Confidential Tokens — Ledger" }),
+      page.getByRole("heading", { name: "Sepolia Confidential Tokens — Ledger" }),
     ).toBeVisible();
   });
 

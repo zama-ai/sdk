@@ -94,6 +94,7 @@ export function DecryptAsCard({
       )}
 
       <button
+        type="button"
         className="btn btn-primary btn-full"
         onClick={handleDecrypt}
         disabled={disabled || !ownerIsValid || decryptAs.isPending}

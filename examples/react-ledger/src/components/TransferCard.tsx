@@ -5,7 +5,7 @@ import { isAddress } from "ethers";
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
 import { parseAmount } from "@/lib/parseAmount";
-import { HOODI_EXPLORER_URL } from "@/lib/config";
+import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface TransferCardProps {
   tokenAddress: Address;
@@ -101,7 +101,7 @@ export function TransferCard({
         <div className="alert alert-success card-status">
           Transferred!{" "}
           <a
-            href={`${HOODI_EXPLORER_URL}/tx/${transfer.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${transfer.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >

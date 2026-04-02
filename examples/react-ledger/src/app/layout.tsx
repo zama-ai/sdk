@@ -3,9 +3,9 @@ import { ClientProviders } from "./client-providers";
 import "./globals.css";
 
 export const metadata = {
-  title: "Hoodi Confidential Tokens — Ledger",
+  title: "Sepolia Confidential Tokens — Ledger",
   description:
-    "POC demo for ERC-7984 confidential tokens on Hoodi testnet using a Ledger hardware wallet directly via WebHID (no MetaMask, no browser extension).",
+    "POC demo for ERC-7984 confidential tokens on Sepolia testnet using a Ledger hardware wallet directly via WebHID (no MetaMask, no browser extension).",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

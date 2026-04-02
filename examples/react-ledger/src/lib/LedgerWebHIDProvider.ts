@@ -17,9 +17,9 @@
 //                                            signEIP712HashedMessage — device shows
 //                                            a generic "Sign typed data? ⚠️" prompt
 //   eth_sendTransaction                 → serialize EIP-1559 tx + signTransaction
-//                                         + broadcast via Hoodi JsonRpcProvider
-//   eth_chainId                         → hardcoded Hoodi (560048)
-//   everything else (reads, estimates…) → forwarded to Hoodi JsonRpcProvider
+//                                         + broadcast via Sepolia JsonRpcProvider
+//   eth_chainId                         → hardcoded Sepolia (11155111)
+//   everything else (reads, estimates…) → forwarded to Sepolia JsonRpcProvider
 //
 // Additional public methods:
 //   connect(accountIndex?)  — opens WebHID picker, returns address.
@@ -57,13 +57,13 @@ import {
   hexlify,
   toUtf8Bytes,
 } from "ethers";
-import { HOODI_CHAIN_ID, HOODI_RPC_URL } from "./config";
+import { SEPOLIA_CHAIN_ID, SEPOLIA_RPC_URL } from "./config";
 import type { EIP1193Provider } from "./ledgerProvider";
 
 type EventHandler = (...args: unknown[]) => void;
 
 // hw-app-eth by default fetches EIP-712 clear-signing metadata from
-// crypto-assets-service.api.ledger.com. Hoodi testnet and Zama contracts are not
+// crypto-assets-service.api.ledger.com. Sepolia testnet and Zama contracts are not
 // registered in that service → every signing call triggers a 403 + CORS error that
 // the library silently ignores. Setting calServiceURL: null skips the HTTP request
 // entirely — behaviour is identical (blind signing) without the console noise.
@@ -79,7 +79,7 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
   private readonly listeners = new Map<string, Set<EventHandler>>();
 
   constructor() {
-    this.rpc = new JsonRpcProvider(HOODI_RPC_URL);
+    this.rpc = new JsonRpcProvider(SEPOLIA_RPC_URL);
     // Expose the singleton on window in non-production builds so Playwright tests
     // can override connect() without opening a real WebHID device picker.
     if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
@@ -199,7 +199,7 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
       // ── Chain ─────────────────────────────────────────────────────────────────
 
       case "eth_chainId":
-        return `0x${HOODI_CHAIN_ID.toString(16)}`;
+        return `0x${SEPOLIA_CHAIN_ID.toString(16)}`;
 
       // ── personal_sign ─────────────────────────────────────────────────────────
       // params: [message, address]
@@ -370,7 +370,7 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
         // Build unsigned EIP-1559 tx, sign it, attach signature in-place.
         const tx = Transaction.from({
           type: 2,
-          chainId: HOODI_CHAIN_ID,
+          chainId: SEPOLIA_CHAIN_ID,
           nonce,
           maxPriorityFeePerGas,
           maxFeePerGas,
@@ -395,7 +395,7 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
 
       // ── eth_blockNumber with high-water mark ───────────────────────────────────
       // Keeps ethers' PollingBlockSubscriber firing every poll interval (~4 s)
-      // rather than once per block (~12 s on Hoodi).
+      // rather than once per block (~12 s on Sepolia).
 
       case "eth_blockNumber": {
         const block = await this.rpc.send("eth_blockNumber", []);
@@ -405,7 +405,7 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
         return `0x${this._highWaterBlock.toString(16)}`;
       }
 
-      // ── All other read-only methods → Hoodi RPC ────────────────────────────────
+      // ── All other read-only methods → Sepolia RPC ─────────────────────────────
 
       default:
         return this.rpc.send(method, params as unknown[]);

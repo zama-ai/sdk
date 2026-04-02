@@ -22,7 +22,7 @@ import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
 import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
-import { HOODI_CHAIN_ID, HOODI_CHAIN_ID_HEX, HOODI_RPC_URL } from "@/lib/config";
+import { SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, SEPOLIA_RPC_URL } from "@/lib/config";
 import { ledgerProvider } from "@/lib/LedgerWebHIDProvider";
 
 const MINT_ABI = ["function mint(address to, uint256 amount)"];
@@ -43,8 +43,8 @@ function normalizePair(
   };
 }
 
-// Direct Hoodi RPC for ETH balance reads — independent of the Ledger device.
-const rpcProvider = new JsonRpcProvider(HOODI_RPC_URL);
+// Direct Sepolia RPC for ETH balance reads — independent of the Ledger device.
+const rpcProvider = new JsonRpcProvider(SEPOLIA_RPC_URL);
 
 // Verify-address button states.
 type VerifyStatus = "idle" | "verifying" | "done" | "error";
@@ -61,7 +61,7 @@ export default function Home() {
   const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>("idle");
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
-  const isHoodi = chainId?.toLowerCase() === HOODI_CHAIN_ID_HEX;
+  const isSepolia = chainId?.toLowerCase() === SEPOLIA_CHAIN_ID_HEX;
 
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
@@ -192,7 +192,7 @@ export default function Home() {
   const { data: ethBalance } = useQuery({
     queryKey: ethBalanceKey,
     queryFn: () => rpcProvider.getBalance(address!).then(formatEther),
-    enabled: !!address && isHoodi,
+    enabled: !!address && isSepolia,
   });
 
   const erc20BalanceKey = ["erc20-balance", token?.tokenAddress, address];
@@ -202,7 +202,7 @@ export default function Home() {
       sdk.signer.readContract(
         balanceOfContract(token!.tokenAddress, address as Address),
       ) as Promise<bigint>,
-    enabled: !!address && isHoodi && !!token,
+    enabled: !!address && isSepolia && !!token,
   });
 
   const refreshBalances = () => {
@@ -217,7 +217,7 @@ export default function Home() {
 
   const balance = useConfidentialBalance(
     { tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS },
-    { enabled: !!address && isHoodi && !!isAllowed && !!token },
+    { enabled: !!address && isSepolia && !!isAllowed && !!token },
   );
 
   const mint = useMutation({
@@ -248,16 +248,16 @@ export default function Home() {
       ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
       : "—";
 
-  const actionsDisabled = !isHoodi || !token;
+  const actionsDisabled = !isSepolia || !token;
 
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!address) {
     return (
       <div className="app-container connect-screen">
-        <h1>Hoodi Confidential Tokens — Ledger</h1>
+        <h1>Sepolia Confidential Tokens — Ledger</h1>
         <p className="subtitle">
           Connect your Ledger device (Nano S, Nano S Plus, Nano X, Stax, Flex) to interact with
-          ERC-7984 tokens on Hoodi testnet.
+          ERC-7984 tokens on Sepolia testnet.
         </p>
         <p className="subtitle" style={{ fontSize: "0.85em", opacity: 0.7 }}>
           Make sure the Ethereum app is open on your device, then select an account and click the
@@ -297,19 +297,19 @@ export default function Home() {
   }
 
   // ── Screen 2: Wrong network (safety guard — unreachable in normal operation) ──
-  // LedgerWebHIDProvider.eth_chainId always returns the Hoodi chain ID (560048).
+  // LedgerWebHIDProvider.eth_chainId always returns the Sepolia chain ID (11155111).
   // This screen exists in case config.ts is changed to point at a different network.
-  if (!isHoodi) {
+  if (!isSepolia) {
     return (
       <div className="app-container connect-screen">
-        <h1>Hoodi Network Required</h1>
+        <h1>Sepolia Network Required</h1>
         <p className="subtitle">
-          This app targets Hoodi testnet (chain ID <strong>{HOODI_CHAIN_ID}</strong>). Detected
+          This app targets Sepolia testnet (chain ID <strong>{SEPOLIA_CHAIN_ID}</strong>). Detected
           chain ID: <strong>{chainId ? parseInt(chainId, 16) : "unknown"}</strong>.
         </p>
         <p className="subtitle" style={{ fontSize: "0.85em", opacity: 0.7 }}>
-          Check that <code>HOODI_CHAIN_ID</code> in <code>src/lib/config.ts</code> is set to 560048
-          and reconnect.
+          Check that <code>SEPOLIA_CHAIN_ID</code> in <code>src/lib/config.ts</code> is set to
+          11155111 and reconnect.
         </p>
         <button type="button" className="btn btn-primary" onClick={connect}>
           Reconnect
@@ -318,11 +318,11 @@ export default function Home() {
     );
   }
 
-  // ── Screen 3: Connected on Hoodi — main UI ─────────────────────────────────
+  // ── Screen 3: Connected on Sepolia — main UI ──────────────────────────────
   return (
     <div className="app-container">
       <div className="app-header">
-        <h1>Hoodi Confidential Tokens — Ledger</h1>
+        <h1>Sepolia Confidential Tokens — Ledger</h1>
         <div className="connected-address">Connected: {address}</div>
         <div
           className="connected-address"

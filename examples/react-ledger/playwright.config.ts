@@ -18,7 +18,7 @@ export default defineConfig({
     timeout: 120_000,
     // Force the RPC URL to empty so that any .env.local override cannot bypass the
     // interceptRpc route mock — tests must always go through the Playwright interceptor.
-    env: { NEXT_PUBLIC_HOODI_RPC_URL: "" },
+    env: { NEXT_PUBLIC_SEPOLIA_RPC_URL: "" },
   },
   projects: [
     {

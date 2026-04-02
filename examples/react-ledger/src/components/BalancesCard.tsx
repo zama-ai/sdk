@@ -1,6 +1,6 @@
 "use client";
 
-import { HOODI_EXPLORER_URL } from "@/lib/config";
+import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface BalancesCardProps {
   formattedErc20: string;
@@ -76,7 +76,7 @@ export function BalancesCard({
       {mintTxHash && (
         <div className="alert alert-success card-status">
           Minted!{" "}
-          <a href={`${HOODI_EXPLORER_URL}/tx/${mintTxHash}`} target="_blank" rel="noreferrer">
+          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${mintTxHash}`} target="_blank" rel="noreferrer">
             {mintTxHash.slice(0, 10)}…
           </a>
         </div>

@@ -8,10 +8,11 @@ import {
   IndexedDBStorage,
   indexedDBStorage,
   savePendingUnshield,
+  RelayerWeb,
 } from "@zama-fhe/react-sdk";
-import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { SepoliaConfig } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
-import { HOODI_RPC_URL } from "@/lib/config";
+import { SEPOLIA_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 import { ledgerProvider } from "@/lib/LedgerWebHIDProvider";
 
@@ -20,13 +21,13 @@ import { ledgerProvider } from "@/lib/LedgerWebHIDProvider";
 // Wires the three SDK primitives:
 //
 //   const signer  = new EthersSigner({ ethereum: ledgerProvider });
-//   const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network });
+//   const relayer = new RelayerWeb({ getChainId, transports: { [SepoliaConfig.chainId]: … } });
 //   <ZamaProvider relayer signer storage sessionStorage>
 //
 // ledgerProvider is a module-level singleton (LedgerWebHIDProvider.ts) that:
 //   - implements EIP-1193 via hw-transport-webhid + hw-app-eth
 //   - routes signing to the physical Ledger device
-//   - routes reads to the Hoodi JsonRpcProvider
+//   - routes reads to the Sepolia JsonRpcProvider
 //   - returns [] for eth_accounts until connect() is called (page.tsx owns the
 //     connect UI; ZamaProvider mounts immediately on all code paths)
 //
@@ -70,7 +71,26 @@ export function Providers({ children }: { children: ReactNode }) {
   }, []);
 
   const relayer = useMemo(
-    () => new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL }),
+    () =>
+      new RelayerWeb({
+        // LedgerWebHIDProvider.eth_chainId returns the hardcoded Sepolia chain ID.
+        // Cannot use getEthereumProvider() here — there is no window.ethereum.
+        getChainId: async () => {
+          try {
+            const hex = (await ledgerProvider.request({ method: "eth_chainId" })) as string;
+            return parseInt(hex, 16);
+          } catch {
+            return SepoliaConfig.chainId;
+          }
+        },
+        transports: {
+          [SepoliaConfig.chainId]: {
+            ...SepoliaConfig,
+            relayerUrl: `${window.location.origin}/api/relayer`,
+            network: SEPOLIA_RPC_URL,
+          },
+        },
+      }),
     [],
   );
 

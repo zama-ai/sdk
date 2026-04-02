@@ -1,10 +1,10 @@
 # Using Zama Confidential Tokens (ERC-7984) with a Ledger Hardware Wallet
 
-**Audience:** Developers integrating Zama confidential tokens on the Hoodi testnet using a **Ledger hardware device** directly in the browser — no MetaMask, no browser extension wallet required.
+**Audience:** Developers integrating Zama confidential tokens on the Sepolia testnet using a **Ledger hardware device** directly in the browser — no MetaMask, no browser extension wallet required.
 
-**What this document covers:** architecture rationale, device compatibility, how the cleartext stack works, prerequisites, step-by-step operation walkthrough, SDK integration details, and troubleshooting.
+**What this document covers:** architecture rationale, device compatibility, how RelayerWeb works, prerequisites, step-by-step operation walkthrough, SDK integration details, and troubleshooting.
 
-**Chain:** Hoodi testnet (chainId 560048)
+**Chain:** Sepolia testnet (chainId 11155111)
 
 ---
 
@@ -14,13 +14,13 @@ ERC-7984 is a token standard that adds **confidential balances and transfer amou
 
 The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`) and the `Token` API (`sdk.createToken().shield()`).
 
-This example uses the **cleartext stack** (`RelayerCleartext`), which is Zama's lightweight backend for chains where the full FHE co-processor is not deployed (including Hoodi). See [How the cleartext stack works](#how-the-cleartext-stack-works) below.
+This example uses **RelayerWeb** — the standard browser FHE worker for Zama-supported networks (Sepolia and Mainnet). FHE operations are handled server-side by the Zama relayer; the SDK communicates with it via a local Next.js proxy (`/api/relayer`) that keeps the optional API key server-side.
 
 ---
 
 ## What this example demonstrates
 
-> A Ledger hardware device can interact directly with ERC-7984 confidential tokens on Hoodi — without any browser extension wallet — using the Zama SDK's ethers integration and a custom EIP-1193 provider built on `@ledgerhq/hw-transport-webhid`.
+> A Ledger hardware device can interact directly with ERC-7984 confidential tokens on Sepolia — without any browser extension wallet — using the Zama SDK's ethers integration and a custom EIP-1193 provider built on `@ledgerhq/hw-transport-webhid`.
 
 Specifically:
 
@@ -61,29 +61,23 @@ The app auto-detects the device tier at runtime (see [Two-tier EIP-712 signing](
 
 ---
 
-## How the cleartext stack works
+## How RelayerWeb works
 
-The full Zama FHE stack (used on Sepolia and Mainnet) relies on:
+The full Zama FHE stack (Sepolia and Mainnet) relies on:
 
 - An **FHE co-processor** that stores encrypted ciphertexts on-chain
 - A **Zama relayer** — an off-chain service that performs server-side decryption using KMS private keys
 
-**Hoodi uses the cleartext stack.** In cleartext mode:
-
-- Values are stored as **plaintexts** in the `CleartextFHEVMExecutor` contract on-chain (no actual FHE encryption)
-- The `RelayerCleartext` class acts as a local relayer: it reads plaintexts directly from the executor contract and produces mock KMS signatures locally
-- **No external service** is required — no relayer URL, no API key
-
-The SDK interface is identical in both modes. From the application developer's perspective, you swap `RelayerWeb` (or `RelayerNode`) for `RelayerCleartext` and point it at the Hoodi preset config. All hooks behave the same way.
+`RelayerWeb` is the browser-side client that communicates with the relayer. To avoid exposing an optional API key to the browser, this example routes all relayer traffic through a local Next.js proxy:
 
 ```
-Full FHE stack (Sepolia / Mainnet)      Cleartext stack (Hoodi)
-──────────────────────────────────      ──────────────────────────────────────
-RelayerWeb → external HTTP service      RelayerCleartext → on-chain executor
-  └─ FHE co-processor (on-chain)          └─ plaintexts(handle) → plaintext
-  └─ KMS decryption (server-side)         └─ mock KMS signature (local)
-  └─ Zama relayer API key required        └─ No API key, no external service
+RelayerWeb → /api/relayer (Next.js proxy) → relayer.testnet.zama.org/v2
+  └─ FHE co-processor (on-chain, Sepolia)
+  └─ KMS decryption (server-side, Zama relayer)
+  └─ No API key required for Sepolia testnet
 ```
+
+The proxy (`src/app/api/relayer/[...path]/route.ts`) forwards requests to `RELAYER_URL` and optionally adds the `x-api-key` header from `RELAYER_API_KEY`. Both are server-side environment variables — never exposed to the browser.
 
 ---
 
@@ -98,10 +92,10 @@ LedgerWebHIDProvider (src/lib/LedgerWebHIDProvider.ts)
   ├─ signing methods     → hw-app-eth (on-device: getAddress, signTransaction,
   │                                    signPersonalMessage, signEIP712Message /
   │                                    signEIP712HashedMessage)
-  └─ read-only methods   → JsonRpcProvider (HOODI_RPC_URL)
+  └─ read-only methods   → JsonRpcProvider (SEPOLIA_RPC_URL)
        │
        ▼
-providers.tsx — EthersSigner + RelayerCleartext + ZamaProvider
+providers.tsx — EthersSigner + RelayerWeb + ZamaProvider
   │
   ▼
 page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield
@@ -114,9 +108,9 @@ page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield
   ▼
 @zama-fhe/sdk (ZamaSDK)
   ├─ EthersSigner   → ledgerProvider (EIP-1193 singleton)
-  └─ RelayerCleartext → hoodiCleartextConfig
-       └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, Hoodi)
-       └─ produces mock KMS signatures locally (no external call)
+  └─ RelayerWeb     → /api/relayer (Next.js proxy) → relayer.testnet.zama.org/v2
+       └─ FHE co-processor (on-chain, Sepolia)
+       └─ KMS decryption (server-side, Zama relayer)
 ```
 
 **Module-level singleton:** `ledgerProvider` (exported from `LedgerWebHIDProvider.ts`) is a single `LedgerWebHIDProvider` instance shared between `providers.tsx` (signing, used by `EthersSigner`) and `page.tsx` (connect UI, `ledgerProvider.connect()`). This ensures both consumers use the same transport state and address.
@@ -165,18 +159,18 @@ Steps before connecting:
 
 1. Unlock the device with your PIN.
 2. Open the **Ethereum** app on the device. The screen should read "Application is ready".
-3. In the Ethereum app settings, ensure **Blind signing** is enabled if you are using a Nano S (required for the `signEIP712HashedMessage` fallback path).
+3. In the Ethereum app settings, ensure **Blind signing** is enabled (Settings → Blind signing → Enable). This is required for all on-chain transactions because Zama contracts are not yet registered in Ledger's CAL.
 
-> On Nano S Plus, Nano X, Stax, and Flex, blind signing is not required — the app uses full EIP-712 field display instead.
+> On Nano S Plus, Nano X, Stax, and Flex, EIP-712 signatures (balance decrypt, delegation) show full field display without blind signing. Blind signing is required only for transaction signing (shield, transfer, unshield, delegation grant/revoke).
 
-### 3. Hoodi ETH (gas)
+### 3. Sepolia ETH (gas)
 
-All on-chain operations require Hoodi ETH. Aim for at least **0.01 ETH** before starting — shield and unshield each involve multiple transactions.
+All on-chain operations require Sepolia ETH. Aim for at least **0.01 ETH** before starting — shield and unshield each involve multiple transactions.
 
 Recommended faucets:
 
-- [hoodi-faucet.pk910.de](https://hoodi-faucet.pk910.de) — proof-of-work faucet, unlimited
-- [faucet.quicknode.com](https://faucet.quicknode.com/ethereum/hoodi) — requires QuickNode account
+- [sepoliafaucet.com](https://sepoliafaucet.com) — requires Alchemy account
+- [faucet.alchemy.com/faucets/ethereum-sepolia](https://faucet.alchemy.com/faucets/ethereum-sepolia) — Alchemy faucet
 
 ### 4. Test tokens
 
@@ -184,18 +178,13 @@ Available tokens have a permissionless `mint(address to, uint256 amount)` functi
 
 ---
 
-## Hoodi contract addresses
+## Sepolia contract addresses
 
-| Token      | ERC-20                                       | ERC-7984 (cToken / wrapper)                  |
-| ---------- | -------------------------------------------- | -------------------------------------------- |
-| USDT Mock  | `0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b` | `0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75` |
-| Test Token | `0x7740F913dC24D4F9e1A72531372c3170452B2F87` | `0x7B1d59BbCD291DAA59cb6C8C5Bc04de1Afc4Aba1` |
+Token pairs are loaded dynamically from the on-chain **WrappersRegistry** at runtime — no hardcoded token addresses are needed. The registry is queried at startup via `useListPairs({ metadata: true })`; name, symbol, and decimal precision are included in the response.
 
-Registry (DeploymentCoordinator): `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
+Registry (WrappersRegistry): `0x2f0750Bbb0A246059d80e94c454586a7F27a128e`
 
-All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
-
-> Token pairs are loaded dynamically from the on-chain WrappersRegistry at runtime — `src/app/page.tsx` contains no hardcoded token addresses. If contracts are redeployed, only the registry needs updating; the app picks up new addresses automatically.
+All contracts verified on [sepolia.etherscan.io](https://sepolia.etherscan.io).
 
 ---
 
@@ -207,10 +196,10 @@ Click the **Mint** button next to the ERC-20 balance. This mints 10 whole tokens
 
 ### Via Etherscan
 
-1. Go to the ERC-20 contract on [hoodi.etherscan.io](https://hoodi.etherscan.io).
+1. Go to the ERC-20 contract on [sepolia.etherscan.io](https://sepolia.etherscan.io).
 2. Click the **Contract** tab → **Write Contract**.
 3. Click **Connect to Web3** and connect a wallet.
-4. Find the `mint` function, enter your Ledger address and the desired amount in raw units (e.g., `10000000` for 10 USDT Mock, which has 6 decimals).
+4. Find the `mint` function, enter your Ledger address and the desired amount in raw units (e.g., `10000000` for 10 tokens with 6 decimals).
 5. Click **Write** and confirm in your wallet.
 
 ### Via code
@@ -219,11 +208,11 @@ Click the **Mint** button next to the ERC-20 balance. This mints 10 whole tokens
 import { Contract, JsonRpcProvider, Wallet, parseUnits } from "ethers";
 
 const MINT_ABI = ["function mint(address to, uint256 amount)"];
-const provider = new JsonRpcProvider("https://rpc.hoodi.ethpandaops.io");
+const provider = new JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
 const signer = new Wallet("0xYOUR_PRIVATE_KEY", provider);
 
 // Amounts are raw integers: use parseUnits to convert from human-readable values.
-const token = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
+const token = new Contract("0xTOKEN_ADDRESS", MINT_ABI, signer);
 await token.mint("0xYOUR_LEDGER_ADDRESS", parseUnits("10", 6)); // 6 decimals
 ```
 
@@ -243,7 +232,7 @@ Click **Connect Ledger**. The browser opens a **WebHID device picker** listing a
 2. Reads the Ethereum address at the selected BIP-44 path via `hw-app-eth.getAddress()`.
 3. Sets the address in state and emits an `accountsChanged` event.
 
-Once connected, your Ledger address, ETH balance, and account index appear at the top of the page. No network switch is needed — transactions are signed and broadcast directly to the Hoodi RPC by the provider.
+Once connected, your Ledger address, ETH balance, and account index appear at the top of the page. No network switch is needed — transactions are signed and broadcast directly to the Sepolia RPC by the provider.
 
 **Verify address:** after connecting, the header shows a **Verify address** button. Clicking it calls `getAddress(path, display:true)` — the device screen shows the derived address so you can compare it with what the browser displays (anti-phishing check). The button label updates to **✓ Verified** for 4 seconds, then resets.
 
@@ -264,7 +253,7 @@ If your ERC-20 balance shows `0`, click **Mint** next to the ERC-20 balance to m
 Two balances are displayed:
 
 - **ERC-20 balance** — your public on-chain balance of the underlying token. Read via a standard `balanceOf` call (no device interaction).
-- **Confidential balance** — your confidential cToken balance, read via `useConfidentialBalance`. The SDK reads the encrypted handle on-chain (Phase 1), then decrypts it via `RelayerCleartext` (Phase 2).
+- **Confidential balance** — your confidential cToken balance, read via `useConfidentialBalance`. The SDK reads the encrypted handle on-chain (Phase 1), then decrypts it via the Zama relayer through `RelayerWeb` (Phase 2).
 
 **Explicit decrypt pattern:** the confidential balance is not queried until you explicitly authorize FHE decryption. The Balances card shows a **Decrypt Balance** button instead of a balance value. This avoids prompting EIP-712 signatures on mount.
 
@@ -292,6 +281,8 @@ The app manages ERC-20 allowances automatically. The spend cap is set to your **
 
 Each device confirmation displays the transaction details on-screen. On **Nano S**, fields are shown as raw hex values. On **Nano S Plus / Nano X / Stax / Flex**, field names and decoded values are shown.
 
+> **Blind signing required:** transaction confirmations require blind signing to be enabled in the Ledger Ethereum app settings (Settings → Blind signing → Enable) because Zama contracts are not yet registered in Ledger's CAL.
+
 The button shows **Shielding… (1/2 approve)** during approval and **Shielding… (2/2 wrap)** once the approval is confirmed. The ERC-20 balance refreshes automatically on success.
 
 ### Step 6 — Confidential transfer
@@ -300,7 +291,7 @@ Enter a **recipient address** and an **amount**, then click **Transfer**. This s
 
 The operation has two phases:
 
-1. **FHE encryption** — the amount is encrypted locally by the SDK. The button shows **Encrypting…** during this phase (no device interaction).
+1. **FHE encryption** — the amount is encrypted by the Zama relayer. The button shows **Encrypting…** during this phase (no device interaction).
 2. **Transaction submission** — the encrypted transfer is sent on-chain. The button shows **Submitting…** and one device confirmation is required.
 
 ### Step 7 — Unshield (cToken → ERC-20)
@@ -310,9 +301,9 @@ Enter an amount and click **Unshield**. This converts cTokens back into public E
 Unshield is a two-phase operation:
 
 1. **Unwrap** — a transaction that burns the cTokens and emits an `UnwrapRequested` event. The button shows **Unshielding… (1/2)**. One device confirmation.
-2. **Finalize** — `RelayerCleartext` decrypts the amount locally (no external call, no device prompt), then submits a `finalizeUnwrap` transaction. The button shows **Unshielding… (2/2)**. One device confirmation.
+2. **Finalize** — the Zama relayer decrypts the amount server-side and submits a `finalizeUnwrap` transaction. The button shows **Unshielding… (2/2)**. One device confirmation.
 
-Both phases complete within seconds on Hoodi. The ERC-20 balance refreshes automatically on success.
+The ERC-20 balance refreshes automatically on success.
 
 **Tab close resilience:** if you close the tab after Phase 1 completes but before Phase 2 starts, the pending unshield is saved in IndexedDB. A **Pending Unshield** card appears when you reopen the app, allowing you to resume finalization.
 
@@ -370,12 +361,12 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
   // eth_signTypedData_v4               → signEIP712Message (Tier 1, field display)
   //                                       or signEIP712HashedMessage (Tier 2, Nano S)
   // eth_sendTransaction                → signTransaction + eth_sendRawTransaction
-  // eth_chainId                        → hardcoded Hoodi (560048)
+  // eth_chainId                        → hardcoded Sepolia (11155111)
   // eth_blockNumber                    → high-water mark (monotonically increasing)
-  // everything else                    → forwarded to JsonRpcProvider(HOODI_RPC_URL)
+  // everything else                    → forwarded to JsonRpcProvider(SEPOLIA_RPC_URL)
 
-  // Skips the fetch to crypto-assets-service.api.ledger.com — Hoodi and Zama
-  // contracts are not registered there, so the request always 403s with CORS.
+  // Skips the fetch to crypto-assets-service.api.ledger.com — Zama contracts are not
+  // registered in Ledger's CAL, so the request always 403s with CORS.
   private static readonly LOAD_CONFIG = { calServiceURL: null };
 
   async connect(accountIndex = 0): Promise<string> {
@@ -414,28 +405,57 @@ export class LedgerWebHIDProvider implements EIP1193Provider {
 export const ledgerProvider = new LedgerWebHIDProvider();
 ```
 
-**High-water mark on `eth_blockNumber`:** ethers' `PollingBlockSubscriber` only polls for new receipts when `eth_blockNumber` returns a value strictly higher than the last seen block. To ensure the subscriber fires every poll interval (~4 s) rather than once per block (~12 s on Hoodi), `eth_blockNumber` responses are adjusted to always be strictly increasing — if the actual block has not advanced, the counter increments by 1.
+**High-water mark on `eth_blockNumber`:** ethers' `PollingBlockSubscriber` only polls for new receipts when `eth_blockNumber` returns a value strictly higher than the last seen block. To ensure the subscriber fires every poll interval (~4 s) rather than once per block (~12 s on Sepolia), `eth_blockNumber` responses are adjusted to always be strictly increasing — if the actual block has not advanced, the counter increments by 1.
 
-**EIP-1559 transaction signing:** `eth_sendTransaction` builds an unsigned EIP-1559 transaction (`Transaction.from({ type: 2, ... })`), sends `tx.unsignedSerialized.slice(2)` (without the `0x` prefix) to `hw-app-eth.signTransaction()`, then attaches the signature in-place: `tx.signature = Signature.from({ r, s, v })`. The signed `tx.serialized` is broadcast via `eth_sendRawTransaction` on the Hoodi RPC.
+**EIP-1559 transaction signing:** `eth_sendTransaction` builds an unsigned EIP-1559 transaction (`Transaction.from({ type: 2, ... })`), sends `tx.unsignedSerialized.slice(2)` (without the `0x` prefix) to `hw-app-eth.signTransaction()`, then attaches the signature in-place: `tx.signature = Signature.from({ r, s, v })`. The signed `tx.serialized` is broadcast via `eth_sendRawTransaction` on the Sepolia RPC.
 
 ### Providers setup
 
 ```tsx
 // src/providers.tsx
-import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { RelayerWeb, ZamaProvider, IndexedDBStorage, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { SepoliaConfig } from "@zama-fhe/sdk";
 import { EthersSigner } from "@zama-fhe/sdk/ethers";
-import { ZamaProvider, IndexedDBStorage, indexedDBStorage } from "@zama-fhe/react-sdk";
 import { ledgerProvider } from "@/lib/LedgerWebHIDProvider";
-import { HOODI_RPC_URL } from "@/lib/config";
+import { SEPOLIA_RPC_URL } from "@/lib/config";
 
-// EthersSigner wraps ledgerProvider (EIP-1193) for use by ZamaSDK.
-// walletKey is incremented on accountsChanged, forcing ZamaProvider to remount
-// with a fresh signer bound to the new Ledger address.
-const signer = new EthersSigner({ ethereum: ledgerProvider as any });
+// Cannot use getEthereumProvider() — there is no window.ethereum in this context.
+// Instead, query the hardcoded chain ID directly from LedgerWebHIDProvider.
+const relayer = useMemo(
+  () =>
+    new RelayerWeb({
+      getChainId: async () => {
+        try {
+          const hex = (await ledgerProvider.request({ method: "eth_chainId" })) as string;
+          return parseInt(hex, 16);
+        } catch {
+          return SepoliaConfig.chainId;
+        }
+      },
+      transports: {
+        [SepoliaConfig.chainId]: {
+          ...SepoliaConfig,
+          // Route relayer traffic through the local Next.js proxy to keep
+          // RELAYER_API_KEY server-side.
+          relayerUrl: `${window.location.origin}/api/relayer`,
+          network: SEPOLIA_RPC_URL,
+        },
+      },
+    }),
+  [],
+);
 
-// hoodiCleartextConfig contains the chainId, executor address, and ACL address for Hoodi.
-// Override `network` to use a custom RPC endpoint.
-const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL });
+// EthersSigner is recreated on each walletKey bump so ZamaSDK re-resolves
+// the active account from the provider.
+const signer = useMemo(
+  () =>
+    new EthersSigner({
+      // LedgerWebHIDProvider is EIP-1193 compatible but its type is narrower than
+      // the Eip1193Provider union that EthersSigner expects — cast required.
+      ethereum: ledgerProvider as any,
+    }),
+  [walletKey],
+);
 
 // IMPORTANT: use a separate IndexedDBStorage instance for sessionStorage.
 // Both storage and sessionStorage use the same key internally — sharing the same
@@ -445,12 +465,30 @@ const sessionDBStorage = new IndexedDBStorage("SessionStore");
 <ZamaProvider
   relayer={relayer}
   signer={signer}
-  storage={indexedDBStorage} // "CredentialStore" DB — encrypted FHE keypair
+  storage={indexedDBStorage}      // "CredentialStore" DB — encrypted FHE keypair
   sessionStorage={sessionDBStorage} // "SessionStore" DB — EIP-712 session signatures
   keypairTTL={30 * 24 * 60 * 60} // 30 days — same as sessionTTL default
 >
   ...
 </ZamaProvider>;
+```
+
+### Relayer proxy
+
+`src/app/api/relayer/[...path]/route.ts` proxies all SDK relayer calls to `RELAYER_URL` (server-side env var, defaults to `https://relayer.testnet.zama.org/v2`). If `RELAYER_API_KEY` is set, it is forwarded as the `x-api-key` header. Neither variable is ever sent to the browser.
+
+```ts
+// Minimal illustration — see the actual file for validation and error handling.
+const RELAYER_URL = process.env.RELAYER_URL ?? "https://relayer.testnet.zama.org/v2";
+const RELAYER_API_KEY = process.env.RELAYER_API_KEY;
+
+export async function POST(req: Request, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params;
+  const url = `${RELAYER_URL}/${path.join("/")}`;
+  const headers = new Headers(req.headers);
+  if (RELAYER_API_KEY) headers.set("x-api-key", RELAYER_API_KEY);
+  return fetch(url, { method: "POST", headers, body: req.body });
+}
 ```
 
 ### Hook usage
@@ -494,7 +532,7 @@ const sdk = useZamaSDK();
 const token = sdk.createToken(pair!.confidentialTokenAddress);
 await token.shield(parseUnits("1", erc20Decimals), { approvalStrategy: "skip" });
 
-// Transfer: FHE encryption (local) + 1 transaction.
+// Transfer: FHE encryption (relayer) + 1 transaction.
 const transfer = useConfidentialTransfer({ tokenAddress: pair?.confidentialTokenAddress });
 transfer.mutate({
   to: "0xRecipient",
@@ -559,11 +597,13 @@ if (decryptAs.error instanceof DelegationExpiredError) {
 
 ## Environment variables
 
-| Variable                    | Required | Default                            | Description                                                                     |
-| --------------------------- | -------- | ---------------------------------- | ------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_HOODI_RPC_URL` | No       | `https://rpc.hoodi.ethpandaops.io` | Override the Hoodi RPC endpoint. Example: `https://hoodi.infura.io/v3/YOUR_KEY` |
+| Variable                      | Required | Default                                       | Description                                                                                     |
+| ----------------------------- | -------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `RELAYER_URL`                 | No       | `https://relayer.testnet.zama.org/v2`         | Relayer base URL (server-side). Not required for Sepolia testnet.                               |
+| `RELAYER_API_KEY`             | No       | —                                             | API key forwarded as `x-api-key` by the proxy. Not required for testnet.                        |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | `https://ethereum-sepolia-rpc.publicnode.com` | Override the default Sepolia RPC. Example: `https://sepolia.infura.io/v3/YOUR_KEY`.             |
 
-Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_HOODI_RPC_URL` to a private endpoint if desired. Leaving the value empty is safe — the app falls back to the default public endpoint automatically.
+Copy `.env.example` to `.env.local`. No changes are needed for Sepolia testnet — all defaults are pre-configured. Set `NEXT_PUBLIC_SEPOLIA_RPC_URL` if you have a private RPC endpoint; set `RELAYER_URL` and `RELAYER_API_KEY` only when using a private relayer (e.g. Mainnet).
 
 ---
 
@@ -575,15 +615,15 @@ Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_HOODI_RPC_URL` to a pri
 | WebHID device picker is empty                               | Ledger not connected via USB, or browser lacks permission                                                                                                | Connect the Ledger via USB before clicking **Connect Ledger**. Bluetooth is not supported by `hw-transport-webhid`.                                                                                                                                    |
 | "WebHID is not supported in this browser"                   | Using Firefox or Safari                                                                                                                                  | Switch to Chrome, Edge, or Brave (Chromium 89+).                                                                                                                                                                                                       |
 | Device shows "Sign typed data? ⚠️" for all EIP-712 requests | Using a Nano S — this is expected (Tier 2 pre-hashed signing)                                                                                            | Normal behavior. Approve as usual. To see individual field names and values, use a Nano S Plus, Nano X, Stax, or Flex.                                                                                                                                 |
-| EIP-712 signature fails with "Blind signing not enabled"    | Nano S requires blind signing to be enabled for `signEIP712HashedMessage`                                                                                | On the Ledger device: Ethereum app → Settings → Blind signing → Enable.                                                                                                                                                                                |
+| Transaction blocked: "Blind signing must be enabled"        | Blind signing not enabled on the device                                                                                                                  | On the Ledger device: Ethereum app → Settings → Blind signing → Enable. Required for all on-chain transactions until Zama contracts are registered in Ledger's CAL.                                                                                    |
 | ERC-20 balance shows `0`                                    | Tokens not yet minted                                                                                                                                    | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens).                                                                                                                                                    |
 | Confidential balance shows `—` immediately after connect    | No shielded balance yet — no encrypted handle to read                                                                                                    | Shield some tokens first; the balance will display once there is something to decrypt.                                                                                                                                                                 |
 | "Decrypting…" stays indefinitely                            | Missed the EIP-712 confirmation prompt on the device                                                                                                     | Check the device screen and approve (or reject) the pending signature request.                                                                                                                                                                         |
 | Transaction confirmation times out on the device            | Ledger screen-lock activates mid-flow                                                                                                                    | Keep the device active during multi-step operations. If a confirmation times out, retry the operation — nonces and gas estimates will be refreshed.                                                                                                    |
 | "nonce too low" error on transaction submission             | A previous transaction is still pending in the mempool                                                                                                   | Wait for all pending transactions to confirm, then retry. The provider queries the `pending` nonce count to account for un-mined transactions.                                                                                                         |
 | Asked to sign again after each balance decrypt              | Session not yet cached (first use — expected)                                                                                                            | Approve once — subsequent decryptions reuse the IndexedDB-persisted session credential (30-day TTL). If the prompt recurs every time, check that `storage` and `sessionStorage` in `ZamaProvider` point to **different** `IndexedDBStorage` instances. |
-| Shield fails with "Transaction reverted"                    | Insufficient token balance, or spend cap approved but wrap reverted                                                                                      | Verify you have sufficient ERC-20 balance and Hoodi ETH. Retry — the app re-estimates gas and re-queries the nonce on each attempt.                                                                                                                    |
-| Unshield shows "Unshielding… (2/2)" for longer than usual   | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow. The receipt is polled every ~4 s via the high-water mark on `eth_blockNumber`.                                                                                                                           |
+| Shield fails with "Transaction reverted"                    | Insufficient token balance, or spend cap approved but wrap reverted                                                                                      | Verify you have sufficient ERC-20 balance and Sepolia ETH. Retry — the app re-estimates gas and re-queries the nonce on each attempt.                                                                                                                  |
+| Unshield shows "Unshielding… (2/2)" for longer than usual   | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Sepolia — the public RPC can be slow. The receipt is polled every ~4 s via the high-water mark on `eth_blockNumber`.                                                                                                                         |
 | Pending unshield card appears on reload                     | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens.                                                                                                                                              |
 | Delegate can still decrypt after revocation                 | Expected behavior — decrypted values are cached in IndexedDB keyed by `(token, owner, handle)`; the cache is served without re-checking the on-chain ACL | By design: the SDK uses the on-chain encrypted handle as the cache key (no TTL). Revocation takes full effect as soon as the owner's balance changes (shield, transfer, or unshield), producing a new handle and invalidating the cache entry.         |
 | Grant Access reverts with `ExpirationDateBeforeOneHour`     | Expiration date is less than 1 hour in the future                                                                                                        | Set the expiry to at least 1 hour from now. The ACL contract compares against `block.timestamp` (UTC).                                                                                                                                                 |
@@ -594,7 +634,7 @@ Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_HOODI_RPC_URL` to a pri
 
 ## Running tests
 
-End-to-end tests live in `e2e/` and use **Playwright**. The test suite mocks both the Ledger hardware device and the Hoodi RPC, so **no physical device and no network connection are required**.
+End-to-end tests live in `e2e/` and use **Playwright**. The test suite mocks both the Ledger hardware device and the Sepolia RPC, so **no physical device and no network connection are required**.
 
 ```bash
 # Install Playwright browsers (first time only)
@@ -622,14 +662,27 @@ npm run test:e2e
 
 - **`mockLedger(config)`** — replaces `connect()` with a stub that sets `_address` and fires `accountsChanged` without opening a WebHID picker; replaces `verifyAddress()` with a no-op.
 - **`simulateDisconnect()`** — calls `_onDisconnect()` directly to simulate the device being unplugged.
-- **`mockRpc(options)`** — intercepts all requests to the Hoodi RPC with ABI-encoded static responses (chain ID, registry pairs, token metadata).
+- **`mockRpc(options)`** — intercepts all requests to the Sepolia RPC (`ethereum-sepolia-rpc.publicnode.com`) with ABI-encoded static responses (chain ID, registry pairs, token metadata).
+
+### How tests isolate the relayer
+
+With `RelayerWeb`, the SDK initiates a connection to the relayer at startup. Tests intercept all requests to `/api/relayer/**` and abort them via a `page` fixture override in `e2e/fixtures.ts`:
+
+```ts
+page: async ({ page }, use) => {
+  await page.route("**/api/relayer/**", (route) => route.abort());
+  await use(page);
+},
+```
+
+This keeps the suite self-contained with no dependency on the Zama relayer or any external service.
 
 ---
 
 ## Going further
 
-- **Additional tokens** — register new ERC-7984 pairs in the on-chain WrappersRegistry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`. The app picks them up automatically via `useListPairs` on the next load.
+- **Additional tokens** — register new ERC-7984 pairs in the on-chain WrappersRegistry at `0x2f0750Bbb0A246059d80e94c454586a7F27a128e`. The app picks them up automatically via `useListPairs` on the next load.
 - **More BIP-44 accounts** — the connect-screen dropdown supports indices 0–4. To expose additional accounts or non-standard derivation paths, extend the account options passed to `connect(accountIndex)` in `LedgerWebHIDProvider.ts`.
-- **Production use** — replace `RelayerCleartext` with `RelayerWeb` (browser) or `RelayerNode` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
 - **Bluetooth transport** — swap `@ledgerhq/hw-transport-webhid` for `@ledgerhq/hw-transport-web-ble` to support Nano X / Stax / Flex over Bluetooth (also Chromium-only).
+- **CAL registration** — register Zama contracts in Ledger's [Clear-signing Asset Library](https://github.com/LedgerHQ/ledger-asset-dapps) via ERC-7730 metadata to remove the blind signing requirement and add human-readable field labels for transaction confirmations.
 - **ERC-7730 clear signing** — pass a resolution object as the third argument to `signTransaction` in `LedgerWebHIDProvider.ts` to enable Ledger's clear-signing metadata standard for full transaction field display on-device.

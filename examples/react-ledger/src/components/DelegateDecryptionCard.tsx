@@ -4,7 +4,7 @@ import { useState } from "react";
 import { isAddress } from "ethers";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/react-sdk";
-import { HOODI_EXPLORER_URL } from "@/lib/config";
+import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface DelegateDecryptionCardProps {
   tokenAddress: Address;
@@ -95,7 +95,7 @@ export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecry
         <div className="alert alert-success card-status">
           Access granted!{" "}
           <a
-            href={`${HOODI_EXPLORER_URL}/tx/${delegate.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${delegate.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >
