@@ -1,5 +1,4 @@
 import type {
-  ClearValueType,
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
@@ -13,6 +12,7 @@ import { RelayerWorkerClient, type WorkerClientConfig } from "../worker/worker.c
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
+  ClearValueType,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,

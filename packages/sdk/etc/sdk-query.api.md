@@ -6,7 +6,6 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -140,6 +139,9 @@ export interface BatchDecryptOptions {
 
 // @public (undocumented)
 export function batchTransferFeeQueryOptions(signer: GenericSigner, feeManagerAddress?: Address, config?: FeeQueryConfig): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.fees.batchTransferFee>>;
+
+// @public
+export type ClearValueType = bigint | boolean | `0x${string}`;
 
 // @public (undocumented)
 export function confidentialApproveMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialApprove", Address], ConfidentialApproveParams, TransactionResult>;
@@ -456,10 +458,8 @@ export interface DelegateDecryptionParams {
     expirationDate?: Date;
 }
 
-// Warning: (ae-forgotten-export) The symbol "ClearValueType$1" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
-export function delegatedUserDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedUserDecrypt"], DelegatedUserDecryptParams, Readonly<Record<Handle, ClearValueType$1>>>;
+export function delegatedUserDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedUserDecrypt"], DelegatedUserDecryptParams, Readonly<Record<Handle, ClearValueType>>>;
 
 // @public
 export interface DelegatedUserDecryptParams {
@@ -766,7 +766,7 @@ export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptio
 
 // @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, ClearValueType$1>>;
+    clearValues: Readonly<Record<Handle, ClearValueType>>;
 };
 
 // @public (undocumented)
@@ -1342,11 +1342,11 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 // @public
 export interface UserDecryptCallbacks {
     onCredentialsReady?: () => void;
-    onDecrypted?: (values: Record<Handle, ClearValueType$1>) => void;
+    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
 }
 
 // @public (undocumented)
-export function userDecryptMutationOptions(sdk: ZamaSDK, callbacks?: UserDecryptCallbacks): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, Record<Handle, ClearValueType$1>>;
+export function userDecryptMutationOptions(sdk: ZamaSDK, callbacks?: UserDecryptCallbacks): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, Record<Handle, ClearValueType>>;
 
 // @public
 export interface UserDecryptMutationParams {
@@ -1719,7 +1719,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-Co7GdzOP.d.ts:1839:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-D8okM6NP.d.ts:1839:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -5,8 +5,6 @@
 ```ts
 
 import { Address } from 'viem';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
-import { ClearValueType as ClearValueType_2 } from '@zama-fhe/relayer-sdk/node';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig as FhevmInstanceConfig_2 } from '@zama-fhe/relayer-sdk/node';
 import { Hex } from 'viem';
@@ -99,6 +97,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     userDecrypt(params: UserDecryptPayload): Promise<UserDecryptResponseData>;
     protected abstract wireEvents(worker: TWorker): void;
 }
+
+// @public
+export type ClearValueType = bigint | boolean | `0x${string}`;
 
 // @public (undocumented)
 export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload"];
@@ -210,10 +211,8 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
 
 // @public (undocumented)
 export interface DelegatedUserDecryptResponseData {
-    // Warning: (ae-forgotten-export) The symbol "ClearValueType$1" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
-    clearValues: Record<Handle, ClearValueType$1>;
+    clearValues: Record<Handle, ClearValueType>;
 }
 
 // @public
@@ -491,14 +490,14 @@ export interface PublicDecryptResponseData {
     // (undocumented)
     abiEncodedClearValues: Hex;
     // (undocumented)
-    clearValues: Readonly<Record<Handle, ClearValueType$1>>;
+    clearValues: Readonly<Record<Handle, ClearValueType>>;
     // (undocumented)
     decryptionProof: Hex;
 }
 
 // @public
 export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, ClearValueType$1>>;
+    clearValues: Readonly<Record<Handle, ClearValueType>>;
 };
 
 // @public
@@ -509,7 +508,7 @@ export class RelayerNode implements RelayerSDK {
     // (undocumented)
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType_2>>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
@@ -533,7 +532,7 @@ export class RelayerNode implements RelayerSDK {
     // (undocumented)
     terminate(): void;
     // (undocumented)
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType_2>>>;
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
 
 // @public (undocumented)
@@ -661,7 +660,7 @@ export interface UserDecryptRequest extends BaseRequest {
 // @public (undocumented)
 export interface UserDecryptResponseData {
     // (undocumented)
-    clearValues: Record<Handle, ClearValueType$1>;
+    clearValues: Record<Handle, ClearValueType>;
 }
 
 // @public (undocumented)

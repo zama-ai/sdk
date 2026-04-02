@@ -1,5 +1,4 @@
 import type {
-  ClearValueType,
   FhevmInstanceConfig,
   InputProofBytesType,
   KeypairType,
@@ -15,6 +14,7 @@ import type { GenericLogger } from "../worker/worker.types";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
+  ClearValueType,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
