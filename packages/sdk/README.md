@@ -855,4 +855,4 @@ Low-level FHE operations are available on the relayer backend via `sdk.relayer`:
 
 For direct use with viem, ethers, or any ABI-compatible library:
 
-`ERC20_ABI`, `ERC20_METADATA_ABI`, `ENCRYPTION_ABI`, `WRAPPER_ABI`, `DEPLOYMENT_COORDINATOR_ABI`, `ERC165_ABI`, `FEE_MANAGER_ABI`, `TRANSFER_BATCHER_ABI`, `BATCH_SWAP_ABI`.
+`ERC20_ABI`, `ERC20_METADATA_ABI`, `ENCRYPTION_ABI`, `WRAPPER_ABI`, `DEPLOYMENT_COORDINATOR_ABI`, `ERC165_ABI`, `TRANSFER_BATCHER_ABI`, `BATCH_SWAP_ABI`.

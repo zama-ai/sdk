@@ -837,10 +837,15 @@ export class Token extends ReadonlyToken {
       : MAX_UINT64;
 
     // Pre-flight with RPC: new expiry must differ from current (ExpirationDateAlreadySetToSameValue)
-    const currentExpiry = await this.getDelegationExpiry({
-      delegatorAddress: signerAddress,
-      delegateAddress: normalizedDelegate,
-    });
+    let currentExpiry: bigint;
+    try {
+      currentExpiry = await this.getDelegationExpiry({
+        delegatorAddress: signerAddress,
+        delegateAddress: normalizedDelegate,
+      });
+    } catch {
+      currentExpiry = -1n; // RPC failure — skip client-side check, let the contract enforce
+    }
     if (currentExpiry === expDate) {
       throw new DelegationExpiryUnchangedError(
         `The new expiration date (${expDate}) is the same as the current one. No on-chain change needed.`,
@@ -893,10 +898,15 @@ export class Token extends ReadonlyToken {
     // Pre-flight: reject if never delegated (expiry === 0).
     // Expired delegations (non-zero expiry in the past) are allowed through —
     // the ACL contract accepts revocation of expired delegations.
-    const currentExpiry = await this.getDelegationExpiry({
-      delegatorAddress: signerAddress,
-      delegateAddress: normalizedDelegate,
-    });
+    let currentExpiry: bigint;
+    try {
+      currentExpiry = await this.getDelegationExpiry({
+        delegatorAddress: signerAddress,
+        delegateAddress: normalizedDelegate,
+      });
+    } catch {
+      currentExpiry = 1n; // RPC failure — skip client-side check, let the contract enforce
+    }
     if (currentExpiry === 0n) {
       throw new DelegationNotFoundError(
         `No active delegation found for delegate ${normalizedDelegate} on contract ${this.address}.`,

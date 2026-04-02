@@ -425,4 +425,5 @@ export {
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   matchZamaError,
+  matchAclRevert,
 } from "@zama-fhe/sdk";
