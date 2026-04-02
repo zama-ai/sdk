@@ -9,6 +9,7 @@
 - [ ] `@zama-fhe/test-components`
 - [ ] `@zama-fhe/test-nextjs`
 - [ ] `@zama-fhe/test-vite`
+- [ ] Examples (`examples/`)
 - [ ] CI/workflows
 - [ ] Docs
 
