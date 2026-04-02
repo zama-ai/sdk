@@ -31,7 +31,7 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
-import { prefixHex, unprefixHex } from "../utils";
+import { assertNonNullable, prefixHex, unprefixHex } from "../utils";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -39,13 +39,17 @@ if (!parentPort) {
 
 const port = parentPort;
 
-let sdkInstance: FhevmInstance = null;
+let sdkInstance: FhevmInstance | null = null;
 
-function assertSdkInitialized(
-  instance: FhevmInstance,
+function assertSdkInstance(
+  instance: FhevmInstance | null,
 ): asserts instance is NonNullable<FhevmInstance> {
-  if (!instance) {
-    throw new Error("SDK not initialized. Call INIT first.");
+  try {
+    assertNonNullable(instance, "Relayer SDK instance");
+  } catch (error) {
+    throw new Error("Relayer SDK is not initialized. Call INIT first.", {
+      cause: error,
+    });
   }
 }
 
@@ -100,7 +104,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   const { values, contractAddress, userAddress } = payload;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const input = sdkInstance.createEncryptedInput(contractAddress, userAddress);
 
@@ -160,7 +164,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   const { id, type, payload } = request;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const handleContractPairs = payload.handles.map((handle) => ({
       handle,
@@ -192,7 +196,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   const { id, type, payload } = request;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const result = await sdkInstance.publicDecrypt(payload.handles);
 
@@ -210,7 +214,7 @@ function handleGenerateKeypair(request: GenerateKeypairRequest): void {
   const { id, type } = request;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const keypair = sdkInstance.generateKeypair();
 
@@ -231,7 +235,7 @@ function handleCreateEIP712(request: CreateEIP712Request): void {
   const { id, type, payload } = request;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const eip712 = sdkInstance.createEIP712(
       unprefixHex(payload.publicKey),
@@ -276,7 +280,7 @@ function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request): voi
   const { id, type, payload } = request;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const result = sdkInstance.createDelegatedUserDecryptEIP712(
       unprefixHex(payload.publicKey),
@@ -298,7 +302,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   const { id, type, payload } = request;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const handleContractPairs = payload.handles.map((handle) => ({
       handle,
@@ -333,7 +337,7 @@ async function handleRequestZKProofVerification(
   const { id, type, payload } = request;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const result = await sdkInstance.requestZKProofVerification(payload.zkProof);
 
@@ -354,7 +358,7 @@ function handleGetPublicKey(request: GetPublicKeyRequest): void {
   const { id, type } = request;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const result = sdkInstance.getPublicKey();
 
@@ -372,7 +376,7 @@ function handleGetPublicParams(request: GetPublicParamsRequest): void {
   const { id, type, payload } = request;
 
   try {
-    assertSdkInitialized(sdkInstance);
+    assertSdkInstance(sdkInstance);
 
     const result = sdkInstance.getPublicParams(
       // oxlint-disable-next-line typescript-eslint/consistent-type-imports -- SDK loaded dynamically
