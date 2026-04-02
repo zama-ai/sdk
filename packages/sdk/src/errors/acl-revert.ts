@@ -12,11 +12,17 @@ import {
 
 /** Extract the decoded error name from a viem ContractFunctionRevertedError. */
 function extractRevertErrorName(error: unknown): string | null {
-  if (!(error instanceof Error)) {return null;}
+  if (!(error instanceof Error)) {
+    return null;
+  }
   const cause = error.cause;
-  if (typeof cause !== "object" || cause === null || !("data" in cause)) {return null;}
+  if (typeof cause !== "object" || cause === null || !("data" in cause)) {
+    return null;
+  }
   const { data } = cause;
-  if (typeof data !== "object" || data === null || !("errorName" in data)) {return null;}
+  if (typeof data !== "object" || data === null || !("errorName" in data)) {
+    return null;
+  }
   return typeof data.errorName === "string" ? data.errorName : null;
 }
 

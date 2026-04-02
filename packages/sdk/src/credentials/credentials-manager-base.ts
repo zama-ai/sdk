@@ -231,7 +231,9 @@ export abstract class BaseCredentialsManager<
         });
       }
     } catch (error) {
-      if (error instanceof ZamaError) {throw error;}
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       // oxlint-disable-next-line no-console
       console.warn("[zama-sdk] Credential resolution failed, recreating:", error);
       this.emit({
@@ -336,7 +338,9 @@ export abstract class BaseCredentialsManager<
       this.emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
     } catch (error) {
-      if (error instanceof ZamaError) {throw error;}
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       wrapSigningError(error, errorContext);
     }
   }
