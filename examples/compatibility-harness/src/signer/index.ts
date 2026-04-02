@@ -41,11 +41,19 @@ import { networkConfig } from "../config/network.js";
 
 // TODO: Replace this with your own signer implementation.
 
-if (!process.env.PRIVATE_KEY) {
-  throw new Error("PRIVATE_KEY is not set. Copy .env.example to .env and add your private key.");
+const rawKey = process.env.PRIVATE_KEY ?? "";
+const isValidKey = /^0x[0-9a-fA-F]{64}$/.test(rawKey);
+
+if (!rawKey || !isValidKey) {
+  throw new Error(
+    rawKey
+      ? `PRIVATE_KEY is invalid (got "${rawKey.slice(0, 6)}…"). ` +
+          "Expected a 0x-prefixed 64-character hex string (32 bytes)."
+      : "PRIVATE_KEY is not set. Copy .env.example to .env and fill in your private key.",
+  );
 }
 
-const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
+const account = privateKeyToAccount(rawKey as `0x${string}`);
 
 const walletClient = createWalletClient({
   account,
