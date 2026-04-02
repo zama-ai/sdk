@@ -31,8 +31,5 @@ export function isContractCallError(error: unknown): boolean {
   }
   // Fallback: common revert message patterns from various providers
   const msg = error.message.toLowerCase();
-  if (msg.includes("execution reverted") || msg.includes("revert")) {
-    return true;
-  }
-  return false;
+  return msg.includes("execution reverted") || msg.includes("call revert exception");
 }

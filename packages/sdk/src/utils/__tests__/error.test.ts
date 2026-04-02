@@ -60,6 +60,15 @@ describe("isContractCallError", () => {
     expect(isContractCallError(new Error("execution reverted"))).toBe(true);
   });
 
+  it("detects ethers call revert exception message", () => {
+    expect(isContractCallError(new Error("call revert exception"))).toBe(true);
+  });
+
+  it("returns false for unrelated errors containing 'revert'", () => {
+    expect(isContractCallError(new Error("Failed to revert local state"))).toBe(false);
+    expect(isContractCallError(new Error("Please revert your changes"))).toBe(false);
+  });
+
   it("returns false for network errors", () => {
     expect(isContractCallError(new Error("fetch failed"))).toBe(false);
     expect(isContractCallError(new Error("connection refused"))).toBe(false);
