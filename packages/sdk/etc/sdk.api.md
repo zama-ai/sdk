@@ -8964,29 +8964,14 @@ export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, bu
     }, {
         readonly anonymous: false;
         readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "uint64";
-            readonly name: "mintAmount";
-            readonly type: "uint64";
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "to";
+            readonly type: "address";
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
             readonly name: "amountIn";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "uint256";
-            readonly name: "feeAmount";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to_";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "mintTxId";
             readonly type: "uint256";
         }];
         readonly name: "Wrapped";
@@ -21139,29 +21124,14 @@ export function underlyingContract(wrapperAddress: Address): {
     }, {
         readonly anonymous: false;
         readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "uint64";
-            readonly name: "mintAmount";
-            readonly type: "uint64";
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "to";
+            readonly type: "address";
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
             readonly name: "amountIn";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "uint256";
-            readonly name: "feeAmount";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to_";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "mintTxId";
             readonly type: "uint256";
         }];
         readonly name: "Wrapped";
@@ -25475,29 +25445,14 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
     }, {
         readonly anonymous: false;
         readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "uint64";
-            readonly name: "mintAmount";
-            readonly type: "uint64";
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "to";
+            readonly type: "address";
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
             readonly name: "amountIn";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "uint256";
-            readonly name: "feeAmount";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to_";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "mintTxId";
             readonly type: "uint256";
         }];
         readonly name: "Wrapped";
@@ -26885,29 +26840,14 @@ export function wrapETHContract(wrapperAddress: Address, to: Address, amount: bi
     }, {
         readonly anonymous: false;
         readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "uint64";
-            readonly name: "mintAmount";
-            readonly type: "uint64";
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "to";
+            readonly type: "address";
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
             readonly name: "amountIn";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "uint256";
-            readonly name: "feeAmount";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to_";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "mintTxId";
             readonly type: "uint256";
         }];
         readonly name: "Wrapped";

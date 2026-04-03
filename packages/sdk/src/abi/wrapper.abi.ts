@@ -745,33 +745,15 @@ export const wrapperAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: false,
-        internalType: "uint64",
-        name: "mintAmount",
-        type: "uint64",
+        indexed: true,
+        internalType: "address",
+        name: "to",
+        type: "address",
       },
       {
         indexed: false,
         internalType: "uint256",
         name: "amountIn",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "feeAmount",
-        type: "uint256",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "to_",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "uint256",
-        name: "mintTxId",
         type: "uint256",
       },
     ],
