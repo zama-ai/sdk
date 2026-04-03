@@ -1015,6 +1015,11 @@ export class Token extends ReadonlyToken {
    * a surprise EIP-712 popup.
    */
   async #assertConfidentialBalance(amount: bigint): Promise<void> {
+    // Zero-amount operations trivially satisfy the balance constraint.
+    if (amount === 0n) {
+      return;
+    }
+
     let userAddress: Address;
     let handle: Handle;
     try {
@@ -1031,9 +1036,6 @@ export class Token extends ReadonlyToken {
     }
 
     if (this.isZeroHandle(handle)) {
-      if (amount === 0n) {
-        return;
-      } // 0 >= 0 satisfies the constraint
       throw new InsufficientConfidentialBalanceError(
         `Insufficient confidential balance: requested ${amount}, available 0 (token: ${this.address})`,
         { requested: amount, available: 0n, token: this.address },
@@ -1061,6 +1063,12 @@ export class Token extends ReadonlyToken {
     // Cache miss — only attempt decryption when credentials are already cached.
     // This avoids triggering an unexpected EIP-712 signing popup during
     // a transfer/unshield flow (respects the explicit-action pattern from SDK-42).
+    //
+    // Note: isAllowed() is a wallet-scoped session check. If credentials exist
+    // but don't yet cover this token's contract address, decryptBalance() may
+    // still trigger a signing prompt for contract extension. This is acceptable:
+    // it only happens when the user interacts with a new token for the first
+    // time while having an active session — a signing prompt is expected there.
     let hasCredentials: boolean;
     try {
       hasCredentials = await this.isAllowed();
@@ -1070,7 +1078,7 @@ export class Token extends ReadonlyToken {
       }
       throw new BalanceCheckUnavailableError(
         `Could not check credential status for balance validation (token: ${this.address})`,
-        { cause: toError(error) },
+        { cause: error },
       );
     }
     if (!hasCredentials) {
@@ -1089,7 +1097,7 @@ export class Token extends ReadonlyToken {
       }
       throw new BalanceCheckUnavailableError(
         `Balance validation failed: could not decrypt confidential balance (token: ${this.address})`,
-        { cause: toError(error) },
+        { cause: error },
       );
     }
 

@@ -1455,6 +1455,24 @@ describe("Token", () => {
       });
     });
 
+    it("wraps non-ZamaError from decryptBalance as BALANCE_CHECK_UNAVAILABLE", async ({
+      signer,
+      token,
+      handle,
+    }) => {
+      await token.allow();
+
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+      // Spy on decryptBalance to throw a raw (non-ZamaError) Error, bypassing
+      // decryptBalance's own error wrapping.
+      vi.spyOn(token, "decryptBalance").mockRejectedValueOnce(new Error("unexpected crash"));
+
+      await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
+        code: ZamaErrorCode.BalanceCheckUnavailable,
+        message: expect.stringContaining("could not decrypt confidential balance"),
+      });
+    });
+
     it("wraps readConfidentialBalanceOf failure as BALANCE_CHECK_UNAVAILABLE", async ({
       signer,
       token,
