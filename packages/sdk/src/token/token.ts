@@ -683,9 +683,10 @@ export class Token extends ReadonlyToken {
       decryptionProof = result.decryptionProof;
       try {
         clearValue = hexToBigInt(result.abiEncodedClearValues);
-      } catch {
+      } catch (error) {
         throw new DecryptionFailedError(
           `Cannot parse decrypted value: ${result.abiEncodedClearValues}`,
+          { cause: error },
         );
       }
     } catch (error) {
@@ -1010,9 +1011,10 @@ export class Token extends ReadonlyToken {
    * a surprise EIP-712 popup.
    */
   async #assertConfidentialBalance(amount: bigint): Promise<void> {
+    let userAddress: Address;
     let handle: Handle;
     try {
-      const userAddress = await this.signer.getAddress();
+      userAddress = await this.signer.getAddress();
       handle = await this.readConfidentialBalanceOf(userAddress);
     } catch (error) {
       if (error instanceof ZamaError) {
@@ -1063,7 +1065,6 @@ export class Token extends ReadonlyToken {
       );
     }
 
-    const userAddress = await this.signer.getAddress();
     let balance: bigint;
     try {
       balance = await this.decryptBalance(handle, userAddress);

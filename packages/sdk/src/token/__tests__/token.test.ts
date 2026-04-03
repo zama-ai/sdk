@@ -1398,6 +1398,21 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
+    it("passes validation when balance exactly equals amount (boundary)", async ({
+      relayer,
+      signer,
+      token,
+      handle,
+    }) => {
+      await token.allow();
+
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
+
+      const result = await token.confidentialTransfer(RECIPIENT, 100n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
     it("skipBalanceCheck: true bypasses validation", async ({ token }) => {
       const result = await token.confidentialTransfer(RECIPIENT, 100n, {
         skipBalanceCheck: true,
@@ -1470,6 +1485,19 @@ describe("Token", () => {
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockResolvedValueOnce(1000n) // ERC-20 balanceOf >= amount
+        .mockResolvedValueOnce(1000n); // allowance >= amount
+
+      const result = await token.shield(100n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("passes ERC-20 check when balance exactly equals amount (boundary)", async ({
+      signer,
+      token,
+    }) => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockResolvedValueOnce(100n) // ERC-20 balanceOf === amount
         .mockResolvedValueOnce(1000n); // allowance >= amount
 
       const result = await token.shield(100n);
@@ -1552,6 +1580,31 @@ describe("Token", () => {
       });
 
       const result = await token.unshield(50n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("passes validation when balance exactly equals amount (boundary)", async ({
+      relayer,
+      signer,
+      token,
+      handle,
+      userAddress,
+    }) => {
+      await token.allow();
+
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
+
+      vi.mocked(signer.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [Topics.UnwrapRequested, `0x000000000000000000000000${userAddress.slice(2)}`],
+            data: `0x${"ff".repeat(32)}`,
+          },
+        ],
+      });
+
+      const result = await token.unshield(100n);
       expect(result.txHash).toBe("0xtxhash");
     });
 
