@@ -933,9 +933,7 @@ export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): Mutatio
 export function resumeUnshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
 
 // @public
-export interface ResumeUnshieldParams {
-    // (undocumented)
-    callbacks?: UnshieldCallbacks;
+export interface ResumeUnshieldParams extends UnshieldCallbacks {
     // (undocumented)
     unwrapTxHash: Hex;
 }
@@ -1004,6 +1002,13 @@ export function shieldFeeQueryOptions(signer: GenericSigner, config: ShieldFeeQu
 
 // @public (undocumented)
 export function shieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult>;
+
+// @public
+export interface ShieldOptions extends ShieldCallbacks {
+    approvalStrategy?: "max" | "exact" | "skip";
+    fees?: bigint;
+    to?: Address;
+}
 
 // @public
 export interface ShieldParams extends ShieldCallbacks {
@@ -1080,7 +1085,6 @@ export class Token extends ReadonlyToken {
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
-    // Warning: (ae-forgotten-export) The symbol "ShieldOptions" needs to be exported by the entry point index.d.ts
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
@@ -1719,7 +1723,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-ifToIwXw.d.ts:2029:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DTBvolDB.d.ts:2034:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

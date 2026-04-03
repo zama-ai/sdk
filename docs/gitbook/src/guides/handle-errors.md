@@ -29,6 +29,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `InsufficientConfidentialBalanceError` | `INSUFFICIENT_CONFIDENTIAL_BALANCE` | Confidential balance too low for transfer or unshield    |
 | `InsufficientERC20BalanceError`        | `INSUFFICIENT_ERC20_BALANCE`        | ERC-20 balance too low for shield                        |
 | `BalanceCheckUnavailableError`         | `BALANCE_CHECK_UNAVAILABLE`         | Balance check impossible (no cached credentials)         |
+| `ERC20ReadFailedError`                 | `ERC20_READ_FAILED`                 | Public ERC-20 read failed (network or contract error)    |
 | `DelegationSelfNotAllowedError`        | `DELEGATION_SELF_NOT_ALLOWED`       | Delegation cannot target self                            |
 | `DelegationCooldownError`              | `DELEGATION_COOLDOWN`               | Only one delegate/revoke per tuple per block             |
 | `DelegationNotFoundError`              | `DELEGATION_NOT_FOUND`              | No active delegation for this tuple                      |
@@ -81,6 +82,7 @@ matchZamaError(error, {
   INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => toast(`Insufficient balance: ${e.available} available`),
   INSUFFICIENT_ERC20_BALANCE: (e) => toast(`Not enough tokens: ${e.available} available`),
   BALANCE_CHECK_UNAVAILABLE: () => toast("Sign to verify your balance first"),
+  ERC20_READ_FAILED: () => toast("Could not read token balance -- check your connection"),
   _: () => toast("Something went wrong"),
 });
 ```
@@ -109,6 +111,7 @@ Here is a quick reference for the most common errors and how to respond:
 | `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                      |
 | `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                 |
 | `BalanceCheckUnavailableError`         | Call `token.allow()` to cache credentials, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
+| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                          |
 | `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                    |
 | `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                        |
 | `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                              |

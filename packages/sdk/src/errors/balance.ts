@@ -51,3 +51,11 @@ export class BalanceCheckUnavailableError extends ZamaError {
     this.name = "BalanceCheckUnavailableError";
   }
 }
+
+/** A public ERC-20 read (e.g. balanceOf) failed due to a network or contract error. */
+export class ERC20ReadFailedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.ERC20ReadFailed, message, options);
+    this.name = "ERC20ReadFailedError";
+  }
+}

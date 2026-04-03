@@ -1562,16 +1562,13 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    it("wraps ERC-20 balanceOf read failure as BALANCE_CHECK_UNAVAILABLE", async ({
-      signer,
-      token,
-    }) => {
+    it("wraps ERC-20 balanceOf read failure as ERC20_READ_FAILED", async ({ signer, token }) => {
       vi.mocked(signer.readContract)
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
         .mockRejectedValueOnce(new Error("RPC unavailable")); // balanceOf fails
 
       await expect(token.shield(100n)).rejects.toMatchObject({
-        code: ZamaErrorCode.BalanceCheckUnavailable,
+        code: ZamaErrorCode.ERC20ReadFailed,
         message: expect.stringContaining("Could not read ERC-20 balance"),
       });
     });

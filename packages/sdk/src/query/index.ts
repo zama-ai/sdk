@@ -187,6 +187,7 @@ export type {
   StoredCredentials,
   TransactionReceipt,
   TransactionResult,
+  ShieldOptions,
   TransferCallbacks,
   TransferOptions,
   UnshieldCallbacks,

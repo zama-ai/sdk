@@ -50,6 +50,8 @@ export const ZamaErrorCode = {
   InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE",
   /** Balance validation could not be performed (no cached credentials and decryption not possible). */
   BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE",
+  /** Public ERC-20 read (e.g. balanceOf) failed due to a network or contract error. */
+  ERC20ReadFailed: "ERC20_READ_FAILED",
   /** The new expiration date equals the current one — no on-chain change needed. */
   DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED",
   /** Delegate address cannot be the contract address. */

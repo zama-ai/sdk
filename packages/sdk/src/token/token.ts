@@ -26,6 +26,7 @@ import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
   DecryptionFailedError,
+  ERC20ReadFailedError,
   DelegationDelegateEqualsContractError,
   DelegationExpirationTooSoonError,
   DelegationExpiryUnchangedError,
@@ -378,7 +379,7 @@ export class Token extends ReadonlyToken {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new BalanceCheckUnavailableError(
+      throw new ERC20ReadFailedError(
         `Could not read ERC-20 balance for shield validation (token: ${underlying})`,
         { cause: toError(error) },
       );

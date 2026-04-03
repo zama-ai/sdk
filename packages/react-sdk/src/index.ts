@@ -436,5 +436,9 @@ export {
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
   ConfigurationError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
+  BalanceCheckUnavailableError,
+  ERC20ReadFailedError,
   matchZamaError,
 } from "@zama-fhe/sdk";
