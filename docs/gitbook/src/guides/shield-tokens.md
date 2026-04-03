@@ -207,8 +207,6 @@ const txHash = await shield({ amount: 1000n });
 
 In React, balance caches are automatically invalidated after a successful shield. The `useConfidentialBalance` hook will pick up the new balance on its next poll cycle.
 
-For fee-aware shielding, you can query the shield fee before submitting the transaction using `useShieldFee` in React or the fee manager contract directly in the core SDK.
-
 ## Next steps
 
 - [Transfer Privately](/guides/transfer-privately) — send confidential tokens to another address

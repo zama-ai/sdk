@@ -134,24 +134,26 @@ describe("decodeUnwrapRequested", () => {
 // ---------------------------------------------------------------------------
 
 describe("decodeUnwrappedFinalized", () => {
-  it("decodes a valid UnwrappedFinalized log", () => {
-    const data =
-      `0x${uint256(1n)}${uint256(1n)}${uint256(100n)}${uint256(90n)}${uint256(10n)}` as Hex;
-    const log = makeLog(Topics.UnwrappedFinalized, [HANDLE, `0x${uint256(7n)}` as Hex], data);
+  it("decodes a valid UnwrapFinalized log", () => {
+    // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
+    // Data: encryptedAmount (word 0), cleartextAmount (word 1)
+    const data = `0x${HANDLE.slice(2)}${uint256(450n)}` as Hex;
+    const log = makeLog(Topics.UnwrappedFinalized, [addressTopic(ALICE)], data);
     const event = decodeUnwrappedFinalized(log);
     expect(event).not.toBeNull();
     expect(event!.eventName).toBe("UnwrappedFinalized");
-    expect(event!.burntAmountHandle).toBe(HANDLE);
-    expect(event!.nextTxId).toBe(7n);
-    expect(event!.finalizeSuccess).toBe(true);
-    expect(event!.feeTransferSuccess).toBe(true);
-    expect(event!.burnAmount).toBe(100n);
-    expect(event!.unwrapAmount).toBe(90n);
-    expect(event!.feeAmount).toBe(10n);
+    expect(event!.receiver.toLowerCase()).toBe(ALICE.toLowerCase());
+    expect(event!.encryptedAmount).toBe(HANDLE);
+    expect(event!.cleartextAmount).toBe(450n);
   });
 
   it("returns null for wrong topic0", () => {
-    const log = makeLog(Topics.Wrapped, [HANDLE, `0x${uint256(1n)}` as Hex]);
+    const log = makeLog(Topics.Wrapped, [addressTopic(ALICE)]);
+    expect(decodeUnwrappedFinalized(log)).toBeNull();
+  });
+
+  it("returns null for insufficient topics", () => {
+    const log = makeLog(Topics.UnwrappedFinalized, []);
     expect(decodeUnwrappedFinalized(log)).toBeNull();
   });
 });

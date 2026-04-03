@@ -52,7 +52,6 @@ export type ActivityDirection = "incoming" | "outgoing" | "self";
 export interface ActivityItem {
     readonly amount: ActivityAmount;
     readonly direction: ActivityDirection;
-    readonly fee?: bigint;
     readonly from?: Address;
     readonly metadata: ActivityLogMetadata;
     readonly rawEvent: OnChainEvent;
@@ -19032,7 +19031,7 @@ export class Token extends ReadonlyToken {
 }
 
 // @public
-export const TOKEN_TOPICS: readonly ["0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9", "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc", "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee", "0xc64e7c81b18b674fc5b037d8a0041bfe3332d86c780a4688f404ee01fbabb152", "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806"];
+export const TOKEN_TOPICS: readonly ["0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9", "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc", "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee", "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e", "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806"];
 
 // @public
 export interface TokenConfig extends ReadonlyTokenConfig {
@@ -19070,8 +19069,8 @@ export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
 export const Topics: {
     readonly ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9"; /** `Wrapped(address indexed to, uint256 amountIn)` */
     readonly Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc"; /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
-    readonly UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee"; /** `UnwrappedFinalized(bytes32 indexed burntAmountHandle, ...)` */
-    readonly UnwrappedFinalized: "0xc64e7c81b18b674fc5b037d8a0041bfe3332d86c780a4688f404ee01fbabb152"; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
+    readonly UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee"; /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+    readonly UnwrappedFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e"; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
     readonly UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806";
 };
 
@@ -24799,15 +24798,11 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 
 // @public
 export interface UnwrappedFinalizedEvent {
-    readonly burnAmount: bigint;
-    readonly burntAmountHandle: Handle;
+    readonly cleartextAmount: bigint;
+    readonly encryptedAmount: Handle;
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
-    readonly feeAmount: bigint;
-    readonly feeTransferSuccess: boolean;
-    readonly finalizeSuccess: boolean;
-    readonly nextTxId: bigint;
-    readonly unwrapAmount: bigint;
+    readonly receiver: Address;
 }
 
 // @public

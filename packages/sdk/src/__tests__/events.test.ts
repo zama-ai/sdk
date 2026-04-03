@@ -32,10 +32,7 @@ describe("Topic constants match keccak256", () => {
     ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
     ["Wrapped(address,uint256)", Topics.Wrapped],
     ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequested],
-    [
-      "UnwrappedFinalized(bytes32,bool,bool,uint64,uint256,uint256,uint256)",
-      Topics.UnwrappedFinalized,
-    ],
+    ["UnwrapFinalized(address,bytes32,uint64)", Topics.UnwrappedFinalized],
     [
       "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
       Topics.UnwrappedStarted,
@@ -145,25 +142,23 @@ describe("decodeUnwrapRequested", () => {
 });
 
 describe("decodeUnwrappedFinalized", () => {
-  const burntHandle = bytes32("ab".repeat(32));
-  const nextTxId = 7n;
+  // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
+  const receiver = addr("aabb");
+  const encryptedHandle = bytes32("cd".repeat(32));
+  const cleartextAmount = 450n;
 
   const log: RawLog = {
-    topics: [Topics.UnwrappedFinalized, burntHandle, topic(nextTxId.toString(16))],
-    data: `0x${word("1")}${word("0")}${word(500n.toString(16))}${word(450n.toString(16))}${word(50n.toString(16))}`,
+    topics: [Topics.UnwrappedFinalized, topic(receiver.slice(2))],
+    data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
   };
 
   it("decodes valid log", () => {
     const event = decodeUnwrappedFinalized(log);
     expect(event).toEqual({
       eventName: "UnwrappedFinalized",
-      burntAmountHandle: burntHandle,
-      nextTxId,
-      finalizeSuccess: true,
-      feeTransferSuccess: false,
-      burnAmount: 500n,
-      unwrapAmount: 450n,
-      feeAmount: 50n,
+      receiver,
+      encryptedAmount: encryptedHandle,
+      cleartextAmount,
     });
   });
 
