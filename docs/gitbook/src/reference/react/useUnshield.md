@@ -133,6 +133,11 @@ await unshield({
 });
 ```
 
+**Throws:**
+
+- `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
+- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
+
 ## Return Type
 
 ```ts

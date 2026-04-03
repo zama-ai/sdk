@@ -13,6 +13,8 @@ Unshielding converts encrypted tokens back into standard ERC-20 tokens that are 
 
 Call `token.unshield()` with the amount you want to convert back to public tokens. The SDK submits the unwrap transaction, waits for the decryption proof, and then submits the finalize transaction.
 
+By default, the SDK validates the confidential balance before submitting. If the balance is insufficient, it throws `InsufficientConfidentialBalanceError` before any transaction is sent. Pass `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
+
 {% tabs %}
 {% tab title="SDK" %}
 
