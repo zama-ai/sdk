@@ -30,7 +30,8 @@ describe("Token.shield", () => {
     const onShieldSubmitted = vi.fn();
 
     await token.shield(100n, {
-      callbacks: { onApprovalSubmitted, onShieldSubmitted },
+      onApprovalSubmitted,
+      onShieldSubmitted,
     });
 
     expect(onApprovalSubmitted).toHaveBeenCalledWith("0xtxhash");
@@ -63,7 +64,8 @@ describe("Token.shield", () => {
     const onShieldSubmitted = vi.fn();
 
     await token.shield(100n, {
-      callbacks: { onApprovalSubmitted, onShieldSubmitted },
+      onApprovalSubmitted,
+      onShieldSubmitted,
     });
 
     expect(onApprovalSubmitted).not.toHaveBeenCalled();
@@ -93,13 +95,11 @@ describe("Token.shield", () => {
       .mockResolvedValueOnce(0n);
 
     const result = await token.shield(100n, {
-      callbacks: {
-        onApprovalSubmitted: () => {
-          throw new Error("callback exploded");
-        },
-        onShieldSubmitted: () => {
-          throw new Error("callback exploded again");
-        },
+      onApprovalSubmitted: () => {
+        throw new Error("callback exploded");
+      },
+      onShieldSubmitted: () => {
+        throw new Error("callback exploded again");
       },
     });
 

@@ -1006,12 +1006,11 @@ export function shieldFeeQueryOptions(signer: GenericSigner, config: ShieldFeeQu
 export function shieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult>;
 
 // @public
-export interface ShieldParams {
+export interface ShieldParams extends ShieldCallbacks {
     // (undocumented)
     amount: bigint;
     // (undocumented)
     approvalStrategy?: "max" | "exact" | "skip";
-    callbacks?: ShieldCallbacks;
     // (undocumented)
     fees?: bigint;
     to?: Address;
@@ -1225,10 +1224,7 @@ export function underlyingAllowanceQueryOptions(signer: GenericSigner, tokenAddr
 export function unshieldAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshieldAll", Address], UnshieldAllParams | void, TransactionResult>;
 
 // @public
-export interface UnshieldAllParams {
-    // (undocumented)
-    callbacks?: UnshieldCallbacks;
-}
+export interface UnshieldAllParams extends UnshieldCallbacks {}
 
 // @public
 export interface UnshieldCallbacks {
@@ -1723,7 +1719,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-yENC4MrV.d.ts:2029:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-ifToIwXw.d.ts:2029:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -65,19 +65,13 @@ Converts public ERC-20 tokens into their encrypted form. The SDK handles the ERC
 
 **The ERC-20 balance is always validated before submitting** — this is a public read with no signing requirement, so it works for all wallet types (including smart wallets). For native ETH shields, the check is skipped (the chain validates ETH balance natively).
 
-| Option             | Type                         | Default          | Description                                |
-| ------------------ | ---------------------------- | ---------------- | ------------------------------------------ |
-| `approvalStrategy` | `"exact" \| "max" \| "skip"` | `"exact"`        | ERC-20 approval strategy                   |
-| `fees`             | `bigint`                     | —                | Extra ETH for native wrappers              |
-| `to`               | `Address`                    | connected wallet | Recipient of shielded tokens               |
-| `callbacks`        | `ShieldCallbacks`            | —                | Progress callbacks (see below)             |
-
-**Callbacks** (passed via `callbacks`):
-
-| Callback                           | Fires when                        |
-| ---------------------------------- | --------------------------------- |
-| `onApprovalSubmitted(txHash: Hex)` | Approval transaction is submitted |
-| `onShieldSubmitted(txHash: Hex)`   | Shield transaction is submitted   |
+| Option                | Type                         | Default          | Description                                |
+| --------------------- | ---------------------------- | ---------------- | ------------------------------------------ |
+| `approvalStrategy`    | `"exact" \| "max" \| "skip"` | `"exact"`        | ERC-20 approval strategy                   |
+| `fees`                | `bigint`                     | —                | Extra ETH for native wrappers              |
+| `to`                  | `Address`                    | connected wallet | Recipient of shielded tokens               |
+| `onApprovalSubmitted` | `(txHash: Hex) => void`      | —                | Fired after the approval tx is submitted   |
+| `onShieldSubmitted`   | `(txHash: Hex) => void`      | —                | Fired after the shield tx is submitted     |
 
 ```ts
 // Exact approval (default) — approves only the shielded amount
@@ -91,10 +85,8 @@ await token.shield(1000n, { approvalStrategy: "skip" });
 
 // With progress callbacks
 await token.shield(1000n, {
-  callbacks: {
-    onApprovalSubmitted: (txHash) => console.log("Approval:", txHash),
-    onShieldSubmitted: (txHash) => console.log("Shield:", txHash),
-  },
+  onApprovalSubmitted: (txHash) => console.log("Approval:", txHash),
+  onShieldSubmitted: (txHash) => console.log("Shield:", txHash),
 });
 ```
 

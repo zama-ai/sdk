@@ -392,14 +392,14 @@ export class Token extends ReadonlyToken {
 
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
-      await this.#ensureAllowance(amount, strategy === "max", options?.callbacks);
+      await this.#ensureAllowance(amount, strategy === "max", options);
     }
 
     try {
       const recipient = options?.to ? getAddress(options.to) : await this.signer.getAddress();
       const txHash = await this.signer.writeContract(wrapContract(this.wrapper, recipient, amount));
       this.emit({ type: ZamaSDKEvents.ShieldSubmitted, txHash });
-      safeCallback(() => options?.callbacks?.onShieldSubmitted?.(txHash));
+      safeCallback(() => options?.onShieldSubmitted?.(txHash));
       const receipt = await this.signer.waitForTransactionReceipt(txHash);
       return { txHash, receipt };
     } catch (error) {

@@ -21625,9 +21625,8 @@ export interface ShieldCallbacks {
 }
 
 // @public
-export interface ShieldOptions {
+export interface ShieldOptions extends ShieldCallbacks {
     approvalStrategy?: "max" | "exact" | "skip";
-    callbacks?: ShieldCallbacks;
     fees?: bigint;
     to?: Address;
 }
