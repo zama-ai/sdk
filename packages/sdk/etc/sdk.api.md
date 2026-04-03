@@ -382,6 +382,21 @@ export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
 }
 
 // @public
+export class BalanceCheckUnavailableError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export interface BalanceErrorDetails {
+    // (undocumented)
+    readonly available: bigint;
+    // (undocumented)
+    readonly requested: bigint;
+    // (undocumented)
+    readonly token: Address;
+}
+
+// @public
 export function balanceOfContract(tokenAddress: Address, account: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -8731,6 +8746,11 @@ export interface EncryptStartEvent extends BaseEvent {
 }
 
 // @public
+export class ERC20ReadFailedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 
 // @public
@@ -13420,6 +13440,22 @@ export class IndexedDBStorage implements GenericStorage {
 export const indexedDBStorage: IndexedDBStorage;
 
 export { InputProofBytesType }
+
+// @public
+export class InsufficientConfidentialBalanceError extends ZamaError {
+    constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions);
+    readonly available: bigint;
+    readonly requested: bigint;
+    readonly token: Address;
+}
+
+// @public
+export class InsufficientERC20BalanceError extends ZamaError {
+    constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions);
+    readonly available: bigint;
+    readonly requested: bigint;
+    readonly token: Address;
+}
 
 // @public
 export class InvalidKeypairError extends ZamaError {
@@ -21593,6 +21629,13 @@ export interface ShieldCallbacks {
     onShieldSubmitted?: (txHash: Hex) => void;
 }
 
+// @public
+export interface ShieldOptions extends ShieldCallbacks {
+    approvalStrategy?: "max" | "exact" | "skip";
+    fees?: bigint;
+    to?: Address;
+}
+
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -21809,7 +21852,7 @@ export class Token extends ReadonlyToken {
         tokens: Token[];
         delegateAddress: Address;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
         delegateAddress: Address;
@@ -21821,14 +21864,9 @@ export class Token extends ReadonlyToken {
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
-    shield(amount: bigint, options?: {
-        approvalStrategy?: "max" | "exact" | "skip";
-        fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
-        to?: Address; /** Progress callbacks for the multi-step shield flow. */
-        callbacks?: ShieldCallbacks;
-    }): Promise<TransactionResult>;
+    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
-    unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
     unwrapAll(): Promise<TransactionResult>;
@@ -23391,6 +23429,11 @@ export interface TransferFromSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransferFromSubmitted;
 }
 
+// @public
+export interface TransferOptions extends TransferCallbacks {
+    skipBalanceCheck?: boolean;
+}
+
 // @public (undocumented)
 export interface TransferSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -24828,6 +24871,11 @@ export interface UnshieldCallbacks {
     onFinalizeSubmitted?: (txHash: Hex) => void;
     onFinalizing?: () => void;
     onUnwrapSubmitted?: (txHash: Hex) => void;
+}
+
+// @public
+export interface UnshieldOptions extends UnshieldCallbacks {
+    skipBalanceCheck?: boolean;
 }
 
 // @public (undocumented)
@@ -30830,7 +30878,11 @@ export const ZamaErrorCode: {
     readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED"; /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
     readonly DelegationCooldown: "DELEGATION_COOLDOWN"; /** No active delegation found for this (delegator, delegate, contract) tuple. */
     readonly DelegationNotFound: "DELEGATION_NOT_FOUND"; /** The delegation has expired. */
-    readonly DelegationExpired: "DELEGATION_EXPIRED"; /** The new expiration date equals the current one — no on-chain change needed. */
+    readonly DelegationExpired: "DELEGATION_EXPIRED"; /** Confidential (cToken) balance is insufficient for the requested operation. */
+    readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE"; /** ERC-20 balance is insufficient for the requested shield amount. */
+    readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE"; /** Balance validation could not be performed (no cached credentials and decryption not possible). */
+    readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE"; /** Public ERC-20 read (e.g. balanceOf) failed due to a network or contract error. */
+    readonly ERC20ReadFailed: "ERC20_READ_FAILED"; /** The new expiration date equals the current one — no on-chain change needed. */
     readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED"; /** Delegate address cannot be the contract address. */
     readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT"; /** Contract address cannot be the sender address. */
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */

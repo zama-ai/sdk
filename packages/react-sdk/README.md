@@ -425,9 +425,9 @@ function useUnshield(
   options?: UseMutationOptions<Address, Error, UnshieldParams>,
 ): UseMutationResult<Address, Error, UnshieldParams>;
 
-interface UnshieldParams {
+interface UnshieldParams extends UnshieldCallbacks {
   amount: bigint;
-  callbacks?: UnshieldCallbacks;
+  skipBalanceCheck?: boolean;
 }
 ```
 
@@ -438,11 +438,9 @@ const { mutateAsync: unshield, isPending } = useUnshield({
 
 const finalizeTxHash = await unshield({
   amount: 500n,
-  callbacks: {
-    onUnwrapSubmitted: (txHash) => console.log("Unwrap tx:", txHash),
-    onFinalizing: () => console.log("Finalizing..."),
-    onFinalizeSubmitted: (txHash) => console.log("Finalize tx:", txHash),
-  },
+  onUnwrapSubmitted: (txHash) => console.log("Unwrap tx:", txHash),
+  onFinalizing: () => console.log("Finalizing..."),
+  onFinalizeSubmitted: (txHash) => console.log("Finalize tx:", txHash),
 });
 ```
 
@@ -456,9 +454,7 @@ function useUnshieldAll(
   options?: UseMutationOptions<Address, Error, UnshieldAllParams | void>,
 ): UseMutationResult<Address, Error, UnshieldAllParams | void>;
 
-interface UnshieldAllParams {
-  callbacks?: UnshieldCallbacks;
-}
+interface UnshieldAllParams extends UnshieldCallbacks {}
 ```
 
 ```tsx
@@ -479,9 +475,8 @@ function useResumeUnshield(
   options?: UseMutationOptions<Address, Error, ResumeUnshieldParams>,
 ): UseMutationResult<Address, Error, ResumeUnshieldParams>;
 
-interface ResumeUnshieldParams {
+interface ResumeUnshieldParams extends UnshieldCallbacks {
   unwrapTxHash: Hex;
-  callbacks?: UnshieldCallbacks;
 }
 ```
 

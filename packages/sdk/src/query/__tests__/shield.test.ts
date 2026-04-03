@@ -10,8 +10,6 @@ describe("shieldMutationOptions", () => {
     expect(mockToken.shield).toHaveBeenCalledWith(1n, {
       fees: 2n,
       approvalStrategy: "exact",
-      to: undefined,
-      callbacks: undefined,
     });
   });
 
@@ -19,11 +17,18 @@ describe("shieldMutationOptions", () => {
     const options = shieldMutationOptions(mockToken);
 
     await options.mutationFn({ amount: 5n });
-    expect(mockToken.shield).toHaveBeenCalledWith(5n, {
-      fees: undefined,
-      approvalStrategy: undefined,
-      to: undefined,
-      callbacks: undefined,
+    expect(mockToken.shield).toHaveBeenCalledWith(5n, {});
+  });
+
+  test("passes flat callbacks to shield", async ({ mockToken }) => {
+    const options = shieldMutationOptions(mockToken);
+    const onApprovalSubmitted = () => {};
+    const onShieldSubmitted = () => {};
+
+    await options.mutationFn({ amount: 1n, onApprovalSubmitted, onShieldSubmitted });
+    expect(mockToken.shield).toHaveBeenCalledWith(1n, {
+      onApprovalSubmitted,
+      onShieldSubmitted,
     });
   });
 });

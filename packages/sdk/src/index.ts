@@ -88,8 +88,11 @@ export type {
   TransactionReceipt,
   TransactionResult,
   UnshieldCallbacks,
+  UnshieldOptions,
   ShieldCallbacks,
+  ShieldOptions,
   TransferCallbacks,
+  TransferOptions,
 } from "./types";
 export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events";
@@ -147,6 +150,11 @@ export {
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
+  BalanceCheckUnavailableError,
+  ERC20ReadFailedError,
+  type BalanceErrorDetails,
   DelegationDelegateEqualsContractError,
   DelegationExpiryUnchangedError,
   AclPausedError,

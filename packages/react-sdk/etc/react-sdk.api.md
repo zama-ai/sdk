@@ -28,6 +28,7 @@ import { ApproveSubmittedEvent } from '@zama-fhe/sdk';
 import { approveUnderlyingMutationOptions } from '@zama-fhe/sdk/query';
 import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
 import { ApproveUnderlyingSubmittedEvent } from '@zama-fhe/sdk';
+import { BalanceCheckUnavailableError } from '@zama-fhe/sdk';
 import { balanceOfContract } from '@zama-fhe/sdk';
 import { BaseEvent } from '@zama-fhe/sdk';
 import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
@@ -124,6 +125,7 @@ import { encryptMutationOptions } from '@zama-fhe/sdk/query';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { EncryptStartEvent } from '@zama-fhe/sdk';
+import { ERC20ReadFailedError } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
 import { extractEncryptedHandles } from '@zama-fhe/sdk';
@@ -155,6 +157,8 @@ import { Hex } from '@zama-fhe/sdk';
 import { IndexedDBStorage } from '@zama-fhe/sdk';
 import { indexedDBStorage } from '@zama-fhe/sdk';
 import { InputProofBytesType } from '@zama-fhe/sdk';
+import { InsufficientConfidentialBalanceError } from '@zama-fhe/sdk';
+import { InsufficientERC20BalanceError } from '@zama-fhe/sdk';
 import { InvalidKeypairError } from '@zama-fhe/sdk';
 import { isAllowedQueryOptions } from '@zama-fhe/sdk/query';
 import { isConfidentialQueryOptions } from '@zama-fhe/sdk/query';
@@ -333,6 +337,8 @@ export { approveUnderlyingMutationOptions }
 export { ApproveUnderlyingParams }
 
 export { ApproveUnderlyingSubmittedEvent }
+
+export { BalanceCheckUnavailableError }
 
 export { balanceOfContract }
 
@@ -526,6 +532,8 @@ export { EncryptResult }
 
 export { EncryptStartEvent }
 
+export { ERC20ReadFailedError }
+
 export { ERC7984_INTERFACE_ID }
 
 export { ERC7984_WRAPPER_INTERFACE_ID }
@@ -587,6 +595,10 @@ export { IndexedDBStorage }
 export { indexedDBStorage }
 
 export { InputProofBytesType }
+
+export { InsufficientConfidentialBalanceError }
+
+export { InsufficientERC20BalanceError }
 
 export { InvalidKeypairError }
 
