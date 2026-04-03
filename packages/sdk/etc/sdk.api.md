@@ -6,6 +6,7 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { ClearValueType as ClearValueType_2 } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -18382,7 +18383,7 @@ export class ReadonlyToken {
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
     // (undocumented)
-    readonly cache: Map<Handle, ClearValueType>;
+    readonly cache: Map<Handle, ClearValueType_2>;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
@@ -18392,7 +18393,7 @@ export class ReadonlyToken {
         delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
-    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType>>;
+    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType_2>>;
     // (undocumented)
     protected readonly delegatedCredentials: DelegatedCredentialsManager;
     protected emit(partial: ZamaSDKEventInput): void;
@@ -18428,7 +18429,7 @@ export class ReadonlyToken {
 // @public
 export interface ReadonlyTokenConfig {
     address: Address;
-    cache?: Map<Handle, ClearValueType>;
+    cache?: Map<Handle, ClearValueType_2>;
     credentials?: CredentialsManager;
     delegatedCredentials?: DelegatedCredentialsManager;
     keypairTTL?: number;
@@ -30850,7 +30851,7 @@ export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
     allow(...contractAddresses: Address[]): Promise<void>;
-    readonly cache: Map<Handle, ClearValueType>;
+    readonly cache: Map<Handle, ClearValueType_2>;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
