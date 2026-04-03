@@ -1,5 +1,4 @@
 import type {
-  ClearValueType,
   FhevmInstanceConfig,
   InputProofBytesType,
   KeypairType,
@@ -15,6 +14,7 @@ import type { GenericLogger } from "../worker/worker.types";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
+  ClearValueType,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -51,7 +51,7 @@ export interface RelayerNodeConfig {
  * resolved pool, and chain switches tear down the old pool within the lock.
  * See the RelayerWeb class doc for a detailed explanation.
  */
-export class RelayerNode implements RelayerSDK {
+export class RelayerNode implements RelayerSDK, Disposable {
   readonly #config: RelayerNodeConfig;
   #pool: NodeWorkerPool | null = null;
   #initPromise: Promise<NodeWorkerPool> | null = null;
@@ -170,6 +170,11 @@ export class RelayerNode implements RelayerSDK {
     }
     this.#initPromise = null;
     this.#ensureLock = null;
+  }
+
+  /** Calls {@link terminate}, shutting down the worker thread pool. */
+  [Symbol.dispose](): void {
+    this.terminate();
   }
 
   async generateKeypair(): Promise<KeypairType<Hex>> {

@@ -50,7 +50,7 @@ export interface ZamaSDKConfig {
   registryAddresses?: Record<number, Address>;
   /**
    * How long cached registry results remain valid, in seconds.
-   * Default: `2592000` (30 days). Consistent with `keypairTTL`/`sessionTTL`.
+   * Default: `86400` (24 hours).
    */
   registryTTL?: number;
   /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
@@ -341,5 +341,23 @@ export class ZamaSDK {
   terminate(): void {
     this.dispose();
     this.relayer.terminate();
+  }
+
+  /**
+   * Implements the TC39 Explicit Resource Management protocol.
+   * Calls {@link terminate} when the `using` binding goes out of scope,
+   * unsubscribing signer events and shutting down the relayer.
+   *
+   * @example
+   * ```ts
+   * {
+   *   using sdk = new ZamaSDK({ relayer, signer, storage });
+   *   await sdk.allow(cUSDT);
+   *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf();
+   * } // sdk.terminate() called automatically here
+   * ```
+   */
+  [Symbol.dispose](): void {
+    this.terminate();
   }
 }

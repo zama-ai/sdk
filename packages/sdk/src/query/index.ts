@@ -159,7 +159,7 @@ export type {
   UnwrappedStartedEvent,
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
-export type { EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
+export type { ClearValueType, EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
 export type {
   DelegatedUserDecryptParams,
   EncryptInput,
