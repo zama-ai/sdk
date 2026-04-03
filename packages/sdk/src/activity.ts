@@ -151,7 +151,6 @@ function buildShield(
     direction: classifyDirection(userAddress, undefined, event.to),
     amount: { type: "clear", value: event.amountIn },
     to: event.to,
-    fee: event.feeAmount,
     metadata,
     rawEvent: event,
   };

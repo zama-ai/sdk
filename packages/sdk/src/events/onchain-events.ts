@@ -20,8 +20,8 @@ export type { RawLog } from "../types/transaction";
 export const Topics = {
   /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
   ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9",
-  /** `Wrapped(uint64 mintAmount, uint256 amountIn, uint256 feeAmount, address indexed to_, uint256 indexed mintTxId)` */
-  Wrapped: "0x1f7907f4d84043abe0fb7c74e8865ee5fe93fe4f691c54a7b8fa9d6fb17c7cba",
+  /** `Wrapped(address indexed to, uint256 amountIn)` */
+  Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc",
   /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
   UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee",
   /** `UnwrappedFinalized(bytes32 indexed burntAmountHandle, ...)` */
@@ -48,16 +48,10 @@ export interface ConfidentialTransferEvent {
 /** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
 export interface WrappedEvent {
   readonly eventName: "Wrapped";
-  /** Confidential tokens minted. */
-  readonly mintAmount: bigint;
-  /** Underlying ERC-20 tokens deposited. */
-  readonly amountIn: bigint;
-  /** Fee deducted during wrapping. */
-  readonly feeAmount: bigint;
   /** Receiver of the minted confidential tokens. */
   readonly to: Address;
-  /** On-chain mint transaction ID. */
-  readonly mintTxId: bigint;
+  /** Underlying ERC-20 tokens deposited. */
+  readonly amountIn: bigint;
 }
 
 /** Decoded `UnwrapRequested` event — an unshield request submitted. */
@@ -181,25 +175,22 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
 }
 
 /**
- * Wrapped(uint64 mintAmount, uint256 amountIn, uint256 feeAmount, address indexed to_, uint256 indexed mintTxId)
- * Indexed: to_ (topics[1]), mintTxId (topics[2])
- * Data: mintAmount (uint64, abi-encoded as uint256), amountIn, feeAmount
+ * Wrapped(address indexed to, uint256 amountIn)
+ * Indexed: to (topics[1])
+ * Data: amountIn (uint256)
  */
 export function decodeWrapped(log: RawLog): WrappedEvent | null {
   if (log.topics[0] !== Topics.Wrapped) {
     return null;
   }
-  if (log.topics.length < 3) {
+  if (log.topics.length < 2) {
     return null;
   }
 
   return {
     eventName: "Wrapped",
     to: topicToAddress(log.topics[1]!),
-    mintTxId: topicToBigInt(log.topics[2]!),
-    mintAmount: wordToBigInt(log.data, 0),
-    amountIn: wordToBigInt(log.data, 1),
-    feeAmount: wordToBigInt(log.data, 2),
+    amountIn: wordToBigInt(log.data, 0),
   };
 }
 

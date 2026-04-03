@@ -30,10 +30,10 @@ function transferLog(from: string, to: string, handle: string): RawLog {
   };
 }
 
-function wrappedLog(to: string, amountIn: bigint, feeAmount: bigint): RawLog {
+function wrappedLog(to: string, amountIn: bigint): RawLog {
   return {
-    topics: [Topics.Wrapped, topic(to.slice(2)), topic("1")],
-    data: `0x${word(amountIn.toString(16))}${word(amountIn.toString(16))}${word(feeAmount.toString(16))}`,
+    topics: [Topics.Wrapped, topic(to.slice(2))],
+    data: `0x${word(amountIn.toString(16))}`,
   };
 }
 
@@ -113,14 +113,13 @@ describe("parseActivityFeed", () => {
   });
 
   it("parses a Wrapped event as shield", () => {
-    const logs = [wrappedLog(USER, 1000n, 50n)];
+    const logs = [wrappedLog(USER, 1000n)];
     const items = parseActivityFeed(logs, USER);
 
     expect(items).toHaveLength(1);
     expect(items[0].type).toBe("shield");
     expect(items[0].direction).toBe("incoming");
     expect(items[0].amount).toEqual({ type: "clear", value: 1000n });
-    expect(items[0].fee).toBe(50n);
   });
 
   it("parses an UnwrapRequested event", () => {
@@ -188,7 +187,7 @@ describe("parseActivityFeed", () => {
   it("parses mixed event types", () => {
     const logs = [
       transferLog(USER, OTHER, bytes32("cc".repeat(32))),
-      wrappedLog(USER, 500n, 10n),
+      wrappedLog(USER, 500n),
       unwrappedFinalizedLog(200n, 20n, false),
     ];
     const items = parseActivityFeed(logs, USER);
@@ -223,7 +222,7 @@ describe("extractEncryptedHandles", () => {
   });
 
   it("skips clear amounts", () => {
-    const items = parseActivityFeed([wrappedLog(USER, 1000n, 50n)], USER);
+    const items = parseActivityFeed([wrappedLog(USER, 1000n)], USER);
     const handles = extractEncryptedHandles(items);
     expect(handles).toHaveLength(0);
   });
@@ -260,7 +259,7 @@ describe("applyDecryptedValues", () => {
   });
 
   it("leaves clear amounts unchanged", () => {
-    const items = parseActivityFeed([wrappedLog(USER, 1000n, 50n)], USER);
+    const items = parseActivityFeed([wrappedLog(USER, 1000n)], USER);
     const result = applyDecryptedValues(items, new Map());
 
     expect(result[0].amount).toEqual({ type: "clear", value: 1000n });

@@ -40,6 +40,7 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
     bytes32 private constant ERC7984_ERC20_WRAPPER_UPGRADEABLE_STORAGE_LOCATION =
         0x789981291a45bfde11e7ba326d04f33e2215f03c85dfc0acebcc6167a5924700;
 
+    event Wrapped(address indexed to, uint256 amountIn);
     event UnwrapRequested(address indexed receiver, euint64 amount);
     event UnwrapFinalized(address indexed receiver, euint64 encryptedAmount, uint64 cleartextAmount);
 
@@ -86,11 +87,14 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
 
         // mint confidential token
         address to = data.length < 20 ? from : address(bytes20(data));
-        _mint(to, FHE.asEuint64(SafeCast.toUint64(amount / rate())));
+        uint256 excess = amount % rate();
+        uint256 amountIn = amount - excess;
+        _mint(to, FHE.asEuint64(SafeCast.toUint64(amountIn / rate())));
 
         // transfer excess back to the sender
-        uint256 excess = amount % rate();
         if (excess > 0) SafeERC20.safeTransfer(IERC20(underlying()), from, excess);
+
+        emit Wrapped(to, amountIn);
 
         // return magic value
         return IERC1363Receiver.onTransferReceived.selector;
@@ -100,11 +104,15 @@ abstract contract ERC7984ERC20WrapperUpgradeable is ERC7984Upgradeable, IERC7984
      * @dev See {IERC7984ERC20Wrapper-wrap}.
      */
     function wrap(address to, uint256 amount) public virtual override {
+        uint256 amountIn = amount - (amount % rate());
+
         // take ownership of the tokens
-        SafeERC20.safeTransferFrom(IERC20(underlying()), msg.sender, address(this), amount - (amount % rate()));
+        SafeERC20.safeTransferFrom(IERC20(underlying()), msg.sender, address(this), amountIn);
 
         // mint confidential token
-        _mint(to, FHE.asEuint64(SafeCast.toUint64(amount / rate())));
+        _mint(to, FHE.asEuint64(SafeCast.toUint64(amountIn / rate())));
+
+        emit Wrapped(to, amountIn);
     }
 
     /**

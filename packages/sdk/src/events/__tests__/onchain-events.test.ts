@@ -83,23 +83,17 @@ describe("decodeConfidentialTransfer", () => {
 
 describe("decodeWrapped", () => {
   it("decodes a valid Wrapped log", () => {
-    const data = `0x${uint256(1000n)}${uint256(500n)}${uint256(10n)}` as Hex;
-    const log = makeLog(Topics.Wrapped, [addressTopic(BOB), `0x${uint256(42n)}` as Hex], data);
+    const data = `0x${uint256(500n)}` as Hex;
+    const log = makeLog(Topics.Wrapped, [addressTopic(BOB)], data);
     const event = decodeWrapped(log);
     expect(event).not.toBeNull();
     expect(event!.eventName).toBe("Wrapped");
     expect(event!.to.toLowerCase()).toBe(BOB.toLowerCase());
-    expect(event!.mintTxId).toBe(42n);
-    expect(event!.mintAmount).toBe(1000n);
     expect(event!.amountIn).toBe(500n);
-    expect(event!.feeAmount).toBe(10n);
   });
 
   it("returns null for wrong topic0", () => {
-    const log = makeLog(Topics.ConfidentialTransfer, [
-      addressTopic(BOB),
-      `0x${uint256(1n)}` as Hex,
-    ]);
+    const log = makeLog(Topics.ConfidentialTransfer, [addressTopic(BOB)]);
     expect(decodeWrapped(log)).toBeNull();
   });
 
@@ -259,13 +253,11 @@ describe("findUnwrapRequested", () => {
 
 describe("findWrapped", () => {
   it("finds the first Wrapped event in logs", () => {
-    const data = `0x${uint256(100n)}${uint256(50n)}${uint256(5n)}` as Hex;
-    const logs: RawLog[] = [
-      makeLog(Topics.Wrapped, [addressTopic(ALICE), `0x${uint256(1n)}` as Hex], data),
-    ];
+    const data = `0x${uint256(50n)}` as Hex;
+    const logs: RawLog[] = [makeLog(Topics.Wrapped, [addressTopic(ALICE)], data)];
     const event = findWrapped(logs);
     expect(event).not.toBeNull();
-    expect(event!.mintAmount).toBe(100n);
+    expect(event!.amountIn).toBe(50n);
   });
 
   it("returns null when no Wrapped exists", () => {

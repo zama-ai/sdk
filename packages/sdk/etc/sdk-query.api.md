@@ -1384,9 +1384,6 @@ export interface WrappedEvent {
     readonly amountIn: bigint;
     // (undocumented)
     readonly eventName: "Wrapped";
-    readonly feeAmount: bigint;
-    readonly mintAmount: bigint;
-    readonly mintTxId: bigint;
     readonly to: Address;
 }
 

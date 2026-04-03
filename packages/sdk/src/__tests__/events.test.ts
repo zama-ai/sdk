@@ -30,7 +30,7 @@ const bytes32 = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
     ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
-    ["Wrapped(uint64,uint256,uint256,address,uint256)", Topics.Wrapped],
+    ["Wrapped(address,uint256)", Topics.Wrapped],
     ["UnwrapRequested(address,bytes32)", Topics.UnwrapRequested],
     [
       "UnwrappedFinalized(bytes32,bool,bool,uint64,uint256,uint256,uint256)",
@@ -90,14 +90,11 @@ describe("decodeConfidentialTransfer", () => {
 
 describe("decodeWrapped", () => {
   const to = addr("dead");
-  const mintTxId = 42n;
-  const mintAmount = 1000n;
   const amountIn = 2000n;
-  const feeAmount = 50n;
 
   const log: RawLog = {
-    topics: [Topics.Wrapped, topic("dead"), topic(mintTxId.toString(16))],
-    data: `0x${word(mintAmount.toString(16))}${word(amountIn.toString(16))}${word(feeAmount.toString(16))}`,
+    topics: [Topics.Wrapped, topic("dead")],
+    data: `0x${word(amountIn.toString(16))}`,
   };
 
   it("decodes valid log", () => {
@@ -105,10 +102,7 @@ describe("decodeWrapped", () => {
     expect(event).toEqual({
       eventName: "Wrapped",
       to,
-      mintTxId,
-      mintAmount,
       amountIn,
-      feeAmount,
     });
   });
 
@@ -300,13 +294,13 @@ describe("findWrapped", () => {
   it("finds first Wrapped in mixed logs", () => {
     const logs: RawLog[] = [
       {
-        topics: [Topics.Wrapped, topic("dead"), topic(42n.toString(16))],
-        data: `0x${word(1000n.toString(16))}${word(2000n.toString(16))}${word(50n.toString(16))}`,
+        topics: [Topics.Wrapped, topic("dead")],
+        data: `0x${word(2000n.toString(16))}`,
       },
     ];
     const event = findWrapped(logs);
     expect(event?.eventName).toBe("Wrapped");
-    expect(event?.mintAmount).toBe(1000n);
+    expect(event?.amountIn).toBe(2000n);
   });
 
   it("returns null when none found", () => {
