@@ -88,6 +88,14 @@ await token.shield(1000n, { approvalStrategy: "max" });
 
 // Skip approval — wrapper is already approved
 await token.shield(1000n, { approvalStrategy: "skip" });
+
+// With progress callbacks
+await token.shield(1000n, {
+  callbacks: {
+    onApprovalSubmitted: (txHash) => console.log("Approval:", txHash),
+    onShieldSubmitted: (txHash) => console.log("Shield:", txHash),
+  },
+});
 ```
 
 **Throws:**
