@@ -21,6 +21,7 @@ import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
+import { loadCachedBalance } from "./balance-cache";
 import {
   ApprovalFailedError,
   BalanceCheckUnavailableError,
@@ -100,8 +101,9 @@ export class Token extends ReadonlyToken {
    * Returns the transaction hash.
    *
    * By default, the SDK validates the confidential balance before submitting.
-   * If the balance is not yet decrypted and credentials are cached, it auto-decrypts.
-   * Set `skipBalanceCheck: true` to bypass this validation (e.g. for smart wallets).
+   * If a cached plaintext balance exists it is used; otherwise, if credentials
+   * are cached, it decrypts on the fly. Set `skipBalanceCheck: true` to bypass
+   * this validation (e.g. for smart wallets).
    *
    * @param to - Recipient address.
    * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
@@ -342,8 +344,9 @@ export class Token extends ReadonlyToken {
    * Handles ERC-20 approval automatically based on `approvalStrategy`
    * (`"exact"` by default, `"max"` for unlimited approval, `"skip"` to opt out).
    *
-   * The ERC-20 balance is always validated before submitting since it is a
-   * public read with no signing requirement.
+   * The ERC-20 balance is validated before submitting (public read, no signing
+   * required). For native ETH shields (`underlying === address(0)`), the ERC-20
+   * check is skipped — the chain validates ETH balance natively.
    *
    * @param amount - The plaintext amount to shield.
    * @param options - Optional configuration: `approvalStrategy` (`"exact"` | `"max"` | `"skip"`, default `"exact"`), `fees` (extra ETH for native wrappers).
@@ -1036,16 +1039,27 @@ export class Token extends ReadonlyToken {
       );
     }
 
-    // Only attempt decryption when credentials are already cached.
+    // Check the persistent plaintext cache first — if the balance was decrypted
+    // in a previous session, we can validate without credentials or a new decrypt.
+    const cached = await loadCachedBalance({
+      storage: this.storage,
+      tokenAddress: this.address,
+      owner: userAddress,
+      handle,
+    });
+    if (cached !== null) {
+      if (cached < amount) {
+        throw new InsufficientConfidentialBalanceError(
+          `Insufficient confidential balance: requested ${amount}, available ${cached} (token: ${this.address})`,
+          { requested: amount, available: cached, token: this.address },
+        );
+      }
+      return;
+    }
+
+    // Cache miss — only attempt decryption when credentials are already cached.
     // This avoids triggering an unexpected EIP-712 signing popup during
     // a transfer/unshield flow (respects the explicit-action pattern from SDK-42).
-    //
-    // Note: isAllowed() is a session-level check (wallet-scoped). The subsequent
-    // decryptBalance() call internally does credentials.allow(this.address) which
-    // is contract-scoped. If the session was created for a different set of
-    // contract addresses, resolveCredentials may extend the credential set via
-    // #extendContracts — which re-signs with the existing key (no new EIP-712
-    // popup) as long as the underlying credential is time-valid.
     let hasCredentials: boolean;
     try {
       hasCredentials = await this.isAllowed();

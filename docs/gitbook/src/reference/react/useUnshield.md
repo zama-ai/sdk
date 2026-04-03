@@ -27,11 +27,9 @@ function UnshieldButton() {
   async function handleUnshield() {
     await unshield({
       amount: 500n,
-      callbacks: {
-        onUnwrapSubmitted: (txHash) => console.log("Unwrap tx:", txHash),
-        onFinalizing: () => console.log("Waiting for decryption proof..."),
-        onFinalizeSubmitted: (txHash) => console.log("Finalized:", txHash),
-      },
+      onUnwrapSubmitted: (txHash) => console.log("Unwrap tx:", txHash),
+      onFinalizing: () => console.log("Waiting for decryption proof..."),
+      onFinalizeSubmitted: (txHash) => console.log("Finalized:", txHash),
     });
   }
 
@@ -110,11 +108,15 @@ Number of confidential tokens to unshield.
 await unshield({ amount: 500n });
 ```
 
-### callbacks
+### skipBalanceCheck
 
-`object` (optional)
+`boolean` (optional, default `false`)
 
-Progress callbacks for each phase. Callbacks are safe — if one throws, the unshield still completes.
+Skip confidential balance validation (e.g. for smart wallets that cannot produce EIP-712 signatures).
+
+### Progress callbacks
+
+Passed as top-level options alongside `amount`. Callbacks are safe — if one throws, the unshield still completes.
 
 | Callback                           | Fires when                                   |
 | ---------------------------------- | -------------------------------------------- |
@@ -125,11 +127,9 @@ Progress callbacks for each phase. Callbacks are safe — if one throws, the uns
 ```ts
 await unshield({
   amount: 500n,
-  callbacks: {
-    onUnwrapSubmitted: (txHash) => updateUI("Step 1 submitted"),
-    onFinalizing: () => updateUI("Awaiting proof..."),
-    onFinalizeSubmitted: (txHash) => updateUI("Complete"),
-  },
+  onUnwrapSubmitted: (txHash) => updateUI("Step 1 submitted"),
+  onFinalizing: () => updateUI("Awaiting proof..."),
+  onFinalizeSubmitted: (txHash) => updateUI("Complete"),
 });
 ```
 

@@ -124,11 +124,9 @@ const { mutateAsync: unshield, isPending } = useUnshield({
 
 await unshield({
   amount: 500n,
-  callbacks: {
-    onUnwrapSubmitted: (txHash) => console.log("Step 1:", txHash),
-    onFinalizing: () => console.log("Waiting for proof..."),
-    onFinalizeSubmitted: (txHash) => console.log("Done:", txHash),
-  },
+  onUnwrapSubmitted: (txHash) => console.log("Step 1:", txHash),
+  onFinalizing: () => console.log("Waiting for proof..."),
+  onFinalizeSubmitted: (txHash) => console.log("Done:", txHash),
 });
 ```
 

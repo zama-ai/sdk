@@ -1454,6 +1454,52 @@ describe("Token", () => {
         code: ZamaErrorCode.DecryptionFailed,
       });
     });
+
+    it("wraps readConfidentialBalanceOf failure as BALANCE_CHECK_UNAVAILABLE", async ({
+      signer,
+      token,
+    }) => {
+      vi.mocked(signer.readContract).mockRejectedValueOnce(new Error("RPC unavailable"));
+
+      await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
+        code: ZamaErrorCode.BalanceCheckUnavailable,
+        message: expect.stringContaining("Could not read confidential balance handle"),
+      });
+    });
+
+    it("uses cached plaintext balance (skips isAllowed / decrypt)", async ({
+      signer,
+      token,
+      handle,
+      storage,
+    }) => {
+      // Seed the balance cache with a sufficient balance
+      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, "200");
+
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+
+      // Should succeed without needing credentials (no allow() call)
+      const result = await token.confidentialTransfer(RECIPIENT, 100n);
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("rejects from cache when cached balance is insufficient", async ({
+      signer,
+      token,
+      handle,
+      storage,
+    }) => {
+      const cacheKey = `zama:balance:${getAddress(token.address)}:${getAddress(await signer.getAddress())}:${handle.toLowerCase()}`;
+      await storage.set(cacheKey, "50");
+
+      vi.mocked(signer.readContract).mockResolvedValueOnce(handle); // confidentialBalanceOf
+
+      await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
+        code: ZamaErrorCode.InsufficientConfidentialBalance,
+        message: expect.stringContaining("requested 100"),
+      });
+    });
   });
 
   describe("balance validation: shield", () => {
@@ -1514,6 +1560,20 @@ describe("Token", () => {
 
       const result = await token.shield(100n);
       expect(result.txHash).toBe("0xtxhash");
+    });
+
+    it("wraps ERC-20 balanceOf read failure as BALANCE_CHECK_UNAVAILABLE", async ({
+      signer,
+      token,
+    }) => {
+      vi.mocked(signer.readContract)
+        .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c") // #getUnderlying
+        .mockRejectedValueOnce(new Error("RPC unavailable")); // balanceOf fails
+
+      await expect(token.shield(100n)).rejects.toMatchObject({
+        code: ZamaErrorCode.BalanceCheckUnavailable,
+        message: expect.stringContaining("Could not read ERC-20 balance"),
+      });
     });
   });
 
