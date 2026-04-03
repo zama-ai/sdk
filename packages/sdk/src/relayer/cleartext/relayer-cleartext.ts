@@ -17,7 +17,6 @@ import {
 } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 import type {
-  ClearValueType,
   InputProofBytesType,
   KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
@@ -27,6 +26,7 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { RelayerSDK } from "../relayer-sdk";
 import type {
+  ClearValueType,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -139,7 +139,7 @@ function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
   return { fheType, value };
 }
 
-export class RelayerCleartext implements RelayerSDK {
+export class RelayerCleartext implements RelayerSDK, Disposable {
   readonly #client: PublicClient;
   readonly #config: CleartextConfig;
   readonly kmsSigner: PrivateKeyAccount;
@@ -372,6 +372,11 @@ export class RelayerCleartext implements RelayerSDK {
 
   terminate(): void {
     // No resources to release in cleartext mode.
+  }
+
+  /** Calls {@link terminate} (no-op in cleartext mode). */
+  [Symbol.dispose](): void {
+    this.terminate();
   }
 
   async #decryptHandles(
