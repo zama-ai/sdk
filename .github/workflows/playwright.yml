@@ -109,31 +109,6 @@ jobs:
       - name: Build SDK packages
         run: pnpm build
 
-      - name: Regenerate deployments.json
-        run: |
-          set -euo pipefail
-          DEPLOYER_PK="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-          DEPLOYER_ADDR="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-
-          anvil --port 9876 --chain-id 31337 --silent &
-          ANVIL_PID=$!
-          for i in $(seq 1 60); do
-            nc -z 127.0.0.1 9876 2>/dev/null && break
-            sleep 0.5
-          done
-
-          contracts/lib/forge-fhevm/deploy-local.sh --anvil-port 9876 --skip-build
-
-          rm -rf contracts/broadcast
-          cd contracts
-          forge script script/Deploy.s.sol \
-            --rpc-url "http://127.0.0.1:9876" \
-            --broadcast \
-            --sender "${DEPLOYER_ADDR}" \
-            --private-key "${DEPLOYER_PK}"
-
-          kill ${ANVIL_PID} 2>/dev/null || true
-
       - name: Build Next.js test-nextjs
         run: pnpm build:test-nextjs
         env:
@@ -243,31 +218,6 @@ jobs:
 
       - name: Build SDK packages
         run: pnpm build
-
-      - name: Regenerate deployments.json
-        run: |
-          set -euo pipefail
-          DEPLOYER_PK="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-          DEPLOYER_ADDR="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-
-          anvil --port 9876 --chain-id 31337 --silent &
-          ANVIL_PID=$!
-          for i in $(seq 1 60); do
-            nc -z 127.0.0.1 9876 2>/dev/null && break
-            sleep 0.5
-          done
-
-          contracts/lib/forge-fhevm/deploy-local.sh --anvil-port 9876 --skip-build
-
-          rm -rf contracts/broadcast
-          cd contracts
-          forge script script/Deploy.s.sol \
-            --rpc-url "http://127.0.0.1:9876" \
-            --broadcast \
-            --sender "${DEPLOYER_ADDR}" \
-            --private-key "${DEPLOYER_PK}"
-
-          kill ${ANVIL_PID} 2>/dev/null || true
 
       - name: Build Vite test-vite
         run: pnpm build:test-vite
