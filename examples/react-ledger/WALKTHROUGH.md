@@ -465,7 +465,7 @@ const sessionDBStorage = new IndexedDBStorage("SessionStore");
 <ZamaProvider
   relayer={relayer}
   signer={signer}
-  storage={indexedDBStorage}      // "CredentialStore" DB — encrypted FHE keypair
+  storage={indexedDBStorage} // "CredentialStore" DB — encrypted FHE keypair
   sessionStorage={sessionDBStorage} // "SessionStore" DB — EIP-712 session signatures
   keypairTTL={30 * 24 * 60 * 60} // 30 days — same as sessionTTL default
 >
@@ -597,11 +597,11 @@ if (decryptAs.error instanceof DelegationExpiredError) {
 
 ## Environment variables
 
-| Variable                      | Required | Default                                       | Description                                                                                     |
-| ----------------------------- | -------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                 | No       | `https://relayer.testnet.zama.org/v2`         | Relayer base URL (server-side). Not required for Sepolia testnet.                               |
-| `RELAYER_API_KEY`             | No       | —                                             | API key forwarded as `x-api-key` by the proxy. Not required for testnet.                        |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | `https://ethereum-sepolia-rpc.publicnode.com` | Override the default Sepolia RPC. Example: `https://sepolia.infura.io/v3/YOUR_KEY`.             |
+| Variable                      | Required | Default                                       | Description                                                                         |
+| ----------------------------- | -------- | --------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `RELAYER_URL`                 | No       | `https://relayer.testnet.zama.org/v2`         | Relayer base URL (server-side). Not required for Sepolia testnet.                   |
+| `RELAYER_API_KEY`             | No       | —                                             | API key forwarded as `x-api-key` by the proxy. Not required for testnet.            |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | `https://ethereum-sepolia-rpc.publicnode.com` | Override the default Sepolia RPC. Example: `https://sepolia.infura.io/v3/YOUR_KEY`. |
 
 Copy `.env.example` to `.env.local`. No changes are needed for Sepolia testnet — all defaults are pre-configured. Set `NEXT_PUBLIC_SEPOLIA_RPC_URL` if you have a private RPC endpoint; set `RELAYER_URL` and `RELAYER_API_KEY` only when using a private relayer (e.g. Mainnet).
 

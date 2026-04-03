@@ -88,10 +88,10 @@ Open [http://localhost:3000](http://localhost:3000) in a Chromium-based browser,
 
 ## Environment variables
 
-| Variable                      | Required | Default                                       | Description                                                                          |
-| ----------------------------- | -------- | --------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `RELAYER_URL`                 | No       | `https://relayer.testnet.zama.org/v2`         | Relayer base URL (server-side only). Not required for Sepolia testnet.               |
-| `RELAYER_API_KEY`             | No       | —                                             | API key forwarded as `x-api-key` by the proxy. Not required for testnet.             |
+| Variable                      | Required | Default                                       | Description                                                                         |
+| ----------------------------- | -------- | --------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `RELAYER_URL`                 | No       | `https://relayer.testnet.zama.org/v2`         | Relayer base URL (server-side only). Not required for Sepolia testnet.              |
+| `RELAYER_API_KEY`             | No       | —                                             | API key forwarded as `x-api-key` by the proxy. Not required for testnet.            |
 | `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | `https://ethereum-sepolia-rpc.publicnode.com` | Override the default Sepolia RPC. Example: `https://sepolia.infura.io/v3/YOUR_KEY`. |
 
 ## Sepolia contract addresses

@@ -850,6 +850,9 @@ export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutatio
 export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptAsOptions>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, BatchDecryptAsOptions, unknown>;
 
 // @public
+export function useBatchTransferFee(feeManagerAddress: Address, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
+
+// @public
 export function useConfidentialApprove(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialApproveParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialApproveParams, `0x${string}`>;
 
 // @public
@@ -1286,6 +1289,17 @@ export interface UseDelegationStatusConfig {
 export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<EncryptResult, Error, EncryptParams, unknown>;
 
 // @public
+export interface UseFeeConfig {
+    amount: bigint;
+    feeManagerAddress: Address;
+    from: Address;
+    to: Address;
+}
+
+// @public
+export function useFeeRecipient(feeManagerAddress: Address, options?: Omit<UseQueryOptions<Address>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
+
+// @public
 export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
 
 // @public
@@ -1381,6 +1395,9 @@ export interface UseShieldETHConfig extends UseZamaConfig {
 }
 
 // @public
+export function useShieldFee(config: UseFeeConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
+
+// @public
 export function useToken(config: UseZamaConfig): _$_zama_fhe_sdk0.Token;
 
 // @public
@@ -1428,6 +1445,9 @@ export function useUnshield(config: UseZamaConfig, options?: UseMutationOptions<
 
 // @public
 export function useUnshieldAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void | UnshieldAllParams, `0x${string}`>;
+
+// @public
+export function useUnshieldFee(config: UseFeeConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public
 export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, UnwrapParams, `0x${string}`>;
