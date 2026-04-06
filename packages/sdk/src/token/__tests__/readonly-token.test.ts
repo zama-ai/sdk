@@ -1,10 +1,9 @@
 import { describe, it, expect, vi } from "../../test-fixtures";
 import { ReadonlyToken, ZERO_HANDLE } from "../readonly-token";
+import { DecryptCache } from "../../decrypt-cache";
 import { ZamaErrorCode, DecryptionFailedError } from "../../errors";
 import type { GenericSigner, GenericStorage } from "../../types";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
-import type { Handle } from "../../relayer/relayer-sdk.types";
 import { getAddress, type Address } from "viem";
 
 const VALID_HANDLE2 = ("0x" + "cd".repeat(32)) as Address;
@@ -16,7 +15,7 @@ interface ReadonlyTokenContext {
   sessionStorage: GenericStorage;
   tokenAddress: Address;
   handle: Address;
-  cache: Map<Handle, ClearValueType>;
+  cache?: DecryptCache;
 }
 
 function createReadonlyToken({
@@ -59,7 +58,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const result = await token.decryptHandles([ZERO_HANDLE as Address]);
 
@@ -82,7 +80,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const result = await token.decryptHandles(["0x" as Address]);
 
@@ -105,7 +102,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const result = await token.decryptHandles([handle, VALID_HANDLE2]);
 
@@ -135,7 +131,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const result = await token.decryptHandles([ZERO_HANDLE as Address, handle]);
 
@@ -165,7 +160,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const result = await token.decryptHandles([]);
 
@@ -188,7 +182,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const otherOwner = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
       await token.decryptHandles([handle], otherOwner);
@@ -216,7 +209,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       await token.decryptHandles([handle]);
 
@@ -242,7 +234,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const unknownHandle = ("0x" + "ff".repeat(32)) as Address;
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({});
@@ -267,7 +258,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new Error("relayer down"));
 
@@ -294,7 +284,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
       vi.mocked(signer.readContract)
@@ -334,7 +323,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const token2 = new ReadonlyToken({
         relayer,
@@ -342,7 +330,6 @@ describe("ReadonlyToken", () => {
         storage,
         sessionStorage,
         address: TOKEN2,
-        cache: new Map(),
       });
 
       vi.mocked(relayer.userDecrypt)
@@ -381,7 +368,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const token2 = new ReadonlyToken({
         relayer,
@@ -389,7 +375,6 @@ describe("ReadonlyToken", () => {
         storage,
         sessionStorage,
         address: TOKEN2,
-        cache: new Map(),
       });
 
       vi.mocked(relayer.userDecrypt)
@@ -420,7 +405,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const token2 = new ReadonlyToken({
         relayer,
@@ -428,7 +412,6 @@ describe("ReadonlyToken", () => {
         storage,
         sessionStorage,
         address: TOKEN2,
-        cache: new Map(),
       });
 
       vi.mocked(relayer.userDecrypt)
@@ -468,7 +451,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       await expect(
         ReadonlyToken.batchDecryptBalances([token], {
@@ -488,9 +470,10 @@ describe("ReadonlyToken", () => {
       sessionStorage,
       tokenAddress,
       handle,
+      userAddress,
     }) => {
       // Shared cache so both tokens see each other's entries.
-      const sharedCache = new Map<Handle, ClearValueType>();
+      const sharedCache = new DecryptCache(storage);
       const token = createReadonlyToken({
         relayer,
         signer,
@@ -509,9 +492,9 @@ describe("ReadonlyToken", () => {
         cache: sharedCache,
       });
 
-      // Pre-populate cache for both tokens
-      sharedCache.set(handle, 1000n);
-      sharedCache.set(VALID_HANDLE2, 2000n);
+      // Pre-populate cache for both tokens (requester = signer, contractAddress = token address)
+      await sharedCache.set(userAddress, tokenAddress, handle, 1000n);
+      await sharedCache.set(userAddress, getAddress(TOKEN2), VALID_HANDLE2, 2000n);
 
       const result = await ReadonlyToken.batchDecryptBalances([token, token2], {
         handles: [handle, VALID_HANDLE2],
@@ -531,8 +514,9 @@ describe("ReadonlyToken", () => {
       sessionStorage,
       tokenAddress,
       handle,
+      userAddress,
     }) => {
-      const sharedCache = new Map<Handle, ClearValueType>();
+      const sharedCache = new DecryptCache(storage);
       const token = createReadonlyToken({
         relayer,
         signer,
@@ -552,7 +536,7 @@ describe("ReadonlyToken", () => {
       });
 
       // Pre-populate cache only for token1
-      sharedCache.set(handle, 1000n);
+      await sharedCache.set(userAddress, tokenAddress, handle, 1000n);
 
       vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({
         [VALID_HANDLE2]: 2000n,
@@ -598,7 +582,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       await token.allow();
 
@@ -621,7 +604,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       const TOKEN2 = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
       const token2 = new ReadonlyToken({
@@ -630,7 +612,6 @@ describe("ReadonlyToken", () => {
         storage,
         sessionStorage,
         address: TOKEN2,
-        cache: new Map(),
       });
 
       await ReadonlyToken.allow(token, token2);
@@ -656,7 +637,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       expect(await token.isAllowed()).toBe(false);
     });
@@ -676,7 +656,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       await token.allow();
       expect(await token.isAllowed()).toBe(true);
@@ -699,7 +678,6 @@ describe("ReadonlyToken", () => {
         sessionStorage,
         tokenAddress,
         handle,
-        cache: new Map(),
       });
       await token.allow();
       expect(await token.isAllowed()).toBe(true);
@@ -724,7 +702,6 @@ describe("ZamaSDK token factory", () => {
       storage,
       sessionStorage,
       address: tokenAddress,
-      cache: new Map(),
     });
 
     expect(token.address).toBe(tokenAddress);

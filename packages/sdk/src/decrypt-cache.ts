@@ -2,25 +2,6 @@ import { getAddress, type Address } from "viem";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import type { GenericStorage } from "./types";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const NAMESPACE = "zama:decrypt";
-const KEYS_INDEX_KEY = `${NAMESPACE}:keys`;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function buildStorageKey(requester: Address, contractAddress: Address, handle: Handle): string {
-  return `${NAMESPACE}:${getAddress(requester)}:${getAddress(contractAddress)}:${handle.toLowerCase()}`;
-}
-
-// ---------------------------------------------------------------------------
-// DecryptCache
-// ---------------------------------------------------------------------------
-
 /**
  * A storage-backed cache for decrypted FHE values.
  *
@@ -37,6 +18,8 @@ function buildStorageKey(requester: Address, contractAddress: Address, handle: H
  * swallowed — the cache will never throw.
  */
 export class DecryptCache {
+  #decryptNamespace = "zama:decrypt";
+  #decryptKeysNamespace = `${this.#decryptNamespace}:keys`;
   readonly #storage: GenericStorage;
 
   /** Serialises concurrent writes to the keys index. */
@@ -46,10 +29,6 @@ export class DecryptCache {
     this.#storage = storage;
   }
 
-  // -------------------------------------------------------------------------
-  // Public API
-  // -------------------------------------------------------------------------
-
   /** Returns the cached clear value or `null` on a miss / error. */
   async get(
     requester: Address,
@@ -57,7 +36,7 @@ export class DecryptCache {
     handle: Handle,
   ): Promise<ClearValueType | null> {
     try {
-      const key = buildStorageKey(requester, contractAddress, handle);
+      const key = this.#buildStorageKey(requester, contractAddress, handle);
       return await this.#storage.get<ClearValueType>(key);
     } catch {
       return null;
@@ -72,7 +51,7 @@ export class DecryptCache {
     value: ClearValueType,
   ): Promise<void> {
     try {
-      const key = buildStorageKey(requester, contractAddress, handle);
+      const key = this.#buildStorageKey(requester, contractAddress, handle);
       await this.#storage.set<ClearValueType>(key, value);
       // Track the key in the index (serialised to avoid concurrent overwrites)
       this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
@@ -88,12 +67,12 @@ export class DecryptCache {
   async clearForRequester(requester: Address): Promise<void> {
     try {
       const checksumRequester = getAddress(requester);
-      const prefix = `${NAMESPACE}:${checksumRequester}:`;
+      const prefix = `${this.#decryptNamespace}:${checksumRequester}:`;
       const keys = await this.#readIndex();
       const toRemove = keys.filter((k) => k.startsWith(prefix));
       await Promise.all(toRemove.map((k) => this.#storage.delete(k).catch(() => {})));
       const remaining = keys.filter((k) => !k.startsWith(prefix));
-      await this.#storage.set<string[]>(KEYS_INDEX_KEY, remaining);
+      await this.#storage.set<string[]>(this.#decryptKeysNamespace, remaining);
     } catch {
       // best-effort
     }
@@ -104,26 +83,25 @@ export class DecryptCache {
     try {
       const keys = await this.#readIndex();
       await Promise.all(keys.map((k) => this.#storage.delete(k).catch(() => {})));
-      await this.#storage.delete(KEYS_INDEX_KEY);
+      await this.#storage.delete(this.#decryptKeysNamespace);
     } catch {
       // best-effort
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Private helpers
-  // -------------------------------------------------------------------------
+  #buildStorageKey(requester: Address, contractAddress: Address, handle: Handle): string {
+    return `${this.#decryptNamespace}:${getAddress(requester)}:${getAddress(contractAddress)}:${handle.toLowerCase()}`;
+  }
 
   async #readIndex(): Promise<string[]> {
-    const stored = await this.#storage.get<string[]>(KEYS_INDEX_KEY);
-    return stored ?? [];
+    return (await this.#storage.get<string[]>(this.#decryptKeysNamespace)) ?? [];
   }
 
   async #addToIndex(key: string): Promise<void> {
     const keys = await this.#readIndex();
     if (!keys.includes(key)) {
       keys.push(key);
-      await this.#storage.set<string[]>(KEYS_INDEX_KEY, keys);
+      await this.#storage.set<string[]>(this.#decryptKeysNamespace, keys);
     }
   }
 }

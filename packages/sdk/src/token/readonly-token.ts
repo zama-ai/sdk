@@ -1,5 +1,6 @@
 import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
 import { type Address, getAddress } from "viem";
+import { DecryptCache } from "../decrypt-cache";
 import {
   allowanceContract,
   confidentialBalanceOfContract,
@@ -88,8 +89,8 @@ export interface ReadonlyTokenConfig {
   storage: GenericStorage;
   /** Session storage for wallet signatures. Shared across all tokens in the same SDK instance. */
   sessionStorage: GenericStorage;
-  /** In-memory cache for decrypted handle values. When omitted, a private Map is created. */
-  cache?: Map<Handle, ClearValueType>;
+  /** Storage-backed cache for decrypted handle values. When omitted, a private instance is created. */
+  cache?: DecryptCache;
   /** Shared CredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for credential creation. */
   credentials?: CredentialsManager;
   /** Shared DelegatedCredentialsManager instance. When provided, storage/sessionStorage/keypairTTL/onEvent are ignored for delegated credential creation. */
@@ -114,7 +115,7 @@ export class ReadonlyToken {
   readonly signer: GenericSigner;
   readonly address: Address;
   readonly storage: GenericStorage;
-  readonly cache: Map<Handle, ClearValueType>;
+  readonly cache: DecryptCache;
   readonly #onEvent: ZamaSDKEventListener | undefined;
 
   constructor(config: ReadonlyTokenConfig) {
@@ -134,7 +135,7 @@ export class ReadonlyToken {
     this.signer = config.signer;
     this.address = getAddress(config.address);
     this.storage = config.storage;
-    this.cache = config.cache ?? new Map<Handle, ClearValueType>();
+    this.cache = config.cache ?? new DecryptCache(config.storage);
     this.#onEvent = config.onEvent;
   }
 
@@ -400,8 +401,8 @@ export class ReadonlyToken {
         results.set(token.address, 0n);
         continue;
       }
-      const cached = firstToken.cache.get(handle);
-      if (cached !== undefined) {
+      const cached = await firstToken.cache.get(ownerAddress, token.address, handle);
+      if (cached !== null) {
         assertBigint(cached, "batchDecryptCore: cached");
         results.set(token.address, cached);
         continue;
@@ -439,7 +440,7 @@ export class ReadonlyToken {
             }
             assertBigint(value, "batchDecryptCore: result[handle]");
             results.set(token.address, value);
-            firstToken.cache.set(handle, value);
+            await firstToken.cache.set(ownerAddress, token.address, handle, value);
           })
           .catch((error) => {
             const err = toError(error);
@@ -733,8 +734,8 @@ export class ReadonlyToken {
       return 0n;
     }
 
-    const cached = this.cache.get(handle);
-    if (cached !== undefined) {
+    const cached = await this.cache.get(normalizedOwner, this.address, handle);
+    if (cached !== null) {
       assertBigint(cached, "decryptBalanceAs: cached");
       return cached;
     }
@@ -774,7 +775,7 @@ export class ReadonlyToken {
         );
       }
       assertBigint(value, "decryptBalanceAs: result[handle]");
-      this.cache.set(handle, value);
+      await this.cache.set(normalizedOwner, this.address, handle, value);
       return value;
     } catch (error) {
       this.emit({
@@ -808,8 +809,8 @@ export class ReadonlyToken {
 
     const signerAddress = owner ?? (await this.signer.getAddress());
 
-    const cached = this.cache.get(handle);
-    if (cached !== undefined) {
+    const cached = await this.cache.get(signerAddress, this.address, handle);
+    if (cached !== null) {
       assertBigint(cached, "decryptBalance: cached");
       return cached;
     }
@@ -839,7 +840,7 @@ export class ReadonlyToken {
       if (value === undefined) {
         throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
       }
-      this.cache.set(handle, value);
+      await this.cache.set(signerAddress, this.address, handle, value);
       assertBigint(value, "decryptBalance: result[handle]");
       return value;
     } catch (error) {

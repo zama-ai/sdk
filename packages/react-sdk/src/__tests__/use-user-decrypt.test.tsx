@@ -317,7 +317,8 @@ describe("useUserDecrypt", () => {
     // mutateAsync() without args should only decrypt h2.
     const data = await result.current.mutateAsync();
 
-    expect(data).toEqual({ "0xh2": 200n });
+    // sdk.decrypt() returns all requested handles (cached + freshly decrypted)
+    expect(data).toEqual({ "0xh1": 100n, "0xh2": 200n });
     expect(relayer.userDecrypt).toHaveBeenLastCalledWith(
       expect.objectContaining({
         handles: ["0xh2"],

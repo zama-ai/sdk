@@ -1,7 +1,7 @@
-import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
 import { describe, expect, vi } from "vitest";
 import { test, createMockSigner } from "../../test-fixtures";
 import { ReadonlyToken } from "../readonly-token";
+import { DecryptCache } from "../../decrypt-cache";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
@@ -59,7 +59,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       storage,
       sessionStorage,
       address: TOKEN_A,
-      cache: new Map(),
     });
     const tokenB = new ReadonlyToken({
       relayer,
@@ -67,7 +66,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       storage,
       sessionStorage,
       address: TOKEN_B,
-      cache: new Map(),
     });
 
     const allowMock = stubDelegatedCredentials(tokenA, [TOKEN_A, TOKEN_B]);
@@ -105,7 +103,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       storage,
       sessionStorage,
       address: TOKEN_A,
-      cache: new Map(),
     });
 
     const balances = await ReadonlyToken.batchDecryptBalancesAs([token], {
@@ -123,7 +120,9 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
     const signer = createMockSigner(DELEGATE);
     const storage = new MemoryStorage();
     const sessionStorage = new MemoryStorage();
-    const cache = new Map([[HANDLE_A, 42n as ClearValueType]]);
+    const cache = new DecryptCache(storage);
+    // Pre-populate cache: ownerAddress = DELEGATOR (default for batchDecryptBalancesAs)
+    await cache.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
     vi.mocked(signer.readContract).mockResolvedValueOnce(HANDLE_A); // confidentialBalanceOf
 
@@ -163,7 +162,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       storage,
       sessionStorage,
       address: TOKEN_A,
-      cache: new Map(),
     });
     stubDelegatedCredentials(token, [TOKEN_A]);
     const onError = vi.fn().mockReturnValue(0n);
@@ -195,7 +193,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       storage,
       sessionStorage,
       address: TOKEN_A,
-      cache: new Map(),
     });
 
     await expect(
@@ -228,7 +225,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       storage,
       sessionStorage,
       address: TOKEN_A,
-      cache: new Map(),
     });
 
     await expect(
@@ -263,7 +259,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       storage,
       sessionStorage,
       address: TOKEN_A,
-      cache: new Map(),
     });
     stubDelegatedCredentials(token, [TOKEN_A]);
 
@@ -294,7 +289,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       storage,
       sessionStorage,
       address: TOKEN_A,
-      cache: new Map(),
     });
     stubDelegatedCredentials(token, [TOKEN_A]);
 
@@ -332,7 +326,6 @@ describe("ReadonlyToken.batchDecryptBalancesAs", () => {
       storage,
       sessionStorage,
       address: TOKEN_A,
-      cache: new Map(),
     });
     stubDelegatedCredentials(token, [TOKEN_A]);
 
