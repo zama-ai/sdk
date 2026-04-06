@@ -3,25 +3,38 @@ import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import type { GenericStorage } from "./types";
 
 /**
- * A storage-backed cache for decrypted FHE values.
+ * Storage-backed cache for decrypted FHE plaintext values.
  *
- * Entries are keyed by `(requester, contractAddress, handle)` using
- * checksummed addresses and lowercase handles so lookups are
- * case-insensitive.
+ * Each entry is keyed by `(requester, contractAddress, handle)` so that
+ * different signers cannot read each other's cached decryptions — this
+ * mirrors the on-chain ACL where only the handle owner (or delegate) is
+ * authorized to decrypt.
  *
- * A separate index at {@link KEYS_INDEX_KEY} tracks all stored cache keys
- * so that {@link clearForRequester} and {@link clearAll} can enumerate
- * entries without a full scan.  Index writes are serialised through a
- * micro-queue to prevent concurrent `set` calls from clobbering each other.
+ * Addresses are checksummed and handles lowercased, making lookups
+ * case-insensitive.  A separate index (`zama:decrypt:keys`) tracks all
+ * stored cache keys so {@link clearForRequester} and {@link clearAll} can
+ * enumerate entries without a full storage scan. Index writes are
+ * serialised through a micro-queue to prevent concurrent `set` calls
+ * from losing entries.
  *
  * All public methods are **best-effort**: storage errors are caught and
- * swallowed — the cache will never throw.
+ * swallowed — the cache never throws.
+ *
+ * Cache storage key format:
+ * ```
+ * zama:decrypt:{checksumAddress}:{checksumAddress}:{lowercaseHandle}
+ * ```
+ *
+ * Lifecycle:
+ * - Populated by {@link ZamaSDK.decrypt} after relayer calls.
+ * - Cleared by {@link ZamaSDK.revoke} / {@link ZamaSDK.revokeSession} (per-requester).
+ * - Cleared by signer lifecycle events (disconnect, account change, chain change).
+ * - Survives page reloads when backed by persistent storage (e.g. IndexedDB).
  */
 export class DecryptCache {
+  readonly #storage: GenericStorage;
   #decryptNamespace = "zama:decrypt";
   #decryptKeysNamespace = `${this.#decryptNamespace}:keys`;
-  readonly #storage: GenericStorage;
-
   /** Serialises concurrent writes to the keys index. */
   #indexWriteQueue: Promise<void> = Promise.resolve();
 
@@ -69,9 +82,16 @@ export class DecryptCache {
       const checksumRequester = getAddress(requester);
       const prefix = `${this.#decryptNamespace}:${checksumRequester}:`;
       const keys = await this.#readIndex();
-      const toRemove = keys.filter((k) => k.startsWith(prefix));
+      const toRemove: string[] = [];
+      const remaining: string[] = [];
+      for (const k of keys) {
+        if (k.startsWith(prefix)) {
+          toRemove.push(k);
+        } else {
+          remaining.push(k);
+        }
+      }
       await Promise.all(toRemove.map((k) => this.#storage.delete(k).catch(() => {})));
-      const remaining = keys.filter((k) => !k.startsWith(prefix));
       await this.#storage.set<string[]>(this.#decryptKeysNamespace, remaining);
     } catch {
       // best-effort
@@ -82,7 +102,11 @@ export class DecryptCache {
   async clearAll(): Promise<void> {
     try {
       const keys = await this.#readIndex();
-      await Promise.all(keys.map((k) => this.#storage.delete(k).catch(() => {})));
+      const deletes: Promise<void>[] = [];
+      for (const k of keys) {
+        deletes.push(this.#storage.delete(k).catch(() => {}));
+      }
+      await Promise.all(deletes);
       await this.#storage.delete(this.#decryptKeysNamespace);
     } catch {
       // best-effort

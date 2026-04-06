@@ -6933,6 +6933,15 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
 
+// @public
+export class DecryptCache {
+    constructor(storage: GenericStorage);
+    clearAll(): Promise<void>;
+    clearForRequester(requester: Address): Promise<void>;
+    get(requester: Address, contractAddress: Address, handle: Handle): Promise<ClearValueType | null>;
+    set(requester: Address, contractAddress: Address, handle: Handle, value: ClearValueType): Promise<void>;
+}
+
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -18383,7 +18392,7 @@ export class ReadonlyToken {
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
     // (undocumented)
-    readonly cache: Map<Handle, ClearValueType_2>;
+    readonly cache: DecryptCache;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
@@ -18429,7 +18438,7 @@ export class ReadonlyToken {
 // @public
 export interface ReadonlyTokenConfig {
     address: Address;
-    cache?: Map<Handle, ClearValueType_2>;
+    cache?: DecryptCache;
     credentials?: CredentialsManager;
     delegatedCredentials?: DelegatedCredentialsManager;
     keypairTTL?: number;
@@ -30851,12 +30860,14 @@ export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
     allow(...contractAddresses: Address[]): Promise<void>;
-    readonly cache: Map<Handle, ClearValueType_2>;
+    readonly cache: DecryptCache;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
     readonly credentials: CredentialsManager;
+    // Warning: (ae-forgotten-export) The symbol "DecryptHandle" needs to be exported by the entry point index.d.ts
+    decrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
