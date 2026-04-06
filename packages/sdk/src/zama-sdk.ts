@@ -69,7 +69,7 @@ export class ZamaSDK {
   readonly sessionStorage: GenericStorage;
   readonly credentials: CredentialsManager;
   readonly delegatedCredentials: DelegatedCredentialsManager;
-  /** Storage-backed cache for decrypted handle values, shared with all tokens created by this SDK. */
+  /** Persistent cache for decrypted FHE plaintext values, scoped by (requester, contract, handle). */
   readonly cache: DecryptCache;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.
@@ -297,7 +297,9 @@ export class ZamaSDK {
    * ```
    */
   async decrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
-    if (handles.length === 0) {return {};}
+    if (handles.length === 0) {
+      return {};
+    }
 
     const signerAddress = await this.signer.getAddress();
     const result: Record<Handle, ClearValueType> = {};
@@ -313,7 +315,9 @@ export class ZamaSDK {
       }
     }
 
-    if (uncached.length === 0) {return result;}
+    if (uncached.length === 0) {
+      return result;
+    }
 
     // Get unique contract addresses and acquire credentials
     const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
