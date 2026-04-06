@@ -39,15 +39,12 @@ export function userDecryptMutationOptions(
     mutationKey: ["zama.userDecrypt"] as const,
     mutationFn: async (params) => {
       const handles = params?.handles ?? options?.handles ?? [];
-      const { onCredentialsReady, onDecrypted } = options ?? {};
 
-      if (handles.length === 0) {return {};}
+      if (handles.length === 0) {
+        return {};
+      }
 
-      const result = await sdk.decrypt(handles);
-
-      try { onCredentialsReady?.(); } catch {}
-      try { onDecrypted?.(result); } catch {}
-      return result;
+      return sdk.decrypt(handles, options);
     },
     onSuccess: (data, _variables, _onMutateResult, context) => {
       for (const [handle, value] of Object.entries(data) as [Handle, ClearValueType][]) {

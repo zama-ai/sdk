@@ -346,7 +346,7 @@ The cache is cleared on `revoke()`, `revokeSession()`, or wallet lifecycle event
 
 #### Showing progress during decryption
 
-Use the `onCredentialsReady` and `onDecrypted` callbacks to show progress:
+Use the `onCredentialsReady` and `onDecrypted` callbacks to show progress. These are passed through to `sdk.decrypt()`, so `onCredentialsReady` fires **after** credentials are acquired but **before** relayer calls begin, and `onDecrypted` fires when all handles have been decrypted:
 
 {% code title="DecryptWithProgress.tsx" %}
 

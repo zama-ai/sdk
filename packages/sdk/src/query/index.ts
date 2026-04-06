@@ -182,7 +182,7 @@ export type {
 export type { ReadonlyToken } from "../token/readonly-token";
 export type { TokenConfig } from "../token/token";
 export type { Token } from "../token/token";
-export type { ZamaSDKConfig } from "../zama-sdk";
+export type { ZamaSDKConfig, DecryptOptions } from "../zama-sdk";
 export type { ZamaSDK } from "../zama-sdk";
 export type { CredentialsManager } from "../credentials/credentials-manager";
 export type { CredentialsManagerConfig } from "../credentials/credentials-manager";

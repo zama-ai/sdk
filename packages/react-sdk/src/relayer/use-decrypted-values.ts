@@ -50,9 +50,7 @@ export interface UseDecryptedValuesConfig {
 export function useDecryptedValues(config: UseDecryptedValuesConfig) {
   const sdk = useZamaSDK();
 
-  const addressQuery = useQuery<Address>({
-    ...signerAddressQueryOptions(sdk.signer),
-  });
+  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk.signer));
   const signerAddress = addressQuery.data;
 
   const queryOpts = signerAddress

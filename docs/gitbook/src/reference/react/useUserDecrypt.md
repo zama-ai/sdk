@@ -76,13 +76,13 @@ Default handles to decrypt when `mutate()` is called without arguments. Only han
 
 `(() => void) | undefined`
 
-Fired after credentials are ready — either reused from cache or freshly generated (which may trigger a wallet signature prompt).
+Fired after credentials are ready (cached or freshly signed), **before** relayer decryption calls begin. Not called when all handles are already cached (no credentials needed). Passed through to `sdk.decrypt()`.
 
 ### onDecrypted
 
 `((values: Record<Handle, ClearValueType>) => void) | undefined`
 
-Fired after all handles have been decrypted. Receives the full result map.
+Fired after all handles have been decrypted, including when the result comes entirely from cache. Receives the full result map. Passed through to `sdk.decrypt()`.
 
 {% tabs %}
 {% tab title="with callbacks" %}

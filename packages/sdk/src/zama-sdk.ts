@@ -4,7 +4,7 @@ import { DelegatedCredentialsManager } from "./credentials/delegated-credentials
 import { DecryptCache } from "./decrypt-cache";
 import type { ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
-import type { DecryptHandle } from "./query/user-decrypt";
+import type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
 import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
@@ -13,6 +13,14 @@ import { Token } from "./token/token";
 import type { GenericSigner, GenericStorage, SignerLifecycleCallbacks } from "./types";
 import { toError } from "./utils";
 import { WrappersRegistry } from "./wrappers-registry";
+
+/** Options for {@link ZamaSDK.decrypt}. */
+export interface DecryptOptions {
+  /** Fired after credentials are ready (either from cache or freshly generated), before relayer calls. */
+  onCredentialsReady?: () => void;
+  /** Fired after all handles have been decrypted. */
+  onDecrypted?: (values: DecryptResult) => void;
+}
 
 /** Configuration for {@link ZamaSDK}. */
 export interface ZamaSDKConfig {
@@ -286,6 +294,7 @@ export class ZamaSDK {
    * for the same handle skip the relayer round-trip.
    *
    * @param handles - Handles to decrypt, each paired with its contract address.
+   * @param options - Optional lifecycle callbacks.
    * @returns A record mapping each handle to its decrypted clear-text value.
    *
    * @example
@@ -296,7 +305,11 @@ export class ZamaSDK {
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
-  async decrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
+  async decrypt(
+    handles: DecryptHandle[],
+    options?: DecryptOptions,
+  ): Promise<Record<Handle, ClearValueType>> {
+    const { onCredentialsReady = () => {}, onDecrypted = () => {} } = options ?? {};
     if (handles.length === 0) {
       return {};
     }
@@ -316,13 +329,18 @@ export class ZamaSDK {
     }
 
     if (uncached.length === 0) {
+      try {
+        onDecrypted(result);
+      } catch {}
       return result;
     }
 
     // Get unique contract addresses and acquire credentials
     const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
     const creds = await this.credentials.allow(...contractAddresses);
-
+    try {
+      onCredentialsReady();
+    } catch {}
     // Group uncached handles by contract address
     const byContract = new Map<Address, Handle[]>();
     for (const h of uncached) {
@@ -354,6 +372,9 @@ export class ZamaSDK {
       }
     }
 
+    try {
+      onDecrypted(result);
+    } catch {}
     return result;
   }
 

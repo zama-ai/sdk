@@ -279,7 +279,7 @@ const pairs = await registry.getTokenPairs();
 
 ### decrypt
 
-`(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
+`(handles: DecryptHandle[], options?: DecryptOptions) => Promise<Record<Handle, ClearValueType>>`
 
 Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written to the persistent cache (`sdk.cache`) so subsequent calls for the same handles return instantly.
 
@@ -293,8 +293,25 @@ const values = await sdk.decrypt([
 console.log(values[balanceHandle]); // 1000n
 ```
 
+#### options
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `onCredentialsReady` | `(() => void) \| undefined` | Fired after credentials are ready (cached or freshly signed), **before** relayer calls begin. Not called when all handles are already cached. |
+| `onDecrypted` | `((values: Record<Handle, ClearValueType>) => void) \| undefined` | Fired after all handles have been decrypted (including the all-cached path). |
+
+```ts
+const values = await sdk.decrypt(
+  [{ handle: balanceHandle, contractAddress: cUSDT }],
+  {
+    onCredentialsReady: () => console.log("Credentials ready, decrypting..."),
+    onDecrypted: (result) => console.log("Done:", result),
+  },
+);
+```
+
 {% hint style="info" %}
-This is the SDK-level entry point for decryption. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query mutation semantics.
+This is the SDK-level entry point for decryption. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query mutation semantics and passes its `onCredentialsReady` / `onDecrypted` callbacks through to `sdk.decrypt()`.
 {% endhint %}
 
 ### allow
