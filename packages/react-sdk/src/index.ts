@@ -17,6 +17,11 @@ export {
   type UseUserDecryptConfig,
   type UseUserDecryptResult,
 } from "./relayer/use-user-decrypt";
+export {
+  useDecryptedValue,
+  type UseDecryptedValueConfig,
+  type UseDecryptedValueResult,
+} from "./relayer/use-decrypted-value";
 
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
