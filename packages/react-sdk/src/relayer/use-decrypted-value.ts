@@ -23,7 +23,8 @@ export interface UseDecryptedValueConfig {
  * React hook that reads a single decrypted value from the persistent cache.
  *
  * Pure read — never triggers a wallet signature or relayer call.
- * Returns the cached `ClearValueType` or `undefined` when not yet decrypted.
+ * Returns the cached `ClearValueType`, `null` when the handle hasn't been
+ * decrypted yet, or `undefined` while the signer address is being resolved.
  *
  * Use `useUserDecrypt` to populate the cache, then `useDecryptedValue`
  * to display cached values automatically on mount / page reload.

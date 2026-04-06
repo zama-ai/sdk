@@ -10,7 +10,13 @@ export interface DecryptHandle {
   contractAddress: Address;
 }
 
-/** A map of handles to their decrypted clear-text values. */
+/**
+ * A map of handles to their decrypted clear-text values.
+ *
+ * Keyed by {@link Handle} alone (no contract dimension). This is safe because
+ * FHE handles are globally unique across contracts — two different contracts
+ * never produce the same handle value.
+ */
 export type DecryptResult = Record<Handle, ClearValueType>;
 
 /** Variables for {@link userDecryptMutationOptions}. */
@@ -21,9 +27,9 @@ export interface UserDecryptMutationParams {
 export interface UserDecryptOptions {
   /** Default handles used when `mutate()` is called without arguments. */
   handles?: DecryptHandle[];
-  /** Fired after credentials are ready (either from cache or freshly generated). */
+  /** Fired after credentials are ready (cached or freshly signed), before relayer calls. Not called when all handles are already cached. */
   onCredentialsReady?: () => void;
-  /** Fired after decryption completes. */
+  /** Fired after all handles have been decrypted, including when all results come from cache. Not called when the handles array is empty. */
   onDecrypted?: (values: DecryptResult) => void;
 }
 
@@ -46,9 +52,16 @@ export function userDecryptMutationOptions(
 
       return sdk.decrypt(handles, options);
     },
-    onSuccess: (data, _variables, _onMutateResult, context) => {
-      for (const [handle, value] of Object.entries(data) as [Handle, ClearValueType][]) {
-        context.client.setQueryData(zamaQueryKeys.decryption.handle(handle), value);
+    onSuccess: (data, variables, _onMutateResult, context) => {
+      const inputHandles = variables?.handles ?? options?.handles ?? [];
+      for (const h of inputHandles) {
+        const value = data[h.handle];
+        if (value !== undefined) {
+          context.client.setQueryData(
+            zamaQueryKeys.decryption.handle(h.handle, h.contractAddress),
+            value,
+          );
+        }
       }
     },
   };

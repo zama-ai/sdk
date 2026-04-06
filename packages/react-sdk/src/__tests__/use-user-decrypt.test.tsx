@@ -41,8 +41,12 @@ describe("useUserDecrypt", () => {
     });
 
     // Verify query cache was also populated (used for lifecycle invalidation)
-    expect(queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle1"))).toBe(100n);
-    expect(queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle2"))).toBe(true);
+    expect(
+      queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle1", tokenAddress)),
+    ).toBe(100n);
+    expect(
+      queryClient.getQueryData(zamaQueryKeys.decryption.handle("0xhandle2", tokenAddress)),
+    ).toBe(true);
   });
 
   it("fires callbacks in correct order", async ({

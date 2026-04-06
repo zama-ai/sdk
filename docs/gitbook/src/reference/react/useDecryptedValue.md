@@ -71,7 +71,7 @@ Pass `{ enabled: false }` to disable the query.
 
 Returns a standard `useQuery` result. `data` is `ClearValueType | null` — the cached decrypted value, or `null` if the handle hasn't been decrypted yet.
 
-The query uses `staleTime: Infinity` — it fetches once and never refetches automatically. To refresh after a new decryption, invalidate the query key via `useUserDecrypt`'s `onSuccess` (which writes to both the decrypt cache and the TanStack Query cache).
+The query uses `staleTime: Infinity` — it fetches once from the persistent decrypt cache and never refetches automatically. After a successful `useUserDecrypt` mutation, the TanStack Query cache is updated automatically via the mutation's `onSuccess` handler, so `useDecryptedValue` reflects the new value without manual invalidation.
 
 ## Related
 

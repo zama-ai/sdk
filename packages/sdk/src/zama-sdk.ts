@@ -16,9 +16,9 @@ import { WrappersRegistry } from "./wrappers-registry";
 
 /** Options for {@link ZamaSDK.decrypt}. */
 export interface DecryptOptions {
-  /** Fired after credentials are ready (either from cache or freshly generated), before relayer calls. */
+  /** Fired after credentials are ready (cached or freshly signed), before relayer calls. Not called when all handles are already cached. */
   onCredentialsReady?: () => void;
-  /** Fired after all handles have been decrypted. */
+  /** Fired after all handles have been decrypted, including when all results come from cache. Receives the full result map. */
   onDecrypted?: (values: DecryptResult) => void;
 }
 
@@ -147,7 +147,7 @@ export class ZamaSDK {
         onDisconnect: () => {
           runLifecycleEffect("signerDisconnect", async () => {
             await this.#revokeByTrackedIdentity();
-            void this.cache.clearAll();
+            await this.cache.clearAll();
             this.#lastAddress = null;
             this.#lastChainId = null;
             lifecycleCallbacks?.onDisconnect?.();
@@ -156,7 +156,7 @@ export class ZamaSDK {
         onAccountChange: (newAddress: Address) => {
           runLifecycleEffect("signerAccountChange", async () => {
             await this.#revokeByTrackedIdentity();
-            void this.cache.clearAll();
+            await this.cache.clearAll();
             this.#lastAddress = getAddress(newAddress);
             try {
               this.#lastChainId = await this.signer.getChainId();
@@ -169,7 +169,7 @@ export class ZamaSDK {
         onChainChange: (newChainId: number) => {
           runLifecycleEffect("signerChainChange", async () => {
             await this.#revokeByTrackedIdentity();
-            void this.cache.clearAll();
+            await this.cache.clearAll();
             this.#lastChainId = newChainId;
             try {
               this.#lastAddress = await this.signer.getAddress();
@@ -220,6 +220,7 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
       delegatedCredentials: this.delegatedCredentials,
+      cache: this.cache,
       address: getAddress(address),
       onEvent: this.#onEvent,
     });
@@ -241,6 +242,7 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
       delegatedCredentials: this.delegatedCredentials,
+      cache: this.cache,
       address: getAddress(address),
       wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,
@@ -329,18 +331,15 @@ export class ZamaSDK {
     }
 
     if (uncached.length === 0) {
-      try {
-        onDecrypted(result);
-      } catch {}
+      onDecrypted(result);
       return result;
     }
 
     // Get unique contract addresses and acquire credentials
     const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
     const creds = await this.credentials.allow(...contractAddresses);
-    try {
-      onCredentialsReady();
-    } catch {}
+    onCredentialsReady();
+
     // Group uncached handles by contract address
     const byContract = new Map<Address, Handle[]>();
     for (const h of uncached) {
@@ -372,9 +371,7 @@ export class ZamaSDK {
       }
     }
 
-    try {
-      onDecrypted(result);
-    } catch {}
+    onDecrypted(result);
     return result;
   }
 
@@ -393,12 +390,14 @@ export class ZamaSDK {
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
     await this.credentials.revoke(...contractAddresses);
+    let address: Address;
     try {
-      const address = await this.signer.getAddress();
-      await this.cache.clearForRequester(address);
+      address = await this.signer.getAddress();
     } catch {
-      // Signer may not be ready
+      // Signer not connected — no cached entries to clear
+      return;
     }
+    await this.cache.clearForRequester(address);
   }
 
   /**

@@ -624,9 +624,10 @@ export class Token extends ReadonlyToken {
       decryptionProof = result.decryptionProof;
       try {
         clearValue = hexToBigInt(result.abiEncodedClearValues);
-      } catch {
+      } catch (error) {
         throw new DecryptionFailedError(
           `Cannot parse decrypted value: ${result.abiEncodedClearValues}`,
+          { cause: error },
         );
       }
     } catch (error) {

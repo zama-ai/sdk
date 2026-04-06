@@ -10,7 +10,7 @@ export interface DecryptedValueQueryConfig {
   handle: DecryptHandle;
   /** The signer address used as the cache requester key. */
   signerAddress: Address;
-  query?: Record<string, unknown>;
+  query?: { enabled?: boolean };
 }
 
 /**

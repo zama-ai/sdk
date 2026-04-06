@@ -33,8 +33,8 @@ import type { GenericStorage } from "./types";
  */
 export class DecryptCache {
   readonly #storage: GenericStorage;
-  #decryptNamespace = "zama:decrypt";
-  #decryptKeysNamespace = `${this.#decryptNamespace}:keys`;
+  readonly #decryptNamespace = "zama:decrypt";
+  readonly #decryptKeysNamespace = `${this.#decryptNamespace}:keys`;
   /** Serialises concurrent writes to the keys index. */
   #indexWriteQueue: Promise<void> = Promise.resolve();
 
@@ -51,7 +51,8 @@ export class DecryptCache {
     try {
       const key = this.#buildStorageKey(requester, contractAddress, handle);
       return await this.#storage.get<ClearValueType>(key);
-    } catch {
+    } catch (error) {
+      console.warn("[zama-sdk] DecryptCache.get failed:", error); // eslint-disable-line no-console
       return null;
     }
   }
@@ -68,49 +69,59 @@ export class DecryptCache {
       await this.#storage.set<ClearValueType>(key, value);
       // Track the key in the index (serialised to avoid concurrent overwrites)
       this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
-        this.#addToIndex(key).catch(() => {}),
+        this.#addToIndex(key).catch((error) => {
+          console.warn("[zama-sdk] DecryptCache index write failed:", error); // eslint-disable-line no-console
+        }),
       );
       await this.#indexWriteQueue;
-    } catch {
-      // best-effort
+    } catch (error) {
+      console.warn("[zama-sdk] DecryptCache.set failed:", error); // eslint-disable-line no-console
     }
   }
 
   /** Removes all cached entries for the given `requester`. */
   async clearForRequester(requester: Address): Promise<void> {
-    try {
-      const checksumRequester = getAddress(requester);
-      const prefix = `${this.#decryptNamespace}:${checksumRequester}:`;
-      const keys = await this.#readIndex();
-      const toRemove: string[] = [];
-      const remaining: string[] = [];
-      for (const k of keys) {
-        if (k.startsWith(prefix)) {
-          toRemove.push(k);
-        } else {
-          remaining.push(k);
-        }
+    // Serialise with the index write queue to avoid racing with concurrent set() calls
+    this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
+      this.#doClearForRequester(requester).catch((error) => {
+        console.warn("[zama-sdk] DecryptCache.clearForRequester failed:", error); // eslint-disable-line no-console
+      }),
+    );
+    await this.#indexWriteQueue;
+  }
+
+  async #doClearForRequester(requester: Address): Promise<void> {
+    const checksumRequester = getAddress(requester);
+    const prefix = `${this.#decryptNamespace}:${checksumRequester}:`;
+    const keys = await this.#readIndex();
+    const toRemove: string[] = [];
+    const remaining: string[] = [];
+    for (const k of keys) {
+      if (k.startsWith(prefix)) {
+        toRemove.push(k);
+      } else {
+        remaining.push(k);
       }
-      await Promise.all(toRemove.map((k) => this.#storage.delete(k).catch(() => {})));
-      await this.#storage.set<string[]>(this.#decryptKeysNamespace, remaining);
-    } catch {
-      // best-effort
     }
+    await Promise.all(toRemove.map((k) => this.#storage.delete(k).catch(() => {})));
+    await this.#storage.set<string[]>(this.#decryptKeysNamespace, remaining);
   }
 
   /** Removes all cached entries. */
   async clearAll(): Promise<void> {
-    try {
-      const keys = await this.#readIndex();
-      const deletes: Promise<void>[] = [];
-      for (const k of keys) {
-        deletes.push(this.#storage.delete(k).catch(() => {}));
-      }
-      await Promise.all(deletes);
-      await this.#storage.delete(this.#decryptKeysNamespace);
-    } catch {
-      // best-effort
-    }
+    // Serialise with the index write queue to avoid racing with concurrent set() calls
+    this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
+      this.#doClearAll().catch((error) => {
+        console.warn("[zama-sdk] DecryptCache.clearAll failed:", error); // eslint-disable-line no-console
+      }),
+    );
+    await this.#indexWriteQueue;
+  }
+
+  async #doClearAll(): Promise<void> {
+    const keys = await this.#readIndex();
+    await Promise.all(keys.map((k) => this.#storage.delete(k).catch(() => {})));
+    await this.#storage.delete(this.#decryptKeysNamespace);
   }
 
   #buildStorageKey(requester: Address, contractAddress: Address, handle: Handle): string {

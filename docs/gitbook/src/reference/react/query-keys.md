@@ -135,7 +135,7 @@ On-chain wrappers registry queries.
 
 ### `decryptionKeys`
 
-Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt) and read reactively via its `values` map.
+Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt) and read via [`useDecryptedValue`](/reference/react/useDecryptedValue) / [`useDecryptedValues`](/reference/react/useDecryptedValues).
 
 ```ts
 import { decryptionKeys } from "@zama-fhe/react-sdk";
