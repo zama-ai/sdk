@@ -261,6 +261,18 @@ export const zamaQueryKeys = {
             : { contractAddress: getAddress(contractAddress) }),
         },
       ] as const,
+    handles: (handles: readonly { handle: string; contractAddress: Address }[]) =>
+      [
+        "zama.decryption",
+        {
+          handles: [...handles]
+            .toSorted((a, b) => a.handle.localeCompare(b.handle))
+            .map((h) => ({
+              handle: h.handle,
+              contractAddress: getAddress(h.contractAddress),
+            })),
+        },
+      ] as const,
   },
 
   wrappersRegistry: {

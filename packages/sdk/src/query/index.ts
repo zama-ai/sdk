@@ -138,6 +138,11 @@ export {
   type DecryptHandle,
 } from "./user-decrypt";
 export { decryptedValueQueryOptions, type DecryptedValueQueryConfig } from "./decrypted-value";
+export {
+  decryptedValuesQueryOptions,
+  type DecryptedValuesQueryConfig,
+  type DecryptedValuesResult,
+} from "./decrypted-values";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
 export {
   batchDecryptBalancesAsMutationOptions,

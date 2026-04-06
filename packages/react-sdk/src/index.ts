@@ -22,6 +22,11 @@ export {
   type UseDecryptedValueConfig,
   type UseDecryptedValueResult,
 } from "./relayer/use-decrypted-value";
+export {
+  useDecryptedValues,
+  type UseDecryptedValuesConfig,
+  type UseDecryptedValuesResult,
+} from "./relayer/use-decrypted-values";
 
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
