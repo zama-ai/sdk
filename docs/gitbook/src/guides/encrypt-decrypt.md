@@ -307,35 +307,42 @@ const result = await decrypt.mutateAsync({
 
 #### Reading decrypted values
 
-Decrypted values are returned in `data` and also stored in the SDK's persistent decrypt cache (`sdk.cache`), scoped by signer and contract address. Cached values survive page reloads. Pass `handles` to config and call `mutate()` — cached handles are returned instantly without hitting the relayer:
+Decrypted values are stored in the SDK's persistent decrypt cache (`sdk.cache`), scoped by signer and contract address. Cached values survive page reloads.
+
+**To display cached values automatically on mount** (no user interaction needed), use `useDecryptedValue` or `useDecryptedValues`. These are pure read hooks — they never trigger a wallet signature or relayer call:
 
 ```tsx
-import { useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useDecryptedValues, useUserDecrypt } from "@zama-fhe/react-sdk";
 import type { DecryptHandle } from "@zama-fhe/react-sdk";
 
 function DecryptedBalances({ handles }: { handles: DecryptHandle[] }) {
-  const { data, mutate, isPending } = useUserDecrypt({ handles });
+  const decrypt = useUserDecrypt();
+
+  // Pure read — renders cached values on mount, even after page reload
+  const { data } = useDecryptedValues({ handles });
 
   return (
     <section>
-      <button onClick={() => mutate()} disabled={isPending}>
-        {isPending ? "Decrypting..." : "Decrypt"}
+      <button onClick={() => decrypt.mutate({ handles })} disabled={decrypt.isPending}>
+        {decrypt.isPending ? "Decrypting..." : "Decrypt"}
       </button>
-      {data && (
-        <ul>
-          {handles.map((h) => (
-            <li key={h.handle}>
-              <output>{data[h.handle]?.toString() ?? "pending"}</output>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul>
+        {handles.map((h) => (
+          <li key={h.handle}>
+            <output>{data?.[h.handle]?.toString() ?? "pending"}</output>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
 ```
 
-Calling `mutate()` without arguments decrypts only handles not already in the decrypt cache. If all handles are cached, the cached values are returned immediately without a relayer call. The cache is cleared on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account/chain change).
+The pattern is:
+- **`useUserDecrypt`** (mutation) — "go decrypt these handles" — may trigger a wallet prompt, populates the cache
+- **`useDecryptedValue` / `useDecryptedValues`** (query) — "give me cached values" — pure read, `staleTime: Infinity`, renders on mount
+
+The cache is cleared on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account/chain change).
 
 #### Showing progress during decryption
 

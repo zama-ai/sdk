@@ -180,6 +180,8 @@ This means users only see a wallet signature prompt once per session (or per TTL
 
 ## Related
 
+- [`useDecryptedValue`](/reference/react/useDecryptedValue) — pure read hook for displaying a single cached value on mount (no wallet prompt)
+- [`useDecryptedValues`](/reference/react/useDecryptedValues) — pure read hook for displaying multiple cached values on mount
 - [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances automatically with two-phase polling
 - [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value for on-chain submission
 - [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with end-to-end examples
