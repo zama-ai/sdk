@@ -23,6 +23,7 @@ export function useRevokeSession(options?: UseMutationOptions<void>) {
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
       void context.client.invalidateQueries({ queryKey: zamaQueryKeys.isAllowed.all });
+      void context.client.invalidateQueries({ queryKey: zamaQueryKeys.decryption.all });
     },
   });
 }
