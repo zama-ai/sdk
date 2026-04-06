@@ -1,11 +1,12 @@
-import type { ClearValueType } from "@zama-fhe/relayer-sdk/bundle";
 import { getAddress, type Address } from "viem";
 import { CredentialsManager } from "./credentials/credentials-manager";
 import { DelegatedCredentialsManager } from "./credentials/delegated-credentials-manager";
+import { DecryptCache } from "./decrypt-cache";
 import type { ZamaSDKEventListener } from "./events/sdk-events";
 import { ZamaSDKEvents } from "./events/sdk-events";
+import type { DecryptHandle } from "./query/user-decrypt";
 import type { RelayerSDK } from "./relayer/relayer-sdk";
-import type { Handle } from "./relayer/relayer-sdk.types";
+import type { ClearValueType, Handle } from "./relayer/relayer-sdk.types";
 import { MemoryStorage } from "./storage/memory-storage";
 import { ReadonlyToken } from "./token/readonly-token";
 import { Token } from "./token/token";
@@ -68,8 +69,8 @@ export class ZamaSDK {
   readonly sessionStorage: GenericStorage;
   readonly credentials: CredentialsManager;
   readonly delegatedCredentials: DelegatedCredentialsManager;
-  /** In-memory cache for decrypted handle values, shared with all tokens created by this SDK. */
-  readonly cache: Map<Handle, ClearValueType> = new Map();
+  /** Storage-backed cache for decrypted handle values, shared with all tokens created by this SDK. */
+  readonly cache: DecryptCache;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.
    * Uses built-in defaults merged with any `registryAddresses` overrides, and the SDK's `registryTTL` if configured.
@@ -95,6 +96,7 @@ export class ZamaSDK {
     this.signer = config.signer;
     this.storage = config.storage;
     this.sessionStorage = config.sessionStorage ?? new MemoryStorage();
+    this.cache = new DecryptCache(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
     this.registry = new WrappersRegistry({
       signer: this.signer,
@@ -137,7 +139,7 @@ export class ZamaSDK {
         onDisconnect: () => {
           runLifecycleEffect("signerDisconnect", async () => {
             await this.#revokeByTrackedIdentity();
-            this.cache.clear();
+            void this.cache.clearAll();
             this.#lastAddress = null;
             this.#lastChainId = null;
             lifecycleCallbacks?.onDisconnect?.();
@@ -146,7 +148,7 @@ export class ZamaSDK {
         onAccountChange: (newAddress: Address) => {
           runLifecycleEffect("signerAccountChange", async () => {
             await this.#revokeByTrackedIdentity();
-            this.cache.clear();
+            void this.cache.clearAll();
             this.#lastAddress = getAddress(newAddress);
             try {
               this.#lastChainId = await this.signer.getChainId();
@@ -159,7 +161,7 @@ export class ZamaSDK {
         onChainChange: (newChainId: number) => {
           runLifecycleEffect("signerChainChange", async () => {
             await this.#revokeByTrackedIdentity();
-            this.cache.clear();
+            void this.cache.clearAll();
             this.#lastChainId = newChainId;
             try {
               this.#lastAddress = await this.signer.getAddress();
@@ -210,7 +212,6 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
       delegatedCredentials: this.delegatedCredentials,
-      cache: this.cache,
       address: getAddress(address),
       onEvent: this.#onEvent,
     });
@@ -232,7 +233,6 @@ export class ZamaSDK {
       sessionStorage: this.sessionStorage,
       credentials: this.credentials,
       delegatedCredentials: this.delegatedCredentials,
-      cache: this.cache,
       address: getAddress(address),
       wrapper: wrapper ? getAddress(wrapper) : undefined,
       onEvent: this.#onEvent,
@@ -282,6 +282,78 @@ export class ZamaSDK {
   }
 
   /**
+   * Decrypt one or more FHE handles. Results are cached — repeated calls
+   * for the same handle skip the relayer round-trip.
+   *
+   * @param handles - Handles to decrypt, each paired with its contract address.
+   * @returns A record mapping each handle to its decrypted clear-text value.
+   *
+   * @example
+   * ```ts
+   * const values = await sdk.decrypt([
+   *   { handle: balanceHandle, contractAddress: cUSDT },
+   * ]);
+   * console.log(values[balanceHandle]); // 1000n
+   * ```
+   */
+  async decrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
+    if (handles.length === 0) {return {};}
+
+    const signerAddress = await this.signer.getAddress();
+    const result: Record<Handle, ClearValueType> = {};
+    const uncached: DecryptHandle[] = [];
+
+    // Check cache for each handle
+    for (const h of handles) {
+      const cached = await this.cache.get(signerAddress, h.contractAddress, h.handle);
+      if (cached !== null) {
+        result[h.handle] = cached;
+      } else {
+        uncached.push(h);
+      }
+    }
+
+    if (uncached.length === 0) {return result;}
+
+    // Get unique contract addresses and acquire credentials
+    const contractAddresses = [...new Set(uncached.map((h) => h.contractAddress))];
+    const creds = await this.credentials.allow(...contractAddresses);
+
+    // Group uncached handles by contract address
+    const byContract = new Map<Address, Handle[]>();
+    for (const h of uncached) {
+      const existing = byContract.get(h.contractAddress);
+      if (existing) {
+        existing.push(h.handle);
+      } else {
+        byContract.set(h.contractAddress, [h.handle]);
+      }
+    }
+
+    // Decrypt per contract group
+    for (const [contractAddress, contractHandles] of byContract) {
+      const decrypted = await this.relayer.userDecrypt({
+        handles: contractHandles,
+        contractAddress,
+        signedContractAddresses: creds.contractAddresses,
+        privateKey: creds.privateKey,
+        publicKey: creds.publicKey,
+        signature: creds.signature,
+        signerAddress,
+        startTimestamp: creds.startTimestamp,
+        durationDays: creds.durationDays,
+      });
+
+      for (const [handle, value] of Object.entries(decrypted)) {
+        result[handle as Handle] = value;
+        await this.cache.set(signerAddress, contractAddress, handle as Handle, value);
+      }
+    }
+
+    return result;
+  }
+
+  /**
    * Revoke the session signature for the current signer.
    * The next decrypt operation will require a fresh wallet signature.
    *
@@ -296,6 +368,12 @@ export class ZamaSDK {
    */
   async revoke(...contractAddresses: Address[]): Promise<void> {
     await this.credentials.revoke(...contractAddresses);
+    try {
+      const address = await this.signer.getAddress();
+      await this.cache.clearForRequester(address);
+    } catch {
+      // Signer may not be ready
+    }
   }
 
   /**
@@ -314,6 +392,7 @@ export class ZamaSDK {
     const chainId = this.#lastChainId ?? (await this.signer.getChainId());
     const storeKey = await CredentialsManager.computeStoreKey(address, chainId);
     await this.credentials.revokeByKey(storeKey);
+    await this.cache.clearForRequester(address);
   }
 
   /**

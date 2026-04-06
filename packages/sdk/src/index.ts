@@ -40,6 +40,9 @@ export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-u
 // ERC-165 interface IDs
 export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
 
+// Decrypt cache
+export { DecryptCache } from "./decrypt-cache";
+
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export type { ZamaSDKConfig } from "./zama-sdk";
