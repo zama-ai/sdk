@@ -70,7 +70,7 @@ import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
 
 `DecryptHandle[] | undefined`
 
-Default handles to decrypt when `mutate()` is called without arguments. Only handles not yet in the SDK's in-memory cache are sent for decryption — cached handles are returned immediately.
+Default handles to decrypt when `mutate()` is called without arguments. Only handles not yet in the SDK's persistent decrypt cache are sent for decryption — cached handles are returned immediately, even after a page reload.
 
 ### onCredentialsReady
 
@@ -164,7 +164,7 @@ const result = await decrypt.mutateAsync({
 
 Returns a standard `useMutation` result. `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). On success, freshly decrypted results are written to the SDK's in-memory cache (`sdk.cache`) so that subsequent calls for the same handles return instantly.
+When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). On success, freshly decrypted results are written to the SDK's persistent decrypt cache (`sdk.cache`) — scoped by `(signer, contract, handle)` — so that subsequent calls for the same handles return instantly, even after a page reload. The cache is cleared automatically on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account change, chain change).
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

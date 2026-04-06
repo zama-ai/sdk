@@ -206,14 +206,23 @@ const sdk = new ZamaSDK({
 
 ### cache
 
-`Map<Handle, ClearValueType>` (read-only reference)
+`DecryptCache` (readonly)
 
-In-memory cache of decrypted handle values, shared with all tokens created by this SDK instance. Keyed by the ciphertext handle — when the on-chain handle changes (e.g. after a transfer), the old entry is automatically a miss.
+Persistent cache for decrypted FHE plaintext values. Backed by the same `GenericStorage` passed to the constructor (e.g. IndexedDB in browsers), so **cached values survive page reloads**.
 
-The cache is cleared automatically on wallet disconnect, account change, or chain change. You can also clear it manually:
+Entries are scoped by `(requester, contractAddress, handle)` — a different signer cannot read another user's cached decryptions, mirroring the on-chain ACL. When the on-chain handle changes (e.g. after a transfer), the old entry is automatically a miss.
+
+The cache is cleared automatically on:
+- `revoke()` / `revokeSession()` — clears entries for the current signer
+- Wallet disconnect, account change, or chain change — clears all entries
 
 ```ts
-sdk.cache.clear();
+// Manual clear for the current signer
+const address = await sdk.signer.getAddress();
+await sdk.cache.clearForRequester(address);
+
+// Clear everything
+await sdk.cache.clearAll();
 ```
 
 ### registry
@@ -268,6 +277,26 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 const pairs = await registry.getTokenPairs();
 ```
 
+### decrypt
+
+`(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
+
+Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written to the persistent cache (`sdk.cache`) so subsequent calls for the same handles return instantly.
+
+Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract.
+
+```ts
+const values = await sdk.decrypt([
+  { handle: balanceHandle, contractAddress: cUSDT },
+  { handle: flagHandle, contractAddress: myContract },
+]);
+console.log(values[balanceHandle]); // 1000n
+```
+
+{% hint style="info" %}
+This is the SDK-level entry point for decryption. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query mutation semantics.
+{% endhint %}
+
 ### allow
 
 `(...addresses: Address[]) => Promise<void>`
@@ -282,7 +311,7 @@ await sdk.allow("0xTokenA", "0xTokenB");
 
 `(...addresses: Address[]) => Promise<void>`
 
-Clears session credentials. The addresses are included in the `credentials:revoked` event.
+Clears session credentials **and** cached decrypted values for the current signer. The addresses are included in the `credentials:revoked` event. The next decrypt requires a fresh wallet signature.
 
 ```ts
 await sdk.revoke("0xTokenA", "0xTokenB");
@@ -292,7 +321,7 @@ await sdk.revoke("0xTokenA", "0xTokenB");
 
 `() => Promise<void>`
 
-Clears the session signature without specifying addresses. The next decrypt requires a fresh wallet signature.
+Clears the session signature **and** cached decrypted values without specifying addresses. The next decrypt requires a fresh wallet signature.
 
 ```ts
 await sdk.revokeSession();

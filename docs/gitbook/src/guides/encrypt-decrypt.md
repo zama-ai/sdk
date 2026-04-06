@@ -307,7 +307,7 @@ const result = await decrypt.mutateAsync({
 
 #### Reading decrypted values
 
-Decrypted values are returned in `data` and also stored in the SDK's in-memory cache (`sdk.cache`). Pass `handles` to config and call `mutate()` — cached handles are returned instantly without hitting the relayer:
+Decrypted values are returned in `data` and also stored in the SDK's persistent decrypt cache (`sdk.cache`), scoped by signer and contract address. Cached values survive page reloads. Pass `handles` to config and call `mutate()` — cached handles are returned instantly without hitting the relayer:
 
 ```tsx
 import { useUserDecrypt } from "@zama-fhe/react-sdk";
@@ -335,7 +335,7 @@ function DecryptedBalances({ handles }: { handles: DecryptHandle[] }) {
 }
 ```
 
-Calling `mutate()` without arguments decrypts only handles not already in the SDK cache. If all handles are cached, the cached values are returned immediately without a relayer call.
+Calling `mutate()` without arguments decrypts only handles not already in the decrypt cache. If all handles are cached, the cached values are returned immediately without a relayer call. The cache is cleared on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account/chain change).
 
 #### Showing progress during decryption
 
