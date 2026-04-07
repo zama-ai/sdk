@@ -55,4 +55,3 @@ contracts/out/
 contracts/cache/
 contracts/broadcast/
 contracts/.forge-deploy-lock/
-.idea/
