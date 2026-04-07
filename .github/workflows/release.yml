@@ -71,6 +71,11 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Ensure npm 11
+        run: |
+          pnpm add -g npm@^11
+          npm --version
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
