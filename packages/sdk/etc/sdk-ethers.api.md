@@ -137,9 +137,6 @@ export function writeUnwrapFromBalanceContract(signer: EthersTransactionSigner, 
 // @public (undocumented)
 export function writeWrapContract(signer: EthersTransactionSigner, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
 
-// @public (undocumented)
-export function writeWrapETHContract(signer: EthersTransactionSigner, wrapperAddress: Address, to: Address, amount: bigint, value: bigint): Promise<`0x${string}`>;
-
 // (No @packageDocumentation comment for this package)
 
 ```

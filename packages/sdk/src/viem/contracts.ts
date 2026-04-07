@@ -13,7 +13,6 @@ import {
   unwrapContract,
   unwrapFromBalanceContract,
   wrapContract,
-  wrapETHContract,
   wrapperExistsContract,
   getTokenPairsContract,
   getTokenPairsLengthContract,
@@ -172,20 +171,6 @@ export function writeWrapContract(
     chain: client.chain,
     account: requireAccount(client),
     ...wrapContract(wrapperAddress, to, amount),
-  });
-}
-
-export function writeWrapETHContract(
-  client: WalletClient,
-  wrapperAddress: Address,
-  to: Address,
-  amount: bigint,
-  value: bigint,
-) {
-  return client.writeContract({
-    chain: client.chain,
-    account: requireAccount(client),
-    ...wrapETHContract(wrapperAddress, to, amount, value),
   });
 }
 

@@ -86,7 +86,6 @@ export {
 } from "./wrappers-registry";
 
 export { shieldMutationOptions, type ShieldParams } from "./shield";
-export { shieldETHMutationOptions, type ShieldETHParams } from "./shield-eth";
 export { confidentialTransferMutationOptions, type ConfidentialTransferParams } from "./transfer";
 export {
   confidentialTransferFromMutationOptions,

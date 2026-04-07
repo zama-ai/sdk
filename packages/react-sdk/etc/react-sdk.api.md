@@ -36,7 +36,6 @@ import { batchDecryptBalancesAsMutationOptions } from '@zama-fhe/sdk/query';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { BatchDecryptOptions } from '@zama-fhe/sdk';
 import { BatchTransferData } from '@zama-fhe/sdk';
-import { batchTransferFeeQueryOptions } from '@zama-fhe/sdk/query';
 import { ChromeSessionStorage } from '@zama-fhe/sdk';
 import { chromeSessionStorage } from '@zama-fhe/sdk';
 import { clearPendingUnshield } from '@zama-fhe/sdk';
@@ -129,7 +128,6 @@ import { ERC20ReadFailedError } from '@zama-fhe/sdk';
 import { ERC7984_INTERFACE_ID } from '@zama-fhe/sdk';
 import { ERC7984_WRAPPER_INTERFACE_ID } from '@zama-fhe/sdk';
 import { extractEncryptedHandles } from '@zama-fhe/sdk';
-import { feeRecipientQueryOptions } from '@zama-fhe/sdk/query';
 import { FheTypeName } from '@zama-fhe/sdk';
 import { FhevmInstanceConfig } from '@zama-fhe/sdk';
 import { filterQueryOptions } from '@zama-fhe/sdk/query';
@@ -144,11 +142,7 @@ import { findWrapped } from '@zama-fhe/sdk';
 import { generateKeypairMutationOptions } from '@zama-fhe/sdk/query';
 import { GenericSigner } from '@zama-fhe/sdk';
 import { GenericStorage } from '@zama-fhe/sdk';
-import { getBatchTransferFeeContract } from '@zama-fhe/sdk';
 import { getDelegationExpiryContract } from '@zama-fhe/sdk';
-import { getFeeRecipientContract } from '@zama-fhe/sdk';
-import { getUnwrapFeeContract } from '@zama-fhe/sdk';
-import { getWrapFeeContract } from '@zama-fhe/sdk';
 import { getWrapperContract } from '@zama-fhe/sdk';
 import { Handle } from '@zama-fhe/sdk';
 import { HardhatConfig } from '@zama-fhe/sdk';
@@ -176,6 +170,7 @@ import { ListPairsQueryConfig } from '@zama-fhe/sdk/query';
 import { listPairsQueryOptions } from '@zama-fhe/sdk/query';
 import { loadPendingUnshield } from '@zama-fhe/sdk';
 import { MainnetConfig } from '@zama-fhe/sdk';
+import { matchAclRevert } from '@zama-fhe/sdk';
 import { matchZamaError } from '@zama-fhe/sdk';
 import { MemoryStorage } from '@zama-fhe/sdk';
 import { memoryStorage } from '@zama-fhe/sdk';
@@ -220,9 +215,6 @@ import { SessionExpiredEvent } from '@zama-fhe/sdk';
 import { setFinalizeUnwrapOperatorContract } from '@zama-fhe/sdk';
 import { setOperatorContract } from '@zama-fhe/sdk';
 import { ShieldCallbacks } from '@zama-fhe/sdk';
-import { shieldETHMutationOptions } from '@zama-fhe/sdk/query';
-import { ShieldETHParams } from '@zama-fhe/sdk/query';
-import { shieldFeeQueryOptions } from '@zama-fhe/sdk/query';
 import { shieldMutationOptions } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
 import { ShieldSubmittedEvent } from '@zama-fhe/sdk';
@@ -255,7 +247,6 @@ import { underlyingContract } from '@zama-fhe/sdk';
 import { unshieldAllMutationOptions } from '@zama-fhe/sdk/query';
 import { UnshieldAllParams } from '@zama-fhe/sdk/query';
 import { UnshieldCallbacks } from '@zama-fhe/sdk';
-import { unshieldFeeQueryOptions } from '@zama-fhe/sdk/query';
 import { unshieldMutationOptions } from '@zama-fhe/sdk/query';
 import { UnshieldParams } from '@zama-fhe/sdk/query';
 import { UnshieldPhase1SubmittedEvent } from '@zama-fhe/sdk';
@@ -278,7 +269,6 @@ import { userDecryptMutationOptions } from '@zama-fhe/sdk/query';
 import { UserDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { UserDecryptParams } from '@zama-fhe/sdk';
 import { wrapContract } from '@zama-fhe/sdk';
-import { wrapETHContract } from '@zama-fhe/sdk';
 import { WrappedEvent } from '@zama-fhe/sdk';
 import { wrapperDiscoveryQueryOptions } from '@zama-fhe/sdk/query';
 import { wrapperExistsContract } from '@zama-fhe/sdk';
@@ -353,8 +343,6 @@ export { BatchDecryptBalancesAsParams }
 export { BatchDecryptOptions }
 
 export { BatchTransferData }
-
-export { batchTransferFeeQueryOptions }
 
 export { ChromeSessionStorage }
 
@@ -540,8 +528,6 @@ export { ERC7984_WRAPPER_INTERFACE_ID }
 
 export { extractEncryptedHandles }
 
-export { feeRecipientQueryOptions }
-
 export { FheTypeName }
 
 export { FhevmInstanceConfig }
@@ -570,15 +556,7 @@ export { GenericSigner }
 
 export { GenericStorage }
 
-export { getBatchTransferFeeContract }
-
 export { getDelegationExpiryContract }
-
-export { getFeeRecipientContract }
-
-export { getUnwrapFeeContract }
-
-export { getWrapFeeContract }
 
 export { getWrapperContract }
 
@@ -633,6 +611,8 @@ export { listPairsQueryOptions }
 export { loadPendingUnshield }
 
 export { MainnetConfig }
+
+export { matchAclRevert }
 
 export { matchZamaError }
 
@@ -741,12 +721,6 @@ export { setOperatorContract }
 
 export { ShieldCallbacks }
 
-export { shieldETHMutationOptions }
-
-export { ShieldETHParams }
-
-export { shieldFeeQueryOptions }
-
 export { shieldMutationOptions }
 
 export { ShieldParams }
@@ -811,8 +785,6 @@ export { UnshieldAllParams }
 
 export { UnshieldCallbacks }
 
-export { unshieldFeeQueryOptions }
-
 export { unshieldMutationOptions }
 
 export { UnshieldParams }
@@ -859,10 +831,7 @@ export function useAllow(options?: UseMutationOptions<void, Error, Address[]>): 
 export function useApproveUnderlying(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
 
 // @public
-export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, _$_zama_fhe_sdk0.BatchDecryptAsOptions, unknown>;
-
-// @public
-export function useBatchTransferFee(feeManagerAddress: Address, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
+export function useBatchDecryptBalancesAs(tokens: ReadonlyToken[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptAsOptions>): _$_tanstack_react_query0.UseMutationResult<Map<`0x${string}`, bigint>, Error, BatchDecryptAsOptions, unknown>;
 
 // @public
 export function useConfidentialApprove(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialApproveParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ConfidentialApproveParams, `0x${string}`>;
@@ -1301,17 +1270,6 @@ export interface UseDelegationStatusConfig {
 export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<EncryptResult, Error, EncryptParams, unknown>;
 
 // @public
-export interface UseFeeConfig {
-    amount: bigint;
-    feeManagerAddress: Address;
-    from: Address;
-    to: Address;
-}
-
-// @public
-export function useFeeRecipient(feeManagerAddress: Address, options?: Omit<UseQueryOptions<Address>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<`0x${string}`, Error>;
-
-// @public
 export function useFinalizeUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
 
 // @public
@@ -1399,17 +1357,6 @@ export interface UseShieldConfig extends UseZamaConfig {
 }
 
 // @public
-export function useShieldETH<TContext = unknown>(config: UseShieldETHConfig, options?: UseMutationOptions<TransactionResult, Error, ShieldETHParams, TContext>): UseMutationResult<TransactionResult, Error, ShieldETHParams, TContext>;
-
-// @public
-export interface UseShieldETHConfig extends UseZamaConfig {
-    optimistic?: boolean;
-}
-
-// @public
-export function useShieldFee(config: UseFeeConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
-
-// @public
 export function useToken(config: UseZamaConfig): _$_zama_fhe_sdk0.Token;
 
 // @public
@@ -1457,9 +1404,6 @@ export function useUnshield(config: UseZamaConfig, options?: UseMutationOptions<
 
 // @public
 export function useUnshieldAll(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, void | UnshieldAllParams, `0x${string}`>;
-
-// @public
-export function useUnshieldFee(config: UseFeeConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): _$_tanstack_react_query0.UseQueryResult<bigint, Error>;
 
 // @public
 export function useUnwrap(config: UseZamaConfig, options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, UnwrapParams, `0x${string}`>;
@@ -1513,8 +1457,6 @@ export interface UseZamaConfig {
 export function useZamaSDK(): ZamaSDK;
 
 export { wrapContract }
-
-export { wrapETHContract }
 
 export { WrappedEvent }
 

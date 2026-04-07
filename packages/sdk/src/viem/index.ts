@@ -19,7 +19,6 @@ export {
   writeFinalizeUnwrapContract,
   writeSetOperatorContract,
   writeWrapContract,
-  writeWrapETHContract,
   readTokenPairsContract,
   readTokenPairsLengthContract,
   readTokenPairsSliceContract,

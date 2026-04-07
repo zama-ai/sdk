@@ -16,7 +16,6 @@ import {
   writeUnwrapContract,
   writeUnwrapFromBalanceContract,
   writeWrapContract,
-  writeWrapETHContract,
 } from "../contracts";
 import { ViemSigner } from "../viem-signer";
 
@@ -552,23 +551,6 @@ describe("Viem write contract helpers", () => {
     },
   );
 
-  vit(
-    "writeWrapETHContract calls writeContract with correct config and value",
-    ({ wrapperAddress, userAddress, walletClient }) => {
-      writeWrapETHContract(walletClient, wrapperAddress, userAddress, 500n, 500n);
-      expect(walletClient.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chain: MOCK_CHAIN,
-          account: walletClient.account,
-          address: wrapperAddress,
-          functionName: "wrapETH",
-          args: [userAddress, 500n],
-          value: 500n,
-        }),
-      );
-    },
-  );
-
   describe("all write helpers throw without account", () => {
     vit(
       "writeConfidentialBatchTransferContract",
@@ -641,13 +623,6 @@ describe("Viem write contract helpers", () => {
       expect(() => writeWrapContract(noAccountClient, wrapperAddress, userAddress, 0n)).toThrow(
         "WalletClient has no account",
       );
-    });
-
-    vit("writeWrapETHContract", ({ wrapperAddress, userAddress, createMockWalletClient }) => {
-      const noAccountClient = createMockWalletClient(false);
-      expect(() =>
-        writeWrapETHContract(noAccountClient, wrapperAddress, userAddress, 0n, 0n),
-      ).toThrow("WalletClient has no account");
     });
   });
 });

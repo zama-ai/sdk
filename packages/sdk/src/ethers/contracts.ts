@@ -22,7 +22,6 @@ import {
   unwrapContract,
   unwrapFromBalanceContract,
   wrapContract,
-  wrapETHContract,
   wrapperExistsContract,
   getTokenPairsContract,
   getTokenPairsLengthContract,
@@ -213,16 +212,6 @@ export function writeWrapContract(
   amount: bigint,
 ) {
   return ethersWrite(signer, wrapContract(wrapperAddress, to, amount));
-}
-
-export function writeWrapETHContract(
-  signer: EthersTransactionSigner,
-  wrapperAddress: Address,
-  to: Address,
-  amount: bigint,
-  value: bigint,
-) {
-  return ethersWrite(signer, wrapETHContract(wrapperAddress, to, amount, value));
 }
 
 // ── Registry read helpers ──────────────────────────────────

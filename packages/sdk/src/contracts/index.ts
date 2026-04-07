@@ -14,12 +14,7 @@ export {
   setFinalizeUnwrapOperatorContract,
 } from "./encrypted";
 
-export {
-  finalizeUnwrapContract,
-  underlyingContract,
-  wrapContract,
-  wrapETHContract,
-} from "./wrapper";
+export { finalizeUnwrapContract, underlyingContract, wrapContract } from "./wrapper";
 
 export {
   nameContract,

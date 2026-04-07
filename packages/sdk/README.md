@@ -181,7 +181,6 @@ Full read/write interface for a single confidential ERC-20. Extends `ReadonlyTok
 | Method                                                     | Description                                                                                                                                                                                                  |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `shield(amount, options?)`                                 | Shield (wrap) public ERC-20 tokens. Handles approval automatically. Options: `{ approvalStrategy: "max" \| "exact" \| "skip" }` (default `"exact"`). `"skip"` bypasses approval (use when already approved). |
-| `shieldETH(amount, value?)`                                | Shield (wrap) native ETH. `value` defaults to `amount`. Use when the underlying token is the zero address (native ETH).                                                                                      |
 | `unshield(amount, callbacks?)`                             | Unwrap a specific amount and finalize in one call. Orchestrates: unwrap → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                                   |
 | `unshieldAll(callbacks?)`                                  | Unwrap the entire balance and finalize in one call. Orchestrates: unwrapAll → wait receipt → parse event → finalizeUnwrap. Optional `UnshieldCallbacks` for progress tracking.                               |
 | `unwrap(amount)`                                           | Request unwrap for a specific amount (low-level, requires manual finalization).                                                                                                                              |
@@ -548,7 +547,6 @@ interface ContractCallConfig {
 | Function                                                         | Description                                   |
 | ---------------------------------------------------------------- | --------------------------------------------- |
 | `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens.                           |
-| `wrapETHContract(wrapper, to, amount, value)`                    | Wrap native ETH.                              |
 | `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap with encrypted amount.         |
 | `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Request unwrap using on-chain balance handle. |
 | `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap with decryption proof.        |
@@ -567,20 +565,11 @@ interface ContractCallConfig {
 | ----------------------------------------------- | ------------------------ |
 | `supportsInterfaceContract(token, interfaceId)` | ERC-165 interface check. |
 
-### Fee Manager
-
-| Function                                             | Description                |
-| ---------------------------------------------------- | -------------------------- |
-| `getWrapFeeContract(feeManager, amount, from, to)`   | Calculate wrap fee.        |
-| `getUnwrapFeeContract(feeManager, amount, from, to)` | Calculate unwrap fee.      |
-| `getBatchTransferFeeContract(feeManager)`            | Get batch transfer fee.    |
-| `getFeeRecipientContract(feeManager)`                | Get fee recipient address. |
-
 ### Transfer Batcher
 
 | Function                                                                   | Description                         |
 | -------------------------------------------------------------------------- | ----------------------------------- |
-| `confidentialBatchTransferContract(batcher, token, from, transfers, fees)` | Batch multiple encrypted transfers. |
+| `confidentialBatchTransferContract(batcher, token, from, transfers)` | Batch multiple encrypted transfers. |
 
 ## Library-Specific Contract Helpers
 
@@ -611,7 +600,7 @@ const txHash = await writeConfidentialTransferContract(
 
 **Read helpers:** `readConfidentialBalanceOfContract`, `readUnderlyingTokenContract`, `readWrapperExistsContract`, `readSupportsInterfaceContract`, `readWrapperForTokenContract` (legacy — prefer `sdk.registry.getConfidentialToken()`).
 
-**Write helpers:** `writeConfidentialTransferContract`, `writeConfidentialBatchTransferContract`, `writeUnwrapContract`, `writeUnwrapFromBalanceContract`, `writeFinalizeUnwrapContract`, `writeSetOperatorContract`, `writeWrapContract`, `writeWrapETHContract`.
+**Write helpers:** `writeConfidentialTransferContract`, `writeConfidentialBatchTransferContract`, `writeUnwrapContract`, `writeUnwrapFromBalanceContract`, `writeFinalizeUnwrapContract`, `writeSetOperatorContract`, `writeWrapContract`.
 
 ### ethers (`@zama-fhe/sdk/ethers`)
 
@@ -657,9 +646,9 @@ Individual topic hashes are accessible via the `Topics` object: `Topics.Confiden
 | Function                          | Returns                                                                                                                |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                            |
-| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ mintAmount, amountIn, feeAmount, to, mintTxId }`                                           |
+| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                            |
 | `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                                       |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ burntAmountHandle, finalizeSuccess, burnAmount, unwrapAmount, feeAmount, ... }` |
+| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount }`                                   |
 | `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }`            |
 | `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                            |
 | `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                               |

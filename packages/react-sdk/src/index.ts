@@ -151,7 +151,6 @@ export {
   wrapperExistsContract,
   underlyingContract,
   wrapContract,
-  wrapETHContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
@@ -205,7 +204,6 @@ export {
   type UseConfidentialIsApprovedSuspenseConfig,
 } from "./transfer/use-confidential-is-approved";
 export { useShield, type UseShieldConfig } from "./shield/use-shield";
-export { useShieldETH, type UseShieldETHConfig } from "./shield/use-shield-eth";
 export { useUnwrap } from "./unwrap/use-unwrap";
 export { useUnwrapAll } from "./unwrap/use-unwrap-all";
 export { useFinalizeUnwrap } from "./unwrap/use-finalize-unwrap";
@@ -275,8 +273,6 @@ export {
   activityFeedQueryOptions,
   shieldMutationOptions,
   type ShieldParams,
-  shieldETHMutationOptions,
-  type ShieldETHParams,
   confidentialTransferMutationOptions,
   type ConfidentialTransferParams,
   confidentialTransferFromMutationOptions,

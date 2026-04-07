@@ -639,55 +639,6 @@ export const encryptedAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: "euint64",
-        name: "burntAmountHandle",
-        type: "bytes32",
-      },
-      {
-        indexed: false,
-        internalType: "bool",
-        name: "finalizeSuccess",
-        type: "bool",
-      },
-      {
-        indexed: false,
-        internalType: "bool",
-        name: "feeTransferSuccess",
-        type: "bool",
-      },
-      {
-        indexed: false,
-        internalType: "uint64",
-        name: "burnAmount",
-        type: "uint64",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "unwrapAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "feeAmount",
-        type: "uint256",
-      },
-      {
-        indexed: true,
-        internalType: "uint256",
-        name: "nextTxId",
-        type: "uint256",
-      },
-    ],
-    name: "UnwrappedFinalized",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
         indexed: false,
         internalType: "bool",
         name: "returnVal",
@@ -750,33 +701,15 @@ export const encryptedAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: false,
-        internalType: "uint64",
-        name: "mintAmount",
-        type: "uint64",
+        indexed: true,
+        internalType: "address",
+        name: "to",
+        type: "address",
       },
       {
         indexed: false,
         internalType: "uint256",
         name: "amountIn",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "feeAmount",
-        type: "uint256",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "to_",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "uint256",
-        name: "mintTxId",
         type: "uint256",
       },
     ],
@@ -1127,19 +1060,6 @@ export const encryptedAbi = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "deploymentCoordinator",
-    outputs: [
-      {
-        internalType: "contract IDeploymentCoordinator",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
     inputs: [
       {
         internalType: "euint64",
@@ -1210,11 +1130,6 @@ export const encryptedAbi = [
       {
         internalType: "address",
         name: "owner_",
-        type: "address",
-      },
-      {
-        internalType: "contract IDeploymentCoordinator",
-        name: "deploymentCoordinator_",
         type: "address",
       },
     ],
@@ -1792,24 +1707,6 @@ export const encryptedAbi = [
     name: "wrap",
     outputs: [],
     stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "to",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-    ],
-    name: "wrapETH",
-    outputs: [],
-    stateMutability: "payable",
     type: "function",
   },
 ] as const;

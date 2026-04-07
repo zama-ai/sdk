@@ -129,9 +129,6 @@ export function writeUnwrapFromBalanceContract(client: WalletClient, encryptedEr
 // @public (undocumented)
 export function writeWrapContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
 
-// @public (undocumented)
-export function writeWrapETHContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint, value: bigint): Promise<`0x${string}`>;
-
 // (No @packageDocumentation comment for this package)
 
 ```

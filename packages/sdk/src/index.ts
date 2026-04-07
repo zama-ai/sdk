@@ -230,7 +230,6 @@ export {
   wrapperExistsContract,
   underlyingContract,
   wrapContract,
-  wrapETHContract,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,

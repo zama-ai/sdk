@@ -37,12 +37,7 @@ import {
 } from "../encrypted";
 
 // Wrapper
-import {
-  finalizeUnwrapContract,
-  underlyingContract,
-  wrapContract,
-  wrapETHContract,
-} from "../wrapper";
+import { finalizeUnwrapContract, underlyingContract, wrapContract } from "../wrapper";
 
 // Deployment coordinator
 import { getWrapperContract, wrapperExistsContract } from "../deployment-coordinator";
@@ -248,13 +243,6 @@ describe("Wrapper contract builders", () => {
     const config = wrapContract(wrapperAddress, userAddress, 1000n);
     expect(config.functionName).toBe("wrap");
     expect(config.args).toEqual([userAddress, 1000n]);
-  });
-
-  it("wrapETHContract includes value", ({ wrapperAddress, userAddress }) => {
-    const config = wrapETHContract(wrapperAddress, userAddress, 500n, 500n);
-    expect(config.functionName).toBe("wrapETH");
-    expect(config.args).toEqual([userAddress, 500n]);
-    expect(config.value).toBe(500n);
   });
 });
 

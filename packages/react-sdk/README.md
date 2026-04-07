@@ -395,22 +395,6 @@ await shield({ amount: 1000n });
 await shield({ amount: 1000n, approvalStrategy: "max" });
 ```
 
-#### `useShieldETH`
-
-Shield native ETH into confidential tokens. Use when the underlying token is the zero address (native ETH).
-
-```ts
-function useShieldETH(
-  config: UseZamaConfig,
-  options?: UseMutationOptions<Address, Error, ShieldETHParams>,
-): UseMutationResult<Address, Error, ShieldETHParams>;
-
-interface ShieldETHParams {
-  amount: bigint;
-  value?: bigint; // defaults to amount
-}
-```
-
 ### Unshield Hooks (Combined)
 
 These hooks orchestrate the full unshield flow in a single call: unwrap → wait for receipt → parse event → finalizeUnwrap. Use these for the simplest integration.
@@ -736,61 +720,6 @@ feed?.forEach((item) => {
 });
 ```
 
-### Fee Hooks
-
-#### `useShieldFee`
-
-Read the shield (wrap) fee for a given amount and address pair.
-
-```ts
-function useShieldFee(
-  config: UseFeeConfig,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<bigint, Error>;
-
-interface UseFeeConfig {
-  feeManagerAddress: Address;
-  amount: bigint;
-  from: Address;
-  to: Address;
-}
-```
-
-```tsx
-const { data: fee } = useShieldFee({
-  feeManagerAddress: "0xFeeManager",
-  amount: 1000n,
-  from: "0xSender",
-  to: "0xReceiver",
-});
-```
-
-#### `useUnshieldFee`
-
-Read the unshield (unwrap) fee for a given amount and address pair. Same signature as `useShieldFee`.
-
-#### `useBatchTransferFee`
-
-Read the batch transfer fee from the fee manager.
-
-```ts
-function useBatchTransferFee(
-  feeManagerAddress: Address,
-  options?: Omit<UseQueryOptions<bigint, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<bigint, Error>;
-```
-
-#### `useFeeRecipient`
-
-Read the fee recipient address from the fee manager.
-
-```ts
-function useFeeRecipient(
-  feeManagerAddress: Address,
-  options?: Omit<UseQueryOptions<Address, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<Address, Error>;
-```
-
 ### Low-Level FHE Hooks
 
 These hooks are for **custom FHE contracts** (non-token contracts that use encrypted types directly). For confidential ERC-20 tokens, use the high-level token hooks above instead. For detailed usage examples, see the [Encrypt & Decrypt guide](../../docs/gitbook/src/guides/encrypt-decrypt.md).
@@ -945,7 +874,6 @@ All write hooks return `{ mutate, mutateAsync, ...mutation }` from wagmi's `useW
 | `useFinalizeUnwrap()`            | `(wrapper, burntAmount, cleartext, proof)`       | Finalize unwrap.              |
 | `useSetOperator()`               | `(token, spender, timestamp?)`                   | Set operator approval.        |
 | `useShield()`                    | `(wrapper, to, amount)`                          | Shield ERC-20 tokens.         |
-| `useShieldETH()`                 | `(wrapper, to, amount, value)`                   | Shield native ETH.            |
 
 ### Wagmi Signer Adapter
 
@@ -1089,4 +1017,4 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
 
-**Contract call builders:** All 31 builders — `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `confidentialBatchTransferContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `getWrapperContract`, `wrapperExistsContract`, `underlyingContract`, `wrapContract`, `wrapETHContract`, `supportsInterfaceContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`, `deploymentCoordinatorContract`, `isFinalizeUnwrapOperatorContract`, `setFinalizeUnwrapOperatorContract`, `getWrapFeeContract`, `getUnwrapFeeContract`, `getBatchTransferFeeContract`, `getFeeRecipientContract`.
+**Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `confidentialBatchTransferContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `getWrapperContract`, `wrapperExistsContract`, `underlyingContract`, `wrapContract`, `supportsInterfaceContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`, `deploymentCoordinatorContract`, `isFinalizeUnwrapOperatorContract`, `setFinalizeUnwrapOperatorContract`.

@@ -75,7 +75,6 @@ export function createMockToken(
     approve: vi.fn().mockResolvedValue(mockResult),
     approveUnderlying: vi.fn().mockResolvedValue(mockResult),
     shield: vi.fn().mockResolvedValue(mockResult),
-    shieldETH: vi.fn().mockResolvedValue(mockResult),
     unwrap: vi.fn().mockResolvedValue(mockResult),
     unwrapAll: vi.fn().mockResolvedValue(mockResult),
     finalizeUnwrap: vi.fn().mockResolvedValue(mockResult),

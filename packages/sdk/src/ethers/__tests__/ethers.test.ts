@@ -67,7 +67,6 @@ import {
   writeFinalizeUnwrapContract,
   writeSetOperatorContract,
   writeWrapContract,
-  writeWrapETHContract,
 } from "../contracts";
 
 // ── Test constants ───────────────────────────────────────────
@@ -656,14 +655,6 @@ describe("ethers write contract helpers", () => {
       hash: TX_HASH,
     });
     const hash = await writeWrapContract(mockSigner, wrapperAddress, userAddress, 1000n);
-    expect(hash).toBe(TX_HASH);
-  });
-
-  eit("writeWrapETHContract", async ({ wrapperAddress, userAddress }) => {
-    vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
-      hash: TX_HASH,
-    });
-    const hash = await writeWrapETHContract(mockSigner, wrapperAddress, userAddress, 500n, 500n);
     expect(hash).toBe(TX_HASH);
   });
 
