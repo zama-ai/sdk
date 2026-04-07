@@ -24,10 +24,20 @@ import {
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
+  BalanceCheckUnavailableError,
+  ERC20ReadFailedError,
   DelegationSelfNotAllowedError,
-  DelegationCooldownError,
+  DelegationDelegateEqualsContractError,
+  DelegationExpiryUnchangedError,
   DelegationNotFoundError,
   DelegationExpiredError,
+  DelegationCooldownError,
+  DelegationContractIsSelfError,
+  DelegationExpirationTooSoonError,
+  DelegationNotPropagatedError,
+  AclPausedError,
 } from "@zama-fhe/sdk";
 ```
 
@@ -43,6 +53,10 @@ const message = matchZamaError(error, {
   ENCRYPTION_FAILED: () => "Encryption failed — try again",
   TRANSACTION_REVERTED: (e) => `Transaction failed: ${e.message}`,
   NO_CIPHERTEXT: () => "No confidential balance — shield tokens first",
+  INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => `Insufficient balance: ${e.available} available`,
+  INSUFFICIENT_ERC20_BALANCE: (e) => `Not enough tokens: ${e.available} available`,
+  BALANCE_CHECK_UNAVAILABLE: () => "Sign to verify your balance first",
+  ERC20_READ_FAILED: () => "Could not read token balance -- check your connection",
   _: (e) => `Unexpected error: ${e}`,
 });
 ```
@@ -56,23 +70,33 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 
 ## Error summary
 
-| Error class                     | Code                          | Description                                                  |
-| ------------------------------- | ----------------------------- | ------------------------------------------------------------ |
-| `SigningRejectedError`          | `SIGNING_REJECTED`            | User rejected the wallet signature                           |
-| `SigningFailedError`            | `SIGNING_FAILED`              | Wallet signature failed (connectivity, firmware)             |
-| `EncryptionFailedError`         | `ENCRYPTION_FAILED`           | FHE encryption failed in the Web Worker                      |
-| `DecryptionFailedError`         | `DECRYPTION_FAILED`           | FHE decryption failed                                        |
-| `ApprovalFailedError`           | `APPROVAL_FAILED`             | ERC-20 approval transaction failed                           |
-| `TransactionRevertedError`      | `TRANSACTION_REVERTED`        | On-chain transaction reverted                                |
-| `InvalidKeypairError`           | `INVALID_KEYPAIR`             | Relayer rejected FHE keypair (stale or malformed)            |
-| `KeypairExpiredError`           | `KEYPAIR_EXPIRED`             | FHE keypair expired — user must re-sign                      |
-| `NoCiphertextError`             | `NO_CIPHERTEXT`               | No encrypted balance for this account                        |
-| `RelayerRequestFailedError`     | `RELAYER_REQUEST_FAILED`      | Relayer HTTP request failed                                  |
-| `ConfigurationError`            | `CONFIGURATION`               | Invalid SDK configuration or FHE worker failed to initialize |
-| `DelegationSelfNotAllowedError` | `DELEGATION_SELF_NOT_ALLOWED` | Delegation cannot target self (delegate === msg.sender)      |
-| `DelegationCooldownError`       | `DELEGATION_COOLDOWN`         | Only one delegate/revoke per tuple per block                 |
-| `DelegationNotFoundError`       | `DELEGATION_NOT_FOUND`        | No active delegation for this tuple                          |
-| `DelegationExpiredError`        | `DELEGATION_EXPIRED`          | The delegation has expired                                   |
+| Error class                             | Code                                  | Description                                                  |
+| --------------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                           |
+| `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)             |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                      |
+| `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                        |
+| `ApprovalFailedError`                   | `APPROVAL_FAILED`                     | ERC-20 approval transaction failed                           |
+| `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted                                |
+| `InvalidKeypairError`                   | `INVALID_KEYPAIR`                     | Relayer rejected FHE keypair (stale or malformed)            |
+| `KeypairExpiredError`                   | `KEYPAIR_EXPIRED`                     | FHE keypair expired — user must re-sign                      |
+| `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                        |
+| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                  |
+| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize |
+| `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield        |
+| `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                            |
+| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no cached credentials)        |
+| `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)        |
+| `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                             |
+| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address                             |
+| `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value                         |
+| `DelegationNotFoundError`               | `DELEGATION_NOT_FOUND`                | No active delegation exists                                  |
+| `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | Delegation has expired                                       |
+| `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Same-block delegate/revoke not allowed                       |
+| `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                               |
+| `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future               |
+| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to gateway yet     |
+| `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                       |
 
 ## Error details
 
@@ -193,7 +217,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Prompt the user to re-sign. Adjust `keypairTTL` in the SDK constructor if the default TTL is too short.
+**How to handle:** Prompt the user to re-sign. Adjust `keypairTTL` in the SDK constructor if the default TTL of 30 days is not appropriate.
 
 ### NoCiphertextError
 
@@ -263,6 +287,87 @@ matchZamaError(error, {
 
 **How to handle:** Check your transport config, CSP headers, and that the relayer has not been terminated. If the error mentions worker initialization, verify WASM support and `wasm-unsafe-eval` in your CSP.
 
+### InsufficientConfidentialBalanceError
+
+**Code:** `INSUFFICIENT_CONFIDENTIAL_BALANCE`
+
+The decrypted confidential balance is less than the requested amount. Thrown by `confidentialTransfer()` and `unshield()` before submitting the transaction. Exposes structured details for UI display.
+
+| Property    | Type      | Description                                |
+| ----------- | --------- | ------------------------------------------ |
+| `requested` | `bigint`  | Amount the caller requested                |
+| `available` | `bigint`  | Decrypted balance at the time of the check |
+| `token`     | `Address` | Token contract address                     |
+
+```ts
+import { InsufficientConfidentialBalanceError } from "@zama-fhe/sdk";
+
+try {
+  await token.confidentialTransfer("0xRecipient", 1000n);
+} catch (error) {
+  if (error instanceof InsufficientConfidentialBalanceError) {
+    showError(`Insufficient balance: you have ${error.available}, need ${error.requested}`);
+  }
+}
+```
+
+**How to handle:** Show the user their current balance and the shortfall. No retry will help until the balance increases (via shielding or receiving a transfer).
+
+### InsufficientERC20BalanceError
+
+**Code:** `INSUFFICIENT_ERC20_BALANCE`
+
+The public ERC-20 balance is less than the requested shield amount. Thrown by `shield()` before submitting the transaction. This is a public read with no signing requirement, so it works for all wallet types.
+
+| Property    | Type      | Description                              |
+| ----------- | --------- | ---------------------------------------- |
+| `requested` | `bigint`  | Amount the caller requested to shield    |
+| `available` | `bigint`  | ERC-20 balance at the time of the check  |
+| `token`     | `Address` | Underlying ERC-20 token contract address |
+
+```ts
+import { InsufficientERC20BalanceError } from "@zama-fhe/sdk";
+
+try {
+  await token.shield(1000n);
+} catch (error) {
+  if (error instanceof InsufficientERC20BalanceError) {
+    showError(`Not enough tokens: you have ${error.available}, need ${error.requested}`);
+  }
+}
+```
+
+**How to handle:** Show the user their public token balance and the shortfall. They need to acquire more tokens before shielding.
+
+### BalanceCheckUnavailableError
+
+**Code:** `BALANCE_CHECK_UNAVAILABLE`
+
+Balance validation could not be performed. For confidential operations (`confidentialTransfer`, `unshield`), this means no cached credentials exist and the SDK cannot decrypt the balance without prompting a wallet signature. For `shield`, this means the ERC-20 balance read failed.
+
+```ts
+matchZamaError(error, {
+  BALANCE_CHECK_UNAVAILABLE: () =>
+    showPrompt("Sign to verify your balance, or use skipBalanceCheck"),
+});
+```
+
+**How to handle:** Either call `token.allow()` first to cache credentials, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
+
+### ERC20ReadFailedError
+
+**Code:** `ERC20_READ_FAILED`
+
+A public ERC-20 read (e.g. `balanceOf`) failed due to a network or contract error. Thrown by `shield()` when the pre-flight balance check cannot read the underlying token balance. This is distinct from `BalanceCheckUnavailableError`, which indicates missing credentials for confidential balance decryption.
+
+```ts
+matchZamaError(error, {
+  ERC20_READ_FAILED: () => showError("Could not read token balance -- check your connection"),
+});
+```
+
+**How to handle:** Check network connectivity and RPC endpoint health. The underlying ERC-20 contract may also be paused or unreachable. Retry the shield operation.
+
 ### DelegationSelfNotAllowedError
 
 **Code:** `DELEGATION_SELF_NOT_ALLOWED`
@@ -319,8 +424,93 @@ matchZamaError(error, {
 
 **How to handle:** Create a new delegation.
 
+### DelegationExpirationTooSoonError
+
+**Code:** `DELEGATION_EXPIRATION_TOO_SOON`
+
+Thrown client-side before submitting a `delegateDecryption` transaction when the expiration date is less than 1 hour in the future. This mirrors the on-chain `ExpirationDateBeforeOneHour` revert in the ACL contract.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_EXPIRATION_TOO_SOON: () =>
+    showError("Expiration must be at least 1 hour in the future"),
+});
+```
+
+**How to handle:** Choose a later expiration date (at least 1 hour from now) or omit it for a permanent delegation.
+
+### DelegationDelegateEqualsContractError
+
+**Code:** `DELEGATION_DELEGATE_EQUALS_CONTRACT`
+
+Thrown client-side before submitting a `delegateDecryption` transaction when the delegate address equals the token contract address.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_DELEGATE_EQUALS_CONTRACT: () => showError("Cannot delegate to the contract itself"),
+});
+```
+
+**How to handle:** Use a different delegate address.
+
+### DelegationExpiryUnchangedError
+
+**Code:** `DELEGATION_EXPIRY_UNCHANGED`
+
+Thrown client-side (after an RPC read) when the new expiration date matches the current on-chain value. Saves gas by skipping a no-op transaction.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_EXPIRY_UNCHANGED: () => showInfo("Delegation already has this expiration date"),
+});
+```
+
+**How to handle:** No action needed — the delegation is already configured as requested.
+
+### DelegationContractIsSelfError
+
+**Code:** `DELEGATION_CONTRACT_IS_SELF`
+
+Caught from the on-chain `SenderCannotBeContractAddress` revert. The contract address passed to the delegation call equals the caller address.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_CONTRACT_IS_SELF: () => showError("Contract address cannot be the caller address"),
+});
+```
+
+**How to handle:** Verify the contract address parameter is the token contract, not the caller's address.
+
+### DelegationNotPropagatedError
+
+**Code:** `DELEGATION_NOT_PROPAGATED`
+
+Thrown when `decryptBalanceAs` fails with an HTTP 500 in a delegated context. The most likely cause is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet — cross-chain sync typically takes 1–2 minutes.
+
+```ts
+matchZamaError(error, {
+  DELEGATION_NOT_PROPAGATED: () => showInfo("Delegation is still syncing — retry in 1–2 minutes"),
+});
+```
+
+**How to handle:** Wait 1–2 minutes after the delegation transaction is mined, then retry. If the error persists, the gateway or relayer may be experiencing an unrelated issue.
+
+### AclPausedError
+
+**Code:** `ACL_PAUSED`
+
+Caught from the on-chain `EnforcedPause` revert. The ACL contract is paused, temporarily disabling all delegation operations.
+
+```ts
+matchZamaError(error, {
+  ACL_PAUSED: () => showError("Delegation is temporarily disabled"),
+});
+```
+
+**How to handle:** Wait for the ACL contract to be unpaused. This is an operator-level action — contact the protocol team if this persists.
+
 {% hint style="info" %}
-The SDK does **not** auto-map ACL contract reverts to delegation errors. These error classes are exported so your dApp code can catch and re-throw them when parsing on-chain revert reasons (e.g. via viem's `decodeErrorResult`).
+The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses via `matchAclRevert()`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation error reference](/reference/sdk/delegation#on-chain-revert-errors) for the full mapping.
 {% endhint %}
 
 ## Common problems
@@ -334,6 +524,10 @@ The SDK does **not** auto-map ACL contract reverts to delegation errors. These e
 | `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `loadPendingUnshield()` on mount, then `resumeUnshield()` to complete.                |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash | Check unwrap state. If already finalized, call `clearPendingUnshield()`.                   |
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
+| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
+| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                |
+| `BalanceCheckUnavailableError`            | No cached credentials for balance check     | Call `token.allow()` first, or pass `skipBalanceCheck: true`.                              |
+| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                             |
 
 ## Related
 

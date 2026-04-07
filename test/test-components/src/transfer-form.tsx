@@ -24,6 +24,7 @@ export function TransferForm({
         transfer.mutate({
           to: formData.get("recipient") as Address,
           amount: BigInt(formData.get("amount") as string),
+          skipBalanceCheck: true,
         });
       }}
       className="space-y-4"

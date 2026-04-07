@@ -96,7 +96,7 @@ jobs:
           cd ../react-sdk
           npm publish --access public --tag "${npm_tag}"
         env:
-          NPM_CONFIG_PROVENANCE: false # Re-enable once repo is public
+          NPM_CONFIG_PROVENANCE: true
 
       - name: Verify release was published
         run: |

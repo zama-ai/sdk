@@ -121,6 +121,6 @@ describe("underlyingAllowanceQueryOptions", () => {
       options.queryFn(
         mockQueryContext(zamaQueryKeys.underlyingAllowance.scope(options.queryKey[1].tokenAddress)),
       ),
-    ).rejects.toThrow("owner is required");
+    ).rejects.toThrow("underlyingAllowanceQueryOptions: owner must not be null or undefined");
   });
 });

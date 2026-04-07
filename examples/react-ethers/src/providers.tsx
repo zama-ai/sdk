@@ -165,12 +165,6 @@ export function Providers({ children }: { children: ReactNode }) {
         storage={indexedDBStorage}
         sessionStorage={sessionDBStorage}
         signer={signer}
-        // Align keypairTTL with sessionTTL (both 30 days) to prevent a mismatch
-        // where isAllowed() returns true (session valid) but the FHE keypair has
-        // already expired — causing an unexpected wallet prompt mid-operation.
-        // Root cause is in the SDK: checkAllowed() only checks session TTL, not
-        // keypair TTL. Setting them equal eliminates the desync window.
-        keypairTTL={30 * 24 * 60 * 60}
         onEvent={(event) => {
           // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK awaits
           // the receipt before emitting). Saving here ensures the pending state survives a tab

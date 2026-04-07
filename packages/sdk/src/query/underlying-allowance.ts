@@ -1,5 +1,6 @@
 import { allowanceContract, underlyingContract } from "../contracts";
 import type { GenericSigner } from "../types";
+import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
@@ -35,12 +36,8 @@ export function underlyingAllowanceQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, wrapperAddress: keyWrapperAddress }] = context.queryKey;
-      if (!keyOwner) {
-        throw new Error("owner is required");
-      }
-      if (!keyWrapperAddress) {
-        throw new Error("wrapperAddress is required");
-      }
+      assertNonNullable(keyOwner, "underlyingAllowanceQueryOptions: owner");
+      assertNonNullable(keyWrapperAddress, "underlyingAllowanceQueryOptions: wrapperAddress");
       const underlying = await signer.readContract(underlyingContract(keyWrapperAddress));
       return signer.readContract(allowanceContract(underlying, keyOwner, keyWrapperAddress));
     },

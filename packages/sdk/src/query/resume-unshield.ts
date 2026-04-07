@@ -4,9 +4,8 @@ import type { MutationFactoryOptions } from "./factory-types";
 import type { Address, Hex } from "viem";
 
 /** Variables for {@link resumeUnshieldMutationOptions}. */
-export interface ResumeUnshieldParams {
+export interface ResumeUnshieldParams extends UnshieldCallbacks {
   unwrapTxHash: Hex;
-  callbacks?: UnshieldCallbacks;
 }
 
 export function resumeUnshieldMutationOptions(
@@ -18,7 +17,7 @@ export function resumeUnshieldMutationOptions(
 > {
   return {
     mutationKey: ["zama.resumeUnshield", token.address] as const,
-    mutationFn: async ({ unwrapTxHash, callbacks }) =>
+    mutationFn: async ({ unwrapTxHash, ...callbacks }) =>
       token.resumeUnshield(unwrapTxHash, callbacks),
   };
 }

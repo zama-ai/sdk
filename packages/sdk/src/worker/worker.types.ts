@@ -1,11 +1,10 @@
 import type {
-  ClearValueType,
   FhevmInstanceConfig,
   InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
-import type { EncryptInput, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, EncryptInput, Handle } from "../relayer/relayer-sdk.types";
 import type { Address, Hex } from "viem";
 
 // ============================================================================

@@ -1,5 +1,6 @@
 import { isOperatorContract } from "../contracts";
 import type { GenericSigner } from "../types";
+import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
@@ -32,15 +33,9 @@ export function confidentialIsApprovedQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress, holder: keyHolder, spender: keySpender }] =
         context.queryKey;
-      if (!keyTokenAddress) {
-        throw new Error("tokenAddress is required");
-      }
-      if (!keyHolder) {
-        throw new Error("holder is required");
-      }
-      if (!keySpender) {
-        throw new Error("spender is required");
-      }
+      assertNonNullable(keyTokenAddress, "confidentialIsApprovedQueryOptions: tokenAddress");
+      assertNonNullable(keyHolder, "confidentialIsApprovedQueryOptions: holder");
+      assertNonNullable(keySpender, "confidentialIsApprovedQueryOptions: spender");
       return signer.readContract(isOperatorContract(keyTokenAddress, keyHolder, keySpender));
     },
     staleTime: 30_000,

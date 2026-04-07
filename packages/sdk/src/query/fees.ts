@@ -5,6 +5,7 @@ import {
   getWrapFeeContract,
 } from "../contracts";
 import type { GenericSigner } from "../types";
+import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
@@ -49,18 +50,10 @@ export function shieldFeeQueryOptions(
     queryFn: async (context) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
-      if (!params.feeManagerAddress) {
-        throw new Error("feeManagerAddress is required");
-      }
-      if (amount === undefined) {
-        throw new Error("amount is required");
-      }
-      if (!params.from) {
-        throw new Error("from is required");
-      }
-      if (!params.to) {
-        throw new Error("to is required");
-      }
+      assertNonNullable(params.feeManagerAddress, "shieldFeeQueryOptions: feeManagerAddress");
+      assertNonNullable(amount, "shieldFeeQueryOptions: amount");
+      assertNonNullable(params.from, "shieldFeeQueryOptions: from");
+      assertNonNullable(params.to, "shieldFeeQueryOptions: to");
       return signer.readContract(
         getWrapFeeContract(params.feeManagerAddress, amount, params.from, params.to),
       );
@@ -88,18 +81,10 @@ export function unshieldFeeQueryOptions(
     queryFn: async (context) => {
       const [, params] = context.queryKey;
       const amount = parseAmount(params.amount);
-      if (!params.feeManagerAddress) {
-        throw new Error("feeManagerAddress is required");
-      }
-      if (amount === undefined) {
-        throw new Error("amount is required");
-      }
-      if (!params.from) {
-        throw new Error("from is required");
-      }
-      if (!params.to) {
-        throw new Error("to is required");
-      }
+      assertNonNullable(params.feeManagerAddress, "unshieldFeeQueryOptions: feeManagerAddress");
+      assertNonNullable(amount, "unshieldFeeQueryOptions: amount");
+      assertNonNullable(params.from, "unshieldFeeQueryOptions: from");
+      assertNonNullable(params.to, "unshieldFeeQueryOptions: to");
       return signer.readContract(
         getUnwrapFeeContract(params.feeManagerAddress, amount, params.from, params.to),
       );
@@ -128,9 +113,7 @@ export function batchTransferFeeQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
-      if (!keyFeeManagerAddress) {
-        throw new Error("feeManagerAddress is required");
-      }
+      assertNonNullable(keyFeeManagerAddress, "batchTransferFeeQueryOptions: feeManagerAddress");
       return signer.readContract(getBatchTransferFeeContract(keyFeeManagerAddress));
     },
     staleTime: 30_000,
@@ -156,9 +139,7 @@ export function feeRecipientQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { feeManagerAddress: keyFeeManagerAddress }] = context.queryKey;
-      if (!keyFeeManagerAddress) {
-        throw new Error("feeManagerAddress is required");
-      }
+      assertNonNullable(keyFeeManagerAddress, "feeRecipientQueryOptions: feeManagerAddress");
       return signer.readContract(getFeeRecipientContract(keyFeeManagerAddress));
     },
     staleTime: 30_000,

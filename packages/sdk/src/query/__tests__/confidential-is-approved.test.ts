@@ -193,7 +193,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
           zamaQueryKeys.confidentialIsApproved.scope(options.queryKey[1].tokenAddress),
         ),
       ),
-    ).rejects.toThrow("holder is required");
+    ).rejects.toThrow("confidentialIsApprovedQueryOptions: holder must not be null or undefined");
   });
 
   test("queryFn throws when tokenAddress is missing from context.queryKey", async ({ signer }) => {
@@ -203,7 +203,7 @@ describe("confidentialIsApprovedQueryOptions", () => {
     });
 
     await expect(options.queryFn(mockQueryContext(options.queryKey))).rejects.toThrow(
-      "tokenAddress is required",
+      "confidentialIsApprovedQueryOptions: tokenAddress must not be null or undefined",
     );
   });
 });

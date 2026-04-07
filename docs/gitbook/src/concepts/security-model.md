@@ -156,7 +156,7 @@ EIP-712 signatures include a start timestamp and duration. The relayer rejects s
 
 Two TTL controls are available:
 
-- `keypairTTL` — how long the FHE keypair remains valid (default: 1 day).
+- `keypairTTL` — how long the FHE keypair remains valid (default: 30 days).
 - `sessionTTL` — how long the cached wallet signature remains valid (default: 30 days).
 
 ### Address-scoped authorization

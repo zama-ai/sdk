@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem";
-import { SigningFailedError, SigningRejectedError, wrapSigningError } from "../errors/signing";
+import { ZamaError } from "../errors/base";
+import { wrapSigningError } from "../errors/signing";
 import type { ZamaSDKEventInput, ZamaSDKEventListener } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { GenericSigner, GenericStorage, StoredCredentials } from "../types";
@@ -24,7 +25,7 @@ export interface CredentialsConfig {
   storage: GenericStorage;
   /** Storage for session signatures (shorter-lived than credentials). */
   sessionStorage: GenericStorage;
-  /** FHE keypair lifetime in seconds. Defaults to `86400` (1 day). */
+  /** FHE keypair lifetime in seconds. Defaults to `2592000` (30 days). */
   keypairTTL?: number;
   /** Session signature lifetime. `0` = always re-sign, `"infinite"` = never expire. Defaults to `2592000` (30 days). */
   sessionTTL?: number | "infinite";
@@ -97,7 +98,7 @@ export abstract class BaseCredentialsManager<
     this.storage = config.storage;
     this.sessionSignatures = new SessionSignatures(config.sessionStorage);
     this.crypto = new CredentialCrypto();
-    this.keypairTTL = config.keypairTTL ?? 86400;
+    this.keypairTTL = config.keypairTTL ?? 2592000;
     this.sessionTTL = config.sessionTTL ?? 2592000;
     this.#onEvent = config.onEvent ?? (() => {});
 
@@ -106,6 +107,15 @@ export abstract class BaseCredentialsManager<
     }
     if (typeof this.sessionTTL === "number" && this.sessionTTL < 0) {
       throw new Error("sessionTTL must be >= 0");
+    }
+    if (typeof this.sessionTTL === "number" && this.sessionTTL > this.keypairTTL) {
+      this.sessionTTL = this.keypairTTL;
+      // oxlint-disable-next-line no-console
+      console.warn(
+        `[zama-sdk] sessionTTL was clamped to keypairTTL (${this.keypairTTL}s). ` +
+          "A session that outlives the keypair causes isAllowed() to return true " +
+          "after the keypair expires, leading to unexpected wallet prompts.",
+      );
     }
   }
 
@@ -221,7 +231,7 @@ export abstract class BaseCredentialsManager<
         });
       }
     } catch (error) {
-      if (error instanceof SigningRejectedError || error instanceof SigningFailedError) {
+      if (error instanceof ZamaError) {
         throw error;
       }
       // oxlint-disable-next-line no-console
@@ -328,6 +338,9 @@ export abstract class BaseCredentialsManager<
       this.emit({ type: ZamaSDKEvents.CredentialsCreated, contractAddresses });
       return creds;
     } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
       wrapSigningError(error, errorContext);
     }
   }

@@ -1,6 +1,9 @@
 // oxlint-disable no-empty-pattern
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, type BrowserContext } from "@playwright/test";
+import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { Address } from "viem";
 import {
   createTestClient,
@@ -12,9 +15,10 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { TEST_PRIVATE_KEY, MINTED, NEXTJS_ANVIL_PORT } from "./constants";
 import deployments from "../../../contracts/deployments.json" with { type: "json" };
-import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { MINTED, NEXTJS_ANVIL_PORT, TEST_PRIVATE_KEY } from "./constants";
+
+const mockCdnBundle = readFileSync(resolve(import.meta.dirname, "relayer-sdk-cdn.mjs"), "utf-8");
 
 const privateKey = TEST_PRIVATE_KEY;
 
@@ -154,6 +158,14 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     ]);
 
     const id = await viemClient.snapshot();
+
+    // Intercept the CDN request for the relayer SDK bundle and serve the mock
+    await page.route("**/relayer-sdk-js*", async (route) => {
+      await route.fulfill({
+        contentType: "application/javascript",
+        body: mockCdnBundle,
+      });
+    });
 
     // Inject wallet private key for the burner-connector
     await page.addInitScript((pk) => {

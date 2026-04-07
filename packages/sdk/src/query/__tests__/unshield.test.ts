@@ -7,17 +7,18 @@ describe("unshieldMutationOptions", () => {
 
     expect(options.mutationKey).toEqual(["zama.unshield", mockToken.address]);
     await options.mutationFn({ amount: 11n });
-    expect(mockToken.unshield).toHaveBeenCalledWith(11n, undefined);
+    expect(mockToken.unshield).toHaveBeenCalledWith(11n, {});
   });
 
   test("delegates callbacks when provided", async ({ mockToken }) => {
     const options = unshieldMutationOptions(mockToken);
-    const callbacks = {
-      onUnwrapSubmitted: () => undefined,
-      onFinalizing: () => undefined,
-    };
+    const onUnwrapSubmitted = () => undefined;
+    const onFinalizing = () => undefined;
 
-    await options.mutationFn({ amount: 12n, callbacks });
-    expect(mockToken.unshield).toHaveBeenCalledWith(12n, callbacks);
+    await options.mutationFn({ amount: 12n, onUnwrapSubmitted, onFinalizing });
+    expect(mockToken.unshield).toHaveBeenCalledWith(
+      12n,
+      expect.objectContaining({ onUnwrapSubmitted, onFinalizing }),
+    );
   });
 });

@@ -1,12 +1,11 @@
 import type { Token } from "../token/token";
-import type { TransactionResult, UnshieldCallbacks } from "../types";
+import type { TransactionResult, UnshieldOptions } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 
 /** Variables for {@link unshieldMutationOptions}. */
-export interface UnshieldParams {
+export interface UnshieldParams extends UnshieldOptions {
   amount: bigint;
-  callbacks?: UnshieldCallbacks;
 }
 
 export function unshieldMutationOptions(
@@ -14,6 +13,6 @@ export function unshieldMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult> {
   return {
     mutationKey: ["zama.unshield", token.address] as const,
-    mutationFn: async ({ amount, callbacks }) => token.unshield(amount, callbacks),
+    mutationFn: async ({ amount, ...options }) => token.unshield(amount, options),
   };
 }
