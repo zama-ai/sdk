@@ -135,6 +135,6 @@ describe("fee query options", () => {
 
     await expect(
       options.queryFn(mockQueryContext(["zama.fees", { type: "shield" }] as const)),
-    ).rejects.toThrow("feeManagerAddress is required");
+    ).rejects.toThrow("shieldFeeQueryOptions: feeManagerAddress must not be null or undefined");
   });
 });

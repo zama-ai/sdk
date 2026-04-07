@@ -43,7 +43,7 @@ export default defineConfig<{}, WorkerFixtures>({
       wait: {
         stdout: /Anvil ready on port (\d+)/,
       },
-      timeout: 60_000,
+      timeout: 90_000,
     },
     {
       command: CI
