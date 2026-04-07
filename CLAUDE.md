@@ -2,98 +2,66 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Claude Code Setup
 
-Zama SDK is a TypeScript monorepo for building privacy-preserving dApps on EVM blockchains using Fully Homomorphic Encryption (FHE). It publishes two npm packages: `@zama-fhe/sdk` (core) and `@zama-fhe/react-sdk` (React hooks).
+Run `pnpm setup:claude` to install skills, plugins, and post-edit hooks. This copies `claude-setup/` → `.claude/` and installs the Zama marketplace. Post-edit hooks automatically run typecheck, lint, and format after every file change. The `.claude/` directory is gitignored — never commit it.
 
-## Commands
+## Product Vision
 
-```bash
-pnpm install                # Install deps (auto-inits git submodules + forge soldeer)
-pnpm build                  # Build sdk then react-sdk (order matters)
-pnpm build:sdk              # Build only @zama-fhe/sdk
-pnpm build:react-sdk        # Build only @zama-fhe/react-sdk
+The Zama SDK is the high-level TypeScript SDK for the **Zama Protocol**, including ERC-7984 confidential tokens. It publishes `@zama-fhe/sdk` (core) and `@zama-fhe/react-sdk` (React hooks).
 
-pnpm test                   # Vitest watch mode
-pnpm test:run               # Single run, all unit tests
-pnpm test:run -- packages/sdk/src/token/__tests__/token.test.ts  # Single file
-pnpm test:coverage          # Coverage report (thresholds: 80% lines/branches/functions)
-pnpm test:integration       # Integration tests (30s timeout)
+**Design principle: clear-text in, clear-text out.** Developers work with familiar primitives (e.g. ERC-20-style `balanceOf`, `transfer` for tokens) while the SDK handles all protocol complexity under the hood — encrypted inputs, EIP-712 signing, Relayer routing, and response format interpretation. The SDK is a credentials + relayer coordination layer that abstracts the protocol so developers never need to understand FHE internals.
 
-pnpm typecheck              # TypeScript checking across all packages
-pnpm lint                   # oxlint + ast-grep rules
-pnpm lint:fix               # Auto-fix lint issues
-pnpm format                 # Format with oxfmt
-pnpm format:check           # Check formatting
+**Target users:** wallet developers and dApp developers building on the Zama Protocol who need a high-level integration layer.
 
-pnpm e2e:test               # Playwright E2E tests (all targets)
-pnpm e2e:test:nextjs        # E2E: Next.js app only
-pnpm e2e:test:vite          # E2E: Vite app only
-pnpm e2e:test:node          # E2E: Node.js (builds sdk first)
+**UX goals:** signing prompt minimization (no per-token prompts for balances, single confirmation for transfers), batch balance fetching, decryption caching and staleness management.
 
-pnpm contracts:build        # Build Solidity contracts (forge)
-pnpm api-report             # Generate API surface reports (api-extractor)
-pnpm size                   # Bundle size check (sdk ESM: 48KB, CJS: 40KB, react-sdk: 15KB)
-```
+**Future direction:** plugin system for additional capabilities beyond tokens — DeFi primitives (swaps, yield), RWA extensions (ERC-3643 + ERC-7984), and domain-specific integrations. The view layer is React-focused today but the architecture accommodates React Native, Vue, and others.
 
-## Architecture
+## Repository Structure
 
-### Monorepo Layout
+**For SDK users:** `packages/sdk/` is the core SDK, `packages/react-sdk/` is the React hooks layer, and `examples/` has working integration examples (react-viem, react-wagmi, react-ethers, node-viem, node-ethers).
 
-- **`packages/sdk/`** — Core SDK (`@zama-fhe/sdk`). Multiple entry points via sub-path exports:
-  - `.` — Core: ZamaSDK, Token, CredentialsManager, RelayerWeb
-  - `./viem` — Viem adapter (ViemSigner, contract call builders)
-  - `./ethers` — Ethers adapter (EthersSigner, contract call builders)
-  - `./node` — Node.js backend (ESM-only, uses worker_threads)
-  - `./query` — TanStack Query integration with cache invalidation
-  - `./cleartext` — Testing adapter (unencrypted FHE operations)
-- **`packages/react-sdk/`** — React hooks (`@zama-fhe/react-sdk`). Entry points:
-  - `.` — React hooks and ZamaSDKProvider
-  - `./wagmi` — Wagmi adapter (WagmiSigner)
-- **`contracts/`** — Solidity smart contracts (Foundry/forge). ERC7984 confidential tokens, wrappers, registries, batchers.
-- **`test/`** — E2E infrastructure (Playwright, Next.js/Vite test apps, shared React test components)
-- **`tools/ast-grep/`** — Custom AST lint rules
-- **`docs/gitbook/`** — Documentation (mdbook)
+**For SDK developers and agents:** `contracts/` has the Solidity smart contracts (Foundry/forge) — ERC-7984 confidential tokens, wrappers, registries, batchers. `test/` has E2E infrastructure (Playwright, Next.js/Vite test apps, shared React test components). `tools/ast-grep/` has custom AST lint rules. `claude-setup/` has Claude Code configuration (copied to `.claude/` by `pnpm setup:claude`). `docs/gitbook/` has user-facing documentation.
 
-### Key Design Patterns
+## How Operations Flow
 
-**Adapter pattern:** Generic interfaces (`GenericSigner`, `GenericStorage`) with library-specific implementations. The SDK core is framework-agnostic; viem/ethers/wagmi adapters implement `GenericSigner`.
+The directory structure is shallow, so understanding how data moves through the system requires knowing the layers:
 
-**Contract call builders:** Pure functions returning `ContractCallConfig` objects. Library-specific sub-paths compose these for viem or ethers.
+**SDK layers:** `ZamaSDK` orchestrates signer + relayer + storage + credentials, and creates `Token` instances that share credentials. `Token` (write ops) and `ReadonlyToken` (read ops) coordinate between host-chain RPC (for encrypted handles) and the Relayer (for encrypt/decrypt via Web Workers). React hooks follow a three-layer pattern: core action (`packages/sdk/src/query/`) → query options factory → framework hook (`packages/react-sdk/src/`).
 
-**Worker strategy:** Browser uses WebWorkers for WASM-based FHE; Node.js uses `worker_threads` pools. Both avoid blocking the main thread.
+**Balance flow (two-phase):** Phase 1 is a cheap RPC poll for the encrypted handle (no signing needed). Phase 2 triggers an expensive relayer decrypt only when the handle changes — this requires EIP-712 credentials (first time needs an explicit user click, then cached). Cache hierarchy: React Query (memory) → IndexedDB balance cache → encrypted credential store → relayer.
 
-**Storage abstraction:** `IndexedDBStorage` (browser), `MemoryStorage` (tests), `ChromeSessionStorage` (extensions), `AsyncLocalStorage` (Node.js).
+**Transfer:** encrypt amount via relayer → single contract call → wait for receipt.
 
-**TanStack Query wrapper:** The react-sdk wraps `useQueries` in `packages/react-sdk/src/utils/query.ts` to inject a custom `queryKeyHashFn`. Direct imports of `useQueries` from `@tanstack/react-query` are banned by ast-grep rule — always use the wrapper.
+**Shield (public ERC-20 → confidential ERC-7984):** approve underlying ERC-20 → wrap into confidential token.
 
-### Build System
+**Unshield (confidential → public):** two-phase — request (encrypt + contract call) then finalize (after off-chain processing).
 
-- **Rolldown** with DTS plugin for both packages
-- SDK outputs ESM (`dist/esm/`) + CJS (`dist/cjs/`), react-sdk outputs ESM only
-- API surface tracked by `@microsoft/api-extractor` — run `pnpm api-report` to regenerate `.api.md` files
+**Transparent routing:** the SDK routes between host-chain RPC and Relayer API automatically. Developers never choose which backend to call. The decision is made at initialization: `RelayerWeb` for browser (Web Worker), `RelayerNode` for Node.js (worker_threads).
 
-### Test Configuration
+## Naming Conventions
 
-Vitest runs three projects defined in `vitest.config.ts`:
-- **`sdk`** — Node environment, `vmForks` pool
-- **`typecheck`** — Type-level tests (`*.test-d.ts`)
-- **`react-sdk`** — happy-dom environment, includes worker tests
+The SDK is for all Zama Protocol use cases, not just tokens. The code is in transition toward this, so naming discipline matters:
 
-Path aliases in vitest.config.ts resolve `@zama-fhe/sdk` and `@zama-fhe/react-sdk` to source directories (not dist), enabling tests without a build step.
+- **SDK-level operations use "contracts":** `contractAddress`, `contractAddresses`, generic ops like allow/revoke/session management, package descriptions, README language. These work with any confidential contract type.
+- **Token-specific operations use "tokens":** `Token`/`ReadonlyToken` classes, `shield`, `unshield`, `transfer`, `balanceOf`, ERC-7984/ERC-20 interfaces. These are explicitly about confidential tokens.
+- **Generic hooks omit the domain:** `useRevoke` not `useRevokeTokens`, `useAllow` not `useAllowTokens`.
+- **Token-specific hooks include the domain:** `useConfidentialBalance`, `useConfidentialTransfer`.
+- **User-facing docs:** no Slack links or internal tool references. Linear ticket refs (SDK-42) in code comments and PR titles are fine.
 
-## Code Style
+## Design Decisions
 
-- **ESM-only** — all packages use `"type": "module"`
-- **Linter:** oxlint (not eslint) with type-aware rules. Key rules: `no-explicit-any`, `consistent-type-imports`, `no-floating-promises`, `no-console` (except in allowed files), `eqeqeq`, `curly`
-- **Formatter:** oxfmt (not prettier)
-- **Unused variables:** prefix with `_`
-- **Tests:** Colocated in `__tests__/` directories, use vitest globals (`describe`, `it`, `expect`, `vi`)
-- **React SDK:** All source files use `"use client"` directive
-- **TypeScript:** `verbatimModuleSyntax` enabled — use `import type` for type-only imports
-- **Commit messages:** Conventional Commits format — `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, with optional scope like `feat(react-sdk):`
-- **Pre-commit hooks:** Husky + lint-staged runs oxlint, ast-grep, and oxfmt on staged files
+- **`create*` factory naming is legacy.** Functions like `createToken`, `createReadonlyToken` imply deploying contracts but actually construct client-side handles to existing on-chain contracts. Don't extend this pattern without considering alternatives like `get*`.
+- **First decrypt requires explicit user click.** The first EIP-712 blind sign per session must be triggered by user action (e.g. "Decrypt Balance" button). After that, cached sessions can auto-decrypt on subsequent renders.
+- **Three-layer hook architecture.** Core async action → TanStack Query options factory → React hook. The `tanstack-best-practices` skill (installed by `pnpm setup:claude`) documents the full pattern. All new hooks must follow this layering.
+- **Contract call builders are pure.** Functions in `packages/sdk/src/contracts/` return `{ address, abi, functionName, args }` config objects. They never execute transactions. Library-specific sub-paths (`/viem`, `/ethers`) compose these.
+- **Adapter pattern for framework neutrality.** Core SDK depends only on `GenericSigner` and `GenericStorage` interfaces. New integrations (viem, ethers, wagmi) add an adapter, not a dependency on the core.
+- **Credentials scoped to (address, chainId).** Auto-revoked on account or chain switch to prevent cross-wallet leaks.
 
-## Release
+## Gotchas
 
-Semantic-release automates versioning. Both packages are versioned in lockstep. `main` publishes to npm `latest`; `prerelease` branch publishes to npm `alpha`. CI gates: Vitest + Playwright must pass before publish.
+- **TanStack `useQueries` wrapper is mandatory** in react-sdk. Never import `useQueries` directly from `@tanstack/react-query` — use the wrapper in `packages/react-sdk/src/utils/query.ts` which injects the custom `queryKeyHashFn`. An ast-grep rule enforces this.
+- **Build order matters.** `@zama-fhe/sdk` must build before `@zama-fhe/react-sdk`. `pnpm build` handles this correctly.
+- **All react-sdk source files need `"use client"` directive.**
+- **Address normalization in query keys.** All addresses in query keys must use `getAddress()` for checksumming. Inconsistent casing causes cache misses.
