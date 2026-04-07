@@ -29,7 +29,6 @@ const contracts = {
   cUSDT: deployments.cUSDT as Address,
   USDC: deployments.erc20 as Address,
   cUSDC: deployments.cToken as Address,
-  transferBatcher: deployments.transferBatcher as Address,
   wrappersRegistry: deployments.wrappersRegistry as Address,
   acl: hardhatCleartextConfig.aclContractAddress as Address,
 } as const;

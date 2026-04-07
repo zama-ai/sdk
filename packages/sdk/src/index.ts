@@ -221,7 +221,6 @@ export {
   confidentialTransferContract,
   confidentialTransferFromContract,
   isOperatorContract,
-  confidentialBatchTransferContract,
   unwrapContract,
   unwrapFromBalanceContract,
   finalizeUnwrapContract,
@@ -258,7 +257,6 @@ export {
   isConfidentialTokenValidContract,
 } from "./contracts";
 export type {
-  BatchTransferData,
   TokenWrapperPair,
   TokenWrapperPairWithMetadata,
   PaginatedResult,

@@ -9,7 +9,6 @@ import {
   readUnderlyingTokenContract,
   readWrapperExistsContract,
   readWrapperForTokenContract,
-  writeConfidentialBatchTransferContract,
   writeConfidentialTransferContract,
   writeFinalizeUnwrapContract,
   writeSetOperatorContract,
@@ -24,7 +23,6 @@ import { ViemSigner } from "../viem-signer";
 const ACCOUNT_ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const REGISTRY = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 const TX_HASH = "0xtxhash" as Hex;
 const MOCK_CHAIN = { id: 1, name: "mainnet" } as WalletClient["chain"];
 
@@ -417,36 +415,6 @@ describe("Viem write contract helpers", () => {
   );
 
   vit(
-    "writeConfidentialBatchTransferContract calls writeContract with correct config",
-    ({ tokenAddress, userAddress, walletClient }) => {
-      const batchData = [
-        {
-          to: userAddress,
-          encryptedAmount: "0xhandle" as Address,
-          inputProof: "0xproof" as Address,
-          retryFor: 0n,
-        },
-      ];
-      writeConfidentialBatchTransferContract(
-        walletClient,
-        BATCHER,
-        tokenAddress,
-        userAddress,
-        batchData,
-      );
-      expect(walletClient.writeContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chain: MOCK_CHAIN,
-          account: walletClient.account,
-          address: BATCHER,
-          functionName: "confidentialBatchTransfer",
-          args: [tokenAddress, userAddress, batchData],
-        }),
-      );
-    },
-  );
-
-  vit(
     "writeUnwrapContract calls writeContract with correct config",
     ({ tokenAddress, userAddress, walletClient }) => {
       const handle = new Uint8Array([0xde, 0xad]);
@@ -552,22 +520,6 @@ describe("Viem write contract helpers", () => {
   );
 
   describe("all write helpers throw without account", () => {
-    vit(
-      "writeConfidentialBatchTransferContract",
-      ({ tokenAddress, userAddress, createMockWalletClient }) => {
-        const noAccountClient = createMockWalletClient(false);
-        expect(() =>
-          writeConfidentialBatchTransferContract(
-            noAccountClient,
-            BATCHER,
-            tokenAddress,
-            userAddress,
-            [],
-          ),
-        ).toThrow("WalletClient has no account");
-      },
-    );
-
     vit("writeUnwrapContract", ({ tokenAddress, userAddress, createMockWalletClient }) => {
       const noAccountClient = createMockWalletClient(false);
       expect(() =>

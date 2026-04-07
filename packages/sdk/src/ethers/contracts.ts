@@ -8,11 +8,9 @@ import {
 } from "viem";
 
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { BatchTransferData } from "../contracts";
 
 import {
   confidentialBalanceOfContract,
-  confidentialBatchTransferContract,
   confidentialTransferContract,
   finalizeUnwrapContract,
   getWrapperContract,
@@ -147,19 +145,6 @@ export function writeConfidentialTransferContract(
   inputProof: Uint8Array,
 ) {
   return ethersWrite(signer, confidentialTransferContract(tokenAddress, to, handle, inputProof));
-}
-
-export function writeConfidentialBatchTransferContract(
-  signer: EthersTransactionSigner,
-  batcherAddress: Address,
-  tokenAddress: Address,
-  fromAddress: Address,
-  batchTransferData: BatchTransferData[],
-) {
-  return ethersWrite(
-    signer,
-    confidentialBatchTransferContract(batcherAddress, tokenAddress, fromAddress, batchTransferData),
-  );
 }
 
 export function writeUnwrapContract(

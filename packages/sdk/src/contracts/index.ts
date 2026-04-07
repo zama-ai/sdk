@@ -36,8 +36,6 @@ export {
   isConfidentialWrapperContract,
 } from "./erc165";
 
-export { confidentialBatchTransferContract, type BatchTransferData } from "./transfer-batcher";
-
 export {
   delegateForUserDecryptionContract,
   revokeDelegationContract,

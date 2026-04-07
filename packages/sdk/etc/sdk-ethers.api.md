@@ -112,11 +112,7 @@ export function readWrapperExistsContract(provider: EthersCallProvider, registry
 export function readWrapperForTokenContract(provider: EthersCallProvider, registryAddress: Address, tokenAddress: Address): Promise<unknown>;
 
 // Warning: (ae-forgotten-export) The symbol "EthersTransactionSigner" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "BatchTransferData" needs to be exported by the entry point index.d.ts
 //
-// @public (undocumented)
-export function writeConfidentialBatchTransferContract(signer: EthersTransactionSigner, batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[]): Promise<`0x${string}`>;
-
 // @public (undocumented)
 export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
 

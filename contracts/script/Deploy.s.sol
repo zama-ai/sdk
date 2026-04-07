@@ -5,7 +5,6 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {TestERC20} from "../src/mocks/Erc20Mintable.sol";
 import {DeploymentCoordinator} from "../src/factory/DeploymentCoordinator.sol";
-import {ERC7984TransferBatcher} from "../src/batcher/ERC7984TransferBatcher.sol";
 import {ConfidentialWrapper} from "../src/wrapper/ERC7984ERC20WrapperUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {WrappersRegistry} from "../src/factory/WrappersRegistry.sol";
@@ -36,22 +35,18 @@ contract Deploy is Script {
         ConfidentialWrapper cUSDT = coordinator.deploy(address(usdt));
         console.log("cUSDT:", address(cUSDT));
 
-        // 5. Deploy TransferBatcher
-        ERC7984TransferBatcher batcher = new ERC7984TransferBatcher();
-        console.log("TransferBatcher:", address(batcher));
-
-        // 6. Mint 10,000 USDC + 10,000 USDT to deployer (Anvil account #0)
+        // 5. Mint 10,000 USDC + 10,000 USDT to deployer (Anvil account #0)
         usdc.mint(msg.sender, 10_000 * 1e6);
         usdt.mint(msg.sender, 10_000 * 1e6);
 
-        // 7. Wrap 1,000 of each into confidential tokens so E2E tests start funded
+        // 6. Wrap 1,000 of each into confidential tokens so E2E tests start funded
         uint256 wrapAmount = 1_000 * 1e6;
         IERC20(address(usdc)).approve(address(cUSDC), wrapAmount);
         cUSDC.wrap(msg.sender, wrapAmount);
         IERC20(address(usdt)).approve(address(cUSDT), wrapAmount);
         cUSDT.wrap(msg.sender, wrapAmount);
 
-        // 8. Deploy WrappersRegistry and register token pairs
+        // 7. Deploy WrappersRegistry and register token pairs
         WrappersRegistry registry = new WrappersRegistry();
         registry.registerPair(address(usdc), address(cUSDC));
         registry.registerPair(address(usdt), address(cUSDT));
@@ -59,13 +54,12 @@ contract Deploy is Script {
 
         vm.stopBroadcast();
 
-        // 9. Write deployments.json
+        // 8. Write deployments.json
         string memory json = "deployments";
         vm.serializeAddress(json, "erc20", address(usdc));
         vm.serializeAddress(json, "cToken", address(cUSDC));
         vm.serializeAddress(json, "USDT", address(usdt));
         vm.serializeAddress(json, "cUSDT", address(cUSDT));
-        vm.serializeAddress(json, "transferBatcher", address(batcher));
         string memory finalJson = vm.serializeAddress(json, "wrappersRegistry", address(registry));
 
         string memory path = string.concat(vm.projectRoot(), "/deployments.json");

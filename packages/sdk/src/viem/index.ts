@@ -13,7 +13,6 @@ export {
   readWrapperExistsContract,
   readSupportsInterfaceContract,
   writeConfidentialTransferContract,
-  writeConfidentialBatchTransferContract,
   writeUnwrapContract,
   writeUnwrapFromBalanceContract,
   writeFinalizeUnwrapContract,

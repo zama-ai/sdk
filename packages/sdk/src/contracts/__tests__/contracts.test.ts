@@ -42,12 +42,8 @@ import { finalizeUnwrapContract, underlyingContract, wrapContract } from "../wra
 // Deployment coordinator
 import { getWrapperContract, wrapperExistsContract } from "../deployment-coordinator";
 
-// Transfer batcher
-import { confidentialBatchTransferContract } from "../transfer-batcher";
-
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const COORDINATOR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
-const BATCHER = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 
 describe("ERC-20 contract builders", () => {
   it("nameContract", ({ tokenAddress }) => {
@@ -261,19 +257,3 @@ describe("Deployment coordinator contract builders", () => {
   });
 });
 
-describe("Transfer batcher contract builders", () => {
-  it("confidentialBatchTransferContract", ({ tokenAddress, userAddress }) => {
-    const data = [
-      {
-        to: userAddress,
-        encryptedAmount: ("0x" + "aa".repeat(32)) as Address,
-        inputProof: ("0x" + "bb".repeat(32)) as Address,
-        retryFor: 0n,
-      },
-    ];
-    const config = confidentialBatchTransferContract(BATCHER, tokenAddress, userAddress, data);
-    expect(config.address).toBe(BATCHER);
-    expect(config.functionName).toBe("confidentialBatchTransfer");
-    expect(config.args).toEqual([tokenAddress, userAddress, data]);
-  });
-});

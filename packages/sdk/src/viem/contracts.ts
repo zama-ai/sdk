@@ -1,9 +1,7 @@
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
 import type { Handle } from "../relayer/relayer-sdk.types";
-import type { BatchTransferData } from "../contracts";
 import {
   confidentialBalanceOfContract,
-  confidentialBatchTransferContract,
   confidentialTransferContract,
   finalizeUnwrapContract,
   getWrapperContract,
@@ -83,25 +81,6 @@ export function writeConfidentialTransferContract(
     chain: client.chain,
     account: requireAccount(client),
     ...confidentialTransferContract(tokenAddress, to, handle, inputProof),
-  });
-}
-
-export function writeConfidentialBatchTransferContract(
-  client: WalletClient,
-  batcherAddress: Address,
-  tokenAddress: Address,
-  fromAddress: Address,
-  batchTransferData: BatchTransferData[],
-) {
-  return client.writeContract({
-    chain: client.chain,
-    account: requireAccount(client),
-    ...confidentialBatchTransferContract(
-      batcherAddress,
-      tokenAddress,
-      fromAddress,
-      batchTransferData,
-    ),
   });
 }
 

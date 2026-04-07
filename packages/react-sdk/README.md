@@ -867,7 +867,6 @@ All write hooks return `{ mutate, mutateAsync, ...mutation }` from wagmi's `useW
 | Hook                             | Mutation Parameters                              | Description                   |
 | -------------------------------- | ------------------------------------------------ | ----------------------------- |
 | `useConfidentialTransfer()`      | `(token, to, handle, inputProof)`                | Encrypted transfer.           |
-| `useConfidentialBatchTransfer()` | `(batcher, token, from, transfers, fees)`        | Batch encrypted transfer.     |
 | `useUnwrap()`                    | `(token, from, to, encryptedAmount, inputProof)` | Request unwrap.               |
 | `useUnwrapFromBalance()`         | `(token, from, to, encryptedBalance)`            | Unwrap using on-chain handle. |
 | `useFinalizeUnwrap()`            | `(wrapper, burntAmount, cleartext, proof)`       | Finalize unwrap.              |
@@ -1002,7 +1001,7 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Pending unshield:** `savePendingUnshield`, `loadPendingUnshield`, `clearPendingUnshield`.
 
-**Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `BatchTransferData`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
+**Types:** `Address`, `ZamaSDKConfig`, `ReadonlyTokenConfig`, `NetworkType`, `RelayerSDK`, `RelayerSDKStatus`, `EncryptResult`, `EncryptParams`, `UserDecryptParams`, `PublicDecryptResult`, `KeypairType`, `EIP712TypedData`, `DelegatedUserDecryptParams`, `KmsDelegatedUserDecryptEIP712Type`, `ZKProofLike`, `InputProofBytesType`, `StoredCredentials`, `GenericSigner`, `GenericStorage`, `TransactionReceipt`, `TransactionResult`, `UnshieldCallbacks`.
 
 **Errors:** `ZamaError`, `ZamaErrorCode`, `SigningRejectedError`, `SigningFailedError`, `EncryptionFailedError`, `DecryptionFailedError`, `ApprovalFailedError`, `TransactionRevertedError`, `InvalidKeypairError`, `NoCiphertextError`, `RelayerRequestFailedError`, `matchZamaError`.
 
@@ -1016,4 +1015,4 @@ All public exports from `@zama-fhe/sdk` are re-exported from the main entry poin
 
 **Activity feed:** `ActivityDirection`, `ActivityType`, `ActivityAmount`, `ActivityLogMetadata`, `ActivityItem`, `parseActivityFeed`, `extractEncryptedHandles`, `applyDecryptedValues`, `sortByBlockNumber`.
 
-**Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `confidentialBatchTransferContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `getWrapperContract`, `wrapperExistsContract`, `underlyingContract`, `wrapContract`, `supportsInterfaceContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`, `deploymentCoordinatorContract`, `isFinalizeUnwrapOperatorContract`, `setFinalizeUnwrapOperatorContract`.
+**Contract call builders:** `confidentialBalanceOfContract`, `confidentialTransferContract`, `confidentialTransferFromContract`, `isOperatorContract`, `unwrapContract`, `unwrapFromBalanceContract`, `finalizeUnwrapContract`, `setOperatorContract`, `getWrapperContract`, `wrapperExistsContract`, `underlyingContract`, `wrapContract`, `supportsInterfaceContract`, `nameContract`, `symbolContract`, `decimalsContract`, `allowanceContract`, `approveContract`, `confidentialTotalSupplyContract`, `totalSupplyContract`, `rateContract`, `deploymentCoordinatorContract`, `isFinalizeUnwrapOperatorContract`, `setFinalizeUnwrapOperatorContract`.

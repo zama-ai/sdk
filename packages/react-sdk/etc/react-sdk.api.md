@@ -35,7 +35,6 @@ import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { batchDecryptBalancesAsMutationOptions } from '@zama-fhe/sdk/query';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { BatchDecryptOptions } from '@zama-fhe/sdk';
-import { BatchTransferData } from '@zama-fhe/sdk';
 import { ChromeSessionStorage } from '@zama-fhe/sdk';
 import { chromeSessionStorage } from '@zama-fhe/sdk';
 import { clearPendingUnshield } from '@zama-fhe/sdk';
@@ -46,7 +45,6 @@ import { confidentialBalanceOfContract } from '@zama-fhe/sdk';
 import { confidentialBalanceQueryOptions } from '@zama-fhe/sdk/query';
 import { ConfidentialBalancesData } from '@zama-fhe/sdk/query';
 import { confidentialBalancesQueryOptions } from '@zama-fhe/sdk/query';
-import { confidentialBatchTransferContract } from '@zama-fhe/sdk';
 import { confidentialHandleQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialHandlesQueryOptions } from '@zama-fhe/sdk/query';
 import { confidentialIsApprovedQueryOptions } from '@zama-fhe/sdk/query';
@@ -342,8 +340,6 @@ export { BatchDecryptBalancesAsParams }
 
 export { BatchDecryptOptions }
 
-export { BatchTransferData }
-
 export { ChromeSessionStorage }
 
 export { chromeSessionStorage }
@@ -363,8 +359,6 @@ export { confidentialBalanceQueryOptions }
 export { ConfidentialBalancesData }
 
 export { confidentialBalancesQueryOptions }
-
-export { confidentialBatchTransferContract }
 
 export { confidentialHandleQueryOptions }
 

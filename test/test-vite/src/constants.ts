@@ -22,5 +22,3 @@ export const DEFAULTS = {
   wrapper: deployments.cUSDT as Address, // cUSDT
   confidentialToken: deployments.cUSDT as Address, // cUSDT
 };
-
-export const TRANSFER_BATCHER_ADDRESS = deployments.transferBatcher as Address;

@@ -564,18 +564,6 @@ export interface BatchDecryptOptions {
 }
 
 // @public
-export interface BatchTransferData {
-    // (undocumented)
-    encryptedAmount: Handle;
-    // (undocumented)
-    inputProof: Hex;
-    // (undocumented)
-    retryFor: bigint;
-    // (undocumented)
-    to: Address;
-}
-
-// @public
 export class ChromeSessionStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
@@ -1923,85 +1911,6 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
     }];
     readonly functionName: "confidentialBalanceOf";
     readonly args: readonly [`0x${string}`];
-};
-
-// @public
-export function confidentialBatchTransferContract(batcherAddress: Address, tokenAddress: Address, fromAddress: Address, batchTransferData: BatchTransferData[]): {
-    readonly address: `0x${string}`;
-    readonly abi: readonly [{
-        readonly inputs: readonly [{
-            readonly internalType: "address";
-            readonly name: "holder";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "spender";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984UnauthorizedSpender";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [];
-        readonly name: "EmptyTransferArray";
-        readonly type: "error";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [];
-        readonly name: "BatchTransferStart";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "cToken";
-            readonly type: "address";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "sender";
-            readonly type: "address";
-        }];
-        readonly name: "BatchTransferEnd";
-        readonly type: "event";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "contract IERC7984";
-            readonly name: "cToken";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "from";
-            readonly type: "address";
-        }, {
-            readonly components: readonly [{
-                readonly internalType: "address";
-                readonly name: "to";
-                readonly type: "address";
-            }, {
-                readonly internalType: "externalEuint64";
-                readonly name: "encryptedAmount";
-                readonly type: "bytes32";
-            }, {
-                readonly internalType: "bytes";
-                readonly name: "inputProof";
-                readonly type: "bytes";
-            }, {
-                readonly internalType: "uint256";
-                readonly name: "retryFor";
-                readonly type: "uint256";
-            }];
-            readonly internalType: "struct ERC7984TransferBatcher.ConfidentialTransferInput[]";
-            readonly name: "transfers";
-            readonly type: "tuple[]";
-        }];
-        readonly name: "confidentialBatchTransfer";
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-        readonly type: "function";
-    }];
-    readonly functionName: "confidentialBatchTransfer";
-    readonly args: readonly [`0x${string}`, `0x${string}`, BatchTransferData[]];
 };
 
 // @public

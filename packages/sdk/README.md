@@ -565,12 +565,6 @@ interface ContractCallConfig {
 | ----------------------------------------------- | ------------------------ |
 | `supportsInterfaceContract(token, interfaceId)` | ERC-165 interface check. |
 
-### Transfer Batcher
-
-| Function                                                             | Description                         |
-| -------------------------------------------------------------------- | ----------------------------------- |
-| `confidentialBatchTransferContract(batcher, token, from, transfers)` | Batch multiple encrypted transfers. |
-
 ## Library-Specific Contract Helpers
 
 Both the `/viem` and `/ethers` sub-paths export convenience wrappers that execute contract calls directly with library-native clients.
@@ -600,7 +594,7 @@ const txHash = await writeConfidentialTransferContract(
 
 **Read helpers:** `readConfidentialBalanceOfContract`, `readUnderlyingTokenContract`, `readWrapperExistsContract`, `readSupportsInterfaceContract`, `readWrapperForTokenContract` (legacy — prefer `sdk.registry.getConfidentialToken()`).
 
-**Write helpers:** `writeConfidentialTransferContract`, `writeConfidentialBatchTransferContract`, `writeUnwrapContract`, `writeUnwrapFromBalanceContract`, `writeFinalizeUnwrapContract`, `writeSetOperatorContract`, `writeWrapContract`.
+**Write helpers:** `writeConfidentialTransferContract`, `writeUnwrapContract`, `writeUnwrapFromBalanceContract`, `writeFinalizeUnwrapContract`, `writeSetOperatorContract`, `writeWrapContract`.
 
 ### ethers (`@zama-fhe/sdk/ethers`)
 
