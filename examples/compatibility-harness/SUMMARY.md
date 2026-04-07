@@ -85,9 +85,9 @@ the `writeContract` path during token operations.
 
 ### Pre-built adapters
 
-The harness ships with a reference adapter for Crossmint MPC wallets, demonstrating the
-expected integration pattern for custody providers. It serves both as a working example
-and as a compatibility baseline.
+The harness ships with reference adapters demonstrating the expected integration pattern
+for common wallet types. Each adapter serves both as a working example and as a
+compatibility baseline for the corresponding provider category.
 
 ---
 
@@ -95,16 +95,16 @@ and as a compatibility baseline.
 
 ### Corporate proxy / TLS interception
 
-Calls from the Crossmint adapter to `api.crossmint.com` fail in corporate network
-environments where an HTTPS proxy intercepts traffic and presents its own certificate.
-Node.js rejects this with `CERT_HAS_EXPIRED` or `UNABLE_TO_GET_ISSUER_CERT`. This is
-an environmental issue, not a code defect, but it prevents the harness from running
-end-to-end in such environments without setting `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+MPC adapter API calls fail in corporate network environments where an HTTPS proxy
+intercepts traffic and presents its own certificate. Node.js rejects this with
+`CERT_HAS_EXPIRED` or `UNABLE_TO_GET_ISSUER_CERT`. This is an environmental issue,
+not a code defect, but it prevents the harness from running end-to-end in such
+environments without setting `NODE_TLS_REJECT_UNAUTHORIZED=0`.
 
 ### BigInt serialization
 
 EIP-712 messages may contain `uint256` fields represented as `BigInt` in JavaScript.
-The Crossmint adapter passes these through `JSON.stringify`, which throws on `BigInt`
+REST-based MPC adapters that pass these through `JSON.stringify` throw on `BigInt`
 values. Fixed with a custom replacer, but this highlights a broader concern: adapters
 must be careful about type mapping at the JS ↔ REST API boundary.
 
