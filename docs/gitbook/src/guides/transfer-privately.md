@@ -34,7 +34,9 @@ const token = useToken({ tokenAddress: "0xEncryptedERC20Address" });
 
 ### 2. Send a confidential transfer
 
-Pass the recipient address and the plaintext amount. The SDK encrypts the amount using FHE before submitting the transaction:
+Pass the recipient address and the plaintext amount. The SDK encrypts the amount using FHE before submitting the transaction.
+
+By default, the SDK validates the confidential balance before submitting. If cached credentials exist, it decrypts silently. If the balance is insufficient, it throws `InsufficientConfidentialBalanceError` before any transaction is sent. Pass `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
 
 {% tabs %}
 {% tab title="Core SDK" %}

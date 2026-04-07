@@ -31,4 +31,16 @@ export const aclAbi = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [
+      { internalType: "address", name: "delegator", type: "address" },
+      { internalType: "address", name: "delegate", type: "address" },
+      { internalType: "address", name: "contractAddress", type: "address" },
+      { internalType: "bytes32", name: "handle", type: "bytes32" },
+    ],
+    name: "isHandleDelegatedForUserDecryption",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;

@@ -61,6 +61,12 @@ describe("ZamaSDK", () => {
     expect(relayer.terminate).toHaveBeenCalledOnce();
   });
 
+  it("[Symbol.dispose] delegates to terminate", ({ relayer, signer, storage }) => {
+    const sdk = new ZamaSDK({ relayer, signer, storage });
+    sdk[Symbol.dispose]();
+    expect(relayer.terminate).toHaveBeenCalledOnce();
+  });
+
   it("calls signer.subscribe when available", ({
     createMockSigner,
     createMockRelayer,

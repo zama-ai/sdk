@@ -7,6 +7,7 @@ import {
   assertFunctionProp,
   assertStringProp,
   assertCondition,
+  assertNonNullable,
 } from "../assertions";
 
 describe("assertObject", () => {
@@ -168,5 +169,33 @@ describe("assertCondition", () => {
   it("throws when condition is false", () => {
     expect(() => assertCondition(false, "oops")).toThrow(TypeError);
     expect(() => assertCondition(false, "oops")).toThrow("oops");
+  });
+});
+
+describe("assertNonNullable", () => {
+  it("accepts a defined value", () => {
+    expect(() => assertNonNullable("hello", "ctx")).not.toThrow();
+  });
+
+  it("accepts zero", () => {
+    expect(() => assertNonNullable(0, "ctx")).not.toThrow();
+  });
+
+  it("accepts empty string", () => {
+    expect(() => assertNonNullable("", "ctx")).not.toThrow();
+  });
+
+  it("accepts false", () => {
+    expect(() => assertNonNullable(false, "ctx")).not.toThrow();
+  });
+
+  it("throws for null", () => {
+    expect(() => assertNonNullable(null, "ctx")).toThrow(TypeError);
+    expect(() => assertNonNullable(null, "ctx")).toThrow("ctx must not be null or undefined");
+  });
+
+  it("throws for undefined", () => {
+    expect(() => assertNonNullable(undefined, "ctx")).toThrow(TypeError);
+    expect(() => assertNonNullable(undefined, "ctx")).toThrow("ctx must not be null or undefined");
   });
 });

@@ -1,6 +1,7 @@
 import { confidentialBalanceOfContract } from "../contracts";
 import type { Handle } from "../relayer/relayer-sdk.types";
 import type { GenericSigner } from "../types";
+import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
@@ -33,9 +34,7 @@ export function confidentialHandlesQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddresses: keyTokenAddresses, owner: keyOwner }] = context.queryKey;
-      if (!keyOwner) {
-        throw new Error("owner is required");
-      }
+      assertNonNullable(keyOwner, "confidentialHandlesQueryOptions: owner");
       return Promise.all(
         keyTokenAddresses.map(async (tokenAddress) => {
           const handle = await signer.readContract(

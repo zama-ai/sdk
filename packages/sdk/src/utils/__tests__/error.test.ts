@@ -1,5 +1,5 @@
 import { describe, it, expect } from "../../test-fixtures";
-import { toError } from "../error";
+import { toError, isContractCallError } from "../error";
 
 describe("toError", () => {
   it("returns the same Error instance", () => {
@@ -35,5 +35,58 @@ describe("toError", () => {
     const result = toError(42);
     expect(result).toBeInstanceOf(Error);
     expect(result.message).toBe("42");
+  });
+});
+
+describe("isContractCallError", () => {
+  it("detects viem ContractFunctionExecutionError", () => {
+    const err = new Error("contract call failed");
+    err.name = "ContractFunctionExecutionError";
+    expect(isContractCallError(err)).toBe(true);
+  });
+
+  it("detects viem ContractFunctionRevertedError", () => {
+    const err = new Error("contract reverted");
+    err.name = "ContractFunctionRevertedError";
+    expect(isContractCallError(err)).toBe(true);
+  });
+
+  it("detects ethers CALL_EXCEPTION", () => {
+    const err = Object.assign(new Error("call exception"), { code: "CALL_EXCEPTION" });
+    expect(isContractCallError(err)).toBe(true);
+  });
+
+  it("detects execution reverted message", () => {
+    expect(isContractCallError(new Error("execution reverted"))).toBe(true);
+  });
+
+  it("detects ethers call revert exception message", () => {
+    expect(isContractCallError(new Error("call revert exception"))).toBe(true);
+  });
+
+  it("returns false for unrelated errors containing 'revert'", () => {
+    expect(isContractCallError(new Error("Failed to revert local state"))).toBe(false);
+    expect(isContractCallError(new Error("Please revert your changes"))).toBe(false);
+  });
+
+  it("returns false for non-CALL_EXCEPTION ethers error codes", () => {
+    expect(
+      isContractCallError(Object.assign(new Error("server error"), { code: "SERVER_ERROR" })),
+    ).toBe(false);
+    expect(
+      isContractCallError(Object.assign(new Error("network error"), { code: "NETWORK_ERROR" })),
+    ).toBe(false);
+  });
+
+  it("returns false for network errors", () => {
+    expect(isContractCallError(new Error("fetch failed"))).toBe(false);
+    expect(isContractCallError(new Error("connection refused"))).toBe(false);
+    expect(isContractCallError(new Error("timeout"))).toBe(false);
+  });
+
+  it("returns false for non-Error values", () => {
+    expect(isContractCallError("string")).toBe(false);
+    expect(isContractCallError(null)).toBe(false);
+    expect(isContractCallError(undefined)).toBe(false);
   });
 });

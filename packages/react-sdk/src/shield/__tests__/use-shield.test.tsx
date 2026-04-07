@@ -31,7 +31,7 @@ describe("useShield", () => {
     renderWithProviders,
     signer,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const { result, queryClient } = renderWithProviders(() =>
       useShield({ tokenAddress: TOKEN, wrapperAddress: WRAPPER }),
@@ -64,7 +64,7 @@ describe("useShield", () => {
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders, signer }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const handleKey = zamaQueryKeys.confidentialHandle.token(TOKEN);
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
@@ -96,7 +96,7 @@ describe("useShield", () => {
     renderWithProviders,
     signer,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-success-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -118,7 +118,7 @@ describe("useShield", () => {
     renderWithProviders,
     signer,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const expectedContext = { requestId: "shield-error-raw" } as const;
@@ -143,7 +143,7 @@ describe("useShield", () => {
     renderWithProviders,
     signer,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-settled-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -165,7 +165,7 @@ describe("useShield", () => {
     renderWithProviders,
     signer,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-success-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -193,7 +193,7 @@ describe("useShield", () => {
     renderWithProviders,
     signer,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const expectedContext = { requestId: "shield-error-optimistic" } as const;
@@ -224,7 +224,7 @@ describe("useShield", () => {
     renderWithProviders,
     signer,
   }) => {
-    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+    vi.mocked(signer.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(5000n);
 
     const expectedContext = { requestId: "shield-settled-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);

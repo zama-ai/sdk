@@ -1,6 +1,7 @@
 import type { ReadonlyToken } from "../token/readonly-token";
 import type { Handle } from "../relayer/relayer-sdk.types";
 
+import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
@@ -33,12 +34,8 @@ export function confidentialBalanceQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handle: keyHandle }] = context.queryKey;
-      if (!keyOwner) {
-        throw new Error("owner is required");
-      }
-      if (!keyHandle) {
-        throw new Error("handle is required");
-      }
+      assertNonNullable(keyOwner, "confidentialBalanceQueryOptions: owner");
+      assertNonNullable(keyHandle, "confidentialBalanceQueryOptions: handle");
       return token.decryptBalance(keyHandle, keyOwner);
     },
     enabled: Boolean(ownerKey && handleKey) && queryEnabled,

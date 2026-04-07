@@ -21,7 +21,10 @@ export function UnshieldForm({
   return (
     <form
       action={(formData) => {
-        unshield.mutate({ amount: BigInt(formData.get("amount") as string) });
+        unshield.mutate({
+          amount: BigInt(formData.get("amount") as string),
+          skipBalanceCheck: true,
+        });
       }}
       className="space-y-4"
       data-testid="unshield-form"

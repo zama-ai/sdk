@@ -27,7 +27,7 @@ export interface ZamaSDKConfig {
   sessionStorage?: GenericStorage;
   /**
    * How long the ML-KEM re-encryption keypair remains valid, in seconds.
-   * Default: `86400` (1 day). Must be a positive number — `0` is rejected
+   * Default: `2592000` (30 days). Must be a positive number — `0` is rejected
    * because the keypair is required to establish the relayer connection.
    */
   keypairTTL?: number;
@@ -48,7 +48,7 @@ export interface ZamaSDKConfig {
   registryAddresses?: Record<number, Address>;
   /**
    * How long cached registry results remain valid, in seconds.
-   * Default: `86400` (24 hours). Consistent with `keypairTTL`/`sessionTTL`.
+   * Default: `86400` (24 hours).
    */
   registryTTL?: number;
   /** Optional signer lifecycle callbacks composed with the SDK's internal session handling. */
@@ -104,7 +104,7 @@ export class ZamaSDK {
       storage: this.storage,
       sessionStorage: this.sessionStorage,
       keypairTTL: (() => {
-        const ttl = config.keypairTTL ?? 86400;
+        const ttl = config.keypairTTL ?? 2592000;
         if (ttl <= 0) {
           throw new Error("keypairTTL must be a positive number (seconds)");
         }
@@ -291,5 +291,23 @@ export class ZamaSDK {
   terminate(): void {
     this.dispose();
     this.relayer.terminate();
+  }
+
+  /**
+   * Implements the TC39 Explicit Resource Management protocol.
+   * Calls {@link terminate} when the `using` binding goes out of scope,
+   * unsubscribing signer events and shutting down the relayer.
+   *
+   * @example
+   * ```ts
+   * {
+   *   using sdk = new ZamaSDK({ relayer, signer, storage });
+   *   await sdk.allow(cUSDT);
+   *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf();
+   * } // sdk.terminate() called automatically here
+   * ```
+   */
+  [Symbol.dispose](): void {
+    this.terminate();
   }
 }
