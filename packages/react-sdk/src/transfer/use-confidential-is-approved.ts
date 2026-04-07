@@ -54,12 +54,15 @@ export function useConfidentialIsApproved(
     enabled: tokenAddress !== undefined && spender !== undefined && holder === undefined,
   });
   const resolvedHolder = holder ?? holderQuery.data;
+  const baseOpts = confidentialIsApprovedQueryOptions(sdk.signer, tokenAddress, {
+    holder: resolvedHolder,
+    spender,
+  });
+
   return useQuery({
-    ...confidentialIsApprovedQueryOptions(sdk.signer, tokenAddress, {
-      holder: resolvedHolder,
-      spender,
-    }),
+    ...baseOpts,
     ...options,
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 

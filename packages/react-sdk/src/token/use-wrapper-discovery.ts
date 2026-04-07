@@ -58,13 +58,16 @@ export function useWrapperDiscovery(
   const sdk = useZamaSDK();
   const registryAddress = useWrappersRegistryAddress();
 
+  const baseOpts = wrapperDiscoveryQueryOptions(sdk.registry, {
+    tokenAddress,
+    erc20Address,
+    registryAddress,
+  });
+
   return useQuery<Address | null>({
-    ...wrapperDiscoveryQueryOptions(sdk.registry, {
-      tokenAddress,
-      erc20Address,
-      registryAddress,
-    }),
+    ...baseOpts,
     ...options,
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 

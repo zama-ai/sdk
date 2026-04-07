@@ -37,9 +37,11 @@ export function useDelegationStatus(
   options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
+  const baseOpts = delegationStatusQueryOptions(sdk, config);
 
   return useQuery<DelegationStatusData>({
-    ...delegationStatusQueryOptions(sdk, config),
+    ...baseOpts,
     ...options,
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }

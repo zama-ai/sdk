@@ -41,12 +41,15 @@ export function useUnderlyingAllowance(
   const addressQuery = useQuery<Address>(signerAddressQueryOptions(token.signer));
   const owner = addressQuery.data;
 
+  const baseOpts = underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
+    owner,
+    wrapperAddress,
+  });
+
   return useQuery<bigint>({
-    ...underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
-      owner,
-      wrapperAddress,
-    }),
+    ...baseOpts,
     ...options,
+    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
