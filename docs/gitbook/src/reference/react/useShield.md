@@ -120,6 +120,25 @@ Controls how the SDK handles the ERC-20 approval before shielding.
 await shield({ amount: 1000n, approvalStrategy: "max" });
 ```
 
+### Progress callbacks
+
+| Callback                           | Fires when                         |
+| ---------------------------------- | ---------------------------------- |
+| `onApprovalSubmitted(txHash: Hex)` | Approval transaction is submitted. |
+| `onShieldSubmitted(txHash: Hex)`   | Shield transaction is submitted.   |
+
+```ts
+await shield({
+  amount: 1000n,
+  onApprovalSubmitted: (txHash) => updateUI(`Approval: ${txHash}`),
+  onShieldSubmitted: (txHash) => updateUI(`Shield: ${txHash}`),
+});
+```
+
+**Throws:**
+
+- `InsufficientERC20BalanceError` -- if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
+
 ## Return Type
 
 ```ts

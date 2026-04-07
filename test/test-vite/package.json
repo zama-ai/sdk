@@ -15,7 +15,7 @@
     "@zama-fhe/test-components": "workspace:*",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router": "^7.13.2",
+    "react-router": "^7.14.0",
     "tailwindcss": "^4.2.2",
     "viem": "^2.47.6",
     "wagmi": "^3.6.0"
@@ -26,6 +26,6 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "typescript": "^6.0.2",
-    "vite": "npm:rolldown-vite@^7.3.1"
+    "vite": "^8.0.3"
   }
 }

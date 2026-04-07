@@ -44,6 +44,24 @@ export const ZamaErrorCode = {
   DelegationNotFound: "DELEGATION_NOT_FOUND",
   /** The delegation has expired. */
   DelegationExpired: "DELEGATION_EXPIRED",
+  /** Confidential (cToken) balance is insufficient for the requested operation. */
+  InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE",
+  /** ERC-20 balance is insufficient for the requested shield amount. */
+  InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE",
+  /** Balance validation could not be performed (no cached credentials and decryption not possible). */
+  BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE",
+  /** Public ERC-20 read (e.g. balanceOf) failed due to a network or contract error. */
+  ERC20ReadFailed: "ERC20_READ_FAILED",
+  /** The new expiration date equals the current one — no on-chain change needed. */
+  DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED",
+  /** Delegate address cannot be the contract address. */
+  DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT",
+  /** Contract address cannot be the sender address. */
+  DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF",
+  /** The ACL contract is paused. */
+  AclPaused: "ACL_PAUSED",
+  /** Expiration date is too soon (must be at least 1 hour in the future). */
+  DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON",
   /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
 } as const;
