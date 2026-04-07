@@ -55,9 +55,9 @@ describe("revokeSessionMutationOptions", () => {
 });
 
 describe("isAllowedQueryOptions", () => {
-  test("calls sdk.isAllowed", async ({ signer, relayer, storage }) => {
+  test("calls sdk.credentials.isAllowed", async ({ signer, relayer, storage }) => {
     const sdk = new ZamaSDK({ relayer, signer, storage });
-    const isAllowedSpy = vi.spyOn(sdk, "isAllowed").mockResolvedValue(true);
+    const isAllowedSpy = vi.spyOn(sdk.credentials, "isAllowed").mockResolvedValue(true);
 
     const options = isAllowedQueryOptions(sdk, {
       account: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",

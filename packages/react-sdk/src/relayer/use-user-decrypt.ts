@@ -1,62 +1,73 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
-import type {
-  DecryptResult,
-  UserDecryptMutationParams,
-  UserDecryptOptions,
+import { skipToken } from "@tanstack/react-query";
+import type { Address } from "@zama-fhe/sdk";
+import type { DecryptHandle, DecryptResult } from "@zama-fhe/sdk/query";
+import {
+  isAllowedQueryOptions,
+  signerAddressQueryOptions,
+  userDecryptQueryOptions,
+  zamaQueryKeys,
 } from "@zama-fhe/sdk/query";
-import { userDecryptMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
+import { useQuery } from "../utils/query";
 
 /** Configuration for {@link useUserDecrypt}. */
-export type UseUserDecryptConfig = UserDecryptOptions;
+export interface UseUserDecryptConfig {
+  /** The handles to decrypt. */
+  handles: DecryptHandle[];
+  /** Pass `{ enabled: false }` to disable the query. */
+  query?: { enabled?: boolean };
+}
 
 /**
- * React hook for FHE user decryption. Follows react-query `useMutation` semantics.
+ * React hook for FHE user decryption. Follows react-query `useQuery` semantics.
  *
- * Handles the full decryption flow: credential acquisition (keypair + EIP-712
- * signing, cached across calls) and relayer decryption — triggered by calling
- * `mutate()`.
+ * Automatically fires when credentials are available (acquired via `useAllow`)
+ * and handles are provided. Checks the persistent cache first and only hits the
+ * relayer for uncached handles.
  *
- * Returns a standard `useMutation` result. Call `mutate()` without args to
- * decrypt all `config.handles` (cached handles are skipped automatically),
- * or pass explicit `{ handles }` to override.
+ * Call `useAllow().mutate([contractAddress])` first to acquire credentials
+ * (triggers a one-time wallet signature). Once allowed, this hook decrypts
+ * the provided handles automatically.
  *
- * @param config - Default handles and optional lifecycle callbacks (`onCredentialsReady`, `onDecrypted`).
- *
- * @example
- * ```tsx
- * const { mutate, isPending, data } = useUserDecrypt();
- *
- * <button
- *   onClick={() => mutate({
- *     handles: [{ handle: "0xHandle", contractAddress: "0xContract" }],
- *   })}
- *   disabled={isPending}
- * >
- *   Decrypt
- * </button>
- * ```
+ * @param config - Handles to decrypt and optional query config.
  *
  * @example
  * ```tsx
- * const { mutate, data, isPending } = useUserDecrypt({
- *   handles: [
- *     { handle: "0xA", contractAddress: "0xContract" },
- *     { handle: "0xB", contractAddress: "0xContract" },
- *   ],
- *   onDecrypted: (result) => console.log("Decrypted:", result),
+ * const { mutate: allow } = useAllow();
+ * const { data, isPending } = useUserDecrypt({
+ *   handles: [{ handle: "0xHandle", contractAddress: "0xContract" }],
  * });
  *
- * // mutate() without args decrypts all config.handles (skips cached)
- * <button onClick={() => mutate()} disabled={isPending}>Decrypt all</button>
+ * // First: authorize decryption (triggers wallet signature once)
+ * <button onClick={() => allow(["0xContract"])}>Allow</button>
+ *
+ * // Then: decrypted values appear automatically
+ * <span>{data?.["0xHandle"]?.toString() ?? "pending"}</span>
  * ```
  */
-export function useUserDecrypt(config?: UseUserDecryptConfig) {
+export function useUserDecrypt(config: UseUserDecryptConfig) {
   const sdk = useZamaSDK();
-  return useMutation<DecryptResult, Error, UserDecryptMutationParams | void>(
-    userDecryptMutationOptions(sdk, config),
+
+  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk.signer));
+  const signerAddress = addressQuery.data;
+
+  const allowedOpts = signerAddress
+    ? isAllowedQueryOptions(sdk, { account: signerAddress })
+    : ({
+        queryKey: zamaQueryKeys.isAllowed.all,
+        queryFn: skipToken,
+        enabled: false,
+      } as const);
+  const allowedQuery = useQuery<boolean>(allowedOpts);
+  const isAllowed = allowedQuery.data === true;
+
+  return useQuery<DecryptResult>(
+    userDecryptQueryOptions(sdk, {
+      handles: config.handles,
+      query: { enabled: isAllowed && config.query?.enabled !== false },
+    }),
   );
 }
 

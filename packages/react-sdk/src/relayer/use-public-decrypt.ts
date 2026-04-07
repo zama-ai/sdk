@@ -8,7 +8,7 @@ import { useZamaSDK } from "../provider";
 /**
  * Decrypt FHE ciphertext handles using the network public key (no credential needed).
  * On success, results are available via `data.clearValues` and written to the
- * persistent decrypt cache, readable via `useDecryptedValue` / `useDecryptedValues`.
+ * persistent decrypt cache.
  *
  * @returns A mutation whose `mutate` accepts an array of handle strings.
  *

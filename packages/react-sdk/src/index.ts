@@ -17,16 +17,6 @@ export {
   type UseUserDecryptConfig,
   type UseUserDecryptResult,
 } from "./relayer/use-user-decrypt";
-export {
-  useDecryptedValue,
-  type UseDecryptedValueConfig,
-  type UseDecryptedValueResult,
-} from "./relayer/use-decrypted-value";
-export {
-  useDecryptedValues,
-  type UseDecryptedValuesConfig,
-  type UseDecryptedValuesResult,
-} from "./relayer/use-decrypted-values";
 
 export { usePublicDecrypt } from "./relayer/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
@@ -324,10 +314,9 @@ export {
   delegatedUserDecryptMutationOptions,
   publicDecryptMutationOptions,
   requestZKProofVerificationMutationOptions,
-  userDecryptMutationOptions,
+  userDecryptQueryOptions,
+  type UserDecryptQueryConfig,
   type DecryptResult,
-  type UserDecryptMutationParams,
-  type UserDecryptOptions,
   type DecryptHandle,
   allowMutationOptions,
   isAllowedQueryOptions,
