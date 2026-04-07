@@ -864,14 +864,14 @@ All read hooks are enabled only when their required parameters are defined. All 
 
 All write hooks return `{ mutate, mutateAsync, ...mutation }` from wagmi's `useWriteContract`.
 
-| Hook                             | Mutation Parameters                              | Description                   |
-| -------------------------------- | ------------------------------------------------ | ----------------------------- |
-| `useConfidentialTransfer()`      | `(token, to, handle, inputProof)`                | Encrypted transfer.           |
-| `useUnwrap()`                    | `(token, from, to, encryptedAmount, inputProof)` | Request unwrap.               |
-| `useUnwrapFromBalance()`         | `(token, from, to, encryptedBalance)`            | Unwrap using on-chain handle. |
-| `useFinalizeUnwrap()`            | `(wrapper, burntAmount, cleartext, proof)`       | Finalize unwrap.              |
-| `useSetOperator()`               | `(token, spender, timestamp?)`                   | Set operator approval.        |
-| `useShield()`                    | `(wrapper, to, amount)`                          | Shield ERC-20 tokens.         |
+| Hook                        | Mutation Parameters                              | Description                   |
+| --------------------------- | ------------------------------------------------ | ----------------------------- |
+| `useConfidentialTransfer()` | `(token, to, handle, inputProof)`                | Encrypted transfer.           |
+| `useUnwrap()`               | `(token, from, to, encryptedAmount, inputProof)` | Request unwrap.               |
+| `useUnwrapFromBalance()`    | `(token, from, to, encryptedBalance)`            | Unwrap using on-chain handle. |
+| `useFinalizeUnwrap()`       | `(wrapper, burntAmount, cleartext, proof)`       | Finalize unwrap.              |
+| `useSetOperator()`          | `(token, spender, timestamp?)`                   | Set operator approval.        |
+| `useShield()`               | `(wrapper, to, amount)`                          | Shield ERC-20 tokens.         |
 
 ### Wagmi Signer Adapter
 

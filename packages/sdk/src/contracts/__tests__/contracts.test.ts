@@ -256,4 +256,3 @@ describe("Deployment coordinator contract builders", () => {
     expect(config.args).toEqual([tokenAddress]);
   });
 });
-

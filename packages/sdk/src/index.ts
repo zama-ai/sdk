@@ -256,8 +256,4 @@ export {
   getTokenAddressContract,
   isConfidentialTokenValidContract,
 } from "./contracts";
-export type {
-  TokenWrapperPair,
-  TokenWrapperPairWithMetadata,
-  PaginatedResult,
-} from "./contracts";
+export type { TokenWrapperPair, TokenWrapperPairWithMetadata, PaginatedResult } from "./contracts";

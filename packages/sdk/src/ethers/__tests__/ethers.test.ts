@@ -568,7 +568,6 @@ describe("ethers write contract helpers", () => {
     expect(hash).toBe(TX_HASH);
   });
 
-
   eit("writeUnwrapContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
