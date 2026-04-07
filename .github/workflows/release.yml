@@ -73,7 +73,7 @@ jobs:
 
       - name: Ensure npm 11
         run: |
-          npm i -g npm@^11
+          pnpm add -g npm@^11
           npm --version
 
       - name: Install dependencies
