@@ -26,11 +26,9 @@ function UnshieldAllButton() {
 
   async function handleUnshieldAll() {
     await unshieldAll({
-      callbacks: {
-        onUnwrapSubmitted: (txHash) => console.log("Unwrap tx:", txHash),
-        onFinalizing: () => console.log("Waiting for proof..."),
-        onFinalizeSubmitted: (txHash) => console.log("Done:", txHash),
-      },
+      onUnwrapSubmitted: (txHash) => console.log("Unwrap tx:", txHash),
+      onFinalizing: () => console.log("Waiting for proof..."),
+      onFinalizeSubmitted: (txHash) => console.log("Done:", txHash),
     });
   }
 
@@ -99,11 +97,9 @@ const { mutateAsync: unshieldAll } = useUnshieldAll({
 
 Passed to `mutate` / `mutateAsync` at call time. All variables are optional.
 
-### callbacks
+### Progress callbacks
 
-`object` (optional)
-
-Progress callbacks for each phase. Callbacks are safe — if one throws, the unshield still completes.
+Callbacks are safe — if one throws, the unshield still completes.
 
 | Callback                           | Fires when                                   |
 | ---------------------------------- | -------------------------------------------- |
@@ -113,11 +109,9 @@ Progress callbacks for each phase. Callbacks are safe — if one throws, the uns
 
 ```ts
 await unshieldAll({
-  callbacks: {
-    onUnwrapSubmitted: (txHash) => updateUI("Step 1 submitted"),
-    onFinalizing: () => updateUI("Awaiting proof..."),
-    onFinalizeSubmitted: (txHash) => updateUI("Complete"),
-  },
+  onUnwrapSubmitted: (txHash) => updateUI("Step 1 submitted"),
+  onFinalizing: () => updateUI("Awaiting proof..."),
+  onFinalizeSubmitted: (txHash) => updateUI("Complete"),
 });
 ```
 

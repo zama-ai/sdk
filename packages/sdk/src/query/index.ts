@@ -194,8 +194,11 @@ export type {
   StoredCredentials,
   TransactionReceipt,
   TransactionResult,
+  ShieldOptions,
   TransferCallbacks,
+  TransferOptions,
   UnshieldCallbacks,
+  UnshieldOptions,
 } from "../types";
 export { ZamaSDKEvents } from "../events/sdk-events";
 export type {

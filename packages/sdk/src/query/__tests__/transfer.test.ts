@@ -10,7 +10,7 @@ describe("confidentialTransferMutationOptions", () => {
     expect(mockToken.confidentialTransfer).toHaveBeenCalledWith(
       "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       3n,
-      undefined,
+      {},
     );
   });
 });

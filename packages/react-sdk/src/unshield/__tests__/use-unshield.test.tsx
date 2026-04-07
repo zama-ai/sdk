@@ -52,7 +52,7 @@ describe("useUnshield", () => {
     queryClient.setQueryData(otherBalanceKey, 777n);
     queryClient.setQueryData(otherAllowanceKey, 333n);
 
-    await act(() => result.current.mutateAsync({ amount: 300n }));
+    await act(() => result.current.mutateAsync({ amount: 300n, skipBalanceCheck: true }));
 
     expectInvalidatedQueries(queryClient, [handleKey, balanceKey, allowanceKey]);
     expectCacheInvalidated(queryClient, WAGMI_BALANCE_KEY);
@@ -86,7 +86,7 @@ describe("useUnshield", () => {
     queryClient.setQueryData(WAGMI_BALANCE_KEY, 2000n);
 
     await mutateAndExpectOnSuccess(
-      () => result.current.mutateAsync({ amount: 300n }),
+      () => result.current.mutateAsync({ amount: 300n, skipBalanceCheck: true }),
       onSuccess,
       (client) => {
         expectInvalidatedQueries(client, [handleKey, balanceKey, allowanceKey]);

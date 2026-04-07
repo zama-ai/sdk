@@ -6,7 +6,6 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { ClearValueType as ClearValueType_2 } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -267,10 +266,9 @@ export interface ConfidentialTransferFromParams {
 export function confidentialTransferMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransfer", Address], ConfidentialTransferParams, TransactionResult>;
 
 // @public
-export interface ConfidentialTransferParams {
+export interface ConfidentialTransferParams extends TransferOptions {
     // (undocumented)
     amount: bigint;
-    callbacks?: TransferCallbacks;
     // (undocumented)
     to: Address;
 }
@@ -441,9 +439,6 @@ export interface DecryptHandle {
     // (undocumented)
     handle: Handle;
 }
-
-// @public
-export type DecryptResult = Record<Handle, ClearValueType>;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
@@ -849,10 +844,6 @@ export class ReadonlyToken {
     balanceOf(owner?: Address): Promise<bigint>;
     static batchDecryptBalances(tokens: ReadonlyToken[], options?: BatchDecryptOptions): Promise<Map<Address, bigint>>;
     static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    // Warning: (ae-forgotten-export) The symbol "DecryptCache" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    readonly cache: DecryptCache;
     confidentialBalanceOf(owner?: Address): Promise<Handle>;
     // (undocumented)
     protected readonly credentials: CredentialsManager;
@@ -862,7 +853,7 @@ export class ReadonlyToken {
         delegatorAddress: Address;
         owner?: Address;
     }): Promise<bigint>;
-    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, ClearValueType_2>>;
+    decryptHandles(handles: Handle[], owner?: Address): Promise<Map<Handle, bigint>>;
     // Warning: (ae-forgotten-export) The symbol "DelegatedCredentialsManager" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -902,7 +893,6 @@ export class ReadonlyToken {
 // @public
 export interface ReadonlyTokenConfig {
     address: Address;
-    cache?: DecryptCache;
     credentials?: CredentialsManager;
     delegatedCredentials?: DelegatedCredentialsManager;
     keypairTTL?: number;
@@ -943,9 +933,7 @@ export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): Mutatio
 export function resumeUnshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
 
 // @public
-export interface ResumeUnshieldParams {
-    // (undocumented)
-    callbacks?: UnshieldCallbacks;
+export interface ResumeUnshieldParams extends UnshieldCallbacks {
     // (undocumented)
     unwrapTxHash: Hex;
 }
@@ -1016,12 +1004,18 @@ export function shieldFeeQueryOptions(signer: GenericSigner, config: ShieldFeeQu
 export function shieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.shield", Address], ShieldParams, TransactionResult>;
 
 // @public
-export interface ShieldParams {
+export interface ShieldOptions extends ShieldCallbacks {
+    approvalStrategy?: "max" | "exact" | "skip";
+    fees?: bigint;
+    to?: Address;
+}
+
+// @public
+export interface ShieldParams extends ShieldCallbacks {
     // (undocumented)
     amount: bigint;
     // (undocumented)
     approvalStrategy?: "max" | "exact" | "skip";
-    callbacks?: ShieldCallbacks;
     // (undocumented)
     fees?: bigint;
     to?: Address;
@@ -1079,7 +1073,7 @@ export class Token extends ReadonlyToken {
         tokens: Token[];
         delegateAddress: Address;
     }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    confidentialTransfer(to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     delegateDecryption(input: {
         delegateAddress: Address;
@@ -1091,14 +1085,9 @@ export class Token extends ReadonlyToken {
     revokeDelegation(input: {
         delegateAddress: Address;
     }): Promise<TransactionResult>;
-    shield(amount: bigint, options?: {
-        approvalStrategy?: "max" | "exact" | "skip";
-        fees?: bigint; /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
-        to?: Address; /** Progress callbacks for the multi-step shield flow. */
-        callbacks?: ShieldCallbacks;
-    }): Promise<TransactionResult>;
+    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     shieldETH(amount: bigint, value?: bigint): Promise<TransactionResult>;
-    unshield(amount: bigint, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
     unwrapAll(): Promise<TransactionResult>;
@@ -1209,6 +1198,11 @@ export interface TransferFromSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransferFromSubmitted;
 }
 
+// @public
+export interface TransferOptions extends TransferCallbacks {
+    skipBalanceCheck?: boolean;
+}
+
 // @public (undocumented)
 export interface TransferSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -1234,10 +1228,7 @@ export function underlyingAllowanceQueryOptions(signer: GenericSigner, tokenAddr
 export function unshieldAllMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshieldAll", Address], UnshieldAllParams | void, TransactionResult>;
 
 // @public
-export interface UnshieldAllParams {
-    // (undocumented)
-    callbacks?: UnshieldCallbacks;
-}
+export interface UnshieldAllParams extends UnshieldCallbacks {}
 
 // @public
 export interface UnshieldCallbacks {
@@ -1265,11 +1256,14 @@ export function unshieldFeeQueryOptions(signer: GenericSigner, config: UnshieldF
 export function unshieldMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.unshield", Address], UnshieldParams, TransactionResult>;
 
 // @public
-export interface UnshieldParams {
+export interface UnshieldOptions extends UnshieldCallbacks {
+    skipBalanceCheck?: boolean;
+}
+
+// @public
+export interface UnshieldParams extends UnshieldOptions {
     // (undocumented)
     amount: bigint;
-    // (undocumented)
-    callbacks?: UnshieldCallbacks;
 }
 
 // @public (undocumented)
@@ -1348,20 +1342,19 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.UnwrapSubmitted;
 }
 
+// @public
+export interface UserDecryptCallbacks {
+    onCredentialsReady?: () => void;
+    onDecrypted?: (values: Record<Handle, ClearValueType>) => void;
+}
+
 // @public (undocumented)
-export function userDecryptMutationOptions(sdk: ZamaSDK, options?: UserDecryptOptions): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams | void, DecryptResult>;
+export function userDecryptMutationOptions(sdk: ZamaSDK, callbacks?: UserDecryptCallbacks): MutationFactoryOptions<readonly ["zama.userDecrypt"], UserDecryptMutationParams, Record<Handle, ClearValueType>>;
 
 // @public
 export interface UserDecryptMutationParams {
     // (undocumented)
     handles: DecryptHandle[];
-}
-
-// @public (undocumented)
-export interface UserDecryptOptions {
-    handles?: DecryptHandle[];
-    onCredentialsReady?: () => void;
-    onDecrypted?: (values: DecryptResult) => void;
 }
 
 // @public
@@ -1646,13 +1639,11 @@ export class ZamaSDK {
     [Symbol.dispose](): void;
     constructor(config: ZamaSDKConfig);
     allow(...contractAddresses: Address[]): Promise<void>;
-    readonly cache: DecryptCache;
     createReadonlyToken(address: Address): ReadonlyToken;
     createToken(address: Address, wrapper?: Address): Token;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
     // (undocumented)
     readonly credentials: CredentialsManager;
-    decrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
     // (undocumented)
     readonly delegatedCredentials: DelegatedCredentialsManager;
     dispose(): void;
@@ -1732,7 +1723,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-CzHIOXW7.d.ts:2229:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-DTBvolDB.d.ts:2034:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

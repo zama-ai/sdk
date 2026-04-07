@@ -9,6 +9,7 @@ import {
 import type { RawLog } from "../events/onchain-events";
 import type { ReadonlyToken } from "../token/readonly-token";
 
+import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions, hashFn } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
@@ -86,12 +87,8 @@ export function activityFeedQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { userAddress: keyUserAddress, decrypt: keyDecrypt }] = context.queryKey;
-      if (!keyUserAddress) {
-        throw new Error("userAddress is required");
-      }
-      if (!logs) {
-        throw new Error("logs are required");
-      }
+      assertNonNullable(keyUserAddress, "activityFeedQueryOptions: userAddress");
+      assertNonNullable(logs, "activityFeedQueryOptions: logs");
 
       const parsed = parseActivityFeed(logs, keyUserAddress);
       if (!keyDecrypt) {
