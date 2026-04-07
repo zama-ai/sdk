@@ -615,6 +615,40 @@ describe("session allow/revoke", () => {
     expect(await credentialManager.isAllowed()).toBe(false);
   });
 
+  it("isAllowed(contracts) checks contract coverage", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+
+    // Covered contract → true
+    expect(await credentialManager.isAllowed(TOKEN_A)).toBe(true);
+    // Uncovered contract → false
+    expect(await credentialManager.isAllowed(TOKEN_B)).toBe(false);
+    // Mix of covered and uncovered → false
+    expect(await credentialManager.isAllowed(TOKEN_A, TOKEN_B)).toBe(false);
+    // No contracts → true (session-only check)
+    expect(await credentialManager.isAllowed()).toBe(true);
+  });
+
+  it("isAllowed(contracts) returns true after extending credentials", async ({
+    relayer,
+    signer,
+    credentialManager,
+  }) => {
+    setupMocks(relayer, signer);
+
+    await credentialManager.allow(TOKEN_A);
+    expect(await credentialManager.isAllowed(TOKEN_B)).toBe(false);
+
+    // Extend to cover TOKEN_B
+    await credentialManager.allow(TOKEN_A, TOKEN_B);
+    expect(await credentialManager.isAllowed(TOKEN_A, TOKEN_B)).toBe(true);
+  });
+
   it("allow() pre-caches session signature without needing stored credentials", async ({
     relayer,
     signer,

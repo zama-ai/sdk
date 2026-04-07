@@ -52,9 +52,10 @@ export function useUserDecrypt(config: UseUserDecryptConfig) {
 
   const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk.signer));
   const signerAddress = addressQuery.data;
+  const contractAddresses = [...new Set(config.handles.map((h) => h.contractAddress))];
 
   const allowedOpts = signerAddress
-    ? isAllowedQueryOptions(sdk, { account: signerAddress })
+    ? isAllowedQueryOptions(sdk, { account: signerAddress, contractAddresses })
     : ({
         queryKey: zamaQueryKeys.isAllowed.all,
         queryFn: skipToken,

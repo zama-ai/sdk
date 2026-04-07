@@ -423,8 +423,8 @@ export class ZamaSDK {
    * Whether a session signature is currently cached for the connected wallet.
    * Use this to check if decrypt operations can proceed without a wallet prompt.
    */
-  async isAllowed(): Promise<boolean> {
-    return this.credentials.isAllowed();
+  async isAllowed(...contractAddresses: Address[]): Promise<boolean> {
+    return this.credentials.isAllowed(...contractAddresses);
   }
 
   /**

@@ -1,12 +1,13 @@
-import type { ZamaSDK } from "../zama-sdk";
-
 import type { Address } from "viem";
+import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
 export interface IsAllowedQueryConfig {
   account: Address;
+  /** When provided, also checks that cached credentials cover these contracts. */
+  contractAddresses?: Address[];
   query?: { enabled?: boolean };
 }
 
@@ -14,11 +15,11 @@ export function isAllowedQueryOptions(
   sdk: ZamaSDK,
   config: IsAllowedQueryConfig,
 ): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>> {
-  const { account, query = {} } = config;
+  const { account, contractAddresses = [], query = {} } = config;
   return {
     ...filterQueryOptions(query),
     queryKey: zamaQueryKeys.isAllowed.scope(account),
-    queryFn: () => sdk.credentials.isAllowed(),
+    queryFn: () => sdk.credentials.isAllowed(...contractAddresses),
     staleTime: 30_000,
     enabled: query?.enabled,
   } as const;

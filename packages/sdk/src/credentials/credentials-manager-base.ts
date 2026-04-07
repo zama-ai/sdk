@@ -295,12 +295,27 @@ export abstract class BaseCredentialsManager<
     } as ZamaSDKEventInput);
   }
 
-  protected async checkAllowed(key: string): Promise<boolean> {
+  protected async checkAllowed(key: string, contractAddresses?: Address[]): Promise<boolean> {
     const entry = await this.sessionSignatures.get(key);
     if (entry === null) {
       return false;
     }
-    return !this.sessionSignatures.isExpired(entry);
+    if (this.sessionSignatures.isExpired(entry)) {
+      return false;
+    }
+    if (contractAddresses && contractAddresses.length > 0) {
+      try {
+        const stored = await this.storage.get<TEncrypted>(key);
+        if (!stored) {
+          return false;
+        }
+        this.assertEncrypted(stored);
+        return coversContracts(stored.contractAddresses, contractAddresses);
+      } catch {
+        return false;
+      }
+    }
+    return true;
   }
 
   protected async clearAll(key: string): Promise<void> {
