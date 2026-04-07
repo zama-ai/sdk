@@ -4,32 +4,45 @@
  * ─────────────────────────────────────────────────────────────────────────────
  *
  * This file exports a single `signer` object that satisfies the `Signer`
- * interface. All four validation tests use this object — nothing else needs
- * to change.
+ * interface (see ./types.ts). All validation tests use this object — nothing
+ * else needs to change.
  *
  * The default implementation below uses a plain EOA derived from PRIVATE_KEY.
- * Replace it with your custody/MPC/hardware wallet adapter.
+ * Replace it entirely with your custody / MPC / hardware wallet adapter.
  *
- * ── Example: viem wallet client ──────────────────────────────────────────────
+ * ── Pre-built adapters ───────────────────────────────────────────────────────
+ *
+ *   Crossmint MPC wallet:
+ *     cp examples/crossmint/signer.ts src/signer/index.ts
+ *     # then set CROSSMINT_API_KEY and CROSSMINT_WALLET_LOCATOR in .env
+ *
+ * ── Example: EOA via viem wallet client ──────────────────────────────────────
  *
  *   import { walletClient } from "./your-client.js";
  *
  *   export const signer: Signer = {
  *     address: walletClient.account.address,
  *     signTypedData: (data) => walletClient.signTypedData(data),
- *     signTransaction: (tx) => walletClient.signTransaction(tx),
+ *     signTransaction: (tx)  => walletClient.signTransaction(tx),
  *   };
  *
- * ── Example: external custody SDK (pseudo-code) ──────────────────────────────
+ * ── Example: MPC / custody adapter (pseudo-code) ─────────────────────────────
  *
- *   import { CustodyProvider } from "@your-custody/sdk";
- *   const provider = new CustodyProvider({ apiKey: process.env.CUSTODY_API_KEY });
- *
+ *   // signTransaction is optional — MPC wallets use writeContract instead.
  *   export const signer: Signer = {
  *     address: await provider.getAddress(),
- *     signTypedData: (data) => provider.signTypedData(data),
- *     signTransaction: (tx) => provider.signTransaction(tx),
+ *     signTypedData: (data)   => provider.signTypedData(data),
+ *     writeContract: (config) => provider.executeContract(config),
  *   };
+ *
+ *   // If address resolution is async, also export a `ready` promise.
+ *   // The harness awaits it automatically before the first test runs.
+ *   export const ready: Promise<void> = provider.init();
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * NOTE: PRIVATE_KEY below is only required for THIS default EOA implementation.
+ * It is NOT needed when you replace this file with an MPC/custody adapter.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  */

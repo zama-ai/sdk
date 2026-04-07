@@ -13,9 +13,9 @@
  *
  * ## Adapter strategy
  *
- *   signTypedData  →  Crossmint /signatures endpoint
- *   writeContract  →  Crossmint /transactions endpoint (encodes calldata via viem)
- *   signTransaction → NOT implemented (not needed for Zama credential flow)
+ *   signTypedData   →  Crossmint /signatures endpoint
+ *   writeContract   →  Crossmint /transactions endpoint (encodes calldata via viem)
+ *   signTransaction →  NOT implemented (not needed for Zama credential flow)
  *
  * ## Expected harness result
  *
@@ -27,9 +27,12 @@
  *
  * ## Environment variables needed
  *
- *   CROSSMINT_API_KEY       Your Crossmint server-side API key
- *   CROSSMINT_WALLET_LOCATOR  e.g. "email:alice@example.com:evm-smart-wallet"
- *                             or   "userId:abc123:evm-smart-wallet"
+ *   CROSSMINT_API_KEY            Your Crossmint server-side API key
+ *   CROSSMINT_WALLET_LOCATOR     e.g. "email:alice@example.com:evm-smart-wallet"
+ *                                or   "userId:abc123:evm-smart-wallet"
+ *   CROSSMINT_WALLET_ADDRESS     (optional) The wallet's 0x address.
+ *                                If provided, skips the /wallets API lookup at startup.
+ *                                If omitted, resolved automatically before tests run.
  *
  * See https://docs.crossmint.com/wallets/smart-wallets/introduction for details.
  */
@@ -41,6 +44,7 @@ import type { Signer } from "../../src/signer/types.js";
 
 const CROSSMINT_API_KEY = process.env.CROSSMINT_API_KEY ?? "";
 const CROSSMINT_WALLET_LOCATOR = process.env.CROSSMINT_WALLET_LOCATOR ?? "";
+const CROSSMINT_WALLET_ADDRESS = process.env.CROSSMINT_WALLET_ADDRESS ?? "";
 const CROSSMINT_API_BASE = "https://api.crossmint.com/2022-06-09";
 const CROSSMINT_CHAIN = "ethereum-sepolia"; // change to "ethereum" for mainnet
 
@@ -61,9 +65,8 @@ const headers = {
 };
 
 /**
- * Resolve the wallet address from the locator.
- * Crossmint wallets have a human-readable locator; the actual 0x address
- * is retrieved once and cached.
+ * Resolve the wallet address from the locator via the Crossmint API.
+ * Only called when CROSSMINT_WALLET_ADDRESS is not set in the environment.
  */
 async function resolveAddress(): Promise<string> {
   const res = await fetch(
@@ -102,20 +105,46 @@ async function pollOperation(
   throw new Error("Crossmint operation timed out after 60 s");
 }
 
-// ── Signer ────────────────────────────────────────────────────────────────────
+// ── Address resolution ────────────────────────────────────────────────────────
+//
+// Strategy:
+//   1. If CROSSMINT_WALLET_ADDRESS is set in .env, use it immediately (no API call).
+//   2. Otherwise, resolve asynchronously via the Crossmint API before tests start.
+//
+// The exported `ready` promise is awaited by the harness (signerType.test.ts
+// beforeAll) so that signer.address is guaranteed to be available synchronously
+// when any test runs.
 
-// Resolve once at module load — throws early if credentials are wrong.
-const addressPromise = resolveAddress();
+let _address: string = CROSSMINT_WALLET_ADDRESS ? getAddress(CROSSMINT_WALLET_ADDRESS) : "";
+
+/**
+ * Resolves when signer.address is ready to be accessed synchronously.
+ *
+ * The harness awaits this automatically in the first test's beforeAll.
+ * You only need to import and await this directly if you access signer.address
+ * outside of the normal test flow.
+ */
+export const ready: Promise<void> = CROSSMINT_WALLET_ADDRESS
+  ? Promise.resolve()
+  : resolveAddress().then((addr) => {
+      _address = addr;
+    });
+
+// ── Signer ────────────────────────────────────────────────────────────────────
 
 export const signer: Signer = {
   get address(): string {
-    // address is used synchronously in some places. We expose the raw locator
-    // at construction time and replace it after the first async resolution.
-    // In practice, tests await the Zama flow which resolves first.
-    throw new Error(
-      "signer.address accessed before resolution. " +
-        "Await resolveAddress() in your setup if needed.",
-    );
+    if (!_address) {
+      // This should not happen in normal harness usage because signerType.test.ts
+      // awaits `ready` in its beforeAll before accessing signer.address.
+      // If you see this, set CROSSMINT_WALLET_ADDRESS in your .env to skip the lookup.
+      throw new Error(
+        "signer.address is not yet available. " +
+          "Either set CROSSMINT_WALLET_ADDRESS in .env, " +
+          "or ensure the exported `ready` promise is awaited before accessing the address.",
+      );
+    }
+    return _address;
   },
 
   /**
@@ -201,8 +230,3 @@ export const signer: Signer = {
   // Crossmint MPC wallets do not expose raw transaction signing.
   // The harness transaction test will SKIP gracefully.
 };
-
-// Override address after async resolution (used by tests that await the flow).
-addressPromise.then((addr) => {
-  Object.defineProperty(signer, "address", { value: addr, writable: false });
-});

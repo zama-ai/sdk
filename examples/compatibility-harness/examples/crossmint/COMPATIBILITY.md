@@ -144,10 +144,18 @@ Edit `.env`:
 CROSSMINT_API_KEY=your_server_side_api_key
 CROSSMINT_WALLET_LOCATOR=email:alice@example.com:evm-smart-wallet
 
+# Optional — set this to skip the GET /wallets/{locator} API call at startup.
+# If omitted, the address is resolved automatically before tests run.
+# CROSSMINT_WALLET_ADDRESS=0x...
+
 # Network (Sepolia defaults work out of the box)
-RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
-RELAYER_URL=https://relayer.testnet.zama.org/v2
+# RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+# RELAYER_URL=https://relayer.testnet.zama.org/v2
 ```
+
+> **`CROSSMINT_WALLET_ADDRESS`**
+> If you already know your wallet's `0x` address (visible in the Crossmint dashboard),
+> set it here to skip the API lookup at startup. Useful in CI where startup time matters.
 
 > **Wallet locator formats**
 > - `email:alice@example.com:evm-smart-wallet`
@@ -166,10 +174,10 @@ npm test
 
 ## Key findings
 
-| Finding                          | Detail                                                                 |
-| -------------------------------- | ---------------------------------------------------------------------- |
-| EIP-712 signatures               | Crossmint produces standard secp256k1 signatures — fully recoverable  |
-| Raw transaction signing          | Not supported — use `writeContract` for on-chain operations            |
-| Zama SDK credential flow         | Works without modification — only `signTypedData` is required          |
-| Async operation model            | Both `/signatures` and `/transactions` require polling until `succeeded` |
-| Address resolution               | Resolved once at startup via `GET /wallets/{locator}`                  |
+| Finding                          | Detail                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| EIP-712 signatures               | Crossmint produces standard secp256k1 signatures — fully recoverable     |
+| Raw transaction signing          | Not supported — use `writeContract` for on-chain operations               |
+| Zama SDK credential flow         | Works without modification — only `signTypedData` is required             |
+| Async operation model            | Both `/signatures` and `/transactions` require polling until `succeeded`  |
+| Address resolution               | Set `CROSSMINT_WALLET_ADDRESS` to skip the API call, or let it auto-resolve |

@@ -1,124 +1,200 @@
 # Zama Compatibility Validation Harness
 
-A developer tool that validates whether your signing system is compatible with:
+A developer tool that validates whether your signing system is compatible with the Zama SDK.
 
-- **Ethereum EOA signing** — standard `secp256k1` key pairs
-- **EIP-712 typed data** — signatures recoverable via `ecrecover`
-- **Zama SDK** — ERC-7984 confidential token flows (credential authorization)
+Run it once. Get a clear PASS / FAIL / SKIP report for each of:
+
+- **EIP-712 typed data** — signature recoverable via `ecrecover`
+- **Transaction execution** — on-chain broadcast (EOA) or contract call routing (MPC)
+- **Zama SDK flow** — ERC-7984 credential authorization (`sdk.allow()`)
+
+The **final verdict** is determined by the Zama SDK section only. An EOA-specific
+test that is skipped (e.g. because you use an MPC wallet) does not block compatibility.
 
 ---
 
 ## Who this is for
 
-Infrastructure teams, custody providers, and wallet integrators (e.g. Crossmint, Openfort, Turnkey) who want to verify their signing stack works with the Zama SDK before building a full integration.
+Infrastructure teams, custody providers, and wallet integrators (Crossmint, Openfort,
+Turnkey, Privy, …) who want to verify their signing stack works with the Zama SDK
+**before** building a full integration.
 
 ---
 
-## Quickstart
+## Quickstart — EOA wallet (default)
 
 ```bash
 git clone <repo>
 cd examples/compatibility-harness
-
 npm install
-
 cp .env.example .env
-# Edit .env — set PRIVATE_KEY at minimum (see below)
+```
 
+Edit `.env`, set `PRIVATE_KEY` to a Sepolia-funded EOA key, then:
+
+```bash
 npm test
 ```
 
 ---
 
-## How to implement your signer
+## Quickstart — MPC wallet (e.g. Crossmint)
 
-Open `src/signer/index.ts`. You will see:
+```bash
+git clone <repo>
+cd examples/compatibility-harness
+npm install
 
-```ts
-// TODO: Replace this with your own signer implementation.
+# 1. Swap in the Crossmint adapter
+cp examples/crossmint/signer.ts src/signer/index.ts
+
+# 2. Configure credentials
+cp .env.example .env
+#    → set CROSSMINT_API_KEY and CROSSMINT_WALLET_LOCATOR (leave PRIVATE_KEY blank)
+
+npm test
 ```
 
-Replace the default viem/EOA implementation with your own. The only constraint is that your export satisfies this interface:
+See [`examples/crossmint/COMPATIBILITY.md`](examples/crossmint/COMPATIBILITY.md) for
+the full Crossmint setup guide and expected report output.
+
+---
+
+## Writing your own adapter
+
+Open `src/signer/index.ts`. Replace the default EOA implementation with your own.
+The only constraint is that your export satisfies this interface:
 
 ```ts
 export interface Signer {
+  /** The wallet address (checksummed 0x string). */
   address: string;
 
   /** Required — must produce a standard secp256k1 EIP-712 signature. */
-  signTypedData: (data: any) => Promise<string>;
+  signTypedData: (data: {
+    domain: Record<string, unknown>;
+    types: Record<string, unknown>;
+    primaryType: string;
+    message: Record<string, unknown>;
+  }) => Promise<string>;
 
-  /** Optional — EOA path: sign a raw EIP-1559 transaction (returned as hex). */
-  signTransaction?: (tx: any) => Promise<string>;
+  /**
+   * Optional — EOA path.
+   * Sign a raw EIP-1559 transaction and return the serialised hex string.
+   * If omitted, the Transaction Execution test is skipped.
+   */
+  signTransaction?: (tx: {
+    to: string;
+    value: bigint;
+    data: string;
+    gas: bigint;
+    maxFeePerGas: bigint;
+    maxPriorityFeePerGas: bigint;
+    nonce: number;
+    chainId: number;
+    type: "eip1559";
+  }) => Promise<string>;
 
-  /** Optional — MPC / smart-account path: submit a contract call and return the tx hash. */
+  /**
+   * Optional — MPC / smart-account path.
+   * Submit a contract call and return the transaction hash.
+   * If `signTransaction` is absent and this is present, the Transaction
+   * Execution test is skipped (writeContract is used during Zama SDK flows).
+   */
   writeContract?: (config: {
     address: string;
-    abi: readonly any[];
+    abi: readonly unknown[];
     functionName: string;
-    args?: readonly any[];
+    args?: readonly unknown[];
     value?: bigint;
   }) => Promise<string>;
 }
 ```
 
-Only `signTypedData` is required. Provide `signTransaction` for EOA wallets or
-`writeContract` for MPC / smart-account wallets. **No other file needs to change.**
+**No other file needs to change.**
 
-### Example — EOA (viem wallet client)
+### Async address resolution (MPC adapters)
+
+Some MPC providers cannot provide `signer.address` synchronously at startup
+(they need to call an API to resolve it from a wallet locator). To handle this,
+also export a `ready` promise — the harness awaits it before the first test runs:
 
 ```ts
-import { walletClient } from "./your-client.js";
+// src/signer/index.ts
+export const signer: Signer = { ... };
+
+// Harness awaits this before accessing signer.address.
+export const ready: Promise<void> = provider.init().then(addr => {
+  signer.address = addr;
+});
+```
+
+Alternatively, set the address directly in `.env` to skip the async lookup entirely
+(see the Crossmint example: `CROSSMINT_WALLET_ADDRESS`).
+
+### Example — EOA via viem
+
+```ts
+import { createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { sepolia } from "viem/chains";
+import type { Signer } from "./types.js";
+
+const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
+const client  = createWalletClient({ account, chain: sepolia, transport: http() });
 
 export const signer: Signer = {
-  address: walletClient.account.address,
-  signTypedData: (data) => walletClient.signTypedData(data),
-  signTransaction: (tx) => walletClient.signTransaction(tx),
+  address:         account.address,
+  signTypedData:   (data) => client.signTypedData({ account, ...data }),
+  signTransaction: (tx)   => client.signTransaction({ account, ...tx }),
 };
 ```
 
-### Example — MPC wallet (Crossmint, Turnkey, Privy, …)
+### Example — MPC adapter (Crossmint)
 
-```ts
-export const signer: Signer = {
-  address: await provider.getAddress(),
-  signTypedData: (data) => provider.signTypedData(data),
-  // signTransaction not implemented — use writeContract instead
-  writeContract: (config) => provider.executeContract(config),
-};
-```
-
-See [`examples/crossmint/signer.ts`](examples/crossmint/signer.ts) for a full
-Crossmint MPC adapter with the expected compatibility report.
+See the ready-to-use adapter at [`examples/crossmint/signer.ts`](examples/crossmint/signer.ts).
 
 ---
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and configure:
+Copy `.env.example` to `.env`. Only set the variables relevant to your adapter.
 
-| Variable          | Required | Default                                        | Description                                         |
-| ----------------- | -------- | ---------------------------------------------- | --------------------------------------------------- |
-| `PRIVATE_KEY`     | Yes      | —                                              | Private key for the default EOA signer (`0x...`)    |
-| `RPC_URL`         | No       | `https://ethereum-sepolia-rpc.publicnode.com`  | Sepolia JSON-RPC endpoint                           |
-| `RELAYER_URL`     | No       | `https://relayer.testnet.zama.org/v2`          | Zama relayer base URL                               |
-| `RELAYER_API_KEY` | No       | _(empty)_                                      | API key for private/mainnet relayers (`x-api-key`)  |
+### EOA signer (default)
 
-> **Gas:** Test 2 (Transaction Execution) sends a zero-value self-transfer and costs only gas.
-> Get Sepolia ETH at [sepoliafaucet.com](https://sepoliafaucet.com) or [faucet.alchemy.com](https://faucet.alchemy.com/faucets/ethereum-sepolia).
+| Variable      | Required | Default | Description |
+| ------------- | -------- | ------- | ----------- |
+| `PRIVATE_KEY` | Yes\*    | —       | `0x`-prefixed 32-byte hex private key. \*Only required for the built-in EOA signer. |
+
+### Crossmint MPC adapter
+
+| Variable                    | Required | Default | Description |
+| --------------------------- | -------- | ------- | ----------- |
+| `CROSSMINT_API_KEY`         | Yes      | —       | Your Crossmint server-side API key |
+| `CROSSMINT_WALLET_LOCATOR`  | Yes      | —       | e.g. `email:alice@example.com:evm-smart-wallet` |
+| `CROSSMINT_WALLET_ADDRESS`  | No       | —       | `0x` address — skips the `/wallets` API call at startup |
+
+### Network
+
+| Variable          | Required | Default                                       | Description |
+| ----------------- | -------- | --------------------------------------------- | ----------- |
+| `RPC_URL`         | No       | `https://ethereum-sepolia-rpc.publicnode.com` | Sepolia JSON-RPC endpoint |
+| `RELAYER_URL`     | No       | `https://relayer.testnet.zama.org/v2`         | Zama relayer base URL |
+| `RELAYER_API_KEY` | No       | _(empty)_                                     | `x-api-key` for private/mainnet relayers |
 
 ---
 
 ## Supported networks
 
-| Network | Chain ID | Relayer |
-| ------- | -------- | ------- |
-| Sepolia | 11155111 | `https://relayer.testnet.zama.org/v2` (no API key needed) |
+| Network | Chain ID | Public relayer |
+| ------- | -------- | -------------- |
+| Sepolia | 11155111 | `https://relayer.testnet.zama.org/v2` (no API key) |
 
 ---
 
 ## How to read the report
 
-After `npm test`, a summary is printed at the end:
+After `npm test`, a compatibility report is printed at the end:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -126,41 +202,107 @@ After `npm test`, a summary is printed at the end:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Signer             0xcafe1234…abcd5678
-  Type               EOA
+  Type               MPC
   EIP-712            ✓ recoverable (secp256k1)
-  signTransaction    ✓ provided (EOA path)
-  writeContract      – not provided
+  signTransaction    – not provided
+  writeContract      ✓ provided (MPC / smart-account path)
 
   ── Ethereum Compatibility ─────────────────────────────
   ✓ EIP-712 Signature                      PASS
-  ✗ Transaction Execution                  FAIL
-      Reason:         sendRawTransaction failed: insufficient funds
-      Likely cause:   Malformed signed transaction, or account has insufficient Sepolia ETH for gas
-      Recommendation: Get Sepolia ETH at sepoliafaucet.com
+  – Transaction Execution                  SKIP
+      Note:           writeContract path available — raw transaction signing not
+                      supported (expected for MPC wallets).
 
   ── Zama SDK Compatibility ─────────────────────────────
   ✓ Zama SDK Flow                          PASS
 
 ────────────────────────────────────────────────────────
   Final: ZAMA COMPATIBLE ✓
+  Note:  1 Ethereum test skipped — not required for Zama SDK compatibility
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 Every failure includes:
 - **Reason** — what went wrong
 - **Likely cause** — the most probable root cause
-- **Recommendation** — what to do next
+- **Recommendation** — what to fix
 
-The **final verdict is determined by the Zama SDK section only** — an Ethereum-section
-SKIP (e.g. MPC wallet without `signTransaction`) does not affect compatibility.
+The final verdict is `ZAMA COMPATIBLE` if all **Zama SDK** tests pass,
+regardless of Ethereum-section SKIPs.
 
 ---
 
 ## What the tests validate
 
-| Order | Test | Section | What it checks |
-|-------|------|---------|----------------|
-| 1 | Signer Profile | (header) | Detects signer type (EOA / MPC / Smart Account) — never blocks |
-| 2 | EIP-712 Signature | Ethereum | Signature is recoverable via `ecrecover` and matches `signer.address` |
-| 3 | Transaction Execution | Ethereum | EOA: signs + broadcasts a tx. MPC: skipped (writeContract path used instead) |
-| 4 | Zama SDK Flow | Zama | `sdk.allow()` completes — the Zama EIP-712 credential payload is accepted |
+| # | Test | Section | What it checks |
+|---|------|---------|----------------|
+| 1 | Signer Profile | (header) | Detects signer type (EOA / MPC / Smart Account) — never fails |
+| 2 | EIP-712 Signature | Ethereum | Signature recoverable via `ecrecover` and matches `signer.address` |
+| 3 | Transaction Execution | Ethereum | EOA: sign + broadcast. MPC: SKIP (writeContract path). No capability: SKIP |
+| 4 | Zama SDK Flow | Zama | `sdk.allow()` completes — EIP-712 credential payload accepted by the relayer |
+
+---
+
+## CI/CD integration
+
+Use environment secrets to inject credentials — no `.env` file needed in CI.
+
+### GitHub Actions example
+
+```yaml
+- name: Run Zama compatibility harness
+  working-directory: examples/compatibility-harness
+  env:
+    PRIVATE_KEY:                 ${{ secrets.PRIVATE_KEY }}
+    # Or, for MPC adapters:
+    CROSSMINT_API_KEY:           ${{ secrets.CROSSMINT_API_KEY }}
+    CROSSMINT_WALLET_LOCATOR:    ${{ secrets.CROSSMINT_WALLET_LOCATOR }}
+    CROSSMINT_WALLET_ADDRESS:    ${{ secrets.CROSSMINT_WALLET_ADDRESS }}
+  run: npm ci && npm test
+```
+
+---
+
+## Troubleshooting
+
+### `PRIVATE_KEY is not set` — but I'm using an MPC adapter
+
+You copied `examples/crossmint/signer.ts` to `src/signer/index.ts` but did not
+rebuild the module cache, or the wrong file is still in place.
+Verify: `head -5 src/signer/index.ts` — it should reference `CROSSMINT_API_KEY`,
+not `PRIVATE_KEY`.
+
+### `signer.address is not yet available`
+
+Your adapter resolves the address asynchronously but has not exported a `ready`
+promise. See the [async address resolution](#async-address-resolution-mpc-adapters)
+section above, or set `CROSSMINT_WALLET_ADDRESS` directly in `.env`.
+
+### EIP-712 FAIL — "Signature is not recoverable via ecrecover"
+
+Your signer produces a non-standard signature format (ERC-1271 smart account,
+threshold / BLS signature, etc.). Standard secp256k1 is required for the Zama SDK
+credential flow. Check whether your provider offers an "EOA-compatible" signing mode.
+
+### Zama SDK Flow FAIL — relayer or network errors
+
+- Verify `RELAYER_URL` is reachable: `curl -s $RELAYER_URL/healthz`
+- The public Sepolia relayer requires no API key — `RELAYER_API_KEY` should be empty
+- If you override `RPC_URL`, confirm the node is synced and responsive
+- Increase `testTimeout` in `vitest.config.ts` if the relayer is slow (default: 60 s)
+
+### Transaction Execution FAIL — "insufficient funds"
+
+Get Sepolia ETH at [sepoliafaucet.com](https://sepoliafaucet.com) or
+[faucet.alchemy.com](https://faucet.alchemy.com/faucets/ethereum-sepolia).
+The test sends a zero-value self-transfer — it only costs gas (~0.0001 ETH).
+
+### Tests time out
+
+Increase `testTimeout` in `vitest.config.ts`:
+
+```ts
+testTimeout: 120_000, // 2 minutes
+```
+
+Network calls to the relayer and RPC can be slow on congested testnets.

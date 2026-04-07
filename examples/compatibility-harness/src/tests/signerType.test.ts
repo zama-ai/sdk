@@ -9,14 +9,38 @@
  *
  * Run order: intentionally FIRST so the profile is available before other
  * tests execute and so the report header reflects accurate capability data.
+ *
+ * Async adapters: if the signer module exports a `ready` promise (e.g. MPC
+ * adapters that resolve the wallet address via an API call at startup), it
+ * is awaited here in beforeAll — guaranteeing that signer.address is
+ * available synchronously for the rest of the test suite.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { getAddress } from "viem";
+import * as signerModule from "../signer/index.js";
 import { signer } from "../signer/index.js";
 import { recoverEIP712Signer } from "../utils/crypto.js";
 import { networkConfig } from "../config/network.js";
 import { recordProfile } from "../report/reporter.js";
+
+// ── Async signer initialization ───────────────────────────────────────────────
+//
+// Some MPC / custody adapters cannot provide signer.address synchronously at
+// module load time (e.g. they need to call an API to resolve the address from
+// a human-readable locator). These adapters export a `ready` promise that
+// resolves once the address is available.
+//
+// We await it here, before any test runs, so that signer.address is safe to
+// access synchronously throughout the entire test suite.
+
+beforeAll(async () => {
+  if ("ready" in signerModule && signerModule.ready instanceof Promise) {
+    await signerModule.ready;
+  }
+});
+
+// ── EIP-712 probe data ────────────────────────────────────────────────────────
 
 const PROBE_DATA = {
   domain: {
