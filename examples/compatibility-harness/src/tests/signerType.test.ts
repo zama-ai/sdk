@@ -36,7 +36,13 @@ import { recordProfile } from "../report/reporter.js";
 
 beforeAll(async () => {
   if ("ready" in signerModule && signerModule.ready instanceof Promise) {
-    await signerModule.ready;
+    try {
+      await signerModule.ready;
+    } catch {
+      // Signer initialisation failed (e.g. API unreachable, expired TLS cert).
+      // Do not crash the suite here — individual tests will fail with their own
+      // descriptive errors (e.g. "signer.address is not yet available").
+    }
   }
 });
 
@@ -88,8 +94,16 @@ describe("Signer Profile", () => {
       detectedType = "Unknown";
     }
 
+    // signer.address may throw if the adapter's async init failed (e.g. API error).
+    let address: string;
+    try {
+      address = signer.address;
+    } catch {
+      address = "(unresolved)";
+    }
+
     recordProfile({
-      address: signer.address,
+      address,
       detectedType,
       eip712Recoverable,
       hasSignTransaction,

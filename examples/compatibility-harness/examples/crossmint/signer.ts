@@ -130,6 +130,11 @@ export const ready: Promise<void> = CROSSMINT_WALLET_ADDRESS
       _address = addr;
     });
 
+// Attach a no-op catch so that Node.js does not report an "unhandled rejection"
+// if `ready` rejects before `beforeAll` has a chance to await it.
+// The rejection is still propagated to any caller that awaits `ready`.
+ready.catch(() => {});
+
 // ── Signer ────────────────────────────────────────────────────────────────────
 
 export const signer: Signer = {
@@ -154,22 +159,29 @@ export const signer: Signer = {
    * Body: { type: "evm-typed-data", params: { typedData: { ... } } }
    */
   async signTypedData(data) {
+    // EIP-712 message values may contain BigInt (e.g. uint256 fields).
+    // JSON.stringify does not handle BigInt natively — serialize them as decimal strings.
+    const bigIntReplacer = (_: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v);
+
     const res = await fetch(
       `${CROSSMINT_API_BASE}/wallets/${encodeURIComponent(CROSSMINT_WALLET_LOCATOR)}/signatures`,
       {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          type: "evm-typed-data",
-          params: {
-            typedData: {
-              domain: data.domain,
-              types: data.types,
-              primaryType: data.primaryType,
-              message: data.message,
+        body: JSON.stringify(
+          {
+            type: "evm-typed-data",
+            params: {
+              typedData: {
+                domain: data.domain,
+                types: data.types,
+                primaryType: data.primaryType,
+                message: data.message,
+              },
             },
           },
-        }),
+          bigIntReplacer,
+        ),
       },
     );
     if (!res.ok) {
