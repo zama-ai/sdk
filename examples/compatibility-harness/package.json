@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --reporter=verbose",
+    "test:crossmint": "SIGNER_MODULE=./examples/crossmint/signer.ts vitest run --reporter=verbose",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -125,13 +125,7 @@ cd examples/compatibility-harness
 npm install
 ```
 
-### 2. Copy the adapter
-
-```bash
-cp examples/crossmint/signer.ts src/signer/index.ts
-```
-
-### 3. Configure environment variables
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env
@@ -164,10 +158,14 @@ CROSSMINT_WALLET_LOCATOR=email:alice@example.com:evm-smart-wallet
 >
 > See the [Crossmint wallet docs](https://docs.crossmint.com/wallets/smart-wallets/introduction) for details.
 
-### 4. Run the harness
+### 3. Run the harness
 
 ```bash
-npm test
+# Recommended — uses the npm script (no file copy needed)
+npm run test:crossmint
+
+# Equivalent — set the adapter path directly
+SIGNER_MODULE=./examples/crossmint/signer.ts npm test
 ```
 
 ---

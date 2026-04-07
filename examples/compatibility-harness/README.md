@@ -45,14 +45,18 @@ git clone <repo>
 cd examples/compatibility-harness
 npm install
 
-# 1. Swap in the Crossmint adapter
-cp examples/crossmint/signer.ts src/signer/index.ts
-
-# 2. Configure credentials
+# Configure credentials (no PRIVATE_KEY needed)
 cp .env.example .env
-#    → set CROSSMINT_API_KEY and CROSSMINT_WALLET_LOCATOR (leave PRIVATE_KEY blank)
+#    → set CROSSMINT_API_KEY and CROSSMINT_WALLET_LOCATOR
 
-npm test
+# Run with the Crossmint adapter — no file copy needed
+npm run test:crossmint
+```
+
+Or, equivalently, using the `SIGNER_MODULE` variable directly:
+
+```bash
+SIGNER_MODULE=./examples/crossmint/signer.ts npm test
 ```
 
 See [`examples/crossmint/COMPATIBILITY.md`](examples/crossmint/COMPATIBILITY.md) for
@@ -62,8 +66,14 @@ the full Crossmint setup guide and expected report output.
 
 ## Writing your own adapter
 
-Open `src/signer/index.ts`. Replace the default EOA implementation with your own.
-The only constraint is that your export satisfies this interface:
+Create a file anywhere — no need to touch the harness source. Point to it with
+`SIGNER_MODULE` when running tests:
+
+```bash
+SIGNER_MODULE=./my-signer.ts npm test
+```
+
+The only constraint is that your file exports a `signer` object satisfying this interface:
 
 ```ts
 export interface Signer {
@@ -267,10 +277,16 @@ Use environment secrets to inject credentials — no `.env` file needed in CI.
 
 ### `PRIVATE_KEY is not set` — but I'm using an MPC adapter
 
-You copied `examples/crossmint/signer.ts` to `src/signer/index.ts` but did not
-rebuild the module cache, or the wrong file is still in place.
-Verify: `head -5 src/signer/index.ts` — it should reference `CROSSMINT_API_KEY`,
-not `PRIVATE_KEY`.
+The default EOA signer (`src/signer/index.ts`) is still being loaded.
+Make sure you set `SIGNER_MODULE` when running:
+
+```bash
+SIGNER_MODULE=./examples/crossmint/signer.ts npm test
+# or
+npm run test:crossmint
+```
+
+Without `SIGNER_MODULE`, the harness always falls back to the default EOA signer.
 
 ### `signer.address is not yet available`
 
