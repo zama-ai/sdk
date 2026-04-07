@@ -119,11 +119,6 @@ function fheTypeToSolidityType(fheType: string): string {
   return fheType.slice(1);
 }
 
-/** JSON.stringify replacer that converts BigInt values to strings. */
-function bigintReplacer(_key: string, value: unknown): unknown {
-  return typeof value === "bigint" ? value.toString() : value;
-}
-
 // oxlint-disable-next-line typescript-eslint/no-redundant-type-constituents -- FhevmClient resolves to `any` when @fhevm/sdk is not installed locally
 function assertClient(c: FhevmClient | null): asserts c is FhevmClient {
   if (!c) {
@@ -298,25 +293,22 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     assertClient(client);
 
     const keypair = await client.parseE2eTransportKeypair({
-      serialized: JSON.stringify({
+      serialized: {
         publicKey: payload.publicKey,
         privateKey: payload.privateKey,
-      }),
+      },
     });
 
     const permit = await client.parseSignedDecryptionPermit({
-      serialized: JSON.stringify(
-        {
-          publicKey: payload.publicKey,
-          contractAddresses: payload.signedContractAddresses,
-          signerAddress: payload.signerAddress,
-          startTimestamp: payload.startTimestamp,
-          durationDays: payload.durationDays,
-          signature: payload.signature,
-          eip712: payload.eip712,
-        },
-        bigintReplacer,
-      ),
+      serialized: {
+        publicKey: payload.publicKey,
+        contractAddresses: payload.signedContractAddresses,
+        signerAddress: payload.signerAddress,
+        startTimestamp: payload.startTimestamp,
+        durationDays: payload.durationDays,
+        signature: payload.signature,
+        eip712: payload.eip712,
+      },
       e2eTransportKeypair: keypair,
     });
 
@@ -475,26 +467,23 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     assertClient(client);
 
     const keypair = await client.parseE2eTransportKeypair({
-      serialized: JSON.stringify({
+      serialized: {
         publicKey: payload.publicKey,
         privateKey: payload.privateKey,
-      }),
+      },
     });
 
     const permit = await client.parseSignedDecryptionPermit({
-      serialized: JSON.stringify(
-        {
-          publicKey: payload.publicKey,
-          contractAddresses: payload.signedContractAddresses,
-          delegatorAddress: payload.delegatorAddress,
-          delegateAddress: payload.delegateAddress,
-          startTimestamp: payload.startTimestamp,
-          durationDays: payload.durationDays,
-          signature: payload.signature,
-          eip712: payload.eip712,
-        },
-        bigintReplacer,
-      ),
+      serialized: {
+        publicKey: payload.publicKey,
+        contractAddresses: payload.signedContractAddresses,
+        delegatorAddress: payload.delegatorAddress,
+        delegateAddress: payload.delegateAddress,
+        startTimestamp: payload.startTimestamp,
+        durationDays: payload.durationDays,
+        signature: payload.signature,
+        eip712: payload.eip712,
+      },
       e2eTransportKeypair: keypair,
     });
 
