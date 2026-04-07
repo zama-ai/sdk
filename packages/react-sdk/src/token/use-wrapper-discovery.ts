@@ -57,16 +57,14 @@ export function useWrapperDiscovery(
   const { tokenAddress, erc20Address } = config;
   const sdk = useZamaSDK();
   const registryAddress = useWrappersRegistryAddress();
-  const baseOpts = wrapperDiscoveryQueryOptions(sdk.registry, {
-    tokenAddress,
-    erc20Address,
-    registryAddress,
-  });
 
   return useQuery<Address | null>({
-    ...baseOpts,
+    ...wrapperDiscoveryQueryOptions(sdk.registry, {
+      tokenAddress,
+      erc20Address,
+      registryAddress,
+    }),
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -90,11 +88,11 @@ export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseC
   const sdk = useZamaSDK();
   const registryAddress = useWrappersRegistryAddress();
 
-  return useSuspenseQuery<Address | null>({
-    ...wrapperDiscoveryQueryOptions(sdk.registry, {
+  return useSuspenseQuery<Address | null>(
+    wrapperDiscoveryQueryOptions(sdk.registry, {
       tokenAddress,
       erc20Address,
       registryAddress,
     }),
-  });
+  );
 }

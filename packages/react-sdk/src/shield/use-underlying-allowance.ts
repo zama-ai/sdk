@@ -38,20 +38,15 @@ export function useUnderlyingAllowance(
 ) {
   const { tokenAddress, wrapperAddress } = config;
   const token = useReadonlyToken(tokenAddress);
-  const addressQuery = useQuery<Address>({
-    ...signerAddressQueryOptions(token.signer),
-  });
+  const addressQuery = useQuery<Address>(signerAddressQueryOptions(token.signer));
   const owner = addressQuery.data;
 
-  const baseOpts = underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
-    owner,
-    wrapperAddress,
-  });
-
   return useQuery<bigint>({
-    ...baseOpts,
+    ...underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
+      owner,
+      wrapperAddress,
+    }),
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -73,15 +68,13 @@ export function useUnderlyingAllowance(
 export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceConfig) {
   const { tokenAddress, wrapperAddress } = config;
   const token = useReadonlyToken(tokenAddress);
-  const addressQuery = useSuspenseQuery<Address>({
-    ...signerAddressQueryOptions(token.signer),
-  });
+  const addressQuery = useSuspenseQuery<Address>(signerAddressQueryOptions(token.signer));
   const owner = addressQuery.data;
 
-  return useSuspenseQuery<bigint>({
-    ...underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
+  return useSuspenseQuery<bigint>(
+    underlyingAllowanceQueryOptions(token.signer, tokenAddress, {
       owner,
       wrapperAddress,
     }),
-  });
+  );
 }

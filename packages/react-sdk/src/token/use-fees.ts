@@ -52,12 +52,10 @@ export function useShieldFee(
   options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const baseOpts = shieldFeeQueryOptions(sdk.signer, config);
 
   return useQuery<bigint>({
-    ...baseOpts,
+    ...shieldFeeQueryOptions(sdk.signer, config),
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -83,12 +81,10 @@ export function useUnshieldFee(
   options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const baseOpts = unshieldFeeQueryOptions(sdk.signer, config);
 
   return useQuery<bigint>({
-    ...baseOpts,
+    ...unshieldFeeQueryOptions(sdk.signer, config),
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -109,12 +105,10 @@ export function useBatchTransferFee(
   options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const baseOpts = batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress);
 
   return useQuery<bigint>({
-    ...baseOpts,
+    ...batchTransferFeeQueryOptions(sdk.signer, feeManagerAddress),
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
 
@@ -135,11 +129,9 @@ export function useFeeRecipient(
   options?: Omit<UseQueryOptions<Address>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const baseOpts = feeRecipientQueryOptions(sdk.signer, feeManagerAddress);
 
   return useQuery<Address>({
-    ...baseOpts,
+    ...feeRecipientQueryOptions(sdk.signer, feeManagerAddress),
     ...options,
-    enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),
   });
 }
