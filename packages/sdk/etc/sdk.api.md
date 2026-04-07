@@ -17888,7 +17888,6 @@ export interface ShieldCallbacks {
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
     approvalStrategy?: "max" | "exact" | "skip";
-    fees?: bigint;
     to?: Address;
 }
 
