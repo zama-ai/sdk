@@ -967,6 +967,7 @@ export function shieldMutationOptions(token: Token): MutationFactoryOptions<read
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
     approvalStrategy?: "max" | "exact" | "skip";
+    fees?: bigint;
     to?: Address;
 }
 
@@ -976,6 +977,8 @@ export interface ShieldParams extends ShieldCallbacks {
     amount: bigint;
     // (undocumented)
     approvalStrategy?: "max" | "exact" | "skip";
+    // (undocumented)
+    fees?: bigint;
     to?: Address;
 }
 
@@ -1633,7 +1636,7 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-CDC_lDh4.d.ts:2004:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-CZdiarLI.d.ts:2004:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -567,8 +567,8 @@ interface ContractCallConfig {
 
 ### Transfer Batcher
 
-| Function                                                             | Description                         |
-| -------------------------------------------------------------------- | ----------------------------------- |
+| Function                                                                   | Description                         |
+| -------------------------------------------------------------------------- | ----------------------------------- |
 | `confidentialBatchTransferContract(batcher, token, from, transfers)` | Batch multiple encrypted transfers. |
 
 ## Library-Specific Contract Helpers
@@ -643,15 +643,15 @@ Individual topic hashes are accessible via the `Topics` object: `Topics.Confiden
 
 ### Decoders
 
-| Function                          | Returns                                                                                                     |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                 |
-| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                 |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                            |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount }`                        |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }` |
-| `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                 |
-| `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                    |
+| Function                          | Returns                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransferEvent \| null` — `{ from, to, encryptedAmountHandle }`                                            |
+| `decodeWrapped(log)`              | `WrappedEvent \| null` — `{ to, amountIn }`                                                                            |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequestedEvent \| null` — `{ receiver, encryptedAmount }`                                                       |
+| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalizedEvent \| null` — `{ receiver, encryptedAmount, cleartextAmount }`                                   |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStartedEvent \| null` — `{ returnVal, requestId, txId, to, refund, requestedAmount, burnAmount }`            |
+| `decodeOnChainEvent(log)`         | `OnChainEvent \| null` — tries all decoders                                                                            |
+| `decodeOnChainEvents(logs)`       | `OnChainEvent[]` — batch decode, skips unrecognized logs                                                               |
 
 ### Finder Helpers
 
