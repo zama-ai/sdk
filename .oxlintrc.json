@@ -96,7 +96,6 @@
     "unicorn/require-post-message-target-origin": "off",
     "react/rules-of-hooks": "error",
     "react/react-in-jsx-scope": "off",
-    "react/jsx-uses-react": "off",
     "import/no-unassigned-import": "off",
     "import/no-nodejs-modules": "off",
     "unicorn/no-null": "off",
@@ -127,6 +126,7 @@
         "no-console": "off",
         "no-new": "off",
         "vitest/hoisted-apis-on-top": "off",
+        "vitest/require-mock-type-parameters": "off",
         "react/rules-of-hooks": "off"
       }
     },

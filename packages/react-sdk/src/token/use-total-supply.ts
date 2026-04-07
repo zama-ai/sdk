@@ -48,7 +48,5 @@ export function useTotalSupply(
 export function useTotalSupplySuspense(tokenAddress: Address) {
   const token = useReadonlyToken(tokenAddress);
 
-  return useSuspenseQuery<bigint>({
-    ...totalSupplyQueryOptions(token.signer, tokenAddress),
-  });
+  return useSuspenseQuery<bigint>(totalSupplyQueryOptions(token.signer, tokenAddress));
 }
