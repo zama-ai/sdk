@@ -826,7 +826,6 @@ import { zamaQueryKeys, decryptionKeys } from "@zama-fhe/react-sdk";
 | `zamaQueryKeys.isAllowed`            | `.all`                                                                                   | Session signature status.           |
 | `zamaQueryKeys.underlyingAllowance`  | `.all`, `.token(address)`, `.scope(address, owner, wrapper)`                             | Underlying ERC-20 allowance.        |
 | `zamaQueryKeys.activityFeed`         | `.all`, `.token(address)`, `.scope(address, userAddress, logsKey, decrypt)`              | Activity feed items.                |
-| `zamaQueryKeys.fees`                 | `.shieldFee(...)`, `.unshieldFee(...)`, `.batchTransferFee(addr)`, `.feeRecipient(addr)` | Fee manager queries.                |
 | `decryptionKeys`                     | `.value(handle)`                                                                         | Individual decrypted handle values. |
 
 ```tsx
