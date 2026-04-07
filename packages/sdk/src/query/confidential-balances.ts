@@ -1,5 +1,6 @@
 import { ReadonlyToken } from "../token/readonly-token";
 import { DecryptionFailedError } from "../errors";
+import { assertNonNullable } from "../utils/assertions";
 
 import type { EncryptedBalanceHandle } from "./confidential-balance";
 import type { QueryFactoryOptions } from "./factory-types";
@@ -50,12 +51,8 @@ export function confidentialBalancesQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { owner: keyOwner, handles: keyHandles }] = context.queryKey;
-      if (!keyOwner) {
-        throw new Error("owner is required");
-      }
-      if (!keyHandles) {
-        throw new Error("handles are required");
-      }
+      assertNonNullable(keyOwner, "confidentialBalancesQueryOptions: owner");
+      assertNonNullable(keyHandles, "confidentialBalancesQueryOptions: handles");
       const perTokenErrors = new Map<Address, Error>();
 
       const raw = await ReadonlyToken.batchDecryptBalances(tokens, {
