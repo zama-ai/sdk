@@ -22,8 +22,10 @@ export default defineConfig({
     alias: signerModule
       ? [
           {
-            // Matches any import whose specifier ends with /signer/index.ts or .js
-            find: /[/\\]signer[/\\]index\.(ts|js)$/,
+            // Matches the entire import specifier ending with /signer/index.ts or .js
+            // ^.* is required so that id.replace(regex, replacement) substitutes
+            // the whole string, not just the suffix (which would produce ../abs/path).
+            find: /^.*[/\\]signer[/\\]index\.(ts|js)$/,
             replacement: signerModule,
           },
         ]
