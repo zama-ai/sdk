@@ -44,7 +44,6 @@ import {
   totalSupplyContract,
   rateContract,
   wrapContract,
-  wrapETHContract,
   unwrapContract,
   unwrapFromBalanceContract,
   finalizeUnwrapContract,
@@ -101,7 +100,6 @@ import {
 | Builder                                                          | What it does                   |
 | ---------------------------------------------------------------- | ------------------------------ |
 | `wrapContract(wrapper, to, amount)`                              | Wrap ERC-20 tokens             |
-| `wrapETHContract(wrapper, to, amount, value)`                    | Wrap native ETH                |
 | `unwrapContract(token, from, to, encryptedAmount, inputProof)`   | Request unwrap                 |
 | `unwrapFromBalanceContract(token, from, to, encryptedBalance)`   | Unwrap using on-chain handle   |
 | `finalizeUnwrapContract(wrapper, burntAmount, cleartext, proof)` | Finalize unwrap                |

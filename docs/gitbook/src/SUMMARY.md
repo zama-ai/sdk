@@ -46,7 +46,6 @@
   - [useConfidentialTransfer](reference/react/useConfidentialTransfer.md)
   - [useConfidentialTransferFrom](reference/react/useConfidentialTransferFrom.md)
   - [useShield](reference/react/useShield.md)
-  - [useShieldETH](reference/react/useShieldETH.md)
   - [useUnshield](reference/react/useUnshield.md)
   - [useUnshieldAll](reference/react/useUnshieldAll.md)
   - [useResumeUnshield](reference/react/useResumeUnshield.md)
