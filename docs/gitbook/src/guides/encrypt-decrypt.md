@@ -16,21 +16,26 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 {% code title="ConfidentialRoundTrip.tsx" %}
 
 ```tsx
-import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useAllow, useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
 import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
 
 function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
-  const [storedHandle, setStoredHandle] = useState<string>();
-  const decrypt = useUserDecrypt();
+  const { mutate: allow } = useAllow();
+  const [handles, setHandles] = useState<
+    { handle: string; contractAddress: `0x${string}` }[]
+  >([]);
+
+  // useUserDecrypt fires automatically once allow() is called
+  const { data: decrypted } = useUserDecrypt({ handles });
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const userAddress = await sdk.signer.getAddress();
-    const contractAddress = "0xYourContract";
+    const contractAddress = "0xYourContract" as `0x${string}`;
 
     // 1. Encrypt
     const encrypted = await encrypt.mutateAsync({
@@ -40,7 +45,7 @@ function ConfidentialRoundTrip() {
     });
 
     // 2. Send to contract
-    const txHash = await sdk.signer.writeContract({
+    await sdk.signer.writeContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "store",
@@ -55,22 +60,18 @@ function ConfidentialRoundTrip() {
       args: [userAddress],
     })) as string;
 
-    setStoredHandle(handle);
-
-    // 4. Decrypt
-    const result = await decrypt.mutateAsync({
-      handles: [{ handle, contractAddress }],
-    });
-    // result: { "0xhandle...": 42n }
+    // 4. Set handles and authorize — decryption happens automatically
+    setHandles([{ handle, contractAddress }]);
+    allow([contractAddress]);
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <button type="submit" disabled={encrypt.isPending || decrypt.isPending}>
+      <button type="submit" disabled={encrypt.isPending}>
         Encrypt → Store → Decrypt
       </button>
-      {decrypt.data && storedHandle && (
-        <output>Decrypted: {decrypt.data[storedHandle]?.toString()}</output>
+      {decrypted && handles[0] && (
+        <output>Decrypted: {decrypted[handles[0].handle]?.toString()}</output>
       )}
     </form>
   );
@@ -249,17 +250,23 @@ function ConfidentialAction() {
 
 {% endcode %}
 
-### 3. Decrypt with useUserDecrypt
+### 3. Authorize and decrypt with useAllow + useUserDecrypt
 
-`useUserDecrypt` manages the entire orchestration internally — keypair generation, EIP-712 creation, wallet signature, and decryption — so you only need to provide the handles you want to decrypt. All session parameters (`keypairTTL`, credential duration, etc.) are inherited from the SDK configuration.
+Decryption is a two-step process:
+
+1. **`useAllow`** — signs an EIP-712 message authorizing decryption for specific contracts (triggers a wallet prompt once).
+2. **`useUserDecrypt`** — a query that automatically decrypts handles once credentials are available. No manual `mutate()` call needed.
 
 {% code title="DecryptExample.tsx" %}
 
 ```tsx
-import { useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useAllow, useIsAllowed, useUserDecrypt } from "@zama-fhe/react-sdk";
 
 function DecryptExample() {
-  const decrypt = useUserDecrypt({
+  const { mutate: allow, isPending: isAllowing } = useAllow();
+  const { data: isAllowed } = useIsAllowed();
+
+  const { data, isPending } = useUserDecrypt({
     handles: [
       {
         handle: "0xabc123...",
@@ -268,19 +275,18 @@ function DecryptExample() {
     ],
   });
 
-  const handleDecrypt = async () => {
-    // Decrypts only uncached handles; returns cached values if already decrypted
-    const result = await decrypt.mutateAsync();
-    // result: { "0xabc123...": 1000n }
-  };
-
   return (
     <section>
-      <button onClick={handleDecrypt} disabled={decrypt.isPending}>
-        {decrypt.isPending ? "Decrypting..." : "Decrypt"}
-      </button>
-      {decrypt.error && <p role="alert">Error: {decrypt.error.message}</p>}
-      {decrypt.data && <output>Value: {Object.values(decrypt.data)[0]?.toString()}</output>}
+      {!isAllowed && (
+        <button
+          onClick={() => allow(["0xYourConfidentialContract"])}
+          disabled={isAllowing}
+        >
+          {isAllowing ? "Signing..." : "Authorize decryption"}
+        </button>
+      )}
+      {isPending && <p>Decrypting...</p>}
+      {data && <output>Value: {Object.values(data)[0]?.toString()}</output>}
     </section>
   );
 }
@@ -290,10 +296,14 @@ function DecryptExample() {
 
 #### Decrypting handles from multiple contracts
 
-`useUserDecrypt` automatically groups handles by contract address and issues one decryption request per contract:
+`useUserDecrypt` automatically groups handles by contract address and issues one decryption request per contract. Make sure all contracts are authorized via `useAllow`:
 
 ```tsx
-const result = await decrypt.mutateAsync({
+// Authorize all contracts upfront
+allow(["0xTokenA", "0xTokenB"]);
+
+// useUserDecrypt fires once credentials cover both contracts
+const { data } = useUserDecrypt({
   handles: [
     { handle: "0xhandle1...", contractAddress: "0xTokenA" },
     { handle: "0xhandle2...", contractAddress: "0xTokenA" },
@@ -301,91 +311,17 @@ const result = await decrypt.mutateAsync({
   ],
 });
 
-// Single wallet signature, but two decryption requests (one per contract)
-// result: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
+// data: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
 ```
 
-#### Reading decrypted values
+#### Persistent caching
 
-Decrypted values are stored in the SDK's persistent decrypt cache (`sdk.cache`), scoped by signer and contract address. Cached values survive page reloads.
-
-**To display cached values automatically on mount** (no user interaction needed), use `useDecryptedValue` or `useDecryptedValues`. These are pure read hooks — they never trigger a wallet signature or relayer call:
-
-```tsx
-import { useDecryptedValues, useUserDecrypt } from "@zama-fhe/react-sdk";
-import type { DecryptHandle } from "@zama-fhe/react-sdk";
-
-function DecryptedBalances({ handles }: { handles: DecryptHandle[] }) {
-  const decrypt = useUserDecrypt();
-
-  // Pure read — renders cached values on mount, even after page reload
-  const { data } = useDecryptedValues({ handles });
-
-  return (
-    <section>
-      <button onClick={() => decrypt.mutate({ handles })} disabled={decrypt.isPending}>
-        {decrypt.isPending ? "Decrypting..." : "Decrypt"}
-      </button>
-      <ul>
-        {handles.map((h) => (
-          <li key={h.handle}>
-            <output>{data?.[h.handle]?.toString() ?? "pending"}</output>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-```
-
-The pattern is:
-- **`useUserDecrypt`** (mutation) — "go decrypt these handles" — may trigger a wallet prompt, populates the cache
-- **`useDecryptedValue` / `useDecryptedValues`** (query) — "give me cached values" — pure read, `staleTime: Infinity`, renders on mount
+Decrypted values are stored in the SDK's persistent decrypt cache (`sdk.cache`), scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
 
 The cache is cleared on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account/chain change).
 
-#### Showing progress during decryption
-
-Use the `onCredentialsReady` and `onDecrypted` callbacks to show progress. These are passed through to `sdk.decrypt()`, so `onCredentialsReady` fires **after** credentials are acquired but **before** relayer calls begin, and `onDecrypted` fires when all handles have been decrypted:
-
-{% code title="DecryptWithProgress.tsx" %}
-
-```tsx
-import { useUserDecrypt } from "@zama-fhe/react-sdk";
-import { useState } from "react";
-
-type DecryptStep = "idle" | "authorizing" | "decrypting" | "done";
-
-function DecryptWithProgress() {
-  const [step, setStep] = useState<DecryptStep>("idle");
-
-  const decrypt = useUserDecrypt({
-    onCredentialsReady: () => setStep("decrypting"),
-    onDecrypted: () => setStep("done"),
-  });
-
-  const handleDecrypt = async () => {
-    setStep("authorizing");
-    await decrypt.mutateAsync({
-      handles: [{ handle: "0x...", contractAddress: "0xToken" }],
-    });
-  };
-
-  const stepLabels: Record<DecryptStep, string> = {
-    idle: "Decrypt",
-    authorizing: "Authorizing...",
-    decrypting: "Decrypting...",
-    done: "Done!",
-  };
-
-  return <button onClick={handleDecrypt}>{stepLabels[step]}</button>;
-}
-```
-
-{% endcode %}
-
 {% hint style="info" %}
-**Decryption fails with "invalid keypair" or "expired credentials"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. `useUserDecrypt` and `useConfidentialBalance` handle re-generation automatically.
+**Decryption fails with "invalid keypair" or "expired credentials"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useAllow` again to generate fresh credentials.
 {% endhint %}
 
 ### 4. Decrypt with usePublicDecrypt (advanced)

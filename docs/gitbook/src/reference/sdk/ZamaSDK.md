@@ -346,12 +346,16 @@ await sdk.revokeSession();
 
 ### isAllowed
 
-`() => Promise<boolean>`
+`(...contractAddresses: Address[]) => Promise<boolean>`
 
-Returns whether the session has active credentials.
+Returns whether the session has active credentials. When contract addresses are provided, also checks that the cached credentials cover all of them.
 
 ```ts
+// Session-level check (any credentials cached?)
 const allowed = await sdk.isAllowed();
+
+// Contract-level check (credentials cover these contracts?)
+const covered = await sdk.isAllowed("0xTokenA", "0xTokenB");
 ```
 
 ### dispose

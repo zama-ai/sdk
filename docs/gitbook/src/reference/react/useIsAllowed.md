@@ -48,6 +48,10 @@ function AuthGuard({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 const { data: allowed } = useIsAllowed();
 ```
 
+{% hint style="info" %}
+**Contract-level checks** are handled internally by [`useUserDecrypt`](/reference/react/useUserDecrypt), which verifies that cached credentials cover all contract addresses from the provided handles before firing the decrypt query. `useIsAllowed` is a session-level check — use it for UI gating (e.g. showing an "Authorize" button).
+{% endhint %}
+
 ## Return Type
 
 ```ts

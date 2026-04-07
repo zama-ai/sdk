@@ -81,8 +81,6 @@
   - [useReadonlyToken](reference/react/useReadonlyToken.md)
   - [useEncrypt](reference/react/useEncrypt.md)
   - [useUserDecrypt](reference/react/useUserDecrypt.md)
-  - [useDecryptedValue](reference/react/useDecryptedValue.md)
-  - [useDecryptedValues](reference/react/useDecryptedValues.md)
   - [useGenerateKeypair](reference/react/useGenerateKeypair.md)
   - [useDelegateDecryption](reference/react/useDelegateDecryption.md)
   - [useRevokeDelegation](reference/react/useRevokeDelegation.md)
