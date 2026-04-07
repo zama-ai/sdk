@@ -101,6 +101,7 @@ describe("Zama SDK Flow", () => {
       if (items.length === 0) {
         record({
           name: "Zama SDK Flow",
+          section: "zama",
           status: "SKIP",
           reason: "No token pairs found in the registry on Sepolia",
           recommendation: "Ensure the Sepolia network is reachable and the registry is populated",
@@ -112,6 +113,7 @@ describe("Zama SDK Flow", () => {
     } catch (err) {
       record({
         name: "Zama SDK Flow",
+        section: "zama",
         status: "FAIL",
         reason: `Failed to query the token registry: ${err instanceof Error ? err.message : String(err)}`,
         likelyCause: "RPC endpoint unreachable or registry contract not deployed on this network",
@@ -130,6 +132,7 @@ describe("Zama SDK Flow", () => {
       const message = err instanceof Error ? err.message : String(err);
       record({
         name: "Zama SDK Flow",
+        section: "zama",
         status: "FAIL",
         reason: `sdk.allow() failed: ${message}`,
         likelyCause:
@@ -145,7 +148,7 @@ describe("Zama SDK Flow", () => {
     }
 
     sdk.terminate();
-    record({ name: "Zama SDK Flow", status: "PASS" });
+    record({ name: "Zama SDK Flow", section: "zama", status: "PASS" });
     expect(true).toBe(true);
   });
 });

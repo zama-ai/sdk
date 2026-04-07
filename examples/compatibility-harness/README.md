@@ -43,14 +43,28 @@ Replace the default viem/EOA implementation with your own. The only constraint i
 ```ts
 export interface Signer {
   address: string;
+
+  /** Required — must produce a standard secp256k1 EIP-712 signature. */
   signTypedData: (data: any) => Promise<string>;
-  signTransaction: (tx: any) => Promise<string>;
+
+  /** Optional — EOA path: sign a raw EIP-1559 transaction (returned as hex). */
+  signTransaction?: (tx: any) => Promise<string>;
+
+  /** Optional — MPC / smart-account path: submit a contract call and return the tx hash. */
+  writeContract?: (config: {
+    address: string;
+    abi: readonly any[];
+    functionName: string;
+    args?: readonly any[];
+    value?: bigint;
+  }) => Promise<string>;
 }
 ```
 
-**No other file needs to change.**
+Only `signTypedData` is required. Provide `signTransaction` for EOA wallets or
+`writeContract` for MPC / smart-account wallets. **No other file needs to change.**
 
-### Example — viem wallet client
+### Example — EOA (viem wallet client)
 
 ```ts
 import { walletClient } from "./your-client.js";
@@ -62,19 +76,19 @@ export const signer: Signer = {
 };
 ```
 
-### Example — external custody SDK (pseudo-code)
+### Example — MPC wallet (Crossmint, Turnkey, Privy, …)
 
 ```ts
-import { CustodyProvider } from "@your-custody/sdk";
-
-const provider = new CustodyProvider({ apiKey: process.env.CUSTODY_API_KEY });
-
 export const signer: Signer = {
   address: await provider.getAddress(),
   signTypedData: (data) => provider.signTypedData(data),
-  signTransaction: (tx) => provider.signTransaction(tx),
+  // signTransaction not implemented — use writeContract instead
+  writeContract: (config) => provider.executeContract(config),
 };
 ```
+
+See [`examples/crossmint/signer.ts`](examples/crossmint/signer.ts) for a full
+Crossmint MPC adapter with the expected compatibility report.
 
 ---
 
@@ -107,21 +121,29 @@ Copy `.env.example` to `.env` and configure:
 After `npm test`, a summary is printed at the end:
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Zama Compatibility Report
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  ✓ EIP-712 Signature              PASS
-  ✓ Transaction Execution          PASS
-  ✗ Zama SDK Flow                  FAIL
-      Reason:         sdk.allow() failed: Signature not recoverable
-      Likely cause:   EIP-712 signature rejected or incompatible with Zama SDK format
-      Recommendation: Ensure the signer produces standard secp256k1 EIP-712 signatures
-  ✓ Signer Type Detection          PASS
+  Signer             0xcafe1234…abcd5678
+  Type               EOA
+  EIP-712            ✓ recoverable (secp256k1)
+  signTransaction    ✓ provided (EOA path)
+  writeContract      – not provided
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Final: INCOMPATIBLE (1 of 4 tests failed)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ── Ethereum Compatibility ─────────────────────────────
+  ✓ EIP-712 Signature                      PASS
+  ✗ Transaction Execution                  FAIL
+      Reason:         sendRawTransaction failed: insufficient funds
+      Likely cause:   Malformed signed transaction, or account has insufficient Sepolia ETH for gas
+      Recommendation: Get Sepolia ETH at sepoliafaucet.com
+
+  ── Zama SDK Compatibility ─────────────────────────────
+  ✓ Zama SDK Flow                          PASS
+
+────────────────────────────────────────────────────────
+  Final: ZAMA COMPATIBLE ✓
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 Every failure includes:
@@ -129,13 +151,16 @@ Every failure includes:
 - **Likely cause** — the most probable root cause
 - **Recommendation** — what to do next
 
+The **final verdict is determined by the Zama SDK section only** — an Ethereum-section
+SKIP (e.g. MPC wallet without `signTransaction`) does not affect compatibility.
+
 ---
 
 ## What the tests validate
 
-| # | Test | What it checks |
-|---|------|----------------|
-| 1 | EIP-712 Signature | Signature is recoverable via `ecrecover` and matches `signer.address` |
-| 2 | Transaction Execution | Signer can sign + broadcast a transaction; receipt is `success` |
-| 3 | Zama SDK Flow | `sdk.credentials.allow()` completes — the Zama EIP-712 payload is signed correctly |
-| 4 | Signer Type Detection | Standalone EOA check — detects ERC-1271, MPC, or AA wallets |
+| Order | Test | Section | What it checks |
+|-------|------|---------|----------------|
+| 1 | Signer Profile | (header) | Detects signer type (EOA / MPC / Smart Account) — never blocks |
+| 2 | EIP-712 Signature | Ethereum | Signature is recoverable via `ecrecover` and matches `signer.address` |
+| 3 | Transaction Execution | Ethereum | EOA: signs + broadcasts a tx. MPC: skipped (writeContract path used instead) |
+| 4 | Zama SDK Flow | Zama | `sdk.allow()` completes — the Zama EIP-712 credential payload is accepted |

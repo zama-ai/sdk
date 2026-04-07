@@ -44,6 +44,7 @@ describe("EIP-712 Signature Validation", () => {
     } catch (err) {
       record({
         name: "EIP-712 Signature",
+        section: "ethereum",
         status: "FAIL",
         reason: `signTypedData threw: ${err instanceof Error ? err.message : String(err)}`,
         likelyCause: "The signer rejected or failed to process the EIP-712 payload",
@@ -58,6 +59,7 @@ describe("EIP-712 Signature Validation", () => {
     if (recovered === null) {
       record({
         name: "EIP-712 Signature",
+        section: "ethereum",
         status: "FAIL",
         reason: "Signature is not recoverable via ecrecover",
         likelyCause: "Non-EOA signer (ERC-1271 smart contract wallet, MPC, or threshold signature)",
@@ -71,6 +73,7 @@ describe("EIP-712 Signature Validation", () => {
     if (getAddress(recovered) !== getAddress(signer.address)) {
       record({
         name: "EIP-712 Signature",
+        section: "ethereum",
         status: "FAIL",
         reason: `Recovered address (${recovered}) does not match signer.address (${signer.address})`,
         likelyCause: "Signer address is misreported, or signature was produced by a different key",
@@ -81,7 +84,7 @@ describe("EIP-712 Signature Validation", () => {
       return;
     }
 
-    record({ name: "EIP-712 Signature", status: "PASS" });
+    record({ name: "EIP-712 Signature", section: "ethereum", status: "PASS" });
     expect(getAddress(recovered)).toBe(getAddress(signer.address));
   });
 });
