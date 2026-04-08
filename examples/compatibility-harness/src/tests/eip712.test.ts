@@ -3,7 +3,12 @@ import { getAddress } from "viem";
 import { detectArchitecture, detectVerificationModel } from "../adapter/profile.js";
 import { emptyCapabilities } from "../adapter/types.js";
 import { networkConfig } from "../config/network.js";
-import { adapter, getAdapterAddress, initializeAdapter } from "../harness/adapter.js";
+import {
+  adapter,
+  adapterObservedCapabilities,
+  getAdapterAddress,
+  initializeAdapter,
+} from "../harness/adapter.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
 import { mergeProfile, record } from "../report/reporter.js";
 import { recoverEIP712Signer } from "../utils/crypto.js";
@@ -40,7 +45,7 @@ beforeAll(async () => {
 
 describe("Identity and Verification", () => {
   it("validates EIP-712 signing and recoverability", async () => {
-    const baseCapabilities = { ...emptyCapabilities(), ...adapter.capabilities };
+    const baseCapabilities = { ...emptyCapabilities(), ...adapterObservedCapabilities };
 
     if (initError) {
       const diagnostic = classifyInfrastructureIssue(initError);
@@ -58,7 +63,7 @@ describe("Identity and Verification", () => {
 
     if (!adapter.signTypedData) {
       mergeProfile({
-        capabilities: {
+        observedCapabilities: {
           eip712Signing: "UNSUPPORTED",
           recoverableEcdsa: "UNSUPPORTED",
           zamaAuthorizationFlow: "UNSUPPORTED",
@@ -97,7 +102,7 @@ describe("Identity and Verification", () => {
       });
       if (!isInfra) {
         mergeProfile({
-          capabilities: {
+          observedCapabilities: {
             eip712Signing: "SUPPORTED",
             recoverableEcdsa: "UNSUPPORTED",
           },
@@ -112,7 +117,7 @@ describe("Identity and Verification", () => {
     const recovered = await recoverEIP712Signer(TEST_TYPED_DATA, signature);
     if (recovered === null) {
       mergeProfile({
-        capabilities: {
+        observedCapabilities: {
           eip712Signing: "SUPPORTED",
           recoverableEcdsa: "UNSUPPORTED",
         },
@@ -143,7 +148,7 @@ describe("Identity and Verification", () => {
     const address = await getAdapterAddress();
     if (getAddress(recovered) !== getAddress(address)) {
       mergeProfile({
-        capabilities: {
+        observedCapabilities: {
           eip712Signing: "SUPPORTED",
           recoverableEcdsa: "UNSUPPORTED",
         },
@@ -170,7 +175,7 @@ describe("Identity and Verification", () => {
       zamaAuthorizationFlow: "SUPPORTED" as const,
     };
     mergeProfile({
-      capabilities: observedCapabilities,
+      observedCapabilities,
       verificationModel: detectVerificationModel(
         adapter.metadata.verificationModel,
         observedCapabilities,

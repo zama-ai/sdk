@@ -39,6 +39,11 @@ Capability state:
 - `UNSUPPORTED`
 - `UNKNOWN`
 
+Profile output separates:
+- `declaredCapabilities`
+- `observedCapabilities`
+- `contradictions` when declared and observed states diverge.
+
 Validation status:
 - `PASS`
 - `FAIL`
@@ -145,8 +150,8 @@ An optional machine-readable report can be exported with:
 
 Versioned schema contract:
 - `kind`: `zama-compatibility-report`
-- `schemaVersion`: `1.0.0`
-- payload includes profile, recorded checks, synthesized environment summary, section views, blockers, verdict, and run id.
+- `schemaVersion`: `1.1.0`
+- payload includes profile, recorded checks, synthesized environment summary, section views, blockers, claim metadata, verdict, and run id.
 
 ## Scope Limits
 

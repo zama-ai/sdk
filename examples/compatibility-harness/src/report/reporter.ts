@@ -14,6 +14,7 @@ import type {
   ValidationStatus,
   CapabilityState,
 } from "../adapter/types.js";
+import { detectCapabilityContradictions } from "../adapter/contradictions.js";
 import {
   REPORT_KIND,
   REPORT_SCHEMA_VERSION,
@@ -82,8 +83,9 @@ export function recordProfile(profile: AdapterProfile): void {
 
 /** Merge a partial profile update into the recorded adapter profile. */
 export function mergeProfile(
-  patch: Partial<Omit<AdapterProfile, "capabilities">> & {
-    capabilities?: Partial<AdapterProfile["capabilities"]>;
+  patch: Partial<Omit<AdapterProfile, "declaredCapabilities" | "observedCapabilities">> & {
+    declaredCapabilities?: Partial<AdapterProfile["declaredCapabilities"]>;
+    observedCapabilities?: Partial<AdapterProfile["observedCapabilities"]>;
   },
 ): void {
   const existing = readProfile();
@@ -105,10 +107,24 @@ export function mergeProfile(
       {
         ...existing,
         ...patch,
-        capabilities: {
-          ...existing.capabilities,
-          ...patch.capabilities,
+        declaredCapabilities: {
+          ...existing.declaredCapabilities,
+          ...patch.declaredCapabilities,
         },
+        observedCapabilities: {
+          ...existing.observedCapabilities,
+          ...patch.observedCapabilities,
+        },
+        contradictions: detectCapabilityContradictions(
+          {
+            ...existing.declaredCapabilities,
+            ...patch.declaredCapabilities,
+          },
+          {
+            ...existing.observedCapabilities,
+            ...patch.observedCapabilities,
+          },
+        ),
       },
       null,
       2,
@@ -319,19 +335,28 @@ export function printReport(): void {
     console.log(`  Detected Type      ${profile.detectedArchitecture}`);
     console.log(`  Verification       ${profile.verificationModel}`);
     console.log(`  Init               ${profile.initializationStatus}`);
-    console.log(`  Capability Source  declared + observed test updates`);
+    console.log(`  Capability Source  declared + observed`);
     console.log(
-      `  EIP-712            ${renderCapability(profile.capabilities.eip712Signing)} / recoverability ${renderCapability(profile.capabilities.recoverableEcdsa)}`,
+      `  EIP-712            declared ${renderCapability(profile.declaredCapabilities.eip712Signing)} / observed ${renderCapability(profile.observedCapabilities.eip712Signing)}`,
     );
     console.log(
-      `  Execution          rawTx ${renderCapability(profile.capabilities.rawTransactionSigning)} / write ${renderCapability(profile.capabilities.contractExecution)}`,
+      `  Recoverability     declared ${renderCapability(profile.declaredCapabilities.recoverableEcdsa)} / observed ${renderCapability(profile.observedCapabilities.recoverableEcdsa)}`,
     );
     console.log(
-      `  Reads & Receipts   reads ${renderCapability(profile.capabilities.contractReads)} / receipts ${renderCapability(profile.capabilities.transactionReceiptTracking)}`,
+      `  Execution          rawTx ${renderCapability(profile.observedCapabilities.rawTransactionSigning)} / write ${renderCapability(profile.observedCapabilities.contractExecution)}`,
     );
     console.log(
-      `  Zama Surface       auth ${renderCapability(profile.capabilities.zamaAuthorizationFlow)} / write ${renderCapability(profile.capabilities.zamaWriteFlow)}`,
+      `  Reads & Receipts   reads ${renderCapability(profile.observedCapabilities.contractReads)} / receipts ${renderCapability(profile.observedCapabilities.transactionReceiptTracking)}`,
     );
+    console.log(
+      `  Zama Surface       auth ${renderCapability(profile.observedCapabilities.zamaAuthorizationFlow)} / write ${renderCapability(profile.observedCapabilities.zamaWriteFlow)}`,
+    );
+    if (profile.contradictions.length > 0) {
+      console.log("  Contradictions");
+      for (const contradiction of profile.contradictions) {
+        console.log(`    - ${contradiction}`);
+      }
+    }
     console.log();
   }
 

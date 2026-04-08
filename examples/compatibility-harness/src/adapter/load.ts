@@ -17,13 +17,22 @@ export interface LoadedAdapter {
   adapter: Adapter;
   init: () => Promise<void>;
   source: "adapter" | "legacy-signer";
+  declaredCapabilities: AdapterCapabilities;
+  observedCapabilities: AdapterCapabilities;
 }
 
 function capabilityFromBoolean(value: boolean): CapabilityState {
   return value ? "SUPPORTED" : "UNSUPPORTED";
 }
 
-function inferCapabilitiesFromAdapter(adapter: Adapter): AdapterCapabilities {
+function normalizeDeclaredCapabilities(adapter: Adapter): AdapterCapabilities {
+  return {
+    ...emptyCapabilities(),
+    ...adapter.capabilities,
+  };
+}
+
+function inferObservedCapabilitiesFromAdapter(adapter: Adapter): AdapterCapabilities {
   const capabilities = emptyCapabilities();
   capabilities.addressResolution = "SUPPORTED";
   capabilities.eip712Signing = capabilityFromBoolean(typeof adapter.signTypedData === "function");
@@ -41,7 +50,7 @@ function inferCapabilitiesFromAdapter(adapter: Adapter): AdapterCapabilities {
     capabilities.eip712Signing === "SUPPORTED" ? "SUPPORTED" : "UNSUPPORTED";
   capabilities.zamaWriteFlow =
     capabilities.contractExecution === "SUPPORTED" ? "SUPPORTED" : "UNSUPPORTED";
-  return { ...capabilities, ...adapter.capabilities };
+  return capabilities;
 }
 
 async function sendWriteViaLegacySigner(
@@ -138,10 +147,14 @@ function wrapLegacySigner(signer: LegacySigner): Adapter {
 function assertAdapterModule(module: AdapterModuleShape): LoadedAdapter {
   if (module.adapter) {
     const adapter = module.adapter;
-    adapter.capabilities = inferCapabilitiesFromAdapter(adapter);
+    const declaredCapabilities = normalizeDeclaredCapabilities(adapter);
+    const observedCapabilities = inferObservedCapabilitiesFromAdapter(adapter);
+    adapter.capabilities = observedCapabilities;
     return {
       adapter,
       source: "adapter",
+      declaredCapabilities,
+      observedCapabilities,
       init: async () => {
         if (module.ready) await module.ready;
         if (adapter.init) await adapter.init();
@@ -151,10 +164,14 @@ function assertAdapterModule(module: AdapterModuleShape): LoadedAdapter {
 
   if (module.signer) {
     const adapter = wrapLegacySigner(module.signer);
-    adapter.capabilities = inferCapabilitiesFromAdapter(adapter);
+    const declaredCapabilities = normalizeDeclaredCapabilities(adapter);
+    const observedCapabilities = inferObservedCapabilitiesFromAdapter(adapter);
+    adapter.capabilities = observedCapabilities;
     return {
       adapter,
       source: "legacy-signer",
+      declaredCapabilities,
+      observedCapabilities,
       init: async () => {
         if (module.ready) await module.ready;
       },

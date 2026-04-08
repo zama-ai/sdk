@@ -155,6 +155,12 @@ Capability state:
 - `UNSUPPORTED`
 - `UNKNOWN`
 
+The adapter profile reports both:
+- `declaredCapabilities` (what the adapter says it supports)
+- `observedCapabilities` (what the harness observed from behavior/tests)
+
+When they diverge, the report includes explicit `contradictions`.
+
 ## Status Model
 
 Every check uses one status:
@@ -223,8 +229,8 @@ REPORT_JSON_PATH=./reports/latest.json npm test
 
 Current schema:
 - `kind`: `zama-compatibility-report`
-- `schemaVersion`: `1.0.0`
-- top-level sections: `adapterProfile`, `checks`, `sections`, `infrastructure`, `finalVerdict`
+- `schemaVersion`: `1.1.0`
+- top-level sections: `adapterProfile`, `checks`, `sections`, `infrastructure`, `claim`, `finalVerdict`
 
 `schemaVersion` is the compatibility contract for CI/partner tooling. Consumers should validate `schemaVersion` before parsing.
 

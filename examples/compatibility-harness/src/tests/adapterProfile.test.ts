@@ -3,10 +3,13 @@ import { detectArchitecture, detectVerificationModel } from "../adapter/profile.
 import { emptyCapabilities } from "../adapter/types.js";
 import {
   adapter,
+  adapterDeclaredCapabilities,
+  adapterObservedCapabilities,
   adapterSource,
   getAdapterAddress,
   initializeAdapter,
 } from "../harness/adapter.js";
+import { detectCapabilityContradictions } from "../adapter/contradictions.js";
 import { classifyInfrastructureIssue, errorMessage } from "../harness/diagnostics.js";
 import { record, readProfile, recordProfile } from "../report/reporter.js";
 
@@ -23,18 +26,30 @@ beforeAll(async () => {
 describe("Adapter Profile", () => {
   it("records adapter metadata, initialization, and address resolution", async () => {
     const existingProfile = readProfile();
-    const capabilities = existingProfile?.capabilities ?? {
+    const declaredCapabilities = existingProfile?.declaredCapabilities ?? {
       ...emptyCapabilities(),
-      ...adapter.capabilities,
+      ...adapterDeclaredCapabilities,
+    };
+    const observedCapabilities = existingProfile?.observedCapabilities ?? {
+      ...emptyCapabilities(),
+      ...adapterObservedCapabilities,
     };
     const baseProfile = {
       name: adapter.metadata.name,
       source: adapterSource,
       declaredArchitecture: adapter.metadata.declaredArchitecture ?? "UNKNOWN",
-      detectedArchitecture: detectArchitecture(adapter.metadata.declaredArchitecture, capabilities),
-      verificationModel: detectVerificationModel(adapter.metadata.verificationModel, capabilities),
+      detectedArchitecture: detectArchitecture(
+        adapter.metadata.declaredArchitecture,
+        observedCapabilities,
+      ),
+      verificationModel: detectVerificationModel(
+        adapter.metadata.verificationModel,
+        observedCapabilities,
+      ),
       address: "(unresolved)",
-      capabilities,
+      declaredCapabilities,
+      observedCapabilities,
+      contradictions: detectCapabilityContradictions(declaredCapabilities, observedCapabilities),
       initializationStatus: initError
         ? classifyInfrastructureIssue(initError).status
         : ("PASS" as const),
@@ -68,8 +83,8 @@ describe("Adapter Profile", () => {
       recordProfile({
         ...baseProfile,
         address,
-        capabilities: {
-          ...capabilities,
+        observedCapabilities: {
+          ...observedCapabilities,
           addressResolution: "SUPPORTED",
         },
       });
@@ -94,8 +109,8 @@ describe("Adapter Profile", () => {
       });
       recordProfile({
         ...baseProfile,
-        capabilities: {
-          ...capabilities,
+        observedCapabilities: {
+          ...observedCapabilities,
           addressResolution: "UNKNOWN",
         },
       });

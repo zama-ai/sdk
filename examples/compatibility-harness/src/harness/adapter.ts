@@ -16,6 +16,8 @@ const loaded = loadAdapterModule(adapterModule);
 
 export const adapter = loaded.adapter;
 export const adapterSource = loaded.source;
+export const adapterDeclaredCapabilities = loaded.declaredCapabilities;
+export const adapterObservedCapabilities = loaded.observedCapabilities;
 
 let initPromise: Promise<void> | null = null;
 

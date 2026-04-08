@@ -34,7 +34,7 @@ describe("Ethereum Raw Transaction Flow", () => {
 
     if (!adapter.signTransaction) {
       mergeProfile({
-        capabilities: {
+        observedCapabilities: {
           rawTransactionSigning: "UNSUPPORTED",
         },
       });
@@ -166,7 +166,7 @@ describe("Ethereum Raw Transaction Flow", () => {
     }
 
     mergeProfile({
-      capabilities: {
+      observedCapabilities: {
         rawTransactionSigning: "SUPPORTED",
       },
     });

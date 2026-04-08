@@ -66,7 +66,7 @@ describe("Adapter-Routed Execution Surface", () => {
 
     sdk.terminate();
     mergeProfile({
-      capabilities: {
+      observedCapabilities: {
         contractReads: adapter.readContract ? "SUPPORTED" : "UNSUPPORTED",
       },
     });

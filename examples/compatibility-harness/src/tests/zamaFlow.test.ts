@@ -32,7 +32,7 @@ describe("Zama Authorization Flow", () => {
 
     if (!adapter.signTypedData) {
       mergeProfile({
-        capabilities: {
+        observedCapabilities: {
           zamaAuthorizationFlow: "UNSUPPORTED",
         },
       });
@@ -96,7 +96,7 @@ describe("Zama Authorization Flow", () => {
 
     sdk.terminate();
     mergeProfile({
-      capabilities: {
+      observedCapabilities: {
         zamaAuthorizationFlow: "SUPPORTED",
       },
     });

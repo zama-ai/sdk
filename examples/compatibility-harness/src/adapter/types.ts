@@ -109,7 +109,9 @@ export interface ObservedAdapterProfile {
   detectedArchitecture: AdapterArchitecture;
   verificationModel: VerificationModel;
   address: string;
-  capabilities: AdapterCapabilities;
+  declaredCapabilities: AdapterCapabilities;
+  observedCapabilities: AdapterCapabilities;
+  contradictions: string[];
   initializationStatus: ValidationStatus;
 }
 

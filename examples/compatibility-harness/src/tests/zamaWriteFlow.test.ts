@@ -41,7 +41,7 @@ describe("Zama Write Flow", () => {
 
     if (!adapter.writeContract) {
       mergeProfile({
-        capabilities: {
+        observedCapabilities: {
           contractExecution: "UNSUPPORTED",
           zamaWriteFlow: "UNSUPPORTED",
         },
@@ -143,7 +143,7 @@ describe("Zama Write Flow", () => {
 
     sdk.terminate();
     mergeProfile({
-      capabilities: {
+      observedCapabilities: {
         contractExecution: "SUPPORTED",
         transactionReceiptTracking: adapter.waitForTransactionReceipt ? "SUPPORTED" : "UNKNOWN",
         zamaWriteFlow: "SUPPORTED",
