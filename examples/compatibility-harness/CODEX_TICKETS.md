@@ -1,0 +1,151 @@
+# Compatibility Harness — Codex Tickets
+
+This file is the execution backlog for Codex-style implementation (small, reviewable commits with explicit acceptance checks).
+
+## Conventions
+
+- Branch strategy: feature branch, one ticket per commit whenever practical.
+- Verification baseline per ticket:
+  - `npm run typecheck`
+  - `npm test`
+- Keep integrator UX simple:
+  - clone
+  - configure `.env`
+  - choose adapter
+  - run command (`doctor`, `test`, or `validate`)
+
+## Completed
+
+### T6 — Infrastructure Error Taxonomy
+
+Status: `DONE`
+
+Objective:
+- Add stable error-code taxonomy for infra/environment failures.
+- Propagate error codes into recorded checks and report output.
+
+Implementation notes:
+- Extend diagnostics classification with `errorCode`.
+- Include `errorCode` in report schema and console output.
+- Update tests that record `BLOCKED`/`INCONCLUSIVE` diagnostics.
+
+Acceptance:
+- Report shows `Error code` on relevant checks.
+- Unit tests cover code classification branches.
+
+Commit:
+- `8752f4ef` (`feat(diagnostics): add infrastructure error-code taxonomy`)
+
+### T7 — Doctor Preflight CLI
+
+Status: `DONE`
+
+Objective:
+- Add fast preflight diagnostics command before full harness run.
+
+Implementation notes:
+- Add `src/cli/doctor.ts`.
+- Add `npm run doctor`.
+- Document checks and exit codes in README/SUMMARY.
+
+Acceptance:
+- `npm run doctor` executes and returns:
+  - `0` (all pass), `2` (blocked), `3` (inconclusive), `99` (unexpected).
+
+Commit:
+- `640daac6` (`feat(cli): add doctor preflight command and docs`)
+
+### T8 — Claim-Based Validation Gate CLI
+
+Status: `DONE`
+
+Objective:
+- Add CI-friendly command with stable exit codes based on final claim.
+
+Implementation notes:
+- Add `src/cli/validate-policy.ts` (claim -> gate decision).
+- Add `src/cli/validate.ts` (run harness + parse JSON artifact + apply gate policy).
+- Add `npm run validate`.
+- Add unit tests for policy logic.
+- Document `VALIDATION_TARGET` and exit codes.
+
+Acceptance:
+- `npm run validate` exits with:
+  - `0` pass
+  - `10` partial
+  - `20` incompatible
+  - `30/31` inconclusive
+  - `97/98/99` runtime/config classes
+- Policy behavior covered by unit tests.
+
+Commit:
+- `d7a55e91` (`feat(cli): add claim-based validate gate for CI`)
+
+## Next Priority
+
+### T9 — Turnkey Golden Scenario Fixture
+
+Status: `TODO`
+
+Objective:
+- Add deterministic Turnkey fixture docs and expected report profile for regression checks.
+
+Codex spec:
+1. Add `examples/turnkey/COMPATIBILITY.md` section with:
+   - expected capability profile,
+   - expected claim range (pass/partial/inconclusive depending env),
+   - known blockers and error codes.
+2. Add script alias for turnkey validation gate:
+   - `validate:turnkey`
+3. Add minimal smoke command section in README.
+
+Acceptance:
+- Turnkey docs clearly separate adapter incompatibility from infra blockers.
+- `npm run validate:turnkey` works with standard env vars.
+
+### T10 — Openfort Adapter Parity
+
+Status: `TODO`
+
+Objective:
+- Bring Openfort example up to same quality level as Turnkey/Crossmint examples.
+
+Codex spec:
+1. Validate `examples/openfort/signer.ts` metadata/capability declaration quality.
+2. Add or refresh `examples/openfort/COMPATIBILITY.md`:
+   - explicit scope (EOA semantics baseline),
+   - what is not validated (embedded/session UX),
+   - expected verdict categories.
+3. Add script alias:
+   - `validate:openfort`
+
+Acceptance:
+- Openfort example can be run with one command from README.
+- Documentation is explicit on proof boundaries.
+
+### T11 — Report Consumer Guide
+
+Status: `TODO`
+
+Objective:
+- Improve machine-consumer usability of report artifacts.
+
+Codex spec:
+1. Add `docs/report-consumption.md` with:
+   - schema fields needed for CI gates,
+   - claim/evidence interpretation rules,
+   - backward compatibility guidance for `schemaVersion`.
+2. Provide copy-paste examples for:
+   - auth-only gate,
+   - strict auth+write gate.
+
+Acceptance:
+- A partner engineer can build a parser without reading source code.
+
+## Definition of Done (Project-Level)
+
+- Adapter model remains capability-first and conservative.
+- Verdicts are scoped and claim-based (no overclaiming).
+- Infra/environment blockers are separated from compatibility failures.
+- Built-in examples (Crossmint, Turnkey, Openfort) are runnable and documented.
+- README remains <10-minute onboarding for new integrators.
