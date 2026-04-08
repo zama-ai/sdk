@@ -5,6 +5,17 @@ import {
   type ReportSection,
 } from "./schema.js";
 import { assertCanonicalCheck, isCanonicalCheckId } from "./check-registry.js";
+import { assertClaimConsistency } from "../verdict/consistency.js";
+import type { ValidationStatus } from "../adapter/types.js";
+
+const VALID_STATUSES = new Set<ValidationStatus>([
+  "PASS",
+  "FAIL",
+  "UNTESTED",
+  "UNSUPPORTED",
+  "BLOCKED",
+  "INCONCLUSIVE",
+]);
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -39,6 +50,10 @@ function assertCheckArray(value: unknown, context: string): void {
     }
     const name = assertStringField(check, "name", `${context}[${i}]`);
     const section = assertStringField(check, "section", `${context}[${i}]`);
+    const status = assertStringField(check, "status", `${context}[${i}]`);
+    if (!VALID_STATUSES.has(status as ValidationStatus)) {
+      throw new Error(`Invalid ${context}[${i}].status: unsupported status "${status}".`);
+    }
     assertCanonicalCheck({
       checkId,
       name,
@@ -121,6 +136,11 @@ export function parseReportArtifact(raw: string): ReportArtifact {
   if (!asRecord(blockers)) {
     throw new Error("Invalid report.infrastructure.blockers: expected object.");
   }
+
+  assertClaimConsistency(
+    claim as unknown as ReportArtifact["claim"],
+    checks.all as unknown as ReportArtifact["checks"]["all"],
+  );
 
   return object as unknown as ReportArtifact;
 }

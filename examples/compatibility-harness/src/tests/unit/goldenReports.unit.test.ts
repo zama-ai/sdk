@@ -40,4 +40,14 @@ describe("golden report fixtures", () => {
       "Invalid report.kind: expected non-empty string.",
     );
   });
+
+  it("rejects artifacts with inconsistent claim evidence", () => {
+    const parsed = JSON.parse(readFixture("eoa-full-compatible.report.json")) as {
+      claim: { evidence: Record<string, string> };
+    };
+    parsed.claim.evidence["Zama Write Flow"] = "FAIL";
+    expect(() => parseReportArtifact(JSON.stringify(parsed))).toThrow(
+      'Claim evidence mismatch for "Zama Write Flow"',
+    );
+  });
 });

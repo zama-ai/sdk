@@ -30,6 +30,7 @@ import {
   type CanonicalCheckId,
 } from "./check-registry.js";
 import { resolveClaimFromResults } from "../verdict/resolve.js";
+import { assertClaimConsistency } from "../verdict/consistency.js";
 
 export type TestStatus = ValidationStatus;
 export type TestSection = ReportSection;
@@ -425,6 +426,7 @@ export function printReport(): void {
 
   // ── Verdict ────────────────────────────────────────────────────────────────
   const verdict = resolveClaimFromResults(results);
+  assertClaimConsistency(verdict, results);
   const blockerCounts = summarizeBlockers(results);
 
   console.log(SUB);
