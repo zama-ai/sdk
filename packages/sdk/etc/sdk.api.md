@@ -10306,6 +10306,9 @@ export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaE
 }): R | undefined;
 
 // @public
+export const MAX_CONTRACTS_PER_CREDENTIAL = 10;
+
+// @public
 export class MemoryStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;

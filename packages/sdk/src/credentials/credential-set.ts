@@ -30,7 +30,9 @@ export interface CredentialSet<T extends StoredCredentials = StoredCredentials> 
 
   /**
    * Addresses whose batch failed (e.g. user rejected the wallet prompt).
-   * The mapped error is the reason for failure.
+   * The same error is re-thrown by {@link credentialFor} when called with
+   * one of these addresses.
+   * Keys are EIP-55 checksummed — use `getAddress(addr)` for lookups.
    * Empty when all batches succeeded.
    */
   readonly failures: ReadonlyMap<Address, Error>;

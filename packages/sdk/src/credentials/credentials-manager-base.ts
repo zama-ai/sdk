@@ -412,7 +412,7 @@ export abstract class BaseCredentialsManager<
   protected async checkExpired(key: string, contractAddress?: Address): Promise<boolean> {
     try {
       const batchKeys = await this.#scanBatchKeys(key);
-      if (batchKeys.length === 0 || (batchKeys.length === 1 && batchKeys[0] === key)) {
+      if (batchKeys.length === 1) {
         // Single-batch path (or no credentials yet).
         const stored = await this.storage.get<TEncrypted>(key);
         if (!stored) {

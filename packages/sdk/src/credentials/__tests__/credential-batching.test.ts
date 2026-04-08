@@ -7,11 +7,11 @@
  */
 import { describe, expect, vi } from "vitest";
 import { test, createMockSigner, createMockStorage } from "../../test-fixtures";
+import type { createMockRelayer } from "../../test-fixtures";
 import { CredentialsManager } from "../credentials-manager";
 import { DelegatedCredentialsManager } from "../delegated-credentials-manager";
 import { ZamaErrorCode } from "../../errors";
 import { getAddress, type Address } from "viem";
-import type { createMockRelayer as CreateMockRelayer } from "../../test-fixtures";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -23,7 +23,10 @@ function makeAddresses(n: number): Address[] {
   });
 }
 
-function createManager(relayer: ReturnType<typeof CreateMockRelayer>) {
+type MockRelayer = ReturnType<typeof createMockRelayer>;
+
+/** Create a CredentialsManager with an accessible signer mock. */
+function createManagerWithSigner(relayer: MockRelayer) {
   const signer = createMockSigner();
   const storage = createMockStorage();
   const sessionStorage = createMockStorage();
@@ -32,10 +35,19 @@ function createManager(relayer: ReturnType<typeof CreateMockRelayer>) {
     privateKey: "0xpriv",
   });
   vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
-  return new CredentialsManager({ relayer, signer, storage, sessionStorage, keypairTTL: 86400 });
+  return {
+    manager: new CredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 86400,
+    }),
+    signer,
+  };
 }
 
-function mockDelegatedEIP712(relayer: ReturnType<typeof CreateMockRelayer>) {
+function mockDelegatedEIP712(relayer: MockRelayer) {
   vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
     domain: { name: "test", version: "1", chainId: 31337n, verifyingContract: "0xkms" },
     types: { DelegatedUserDecryptRequestVerification: [] },
@@ -50,7 +62,8 @@ function mockDelegatedEIP712(relayer: ReturnType<typeof CreateMockRelayer>) {
   } as never);
 }
 
-function createDelegatedManager(relayer: ReturnType<typeof CreateMockRelayer>) {
+/** Create a DelegatedCredentialsManager with an accessible signer mock. */
+function createDelegatedManagerWithSigner(relayer: MockRelayer) {
   const signer = createMockSigner();
   const storage = createMockStorage();
   const sessionStorage = createMockStorage();
@@ -60,13 +73,16 @@ function createDelegatedManager(relayer: ReturnType<typeof CreateMockRelayer>) {
   });
   vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
   mockDelegatedEIP712(relayer);
-  return new DelegatedCredentialsManager({
-    relayer,
+  return {
+    manager: new DelegatedCredentialsManager({
+      relayer,
+      signer,
+      storage,
+      sessionStorage,
+      keypairTTL: 86400,
+    }),
     signer,
-    storage,
-    sessionStorage,
-    keypairTTL: 86400,
-  });
+  };
 }
 
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -76,18 +92,14 @@ const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
 describe("credential batching", () => {
   describe("CredentialsManager", () => {
     test("10 addresses → 1 batch, 1 EIP-712 signature", async ({ relayer }) => {
-      const manager = createManager(relayer);
+      const { manager } = createManagerWithSigner(relayer);
       const addrs = makeAddresses(10);
 
       const credSet = await manager.allow(...addrs);
 
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-      expect(vi.mocked(createMockSigner().signTypedData)).not.toHaveBeenCalled(); // different instance
-      // One batch → one signTypedData call on the manager's signer
-      // We can verify by checking how many batches are in the credSet
       expect(credSet.batches).toHaveLength(1);
       expect(credSet.failures.size).toBe(0);
-      // credentialFor works for every address
       for (const addr of addrs) {
         const creds = credSet.credentialFor(addr);
         expect(creds.contractAddresses).toContain(getAddress(addr));
@@ -95,21 +107,7 @@ describe("credential batching", () => {
     });
 
     test("11 addresses → 2 batches (10 + 1), 2 sequential signatures", async ({ relayer }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
-      vi.mocked(relayer.generateKeypair).mockResolvedValue({
-        publicKey: "0xpub",
-        privateKey: "0xpriv",
-      });
-      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
-      const manager = new CredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
-      });
+      const { manager, signer } = createManagerWithSigner(relayer);
       const addrs = makeAddresses(11);
 
       const credSet = await manager.allow(...addrs);
@@ -121,28 +119,13 @@ describe("credential batching", () => {
       expect(credSet.batches[0]!.contractAddresses).toHaveLength(10);
       expect(credSet.batches[1]!.contractAddresses).toHaveLength(1);
 
-      // credentialFor routes each address to the correct batch
       for (const addr of addrs) {
         expect(() => credSet.credentialFor(addr)).not.toThrow();
       }
     });
 
     test("20 addresses → 2 batches of 10, 2 signatures", async ({ relayer }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
-      vi.mocked(relayer.generateKeypair).mockResolvedValue({
-        publicKey: "0xpub",
-        privateKey: "0xpriv",
-      });
-      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
-      const manager = new CredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
-      });
+      const { manager, signer } = createManagerWithSigner(relayer);
       const addrs = makeAddresses(20);
 
       const credSet = await manager.allow(...addrs);
@@ -157,26 +140,16 @@ describe("credential batching", () => {
     test("shared keypair across batches — generateKeypair called once even for 20 addresses", async ({
       relayer,
     }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
+      const { manager } = createManagerWithSigner(relayer);
+      // Override after helper so the recognizable value takes precedence
       vi.mocked(relayer.generateKeypair).mockResolvedValue({
         publicKey: "0xpub_shared",
         privateKey: "0xpriv_shared",
-      });
-      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
-      const manager = new CredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
       });
 
       const credSet = await manager.allow(...makeAddresses(20));
 
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-      // All batches share the same keypair
       for (const batch of credSet.batches) {
         expect(batch.publicKey).toBe("0xpub_shared");
         expect(batch.privateKey).toBe("0xpriv_shared");
@@ -186,21 +159,7 @@ describe("credential batching", () => {
     test("cache hit: calling allow() again with the same addresses issues no new signatures", async ({
       relayer,
     }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
-      vi.mocked(relayer.generateKeypair).mockResolvedValue({
-        publicKey: "0xpub",
-        privateKey: "0xpriv",
-      });
-      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
-      const manager = new CredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
-      });
+      const { manager, signer } = createManagerWithSigner(relayer);
       const addrs = makeAddresses(11);
 
       await manager.allow(...addrs);
@@ -219,21 +178,7 @@ describe("credential batching", () => {
     test("extending from 10 → 11: existing batch is full, new batch created for the extra address", async ({
       relayer,
     }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
-      vi.mocked(relayer.generateKeypair).mockResolvedValue({
-        publicKey: "0xpub",
-        privateKey: "0xpriv",
-      });
-      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
-      const manager = new CredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
-      });
+      const { manager, signer } = createManagerWithSigner(relayer);
       const first10 = makeAddresses(10);
       const eleventh = makeAddresses(11)[10]!;
 
@@ -246,7 +191,6 @@ describe("credential batching", () => {
       expect(signer.signTypedData).toHaveBeenCalledTimes(signCallsAfterFirst + 1);
       expect(credSet.batches).toHaveLength(2);
 
-      // All 11 addresses are accessible
       for (const addr of [...first10, eleventh]) {
         expect(() => credSet.credentialFor(addr)).not.toThrow();
       }
@@ -255,21 +199,7 @@ describe("credential batching", () => {
     test("extending from 9 → 11: one address packed into the existing batch, one new batch", async ({
       relayer,
     }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
-      vi.mocked(relayer.generateKeypair).mockResolvedValue({
-        publicKey: "0xpub",
-        privateKey: "0xpriv",
-      });
-      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
-      const manager = new CredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
-      });
+      const { manager, signer } = createManagerWithSigner(relayer);
       const first9 = makeAddresses(9);
       const all11 = makeAddresses(11);
       const [tenth, eleventh] = [all11[9]!, all11[10]!];
@@ -279,19 +209,17 @@ describe("credential batching", () => {
 
       const credSet = await manager.allow(...all11);
 
-      // Batch 0 extended to 10 (re-signed) + new batch 1 created for the 11th
-      // That's 2 new signatures (1 extension of batch 0, 1 creation of batch 1)
+      // Batch 0 extended to 10 (1 sign) + new batch 1 created for the 11th (1 sign)
       expect(signer.signTypedData).toHaveBeenCalledTimes(signCallsAfterFirst + 2);
       expect(credSet.batches).toHaveLength(2);
 
-      // All 11 addresses are accessible
       for (const addr of [...first9, tenth, eleventh]) {
         expect(() => credSet.credentialFor(addr)).not.toThrow();
       }
 
-      // The 10th address was packed into batch 0 (same credential as the first 9)
+      // The 10th address was packed into batch 0 (same credential object as the first 9)
       expect(credSet.credentialFor(first9[0]!)).toBe(credSet.credentialFor(tenth));
-      // The 11th address is in batch 1 (different credential)
+      // The 11th address is in batch 1 (different credential object)
       expect(credSet.credentialFor(first9[0]!)).not.toBe(credSet.credentialFor(eleventh));
     });
   });
@@ -302,25 +230,12 @@ describe("credential batching", () => {
     test("signing rejection for batch 2 is captured in failures; batch 1 still succeeds", async ({
       relayer,
     }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
-      vi.mocked(relayer.generateKeypair).mockResolvedValue({
-        publicKey: "0xpub",
-        privateKey: "0xpriv",
-      });
+      const { manager, signer } = createManagerWithSigner(relayer);
       // Batch 0 (first 10) succeeds; batch 1 (11th address) rejected
       vi.mocked(signer.signTypedData)
         .mockResolvedValueOnce("0xsig_batch0")
         .mockRejectedValueOnce(new Error("User rejected the request"));
 
-      const manager = new CredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
-      });
       const addrs = makeAddresses(11);
       const [batch0Addrs, batch1Addr] = [addrs.slice(0, 10), addrs[10]!];
 
@@ -340,32 +255,19 @@ describe("credential batching", () => {
       );
       expect(credSet.tryCredentialFor(batch1Addr)).toBeNull();
       expect(credSet.failures.size).toBe(1);
+      // failures keys are checksummed (EIP-55)
       expect(credSet.failures.has(getAddress(batch1Addr))).toBe(true);
     });
 
-    test("tryCredentialFor returns null for a failed batch and the credential for a succeeded batch", async ({
+    test("tryCredentialFor returns the credential for a succeeded batch and null for a failed one", async ({
       relayer,
     }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
-      vi.mocked(relayer.generateKeypair).mockResolvedValue({
-        publicKey: "0xpub",
-        privateKey: "0xpriv",
-      });
+      const { manager, signer } = createManagerWithSigner(relayer);
       vi.mocked(signer.signTypedData)
         .mockResolvedValueOnce("0xsig_ok")
         .mockRejectedValueOnce(new Error("User rejected the request"));
 
-      const manager = new CredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
-      });
       const addrs = makeAddresses(11);
-
       const credSet = await manager.allow(...addrs);
 
       expect(credSet.tryCredentialFor(addrs[0]!)).not.toBeNull();
@@ -377,22 +279,7 @@ describe("credential batching", () => {
 
   describe("DelegatedCredentialsManager", () => {
     test("15 addresses → 2 batches (10 + 5), 2 sequential signatures", async ({ relayer }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
-      vi.mocked(relayer.generateKeypair).mockResolvedValue({
-        publicKey: "0xpub",
-        privateKey: "0xpriv",
-      });
-      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
-      mockDelegatedEIP712(relayer);
-      const manager = new DelegatedCredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
-      });
+      const { manager, signer } = createDelegatedManagerWithSigner(relayer);
       const addrs = makeAddresses(15);
 
       const credSet = await manager.allow(DELEGATOR, ...addrs);
@@ -412,7 +299,7 @@ describe("credential batching", () => {
 
     test("different delegators get separate credential sets", async ({ relayer }) => {
       const OTHER_DELEGATOR = "0xdDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd" as Address;
-      const manager = createDelegatedManager(relayer);
+      const { manager } = createDelegatedManagerWithSigner(relayer);
       const addrs = makeAddresses(11);
 
       await manager.allow(DELEGATOR, ...addrs);
@@ -427,7 +314,7 @@ describe("credential batching", () => {
 
   describe("CredentialSet semantics", () => {
     test("credentialFor on an address not passed to allow() throws", async ({ relayer }) => {
-      const manager = createManager(relayer);
+      const { manager } = createManagerWithSigner(relayer);
       const addrs = makeAddresses(3);
       const unknown = makeAddresses(4)[3]!;
 
@@ -436,38 +323,50 @@ describe("credential batching", () => {
       expect(() => credSet.credentialFor(unknown)).toThrow(/No credential found/);
     });
 
+    test("tryCredentialFor returns null for an address not passed to allow()", async ({
+      relayer,
+    }) => {
+      const { manager } = createManagerWithSigner(relayer);
+      const addrs = makeAddresses(3);
+      const unknown = makeAddresses(4)[3]!;
+
+      const credSet = await manager.allow(...addrs);
+
+      expect(credSet.tryCredentialFor(unknown)).toBeNull();
+    });
+
+    test("duplicate addresses in allow() are deduplicated — only one batch created", async ({
+      relayer,
+    }) => {
+      const { manager, signer } = createManagerWithSigner(relayer);
+      const addr = makeAddresses(1)[0]!;
+
+      // Passing the same address three times is equivalent to passing it once
+      const credSet = await manager.allow(addr, addr, addr);
+
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
+      expect(credSet.batches).toHaveLength(1);
+      expect(credSet.batches[0]!.contractAddresses).toHaveLength(1);
+      expect(() => credSet.credentialFor(addr)).not.toThrow();
+    });
+
     test("credentialFor is case-insensitive (normalizes checksummed address)", async ({
       relayer,
     }) => {
-      const manager = createManager(relayer);
+      const { manager } = createManagerWithSigner(relayer);
       const addr = makeAddresses(1)[0]!;
-      // Lowercase variant of the address
+      // Lowercase variant — credentialFor must normalize before lookup
       const addrLower = addr.toLowerCase() as Address;
 
       const credSet = await manager.allow(addr);
 
-      // credentialFor should work regardless of checksum casing
       expect(() => credSet.credentialFor(addrLower)).not.toThrow();
     });
 
-    test("20 addresses: all are accessible via credentialFor (complete coverage, no gaps)", async ({
+    test("20 addresses: all accessible via credentialFor; addresses in different batches have different credential objects", async ({
       relayer,
     }) => {
-      const signer = createMockSigner();
-      const storage = createMockStorage();
-      const sessionStorage = createMockStorage();
-      vi.mocked(relayer.generateKeypair).mockResolvedValue({
-        publicKey: "0xpub",
-        privateKey: "0xpriv",
-      });
-      vi.mocked(signer.signTypedData).mockResolvedValue("0xsig");
-      const manager = new CredentialsManager({
-        relayer,
-        signer,
-        storage,
-        sessionStorage,
-        keypairTTL: 86400,
-      });
+      const { manager } = createManagerWithSigner(relayer);
       const addrs = makeAddresses(20);
 
       const credSet = await manager.allow(...addrs);
@@ -475,7 +374,7 @@ describe("credential batching", () => {
       expect(credSet.batches).toHaveLength(2);
       expect(credSet.failures.size).toBe(0);
 
-      // Every address resolves to a credential (no gaps)
+      // Every address resolves without error
       for (const addr of addrs) {
         expect(() => credSet.credentialFor(addr)).not.toThrow();
       }

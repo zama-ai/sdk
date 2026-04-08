@@ -74,6 +74,7 @@ export {
   DelegatedCredentialsManager,
   type DelegatedCredentialsManagerConfig,
   type CredentialSet,
+  MAX_CONTRACTS_PER_CREDENTIAL,
 } from "./credentials";
 export type {
   GenericSigner,
