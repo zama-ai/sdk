@@ -334,6 +334,7 @@ Clears session credentials **and** cached decrypted values for the current signe
 await sdk.revoke("0xTokenA", "0xTokenB");
 ```
 
+
 ### revokeSession
 
 `() => Promise<void>`
@@ -357,6 +358,7 @@ const allowed = await sdk.isAllowed();
 // Contract-level check (credentials cover these contracts?)
 const covered = await sdk.isAllowed("0xTokenA", "0xTokenB");
 ```
+
 
 ### dispose
 

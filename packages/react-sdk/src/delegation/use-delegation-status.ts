@@ -37,11 +37,7 @@ export function useDelegationStatus(
   options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  const baseOpts = delegationStatusQueryOptions(sdk, {
-    tokenAddress: config.tokenAddress,
-    delegatorAddress: config.delegatorAddress,
-    delegateAddress: config.delegateAddress,
-  });
+  const baseOpts = delegationStatusQueryOptions(sdk, config);
 
   return useQuery<DelegationStatusData>({
     ...baseOpts,

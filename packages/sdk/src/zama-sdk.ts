@@ -455,7 +455,7 @@ export class ZamaSDK {
    * ```ts
    * {
    *   using sdk = new ZamaSDK({ relayer, signer, storage });
-   *   await sdk.allow(cUSDT);
+   *   await sdk.credentials.allow(cUSDT);
    *   const balance = await sdk.createReadonlyToken(cUSDT).balanceOf();
    * } // sdk.terminate() called automatically here
    * ```
